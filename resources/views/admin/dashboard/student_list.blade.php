@@ -263,11 +263,11 @@
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
         <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white" role="group" aria-label="Attendance status">
             <li class="nav-item" role="presentation">
-                <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ ($filters['attendance'] ?? 'present') !== 'absent' ? 'active' : '' }}"
+                <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ !$isAbsent ? 'active' : '' }}"
                     data-attendance="present">Present</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ ($filters['attendance'] ?? '') === 'absent' ? 'active' : '' }}"
+                <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $isAbsent ? 'active' : '' }}"
                     data-attendance="absent">Absent</button>
             </li>
         </ul>
@@ -339,6 +339,15 @@
                                             <option value="{{ $type->type_pk }}" {{ (string)($filters['role_filter'] ?? '') === (string)$type->type_pk ? 'selected' : '' }}>{{ $type->counsellor_type_name }}</option>
                                         @endforeach
                                     @endif
+                                </select>
+                            </div>
+                            <div class="sl-filter-item" id="slItemCounsellorFaculty" @unless(($filters['role_filter'] ?? '') === 'cc_acc') style="display:none;" @endunless>
+                                <span class="sl-filter-label-text">CC/ACC Faculty</span>
+                                <select id="counsellorFacultyFilter" class="form-select sl-filter-select w-100" aria-label="Filter by CC/ACC faculty">
+                                    <option value="">All Faculty</option>
+                                    @foreach(($counsellorFaculties ?? []) as $faculty)
+                                        <option value="{{ $faculty->faculty_pk }}" {{ (string)($filters['counsellor_faculty'] ?? '') === (string)$faculty->faculty_pk ? 'selected' : '' }}>{{ $faculty->faculty_name }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                             <div class="sl-filter-item">
@@ -430,6 +439,9 @@
                                 <th>Status</th>
                                 <th>Date &amp; Session</th>
                                 <th>Topic</th>
+                                <th>Total Duty (Count)</th>
+                                <th>Total PT Exemption Count</th>
+                                <th>Total Stationed Leave Count</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -491,6 +503,7 @@
                 course_id: $('#courseFilter').val() || '',
                 duty_type: $('#dutyTypeFilter').val() || '',
                 role_filter: $('#roleFilter').val() || '',
+                counsellor_faculty: ($('#roleFilter').val() === 'cc_acc') ? ($('#counsellorFacultyFilter').val() || '') : '',
                 cadre: $('#cadreFilter').val() || '',
                 house: $('#houseFilter').val() || '',
                 from_date: (filters.from_date || '').toString(),
@@ -542,6 +555,7 @@
                     d.course_id = state.course_id;
                     d.duty_type = state.duty_type;
                     d.role_filter = state.role_filter;
+                    d.counsellor_faculty = state.counsellor_faculty;
                     d.cadre = state.cadre;
                     d.house = state.house;
                     d.from_date = state.from_date;
@@ -615,6 +629,9 @@
                 { data: 'status', name: 'status', searchable: false },
                 { data: 'date_session', name: 'date_session' },
                 { data: 'topic', name: 'topic' },
+                { data: 'total_duty_count', name: 'total_duty_count', searchable: false },
+                { data: 'total_pt_exemption_count', name: 'total_pt_exemption_count', searchable: false },
+                { data: 'total_stationed_leave_count', name: 'total_stationed_leave_count', searchable: false },
             ]
         }));
 
@@ -664,7 +681,17 @@
         });
         $('#courseFilter').on('change', function() { applyFilter({ course_id: this.value }); });
         $('#dutyTypeFilter').on('change', function() { applyFilter({ duty_type: this.value }); });
-        $('#roleFilter').on('change', function() { applyFilter({ role_filter: this.value }); });
+        function toggleCounsellorFaculty() {
+            const isCcAcc = $('#roleFilter').val() === 'cc_acc';
+            $('#slItemCounsellorFaculty').toggle(isCcAcc);
+            if (!isCcAcc) { $('#counsellorFacultyFilter').val(''); }
+        }
+        $('#roleFilter').on('change', function() {
+            toggleCounsellorFaculty();
+            applyFilter({ role_filter: this.value });
+        });
+        $('#counsellorFacultyFilter').on('change', function() { applyFilter({ counsellor_faculty: this.value }); });
+        toggleCounsellorFaculty();
         $('#cadreFilter').on('change', function() { applyFilter({ cadre: this.value }); });
         $('#houseFilter').on('change', function() { applyFilter({ house: this.value }); });
         $('#resetFilters').on('click', function() { window.location.href = baseUrl; });

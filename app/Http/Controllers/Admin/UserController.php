@@ -1086,6 +1086,29 @@ class UserController extends Controller
             ->orderBy('cgroup.type_name')
             ->get();
 
+        // CC/ACC counsellor faculty options for the dependent dropdown shown when the
+        // "CC/ACC" role filter is selected. A student's counsellor is the faculty
+        // (gmap.facility_id) of the course group they belong to. Derive the list from
+        // the students already in scope so it stays consistent with the rows shown —
+        // a Super Admin sees every counsellor, a coordinator sees all counsellors
+        // across their courses (not just themselves).
+        $counsellorFaculties = $students
+            ->map(function ($m) {
+                $gmap = $m->groupMapping->groupTypeMasterCourseMasterMap ?? null;
+                if (! $gmap || empty($gmap->facility_id)) {
+                    return null;
+                }
+
+                return (object) [
+                    'faculty_pk' => $gmap->facility_id,
+                    'faculty_name' => $gmap->Faculty->full_name ?? ('Faculty #' . $gmap->facility_id),
+                ];
+            })
+            ->filter()
+            ->unique('faculty_pk')
+            ->sortBy('faculty_name')
+            ->values();
+
         // Get courses from group_type_master_course_master_map and merge with available courses
         // Only include active courses (active_inactive = 1 and end_date >= now())
         // Filter by logged-in faculty if available
@@ -1184,9 +1207,10 @@ class UserController extends Controller
             'attendance' => (string) $request->input('attendance', 'present'),
             'cadre' => (string) $request->input('cadre', ''),
             'house' => (string) $request->input('house', ''),
+            'counsellor_faculty' => (string) $request->input('counsellor_faculty', ''),
         ];
 
-        return view('admin.dashboard.student_list', compact('students', 'presentStudents', 'absentStudents', 'availableCourses', 'counsellorTypes', 'groupNames', 'dutyTypes', 'filters', 'cadreOptions', 'houseOptions'));
+        return view('admin.dashboard.student_list', compact('students', 'presentStudents', 'absentStudents', 'availableCourses', 'counsellorTypes', 'counsellorFaculties', 'groupNames', 'dutyTypes', 'filters', 'cadreOptions', 'houseOptions'));
     }
 
     /**
@@ -1210,6 +1234,8 @@ class UserController extends Controller
         $fileBase = "student_list_{$timestamp}";
 
         if ($format === 'pdf') {
+            ini_set('memory_limit', '512M');
+
             $pdf = Pdf::loadView('admin.dashboard.export.student_list_pdf', [
                 'headings' => $exportData['headings'],
                 'rows' => $exportData['rows'],
@@ -1361,6 +1387,12 @@ class UserController extends Controller
                 $toDate = $request?->input('to_date') ?: null;
                 $dutyType = $request?->input('duty_type') ?: null;
 
+                // Include students who have discipline memos but were dropped from the
+                // active-course list (their course has expired or their enrolment is
+                // inactive), so their memo history still surfaces here. Scoped to what
+                // the current viewer is allowed to see.
+                $this->appendStudentsWithMemos($uniqueStudents, $seenStudentCourseKeys, $isSuperAdmin, $facultyPk);
+
                 // Batch-load House Name (hostel room, keyed by student_master.user_id == hostel user_name)
                 // and the latest attendance status per student (for Present/Absent).
                 $studentPks = $uniqueStudents->pluck('student_master_pk')->filter()->unique()->values()->all();
@@ -1375,23 +1407,9 @@ class UserController extends Controller
                         ->pluck('hostel_room_name', 'user_name')
                     : collect();
 
-                // Latest attendance record per student, joined to its timetable so we
-                // can show the session (date + session time + topic) it belongs to.
-                $latestAttendance = ! empty($studentPks)
-                    ? DB::table('course_student_attendance as a')
-                        ->leftJoin('timetable as t', 'a.timetable_pk', '=', 't.pk')
-                        ->whereIn('a.Student_master_pk', $studentPks)
-                        ->orderByDesc('a.pk')
-                        ->get([
-                            'a.Student_master_pk as spk',
-                            'a.status',
-                            't.START_DATE as session_date',
-                            't.class_session as session_time',
-                            't.subject_topic as session_topic',
-                        ])
-                        ->groupBy('spk')
-                        ->map(fn ($g) => $g->first())
-                    : collect();
+                // Present/Absent status per student, resolved from the most recent day
+                // that student has attendance for (Absent if absent in ANY session that day).
+                $attendanceStatus = $this->resolveStudentAttendanceStatus($studentPks);
 
                 foreach ($uniqueStudents as $studentMap) {
                     $studentPk = $studentMap->student_master_pk;
@@ -1446,14 +1464,13 @@ class UserController extends Controller
 
                     $uid = $studentMap->studentMaster->user_id ?? null;
                     $studentMap->house_name = ($uid && isset($houseByUser[$uid])) ? $houseByUser[$uid] : null;
-                    // Present = latest session not marked Absent (status 3); no record => Present.
-                    $att = $latestAttendance[$studentPk] ?? null;
-                    $attStatus = $att ? (int) $att->status : null;
-                    $studentMap->attendance_present = ($attStatus === 3) ? false : true;
-                    // Session (date / time / topic) of that latest attendance record.
-                    $studentMap->session_date = $att->session_date ?? null;
-                    $studentMap->session_time = $att->session_time ?? null;
-                    $studentMap->session_topic = $att->session_topic ?? null;
+                    // Absent if absent in any session on their most recent attendance day.
+                    $att = $attendanceStatus[$studentPk] ?? null;
+                    $studentMap->attendance_present = $att['present'] ?? true;
+                    // Session (date / time / topic) shown for that day.
+                    $studentMap->session_date = $att['session_date'] ?? null;
+                    $studentMap->session_time = $att['session_time'] ?? null;
+                    $studentMap->session_topic = $att['session_topic'] ?? null;
                 }
 
                 $students = $uniqueStudents->filter(function ($studentMap) {
@@ -1530,6 +1547,78 @@ class UserController extends Controller
         return compact('students', 'availableCourses', 'facultyPk');
     }
 
+    /**
+     * Append students who have discipline memos but are missing from the active-course
+     * list (their course has expired, or their enrolment map is inactive). Each is given
+     * course context from their most recent enrolment so the row renders normally. The
+     * caller's existing per-student loop then fills in memo/attendance/other counts.
+     *
+     * Super Admin sees every memo student; a faculty only sees memo students within
+     * their remit (canFacultyViewStudent).
+     *
+     * @param  \Illuminate\Support\Collection  $uniqueStudents
+     * @param  array<int, string>  $seenStudentCourseKeys
+     * @param  int|null  $facultyPk
+     */
+    private function appendStudentsWithMemos(\Illuminate\Support\Collection $uniqueStudents, array &$seenStudentCourseKeys, bool $isSuperAdmin, $facultyPk): void
+    {
+        $memoStudentPks = DB::table('student_memo_status')
+            ->distinct()
+            ->pluck('student_pk')
+            ->filter()
+            ->map(fn ($v) => (int) $v)
+            ->unique()
+            ->all();
+
+        if (empty($memoStudentPks)) {
+            return;
+        }
+
+        // Students already on the list (any course row) — skip them.
+        $existingPks = $uniqueStudents
+            ->pluck('student_master_pk')
+            ->map(fn ($v) => (int) $v)
+            ->unique()
+            ->flip();
+
+        foreach ($memoStudentPks as $studentPk) {
+            if (isset($existingPks[$studentPk])) {
+                continue;
+            }
+
+            // Faculty may only see memo students within their remit.
+            if (! $isSuperAdmin && $facultyPk && ! $this->canFacultyViewStudent($facultyPk, $studentPk)) {
+                continue;
+            }
+
+            // Most recent enrolment (any status) provides the course context to display.
+            $courseMap = StudentMasterCourseMap::with(['studentMaster.cadre', 'course'])
+                ->where('student_master_pk', $studentPk)
+                ->orderByDesc('pk')
+                ->first();
+
+            $student = $courseMap?->studentMaster ?? StudentMaster::with('cadre')->find($studentPk);
+            if (! $student) {
+                continue;
+            }
+
+            $stdObj = new \stdClass();
+            $stdObj->student_master_pk = $studentPk;
+            $stdObj->course_master_pk = $courseMap->course_master_pk ?? null;
+            $stdObj->studentMaster = $student;
+            $stdObj->course = $courseMap?->course;
+            $stdObj->source = 'memo';
+
+            $key = $studentPk . '_' . ($stdObj->course_master_pk ?? 0);
+            if (in_array($key, $seenStudentCourseKeys, true)) {
+                continue;
+            }
+
+            $seenStudentCourseKeys[] = $key;
+            $uniqueStudents->push($stdObj);
+        }
+    }
+
     private function augmentStudentListEntries(\Illuminate\Support\Collection $uniqueStudents, ?Request $request = null): void
     {
         $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
@@ -1550,14 +1639,9 @@ class UserController extends Controller
                 ->pluck('hostel_room_name', 'user_name')
             : collect();
 
-        $latestAttendance = ! empty($studentPks)
-            ? DB::table('course_student_attendance')
-                ->whereIn('Student_master_pk', $studentPks)
-                ->orderByDesc('pk')
-                ->get(['Student_master_pk', 'status'])
-                ->groupBy('Student_master_pk')
-                ->map(fn ($g) => (int) $g->first()->status)
-            : collect();
+        // Present/Absent status per student, resolved from the most recent day that
+        // student has attendance for (Absent if absent in ANY session that day).
+        $attendanceStatus = $this->resolveStudentAttendanceStatus($studentPks);
 
         foreach ($uniqueStudents as $studentMap) {
             $studentPk = $studentMap->student_master_pk;
@@ -1612,15 +1696,84 @@ class UserController extends Controller
 
             $uid = $studentMap->studentMaster->user_id ?? null;
             $studentMap->house_name = ($uid && isset($houseByUser[$uid])) ? $houseByUser[$uid] : null;
-            $attStatus = $latestAttendance[$studentPk] ?? null;
-            $studentMap->attendance_present = ($attStatus === 3) ? false : true;
+            $att = $attendanceStatus[$studentPk] ?? null;
+            $studentMap->attendance_present = $att['present'] ?? true;
+            $studentMap->session_date = $att['session_date'] ?? null;
+            $studentMap->session_time = $att['session_time'] ?? null;
+            $studentMap->session_topic = $att['session_topic'] ?? null;
         }
+    }
+
+    /**
+     * Resolve each student's Present/Absent status from their most recent session.
+     * Rule: a student is ABSENT if that single latest session is marked Absent
+     * (status 3); otherwise Present. Also returns that session's details
+     * (date/time/topic) for display, so the status always matches the shown session.
+     *
+     * @param  array<int, int>  $studentPks
+     * @return array<int, array{present: bool, session_date: ?string, session_time: ?string, session_topic: ?string}>
+     */
+    private function resolveStudentAttendanceStatus(array $studentPks): array
+    {
+        if (empty($studentPks)) {
+            return [];
+        }
+
+        // All attendance rows for these students, joined to their timetable session
+        // (date / time / topic). Newest-first so the first row of a day is its latest.
+        $rowsByStudent = DB::table('course_student_attendance as a')
+            ->join('timetable as t', 'a.timetable_pk', '=', 't.pk')
+            ->whereIn('a.Student_master_pk', $studentPks)
+            ->orderByDesc('a.pk')
+            ->get([
+                'a.Student_master_pk as spk',
+                'a.status',
+                't.START_DATE as session_date',
+                't.class_session as session_time',
+                't.subject_topic as session_topic',
+            ])
+            ->groupBy('spk');
+
+        $result = [];
+        foreach ($rowsByStudent as $spk => $sessions) {
+            // The student's most recent attendance day (by session date, not row id).
+            $latestDay = $sessions
+                ->map(fn ($r) => $r->session_date ? Carbon::parse($r->session_date)->toDateString() : null)
+                ->filter()
+                ->sort()
+                ->last();
+
+            if (! $latestDay) {
+                continue;
+            }
+
+            // Present/Absent is decided by the single most recent session (not by
+            // aggregating the whole day). Rows are pk-desc, so the first row of the
+            // latest day is that day's latest session — the one shown in the list.
+            $latest = $sessions->first(
+                fn ($r) => $r->session_date && Carbon::parse($r->session_date)->toDateString() === $latestDay
+            );
+
+            if (! $latest) {
+                continue;
+            }
+
+            $result[(int) $spk] = [
+                'present' => (int) $latest->status !== 3,
+                'session_date' => $latest->session_date ?? null,
+                'session_time' => $latest->session_time ?? null,
+                'session_topic' => $latest->session_topic ?? null,
+            ];
+        }
+
+        return $result;
     }
 
     private function applyDashboardStudentListFilters($students, Request $request)
     {
         $courseId = $request->input('course_id');
         $roleFilter = $request->input('role_filter');
+        $counsellorFaculty = $request->input('counsellor_faculty');
         $groupPk = $request->input('group_pk');
         $cadre = $request->input('cadre');
         $house = $request->input('house');
@@ -1628,10 +1781,11 @@ class UserController extends Controller
         $searchValue = is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput;
         $search = strtolower(trim((string) $searchValue));
 
-        return $students->filter(function ($studentMap) use ($courseId, $roleFilter, $groupPk, $cadre, $house, $search) {
+        return $students->filter(function ($studentMap) use ($courseId, $roleFilter, $counsellorFaculty, $groupPk, $cadre, $house, $search) {
             $student = $studentMap->studentMaster;
             $course = $studentMap->course;
             $counsellorTypePk = (string) ($studentMap->groupMapping->groupTypeMasterCourseMasterMap->type_name ?? '');
+            $rowFacilityId = (string) ($studentMap->groupMapping->groupTypeMasterCourseMasterMap->facility_id ?? '');
             $rowGroupPk = (string) ($studentMap->groupMapping->groupTypeMasterCourseMasterMap->pk ?? '');
             $rowCourseId = (string) ($course->pk ?? '');
 
@@ -1649,6 +1803,11 @@ class UserController extends Controller
 
             if ($roleFilter === 'cc_acc') {
                 if ($counsellorTypePk === '') {
+                    return false;
+                }
+                // Optional narrowing to a specific CC/ACC faculty (counsellor).
+                if ($counsellorFaculty !== null && $counsellorFaculty !== ''
+                    && $rowFacilityId !== (string) $counsellorFaculty) {
                     return false;
                 }
             } elseif ($roleFilter !== null && $roleFilter !== '') {
@@ -1706,6 +1865,9 @@ class UserController extends Controller
                 5 => 'status',
                 6 => 'session',
                 7 => 'topic',
+                8 => 'duty',
+                9 => 'pt',
+                10 => 'stationed',
             ]
             : [
                 0 => 'serial_no',
@@ -1763,19 +1925,24 @@ class UserController extends Controller
                 'name' => '<a href="' . e($detailUrl) . '" class="sl-count">' . e($displayName) . '</a>',
                 'email' => $student->email ?? 'N/A',
                 'cadre' => $student->cadre->cadre_name ?? 'N/A',
-                'status' => ($attendance === 'absent')
-                    ? '<span class="sl-status-badge sl-status-absent">Absent</span>'
-                    : '<span class="sl-status-badge sl-status-present">Present</span>',
+                'status' => ($studentMap->attendance_present ?? true)
+                    ? '<span class="sl-status-badge sl-status-present">Present</span>'
+                    : '<span class="sl-status-badge sl-status-absent">Absent</span>',
                 'date_session' => $sessionHtml,
                 'topic' => $studentMap->session_topic ?: 'N/A',
             ];
 
+            $sectionUrl = fn ($section) => $detailUrl . '?section=' . $section;
+
             if ($attendance === 'absent') {
-                $data[] = $baseRow;
+                $data[] = $baseRow + [
+                    'total_duty_count' => '<a href="' . e($sectionUrl('dutiesSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_duty_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
+                    'total_pt_exemption_count' => '<a href="' . e($sectionUrl('ptExemptionsSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_pt_exemption_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
+                    'total_stationed_leave_count' => '<a href="' . e($sectionUrl('stationedLeavesSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_stationed_leave_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
+                ];
                 continue;
             }
 
-            $sectionUrl = fn ($section) => $detailUrl . '?section=' . $section;
             $data[] = $baseRow + [
                 'house_name' => $studentMap->house_name ?? 'N/A',
                 'total_duty_count' => '<a href="' . e($sectionUrl('dutiesSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_duty_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',

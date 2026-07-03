@@ -114,7 +114,7 @@
             $sdStats = [
                 ['medicalExceptionsSection', $medicalExemptions->count(), 'Medical Exceptions', 'bi-heart-pulse-fill', '#b42318', '#fef3f2'],
                 ['ptExemptionsSection', $ptExemptions->count(), 'PT Exemptions', 'bi-person-walking', '#027a48', '#ecfdf3'],
-                ['stationedLeavesSection', $stationedLeaves->count(), 'Station Leave', 'bi-geo-alt-fill', '#5925dc', '#f4f3ff'],
+                ['stationedLeavesSection', number_format((float) $stationedLeaves->sum('total_days'), 0), 'Station Leave', 'bi-geo-alt-fill', '#5925dc', '#f4f3ff'],
                 ['dutiesSection', $duties->count(), 'Duties Assigned', 'bi-list-task', '#b54708', '#fffaeb'],
                 ['noticesSection', $notices->count(), 'Notices Received', 'bi-bell-fill', '#026aa2', '#f0f9ff'],
                 ['memosSection', $memos->count(), 'Memos Issued', 'bi-file-earmark-text-fill', '#475467', '#f2f4f7'],
@@ -267,7 +267,7 @@
     @if(!$focusSection || $focusSection === 'stationedLeavesSection')
     <div class="card border-0 shadow-sm rounded-3 mb-4 sd-section" id="stationedLeavesSection">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Station Leave ({{ $stationedLeaves->count() }})</h5>
+            <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Station Leave ({{ number_format((float) $stationedLeaves->sum('total_days'), 0) }})</h5>
             <div>
                 <button type="button" class="btn btn-sm btn-outline-success rounded-2" onclick="exportTableToExcel('stationedLeavesTable', 'Station_Leave')">
                     <i class="fas fa-file-excel me-1"></i>Export Excel
@@ -669,14 +669,22 @@
             return;
         }
 
+        // Get section title from card header h5
+        const card = table.closest('.card');
+        const sectionTitle = card ? (card.querySelector('.card-header h5')?.textContent?.trim() || fileName) : fileName;
+
+        // Student details
+        const studentFullName = '{{ $student->display_name ?? trim(($student->first_name ?? "") . " " . ($student->last_name ?? "")) }}';
+        const otCode = '{{ $student->generated_OT_code ?? "N/A" }}';
+
         // Clone the table
         const clonedTable = table.cloneNode(true);
-        
+
         // Remove badges and convert to plain text
         clonedTable.querySelectorAll('.badge').forEach(badge => {
             badge.parentElement.textContent = badge.textContent.trim();
         });
-        
+
         // Convert document links to text for Excel export
         clonedTable.querySelectorAll('a[target="_blank"]').forEach(link => {
             if (link.textContent.includes('View')) {
@@ -684,14 +692,42 @@
             }
         });
 
-        // Create workbook and worksheet
-        const wb = XLSX.utils.table_to_book(clonedTable, {sheet: fileName});
-        
+        // Count columns for spanning header rows
+        const colCount = clonedTable.querySelectorAll('thead th').length || clonedTable.querySelectorAll('tr:first-child td').length || 1;
+
+        // Build a wrapper table with header rows prepended
+        const wrapperTable = document.createElement('table');
+
+        const makeHeaderRow = (text) => {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = colCount;
+            td.textContent = text;
+            tr.appendChild(td);
+            return tr;
+        };
+
+        wrapperTable.appendChild(makeHeaderRow(sectionTitle));
+        wrapperTable.appendChild(makeHeaderRow(`Student: ${studentFullName} | OT Code: ${otCode}`));
+
+        // Empty spacer row
+        const spacer = document.createElement('tr');
+        spacer.appendChild(document.createElement('td'));
+        wrapperTable.appendChild(spacer);
+
+        // Append all data rows from cloned table
+        clonedTable.querySelectorAll('tr').forEach(row => {
+            wrapperTable.appendChild(row.cloneNode(true));
+        });
+
+        // Create workbook from wrapper table
+        const wb = XLSX.utils.table_to_book(wrapperTable, {sheet: fileName});
+
         // Generate filename with student name and current date
-        const studentName = '{{ $student->display_name ?? ($student->first_name ?? "") . " " . ($student->last_name ?? "") }}'.replace(/[^a-z0-9]/gi, '_');
+        const studentName = studentFullName.replace(/[^a-z0-9]/gi, '_');
         const date = new Date().toISOString().split('T')[0];
         const finalFileName = `${studentName}_${fileName}_${date}.xlsx`;
-        
+
         // Save file
         XLSX.writeFile(wb, finalFileName);
     }
