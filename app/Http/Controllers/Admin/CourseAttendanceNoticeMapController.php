@@ -1570,6 +1570,82 @@ protected function userCanManageMemoNotice(): bool
     return hasRole('Internal Faculty') || hasRole('Guest Faculty')
         || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction');
 }
+
+/**
+ * Notice detail for the "Edit Notice" modal — the only editable field is the
+ * template; everything else shown is read-only context for the live preview.
+ */
+public function editNotice($id)
+{
+    if (! $this->userCanManageMemoNotice()) {
+        return response()->json(['message' => 'You are not authorized to edit this notice.'], 403);
+    }
+
+    $notice = DB::table('student_notice_status as sns')
+        ->leftJoin('course_master as cm', 'cm.pk', '=', 'sns.course_master_pk')
+        ->leftJoin('timetable as t', 't.pk', '=', 'sns.subject_topic')
+        ->leftJoin('venue_master as v', 'v.venue_id', '=', 'sns.venue_id')
+        ->leftJoin('student_master as sm', 'sm.pk', '=', 'sns.student_pk')
+        ->where('sns.pk', $id)
+        ->select(
+            'sns.pk',
+            'sns.course_master_pk',
+            'sns.date_',
+            'sns.class_session_master_pk',
+            'sns.memo_notice_template_pk',
+            'sns.message',
+            'sns.status',
+            'cm.course_name',
+            't.subject_topic as topic_name',
+            'v.venue_name',
+            'sm.display_name as student_name',
+            'sm.generated_OT_code'
+        )
+        ->first();
+
+    if (!$notice) {
+        return response()->json(['message' => 'Notice not found.'], 404);
+    }
+
+    return response()->json([
+        'pk' => $notice->pk,
+        'course_master_pk' => $notice->course_master_pk,
+        'course_name' => $notice->course_name ?? 'N/A',
+        'date_' => $notice->date_,
+        'topic_name' => $notice->topic_name ?? 'N/A',
+        'venue_name' => $notice->venue_name ?? 'N/A',
+        'session_name' => $notice->class_session_master_pk ?? 'N/A',
+        'memo_notice_template_pk' => $notice->memo_notice_template_pk,
+        'student_name' => $notice->student_name ?? 'N/A',
+        'generated_OT_code' => $notice->generated_OT_code,
+        'message' => $notice->message,
+    ]);
+}
+
+public function updateNoticeTemplate(Request $request, $id)
+{
+    if (! $this->userCanManageMemoNotice()) {
+        return response()->json(['success' => false, 'message' => 'You are not authorized to edit this notice.'], 403);
+    }
+
+    $notice = DB::table('student_notice_status')->where('pk', $id)->first();
+    if (!$notice) {
+        return response()->json(['success' => false, 'message' => 'Notice not found.'], 404);
+    }
+    if ($notice->status == 2) {
+        return response()->json(['success' => false, 'message' => 'Closed notices cannot be edited.'], 422);
+    }
+
+    $validated = $request->validate([
+        'memo_notice_template_pk' => 'required|exists:memo_notice_templates,pk',
+    ]);
+
+    DB::table('student_notice_status')->where('pk', $id)->update([
+        'memo_notice_template_pk' => $validated['memo_notice_template_pk'],
+    ]);
+
+    return response()->json(['success' => true, 'message' => 'Notice updated successfully.']);
+}
 public function memo_notice_conversation(Request $request)
 {
     $type = $request->input('type'); // 'memo' or 'notice'

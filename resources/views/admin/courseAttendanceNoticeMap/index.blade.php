@@ -134,6 +134,63 @@
         </div>
     </div>
 
+    {{-- Edit Notice modal — template is the only editable field --}}
+    <div class="modal fade add-notice-modal" id="editNoticeModal" tabindex="-1" aria-labelledby="editNoticeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editNoticeModalLabel">Edit Notice</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editNoticeForm">
+                    @csrf
+                    <input type="hidden" id="editNoticePk">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Select Template <span class="text-danger">*</span></label>
+                            <select class="form-select" id="editNoticeTemplate" required>
+                                <option value="">Select Template</option>
+                            </select>
+                        </div>
+
+                        <h6 class="an-section-title">Notice Preview</h6>
+                        <div class="an-note"><i class="bi bi-info-circle"></i> You may edit the Notice from Notice Template</div>
+                        <div id="editNoticePreviewWrap" class="an-preview" style="display:none;">
+                            <h5 class="text-center fw-bold mb-2" id="editNoticeTplCourse"></h5>
+                            <p class="text-center mb-0 small">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+                            <hr>
+                            <p class="mb-1" id="editNoticeTplType"></p>
+                            <p class="mb-1"><strong>Date:</strong> <span id="editNoticeTplDate"></span></p>
+                            <div class="table-responsive mb-3">
+                                <table class="table table-sm table-bordered mb-0">
+                                    <thead class="table-light">
+                                        <tr><th>Date</th><th>No. of Session(s)</th><th>Topics</th><th>Venue</th><th>Session(s)</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td id="editNoticeInfoDate"></td>
+                                            <td>1</td>
+                                            <td id="editNoticeInfoTopic"></td>
+                                            <td id="editNoticeInfoVenue"></td>
+                                            <td id="editNoticeInfoSession"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div id="editNoticeTplContent" class="mb-3"></div>
+                            <p class="text-end mb-0"><strong id="editNoticeTplDirector"></strong><br><span id="editNoticeTplDesig"></span></p>
+                        </div>
+                        <div id="editNoticePreviewNone" class="an-preview-none text-muted" style="display:none;">No active Notice template for this course.</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary px-4" id="editNoticeSaveBtn">Send Notice</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     {{-- Column Visibility modal --}}
     <div class="modal fade sn-colvis-modal" id="mnmColumnModal" tabindex="-1" aria-labelledby="mnmColumnModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -290,6 +347,14 @@
                                     </a>
                                     @else
                                     <span class="mnm-action disabled" title="No notice"><i class="bi bi-file-earmark-text"></i><span>Notice</span></span>
+                                    @endif
+
+                                    {{-- Edit Notice: template only, and only while still open --}}
+                                    @if($isNotice && $canManageMemoNotice && $st == 1)
+                                    <a href="javascript:void(0)" class="mnm-action edit-notice-btn" data-notice-id="{{ $memo->notice_id }}"
+                                        data-bs-toggle="modal" data-bs-target="#editNoticeModal" title="Edit Notice">
+                                        <i class="bi bi-pencil"></i><span>Edit</span>
+                                    </a>
                                     @endif
 
                                     {{-- Chats: open the conversation offcanvas --}}
@@ -1510,6 +1575,109 @@ $(function () {
                     toastr.error((xhr.responseJSON && xhr.responseJSON.message) || 'Failed to delete.');
                 }
             });
+        });
+    });
+});
+</script>
+@endpush
+
+@push('scripts')
+<script>
+/* ── Edit Notice (template only) ── */
+$(function () {
+    var editNoticeTemplateCache = [];
+
+    function renderEditNoticePreview(tpl, ctx) {
+        if (tpl && (tpl.content || tpl.director_name)) {
+            $('#editNoticeTplCourse').text(ctx.course_name || '');
+            $('#editNoticeTplType').text('SHOW CAUSE NOTICE');
+            $('#editNoticeTplDate').text(ctx.date_ ? new Date(ctx.date_).toLocaleDateString('en-GB') : '');
+            $('#editNoticeInfoDate').text(ctx.date_ ? new Date(ctx.date_).toLocaleDateString('en-GB') : '');
+            $('#editNoticeInfoTopic').text(ctx.topic_name || '');
+            $('#editNoticeInfoVenue').text(ctx.venue_name || '');
+            $('#editNoticeInfoSession').text(ctx.session_name || '');
+            $('#editNoticeTplContent').html(tpl.content || '');
+            $('#editNoticeTplDirector').text(tpl.director_name || '');
+            $('#editNoticeTplDesig').text(tpl.director_designation || '');
+            $('#editNoticePreviewNone').hide();
+            $('#editNoticePreviewWrap').show();
+        } else {
+            $('#editNoticePreviewWrap').hide();
+            $('#editNoticePreviewNone').show();
+        }
+    }
+
+    var editNoticeCtx = {};
+
+    $(document).on('click', '.edit-notice-btn', function () {
+        var noticeId = $(this).data('notice-id');
+        if (!noticeId) { return; }
+
+        $('#editNoticeForm')[0].reset();
+        $('#editNoticePk').val('');
+        $('#editNoticeTemplate').html('<option value="">Loading…</option>').prop('disabled', true);
+        $('#editNoticePreviewWrap, #editNoticePreviewNone').hide();
+        $('#editNoticeSaveBtn').prop('disabled', true);
+
+        $.get("{{ rtrim(route('memo.notice.management.editNotice', ''), '/') }}/" + noticeId)
+            .done(function (data) {
+                editNoticeCtx = data;
+                $('#editNoticePk').val(data.pk);
+
+                $.get("{{ route('memo.notice.management.getTemplatesByType') }}", { course_id: data.course_master_pk, type: 'Notice' })
+                    .done(function (res) {
+                        editNoticeTemplateCache = res || [];
+                        var $sel = $('#editNoticeTemplate').prop('disabled', false).empty()
+                            .append('<option value="">Select Template</option>');
+                        editNoticeTemplateCache.forEach(function (tpl) {
+                            $sel.append($('<option>').val(tpl.pk).text(tpl.title));
+                        });
+                        var preselect = data.memo_notice_template_pk || (editNoticeTemplateCache.length === 1 ? editNoticeTemplateCache[0].pk : '');
+                        if (preselect) { $sel.val(String(preselect)); }
+                        var chosen = editNoticeTemplateCache.find(function (t) { return String(t.pk) === String($sel.val()); });
+                        renderEditNoticePreview(chosen || null, editNoticeCtx);
+                        $('#editNoticeSaveBtn').prop('disabled', false);
+                    });
+            })
+            .fail(function (xhr) {
+                toastr.error((xhr.responseJSON && xhr.responseJSON.message) || 'Failed to load notice data.');
+            });
+    });
+
+    $('#editNoticeTemplate').on('change', function () {
+        var pk = String($(this).val() || '');
+        var tpl = editNoticeTemplateCache.find(function (t) { return String(t.pk) === pk; });
+        renderEditNoticePreview(tpl || null, editNoticeCtx);
+    });
+
+    $('#editNoticeForm').on('submit', function (e) {
+        e.preventDefault();
+        var id = $('#editNoticePk').val();
+        var templatePk = $('#editNoticeTemplate').val();
+        if (!templatePk) { toastr.error('Please select a template.'); return; }
+
+        var $btn = $('#editNoticeSaveBtn').prop('disabled', true);
+        $.ajax({
+            url: "{{ rtrim(route('memo.notice.management.update_notice_template', ''), '/') }}/" + id,
+            type: 'POST',
+            data: {
+                _token: "{{ csrf_token() }}",
+                memo_notice_template_pk: templatePk
+            },
+            success: function (res) {
+                if (res.success) {
+                    toastr.success(res.message || 'Notice updated successfully.');
+                    $('#editNoticeModal').modal('hide');
+                    setTimeout(function () { window.location.reload(); }, 600);
+                } else {
+                    toastr.error(res.message || 'Update failed.');
+                    $btn.prop('disabled', false);
+                }
+            },
+            error: function (xhr) {
+                toastr.error((xhr.responseJSON && xhr.responseJSON.message) || 'Update failed.');
+                $btn.prop('disabled', false);
+            }
         });
     });
 });
