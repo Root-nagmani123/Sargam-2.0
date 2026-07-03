@@ -30,10 +30,6 @@
             </li>
             <li class="nav-item" role="presentation">
                 <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill"
-                    data-status="0" aria-pressed="false">Draft</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill"
                     data-status="1" aria-pressed="false">Pending</button>
             </li>
             <li class="nav-item" role="presentation">
@@ -221,14 +217,11 @@ $(function () {
     });
 
     $('#resetFilters').on('click', function () {
+        // Reset the filters (leave type, time period, search) but stay on the
+        // currently selected status tab — don't force it back to "All".
         $('#filter_leave_type').val('');
         $period.val('').removeData('from').removeData('to');
         table.search('');
-        $('.programme-status-tabs .programme-status-pill')
-            .removeClass('active').attr('aria-pressed', 'false').removeAttr('aria-current');
-        $('.programme-status-tabs .programme-status-pill[data-status=""]')
-            .addClass('active').attr('aria-pressed', 'true').attr('aria-current', 'true');
-        currentStatus = '';
         table.ajax.reload();
     });
 

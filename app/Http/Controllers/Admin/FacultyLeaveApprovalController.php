@@ -174,8 +174,8 @@ class FacultyLeaveApprovalController extends Controller
                 $html .= '<a href="' . $viewUrl . '" class="approval-action-btn approval-action-btn--view" title="View" aria-label="View"><i class="bi bi-eye"></i></a>';
 
                 if ($this->approvalService->canUserActOnLeave($row)) {
-                    $html .= '<button type="button" class="approval-action-btn approval-action-btn--approve faculty-leave-approve" data-id="' . $row->pk . '" title="Approve" aria-label="Approve"><i class="bi bi-hand-thumbs-up-fill"></i></button>';
-                    $html .= '<button type="button" class="approval-action-btn approval-action-btn--reject faculty-leave-reject" data-id="' . $row->pk . '" title="Reject" aria-label="Reject"><i class="bi bi-hand-thumbs-down-fill"></i></button>';
+                    $html .= '<button type="button" class="approval-action-btn approval-action-btn--approve faculty-leave-approve" data-id="' . $row->pk . '" title="Approve" aria-label="Approve"><i class="bi bi-check-lg"></i></button>';
+                    $html .= '<button type="button" class="approval-action-btn approval-action-btn--reject faculty-leave-reject" data-id="' . $row->pk . '" title="Reject" aria-label="Reject"><i class="bi bi-x-lg"></i></button>';
                 }
 
                 $html .= '</div>';
