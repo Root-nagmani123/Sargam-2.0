@@ -1102,7 +1102,22 @@
     background: #fff;
     font-size: 0.82rem;
     max-height: 280px;
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+}
+/* Pasted rich-text template content can carry fixed-width inline styles, images,
+   or long unbroken strings/URLs — constrain them so they can't push the preview
+   box (or the modal around it) wider than its container. */
+.an-preview img,
+.an-preview svg,
+.an-preview table {
+    max-width: 100%;
+    height: auto;
+}
+.an-preview * {
+    max-width: 100%;
 }
 .an-preview-none { padding: 0.5rem; }
 
