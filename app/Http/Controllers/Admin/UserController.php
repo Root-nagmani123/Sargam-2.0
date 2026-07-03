@@ -1200,6 +1200,7 @@ class UserController extends Controller
         $filters = [
             'course_id' => (string) $request->input('course_id', ''),
             'role_filter' => (string) $request->input('role_filter', ''),
+            'faculty_filter' => (string) $request->input('faculty_filter', ''),
             'group_pk' => (string) $request->input('group_pk', ''),
             'duty_type' => (string) $request->input('duty_type', ''),
             'from_date' => (string) $request->input('from_date', ''),
@@ -1218,7 +1219,7 @@ class UserController extends Controller
      */
     public function studentListExport(Request $request, string $format)
     {
-        if (! in_array($format, ['csv', 'pdf'], true)) {
+        if (! in_array($format, ['csv', 'pdf', 'print'], true)) {
             abort(404);
         }
 
@@ -1232,6 +1233,17 @@ class UserController extends Controller
 
         $timestamp = now()->format('Ymd_His');
         $fileBase = "student_list_{$timestamp}";
+
+        // Browser-printable report: same clean layout as the PDF, rendered as
+        // HTML in a new tab that auto-opens the print dialog.
+        if ($format === 'print') {
+            return view('admin.dashboard.export.student_list_print', [
+                'headings' => $exportData['headings'],
+                'rows' => $exportData['rows'],
+                'generatedAt' => now()->format('d-m-Y H:i'),
+                'filterSummary' => $this->dashboardStudentListFilterSummary($request),
+            ]);
+        }
 
         if ($format === 'pdf') {
             ini_set('memory_limit', '512M');
@@ -1816,6 +1828,13 @@ class UserController extends Controller
                 }
             }
 
+            // Faculty filter (shown when ACC = CC/ACC): narrow to a specific CC/ACC faculty.
+            if ($facultyFilter !== null && $facultyFilter !== '') {
+                if ($rowFacilityId !== (string) $facultyFilter) {
+                    return false;
+                }
+            }
+
             if ($groupPk && $rowGroupPk !== (string) $groupPk) {
                 return false;
             }
@@ -2047,6 +2066,11 @@ class UserController extends Controller
                 $type = DB::table('course_group_type_master')->where('pk', $request->role_filter)->value('type_name');
                 $parts[] = 'Role: ' . ($type ?? $request->role_filter);
             }
+        }
+
+        if ($request->filled('faculty_filter')) {
+            $facultyName = DB::table('faculty_master')->where('pk', $request->faculty_filter)->value('full_name');
+            $parts[] = 'Faculty: ' . ($facultyName ?? $request->faculty_filter);
         }
 
         if ($request->filled('group_pk')) {

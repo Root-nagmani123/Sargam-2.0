@@ -176,40 +176,48 @@
     .student-list-page .programme-dt-table th:nth-child(3),
     .student-list-page .programme-dt-table td:nth-child(3) { min-width: 260px; }
 
-    /* Let DataTables scrollX be the only horizontal scroller. */
-    .student-list-page .sl-dt-scroll-host { overflow: visible; }
+    /* scrollX is OFF (it would clone the header into a second table and break
+       sticky freezing). The scroll host is the ONE horizontal scroller. */
+    .student-list-page .sl-dt-scroll-host { overflow-x: auto; overflow-y: visible; }
 
-    /* Custom pinned columns for DataTables scroll head/body. */
-    .student-list-page .dataTables_wrapper {
+    /* CRITICAL: the DataTables bootstrap5 CSS puts overflow:hidden on the
+       <table>, which turns the table into its own scroll container and anchors
+       the sticky cells to the (scrolling) table instead of the host — so they
+       never freeze. Force the table to overflow:visible so the sticky cells
+       anchor to .sl-dt-scroll-host. */
+    .student-list-page .programme-dt-table { overflow: visible !important; }
+
+    /* Freeze the first three columns via sticky positioning on the single table. */
+    .student-list-page .programme-dt-table {
         --sl-pin-left-0: 0px;
         --sl-pin-left-1: 90px;
         --sl-pin-left-2: 220px;
     }
-    .student-list-page .dataTables_scrollHead table thead th:nth-child(1),
-    .student-list-page .dataTables_scrollBody table tbody td:nth-child(1),
-    .student-list-page .dataTables_scrollHead table thead th:nth-child(2),
-    .student-list-page .dataTables_scrollBody table tbody td:nth-child(2),
-    .student-list-page .dataTables_scrollHead table thead th:nth-child(3),
-    .student-list-page .dataTables_scrollBody table tbody td:nth-child(3) {
+    .student-list-page .programme-dt-table thead th:nth-child(-n+3),
+    .student-list-page .programme-dt-table tbody td:nth-child(-n+3) {
         position: sticky;
+    }
+    /* Pinned cells need an opaque fill so scrolled columns don't bleed through. */
+    .student-list-page .programme-dt-table thead th:nth-child(-n+3) {
+        z-index: 6;
+        background: #f2f4f7 !important;
+    }
+    .student-list-page .programme-dt-table tbody td:nth-child(-n+3) {
+        z-index: 3;
         background: #fff;
     }
-    .student-list-page .dataTables_scrollHead table thead th:nth-child(1),
-    .student-list-page .dataTables_scrollBody table tbody td:nth-child(1) { left: var(--sl-pin-left-0); }
-    .student-list-page .dataTables_scrollHead table thead th:nth-child(2),
-    .student-list-page .dataTables_scrollBody table tbody td:nth-child(2) { left: var(--sl-pin-left-1); }
-    .student-list-page .dataTables_scrollHead table thead th:nth-child(3),
-    .student-list-page .dataTables_scrollBody table tbody td:nth-child(3) { left: var(--sl-pin-left-2); }
-    .student-list-page .dataTables_scrollHead table thead th:nth-child(1),
-    .student-list-page .dataTables_scrollHead table thead th:nth-child(2),
-    .student-list-page .dataTables_scrollHead table thead th:nth-child(3) { z-index: 8; }
-    .student-list-page .dataTables_scrollBody table tbody td:nth-child(1),
-    .student-list-page .dataTables_scrollBody table tbody td:nth-child(2),
-    .student-list-page .dataTables_scrollBody table tbody td:nth-child(3) { z-index: 4; }
-    .student-list-page .dataTables_scrollHead table thead th:nth-child(3),
-    .student-list-page .dataTables_scrollBody table tbody td:nth-child(3) {
-        box-shadow: 1px 0 0 #e5e7eb;
+    .student-list-page .programme-dt-table tbody tr:hover td:nth-child(-n+3) {
+        background: #f7fafc;
     }
+    .student-list-page .programme-dt-table th:nth-child(1),
+    .student-list-page .programme-dt-table td:nth-child(1) { left: var(--sl-pin-left-0); }
+    .student-list-page .programme-dt-table th:nth-child(2),
+    .student-list-page .programme-dt-table td:nth-child(2) { left: var(--sl-pin-left-1); }
+    .student-list-page .programme-dt-table th:nth-child(3),
+    .student-list-page .programme-dt-table td:nth-child(3) { left: var(--sl-pin-left-2); }
+    /* Divider on the last frozen column marks the freeze edge while scrolling. */
+    .student-list-page .programme-dt-table th:nth-child(3),
+    .student-list-page .programme-dt-table td:nth-child(3) { box-shadow: 1px 0 0 #e5e7eb; }
 
     /* ── Collapsible search: full field when there's room, icon-only otherwise ── */
     .student-list-page .sl-search-wrap { position: relative; display: inline-flex; align-items: center; }
@@ -575,16 +583,17 @@
             order: [[0, 'asc']],
             language: { emptyTable: 'Data not found.' },
             responsive: false,
-            scrollX: true,
-            scrollCollapse: true,
             autoWidth: false,
         };
 
+        // Measure the actual widths of the three frozen columns and feed them
+        // back as the sticky `left` offsets so each pinned column butts up
+        // against the previous one regardless of content width.
         function relayoutPinnedColumns(dt) {
             if (!dt) { return; }
-            const $container = $(dt.table().container());
-            if (!$container.length) { return; }
-            const $headCells = $container.find('.dataTables_scrollHead table thead th');
+            const tableNode = dt.table().node();
+            if (!tableNode) { return; }
+            const $headCells = $(tableNode).find('thead th');
             if (!$headCells.length) { return; }
 
             const fallbackWidths = [90, 130, 260];
@@ -592,7 +601,7 @@
             LOCKED_COLUMNS.forEach(function(colIdx, i) {
                 const $cell = $headCells.eq(colIdx);
                 const width = Math.max(0, Math.round(($cell.outerWidth() || fallbackWidths[i] || 100)));
-                $container[0].style.setProperty('--sl-pin-left-' + i, runningLeft + 'px');
+                tableNode.style.setProperty('--sl-pin-left-' + i, runningLeft + 'px');
                 runningLeft += width;
             });
         }
@@ -718,7 +727,9 @@
             applyFilter({ from_date: '', to_date: '' });
         });
 
-        $('#studentListPrintBtn').on('click', function() { window.print(); });
+        // Print opens the clean report (same data as the PDF export) in a new
+        // tab that auto-triggers the browser print dialog — not the whole page.
+        $('#studentListPrintBtn').on('click', function() { window.open(buildExportUrl('print'), '_blank'); });
 
         function buildExportUrl(format) {
             const params = new URLSearchParams(window.location.search);
@@ -727,7 +738,9 @@
             if (search) params.set('search', search);
             const base = format === 'csv'
                 ? "{{ route('admin.dashboard.students.export', ['format' => 'csv']) }}"
-                : "{{ route('admin.dashboard.students.export', ['format' => 'pdf']) }}";
+                : format === 'print'
+                    ? "{{ route('admin.dashboard.students.export', ['format' => 'print']) }}"
+                    : "{{ route('admin.dashboard.students.export', ['format' => 'pdf']) }}";
             const q = params.toString();
             return q ? `${base}?${q}` : base;
         }
