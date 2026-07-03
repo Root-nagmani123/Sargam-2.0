@@ -3,6 +3,7 @@
 namespace App\Services\SidebarMenu;
 
 use App\Models\SidebarMenu\Menu;
+use App\Models\SidebarMenu\MenuGroup;
 use App\Models\SidebarMenu\SidebarCategory;
 use Illuminate\Support\Facades\Cache;
 
@@ -451,6 +452,161 @@ class SidebarNavResolver
         }
 
         return $slug ? $this->resultForCategorySlug($slug) : null;
+    }
+
+    /**
+     * Build the breadcrumb trail from the CURRENT request's actual menu
+     * placement in the DB (sidebar_categories → menu_groups → menus, with
+     * menus.parent_id nesting). No hardcoded section names — relocating a menu
+     * in the Menu manager changes its breadcrumb automatically.
+     *
+     * Shape:  Home / Category / Group / [parent menus …] / MenuName
+     * Levels that don't exist for a page are simply skipped. Home is always
+     * first. Returns a list of ['label' => string, 'url' => string|null];
+     * the caller renders the last item as the active (non-linked) crumb.
+     *
+     * @return list<array{label: string, url: string|null}>
+     */
+    public function breadcrumb(?string $path = null, ?string $routeName = null): array
+    {
+        $result = $this->resolve($path, $routeName);
+
+        // Home is the permanent root.
+        $trail = [[
+            'label' => 'Home',
+            'url'   => $this->safeRoute('admin.dashboard'),
+        ]];
+
+        // Category (the header tab) — skip the Home category, since Home is
+        // already the root and we don't want "Home / Home".
+        if (! empty($result['category_id']) && ($result['category_slug'] ?? null) !== 'home') {
+            $category = SidebarCategory::find($result['category_id']);
+            if ($category && filled($category->name)) {
+                $trail[] = ['label' => $category->name, 'url' => null];
+            }
+        }
+
+        // Group (the mid-level sidebar heading), when the menu sits inside one.
+        if (! empty($result['group_id'])) {
+            $group = MenuGroup::find($result['group_id']);
+            if ($group && filled($group->name)) {
+                $trail[] = ['label' => $group->name, 'url' => null];
+            }
+        }
+
+        // The menu itself plus every ancestor menu (parent_id chain), ordered
+        // top-level → … → active. Ancestors link to their own page; the active
+        // menu is left without a URL so it renders as the current crumb.
+        if (! empty($result['menu_id'])) {
+            $menu = Menu::find($result['menu_id']);
+            if ($menu) {
+                foreach ($this->menuAncestryChain($menu) as $node) {
+                    $trail[] = [
+                        'label' => $node->name,
+                        'url'   => $node->id === $menu->id ? null : $this->menuUrl($node),
+                    ];
+                }
+            }
+        }
+
+        return $this->dedupeTrail($trail);
+    }
+
+    /**
+     * Menus from the top-level ancestor down to $menu (root-first).
+     *
+     * Edge cases: a `visited` guard breaks circular parent references, and a
+     * missing parent stops the walk instead of throwing — so a broken row can
+     * never hang or crash the breadcrumb.
+     *
+     * @return list<Menu>
+     */
+    protected function menuAncestryChain(Menu $menu): array
+    {
+        $chain = [];
+        $visited = [];
+        $current = $menu;
+        $guard = 0;
+
+        while ($current && $guard++ < 20) {
+            if (isset($visited[$current->id])) {
+                break; // circular reference guard
+            }
+            $visited[$current->id] = true;
+
+            array_unshift($chain, $current); // prepend keeps the list root-first
+
+            if (! $current->parent_id) {
+                break; // reached the top-level menu
+            }
+
+            $current->loadMissing('parent');
+            if (! $current->parent) {
+                break; // parent_id set but the parent row is missing/inactive
+            }
+
+            $current = $current->parent;
+        }
+
+        return $chain;
+    }
+
+    /**
+     * Turn a stored menu route (URL path, named route, or absolute URL) into a
+     * clickable href. Returns null for placeholder/blank routes ("#", "").
+     */
+    protected function menuUrl(Menu $menu): ?string
+    {
+        $route = trim((string) $menu->route);
+        if ($route === '' || $route === '#') {
+            return null;
+        }
+
+        if (preg_match('#^https?://#i', $route)) {
+            return $route;
+        }
+
+        // Named route: contains a dot and no slash (e.g. "roles.index").
+        if (str_contains($route, '.') && ! str_contains($route, '/')) {
+            return $this->safeRoute($route);
+        }
+
+        return url($route);
+    }
+
+    /**
+     * Drop consecutive duplicate labels (case-insensitive) so a group and its
+     * top-level menu sharing a name don't produce "Setup / Setup".
+     *
+     * @param  list<array{label: string, url: string|null}>  $trail
+     * @return list<array{label: string, url: string|null}>
+     */
+    protected function dedupeTrail(array $trail): array
+    {
+        $out = [];
+        foreach ($trail as $item) {
+            if (! filled($item['label'])) {
+                continue;
+            }
+            $prev = end($out);
+            if ($prev && strcasecmp((string) $prev['label'], (string) $item['label']) === 0) {
+                // Prefer the later row's URL (the deeper/active one) on collapse.
+                $out[array_key_last($out)]['url'] = $item['url'] ?? $prev['url'];
+                continue;
+            }
+            $out[] = $item;
+        }
+
+        return array_values($out);
+    }
+
+    protected function safeRoute(string $name): ?string
+    {
+        try {
+            return route($name);
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     public static function clearCache(): void

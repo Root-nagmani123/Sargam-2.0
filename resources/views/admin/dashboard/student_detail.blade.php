@@ -1,110 +1,149 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Student Details - Sargam | Lal Bahadur')
+@section('title', 'Student Details')
 
 @section('content')
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+@endpush
 <style>
-    .student-info-table th {
-        color: #1a1a1a !important;
+    .student-detail-page .sd-info-label {
+        font-size: 0.75rem;
         font-weight: 600;
+        letter-spacing: 0.02em;
+        color: #667085;
+        text-transform: uppercase;
     }
-    .card table th {
-        color: #1a1a1a !important;
+    .student-detail-page .sd-info-value {
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: #101828;
+    }
+    .student-detail-page .sd-stat {
+        border: 1px solid #eef2f6;
+        border-radius: 12px;
+        background: #fff;
+        cursor: pointer;
+        transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+    }
+    .student-detail-page .sd-stat:hover {
+        box-shadow: 0 6px 16px rgba(16, 24, 40, 0.08);
+        transform: translateY(-2px);
+        border-color: #e4e7ec;
+    }
+    .student-detail-page .sd-stat-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.15rem;
+        flex-shrink: 0;
+    }
+    .student-detail-page .sd-stat-value { font-size: 1.6rem; font-weight: 700; line-height: 1; color: #101828; }
+    .student-detail-page .sd-stat-label { font-size: 0.8rem; color: #667085; }
+    .student-detail-page .sd-section .card-header {
+        background: #fff;
+        border-bottom: 1px solid #eef2f6;
+    }
+    .student-detail-page .sd-section .card-title {
+        font-size: 1rem;
         font-weight: 600;
+        color: #101828;
+    }
+    .student-detail-page .sd-count-pill {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #475467;
+        background: #f2f4f7;
+        border-radius: 999px;
+        padding: 0.1rem 0.55rem;
     }
 </style>
-<div class="container-fluid">
-    <x-breadcrum title="Student Details"></x-breadcrum>
+<div class="container-fluid student-detail-page">
+    <x-breadcrum title="Student Details" :showBack="true" />
     <x-session_message />
 
-    <!-- Student Basic Information -->
-    <div class="card mb-4" >
-        <div class="card-header bg-primary text-white py-2">
-            <h6 class="mb-0"><i class="fas fa-user me-2"></i>Student Information</h6>
+    @php
+        // When a count is clicked on the student list, only the relevant section is shown.
+        $validSections = ['medicalExceptionsSection', 'ptExemptionsSection', 'stationedLeavesSection', 'dutiesSection', 'noticesSection', 'memosSection'];
+        $focusSection = request('section');
+        if (!in_array($focusSection, $validSections, true)) {
+            $focusSection = null;
+        }
+    @endphp
+
+    @if($focusSection)
+        <div class="alert alert-light border d-flex align-items-center justify-content-between rounded-3 mb-4">
+            <span class="text-secondary"><i class="bi bi-funnel me-2"></i>Showing a single section only.</span>
+            <a href="{{ route('admin.dashboard.students.detail', request()->route('id')) }}" class="btn btn-sm btn-outline-primary rounded-2">
+                <i class="bi bi-grid me-1"></i>View full details
+            </a>
         </div>
-        <div class="card-body py-3">
-            <div class="row">
-                <div class="col-md-12">
-                    <table class="table table-borderless student-info-table mb-0">
-                        <tr>
-                            <th width="15%" class="py-1">Student Name:</th>
-                            <td class="py-1">{{ $student->display_name ?? ($student->first_name ?? '') . ' ' . ($student->last_name ?? '') }}</td>
-                            <th width="15%" class="py-1">OT Code:</th>
-                            <td class="py-1">{{ $student->generated_OT_code ?? 'N/A' }}</td>
-                        </tr>
-                        <tr>
-                            <th class="py-1">Email:</th>
-                            <td class="py-1">{{ $student->email ?? 'N/A' }}</td>
-                            <th class="py-1">Service:</th>
-                            <td class="py-1">{{ $student->service->service_name ?? 'N/A' }}</td>
-                        </tr>
-                    </table>
+    @endif
+
+    <!-- Student Basic Information -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-body p-3 p-md-4">
+            <div class="row g-3">
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="sd-info-label">Student Name</div>
+                    <div class="sd-info-value">{{ $student->display_name ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')) }}</div>
+                </div>
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="sd-info-label">OT Code</div>
+                    <div class="sd-info-value">{{ $student->generated_OT_code ?? 'N/A' }}</div>
+                </div>
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="sd-info-label">Email</div>
+                    <div class="sd-info-value">{{ $student->email ?? 'N/A' }}</div>
+                </div>
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="sd-info-label">Service</div>
+                    <div class="sd-info-value">{{ $student->service->service_name ?? 'N/A' }}</div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Summary Cards -->
-    <div class="row mb-4">
-        <div class="col-lg-2 col-md-4 col-6 mb-3">
-            <div class="card text-center h-100" style="border-left: 4px solid #dc3545; cursor: pointer;" onclick="scrollToSection('medicalExceptionsSection')">
-                <div class="card-body">
-                    <h3 class="text-danger">{{ $medicalExemptions->count() }}</h3>
-                    <p class="mb-0 small">Medical Exceptions</p>
+    @unless($focusSection)
+    <div class="row g-3 mb-4">
+        @php
+            $sdStats = [
+                ['medicalExceptionsSection', $medicalExemptions->count(), 'Medical Exceptions', 'bi-heart-pulse-fill', '#b42318', '#fef3f2'],
+                ['ptExemptionsSection', $ptExemptions->count(), 'PT Exemptions', 'bi-person-walking', '#027a48', '#ecfdf3'],
+                ['stationedLeavesSection', number_format((float) $stationedLeaves->sum('total_days'), 0), 'Station Leave', 'bi-geo-alt-fill', '#5925dc', '#f4f3ff'],
+                ['dutiesSection', $duties->count(), 'Duties Assigned', 'bi-list-task', '#b54708', '#fffaeb'],
+                ['noticesSection', $notices->count(), 'Notices Received', 'bi-bell-fill', '#026aa2', '#f0f9ff'],
+                ['memosSection', $memos->count(), 'Memos Issued', 'bi-file-earmark-text-fill', '#475467', '#f2f4f7'],
+            ];
+        @endphp
+        @foreach($sdStats as [$sectionId, $count, $label, $icon, $color, $bg])
+            <div class="col-lg-2 col-md-4 col-6">
+                <div class="sd-stat h-100 p-3 d-flex align-items-center gap-3" onclick="scrollToSection('{{ $sectionId }}')">
+                    <span class="sd-stat-icon" style="background: {{ $bg }}; color: {{ $color }};"><i class="bi {{ $icon }}"></i></span>
+                    <div>
+                        <div class="sd-stat-value">{{ $count }}</div>
+                        <div class="sd-stat-label">{{ $label }}</div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-lg-2 col-md-4 col-6 mb-3">
-            <div class="card text-center h-100" style="border-left: 4px solid #28a745; cursor: pointer;" onclick="scrollToSection('ptExemptionsSection')">
-                <div class="card-body">
-                    <h3 class="text-success">{{ $ptExemptions->count() }}</h3>
-                    <p class="mb-0 small">PT Exemptions</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-2 col-md-4 col-6 mb-3">
-            <div class="card text-center h-100" style="border-left: 4px solid #6610f2; cursor: pointer;" onclick="scrollToSection('stationedLeavesSection')">
-                <div class="card-body">
-                    <h3 style="color: #6610f2;">{{ $stationedLeaves->count() }}</h3>
-                    <p class="mb-0 small">Station Leave</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-2 col-md-4 col-6 mb-3">
-            <div class="card text-center h-100" style="border-left: 4px solid #ffc107; cursor: pointer;" onclick="scrollToSection('dutiesSection')">
-                <div class="card-body">
-                    <h3 class="text-warning">{{ $duties->count() }}</h3>
-                    <p class="mb-0 small">Duties Assigned</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-2 col-md-4 col-6 mb-3">
-            <div class="card text-center h-100" style="border-left: 4px solid #17a2b8; cursor: pointer;" onclick="scrollToSection('noticesSection')">
-                <div class="card-body">
-                    <h3 class="text-info">{{ $notices->count() }}</h3>
-                    <p class="mb-0 small">Notices Received</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-2 col-md-4 col-6 mb-3">
-            <div class="card text-center h-100" style="border-left: 4px solid #6c757d; cursor: pointer;" onclick="scrollToSection('memosSection')">
-                <div class="card-body">
-                    <h3 class="text-secondary">{{ $memos->count() }}</h3>
-                    <p class="mb-0 small">Memos Issued</p>
-                </div>
-            </div>
-        </div>
+        @endforeach
     </div>
+    @endunless
 
     <!-- Medical Exceptions -->
-    <div class="card mb-4" id="medicalExceptionsSection">
+    @if(!$focusSection || $focusSection === 'medicalExceptionsSection')
+    <div class="card border-0 shadow-sm rounded-3 mb-4 sd-section" id="medicalExceptionsSection">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="fas fa-heartbeat me-2"></i>Medical Exceptions ({{ $medicalExemptions->count() }})</h5>
             <div>
-                <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('medicalExemptionsTable', 'Medical_Exceptions')">
+                <button type="button" class="btn btn-sm btn-outline-success rounded-2" onclick="exportTableToExcel('medicalExemptionsTable', 'Medical_Exceptions')">
                     <i class="fas fa-file-excel me-1"></i>Export Excel
                 </button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="printTable('medicalExemptionsTable')">
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-2" onclick="printTable('medicalExemptionsTable')">
                     <i class="fas fa-print me-1"></i>Print
                 </button>
             </div>
@@ -112,7 +151,7 @@
         <div class="card-body">
             @if($medicalExemptions->isNotEmpty())
                 <div class="table-responsive">
-                    <table class="table table-hover" id="medicalExemptionsTable">
+                    <table class="table table-hover programme-dt-table align-middle mb-0" id="medicalExemptionsTable">
                         <thead>
                             <tr>
                                 <th>Course</th>
@@ -155,15 +194,18 @@
         </div>
     </div>
 
+    @endif
+
     <!-- PT Exemptions -->
-    <div class="card mb-4" id="ptExemptionsSection">
+    @if(!$focusSection || $focusSection === 'ptExemptionsSection')
+    <div class="card border-0 shadow-sm rounded-3 mb-4 sd-section" id="ptExemptionsSection">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="fas fa-running me-2"></i>PT Exemptions ({{ $ptExemptions->count() }})</h5>
             <div>
-                <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('ptExemptionsTable', 'PT_Exemptions')">
+                <button type="button" class="btn btn-sm btn-outline-success rounded-2" onclick="exportTableToExcel('ptExemptionsTable', 'PT_Exemptions')">
                     <i class="fas fa-file-excel me-1"></i>Export Excel
                 </button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="printTable('ptExemptionsTable')">
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-2" onclick="printTable('ptExemptionsTable')">
                     <i class="fas fa-print me-1"></i>Print
                 </button>
             </div>
@@ -171,7 +213,7 @@
         <div class="card-body">
             @if($ptExemptions->isNotEmpty())
                 <div class="table-responsive">
-                    <table class="table table-hover" id="ptExemptionsTable">
+                    <table class="table table-hover programme-dt-table align-middle mb-0" id="ptExemptionsTable">
                         <thead>
                             <tr>
                                 <th>Course</th>
@@ -219,15 +261,18 @@
         </div>
     </div>
 
+    @endif
+
     <!-- Station Leave -->
-    <div class="card mb-4" id="stationedLeavesSection">
+    @if(!$focusSection || $focusSection === 'stationedLeavesSection')
+    <div class="card border-0 shadow-sm rounded-3 mb-4 sd-section" id="stationedLeavesSection">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Station Leave ({{ $stationedLeaves->count() }})</h5>
+            <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Station Leave ({{ number_format((float) $stationedLeaves->sum('total_days'), 0) }})</h5>
             <div>
-                <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('stationedLeavesTable', 'Station_Leave')">
+                <button type="button" class="btn btn-sm btn-outline-success rounded-2" onclick="exportTableToExcel('stationedLeavesTable', 'Station_Leave')">
                     <i class="fas fa-file-excel me-1"></i>Export Excel
                 </button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="printTable('stationedLeavesTable')">
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-2" onclick="printTable('stationedLeavesTable')">
                     <i class="fas fa-print me-1"></i>Print
                 </button>
             </div>
@@ -235,7 +280,7 @@
         <div class="card-body">
             @if($stationedLeaves->isNotEmpty())
                 <div class="table-responsive">
-                    <table class="table table-hover" id="stationedLeavesTable">
+                    <table class="table table-hover programme-dt-table align-middle mb-0" id="stationedLeavesTable">
                         <thead>
                             <tr>
                                 <th>Course</th>
@@ -285,15 +330,18 @@
         </div>
     </div>
 
+    @endif
+
     <!-- Duties Assigned -->
-    <div class="card mb-4" id="dutiesSection">
+    @if(!$focusSection || $focusSection === 'dutiesSection')
+    <div class="card border-0 shadow-sm rounded-3 mb-4 sd-section" id="dutiesSection">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Duties Assigned ({{ $duties->count() }})</h5>
             <div>
-                <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('dutiesTable', 'Duties_Assigned')">
+                <button type="button" class="btn btn-sm btn-outline-success rounded-2" onclick="exportTableToExcel('dutiesTable', 'Duties_Assigned')">
                     <i class="fas fa-file-excel me-1"></i>Export Excel
                 </button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="printTable('dutiesTable')">
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-2" onclick="printTable('dutiesTable')">
                     <i class="fas fa-print me-1"></i>Print
                 </button>
             </div>
@@ -301,7 +349,7 @@
         <div class="card-body">
             @if($duties->isNotEmpty())
                 <div class="table-responsive">
-                    <table class="table table-hover" id="dutiesTable">
+                    <table class="table table-hover programme-dt-table align-middle mb-0" id="dutiesTable">
                         <thead>
                             <tr>
                                 <th>Course</th>
@@ -338,15 +386,18 @@
         </div>
     </div>
 
+    @endif
+
     <!-- Notices Received -->
-    <div class="card mb-4" id="noticesSection">
+    @if(!$focusSection || $focusSection === 'noticesSection')
+    <div class="card border-0 shadow-sm rounded-3 mb-4 sd-section" id="noticesSection">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Notices Received ({{ $notices->count() }})</h5>
             <div>
-                <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('noticesTable', 'Notices_Received')">
+                <button type="button" class="btn btn-sm btn-outline-success rounded-2" onclick="exportTableToExcel('noticesTable', 'Notices_Received')">
                     <i class="fas fa-file-excel me-1"></i>Export Excel
                 </button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="printTable('noticesTable')">
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-2" onclick="printTable('noticesTable')">
                     <i class="fas fa-print me-1"></i>Print
                 </button>
             </div>
@@ -354,7 +405,7 @@
         <div class="card-body">
             @if($notices->isNotEmpty())
                 <div class="table-responsive">
-                    <table class="table table-hover" id="noticesTable">
+                    <table class="table table-hover programme-dt-table align-middle mb-0" id="noticesTable">
                         <thead>
                             <tr>
                                 <th>Course</th>
@@ -389,15 +440,18 @@
         </div>
     </div>
 
+    @endif
+
     <!-- Memos Issued -->
-    <div class="card mb-4" id="memosSection">
+    @if(!$focusSection || $focusSection === 'memosSection')
+    <div class="card border-0 shadow-sm rounded-3 mb-4 sd-section" id="memosSection">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Memos Issued ({{ $memos->count() }})</h5>
             <div>
-                <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('memosTable', 'Memos_Issued')">
+                <button type="button" class="btn btn-sm btn-outline-success rounded-2" onclick="exportTableToExcel('memosTable', 'Memos_Issued')">
                     <i class="fas fa-file-excel me-1"></i>Export Excel
                 </button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="printTable('memosTable')">
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-2" onclick="printTable('memosTable')">
                     <i class="fas fa-print me-1"></i>Print
                 </button>
             </div>
@@ -405,7 +459,7 @@
         <div class="card-body">
             @if($memos->isNotEmpty())
                 <div class="table-responsive">
-                    <table class="table table-hover" id="memosTable">
+                    <table class="table table-hover programme-dt-table align-middle mb-0" id="memosTable">
                         <thead>
                             <tr>
                                 <th>Course</th>
@@ -444,16 +498,18 @@
         </div>
     </div>
 
+    @endif
+
     <!-- Attendance Summary -->
-    @if($attendanceSummary && $attendanceSummary->total_sessions > 0)
-    <div class="card mb-4">
+    @if(!$focusSection && $attendanceSummary && $attendanceSummary->total_sessions > 0)
+    <div class="card border-0 shadow-sm rounded-3 mb-4 sd-section">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Attendance Summary</h5>
             <div>
-                <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('attendanceSummaryTable', 'Attendance_Summary')">
+                <button type="button" class="btn btn-sm btn-outline-success rounded-2" onclick="exportTableToExcel('attendanceSummaryTable', 'Attendance_Summary')">
                     <i class="fas fa-file-excel me-1"></i>Export Excel
                 </button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="printTable('attendanceSummaryTable')">
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-2" onclick="printTable('attendanceSummaryTable')">
                     <i class="fas fa-print me-1"></i>Print
                 </button>
             </div>
@@ -536,13 +592,6 @@
         </div>
     </div>
     @endif
-
-    <!-- Back Button -->
-    <div class="mb-4">
-        <a href="{{ route('admin.dashboard.students') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-2"></i>Back to Student List
-        </a>
-    </div>
 </div>
 
 @push('scripts')
@@ -620,14 +669,22 @@
             return;
         }
 
+        // Get section title from card header h5
+        const card = table.closest('.card');
+        const sectionTitle = card ? (card.querySelector('.card-header h5')?.textContent?.trim() || fileName) : fileName;
+
+        // Student details
+        const studentFullName = '{{ $student->display_name ?? trim(($student->first_name ?? "") . " " . ($student->last_name ?? "")) }}';
+        const otCode = '{{ $student->generated_OT_code ?? "N/A" }}';
+
         // Clone the table
         const clonedTable = table.cloneNode(true);
-        
+
         // Remove badges and convert to plain text
         clonedTable.querySelectorAll('.badge').forEach(badge => {
             badge.parentElement.textContent = badge.textContent.trim();
         });
-        
+
         // Convert document links to text for Excel export
         clonedTable.querySelectorAll('a[target="_blank"]').forEach(link => {
             if (link.textContent.includes('View')) {
@@ -635,14 +692,42 @@
             }
         });
 
-        // Create workbook and worksheet
-        const wb = XLSX.utils.table_to_book(clonedTable, {sheet: fileName});
-        
+        // Count columns for spanning header rows
+        const colCount = clonedTable.querySelectorAll('thead th').length || clonedTable.querySelectorAll('tr:first-child td').length || 1;
+
+        // Build a wrapper table with header rows prepended
+        const wrapperTable = document.createElement('table');
+
+        const makeHeaderRow = (text) => {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = colCount;
+            td.textContent = text;
+            tr.appendChild(td);
+            return tr;
+        };
+
+        wrapperTable.appendChild(makeHeaderRow(sectionTitle));
+        wrapperTable.appendChild(makeHeaderRow(`Student: ${studentFullName} | OT Code: ${otCode}`));
+
+        // Empty spacer row
+        const spacer = document.createElement('tr');
+        spacer.appendChild(document.createElement('td'));
+        wrapperTable.appendChild(spacer);
+
+        // Append all data rows from cloned table
+        clonedTable.querySelectorAll('tr').forEach(row => {
+            wrapperTable.appendChild(row.cloneNode(true));
+        });
+
+        // Create workbook from wrapper table
+        const wb = XLSX.utils.table_to_book(wrapperTable, {sheet: fileName});
+
         // Generate filename with student name and current date
-        const studentName = '{{ $student->display_name ?? ($student->first_name ?? "") . " " . ($student->last_name ?? "") }}'.replace(/[^a-z0-9]/gi, '_');
+        const studentName = studentFullName.replace(/[^a-z0-9]/gi, '_');
         const date = new Date().toISOString().split('T')[0];
         const finalFileName = `${studentName}_${fileName}_${date}.xlsx`;
-        
+
         // Save file
         XLSX.writeFile(wb, finalFileName);
     }
