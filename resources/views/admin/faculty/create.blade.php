@@ -1,4 +1,4 @@
-@extends('admin.layouts.master')
+﻿@extends('admin.layouts.master')
 
 @section('title', 'Faculty')
 
@@ -60,10 +60,7 @@ input.is-invalid {
     <x-breadcrum title="Faculty" />
     <x-session_message />
     <!-- start Vertical Steps Example -->
-    {{-- <div class="card" id="facultyForm" data-store-url="{{ route('faculty.store') }}" data-index-url="{{ route('faculty.index') }}">
-        <div class="card-body"> --}}
-
-            <form class="facultyForm">
+        <form class="facultyForm">
 			  @csrf
 			  <input type="hidden" name="faculty_id" id="faculty_id" value="">
                 <div class="card">
@@ -90,8 +87,8 @@ input.is-invalid {
                             <div class="mb-3">
                             <x-select
                             name="appellation"
-                            label="Appellation :"
-                            placeholder="Select Appellation"
+                            label="Salutation (Title) :"
+                            placeholder="Select Salutation"
                             formLabelClass="form-label"
                             :options="$appellationMasterList"
                              labelRequired="true"
@@ -110,22 +107,7 @@ input.is-invalid {
                                         />
                                 </div>
                             </div>
-                            <!--<div class="col-md-6">
-                                <div class="mb-3">
-                                    <x-input
-                                        name="firstName"
-                                        label="First Name :"
-                                        placeholder="First Name"
-                                        formLabelClass="form-label"
-                                        required="true"
-                                        value="{{ $hostelFloorMapping->hostel_floor_master_pk ?? '' }}"
-                                        labelRequired="true"
-                                        formInputClass="only-letters"
-                                        />
-                                </div>
-                            </div>-->
-
-							<div class="col-md-6">
+                            <div class="col-md-6">
 							<div class="mb-3">
 								<x-input
 									name="firstName"
@@ -143,8 +125,6 @@ input.is-invalid {
 							</div>
 						</div>
 
-
-
                             <div class="col-md-6">
                                 <div class="mb-3">
 
@@ -155,13 +135,10 @@ input.is-invalid {
                                         formLabelClass="form-label"
                                         formInputClass="only-letters"
                                         />
-
-
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-
                                     <x-input
                                         name="lastname"
                                         label="Last Name :"
@@ -171,12 +148,11 @@ input.is-invalid {
                                         labelRequired="true"
                                         formInputClass="only-letters"
                                         />
-
                                 </div>
                             </div>
+
                             <div class="col-md-3">
                                 <div class="mb-3">
-
                                     <x-input
                                         name="fullname"
                                         label="Full Name :"
@@ -273,8 +249,8 @@ input.is-invalid {
                                 <div class="mb-3">
                                     <x-input
                                         name="current_department"
-                                        label="Current Department :"
-                                        placeholder="Current Department"
+                                        label="Organisation :"
+                                        placeholder="Current Organisation"
                                         formLabelClass="form-label"
 
                                     />
@@ -298,16 +274,7 @@ input.is-invalid {
                             <div class="col-md-6">
                                 <div class="mb-3">
 
-                                    <!--<x-select
-                                        name="state"
-                                        label="State :"
-                                        placeholder="State"
-                                        formLabelClass="form-label"
-                                        {{-- :options="$state" --}}
-                                        required="true"
-                                        labelRequired="true"
-                                        />-->
-						    <x-select
+            			    <x-select
 							name="state"
 							label="State :"
 							placeholder="State"
@@ -321,16 +288,7 @@ input.is-invalid {
                             <div class="col-md-6">
                                 <div class="mb-3">
 
-                                    <!--<x-select
-                                        name="district"
-                                        label="District :"
-                                        placeholder="District"
-                                        formLabelClass="form-label"
-                                        {{-- :options="$district" --}}
-                                        required="true"
-                                        />-->
-
-                                        <x-select
+                                       <x-select
                                         name="district"
                                         label="District :"
                                         placeholder="District"
@@ -344,18 +302,7 @@ input.is-invalid {
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-
-                                    <!--<x-select
-                                        name="city"
-                                        label="City :"
-                                        placeholder="City"
-                                        formLabelClass="form-label"
-                                        {{-- :options="$city" --}}
-                                        required="true"
-                                        labelRequired="true"
-                                        />-->
-
-                                        <x-select
+                                      <x-select
                                         name="city"
                                         label="City :"
                                         placeholder="City"
@@ -422,7 +369,17 @@ input.is-invalid {
                                     placeholder="Alternate Email :"
                                     formLabelClass="form-label"
                                     />
-
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <x-select
+                                        name="service_master_pk"
+                                        label="Service :"
+                                        placeholder="Select Service"
+                                        formLabelClass="form-label"
+                                        :options="$serviceMasterList"
+                                    />
+                                </div>
                             </div>
                             <div class="col-md-6 mt-3">
                                 <x-input
@@ -434,7 +391,6 @@ input.is-invalid {
                                     formLabelClass="form-label"
                                     accept="image/jpeg,image/png"
                                     helperSmallText="Please upload a recent passport-sized photo (Max 2 MB, JPG or PNG only)"
-
                                 />
 
                                 <!-- File Validation Message -->
@@ -448,11 +404,10 @@ input.is-invalid {
                                 <div class="mt-2">
                                     <img id="photoPreview" src="#" alt="Photo Preview" class="img-thumbnail d-none" style="max-width: 200px;">
                                 </div>
-								 <div class="existing-photo"></div>
+                                <div class="existing-photo"></div>
                             </div>
 
                             <div class="col-md-6 mt-3">
-
                                 <x-input
                                     type="file"
                                     name="document"
@@ -462,15 +417,15 @@ input.is-invalid {
                                     helperSmallText="CV or any other supporting document"
                                     />
 
-                                       <!-- PDF Preview -->
-                           <div class="d-flex align-items-start mt-2">
-                            <iframe id="documentPreviewPDF" class="d-none border"
-                                    style="width: 100%; max-width: 200px; height: 200px; border-radius: 6px;"></iframe>
-                        </div>
+                                <!-- PDF Preview -->
+                                <div class="d-flex align-items-start mt-2">
+                                    <iframe id="documentPreviewPDF" class="d-none border"
+                                            style="width: 100%; max-width: 200px; height: 200px; border-radius: 6px;"></iframe>
+                                </div>
 
-                    <!-- Existing Document Link -->
-                            <div class="existing-document mt-2"></div>
-                        </div>
+                                <!-- Existing Document Link -->
+                                <div class="existing-document mt-2"></div>
+                            </div>
 
 
                             </div>
@@ -483,11 +438,8 @@ input.is-invalid {
                         <div>
                             <h4 class="card-title">Qualification Details</h4>
                             <hr>
-                            <div id="education_fields" class="my-4"></div>
-
-                            <div class="row degree-row" id="education_fields">
+                            <div class="row degree-row mb-3">
                                 <div class="col-12 col-sm-6 col-md-3">
-
                                     <x-input
                                         name="degree[]"
                                         label="Degree :"
@@ -495,7 +447,6 @@ input.is-invalid {
                                         formLabelClass="form-label"
                                         helperSmallText="Bachelors, Masters, PhD"
                                         />
-
                                 </div>
                                 <div class="col-12 col-sm-6 col-md-3">
                                     <x-input
@@ -506,18 +457,6 @@ input.is-invalid {
                                         />
                                 </div>
                                 <div class="col-12 col-sm-6 col-md-3">
-                                    {{-- <x-input
-                                        type="number"
-                                        name="year_of_passing[]"
-                                        label="Year of Passing :"
-                                        placeholder="Year of Passing"
-                                        formLabelClass="form-label"
-                                        min="1900"
-                                        max="{{ date('Y') }}"
-                                        step="1"
-                                        required="true"
-                                        /> --}}
-
                                     <x-select
                                         name="year_of_passing[]"
                                         label="Year of Passing :"
@@ -537,10 +476,8 @@ input.is-invalid {
                                         placeholder="Percentage/CGPA"
                                         formLabelClass="form-label"
                                         />
-
                                 </div>
                                 <div class="col-12 col-sm-6 col-md-3 mt-3">
-
                                     <x-input
                                         type="file"
                                         name="certificate[]"
@@ -549,12 +486,17 @@ input.is-invalid {
                                         formLabelClass="form-label"
                                         helperSmallText="Please upload your certificates/documents, if any"
                                         />
-                                  </div>
-								  <div class="existing-certificate"></div>
-                                <div class="col-9">
-                                    <label for="Schoolname" class="form-label"></label>
-                                    <div class="mb-3 float-end">
-                                        <button onclick="education_fields();" class="btn btn-success fw-medium" type="button">
+                                    <div class="existing-certificate"></div>
+                                </div>
+                            </div>
+                            <div id="education_fields"></div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="mb-3 float-end d-flex gap-2">
+                                        <button onclick="remove_last_education_field();" class="btn btn-danger btn-sm" type="button">
+                                            <i class="material-icons menu-icon">remove</i>
+                                        </button>
+                                        <button onclick="education_fields();" class="btn btn-success btn-sm" type="button">
                                             <i class="material-icons menu-icon">add</i>
                                         </button>
                                     </div>
@@ -569,8 +511,7 @@ input.is-invalid {
                     <div class="card-body">
                         <h4 class="card-title">Experience Details</h4>
                             <hr>
-                            <div id="experience_fields_wrapper" class="my-4"></div>
-                            <div class="row experience-row" id="experience_fields">
+                            <div class="row experience-row mb-3">
                                 <div class="col-12 col-sm-6 col-md-3">
                                     <x-input
                                         name="experience[]"
@@ -580,14 +521,12 @@ input.is-invalid {
                                         />
                                 </div>
                                 <div class="col-12 col-sm-6 col-md-3">
-
                                     <x-input
                                         name="specialization[]"
                                         label="Area of Specialization :"
-                                        placeholder="Area of Specialization blade file"
+                                        placeholder="Area of Specialization"
                                         formLabelClass="form-label"
                                         />
-
                                 </div>
                                 <div class="col-12 col-sm-6 col-md-3">
                                     <x-input
@@ -604,7 +543,6 @@ input.is-invalid {
                                         placeholder="Position Held"
                                         formLabelClass="form-label"
                                         />
-
                                 </div>
                                 <div class="col-12 col-sm-6 col-md-3 mt-3">
                                     <x-input
@@ -624,10 +562,14 @@ input.is-invalid {
                                         formLabelClass="form-label"
                                         />
                                 </div>
-                                <div class="col-6">
-
-                                    <label for="Schoolname" class="form-label"></label>
-                                    <div class="mb-3 float-end">
+                            </div>
+                            <div id="experience_fields"></div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="mb-3 float-end d-flex gap-2">
+                                        <button onclick="remove_last_experience_field();" class="btn btn-danger btn-sm" type="button">
+                                            <i class="material-icons menu-icon">remove</i>
+                                        </button>
                                         <button onclick="experience_fields();" class="btn btn-success btn-sm" type="button">
                                             <i class="material-icons menu-icon">add</i>
                                         </button>
@@ -769,25 +711,19 @@ input.is-invalid {
 <div class="card">
      <div class="card-body">
           <div class="row">
-               <div class="col-12">
-                    <label for="sector" class="form-label">Current Sector : <span class="text-danger">*</span></label>
+               <div class="col-12 col-md-6">
                     <div class="mb-3">
-                         <div class="form-check form-check-inline">
-						 <input class="form-check-input success"
-						 type="radio" name="current_sector"
-                         id="success-radio" value="1">
-
-                     <label class="form-check-label"
-					 for="success-radio">Government Sector</label>
-                      </div>
-                    <div class="form-check form-check-inline">
-                      <input class="form-check-input success"
-					  type="radio" name="current_sector"
-                       id="success2-radio" value="2" >
-                     <label class="form-check-label" for="success2-radio">Private Sector</label>
-                     </div>
-                     <div id="current-sector-error-placeholder"></div>
-                       </div>
+                        <x-select
+                            name="current_sector"
+                            label="Current Sector :"
+                            placeholder="Select Sector"
+                            formLabelClass="form-label"
+                            :options="$facultySectorList"
+                            required="true"
+                            labelRequired="true"
+                        />
+                        <div id="current-sector-error-placeholder"></div>
+                    </div>
                 </div>
 
                  <div class="col-12">
@@ -806,25 +742,10 @@ input.is-invalid {
                         </div>
                         <hr>
 		<div class="d-flex justify-content-end align-items-center gap-2 mb-3">
-
-			<!--<button onclick="printFacultyForm()" class="btn btn-success d-flex align-items-center gap-2" type="button">
-				<i class="material-icons menu-icon">print</i>
-				Print
-			</button>-->
-
-			<!--<button class="btn btn-primary d-flex align-items-center gap-2" type="button" id="saveFacultyForm">
-				<i class="material-icons menu-icon">save</i>
-				Save
-			</button>-->
-
-			<button class="btn btn-primary d-flex align-items-center gap-2" type="button" id="saveFacultyForm">
+		<button class="btn btn-primary d-flex align-items-center gap-2" type="button" id="saveFacultyForm">
 			<i class="material-icons menu-icon">save</i>
 			Save
 		</button>
-
-
-
-
 			<a href="{{ route('faculty.index') }}" class="btn btn-secondary d-flex align-items-center gap-2">
 				<i class="material-icons menu-icon">arrow_back</i>
 				Back
@@ -1296,10 +1217,8 @@ if (faculty.Reference_Recommendation) {
 });
 
 
- $('input[name="current_sector"][value="' + faculty.faculty_sector + '"]').prop("checked", true);
-
- //document.querySelector('input[name="current_sector"]:checked').value;
- //document.querySelectorAll('input[name="faculties[]"]:checked');
+ $("select[name='current_sector']").val(faculty.faculty_sector).trigger('change');
+ $("select[name='service_master_pk']").val(faculty.service_master_pk ?? '').trigger('change');
 
 
 	$("#faculty_id").val(faculty.pk);

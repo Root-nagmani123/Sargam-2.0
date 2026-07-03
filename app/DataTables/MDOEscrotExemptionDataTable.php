@@ -21,8 +21,14 @@ class MDOEscrotExemptionDataTable extends DataTable
             ->editColumn('Time_from', fn($row) => $row->Time_from ?? 'N/A')
             ->editColumn('Time_to', fn($row) => $row->Time_to ?? 'N/A')
             ->editColumn('course_name', fn($row) => optional($row->courseMaster)->course_name ?? 'N/A')
-            ->editColumn('mdo_name', fn($row) => optional($row->mdoDutyTypeMaster)->mdo_duty_type_name ?? 'N/A')
-            ->editColumn('faculty_name', fn($row) => optional($row->facultyMaster)->full_name ?? 'N/A')
+            ->editColumn('mdo_name', function ($row) {
+                $name = optional($row->mdoDutyTypeMaster)->mdo_duty_type_name ?? 'N/A';
+                if (!empty($row->duty_other)) {
+                    $name .= ' (' . e($row->duty_other) . ')';
+                }
+                return $name;
+            })
+            ->editColumn('faculty_name', fn($row) => $row->faculty_names !== '' ? $row->faculty_names : 'N/A')
             ->editColumn('Remark', fn($row) => $row->Remark ?? 'N/A')
             ->filterColumn('student_name', function ($query, $keyword) {
                 $query->whereHas('studentMaster', function ($q) use ($keyword) {
@@ -48,6 +54,23 @@ class MDOEscrotExemptionDataTable extends DataTable
                 $query->whereHas('facultyMaster', function ($q) use ($keyword) {
                     $q->where('full_name', 'like', "%{$keyword}%");
                 });
+            })
+            // Relation-based columns can't sort on the base table directly, so
+            // order them via correlated subqueries against the related tables.
+            ->orderColumn('ot_code', function ($query, $order) {
+                $query->orderByRaw("(SELECT sm.generated_OT_code FROM student_master sm WHERE sm.pk = mdo_escot_duty_map.selected_student_list) $order");
+            })
+            ->orderColumn('student_name', function ($query, $order) {
+                $query->orderByRaw("(SELECT sm.display_name FROM student_master sm WHERE sm.pk = mdo_escot_duty_map.selected_student_list) $order");
+            })
+            ->orderColumn('course_name', function ($query, $order) {
+                $query->orderByRaw("(SELECT cm.course_name FROM course_master cm WHERE cm.pk = mdo_escot_duty_map.course_master_pk) $order");
+            })
+            ->orderColumn('mdo_name', function ($query, $order) {
+                $query->orderByRaw("(SELECT dt.mdo_duty_type_name FROM mdo_duty_type_master dt WHERE dt.pk = mdo_escot_duty_map.mdo_duty_type_master_pk) $order");
+            })
+            ->orderColumn('faculty_name', function ($query, $order) {
+                $query->orderByRaw("(SELECT fm.full_name FROM faculty_master fm WHERE fm.pk = mdo_escot_duty_map.faculty_master_pk) $order");
             })
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
@@ -83,13 +106,12 @@ class MDOEscrotExemptionDataTable extends DataTable
 
     <!-- Edit -->
     <a href="javascript:void(0)"
-       class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2 mee-edit-btn"
+       class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2 mee-edit-btn border-0 bg-transparent p-0"
        data-edit-id="{$row->pk}"
        aria-label="Edit record">
         <span class="material-icons material-symbols-rounded"
               style="font-size:20px;"
               aria-hidden="true">edit</span>
-        <span class="d-none d-md-inline">Edit</span>
     </a>
 
     <!-- Delete -->
@@ -98,13 +120,12 @@ class MDOEscrotExemptionDataTable extends DataTable
         <input type="hidden" name="_method" value="DELETE">
 
         <button type="submit"
-                class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 px-2"
+                class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 px-2 border-0 bg-transparent p-0"
                 aria-label="Delete record"
                 onclick="return confirm('Are you sure you want to delete this record?');">
             <span class="material-icons material-symbols-rounded"
                   style="font-size:20px;"
                   aria-hidden="true">delete</span>
-            <span class="d-none d-md-inline">Delete</span>
         </button>
     </form>
 
@@ -122,7 +143,13 @@ HTML;
             'mdoDutyTypeMaster' => fn($q) => $q->select('pk', 'mdo_duty_type_name'),
             'studentMaster' => fn($q) => $q->select('pk', 'display_name', 'generated_OT_code'),
             'facultyMaster' => fn($q) => $q->select('pk', 'full_name')
-        ])->orderBy('created_date', 'desc')->newQuery();
+        ])->newQuery();
+
+        // Default newest-first ordering, but only when the user hasn't picked a
+        // column to sort by (otherwise this would always override their choice).
+        if (empty(request('order'))) {
+            $query->orderBy('created_date', 'desc');
+        }
 
         // Filter by course status (Active/Archive)
         $filter = request('filter', 'active'); // Default to 'active'
@@ -195,7 +222,10 @@ public function html(): HtmlBuilder
         ->parameters([
             'responsive' => false,
             'autoWidth' => false,
-            'ordering' => false,
+            'ordering' => true,
+            // No initial client-side order; the query() default (created_date desc)
+            // applies until the user clicks a column header to sort.
+            'order' => [],
             'searching' => true,
             'lengthChange' => true,
             'pageLength' => 10,
@@ -229,15 +259,15 @@ public function html(): HtmlBuilder
         // Column order mirrors the reference mockup exactly.
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('mdo_date')->title('Date')->orderable(false)->searchable(false),
-            Column::make('ot_code')->title('OT Code')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('student_name')->title('Student Name')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('Time_to')->title('Time To')->orderable(false)->searchable(false)->addClass('text-center'),
-            Column::make('Time_from')->title('Time From')->orderable(false)->searchable(false)->addClass('text-center'),
-            Column::make('course_name')->title('Programme Name')->addClass('text-center')->searchable(true)->orderable(false),
-            Column::make('mdo_name')->title('Duty Type')->addClass('text-center')->searchable(true)->orderable(false),
-            Column::make('faculty_name')->title('Faculty Name')->addClass('text-center')->searchable(true)->orderable(false),
-            Column::make('Remark')->title('Remarks')->addClass('text-center')->searchable(true)->orderable(false),
+            Column::make('mdo_date')->title('Date')->orderable(true)->searchable(false),
+            Column::make('ot_code')->title('OT Code')->addClass('text-center')->orderable(true)->searchable(true),
+            Column::make('student_name')->title('Student Name')->addClass('text-center')->orderable(true)->searchable(true),
+            Column::make('Time_from')->title('Time From')->orderable(true)->searchable(false)->addClass('text-center'),
+            Column::make('Time_to')->title('Time To')->orderable(true)->searchable(false)->addClass('text-center'),
+            Column::make('course_name')->title('Programme Name')->addClass('text-center')->searchable(true)->orderable(true),
+            Column::make('mdo_name')->title('Duty Type')->addClass('text-center')->searchable(true)->orderable(true),
+            Column::make('faculty_name')->title('Faculty Name')->addClass('text-center')->searchable(true)->orderable(true),
+            Column::make('Remark')->title('Remarks')->addClass('text-center')->searchable(true)->orderable(true),
             Column::computed('actions')->title('Action')->addClass('text-center')->orderable(false),
         ];
 

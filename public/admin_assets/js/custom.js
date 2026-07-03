@@ -600,8 +600,12 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         // current_sector
-        let currentSector = $('input[name="current_sector"]:checked').val();
+        let currentSector = $('select[name="current_sector"]').val();
         formData.append('current_sector', currentSector);
+
+        // service_master_pk
+        let serviceMasterPk = $('select[name="service_master_pk"]').val();
+        formData.append('service_master_pk', serviceMasterPk ?? '');
 
         // append csrf token
         formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
@@ -1749,6 +1753,7 @@ function performAttendanceSearch() {
             to_date: toDate,
             session_value: sessionTypeValue,
             attendance_type: attendanceType,
+            page_context: (typeof window.attendancePageContext !== 'undefined') ? window.attendancePageContext : '',
             // view_type: viewType
         },
         beforeSend: function () {
@@ -1859,6 +1864,7 @@ function drawAttendanceTable() {
                 d.from_date = $('#from_date').val();
                 d.to_date = $('#to_date').val();
                 d.view_type = $('#view_type').val();
+                d.page_context = (typeof window.attendancePageContext !== 'undefined') ? window.attendancePageContext : '';
             }
         },
         drawCallback: function () {

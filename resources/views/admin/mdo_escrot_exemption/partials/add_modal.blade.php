@@ -57,12 +57,20 @@
                             <small class="text-danger d-none mt-1" id="meeErrorDutyType">Duty type is required.</small>
                         </div>
 
+                        <div class="col-md-12 d-none" id="duty_other_container">
+                            <label for="duty_other" class="form-label cgt-field-label mb-2">
+                                Duty Other <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" name="duty_other" id="duty_other" class="form-control rounded-3"
+                                placeholder="Enter duty name" maxlength="255">
+                            <small class="text-danger d-none mt-1" id="meeErrorDutyOther">Duty other is required.</small>
+                        </div>
+
                         <div class="col-12 d-none" id="faculty_field_container">
                             <label for="faculty_master_pk" class="form-label cgt-field-label mb-2">
                                 Faculty <span class="text-danger">*</span>
                             </label>
-                            <select name="faculty_master_pk" id="faculty_master_pk" class="form-select rounded-3">
-                                <option value="">Select Faculty</option>
+                            <select name="faculty_master_pk[]" id="faculty_master_pk" class="form-select rounded-3 mee-faculty-select2" multiple>
                                 @foreach($facultyMaster ?? [] as $pk => $name)
                                 <option value="{{ $pk }}">{{ $name }}</option>
                                 @endforeach
@@ -122,7 +130,7 @@
                         <div class="col-12 mee-add-only-field">
                             <label for="textarea" class="form-label cgt-field-label mb-2">Description</label>
                             <textarea class="form-control rounded-3" id="textarea" name="Remark" rows="3"
-                                placeholder="eg. Lorem ipsum dolor"></textarea>
+                                placeholder="Enter a remark or description (optional)"></textarea>
                         </div>
                     </div>
                 </div>

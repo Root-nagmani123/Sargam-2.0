@@ -150,9 +150,22 @@ class StudentAttendanceListDataTable extends DataTable
         }
     }
 
-    // Escort nahi hai → N/A
+    // Escort nahi hai → N/A. MDO duty ab apne "MDO Duty" column me text ke roop
+    // me dikhti hai (is "Escort/Moderator Duty" column me nahi).
     return "<span class='text-muted'>N/A</span>";
 }
+
+        // MDO Duty column: agar OT ki MDO duty pehle se hai to radio button ke bajaye
+        // yahan "MDO Duty" text dikhao. OT ko Attendance column me "Present" default
+        // kiya gaya hai, aur sabhi radios ka name same hone ki wajah se yahan radio
+        // auto-check karne se wo Present default override ho jata — isliye text.
+        if ($value === 4) {
+            if ($this->hasMdoDuty($row->studentsMaster->pk)) {
+                return "<span class='text-info fw-bold'>MDO Duty</span>";
+            }
+            // MDO duty nahi hai → radio button ke bajaye N/A dikhao
+            return "<span class='text-muted'>N/A</span>";
+        }
 
         $studentId = $row->studentsMaster->pk;
         $courseStudent = CourseStudentAttendance::where([
@@ -209,7 +222,11 @@ class StudentAttendanceListDataTable extends DataTable
                     $mdoDutyTypes = MDOEscotDutyMap::getMdoDutyTypes();
                     
                     match ($value) {
-                        4 => $dutyType = $mdoDutyTypes['mdo'] ?? null,
+                        // MDO (4) is intentionally NOT auto-checked: an MDO-duty OT is
+                        // defaulted to "Present" in the Attendance column instead. Since all
+                        // radios for a student share the same name, auto-checking MDO here
+                        // would override that Present default in the browser.
+                        4 => $dutyType = null,
                         5 => $dutyType = $mdoDutyTypes['escort'] ?? null,
                         7 => $dutyType = $mdoDutyTypes['other'] ?? null,
                         default => $dutyType = null,
@@ -255,8 +272,16 @@ class StudentAttendanceListDataTable extends DataTable
         // Determine default checked value
         $defaultCheckedValue = null;
         // print_r($courseStudent);die;
-        // If there's an existing attendance record, use its status
-        if ($courseStudent) {
+
+        // MDO & Escort/Moderator duty ko top priority: agar "MDO Duty" column me MDO
+        // Duty ya "Escort/Moderator Duty" column me Escort/Moderator dikh rahi hai to
+        // OT duty par hai par attend kar raha mana jata hai — isliye Attendance column
+        // me "Present" radio by default select rahega (chahe saved record kuch bhi ho,
+        // kyunki MDO/Escort ke liye Attendance column me koi alag radio nahi hota).
+        if ($this->hasMdoDuty($studentId) || $this->hasEscortDuty($studentId)) {
+            $defaultCheckedValue = 1; // Present
+        } elseif ($courseStudent) {
+            // If there's an existing attendance record, use its status
             $defaultCheckedValue = $courseStudent->status;
             if( $defaultCheckedValue == 5 ){
                 $defaultCheckedValue = 1;
@@ -264,7 +289,7 @@ class StudentAttendanceListDataTable extends DataTable
         } else {
             // Check if student has any exemptions or duties
             $hasExemptionOrDuty = $this->hasExemptionOrDuty($studentId);
-            
+
             // If no exemptions or duties, default to Present (1)
             if (!$hasExemptionOrDuty) {
                 $defaultCheckedValue = 1; // Present
@@ -290,6 +315,62 @@ class StudentAttendanceListDataTable extends DataTable
         }
 
         return $html;
+    }
+
+    /**
+     * Check if student has an MDO duty overlapping the current class session.
+     * Used to default the Attendance column to "Present" for MDO-duty OTs
+     * (MDO duty means the OT is still attending, unlike Medical/Other exemptions).
+     */
+    protected function hasMdoDuty(int $studentId): bool
+    {
+        $timetable = Timetable::select('START_DATE', 'class_session')->where('pk', $this->timetable_pk)->first();
+
+        if (empty($timetable)) {
+            return false;
+        }
+
+        $mdoDutyTypes = MDOEscotDutyMap::getMdoDutyTypes();
+
+        if (empty($mdoDutyTypes['mdo'])) {
+            return false;
+        }
+
+        $mdoDuty = MDOEscotDutyMap::where([
+            ['course_master_pk', '=', $this->course_pk],
+            ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['mdo']],
+            ['selected_student_list', '=', $studentId]
+        ])->whereDate('mdo_date', '=', $timetable->START_DATE)->first();
+
+        return $mdoDuty && $this->checkTimeOverlap($timetable->class_session, $mdoDuty->Time_from, $mdoDuty->Time_to);
+    }
+
+    /**
+     * Check if student has an Escort/Moderator duty overlapping the current class session.
+     * Used to default the Attendance column to "Present" for Escort-duty OTs
+     * (an Escort/Moderator OT is on duty but still counted as attending).
+     */
+    protected function hasEscortDuty(int $studentId): bool
+    {
+        $timetable = Timetable::select('START_DATE', 'class_session')->where('pk', $this->timetable_pk)->first();
+
+        if (empty($timetable)) {
+            return false;
+        }
+
+        $mdoDutyTypes = MDOEscotDutyMap::getMdoDutyTypes();
+
+        if (empty($mdoDutyTypes['escort'])) {
+            return false;
+        }
+
+        $escortDuty = MDOEscotDutyMap::where([
+            ['course_master_pk', '=', $this->course_pk],
+            ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['escort']],
+            ['selected_student_list', '=', $studentId]
+        ])->whereDate('mdo_date', '=', $timetable->START_DATE)->first();
+
+        return $escortDuty && $this->checkTimeOverlap($timetable->class_session, $escortDuty->Time_from, $escortDuty->Time_to);
     }
 
     /**

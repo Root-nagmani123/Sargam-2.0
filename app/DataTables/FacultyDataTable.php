@@ -172,13 +172,15 @@ class FacultyDataTable extends DataTable
                         'searching' => true,
                         'lengthChange' => true,
                         'pageLength' => 10,
+                        'sargamDtUi' => false,
+                        'dom' => "<'row mb-2 align-items-center'<'col-sm-6'l><'col-sm-6'f>>" .
+                                 "<'row'<'col-sm-12'tr>>" .
+                                 "<'row mt-2 align-items-center'<'col-sm-5'i><'col-sm-7'p>>",
                         'language' => [
                             'paginate' => [
-                                'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
-                                                    style="font-size: 24px;">chevron_left</i>',
-                                'next' => '<i class="material-icons menu-icon material-symbols-rounded"
-                                                    style="font-size: 24px;">chevron_right</i>'
-                            ]
+                                'previous' => '<i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">chevron_left</i>',
+                                'next' => '<i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">chevron_right</i>',
+                            ],
                         ],
                     ])
                     ->buttons([

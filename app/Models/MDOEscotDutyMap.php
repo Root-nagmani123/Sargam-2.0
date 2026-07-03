@@ -59,4 +59,35 @@ class MDOEscotDutyMap extends Model
     {
         return $this->belongsTo(FacultyMaster::class, 'faculty_master_pk', 'pk');
     }
+
+    /**
+     * All faculty pks for this duty (multiple supported). Falls back to the single
+     * faculty_master_pk for legacy rows that predate the faculty_master_pks column.
+     *
+     * @return int[]
+     */
+    public function facultyPks(): array
+    {
+        if (!empty($this->faculty_master_pks)) {
+            return array_values(array_filter(array_map('intval', explode(',', $this->faculty_master_pks))));
+        }
+
+        return $this->faculty_master_pk ? [(int) $this->faculty_master_pk] : [];
+    }
+
+    /**
+     * Comma-separated faculty names for display (resolves all selected faculty).
+     */
+    public function getFacultyNamesAttribute(): string
+    {
+        $pks = $this->facultyPks();
+        if (empty($pks)) {
+            return '';
+        }
+
+        return FacultyMaster::whereIn('pk', $pks)
+            ->orderBy('full_name')
+            ->pluck('full_name')
+            ->implode(', ');
+    }
 }

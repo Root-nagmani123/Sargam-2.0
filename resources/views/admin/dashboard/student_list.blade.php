@@ -44,6 +44,29 @@
                 </div>
             </div>
             <hr class="my-2">
+            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3">
+                <div class="dropdown">
+                    <button type="button" class="btn programme-dt-btn-columns gm-download-btn dropdown-toggle"
+                        id="studentListDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-download" aria-hidden="true"></i>
+                        <span>Download</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-1 py-2" aria-labelledby="studentListDownloadBtn">
+                        <li>
+                            <button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="studentListDownloadCsv">
+                                <i class="bi bi-filetype-csv text-success" aria-hidden="true"></i>
+                                <span>Download CSV</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="studentListDownloadPdf">
+                                <i class="bi bi-filetype-pdf text-danger" aria-hidden="true"></i>
+                                <span>Download PDF</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
             <div class="datatables">
                 <div class="table-responsive">
                     <table class="table table-hover" id="studentListTable">
@@ -56,6 +79,8 @@
                                 <th scope="col">Cadre</th>
                                 <th scope="col">Total Duty (Count)</th>
                                 <th scope="col">Total Medical Exception (Count)</th>
+                                <th scope="col">Total PT Exemption (Count)</th>
+                                <th scope="col">Total Station Leave (Count)</th>
                                 <th scope="col">Total Memo</th>
                                 <th scope="col">Notice (Count)</th>
                                 <th scope="col">Action</th>
@@ -80,6 +105,8 @@
                                     <td>{{ $displayName }}</td>
                                     <td>{{ $studentMap->total_duty_count ?? 0 }}</td>
                                     <td>{{ $studentMap->total_medical_exception_count ?? 0 }}</td>
+                                    <td>{{ $studentMap->total_pt_exemption_count ?? 0 }}</td>
+                                    <td>{{ $studentMap->total_stationed_leave_count ?? 0 }}</td>
                                     <td>{{ $studentMap->total_memo_count ?? 0 }}</td>
                                     <td>{{ $studentMap->total_notice_count ?? 0 }}</td>
                                     <td>
@@ -91,7 +118,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="10" class="text-center">
+                                    <td colspan="12" class="text-center">
                                         <div class="alert alert-info mb-0">
                                             <i class="fas fa-info-circle me-2"></i>
                                             Data not found.
@@ -255,6 +282,36 @@
                 });
             }
         }
+
+        function buildStudentListExportUrl(format) {
+            const params = new URLSearchParams();
+            const courseId = $('#courseFilter').val();
+            const roleFilter = $('#roleFilter').val();
+            const groupPk = $('#groupNameFilter').val();
+            const search = dataTable ? dataTable.search() : '';
+
+            if (courseId) params.set('course_id', courseId);
+            if (roleFilter) params.set('role_filter', roleFilter);
+            if (groupPk) params.set('group_pk', groupPk);
+            if (search) params.set('search', search);
+
+            const baseUrl = format === 'csv'
+                ? "{{ route('admin.dashboard.students.export', ['format' => 'csv']) }}"
+                : "{{ route('admin.dashboard.students.export', ['format' => 'pdf']) }}";
+
+            const query = params.toString();
+            return query ? `${baseUrl}?${query}` : baseUrl;
+        }
+
+        $('#studentListDownloadCsv').on('click', function(e) {
+            e.preventDefault();
+            window.location.href = buildStudentListExportUrl('csv');
+        });
+
+        $('#studentListDownloadPdf').on('click', function(e) {
+            e.preventDefault();
+            window.open(buildStudentListExportUrl('pdf'), '_blank');
+        });
 
     });
 </script>

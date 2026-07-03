@@ -2538,7 +2538,21 @@ class CalendarController extends Controller
         return response()->json($query->orderByDesc('tf.created_date')->get());
     }
 
+    /**
+     * Resolve the authenticated student's full name (first + middle + last) from
+     * student_master, keyed by the auth user_id (= student_master.pk). Falls back
+     * to the login username. Used by the three feedback screens so the blade can
+     * show whose account the listing belongs to.
+     */
+    private function feedbackStudentFullName($student_pk): string
+    {
+        $name = DB::table('student_master')
+            ->where('pk', $student_pk)
+            ->selectRaw("TRIM(CONCAT(COALESCE(first_name,''),' ',COALESCE(middle_name,''),' ',COALESCE(last_name,''))) as full_name")
+            ->value('full_name');
 
+        return $name !== null && trim($name) !== '' ? $name : (string) (auth()->user()->user_name ?? '');
+    }
 
     public function studentFeedback()
     {
@@ -2706,10 +2720,13 @@ class CalendarController extends Controller
 
             $otUrl = route('feedback.get.studentFacultyFeedback', ['data' => $encrypted]);
 
+            $authFullName = $this->feedbackStudentFullName($student_pk);
+
             return view('admin.feedback.student_feedback', compact(
                 'pendingData',
                 'submittedData',
-                'otUrl'
+                'otUrl',
+                'authFullName'
             ));
         } catch (\Throwable $e) {
             logger()->error('Error in studentFeedback: ' . $e->getMessage());
@@ -2876,9 +2893,11 @@ class CalendarController extends Controller
                 ->orderByDesc('tf.created_date')
                 ->get();
 
+            $authFullName = $this->feedbackStudentFullName($student_pk);
+
             return view(
                 'admin.feedback.student_feedback',
-                compact('pendingData', 'submittedData')
+                compact('pendingData', 'submittedData', 'authFullName')
             );
         } catch (\Throwable $e) {
             logger()->error('Error in studentFacultyFeedback: ' . $e->getMessage());
@@ -2937,6 +2956,7 @@ class CalendarController extends Controller
                     't.Ratting_checkbox',
                     't.feedback_checkbox',
                     't.Remark_checkbox',
+                    't.faculty_details',
                     't.faculty_master as faculty_json', // Keep original JSON
                     'f.pk as faculty_pk', // Get individual faculty PK
                     'f.full_name as faculty_name',
@@ -2992,6 +3012,14 @@ class CalendarController extends Controller
                         ->where('tf.faculty_pk', DB::raw('f.pk')) // Check for this specific faculty
                         ->where('tf.is_submitted', 1);
                 })
+                // Only show Teaching-role faculty — strict filter.
+                ->whereRaw("
+                    JSON_VALID(t.faculty_details) = 1
+                    AND JSON_CONTAINS(
+                        t.faculty_details,
+                        JSON_OBJECT('faculty_pk', f.pk, 'role', 'Teaching')
+                    ) = 1
+                ")
                 // Show only sessions whose end time has passed (handles both "HH:MM AM - HH:MM PM" and "HH:MM to HH:MM")
                 ->whereRaw("
                 TIMESTAMP(
@@ -3020,6 +3048,10 @@ class CalendarController extends Controller
                 ->unique(function ($item) {
                     // Ensure each faculty-timetable combination is unique
                     return $item->timetable_pk . '_' . $item->faculty_pk;
+                })
+                ->map(function ($item) {
+                    $item->faculty_feedback_type = $this->resolveFacultyFeedbackType($item->faculty_details, $item->faculty_pk);
+                    return $item;
                 })
                 ->values(); // Reset array keys
 
@@ -3062,10 +3094,13 @@ class CalendarController extends Controller
 
             $otUrl = route('feedback.get.studentFacultyFeedback', ['data' => $encrypted]);
 
+            $authFullName = $this->feedbackStudentFullName($student_pk);
+
             return view('admin.feedback.student_feedback_url', compact(
                 'pendingData',
                 'submittedData',
-                'otUrl'
+                'otUrl',
+                'authFullName'
             ));
         } catch (\Throwable $e) {
             logger()->error('Error in studentFeedback: ' . $e->getMessage());

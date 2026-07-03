@@ -85,7 +85,11 @@ table.table-bordered.dataTable td:nth-child(4) {
                         </a>
                         @if($currentPath === 'mark')
                         @if(!empty($allMarked) && $allMarked)
-                        <button type="submit" class="btn btn-success" disabled>Attendance Already Marked</button>
+                            @if(hasRole('Super Admin') || hasRole('Training Induction Admin'))
+                            <button type="submit" class="btn btn-warning">Update Attendance</button>
+                            @else
+                            <button type="submit" class="btn btn-success" disabled>Attendance Already Marked</button>
+                            @endif
                         @else
                         <button type="submit" class="btn btn-primary">Mark Attendance</button>
                         @endif

@@ -675,6 +675,7 @@
                     html += '<thead><tr>';
                     html += '<th>Course</th>';
                     html += '<th>Session Name</th>';
+                    html += '<th>Faculty</th>';
                     html += '<th>Date</th>';
                     html += '<th>Time</th>';
                     html += '<th class="text-center">Feedback Status</th>';
@@ -684,6 +685,7 @@
                         html += '<tr>';
                         html += '<td>' + escapeHtml(session.course_name || '—') + '</td>';
                         html += '<td>' + escapeHtml(session.session_name) + '</td>';
+                        html += '<td>' + escapeHtml(session.faculty_name || '—') + '</td>';
                         html += '<td>' + escapeHtml(session.date) + '</td>';
                         html += '<td>' + escapeHtml(session.time) + '</td>';
                         if (session.feedback_status === 'given') {

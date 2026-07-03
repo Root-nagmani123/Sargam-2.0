@@ -65,6 +65,11 @@ return [
             'route' => 'memo.notice.management.conversation_student',
             'params' => ['id' => 'reference_pk', 'type' => 'memo'],
         ],
+        // Notice chat replies redirect to the notice conversation
+        'Notice' => [
+            'route' => 'memo.notice.management.conversation_student',
+            'params' => ['id' => 'reference_pk', 'type' => 'notice'],
+        ],
         'MemoNotice' => [
             'route' => 'memo.notice.management.conversation_student',
             'params' => ['id' => 'reference_pk', 'type' => 'memo'],
@@ -176,6 +181,14 @@ return [
         'EstateHac' => [
             'route' => 'admin.estate.put-in-hac',
             'params' => [],
+        ],
+    ],
+
+    // Leave Request Notifications (faculty approver clicks through to the leave)
+    'leave' => [
+        'StationedLeave' => [
+            'route' => 'faculty.leave-approval.show',
+            'params' => ['id' => 'reference_pk'],
         ],
     ],
 
