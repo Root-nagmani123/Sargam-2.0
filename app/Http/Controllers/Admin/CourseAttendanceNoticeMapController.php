@@ -2780,6 +2780,60 @@ public function store_memo_status(Request $request)
 }
 
 /**
+ * Edit an already-generated memo: Memo Type, Template, participant (student),
+ * Venue, Date, Meeting Time and Message are all correctable after the fact.
+ * Does not touch the source student_notice_status row — this reassigns the
+ * memo itself, not the original notice's history.
+ */
+public function updateMemoStatus(Request $request, $id)
+{
+    if (! $this->userCanManageMemoNotice()) {
+        return response()->json(['success' => false, 'message' => 'You are not authorized to edit this memo.'], 403);
+    }
+
+    $memo = DB::table('student_memo_status')->where('pk', $id)->first();
+    if (!$memo) {
+        return response()->json(['success' => false, 'message' => 'Memo not found.'], 404);
+    }
+    if ($memo->status == 2) {
+        return response()->json(['success' => false, 'message' => 'Closed memos cannot be edited.'], 422);
+    }
+
+    $validated = $request->validate([
+        'student_pk'              => 'required|integer|exists:student_master,pk',
+        'memo_type_master_pk'     => 'required|integer|exists:memo_type_master,pk',
+        'memo_notice_template_pk' => 'nullable|exists:memo_notice_templates,pk',
+        'venue'                   => 'required|integer',
+        'date_memo_notice'        => 'required|date',
+        'meeting_time'            => 'required|date_format:H:i',
+        'Remark'                  => 'nullable|string',
+    ]);
+
+    // Reassignment must stay within the memo's own course.
+    $belongsToCourse = DB::table('student_master_course__map')
+        ->where('course_master_pk', $memo->course_master_pk)
+        ->where('student_master_pk', $validated['student_pk'])
+        ->where('active_inactive', 1)
+        ->exists();
+    if (!$belongsToCourse) {
+        return response()->json(['success' => false, 'message' => 'Selected student is not enrolled in this course.'], 422);
+    }
+
+    DB::table('student_memo_status')->where('pk', $id)->update([
+        'student_pk'              => $validated['student_pk'],
+        'memo_type_master_pk'     => $validated['memo_type_master_pk'],
+        'memo_notice_template_pk' => $validated['memo_notice_template_pk'] ?? null,
+        'venue_master_pk'         => $validated['venue'],
+        'date'                    => $validated['date_memo_notice'],
+        'start_time'              => $validated['meeting_time'],
+        'message'                 => $validated['Remark'] ?? null,
+        'modified_date'           => now(),
+    ]);
+
+    return response()->json(['success' => true, 'message' => 'Memo updated successfully.']);
+}
+
+/**
  * Conclude (close) a notice/memo conversation from the chat panel's "End Chat" action.
  * Memo  → sets status/communication_status to closed and records the conclusion type + remark.
  * Notice → closes the notice (status = 2).

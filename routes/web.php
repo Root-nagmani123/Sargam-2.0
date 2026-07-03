@@ -921,6 +921,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
             Route::post('/get-student-attendance-by-topic', 'getStudentAttendanceBytopic')->name('getStudentAttendanceBytopic'); // <-- New AJAX route
             Route::post('/store_memo_notice', 'store_memo_notice')->name('store_memo_notice');
             Route::post('/store_memo_status', 'store_memo_status')->name('store_memo_status');
+            Route::post('/memo/update/{id}', 'updateMemoStatus')->name('update_memo_status');
             Route::post('/end-chat', 'endChat')->name('endChat');
             Route::post('/memo_notice_conversation', 'memo_notice_conversation')->name('memo_notice_conversation');
             Route::post('/memo_notice_conversation_student', 'memo_notice_conversation_student')->name('memo_notice_conversation_student');
