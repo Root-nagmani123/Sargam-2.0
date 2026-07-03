@@ -1419,9 +1419,10 @@ class UserController extends Controller
                         ->pluck('hostel_room_name', 'user_name')
                     : collect();
 
-                // Present/Absent status per student, resolved from the most recent day
-                // that student has attendance for (Absent if absent in ANY session that day).
-                $attendanceStatus = $this->resolveStudentAttendanceStatus($studentPks);
+                // Every marked attendance session per student (one row per session is
+                // produced after this loop). Scoped to the Time Period filter, so a
+                // student with no session in range gets no session rows.
+                $attendanceSessions = $this->resolveStudentAttendanceSessions($studentPks, $fromDate, $toDate);
 
                 foreach ($uniqueStudents as $studentMap) {
                     $studentPk = $studentMap->student_master_pk;
@@ -1470,20 +1471,16 @@ class UserController extends Controller
                         ->count();
 
                     $notices = $noticeMemoService->getNotices($studentPk);
-                    $memos = $noticeMemoService->getMemos($studentPk);
+                    $memos = $noticeMemoService->getDisciplineMemos($studentPk);
                     $studentMap->total_notice_count = $notices->count();
                     $studentMap->total_memo_count = $memos->count();
 
                     $uid = $studentMap->studentMaster->user_id ?? null;
                     $studentMap->house_name = ($uid && isset($houseByUser[$uid])) ? $houseByUser[$uid] : null;
-                    // Absent if absent in any session on their most recent attendance day.
-                    $att = $attendanceStatus[$studentPk] ?? null;
-                    $studentMap->attendance_present = $att['present'] ?? true;
-                    // Session (date / time / topic) shown for that day.
-                    $studentMap->session_date = $att['session_date'] ?? null;
-                    $studentMap->session_time = $att['session_time'] ?? null;
-                    $studentMap->session_topic = $att['session_topic'] ?? null;
                 }
+
+                // One row per marked attendance session (student totals repeat per row).
+                $uniqueStudents = $this->expandStudentRowsBySession($uniqueStudents, $attendanceSessions);
 
                 $students = $uniqueStudents->filter(function ($studentMap) {
                     return ! empty($studentMap->studentMaster);
@@ -1538,7 +1535,7 @@ class UserController extends Controller
                 }
             }
 
-            $this->augmentStudentListEntries($uniqueStudents, $request);
+            $uniqueStudents = $this->augmentStudentListEntries($uniqueStudents, $request);
 
             $students = $uniqueStudents->filter(fn ($m) => ! empty($m->studentMaster))->values();
 
@@ -1574,9 +1571,13 @@ class UserController extends Controller
      */
     private function appendStudentsWithMemos(\Illuminate\Support\Collection $uniqueStudents, array &$seenStudentCourseKeys, bool $isSuperAdmin, $facultyPk): void
     {
-        $memoStudentPks = DB::table('student_memo_status')
+        // Students carrying discipline memos (discipline_memo_status), scoped to
+        // active disciplines — same source as /memo/discipline and the memo counts.
+        $memoStudentPks = DB::table('discipline_memo_status as dms')
+            ->join('discipline_master as dm', 'dms.discipline_master_pk', '=', 'dm.pk')
+            ->where('dm.active_inactive', 1)
             ->distinct()
-            ->pluck('student_pk')
+            ->pluck('dms.student_master_pk')
             ->filter()
             ->map(fn ($v) => (int) $v)
             ->unique()
@@ -1631,7 +1632,7 @@ class UserController extends Controller
         }
     }
 
-    private function augmentStudentListEntries(\Illuminate\Support\Collection $uniqueStudents, ?Request $request = null): void
+    private function augmentStudentListEntries(\Illuminate\Support\Collection $uniqueStudents, ?Request $request = null): \Illuminate\Support\Collection
     {
         $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
 
@@ -1651,9 +1652,9 @@ class UserController extends Controller
                 ->pluck('hostel_room_name', 'user_name')
             : collect();
 
-        // Present/Absent status per student, resolved from the most recent day that
-        // student has attendance for (Absent if absent in ANY session that day).
-        $attendanceStatus = $this->resolveStudentAttendanceStatus($studentPks);
+        // Every marked attendance session per student (one row per session is
+        // produced below). Scoped to the Time Period filter.
+        $attendanceSessions = $this->resolveStudentAttendanceSessions($studentPks, $fromDate, $toDate);
 
         foreach ($uniqueStudents as $studentMap) {
             $studentPk = $studentMap->student_master_pk;
@@ -1702,83 +1703,132 @@ class UserController extends Controller
                 ->count();
 
             $notices = $noticeMemoService->getNotices($studentPk);
-            $memos = $noticeMemoService->getMemos($studentPk);
+            $memos = $noticeMemoService->getDisciplineMemos($studentPk);
             $studentMap->total_notice_count = $notices->count();
             $studentMap->total_memo_count = $memos->count();
 
             $uid = $studentMap->studentMaster->user_id ?? null;
             $studentMap->house_name = ($uid && isset($houseByUser[$uid])) ? $houseByUser[$uid] : null;
-            $att = $attendanceStatus[$studentPk] ?? null;
-            $studentMap->attendance_present = $att['present'] ?? true;
-            $studentMap->session_date = $att['session_date'] ?? null;
-            $studentMap->session_time = $att['session_time'] ?? null;
-            $studentMap->session_topic = $att['session_topic'] ?? null;
         }
+
+        // One row per marked attendance session (student totals repeat per row).
+        return $this->expandStudentRowsBySession($uniqueStudents, $attendanceSessions);
     }
 
     /**
-     * Resolve each student's Present/Absent status from their most recent session.
-     * Rule: a student is ABSENT if that single latest session is marked Absent
-     * (status 3); otherwise Present. Also returns that session's details
-     * (date/time/topic) for display, so the status always matches the shown session.
+     * Resolve every marked attendance session per student, newest first.
+     *
+     * Attendance is recorded per timetable session (course_student_attendance,
+     * keyed by timetable_pk), so a student can have many sessions. Each entry
+     * carries that session's date/time/topic, its raw status code and a derived
+     * present flag (Absent only when status == 3). The dashboard student list
+     * renders ONE ROW PER SESSION, so every session the student was marked in is
+     * shown — not just the latest.
+     *
+     * When a date range is supplied, only sessions whose timetable START_DATE
+     * falls within [$fromDate, $toDate] are returned (Time Period filter).
      *
      * @param  array<int, int>  $studentPks
-     * @return array<int, array{present: bool, session_date: ?string, session_time: ?string, session_topic: ?string}>
+     * @return array<int, array<int, array<string, mixed>>>  spk => list of sessions
      */
-    private function resolveStudentAttendanceStatus(array $studentPks): array
+    private function resolveStudentAttendanceSessions(array $studentPks, ?string $fromDate = null, ?string $toDate = null): array
     {
         if (empty($studentPks)) {
             return [];
         }
 
-        // All attendance rows for these students, joined to their timetable session
-        // (date / time / topic). Newest-first so the first row of a day is its latest.
-        $rowsByStudent = DB::table('course_student_attendance as a')
+        // Every attendance row for these students, joined to its timetable session
+        // (date / time / topic). Newest session first. Scoped to the selected
+        // Time Period (event date) when one is active.
+        return DB::table('course_student_attendance as a')
             ->join('timetable as t', 'a.timetable_pk', '=', 't.pk')
             ->whereIn('a.Student_master_pk', $studentPks)
+            ->when($fromDate, fn ($q) => $q->whereDate('t.START_DATE', '>=', $fromDate))
+            ->when($toDate, fn ($q) => $q->whereDate('t.START_DATE', '<=', $toDate))
+            ->orderByDesc('t.START_DATE')
             ->orderByDesc('a.pk')
             ->get([
                 'a.Student_master_pk as spk',
+                'a.pk as attendance_pk',
                 'a.status',
+                'a.timetable_pk',
+                'a.course_master_pk',
                 't.START_DATE as session_date',
                 't.class_session as session_time',
                 't.subject_topic as session_topic',
             ])
-            ->groupBy('spk');
+            ->groupBy('spk')
+            ->map(function ($sessions) {
+                return $sessions->map(fn ($r) => [
+                    'attendance_pk' => (int) $r->attendance_pk,
+                    'timetable_pk' => $r->timetable_pk,
+                    'course_master_pk' => $r->course_master_pk,
+                    'status' => $r->status,
+                    'present' => (int) $r->status !== 3,
+                    'session_date' => $r->session_date ?? null,
+                    'session_time' => $r->session_time ?? null,
+                    'session_topic' => $r->session_topic ?? null,
+                ])->values()->all();
+            })
+            ->all();
+    }
 
-        $result = [];
-        foreach ($rowsByStudent as $spk => $sessions) {
-            // The student's most recent attendance day (by session date, not row id).
-            $latestDay = $sessions
-                ->map(fn ($r) => $r->session_date ? Carbon::parse($r->session_date)->toDateString() : null)
-                ->filter()
-                ->sort()
-                ->last();
+    /**
+     * Expand one-row-per-student into one-row-per-session.
+     *
+     * Every student/course entry is cloned once per marked attendance session
+     * (scoped to that entry's own course), carrying the session's date/time/topic
+     * and status; the per-student totals (duty / medical / PT / stationed / notice
+     * / memo) simply repeat on each of that student's session rows. A student with
+     * no marked session keeps a single roster row (present by default) and is
+     * flagged has_session_in_range = false so the Time Period filter drops it.
+     *
+     * @param  \Illuminate\Support\Collection  $uniqueStudents
+     * @param  array<int, array<int, array<string, mixed>>>  $attendanceSessions
+     * @return \Illuminate\Support\Collection
+     */
+    private function expandStudentRowsBySession(\Illuminate\Support\Collection $uniqueStudents, array $attendanceSessions): \Illuminate\Support\Collection
+    {
+        $expanded = collect();
 
-            if (! $latestDay) {
+        foreach ($uniqueStudents as $studentMap) {
+            $studentPk = $studentMap->student_master_pk;
+            $coursePk = $studentMap->course_master_pk ?? null;
+
+            $sessions = $attendanceSessions[$studentPk] ?? [];
+
+            // Keep only this course-row's own sessions so a student enrolled in
+            // multiple courses doesn't repeat another course's sessions.
+            if ($coursePk !== null && (int) $coursePk !== 0) {
+                $sessions = array_values(array_filter($sessions, function ($s) use ($coursePk) {
+                    return (string) ($s['course_master_pk'] ?? '') === (string) $coursePk;
+                }));
+            }
+
+            if (empty($sessions)) {
+                $studentMap->attendance_present = true;
+                $studentMap->attendance_status = null;
+                $studentMap->session_date = null;
+                $studentMap->session_time = null;
+                $studentMap->session_topic = null;
+                $studentMap->has_session_in_range = false;
+                $expanded->push($studentMap);
                 continue;
             }
 
-            // Present/Absent is decided by the single most recent session (not by
-            // aggregating the whole day). Rows are pk-desc, so the first row of the
-            // latest day is that day's latest session — the one shown in the list.
-            $latest = $sessions->first(
-                fn ($r) => $r->session_date && Carbon::parse($r->session_date)->toDateString() === $latestDay
-            );
-
-            if (! $latest) {
-                continue;
+            foreach ($sessions as $session) {
+                $row = clone $studentMap;
+                $row->attendance_present = $session['present'];
+                $row->attendance_status = $session['status'];
+                $row->session_date = $session['session_date'];
+                $row->session_time = $session['session_time'];
+                $row->session_topic = $session['session_topic'];
+                $row->has_session_in_range = true;
+                $expanded->push($row);
             }
-
-            $result[(int) $spk] = [
-                'present' => (int) $latest->status !== 3,
-                'session_date' => $latest->session_date ?? null,
-                'session_time' => $latest->session_time ?? null,
-                'session_topic' => $latest->session_topic ?? null,
-            ];
         }
 
-        return $result;
+        return $expanded;
     }
 
     private function applyDashboardStudentListFilters($students, Request $request)
@@ -1793,13 +1843,22 @@ class UserController extends Controller
         $searchValue = is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput;
         $search = strtolower(trim((string) $searchValue));
 
-        return $students->filter(function ($studentMap) use ($courseId, $roleFilter, $counsellorFaculty, $groupPk, $cadre, $house, $search) {
+        // Time Period (event date) filter: when a range is selected, only students who
+        // have a timetable session/event within that range are kept. If no event exists
+        // on the chosen day(s), the list ends up empty ("Data not found.").
+        $hasSessionDateFilter = $request->filled('from_date') && $request->filled('to_date');
+
+        return $students->filter(function ($studentMap) use ($courseId, $roleFilter, $counsellorFaculty, $groupPk, $cadre, $house, $search, $hasSessionDateFilter) {
             $student = $studentMap->studentMaster;
             $course = $studentMap->course;
             $counsellorTypePk = (string) ($studentMap->groupMapping->groupTypeMasterCourseMasterMap->type_name ?? '');
             $rowFacilityId = (string) ($studentMap->groupMapping->groupTypeMasterCourseMasterMap->facility_id ?? '');
             $rowGroupPk = (string) ($studentMap->groupMapping->groupTypeMasterCourseMasterMap->pk ?? '');
             $rowCourseId = (string) ($course->pk ?? '');
+
+            if ($hasSessionDateFilter && ! ($studentMap->has_session_in_range ?? false)) {
+                return false;
+            }
 
             if ($courseId && $rowCourseId !== (string) $courseId) {
                 return false;
@@ -1877,7 +1936,7 @@ class UserController extends Controller
                 5 => 'status',
                 6 => 'session',
                 7 => 'topic',
-                8 => 'duty',
+                8 => 'medical',
                 9 => 'pt',
                 10 => 'stationed',
             ]
@@ -1937,9 +1996,9 @@ class UserController extends Controller
                 'name' => '<a href="' . e($detailUrl) . '" class="sl-count">' . e($displayName) . '</a>',
                 'email' => $student->email ?? 'N/A',
                 'cadre' => $student->cadre->cadre_name ?? 'N/A',
-                'status' => ($studentMap->attendance_present ?? true)
-                    ? '<span class="sl-status-badge sl-status-present">Present</span>'
-                    : '<span class="sl-status-badge sl-status-absent">Absent</span>',
+                'status' => '<span class="sl-status-badge '
+                    . (($studentMap->attendance_present ?? true) ? 'sl-status-present' : 'sl-status-absent')
+                    . '">' . e($this->dashboardAttendanceStatusLabel($studentMap)) . '</span>',
                 'date_session' => $sessionHtml,
                 'topic' => $studentMap->session_topic ?: 'N/A',
             ];
@@ -1948,7 +2007,7 @@ class UserController extends Controller
 
             if ($attendance === 'absent') {
                 $data[] = $baseRow + [
-                    'total_duty_count' => '<a href="' . e($sectionUrl('dutiesSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_duty_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
+                    'total_medical_exception_count' => '<a href="' . e($sectionUrl('medicalExceptionsSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_medical_exception_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
                     'total_pt_exemption_count' => '<a href="' . e($sectionUrl('ptExemptionsSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_pt_exemption_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
                     'total_stationed_leave_count' => '<a href="' . e($sectionUrl('stationedLeavesSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_stationed_leave_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
                 ];
@@ -1972,6 +2031,32 @@ class UserController extends Controller
             'recordsFiltered' => $recordsFiltered,
             'data' => $data,
         ]);
+    }
+
+    /**
+     * Human label for a session row's attendance status code
+     * (1 Present, 2 Late, 3 Absent, 4 MDO, 5 Escort, 6 Medical Exempt,
+     * 7 Other Exempt; 0/blank falls back to the present/absent flag).
+     */
+    private function dashboardAttendanceStatusLabel($studentMap): string
+    {
+        $status = $studentMap->attendance_status ?? null;
+        $present = ($studentMap->attendance_present ?? true) ? 'Present' : 'Absent';
+
+        if ($status === null || (int) $status === 0) {
+            return $present;
+        }
+
+        return match ((int) $status) {
+            1 => 'Present',
+            2 => 'Late',
+            3 => 'Absent',
+            4 => 'MDO',
+            5 => 'Escort',
+            6 => 'Medical Exempt',
+            7 => 'Other Exempt',
+            default => $present,
+        };
     }
 
     private function dashboardStudentListSortValue($studentMap, string $sortKey)
@@ -2009,6 +2094,8 @@ class UserController extends Controller
             'Email',
             'Cadre',
             'Course',
+            'Session Date',
+            'Status',
             'Total Duty (Count)',
             'Total Medical Exception (Count)',
             'Total PT Exemption (Count)',
@@ -2031,6 +2118,8 @@ class UserController extends Controller
                 $student->email ?? 'N/A',
                 $displayName,
                 $course->course_name ?? 'N/A',
+                $studentMap->session_date ? Carbon::parse($studentMap->session_date)->format('d-m-Y') : 'N/A',
+                $this->dashboardAttendanceStatusLabel($studentMap),
                 $studentMap->total_duty_count ?? 0,
                 $studentMap->total_medical_exception_count ?? 0,
                 $studentMap->total_pt_exemption_count ?? 0,
@@ -2163,7 +2252,7 @@ class UserController extends Controller
             $exemptionsCount = StudentMedicalExemption::where('student_master_pk', $studentPk)
                 ->where('active_inactive', 1)
                 ->count();
-            $memosCount = $noticeMemoService->getMemos($studentPk)->count();
+            $memosCount = $noticeMemoService->getDisciplineMemos($studentPk)->count();
 
             // Phase list: use active enrolled courses as “completed/active” sequence
             $courseMaps = StudentMasterCourseMap::with('course')
@@ -2288,10 +2377,12 @@ class UserController extends Controller
             ->orderBy('mdo_date', 'desc')
             ->get();
 
-        // Get notices using OTNoticeMemoService
+        // Get notices using OTNoticeMemoService; memos come from the Discipline Memo
+        // module's source (discipline_memo_status) so the detail view matches
+        // /memo/discipline and the list "Total Memo" count.
         $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
         $notices = $noticeMemoService->getNotices($studentPk);
-        $memos = $noticeMemoService->getMemos($studentPk);
+        $memos = $noticeMemoService->getDisciplineMemos($studentPk);
 
         // Get enrolled courses
         $enrolledCourses = StudentMasterCourseMap::with('course')

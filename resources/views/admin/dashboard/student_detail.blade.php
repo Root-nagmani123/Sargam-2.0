@@ -113,7 +113,7 @@
         @php
             $sdStats = [
                 ['medicalExceptionsSection', $medicalExemptions->count(), 'Medical Exceptions', 'bi-heart-pulse-fill', '#b42318', '#fef3f2'],
-                ['ptExemptionsSection', $ptExemptions->count(), 'PT Exemptions', 'bi-person-walking', '#027a48', '#ecfdf3'],
+                ['ptExemptionsSection', number_format((float) $ptExemptions->sum('total_days'), 0), 'PT Exemptions', 'bi-person-walking', '#027a48', '#ecfdf3'],
                 ['stationedLeavesSection', number_format((float) $stationedLeaves->sum('total_days'), 0), 'Station Leave', 'bi-geo-alt-fill', '#5925dc', '#f4f3ff'],
                 ['dutiesSection', $duties->count(), 'Duties Assigned', 'bi-list-task', '#b54708', '#fffaeb'],
                 ['noticesSection', $notices->count(), 'Notices Received', 'bi-bell-fill', '#026aa2', '#f0f9ff'],
@@ -200,7 +200,7 @@
     @if(!$focusSection || $focusSection === 'ptExemptionsSection')
     <div class="card border-0 shadow-sm rounded-3 mb-4 sd-section" id="ptExemptionsSection">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="fas fa-running me-2"></i>PT Exemptions ({{ $ptExemptions->count() }})</h5>
+            <h5 class="mb-0"><i class="fas fa-running me-2"></i>PT Exemptions ({{ number_format((float) $ptExemptions->sum('total_days'), 0) }})</h5>
             <div>
                 <button type="button" class="btn btn-sm btn-outline-success rounded-2" onclick="exportTableToExcel('ptExemptionsTable', 'PT_Exemptions')">
                     <i class="fas fa-file-excel me-1"></i>Export Excel
@@ -479,11 +479,11 @@
                                     <td>{{ $memo->conclusion_type ?? 'N/A' }}</td>
                                     <td>
                                         @if($memo->status == 1)
-                                            <span class="badge bg-warning">Pending</span>
+                                            <span class="badge bg-success">Recorded</span>
                                         @elseif($memo->status == 2)
-                                            <span class="badge bg-success">Resolved</span>
+                                            <span class="badge bg-warning">Memo Sent</span>
                                         @else
-                                            <span class="badge bg-secondary">Unknown</span>
+                                            <span class="badge bg-secondary">Closed</span>
                                         @endif
                                     </td>
                                     <td>{{ $memo->response ?? 'N/A' }}</td>

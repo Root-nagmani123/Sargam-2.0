@@ -447,7 +447,7 @@
                                 <th>Status</th>
                                 <th>Date &amp; Session</th>
                                 <th>Topic</th>
-                                <th>Total Duty (Count)</th>
+                                <th>Total Medical Exemption Count</th>
                                 <th>Total PT Exemption Count</th>
                                 <th>Total Stationed Leave Count</th>
                             </tr>
@@ -638,7 +638,7 @@
                 { data: 'status', name: 'status', searchable: false },
                 { data: 'date_session', name: 'date_session' },
                 { data: 'topic', name: 'topic' },
-                { data: 'total_duty_count', name: 'total_duty_count', searchable: false },
+                { data: 'total_medical_exception_count', name: 'total_medical_exception_count', searchable: false },
                 { data: 'total_pt_exemption_count', name: 'total_pt_exemption_count', searchable: false },
                 { data: 'total_stationed_leave_count', name: 'total_stationed_leave_count', searchable: false },
             ]
