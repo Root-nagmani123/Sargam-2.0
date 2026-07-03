@@ -50,8 +50,9 @@ class CalendarController extends Controller
 
         $data_course_id = get_Role_by_course();
 
-        $courseMaster = CourseMaster::where('course_master.active_inactive', 1)
-            ->whereDate('end_date', '>=', today());
+        // Base course scope (role / faculty / student), WITHOUT the end-date
+        // condition — so we can branch it into Active vs Archived below.
+        $courseBase = CourseMaster::where('course_master.active_inactive', 1);
 
         // Training-admin roles manage events and must see courses by role mapping, not timetable.
         $isTrainingAdmin = hasRole('Training') || hasRole('Training-Induction') || hasRole('Training MCTP Admin') || hasRole('Training IST');
@@ -61,21 +62,21 @@ class CalendarController extends Controller
             $facultyPk = get_auth_faculty_master_pk();
             if ($facultyPk) {
                 $facultyCourseIds = app(FacultyFeedbackReportService::class)->getAccessibleCourseIds($facultyPk);
-                $courseMaster = $facultyCourseIds->isNotEmpty()
-                    ? $courseMaster->whereIn('course_master.pk', $facultyCourseIds)
-                    : $courseMaster->whereRaw('1 = 0');
+                $courseBase = $facultyCourseIds->isNotEmpty()
+                    ? $courseBase->whereIn('course_master.pk', $facultyCourseIds)
+                    : $courseBase->whereRaw('1 = 0');
             } else {
-                $courseMaster = $courseMaster->whereRaw('1 = 0');
+                $courseBase = $courseBase->whereRaw('1 = 0');
             }
         } elseif (!hasRole('Student-OT') && !empty($data_course_id)) {
             // Students are scoped by enrolment (the join below), not by role. Skipping the
             // role-course filter for them avoids get_Role_by_course()'s [-1] (students have
             // no Spatie role), which would otherwise wipe out their course list.
-            $courseMaster = $courseMaster->whereIn('course_master.pk', $data_course_id);
+            $courseBase = $courseBase->whereIn('course_master.pk', $data_course_id);
         }
 
         if (hasRole('Student-OT')) {
-            $courseMaster = $courseMaster->leftJoin(
+            $courseBase = $courseBase->leftJoin(
                 'student_master_course__map',
                 'student_master_course__map.course_master_pk',
                 '=',
@@ -84,7 +85,20 @@ class CalendarController extends Controller
                 ->where('student_master_course__map.student_master_pk', auth()->user()->user_id);
         }
 
-        $courseMaster = $courseMaster->select('course_master.pk', 'course_name', 'couse_short_name', 'course_year')
+        $courseSelect = ['course_master.pk', 'course_name', 'couse_short_name', 'course_year'];
+        $today = today();
+
+        // Active = running/upcoming courses (end date today or later).
+        $courseMaster = (clone $courseBase)
+            ->whereDate('end_date', '>=', $today)
+            ->select($courseSelect)
+            ->get();
+
+        // Archived = courses that have already ended.
+        $archivedCourseMaster = (clone $courseBase)
+            ->whereNotNull('end_date')
+            ->whereDate('end_date', '<', $today)
+            ->select($courseSelect)
             ->get();
         // print_r($courseMaster);die;
 
@@ -122,6 +136,7 @@ class CalendarController extends Controller
 
         return view('admin.calendar.index', compact(
             'courseMaster',
+            'archivedCourseMaster',
             'facultyMaster',
             'subjects',
             'venueMaster',

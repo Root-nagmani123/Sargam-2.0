@@ -34,7 +34,19 @@
         </a>
         @endif
     </x-breadcrum>
-<div class="d-flex justify-content-end mb-3">
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+    {{-- Active / Archived courses (same split as Course Master) --}}
+    <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0" role="group" aria-label="Filter courses by status">
+        <li class="nav-item" role="presentation">
+            <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill active"
+                id="calFilterActive" data-cal-status="active" aria-pressed="true" aria-current="true">Active</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill"
+                id="calFilterArchive" data-cal-status="archive" aria-pressed="false">Archived</button>
+        </li>
+    </ul>
+
     <a href="#" id="btnTimetablePdf" class="btn btn-outline-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm px-3 fw-semibold text-nowrap" style="background-color: #fff; border:0;color:#004a93;" title="Download the visible timetable as a PDF">
         <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">download</i>
         <span>Download</span>
@@ -326,6 +338,56 @@ function initCourseFilter() {
     if (!select) return;
     syncCalCourseFilterState();
     select.addEventListener('change', syncCalCourseFilterState);
+}
+
+/**
+ * Active / Archived course tabs (same split as Course Master): Active =
+ * running courses, Archived = courses that have already ended. Switching the
+ * tab repopulates the course dropdown from the matching list and reloads the
+ * calendar for the newly-selected scope.
+ */
+function initCalendarStatusTabs() {
+    const activeCourses = @json($courseMaster ?? []);
+    const archivedCourses = @json($archivedCourseMaster ?? []);
+    const select = document.getElementById('courseFilter');
+    const pills = document.querySelectorAll('.programme-status-tabs [data-cal-status]');
+    if (!select || !pills.length) return;
+
+    function repopulate(list) {
+        if (list && list.length) {
+            select.innerHTML = '<option value="">Course Name</option>' +
+                list.map(function (c) {
+                    return '<option value="' + c.pk + '">' + (c.course_name || '') + '</option>';
+                }).join('');
+        } else {
+            select.innerHTML = '<option value="">No courses in this view</option>';
+        }
+        select.value = '';
+
+        // Keep the calendar manager's course list in sync so the course header
+        // resolves the right course, then clear the selection and refetch.
+        if (window.calendarManager) {
+            window.calendarManager.courses = list || [];
+            window.calendarManager.selectedCourseId = null;
+        }
+        syncCalCourseFilterState();
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    pills.forEach(function (pill) {
+        pill.addEventListener('click', function () {
+            if (this.classList.contains('active')) return;
+            pills.forEach(function (p) {
+                p.classList.remove('active');
+                p.setAttribute('aria-pressed', 'false');
+                p.removeAttribute('aria-current');
+            });
+            this.classList.add('active');
+            this.setAttribute('aria-pressed', 'true');
+            this.setAttribute('aria-current', 'true');
+            repopulate(this.dataset.calStatus === 'archive' ? archivedCourses : activeCourses);
+        });
+    });
 }
 
 /** Blur course filter while Add/Edit Event modal is open */
@@ -2906,6 +2968,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
         window.calendarManager = new CalendarManager();
         console.log('Calendar manager initialized successfully');
+        initCalendarStatusTabs();
     } catch (error) {
         console.error('Error initializing calendar:', error);
         console.error('Error stack:', error.stack);
