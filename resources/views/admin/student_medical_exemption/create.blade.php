@@ -87,17 +87,17 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label">OT Code</label>
-                        <input type="text" class="form-control" name="ot_code" id="otCodeField"
-                               placeholder="eg. A72" readonly>
-                    </div>
-
-                    <div class="col-md-6">
                         <label class="form-label">Student Name <span class="text-danger">*</span></label>
                         <select name="student_master_pk" class="form-select" id="studentDropdown" required>
                             <option value="">Search Student</option>
                             {{-- Student options will be populated by AJAX --}}
                         </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">OT Code</label>
+                        <input type="text" class="form-control" name="ot_code" id="otCodeField"
+                               placeholder="eg. A72" readonly>
                     </div>
                 </div>
 
