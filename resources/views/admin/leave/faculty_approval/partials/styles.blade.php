@@ -92,21 +92,21 @@
         color: #b42318;
     }
 
-    /* ── Icon row actions ── */
+    /* ── Square action buttons (filled approve / outlined reject) ── */
     .faculty-leave-approval-page .approval-action-btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 1.85rem;
-        height: 1.85rem;
+        width: 38px;
+        height: 38px;
         padding: 0;
-        border: 0;
+        border: 1px solid transparent;
         background: transparent;
-        border-radius: 6px;
+        border-radius: 9px;
         line-height: 1;
         cursor: pointer;
         text-decoration: none;
-        transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+        transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
     }
 
     .faculty-leave-approval-page .approval-action-btn:hover {
@@ -117,31 +117,44 @@
         font-size: 1.05rem;
     }
 
+    /* View — neutral outlined square */
     .faculty-leave-approval-page .approval-action-btn--view {
         color: #475467;
+        border-color: #d0d5dd;
+        background: #fff;
     }
 
     .faculty-leave-approval-page .approval-action-btn--view:hover {
         color: #101828;
+        border-color: #98a2b3;
         background: #f2f4f7;
     }
 
+    /* Approve — solid brand-blue square with white check */
     .faculty-leave-approval-page .approval-action-btn--approve {
-        color: #12b76a;
+        color: #fff;
+        background: #004a93;
+        border-color: #004a93;
     }
 
     .faculty-leave-approval-page .approval-action-btn--approve:hover {
-        color: #027a48;
-        background: #ecfdf3;
+        color: #fff;
+        background: #003a75;
+        border-color: #003a75;
+        box-shadow: 0 4px 10px rgba(0, 74, 147, 0.25);
     }
 
+    /* Reject — white square with red border and red cross */
     .faculty-leave-approval-page .approval-action-btn--reject {
-        color: #f04438;
+        color: #d92d20;
+        background: #fff;
+        border-color: #f5a3a0;
     }
 
     .faculty-leave-approval-page .approval-action-btn--reject:hover {
         color: #b42318;
         background: #fef3f2;
+        border-color: #f04438;
     }
 
     @media (max-width: 767.98px) {

@@ -99,36 +99,24 @@
     @endif
 
     <div class="row g-4 leave-apply-layout">
-        {{-- Aside: info note + PT balance --}}
+        {{-- Aside: PT balance — only for PT exemption. Stationed leave has no
+             aside content, so the form below spans the full width instead of
+             leaving an empty left column. --}}
+        @if($isPt)
         <div class="col-12 col-lg-4 order-2 order-lg-1">
-            @php
-                $applyCutoffDisplay = $isPt ? ($ptCutoffTimeDisplay ?? null) : ($stationedCutoffTimeDisplay ?? null);
-                $leaveTypeLabel = $isPt ? 'PT exemption' : 'Stationed leave';
-            @endphp
-            <div class="leave-note-card">
-                <i class="material-icons material-symbols-rounded note-icon">info</i>
-                <p class="leave-note-text">
-                    {{ $leaveTypeLabel }} is approved automatically on submit.
-                    @if($applyCutoffDisplay)
-                        Same day applications are allowed only before {{ $applyCutoffDisplay }}.
-                    @endif
-                </p>
-            </div>
-
-            @if($isPt)
-                <div class="pt-balance-box">
-                    <div class="pt-balance-head">
-                        <i class="material-icons material-symbols-rounded">calendar_month</i>
-                        <span>PT Balance</span>
-                    </div>
-                    <div class="pt-balance-num">{{ number_format((float) ($ptBalance['remaining'] ?? 0), 1) }} Days</div>
-                    <div class="pt-balance-sub">As on {{ $ptBalance['as_on'] ?? now()->format('d M Y') }}</div>
+            <div class="pt-balance-box">
+                <div class="pt-balance-head">
+                    <i class="material-icons material-symbols-rounded">calendar_month</i>
+                    <span>PT Balance</span>
                 </div>
-            @endif
+                <div class="pt-balance-num">{{ number_format((float) ($ptBalance['remaining'] ?? 0), 1) }} Days</div>
+                <div class="pt-balance-sub">As on {{ $ptBalance['as_on'] ?? now()->format('d M Y') }}</div>
+            </div>
         </div>
+        @endif
 
         {{-- Form --}}
-        <div class="col-12 col-lg-8 order-1 order-lg-2">
+        <div class="col-12 {{ $isPt ? 'col-lg-8 order-1 order-lg-2' : '' }}">
     <div class="card leave-apply-card border-0 shadow-sm rounded-3">
         <div class="card-body p-3 p-md-4">
             <form method="POST" action="{{ $formAction }}" enctype="multipart/form-data" id="leave-apply-form">
@@ -245,17 +233,27 @@
                         @if(($application ?? null) && $application->attachments->isNotEmpty())
                             <div class="leave-existing-attach mb-2">
                                 @foreach($application->attachments as $attachment)
-                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                    <div class="d-flex align-items-center gap-2 mb-1 leave-existing-attach-row">
                                         <i class="material-icons material-symbols-rounded text-secondary" style="font-size:18px;">attach_file</i>
-                                        <a href="{{ asset('storage/' . $attachment->file_path) }}" target="_blank">
+                                        <a href="{{ asset('storage/' . $attachment->file_path) }}" target="_blank" class="leave-existing-attach-link">
                                             {{ $attachment->attachment_title ? $attachment->attachment_title . ' — ' : '' }}{{ $attachment->original_file_name }}
                                         </a>
                                         @if(! $isReadOnly)
                                             <input type="hidden" name="existing_attachments[]" value="{{ $attachment->pk }}">
+                                            {{-- Staged removal: the file is only deleted when the form is
+                                                 saved (the hidden input above is disabled on remove, so its
+                                                 pk drops out of existing_attachments[]). Undo restores it. --}}
+                                            <button type="button" class="btn btn-sm btn-link text-danger p-0 leave-existing-attach-remove"
+                                                title="Remove attachment" aria-label="Remove attachment">
+                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
+                                            </button>
                                         @endif
                                     </div>
                                 @endforeach
                             </div>
+                            @if(! $isReadOnly)
+                                <p class="form-text mt-0 mb-2">To replace a file, remove the existing one and add a new attachment below.</p>
+                            @endif
                         @endif
 
                         @if(! $isReadOnly)
@@ -308,7 +306,7 @@
                 @if(! $isReadOnly)
                 <div class="leave-actions-end">
                     <a href="{{ route('leave.my-leave') }}" class="btn btn-cancel-outline">Cancel</a>
-                    <button type="submit" name="submit_action" value="submit" class="btn btn-apply">Apply Leave</button>
+                    <button type="submit" name="submit_action" value="submit" class="btn btn-apply">Apply Exemption</button>
                 </div>
                 @endif
             </form>
@@ -406,6 +404,32 @@ $(function () {
     $(document).on('click', '.leave-attachment-remove', function () {
         $(this).closest('.leave-attachment-row').remove();
         refreshRemoveButtons();
+    });
+
+    /* ── Existing (already-saved) attachments: remove / undo ── */
+    $(document).on('click', '.leave-existing-attach-remove', function () {
+        const $row = $(this).closest('.leave-existing-attach-row');
+        const $hidden = $row.find('input[name="existing_attachments[]"]');
+        const $link = $row.find('.leave-existing-attach-link');
+        const $icon = $(this).find('i');
+        const staged = $row.hasClass('leave-existing-removed');
+
+        if (!staged) {
+            // Stage for deletion — disabling the hidden input drops this pk from
+            // existing_attachments[], so the update removes the file on save.
+            $row.addClass('leave-existing-removed');
+            $hidden.prop('disabled', true);
+            $link.css({ 'text-decoration': 'line-through', 'opacity': '0.55' });
+            $(this).attr('title', 'Undo remove').attr('aria-label', 'Undo remove');
+            $icon.text('undo');
+        } else {
+            // Undo — keep the file.
+            $row.removeClass('leave-existing-removed');
+            $hidden.prop('disabled', false);
+            $link.css({ 'text-decoration': '', 'opacity': '' });
+            $(this).attr('title', 'Remove attachment').attr('aria-label', 'Remove attachment');
+            $icon.text('delete');
+        }
     });
 
     /* ── Date sync + total days ── */
