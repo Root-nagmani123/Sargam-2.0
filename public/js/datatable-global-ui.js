@@ -393,7 +393,17 @@
     }
 
     function normalizeSortingOptions(options) {
-        if (!options || typeof options !== 'object' || options.serverSide === true) {
+        if (!options || typeof options !== 'object') {
+            return options;
+        }
+
+        if (options.serverSide === true) {
+            // Server-side (Yajra) tables can't be safely converted to full
+            // client-side globally — their generated ajax request logic depends
+            // on the server-side request structure. So we turn OFF DataTables'
+            // server ordering and let enableClientSidePageSort() sort the loaded
+            // page in the browser instead.
+            options.ordering = false;
             return options;
         }
 
@@ -410,6 +420,84 @@
         }
 
         return options;
+    }
+
+    /* ── Client-side page sort for server-side tables ──────────────────────────
+       Server-side tables now have DataTables' own ordering disabled (above), so
+       we sort the CURRENTLY-LOADED rows in the browser on header click, toggling
+       asc/desc. We reuse the .sorting / .sorting_asc / .sorting_desc classes so
+       the sort-arrow styling applies. Sorts each loaded page (the accepted
+       client-side behaviour). */
+    function cellSortValue(cell) {
+        if (!cell) { return { text: '', num: null }; }
+        var text = (cell.textContent || '').replace(/\s+/g, ' ').trim();
+        var cleaned = text.replace(/[,%₹$]/g, '').trim();
+        var num = (cleaned !== '' && !isNaN(cleaned)) ? parseFloat(cleaned) : null;
+        return { text: text, num: num };
+    }
+
+    function sortVisiblePageRows(tableNode, colIdx, dir) {
+        var tbody = tableNode.tBodies && tableNode.tBodies[0];
+        if (!tbody) { return; }
+        var rows = Array.prototype.slice.call(tbody.rows).filter(function (r) {
+            return !r.querySelector('td[colspan], th[colspan]'); // skip empty / grouping rows
+        });
+        if (rows.length < 2) { return; }
+        var factor = dir === 'desc' ? -1 : 1;
+        rows.sort(function (a, b) {
+            var av = cellSortValue(a.cells[colIdx]);
+            var bv = cellSortValue(b.cells[colIdx]);
+            if (av.num !== null && bv.num !== null) {
+                return (av.num - bv.num) * factor;
+            }
+            return av.text.localeCompare(bv.text, undefined, { numeric: true, sensitivity: 'base' }) * factor;
+        });
+        var frag = document.createDocumentFragment();
+        rows.forEach(function (r) { frag.appendChild(r); });
+        tbody.appendChild(frag);
+    }
+
+    function enableClientSidePageSort(settings) {
+        if (!settings.oFeatures || !settings.oFeatures.bServerSide) {
+            return; // client-side tables sort natively via DataTables
+        }
+        var api = new $.fn.dataTable.Api(settings);
+        var tableNode = api.table().node();
+        var $table = $(tableNode);
+        if ($table.data('sargamPageSort')) { return; }
+        $table.data('sargamPageSort', true);
+
+        var $headRow = $table.find('thead tr').last();
+        var $cells = $headRow.children('th, td');
+        var sortState = { col: null, dir: 'asc' };
+
+        $cells.each(function (idx) {
+            var $c = $(this);
+            var title = $c.text().replace(/\s+/g, ' ').trim().toLowerCase();
+            if (title === '' || title === 'action' || title === 'actions') { return; }
+            $c.addClass('sorting').attr('data-sargam-sort', idx).css('cursor', 'pointer');
+        });
+
+        $headRow.on('click.sargamSort', '[data-sargam-sort]', function () {
+            var col = parseInt($(this).attr('data-sargam-sort'), 10);
+            if (sortState.col === col) {
+                sortState.dir = (sortState.dir === 'asc') ? 'desc' : 'asc';
+            } else {
+                sortState.col = col;
+                sortState.dir = 'asc';
+            }
+            $cells.filter('[data-sargam-sort]').removeClass('sorting_asc sorting_desc').addClass('sorting');
+            $(this).removeClass('sorting').addClass(sortState.dir === 'asc' ? 'sorting_asc' : 'sorting_desc');
+            sortVisiblePageRows(tableNode, col, sortState.dir);
+        });
+
+        // Each server draw (page change / filter) replaces the rows; re-apply the
+        // active sort so the visible page stays sorted the way the user chose.
+        $table.on('draw.dt.sargamSort', function () {
+            if (sortState.col !== null) {
+                sortVisiblePageRows(tableNode, sortState.col, sortState.dir);
+            }
+        });
     }
 
     // Patch the DataTables initialisers once so the normalisation applies to
@@ -460,6 +548,10 @@
         var api = new $.fn.dataTable.Api(settings);
         var $table = $(api.table().node());
 
+        // Client-side page sorting for server-side tables applies regardless of
+        // the UI-enhancement opt-out, so every table gets sortable headers.
+        try { enableClientSidePageSort(settings); } catch (err) { /* noop */ }
+
         if (!shouldEnhance($table)) {
             return;
         }
@@ -472,6 +564,7 @@
             enhanceFromSettings(settings);
         }, 300);
     });
+
 
     window.SargamDataTableUI = {
         enhance: enhance,
