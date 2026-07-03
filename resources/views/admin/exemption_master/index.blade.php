@@ -339,23 +339,41 @@ $(function () {
         const active = $(this).is(':checked') ? 1 : 0;
         const $toggle = $(this);
 
-        $.ajax({
-            url: "{{ route('admin.pt-exemption-master.status', ':id') }}".replace(':id', id),
-            type: 'POST',
-            data: {
-                _token: '{{ csrf_token() }}',
-                active_inactive: active,
-            },
-            success: function (res) {
-                if (res.success) {
-                    toastr.success(res.message);
-                    table.ajax.reload(null, false);
-                }
-            },
-            error: function () {
+        const actionWord = active ? 'activate' : 'inactivate';
+
+        Swal.fire({
+            title: 'Are you sure?',
+            html: 'This will ' + actionWord + ' <strong style="color:#d33;">both Male and Female</strong> PT exemption for this course.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, ' + actionWord + ' both',
+            cancelButtonText: 'Cancel',
+        }).then((result) => {
+            if (!result.isConfirmed) {
                 $toggle.prop('checked', !active);
-                toastr.error('Failed to update status.');
+                return;
             }
+
+            $.ajax({
+                url: "{{ route('admin.pt-exemption-master.status', ':id') }}".replace(':id', id),
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    active_inactive: active,
+                },
+                success: function (res) {
+                    if (res.success) {
+                        toastr.success(res.message);
+                        table.ajax.reload(null, false);
+                    }
+                },
+                error: function () {
+                    $toggle.prop('checked', !active);
+                    toastr.error('Failed to update status.');
+                }
+            });
         });
     });
 
@@ -365,12 +383,12 @@ $(function () {
 
         Swal.fire({
             title: 'Are you sure?',
-            text: 'This record will be permanently deleted.',
+            html: 'This will permanently delete <strong style="color:#d33;">both Male and Female</strong> PT exemption for this course.',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, delete it',
+            confirmButtonText: 'Yes, delete both',
             cancelButtonText: 'Cancel',
         }).then((result) => {
             if (!result.isConfirmed) {
