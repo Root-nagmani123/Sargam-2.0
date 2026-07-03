@@ -76,7 +76,7 @@
                             </div>
                         </div>
 
-                        <h6 class="gm-section-title mt-3">Notice Preview</h6>
+                        <h6 class="gm-section-title mt-3">Preview</h6>
                         <div class="gm-preview" id="gmPreview">
                             <h5 class="text-center fw-bold mb-1" id="gmPvCourse">Course Name</h5>
                             <p class="text-center mb-0 small">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
@@ -164,8 +164,6 @@
             </div>
         </div>
     </div>
-
-    @include('admin.partials.memo_global_search')
 
     {{-- Tabs + Download --}}
     <div class="card-body py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">

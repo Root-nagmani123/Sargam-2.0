@@ -208,7 +208,6 @@
       });
     })();
   </script>
-  <script src="{{asset('admin_assets/js/datatable/datatable-basic.init.js')}}"></script>
   <script src="{{asset('admin_assets/js/forms/repeater-init.js')}}"></script>
   <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
   <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
@@ -216,7 +215,7 @@
   <script src="{{asset('admin_assets/js/routes.js')}}"></script>
   <!-- SweetAlert2 must be loaded before custom.js (status-toggle confirmation uses Swal.fire) -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script src="{{asset('admin_assets/js/custom.js')}}"></script>
+  <script src="{{asset('admin_assets/js/custom.js')}}?v={{ filemtime(public_path('admin_assets/js/custom.js')) }}"></script>
   <script src="{{asset('admin_assets/js/status-toggle-delete.js')}}"></script>
   <script src="{{asset('admin_assets/js/forms/form-wizard.js')}}"></script>
   <script src="{{asset('admin_assets/libs/jquery-steps/build/jquery.steps.min.js')}}"></script>
@@ -231,4 +230,3 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
-  <script src="https://bootstrapdemos.adminmart.com/matdash/dist/assets/js/datatable/datatable-advanced.init.js"></script>

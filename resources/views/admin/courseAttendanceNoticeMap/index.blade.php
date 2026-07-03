@@ -152,8 +152,6 @@
         </div>
     </div>
 
-    @include('admin.partials.memo_global_search')
-
     {{-- Tabs + Download --}}
   <div class="py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
             <div class="mnm-tabs">
@@ -219,7 +217,14 @@
                             <i class="bi bi-layout-three-columns"></i> Columns
                         </button>
                         <button type="button" class="mnm-icon-btn" id="mnmSearchToggle" aria-label="Search"><i class="bi bi-search"></i></button>
-                        <input type="text" class="mnm-search-input {{ $searchFilter ? '' : 'd-none' }}" id="search" name="search" placeholder="Search..." value="{{ $searchFilter }}">
+                        <div class="mnm-search-wrap {{ $searchFilter ? '' : 'd-none' }}" id="mnmSearchWrap" style="position:relative;">
+                            <input type="text" class="mnm-search-input" id="search" name="search" placeholder="Search..."
+                                value="{{ $searchFilter }}" autocomplete="off" style="padding-right:1.9rem;">
+                            <button type="button" id="mnmSearchClear" aria-label="Clear search" title="Clear"
+                                style="position:absolute;top:50%;right:.35rem;transform:translateY(-50%);border:0;background:transparent;color:#94a3b8;line-height:1;padding:.15rem;{{ $searchFilter ? '' : 'display:none;' }}">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -972,14 +977,43 @@ $(function () {
         $('#filterForm').submit();
     });
 
-    // ── Search toggle + submit on Enter ──
+    // ── Search: toggle, search-as-you-type (debounced), Enter, clear ──
     $('#mnmSearchToggle').on('click', function () {
-        $('#search').toggleClass('d-none');
-        if (!$('#search').hasClass('d-none')) { $('#search').trigger('focus'); }
+        var $wrap = $('#mnmSearchWrap');
+        $wrap.toggleClass('d-none');
+        if (!$wrap.hasClass('d-none')) { $('#search').trigger('focus'); }
+    });
+
+    var mnmSearchTimer = null;
+    $('#search').on('input', function () {
+        $('#mnmSearchClear').toggle(this.value.length > 0);
+        clearTimeout(mnmSearchTimer);
+        // Filters here submit the whole form (full reload); debounce so we only
+        // search once the user pauses typing, not on every keystroke.
+        mnmSearchTimer = setTimeout(function () { $('#filterForm').submit(); }, 500);
     });
     $('#search').on('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); $('#filterForm').submit(); }
+        if (e.key === 'Enter') { e.preventDefault(); clearTimeout(mnmSearchTimer); $('#filterForm').submit(); }
     });
+    $('#mnmSearchClear').on('click', function () {
+        var $s = $('#search');
+        $(this).hide();
+        clearTimeout(mnmSearchTimer);
+        if ($s.val() === '') { $s.trigger('focus'); return; }
+        $s.val('');
+        $('#filterForm').submit();
+    });
+
+    // After a search reload, put the cursor back in the search box (at the end)
+    // so typing continues uninterrupted despite the full-page submit.
+    (function restoreSearchFocus() {
+        var el = document.getElementById('search');
+        var wrap = document.getElementById('mnmSearchWrap');
+        if (el && wrap && !wrap.classList.contains('d-none') && el.value) {
+            el.focus();
+            var v = el.value; el.value = ''; el.value = v; // move caret to end
+        }
+    })();
 
     // ── Column Visibility modal (static, server-paginated table) ──
     var mnmLabels = ['S. No.', 'Program Name', 'Participant Name', 'Type', 'Session Date', 'Topic', 'Conclusion Type', 'Conclusion Remark', 'Status', 'Action'];
