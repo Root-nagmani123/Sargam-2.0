@@ -994,6 +994,7 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
         Route::get('/edit/{id}', 'edit')->name('edit');
 
         Route::get('assign-student', 'assignStudent')->name('assign.student');
+        Route::post('assign-hostel-student-preview', 'previewAssignHostelToStudent')->name('assign.hostel.to.student.preview');
         Route::post('assign-hostel-student', 'assignHostelToStudent')->name('assign.hostel.to.student');
         Route::get('export', 'export')->name('export');
         Route::get('import', 'import')->name('import');
@@ -1007,6 +1008,7 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::get('/export', 'export')->name('export');
         Route::post('/update-comment', 'updateComment')->name('update.comment');
+        Route::delete('/destroy/{id}', 'destroy')->name('destroy');
     });
 });
 

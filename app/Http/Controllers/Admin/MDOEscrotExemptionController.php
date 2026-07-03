@@ -159,11 +159,18 @@ class MDOEscrotExemptionController extends Controller
             $primaryFaculty = $facultyPks[0] ?? null;
             $facultyPksCsv = !empty($facultyPks) ? implode(',', $facultyPks) : null;
 
+            // Free-text duty name is only relevant when duty type is "Other".
+            $otherDutyTypeId = MDOEscotDutyMap::getMdoDutyTypes()['other'] ?? null;
+            $dutyOther = ($otherDutyTypeId && $request->mdo_duty_type_master_pk == $otherDutyTypeId)
+                ? $request->duty_other
+                : null;
+
             if ($request->selected_student_list != null) {
                 foreach ($request->selected_student_list as $student_id) {
                     $record = MDOEscotDutyMap::create([
                         'course_master_pk' => $request->course_master_pk,
                         'mdo_duty_type_master_pk' => $request->mdo_duty_type_master_pk,
+                        'duty_other' => $dutyOther,
                         'mdo_date' => $request->mdo_date,
                         'Time_from' => $request->Time_from,
                         'Time_to' => $request->Time_to,
