@@ -2236,13 +2236,15 @@ class UserController extends Controller
                 $course = CourseMaster::find($coursePk);
             }
 
-            // Attendance % for this student in this course (present + late) / total
+            // Attendance % for this student in this course (present + late) / total.
+            // status is ENUM('0'..'7'); compare to quoted strings so buckets aren't
+            // shifted by MySQL's enum-ordinal comparison (see studentDetail summary).
             $att = CourseStudentAttendance::where('Student_master_pk', $studentPk)
                 ->when($coursePk > 0, fn ($q) => $q->where('course_master_pk', $coursePk))
-                ->selectRaw('COUNT(*) as total_sessions,
-                    COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) as present_count,
-                    COALESCE(SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END), 0) as late_count
-                ')
+                ->selectRaw("COUNT(*) as total_sessions,
+                    COALESCE(SUM(CASE WHEN status = '1' THEN 1 ELSE 0 END), 0) as present_count,
+                    COALESCE(SUM(CASE WHEN status = '2' THEN 1 ELSE 0 END), 0) as late_count
+                ")
                 ->first();
             $totalSessions = (int) ($att->total_sessions ?? 0);
             $present = (int) ($att->present_count ?? 0);
@@ -2390,19 +2392,23 @@ class UserController extends Controller
             ->where('active_inactive', 1)
             ->get();
 
-        // Get attendance records summary
+        // Get attendance records summary.
+        // NOTE: course_student_attendance.status is an ENUM('0'..'7'); comparing it to
+        // an INTEGER makes MySQL match by enum ordinal (1-indexed), shifting every
+        // bucket by one. Compare against the quoted string values so the mapping is
+        // correct (1 Present, 2 Late, 3 Absent, 4 MDO, 5 Escort, 6 Medical, 7 Other).
         $attendanceSummary = CourseStudentAttendance::where('Student_master_pk', $studentPk)
-            ->selectRaw('
+            ->selectRaw("
                 COUNT(*) as total_sessions,
-                SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as present_count,
-                SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) as late_count,
-                SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) as absent_count,
-                SUM(CASE WHEN status = 4 THEN 1 ELSE 0 END) as mdo_count,
-                SUM(CASE WHEN status = 5 THEN 1 ELSE 0 END) as escort_count,
-                SUM(CASE WHEN status = 6 THEN 1 ELSE 0 END) as medical_exempt_count,
-                SUM(CASE WHEN status = 7 THEN 1 ELSE 0 END) as other_exempt_count,
-                SUM(CASE WHEN status = 0 OR status IS NULL THEN 1 ELSE 0 END) as not_marked_count
-            ')
+                SUM(CASE WHEN status = '1' THEN 1 ELSE 0 END) as present_count,
+                SUM(CASE WHEN status = '2' THEN 1 ELSE 0 END) as late_count,
+                SUM(CASE WHEN status = '3' THEN 1 ELSE 0 END) as absent_count,
+                SUM(CASE WHEN status = '4' THEN 1 ELSE 0 END) as mdo_count,
+                SUM(CASE WHEN status = '5' THEN 1 ELSE 0 END) as escort_count,
+                SUM(CASE WHEN status = '6' THEN 1 ELSE 0 END) as medical_exempt_count,
+                SUM(CASE WHEN status = '7' THEN 1 ELSE 0 END) as other_exempt_count,
+                SUM(CASE WHEN status = '0' OR status IS NULL THEN 1 ELSE 0 END) as not_marked_count
+            ")
             ->first();
 
         // Calculate total expected sessions (timetables) for student's course groups
@@ -2419,10 +2425,12 @@ class UserController extends Controller
             $totalExpectedSessions = $result ? (int)$result->count : 0;
         }
 
-        // Calculate not marked count: sessions without attendance records or with status 0/NULL
+        // Calculate not marked count: sessions without attendance records or with status 0/NULL.
+        // status is an ENUM('0'..'7') — compare against the string '0' (not integer 0,
+        // which MySQL would treat as the enum's 0th/invalid index and never exclude '0').
         $markedResult = CourseStudentAttendance::where('Student_master_pk', $studentPk)
             ->whereNotNull('status')
-            ->where('status', '!=', 0)
+            ->where('status', '!=', '0')
             ->selectRaw('COUNT(DISTINCT timetable_pk) as count')
             ->first();
         $markedSessions = $markedResult ? (int)$markedResult->count : 0;
