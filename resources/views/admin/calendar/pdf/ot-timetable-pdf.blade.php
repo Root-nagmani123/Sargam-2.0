@@ -33,26 +33,27 @@
 
         /* ===== Grid ===== */
         table.grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        table.grid th, table.grid td { border: 1px solid #1c3a5e; vertical-align: middle; }
+        table.grid th, table.grid td { border: 0.8px solid #8fa3bd; vertical-align: middle; }
         table.grid thead th {
-            background: #1c3a5e; color: #ffffff; text-align: center;
+            background: #2f5496; color: #ffffff; text-align: center;
             font-size: 7.5px; font-weight: bold; line-height: 1.35; padding: 5px 2px;
+            border-color: #2f5496;
         }
         table.grid thead th .dt { font-weight: normal; font-size: 7px; }
-        table.grid .time-col { width: 46px; }
+        table.grid .time-col { width: 42px; }
         table.grid td.time {
             text-align: center;
-            font-weight: bold; font-size: 7.5px; line-height: 1.45;
-            vertical-align: middle; padding: 5px 2px; background: #f3f6fa;
+            font-weight: bold; font-size: 7.5px; line-height: 1.5;
+            vertical-align: middle; padding: 5px 2px; background: #eef2f8; color: #1f3864;
         }
-        table.grid td.time .to { font-weight: normal; font-size: 7px; }
+        table.grid td.time .to { font-weight: normal; font-size: 7px; color: #5b6b85; }
         table.grid td.day { padding: 5px 3px; font-size: 7px; line-height: 1.3; text-align: center; vertical-align: middle; }
-        table.grid td.is-break { background: #eef3f9; }
+        table.grid td.is-break { background: #dfe7f3; }
 
         /* Merged break band (Tea Break / Lunch). */
         table.grid td.break {
-            text-align: center; font-weight: bold; font-size: 8px;
-            color: #243b53; background: #eef3f9; letter-spacing: .3px;
+            text-align: center; font-weight: bold; font-style: italic; font-size: 8.5px;
+            color: #1f3864; background: #dfe7f3; letter-spacing: .3px;
         }
 
         .cell { margin-bottom: 5px; }
@@ -62,7 +63,8 @@
         .cell-fac { color: #243b53; margin-top: 1px; }
         .cell-ven { color: #627d98; margin-top: 1px; }
         .cell-time { color: #2a6f97; font-weight: bold; margin-top: 1px; }
-        .cell.is-break .cell-topic { font-style: italic; color: #475569; }
+        .cell.is-break .cell-topic { font-weight: bold; font-style: italic; color: #1f3864; }
+        .cell.is-break .cell-time { color: #1f3864; font-weight: normal; }
 
         .empty { text-align: center; padding: 28px; color: #6b7280; font-size: 11px; }
         .note {
@@ -139,9 +141,11 @@
                         <tr>
                             <td class="time">
                                 @if($row['isBand'])
-                                    {{ $row['from'] }}-{{ $row['to'] }}
-                                @else
+                                    {{ $row['from'] }}@if(!empty($row['to']))-{{ $row['to'] }}@endif
+                                @elseif(!empty($row['to']))
                                     {{ $row['from'] }}<br><span class="to">to</span><br>{{ $row['to'] }}
+                                @else
+                                    {{ $row['from'] }}
                                 @endif
                             </td>
 
