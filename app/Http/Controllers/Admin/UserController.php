@@ -1828,13 +1828,6 @@ class UserController extends Controller
                 }
             }
 
-            // Faculty filter (shown when ACC = CC/ACC): narrow to a specific CC/ACC faculty.
-            if ($facultyFilter !== null && $facultyFilter !== '') {
-                if ($rowFacilityId !== (string) $facultyFilter) {
-                    return false;
-                }
-            }
-
             if ($groupPk && $rowGroupPk !== (string) $groupPk) {
                 return false;
             }
