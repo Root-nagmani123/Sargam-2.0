@@ -216,10 +216,17 @@ $(document).ready(function() {
         chatOffcanvas.show();
     });
 
+    function isComposerBusy() {
+        const chatBody = document.getElementById('chatBody');
+        const ta = chatBody && chatBody.querySelector('.chat-input');
+        return !!(ta && (document.activeElement === ta || ta.value.trim().length > 0));
+    }
+
     // Start real-time polling when offcanvas is visible
     chatOffcanvasEl.addEventListener('shown.bs.offcanvas', function() {
         if (pollInterval) clearInterval(pollInterval);
         pollInterval = setInterval(function() {
+            if (isComposerBusy()) return; // don't wipe out text the user is mid-typing
             const w = document.querySelector('#chatBody .chat-wrapper');
             if (!w) return;
             const memoId   = w.dataset.memoId;

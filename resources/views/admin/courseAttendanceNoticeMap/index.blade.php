@@ -548,7 +548,7 @@
 
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="session_name" class="form-label">Session</label>
-                                <input type="text" id="class_session_master_pk" class="form-control" value="{{ old('class_session_master_pk') }}" readonly>
+                                <input type="text" id="class_session_master_pk" name="class_session_master_pk" class="form-control" value="{{ old('class_session_master_pk') }}" readonly>
                                 @error('session_name')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
@@ -556,14 +556,14 @@
 
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="faculty_name" class="form-label">Faculty Name</label>
-                                <input type="text" id="faculty_name" class="form-control" value="{{ old('faculty_name') }}" readonly>
+                                <input type="text" id="faculty_name" name="faculty_name" class="form-control" value="{{ old('faculty_name') }}" readonly>
                                 @error('faculty_name')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="student_name" class="form-label">Student Name</label>
-                                <input type="text" id="student_name" class="form-control" value="{{ old('student_name') }}" readonly>
+                                <input type="text" id="student_name" name="student_name" class="form-control" value="{{ old('student_name') }}" readonly>
                                 <select id="student_pk_select" class="form-select d-none">
                                     <option value="">Select Student</option>
                                 </select>
@@ -614,7 +614,7 @@
                             </div>
                             <div class="col-12 col-md-3 mb-3">
                                 <label for="memo_date" class="form-label">Date</label>
-                                <input type="date" id="memo_date" class="form-control" min="{{ date('Y-m-d') }}">
+                                <input type="date" id="memo_date" name="memo_date" class="form-control" min="{{ date('Y-m-d') }}" value="{{ old('memo_date') }}">
                                 @error('memo_date')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
@@ -903,6 +903,12 @@ $(document).ready(function() {
         let memoId = $(this).data('id');
         setModalMode('generate');
 
+        // Fresh generate: don't carry over a memo type left selected from a
+        // previously-generated memo in this same page session, or its stale
+        // value will filter out this course's templates and leave the preview blank.
+        $('#memo_type_master_pk').val('');
+        syncMemoChoicesById('memo_type_master_pk');
+
         $.ajax({
             url: "{{ route('memo.notice.management.get_memo_data') }}",
             type: "POST",
@@ -1182,6 +1188,14 @@ $(document).ready(function() {
     }
     syncMemoChoicesById('memo_type_master_pk');
     syncMemoChoicesById('venue');
+    // Re-fetch the Template options for the previously-selected course/memo type
+    // so the previously-chosen template is re-selected instead of reverting to
+    // "Select Template" (its <option> only exists once templates are (re)loaded).
+    loadMemoTemplates(
+        @json(old('course_master_pk')),
+        @json(old('memo_notice_template_pk')),
+        @json(old('memo_type_master_pk'))
+    );
     @endif
 });
 </script>

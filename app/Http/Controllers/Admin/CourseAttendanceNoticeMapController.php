@@ -1018,6 +1018,7 @@ $memo_conclusion_master = collect(); // default empty collection
     })
     ->where('sns.pk', $id)
     ->select(
+        'sns.student_pk',
         'sns.course_master_pk',
         't.subject_topic',
         'v.venue_name',
@@ -1070,6 +1071,8 @@ $memo_conclusion_master = collect(); // default empty collection
     })
     ->where('sms.pk', $id)
     ->select(
+        'sms.student_pk',
+        'sms.course_master_pk',
         't.subject_topic',
         'v.venue_name',
         't.class_session as session_time',
@@ -1088,8 +1091,40 @@ $memo_conclusion_master = collect(); // default empty collection
         'sms.communication_status as notice_current_status'
     )
     ->first();
-          
-            
+
+
+    }
+
+    // Build the full list of sessions this student has been noticed for on this course,
+    // grouped by date, so the notice's session table reflects all of them (not just this one).
+    $sessionRows = collect();
+    if (!empty($template_details) && !empty($template_details->student_pk) && !empty($template_details->course_master_pk)) {
+        $sessionRows = DB::table('student_notice_status as sns2')
+            ->leftJoin('timetable as t2', 'sns2.subject_topic', '=', 't2.pk')
+            ->leftJoin('venue_master as v2', 't2.venue_id', '=', 'v2.venue_id')
+            ->where('sns2.student_pk', $template_details->student_pk)
+            ->where('sns2.course_master_pk', $template_details->course_master_pk)
+            ->orderBy('sns2.date_')
+            ->select(
+                'sns2.date_ as session_date',
+                't2.subject_topic',
+                'v2.venue_name',
+                't2.class_session as session_time'
+            )
+            ->get()
+            ->groupBy(function ($row) {
+                return \Carbon\Carbon::parse($row->session_date)->format('Y-m-d');
+            })
+            ->map(function ($rows) {
+                return (object) [
+                    'session_date'  => $rows->first()->session_date,
+                    'session_count' => $rows->count(),
+                    'topics'        => $rows->pluck('subject_topic')->filter()->unique()->implode(', '),
+                    'venues'        => $rows->pluck('venue_name')->filter()->unique()->implode(', '),
+                    'sessions'      => $rows->pluck('session_time')->filter()->unique()->implode(', '),
+                ];
+            })
+            ->values();
     }
 
     // Common: map display_name based on role
@@ -1107,7 +1142,7 @@ $memo_conclusion_master = collect(); // default empty collection
     });
 
 // print_r($memoNotice);die;
-    return view('admin.courseAttendanceNoticeMap.conversation', compact('id', 'memoNotice', 'type', 'memo_conclusion_master','template_details'));
+    return view('admin.courseAttendanceNoticeMap.conversation', compact('id', 'memoNotice', 'type', 'memo_conclusion_master','template_details', 'sessionRows'));
 }
 
 function conversation_bkp($id,$type){
@@ -1663,7 +1698,7 @@ public function memo_notice_conversation(Request $request)
         'date' => 'required|date',
         'time' => 'required',
         'message' => 'required|string|max:500',
-        'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:1048',
+        'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
         'status' => 'required|in:1,2',
         'mark_of_deduction' => 'nullable|string|max:100',
         'conclusion_type' => 'nullable|exists:memo_conclusion_master,pk',
@@ -2939,7 +2974,11 @@ public function endChat(Request $request)
         } else {
             DB::table('student_notice_status')
                 ->where('pk', $validated['id'])
-                ->update(['status' => 2]);
+                ->update([
+                    'status'             => 2,
+                    'conclusion_type_pk' => $validated['memo_conclusion_master_pk'],
+                    'conclusion_remark'  => $validated['conclusion_remark'],
+                ]);
         }
 
         return response()->json(['success' => true, 'message' => 'Conversation ended successfully.']);

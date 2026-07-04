@@ -113,7 +113,7 @@
           {{-- Admin identity is always shown (name + role), never collapsed to "You" —
                a memo's admin-side conversation can involve multiple distinct admins. --}}
           <span class="chat-user">
-            {{ $isAdminMsg ? $msg->display_name . (!empty($msg->role_name) ? ' · ' . $msg->role_name : '') : ($isOwn ? 'You' : $msg->display_name) }}
+            {{ $isAdminMsg ? $msg->display_name . (!empty($msg->role_name) ? ' · ' . $msg->role_name : '') : ($isOwn ? 'You' : $msg->display_name . ' (OT)') }}
           </span>
           <span class="chat-time">{{ $msgTime->format('d M Y, h:i A') }}</span>
         </div>

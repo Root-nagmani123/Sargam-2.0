@@ -53,6 +53,15 @@
                         </tr>
                     </thead>
                     <tbody>
+                        @forelse($sessionRows ?? [] as $row)
+                        <tr>
+                            <td>{{ \Carbon\Carbon::parse($row->session_date)->format('d/m/Y') }}</td>
+                            <td>{{ $row->session_count }}</td>
+                            <td>{{ $row->topics ?: 'Topic Name' }}</td>
+                            <td>{{ $row->venues ?: 'Venue' }}</td>
+                            <td>{{ $row->sessions ?: '06:00-07:00' }}</td>
+                        </tr>
+                        @empty
                         <tr>
                             <td>{{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}
                             </td>
@@ -61,6 +70,7 @@
                             <td>{{ $template_details->venue_name ?? 'Venue' }}</td>
                             <td>{{ $template_details->session_time ?? '06:00-07:00' }}</td>
                         </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -73,7 +83,8 @@
             <p>
                 <strong>{{ $template_details->display_name ?? 'Student Name' }},
                     {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>
-                Remarks: {{ $type == 'memo' ? 'Show Cause Memo' : 'Show Cause Notice' }} for
+                Remarks: {{ $type == 'memo' ? 'Show Cause Memo' : 'Show Cause Notice' }} for absence in
+                {{ $template_details->subject_topic ?? 'the session' }} on
                 {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}
             </p>
 
@@ -197,6 +208,7 @@
                                 accept=".jpg,.jpeg,.png,.pdf">
                             <div id="conv_file_preview" class="mt-1"></div>
                             <small class="text-muted">Allowed: JPG, PNG, PDF · Max 2 MB</small>
+                            @error('document') <small class="d-block text-danger">{{ $message }}</small> @enderror
                         </div>
 
                         <!-- Status -->
