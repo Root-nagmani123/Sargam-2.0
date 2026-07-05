@@ -101,6 +101,17 @@ Route::get('clear-cache', function () {
     return redirect()->back()->with('success', 'Cache cleared successfully');
 });
 
+// Read-only: list pending/ran migrations from a server with no shell/SSH access.
+// Check this BEFORE run-migrations — migrate runs everything pending, not just
+// whichever one you're chasing, and some pending migrations may not be reversible.
+Route::middleware(['auth'])->get('migration-status', function () {
+    if (!hasRole('Super Admin')) {
+        abort(403);
+    }
+    Artisan::call('migrate:status');
+    return '<pre>' . e(Artisan::output()) . '</pre>';
+})->name('migration.status');
+
 // Run pending DB migrations from a server with no shell/SSH access (e.g. preprod).
 // Gated to authenticated Super Admins only — this alters the schema.
 Route::middleware(['auth'])->get('run-migrations', function () {
