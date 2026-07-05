@@ -361,12 +361,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // If we found a non-home tab with content, activate it
-        if (activeTabId) {
-            console.log('Auto-activating tab based on content:', activeTabId);
-            
+        if (contentTabId) {
+            console.log('Auto-activating tab based on content:', contentTabId);
+
             // Find and activate the corresponding header tab
             const headerTab = document.querySelector(
-                '#mainNavbar a[href="' + activeTabId + '"], .mobile-tabbar a[href="' + activeTabId + '"]'
+                '#mainNavbar a[href="' + contentTabId + '"], .mobile-tabbar a[href="' + contentTabId + '"]'
             );
             if (headerTab) {
                 // Remove active from all tabs
@@ -374,14 +374,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     tab.classList.remove('active');
                     tab.setAttribute('aria-selected', 'false');
                 });
-                
+
                 // Activate the correct header tab
                 headerTab.classList.add('active');
                 headerTab.setAttribute('aria-selected', 'true');
-                
+
                 // Sync both content areas
-                syncBodyWrapperTab(activeTabId);
-                syncSidebarTab(activeTabId);
+                syncBodyWrapperTab(contentTabId);
+                syncSidebarTab(contentTabId);
+            }
+        }
 
         // The header tab to highlight comes from the RBAC resolver — the SAME source
         // as the breadcrumb (window.SARGAM_ACTIVE_NAV_TAB). This keeps the active

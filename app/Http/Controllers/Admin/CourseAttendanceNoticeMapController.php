@@ -735,31 +735,19 @@ public function getTemplateByCourse(Request $request)
  */
 public function getTemplatesByType(Request $request)
 {
-    $courseId       = $request->course_id;
-    $type           = $request->type === 'Memo' ? 'Memo' : 'Notice';
-    $memoTypeMasterPk = $request->memo_type_master_pk;
+    $courseId = $request->course_id;
+    $type     = $request->type === 'Memo' ? 'Memo' : 'Notice';
 
     if (! $courseId) {
         return response()->json([]);
     }
 
-    $query = DB::table('memo_notice_templates')
+    $templates = DB::table('memo_notice_templates')
         ->where('course_master_pk', $courseId)
         ->where('memo_notice_type', $type)
         ->where('active_inactive', 1)
-        ->whereNull('deleted_at');
-
-    // Memo templates may be tied to a specific Memo Type; prefer a matching one but
-    // fall back to memo-type-agnostic templates (same discipline-fallback pattern
-    // used in MemoDisciplineController::getTemplatesByDiscipline()).
-    if ($type === 'Memo' && $memoTypeMasterPk) {
-        $query->where(function ($q) use ($memoTypeMasterPk) {
-            $q->whereNull('memo_type_master_pk')
-              ->orWhere('memo_type_master_pk', $memoTypeMasterPk);
-        })->orderByRaw('memo_type_master_pk IS NULL'); // type-specific first, agnostic fallback last
-    }
-
-    $templates = $query->orderBy('title')
+        ->whereNull('deleted_at')
+        ->orderBy('title')
         ->get(['pk', 'title', 'content', 'director_name', 'director_designation', 'signature_image', 'memo_type_master_pk']);
 
     return response()->json($templates);
@@ -1301,7 +1289,7 @@ public function store_memo_notice(Request $request)
         'selected_student_list' => 'required|array|min:1',
         'Remark' => 'nullable|string|max:500',
         'submission_type' => 'required|in:1,2',
-        'memo_notice_template_pk' => 'nullable|exists:memo_notice_templates,pk',
+        'memo_notice_template_pk' => 'required|exists:memo_notice_templates,pk',
     ]);
 
     // Guard: only include memo_notice_template_pk if the column exists (migration may not have run)

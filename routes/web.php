@@ -100,6 +100,16 @@ Route::get('clear-cache', function () {
     Artisan::call('optimize:clear');
     return redirect()->back()->with('success', 'Cache cleared successfully');
 });
+
+// Run pending DB migrations from a server with no shell/SSH access (e.g. preprod).
+// Gated to authenticated Super Admins only — this alters the schema.
+Route::middleware(['auth'])->get('run-migrations', function () {
+    if (!hasRole('Super Admin')) {
+        abort(403);
+    }
+    Artisan::call('migrate', ['--force' => true]);
+    return '<pre>' . e(Artisan::output()) . '</pre>';
+})->name('run.migrations');
 // Authentication Routes
 Auth::routes(['verify' => true, 'register' => false]);
 

@@ -897,7 +897,25 @@ $(function () {
     });
     $(genModalEl).on('hidden.bs.modal', function () {
         if (pendingOpenPicker) { pendingOpenPicker = false; pickerModal.show(); }
+        else { resetGenMemoForm(); }
     });
+
+    // Clear everything on a real close (Cancel, backdrop click, Esc, or after submit) —
+    // but not when hiding temporarily to open the student picker (handled above).
+    function resetGenMemoForm() {
+        var form = document.getElementById('genMemoForm');
+        if (form) form.reset();
+        gmDefaulters = [];
+        gmSelected = [];
+        gmTemplateMap = {};
+        $('#gmDiscipline').html('<option value="">Select Discipline</option>');
+        $('#gmTemplate').html('<option value="">Select Discipline first</option>');
+        $('#gmSelectedHidden').empty();
+        syncSelection();
+        $('#gmPvCourse').text('Course Name');
+        $('#gmPvDate').text('—');
+        updateTemplatePreview();
+    }
     $(pickerModalEl).on('hidden.bs.modal', function () {
         // Closing the picker (Save or dismiss) always returns to the Generate modal.
         genModal.show();

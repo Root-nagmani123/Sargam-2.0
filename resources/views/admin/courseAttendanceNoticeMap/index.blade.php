@@ -105,7 +105,7 @@
 
                         <div class="mt-4">
                             <label class="form-label">Select Template <span class="text-danger">*</span></label>
-                            <select class="form-select" name="memo_notice_template_pk" id="anTemplate">
+                            <select class="form-select" name="memo_notice_template_pk" id="anTemplate" required>
                                 <option value="">Select Course first</option>
                             </select>
                         </div>
@@ -704,7 +704,7 @@ $(document).ready(function() {
     // Holds the conversation currently open in the offcanvas (used by End Chat).
     window.currentConv = { id: null, type: null };
 
-    $('.view-conversation').on('click', function() {
+    $(document).on('click', '.view-conversation', function() {
         let memoId = $(this).data('id');
         let topic = $(this).data('topic');
         let type = $(this).data('type');
@@ -899,7 +899,7 @@ $(document).ready(function() {
     });
 
     // Handle Generate Memo button (editable mode)
-    $('.generate-memo-btn').on('click', function() {
+    $(document).on('click', '.generate-memo-btn', function() {
         let memoId = $(this).data('id');
         setModalMode('generate');
 
@@ -949,7 +949,7 @@ $(document).ready(function() {
     });
 
     // Handle Preview Memo button (read-only mode)
-    $('.preview-memo-btn').on('click', function() {
+    $(document).on('click', '.preview-memo-btn', function() {
         let memoId = $(this).data('memo-id');
         // Set preview mode immediately to hide save button
         setModalMode('preview');
@@ -1494,6 +1494,22 @@ $(function () {
     $('#addNoticeModal').on('show.bs.modal', function () {
         if (!$('#anDate').val()) $('#anDate').val(todayStr);
     });
+
+    // Clear everything on close (Cancel, backdrop click, Esc, or after submit)
+    // so the next "Add Notice" doesn't reopen with stale course/session/students/template.
+    function resetAddNoticeForm() {
+        var form = document.getElementById('addNoticeForm');
+        if (form) form.reset();
+        $('#anSession').html('<option value="">Select Session</option>').prop('disabled', true);
+        $('#anVenue').html('<option value="">Select Venue</option>').prop('disabled', true);
+        clearSubjectTopicDetails();
+        resetStudents();
+        anTemplateCache = [];
+        $('#anTemplate').html('<option value="">Select Course first</option>');
+        $('#anPreviewWrap, #anPreviewNone').hide();
+        $('#anHiddenInputs').empty();
+    }
+    $('#addNoticeModal').on('hidden.bs.modal', resetAddNoticeForm);
 
     $('#anCourse').on('change', function () { loadSessions(); loadTemplate($(this).val()); });
     $('#anDate').on('change', loadSessions);
