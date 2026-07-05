@@ -424,6 +424,13 @@
                     $paneMigrate.removeClass('show active');
                     $paneMigrated.addClass('show active');
                 }
+
+                // Hard-hide the inactive list's whole DataTables wrapper (table + info +
+                // pagination). Bootstrap's .show toggle on the panes is not enough here:
+                // a DataTables redraw can disturb it, leaving the other list's pagination
+                // (e.g. the 473-row Migrated pager) rendered under the active list.
+                $('#fcMigratedRosterTable').closest('.dataTables_wrapper').toggle(!eligibleOn);
+                $('#fcMigrateStudentsTable').closest('.dataTables_wrapper').toggle(eligibleOn);
             }
 
             function enforceFcMigrateTabs() {
@@ -556,13 +563,17 @@
                     }
                     return;
                 }
+                // resetPaging = true: the eligible table carries deferLoading:1, so its
+                // pre-ajax paging state is a placeholder. Its first real load must land
+                // on page 1 with pagination rebuilt from the true recordsTotal, otherwise
+                // a stale/placeholder page count survives the first draw.
                 migrateTable.ajax.reload(function () {
                     eligibleTableBootstrapped = true;
                     syncMigrateCheckboxState();
                     if (typeof done === 'function') {
                         done();
                     }
-                }, false);
+                }, true);
             }
 
             function reloadTables() {
@@ -585,10 +596,13 @@
 
                 if (migrateActive) {
                     if (eligibleTableBootstrapped) {
+                        // resetPaging = true: a filter/search/reset must jump back to
+                        // page 1, otherwise a stale page (e.g. page 17) survives when
+                        // the result set shrinks to a single page.
                         migrateTable.ajax.reload(function () {
                             syncMigrateCheckboxState();
                             afterReload();
-                        }, false);
+                        }, true);
                     } else {
                         bootstrapEligibleTableIfNeeded(afterReload);
                     }
@@ -599,7 +613,7 @@
                     migratedTable.ajax.reload(function () {
                         syncMigratedRecordCount();
                         afterReload();
-                    }, false);
+                    }, true);
                 }
             }
 
