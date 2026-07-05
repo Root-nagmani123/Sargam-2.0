@@ -1,6 +1,7 @@
 {{--
   Choices.js 10.x styled like Bootstrap 5 form-select.
   Wrap page content in .choices-bs-scope and use select.form-select (optional data-placeholder, data-no-choices to skip).
+  Options may use data-short or data-login for custom search (same pattern as FC activity departments setup).
 --}}
 @once('admin-choices-bootstrap5-assets')
 @push('styles')
@@ -46,6 +47,11 @@
         box-shadow: var(--bs-box-shadow);
         z-index: 1060;
     }
+    .choices-bs-scope .choices[data-type*="select-multiple"] .choices__button {
+        border-left: 1px solid rgba(0, 0, 0, 0.12);
+        margin-left: 0.35rem;
+        padding-left: 0.35rem;
+    }
     .choices-bs-scope .card.overflow-hidden { overflow: visible; }
 </style>
 @endpush
@@ -53,6 +59,76 @@
 <script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
 <script>
 (function () {
+    function normalizeChoicesSearchText(text) {
+        return String(text || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    }
+
+    function selectOptionByValue(selectEl, value) {
+        if (!selectEl) return null;
+        for (var i = 0; i < selectEl.options.length; i++) {
+            if (String(selectEl.options[i].value) === String(value)) {
+                return selectEl.options[i];
+            }
+        }
+        return null;
+    }
+
+    function applyChoicesCustomSearchFilter(instance, rawQuery) {
+        if (!instance || !instance.dropdown || !instance.dropdown.element) return;
+        var selectEl = instance.passedElement && instance.passedElement.element ? instance.passedElement.element : null;
+        if (!selectEl) return;
+        var dropdownEl = instance.dropdown.element;
+        var query = normalizeChoicesSearchText(rawQuery);
+        var choiceItems = dropdownEl.querySelectorAll('.choices__item--choice');
+        if (!choiceItems || !choiceItems.length) return;
+
+        choiceItems.forEach(function (item) {
+            if (item.classList.contains('choices__placeholder')) return;
+            var label = normalizeChoicesSearchText(item.textContent || '');
+            var value = normalizeChoicesSearchText(item.getAttribute('data-value') || '');
+            var short = '';
+            var login = '';
+            var dv = item.getAttribute('data-value');
+            if (dv) {
+                var opt = selectOptionByValue(selectEl, dv);
+                if (opt && opt.dataset) {
+                    if (opt.dataset.short) short = normalizeChoicesSearchText(opt.dataset.short);
+                    if (opt.dataset.login) login = normalizeChoicesSearchText(opt.dataset.login);
+                }
+            }
+            var show = !query || label.indexOf(query) !== -1 || value.indexOf(query) !== -1
+                || short.indexOf(query) !== -1 || login.indexOf(query) !== -1;
+            item.style.display = show ? '' : 'none';
+        });
+    }
+
+    function usesCustomChoicesSearch(el) {
+        if (!el || el.getAttribute('data-search') === 'false') return false;
+        if (el.getAttribute('data-search') === 'true') return true;
+        for (var i = 0; i < el.options.length; i++) {
+            var o = el.options[i];
+            if (o.dataset && (o.dataset.short || o.dataset.login)) return true;
+        }
+        return false;
+    }
+
+    function wireChoicesCustomSearch(el, instance) {
+        if (!usesCustomChoicesSearch(el)) return;
+
+        function applySearchFilterAfterRender() {
+            var typed = (instance.input && instance.input.element) ? (instance.input.element.value || '') : '';
+            requestAnimationFrame(function () {
+                applyChoicesCustomSearchFilter(instance, typed);
+            });
+        }
+
+        el.addEventListener('showDropdown', applySearchFilterAfterRender);
+        if (instance.input && instance.input.element) {
+            instance.input.element.addEventListener('input', applySearchFilterAfterRender);
+            instance.input.element.addEventListener('keyup', applySearchFilterAfterRender);
+        }
+    }
+
     function choicesBsPlaceholder(el) {
         var attr = el.getAttribute('data-placeholder');
         if (attr) return attr;
@@ -63,8 +139,10 @@
 
     function choicesBsOptions(el) {
         var multiple = el.hasAttribute('multiple');
+        var customSearch = usesCustomChoicesSearch(el);
         return {
             searchEnabled: true,
+            searchChoices: !customSearch,
             shouldSort: false,
             allowHTML: false,
             itemSelectText: '',
@@ -72,28 +150,47 @@
             placeholderValue: choicesBsPlaceholder(el),
             searchPlaceholderValue: 'Search…',
             position: 'bottom',
-            removeItemButton: multiple
+            removeItemButton: multiple,
+            closeDropdownOnSelect: !multiple
         };
     }
 
+    function destroyChoicesBootstrap5(el) {
+        if (!el || !el._choicesBs) return;
+        try {
+            el._choicesBs.destroy();
+        } catch (e) {}
+        el._choicesBs = null;
+    }
+
+    function initChoicesBootstrap5Element(el) {
+        if (typeof Choices === 'undefined' || !el) return;
+        if (el.getAttribute('data-no-choices') !== null) return;
+        if (el.classList.contains('js-cru-filter-choice')) return;
+        if (el.classList.contains('select2-hidden-accessible')) return;
+        if (el.classList.contains('tomselected')) return;
+        if (/select2/i.test(el.className || '')) return;
+        if (el.parentElement && el.parentElement.classList.contains('choices')) return;
+
+        destroyChoicesBootstrap5(el);
+        try {
+            var instance = new Choices(el, choicesBsOptions(el));
+            el._choicesBs = instance;
+            wireChoicesCustomSearch(el, instance);
+        } catch (e) {
+            console.warn('Choices init failed', e);
+        }
+    }
+
     function initChoicesBootstrap5In(root) {
-        if (typeof Choices === 'undefined' || !root) return;
-        root.querySelectorAll('select.form-select, select.form-control').forEach(function (el) {
-            if (el.getAttribute('data-no-choices') !== null) return;
-            if (el.classList.contains('js-cru-filter-choice')) return;
-            if (el.classList.contains('select2-hidden-accessible')) return;
-            if (el.classList.contains('tomselected')) return;
-            if (/select2/i.test(el.className || '')) return;
-            if (el.parentElement && el.parentElement.classList.contains('choices')) return;
-            try {
-                el._choicesBs = new Choices(el, choicesBsOptions(el));
-            } catch (e) {
-                console.warn('Choices init failed', e);
-            }
-        });
+        if (!root) return;
+        root.querySelectorAll('select.form-select, select.form-control').forEach(initChoicesBootstrap5Element);
     }
 
     window.initChoicesBootstrap5In = initChoicesBootstrap5In;
+    window.initChoicesBootstrap5Element = initChoicesBootstrap5Element;
+    window.destroyChoicesBootstrap5 = destroyChoicesBootstrap5;
+    window.reinitChoicesBootstrap5 = initChoicesBootstrap5Element;
 
     document.addEventListener('DOMContentLoaded', function () {
         var main = document.getElementById('main-content');

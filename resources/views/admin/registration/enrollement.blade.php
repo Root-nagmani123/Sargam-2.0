@@ -4,7 +4,7 @@
 
 @section('setup_content')
     @include('admin.partials.choices-bootstrap5')
-    <div id="enrollment-page" class="container-fluid">
+    <div id="enrollment-page" class="container-fluid choices-bs-scope">
         <x-breadcrum title="Enroll to New Course" />
         <x-session_message />
         <div class="row justify-content-center">
@@ -51,16 +51,14 @@
                                     <div class="mb-3">
                                         <select id="course_master_pk"
                                             class="form-select @error('course_master_pk') is-invalid @enderror"
-                                            name="course_master_pk" required data-placeholder="Select course">
+                                            name="course_master_pk" required data-placeholder="Select course" data-search="true">
                                             <option value="">Select Course</option>
                                             @if (isset($courses) && $courses->count())
                                                 @foreach ($courses as $course)
                                                     <option value="{{ $course->pk }}"
+                                                        data-short="{{ e($course->couse_short_name ?? '') }}"
                                                         {{ (string) old('course_master_pk') === (string) $course->pk || (session('selected_course') == $course->pk) ? 'selected' : '' }}>
-                                                        {{ $course->course_name }}
-                                                        @if ($course->couse_short_name)
-                                                            ({{ $course->couse_short_name }})
-                                                        @endif
+                                                        {{ $course->course_name }}@if ($course->couse_short_name) ({{ $course->couse_short_name }})@endif
                                                     </option>
                                                 @endforeach
                                             @else
@@ -82,20 +80,18 @@
                                     <div class="mb-3">
                                         <select id="previous_courses"
                                             class="form-select @error('previous_courses') is-invalid @enderror"
-                                            name="previous_courses[]" multiple data-placeholder="Select previous courses">
+                                            name="previous_courses[]" multiple data-placeholder="Select previous courses" data-search="true">
                                             @if (isset($previousCourses) && $previousCourses->count())
                                                 @foreach ($previousCourses as $prev)
                                                     <option value="{{ $prev->pk }}"
+                                                        data-short="{{ e($prev->couse_short_name ?? '') }}"
                                                         {{ in_array((string)$prev->pk, old('previous_courses', [])) ? 'selected' : '' }}>
-                                                        {{ $prev->course_name }}
-                                                        @if ($prev->couse_short_name)
-                                                            ({{ $prev->couse_short_name }})
-                                                        @endif
+                                                        {{ $prev->course_name }}@if ($prev->couse_short_name) ({{ $prev->couse_short_name }})@endif
                                                     </option>
                                                 @endforeach
                                             @endif
                                         </select>
-                                        <small class="form-text text-muted">Select multiple courses</small>
+                                        <small class="form-text text-muted">Search by course name or short name. Select multiple courses.</small>
 
                                         @error('previous_courses')
                                             <span class="invalid-feedback" role="alert">
@@ -111,17 +107,18 @@
                                     <div class="mb-3">
                                         <select id="services"
                                             class="form-select @error('services') is-invalid @enderror"
-                                            name="services[]" multiple data-placeholder="Select services">
+                                            name="services[]" multiple data-placeholder="Select services" data-search="true">
                                             @if (isset($services) && $services->count())
                                                 @foreach ($services as $service)
                                                     <option value="{{ $service->pk }}"
+                                                        data-short="{{ e($service->service_short_name ?? '') }}"
                                                         {{ in_array($service->pk, old('services', [])) ? 'selected' : '' }}>
-                                                        {{ $service->service_name }}
+                                                        {{ $service->service_name }}@if ($service->service_short_name) ({{ $service->service_short_name }})@endif
                                                     </option>
                                                 @endforeach
                                             @endif
                                         </select>
-                                        <small class="form-text text-muted">Select multiple services</small>
+                                        <small class="form-text text-muted">Search by service name or short name. Select multiple services.</small>
 
                                         @error('services')
                                             <span class="invalid-feedback" role="alert">
@@ -197,16 +194,14 @@
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <label for="modalCourseSelect" class="form-label">Select Course:</label>
-                            <select id="modalCourseSelect" class="form-select" data-placeholder="All Active Courses">
+                            <select id="modalCourseSelect" class="form-select" data-placeholder="All Active Courses" data-search="true">
                                 <option value="">All Active Courses</option>
                                 @if (isset($courses) && $courses->count())
                                     @foreach ($courses as $course)
                                         <option value="{{ $course->pk }}"
+                                            data-short="{{ e($course->couse_short_name ?? '') }}"
                                             {{ $course->pk == (session('selected_course') ?? old('course_master_pk')) ? 'selected' : '' }}>
-                                            {{ $course->course_name }}
-                                            @if ($course->couse_short_name)
-                                                ({{ $course->couse_short_name }})
-                                            @endif
+                                            {{ $course->course_name }}@if ($course->couse_short_name) ({{ $course->couse_short_name }})@endif
                                         </option>
                                     @endforeach
                                 @endif
@@ -303,10 +298,16 @@
             window.initChoicesBootstrap5In(enrollmentRoot);
         }
 
+        function formatNameWithShort(name, short) {
+            if (!name) return 'N/A';
+            var s = (short || '').trim();
+            return s ? name + ' (' + s + ')' : name;
+        }
+
         function refreshChoicesSelect(selectId) {
             var el = document.getElementById(selectId);
-            if (el && el._choicesBs && typeof el._choicesBs.refresh === 'function') {
-                el._choicesBs.refresh();
+            if (el && typeof window.reinitChoicesBootstrap5 === 'function') {
+                window.reinitChoicesBootstrap5(el);
             }
         }
 
@@ -760,10 +761,10 @@
                 
                 var row = '<tr>' +
                     '<td><input type="checkbox" name="students[]" value="' + student.student_pk + '" class="student-checkbox" checked></td>' +
-                    '<td>' + (student.course_name || 'N/A') + '</td>' +
+                    '<td>' + formatNameWithShort(student.course_name, student.course_short_name) + '</td>' +
                     '<td>' + (student.student_name || 'N/A') + '</td>' +
                     '<td>' + (student.ot_code || 'N/A') + '</td>' +
-                    '<td>' + (student.service_name || 'N/A') + '</td>' +
+                    '<td>' + formatNameWithShort(student.service_name, student.service_short_name) + '</td>' +
                     '</tr>';
 
                 tableBody.append(row);

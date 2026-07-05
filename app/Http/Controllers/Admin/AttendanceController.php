@@ -148,7 +148,36 @@ class AttendanceController extends Controller
             }
 
 
-            return view('admin.attendance.index', compact('courseMasters', 'sessions', 'maunalSessions'));
+            // Split the resolved course set into Active vs Archived (same rule as
+            // Course Master): Active = running/upcoming (end date null or today+),
+            // Archived = already ended. Both stay within the user's scoped set.
+            $candidateCoursePks = collect($courseMasters)->pluck('pk')->filter()->all();
+            $archivedCourseMasters = [];
+
+            if (! empty($candidateCoursePks)) {
+                $currentDate = Carbon::today();
+                $courseSplitSelect = ['course_master.couse_short_name', 'course_master.course_name', 'course_master.pk'];
+
+                $archivedCourseMasters = CourseMaster::whereIn('course_master.pk', $candidateCoursePks)
+                    ->where('course_master.active_inactive', 1)
+                    ->whereNotNull('course_master.end_date')
+                    ->whereDate('course_master.end_date', '<', $currentDate)
+                    ->select($courseSplitSelect)
+                    ->orderBy('course_master.couse_short_name')
+                    ->get()->toArray();
+
+                $courseMasters = CourseMaster::whereIn('course_master.pk', $candidateCoursePks)
+                    ->where('course_master.active_inactive', 1)
+                    ->where(function ($q) use ($currentDate) {
+                        $q->whereNull('course_master.end_date')
+                            ->orWhereDate('course_master.end_date', '>=', $currentDate);
+                    })
+                    ->select($courseSplitSelect)
+                    ->orderBy('course_master.couse_short_name')
+                    ->get()->toArray();
+            }
+
+            return view('admin.attendance.index', compact('courseMasters', 'archivedCourseMasters', 'sessions', 'maunalSessions'));
         } catch (\Exception $e) {
             dd($e->getMessage());
             // Handle the exception
