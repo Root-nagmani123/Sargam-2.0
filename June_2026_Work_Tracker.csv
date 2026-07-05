@@ -1,0 +1,31 @@
+Day,Date,,Work Description
+Monday,06-01-2026,,"Identified and resolved registration module bugs along with a course migration bug. Deployed the corrected code to the staging environment to ensure a stable and reliable registration flow."
+Tuesday,06-02-2026,,"Implemented admin-side status and exemption handling changes, enabling administrators to update applicant status and exemption categories accurately."
+Wednesday,06-03-2026,,"Investigated and fixed multiple bugs across the FC module, improving overall stability and ensuring smoother workflow execution."
+Thursday,06-04-2026,,"Continued resolving registration and exemption-related issues and carried out testing on the staging environment to confirm the fixes worked as expected."
+Friday,06-05-2026,,"Analyzed requirements for the new FC registration form and planned the field mapping, sections, and structure for the upcoming form rebuild."
+Saturday,06-06-2026,,
+Sunday,06-07-2026,,
+Monday,06-08-2026,,"Started development of the new FC registration form replica, setting up the layout, sections, and dynamic field structure as per the updated requirements."
+Tuesday,06-09-2026,,"Continued building the new FC form replica, implementing field-level validations and aligning the form with the reference design."
+Wednesday,06-10-2026,,"Worked on the applicant ""Other Details"" edit and view screens, ensuring saved data is displayed and remains editable correctly."
+Thursday,06-11-2026,,"Fixed issues in the ""Other Details"" edit/view screens, correcting data binding and display inconsistencies for a reliable editing experience."
+Friday,06-12-2026,,"Developed the new FC registration form replica, implementing the redesigned layout and dynamic sections to match the updated form requirements."
+Saturday,06-13-2026,,
+Sunday,06-14-2026,,
+Monday,06-15-2026,,"Completed the form replica along with additional fixes, resolving layout and validation issues identified during review and testing."
+Tuesday,06-16-2026,,"Fixed the ""add multiple hobby"" functionality, allowing users to add and manage multiple hobby entries without errors."
+Wednesday,06-17-2026,,"Updated the joining-document module, refining document handling and aligning it with the latest joining-document requirements."
+Thursday,06-18-2026,,"Enhanced the reporting module, improving report generation and data representation for better accuracy and usability."
+Friday,06-19-2026,,"Resolved a document upload issue, ensuring uploaded files are stored and retrieved correctly throughout the registration flow."
+Saturday,06-20-2026,,
+Sunday,06-21-2026,,
+Monday,06-22-2026,,"Designed the approach for the joining-document fillable feature, enabling users to fill documents online instead of uploading them manually."
+Tuesday,06-23-2026,,"Continued implementing the fillable joining-document feature and reviewed the dashboard and travel-plan layouts for required corrections."
+Wednesday,06-24-2026,,"Implemented the joining-document fillable functionality, fixed the travel-plan layout, and restored the dashboard UI, improving usability across these modules."
+Thursday,06-25-2026,,"Tested the joining-document and travel-plan changes end to end and prepared the identified feedback and change-request (CR) points for resolution."
+Friday,06-26-2026,,"Reviewed and incorporated feedback and CR points across the FC module, refining functionality based on stakeholder inputs."
+Saturday,06-27-2026,,
+Sunday,06-28-2026,,
+Monday,06-29-2026,,"Verified the joining-document workflow end to end, confirming correct document handling, validation, and sample-document availability."
+Tuesday,06-30-2026,,"Activated the joining sample documents and created a data migration to ensure the correct sample documents are available across all environments after deployment."

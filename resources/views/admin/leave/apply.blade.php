@@ -13,6 +13,9 @@
         ? route('leave.update', $application->pk)
         : route('leave.store');
     $pageTitle = ($readOnly ?? false) ? 'View Leave Application' : (($application ?? null) ? 'Edit Leave Application' : 'Apply Leave');
+    $isReadOnly = $readOnly ?? false;
+    $isEditing = (bool) ($application ?? null);
+    $typeLocked = $isReadOnly || $isEditing;
     $stationedReady = $stationedLeaveConfigured ?? false;
     $upcomingStationed = $upcomingStationedLeave ?? null;
     $activeStationed = $activeStationedLeave ?? null;
@@ -28,7 +31,7 @@
     $toDateMin = $fromDateValue ?: ($isPt ? $ptMinDate : $stationedMinDate);
 @endphp
 
-<div class="container-fluid py-3 leave-module">
+<div class="container-fluid leave-module">
     <x-breadcrum :title="$pageTitle" />
     <x-session_message />
 
@@ -38,311 +41,277 @@
         </div>
     @endif
 
-    <div class="card leave-apply-card border-0">
-        <div class="card-body p-3 p-md-4">
-            <h2 class="leave-apply-title">{{ $pageTitle }}</h2>
-            <hr class="leave-apply-divider">
+    @if($isReadOnly)
+        @php
+            $applicationStatus = (int) ($application->status ?? -1);
+            $isRejectedApplication = $applicationStatus === \App\Models\LeaveApplication::STATUS_REJECTED;
+            $isApprovedApplication = $applicationStatus === \App\Models\LeaveApplication::STATUS_APPROVED;
+        @endphp
+        <div class="alert alert-{{ $isRejectedApplication ? 'danger' : ($isApprovedApplication ? 'success' : 'info') }} py-2 small mb-3">
+            Status: <strong>{{ $application->status_label }}</strong>
+        </div>
 
-            @if($readOnly ?? false)
-                @php
-                    $applicationStatus = (int) ($application->status ?? -1);
-                    $isRejectedApplication = $applicationStatus === \App\Models\LeaveApplication::STATUS_REJECTED;
-                    $isApprovedApplication = $applicationStatus === \App\Models\LeaveApplication::STATUS_APPROVED;
-                @endphp
-                <div class="alert alert-{{ $isRejectedApplication ? 'danger' : ($isApprovedApplication ? 'success' : 'info') }} py-2 small mb-3">
-                    Status: <strong>{{ $application->status_label }}</strong>
-                </div>
-
-                @if($isRejectedApplication)
-                    <div class="border border-danger rounded p-3 mb-3 small bg-danger bg-opacity-10">
-                        <div class="mb-2"><strong>Rejected By:</strong> {{ $application->action_by_faculty_name }}</div>
-                        @if($application->approved_at)
-                            <div class="mb-2"><strong>Rejected On:</strong> {{ $application->approved_at->format('d-m-Y, h:i A') }}</div>
-                        @endif
-                        <div><strong>Rejection Reason:</strong> {{ $application->rejection_remarks ?: 'No reason provided.' }}</div>
-                    </div>
+        @if($isRejectedApplication)
+            <div class="border border-danger rounded p-3 mb-3 small bg-danger bg-opacity-10">
+                <div class="mb-2"><strong>Rejected By:</strong> {{ $application->action_by_faculty_name }}</div>
+                @if($application->approved_at)
+                    <div class="mb-2"><strong>Rejected On:</strong> {{ $application->approved_at->format('d-m-Y, h:i A') }}</div>
                 @endif
-            @endif
+                <div><strong>Rejection Reason:</strong> {{ $application->rejection_remarks ?: 'No reason provided.' }}</div>
+            </div>
+        @endif
+    @endif
 
-            @if(!($readOnly ?? false))
-            @if($isPt && ! $ptReady && $upcomingPt)
-                <div class="alert alert-warning py-2 small mb-3">
-                    PT exemption for <strong>{{ $course->course_name }}</strong> will be available from
-                    <strong>{{ $upcomingPt->effective_from->format('d-m-Y') }}</strong>.
-                    Please select a start date on or after that date.
-                </div>
-            @elseif($isPt && ! $ptReady && ! $upcomingPt)
-                <div class="alert alert-warning py-2 small mb-3">
-                    PT exemption is not configured for your course: <strong>{{ $course->course_name }}</strong>.
-                </div>
-            @elseif($isPt && ($ptCutoffPassedToday ?? false) && $ptCutoffTimeDisplay)
-                <div class="alert alert-warning py-2 small mb-3">
-                    Today's PT timing (<strong>{{ $ptCutoffTimeDisplay }}</strong>) has passed.
-                    You cannot apply for PT exemption starting today. Please select a future start date.
-                </div>
-            @endif
+    @if(! $isReadOnly)
+        @if($isPt && ! $ptReady && $upcomingPt)
+            <div class="alert alert-warning py-2 small mb-3">
+                PT exemption for <strong>{{ $course->course_name }}</strong> will be available from
+                <strong>{{ $upcomingPt->effective_from->format('d-m-Y') }}</strong>.
+                Please select a start date on or after that date.
+            </div>
+        @elseif($isPt && ! $ptReady && ! $upcomingPt)
+            <div class="alert alert-warning py-2 small mb-3">
+                PT exemption is not configured for your course: <strong>{{ $course->course_name }}</strong>.
+            </div>
+        @elseif($isPt && ($ptCutoffPassedToday ?? false) && $ptCutoffTimeDisplay)
+            <div class="alert alert-warning py-2 small mb-3">
+                Today's PT timing (<strong>{{ $ptCutoffTimeDisplay }}</strong>) has passed.
+                You cannot apply for PT exemption starting today. Please select a future start date.
+            </div>
+        @endif
 
-            @if(! $isPt && ! $stationedReady && $upcomingStationed)
-                <div class="alert alert-warning py-2 small mb-3">
-                    Stationed leave for <strong>{{ $course->course_name }}</strong> will be available from
-                    <strong>{{ $upcomingStationed->effective_from->format('d-m-Y') }}</strong>.
-                    Please select a start date on or after that date.
-                </div>
-            @elseif(! $isPt && ! $stationedReady && ! $upcomingStationed)
-                <div class="alert alert-warning py-2 small mb-3">
-                    Stationed leave is not configured for your course: <strong>{{ $course->course_name }}</strong>.
-                </div>
-            @elseif(! $isPt && ($stationedCutoffPassedToday ?? false) && $stationedCutoffTimeDisplay)
-                <div class="alert alert-warning py-2 small mb-3">
-                    Today's PT timing (<strong>{{ $stationedCutoffTimeDisplay }}</strong>) has passed.
-                    You cannot apply for stationed leave starting today. Please select a future start date.
-                </div>
-            @endif
-            @endif
+        @if(! $isPt && ! $stationedReady && $upcomingStationed)
+            <div class="alert alert-warning py-2 small mb-3">
+                Stationed leave for <strong>{{ $course->course_name }}</strong> will be available from
+                <strong>{{ $upcomingStationed->effective_from->format('d-m-Y') }}</strong>.
+                Please select a start date on or after that date.
+            </div>
+        @elseif(! $isPt && ! $stationedReady && ! $upcomingStationed)
+            <div class="alert alert-warning py-2 small mb-3">
+                Stationed leave is not configured for your course: <strong>{{ $course->course_name }}</strong>.
+            </div>
+        @elseif(! $isPt && ($stationedCutoffPassedToday ?? false) && $stationedCutoffTimeDisplay)
+            <div class="alert alert-warning py-2 small mb-3">
+                Today's PT timing (<strong>{{ $stationedCutoffTimeDisplay }}</strong>) has passed.
+                You cannot apply for stationed leave starting today. Please select a future start date.
+            </div>
+        @endif
+    @endif
 
+    <div class="row g-4 leave-apply-layout">
+        {{-- Aside: PT balance — only for PT exemption. Stationed leave has no
+             aside content, so the form below spans the full width instead of
+             leaving an empty left column. --}}
+        @if($isPt)
+        <div class="col-12 col-lg-4 order-2 order-lg-1">
+            <div class="pt-balance-box">
+                <div class="pt-balance-head">
+                    <i class="material-icons material-symbols-rounded">calendar_month</i>
+                    <span>PT Balance</span>
+                </div>
+                <div class="pt-balance-num">{{ number_format((float) ($ptBalance['remaining'] ?? 0), 1) }} Days</div>
+                <div class="pt-balance-sub">As on {{ $ptBalance['as_on'] ?? now()->format('d M Y') }}</div>
+            </div>
+        </div>
+        @endif
+
+        {{-- Form --}}
+        <div class="col-12 {{ $isPt ? 'col-lg-8 order-1 order-lg-2' : '' }}">
+    <div class="card leave-apply-card border-0 shadow-sm rounded-3">
+        <div class="card-body p-3 p-md-4">
             <form method="POST" action="{{ $formAction }}" enctype="multipart/form-data" id="leave-apply-form">
                 @csrf
-                @if($application ?? null)
+                @if($isEditing)
                     @method('PUT')
                 @endif
 
                 <input type="hidden" name="leave_type" value="{{ $selectedLeaveType }}">
 
                 <div class="row g-4">
-                    <div class="col-lg-8">
-                        <div class="leave-form-row">
-                            <label class="leave-form-label">Leave Type</label>
-                            <div class="leave-form-field">
-                                @if($readOnly ?? false)
-                                    <div class="leave-type-tabs" role="group" aria-label="Leave type">
-                                        <span class="btn active disabled pe-none">
-                                            {{ $isPt ? 'PT Exemption' : 'Stationed Leave' }}
-                                        </span>
-                                    </div>
-                                @else
-                                    <div class="leave-type-tabs" role="group" aria-label="Leave type">
-                                        <a href="{{ route('leave.apply', ['leave_type' => 'PT_EXEMPTION']) }}"
-                                            class="btn {{ $isPt ? 'active' : '' }} {{ ($application ?? null) ? 'disabled pe-none' : '' }}">
-                                            PT Exemption
-                                        </a>
-                                        <a href="{{ route('leave.apply', ['leave_type' => 'STATIONED_LEAVE']) }}"
-                                            class="btn {{ ! $isPt ? 'active' : '' }} {{ ($application ?? null) ? 'disabled pe-none' : '' }}">
-                                            Stationed Leave
-                                        </a>
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
 
-                        <div class="leave-form-row">
-                            <label class="leave-form-label">Course</label>
-                            <div class="leave-form-field">
-                                <input type="text" class="form-control" readonly
-                                    value="{{ $course->course_name ?? 'N/A' }}">
+                    {{-- Leave Type --}}
+                    <div class="col-12 col-md-6">
+                        <label class="leave-grid-label d-block">Leave Type <span class="text-danger">*</span></label>
+                        <div class="leave-type-radios" data-apply-url="{{ route('leave.apply') }}">
+                            <div class="form-check">
+                                <input class="form-check-input leave-type-radio" type="radio" name="leave_type_radio"
+                                    id="lt_pt" value="PT_EXEMPTION" {{ $isPt ? 'checked' : '' }}
+                                    {{ $typeLocked ? 'disabled' : '' }}>
+                                <label class="form-check-label" for="lt_pt">PT Exemption</label>
                             </div>
-                        </div>
-
-                        <div class="leave-form-row">
-                            <label class="leave-form-label">Nature of Leave <span class="text-danger">*</span></label>
-                            <div class="leave-form-field">
-                                <select name="leave_nature_master_pk" class="form-select" required {{ ($readOnly ?? false) ? 'disabled' : '' }}>
-                                    <option value="">--Select--</option>
-                                    @foreach($natures as $nature)
-                                        <option value="{{ $nature->pk }}"
-                                            {{ (string) old('leave_nature_master_pk', $application->leave_nature_master_pk ?? '') === (string) $nature->pk ? 'selected' : '' }}>
-                                            {{ $nature->nature_name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="leave-form-row">
-                            <label class="leave-form-label">Start Date <span class="text-danger">*</span></label>
-                            <div class="leave-form-field">
-                                <div class="leave-date-wrap">
-                                    <input type="date" name="from_date" id="from_date" class="form-control @error('from_date') is-invalid @enderror" required
-                                        value="{{ $fromDateValue }}"
-                                        @if($isPt && $ptMinDate) min="{{ $ptMinDate }}" @elseif(! $isPt && $stationedMinDate) min="{{ $stationedMinDate }}" @endif
-                                        {{ ($readOnly ?? false) ? 'readonly' : '' }}>
-                                    <i class="material-icons material-symbols-rounded leave-date-icon">calendar_month</i>
-                                </div>
-                                @error('from_date')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="leave-form-row">
-                            <label class="leave-form-label">End Date <span class="text-danger">*</span></label>
-                            <div class="leave-form-field">
-                                <div class="leave-date-wrap">
-                                    <input type="date" name="to_date" id="to_date" class="form-control @error('to_date') is-invalid @enderror" required
-                                        value="{{ $toDateValue }}"
-                                        @if($toDateMin) min="{{ $toDateMin }}" @endif
-                                        {{ ($readOnly ?? false) ? 'readonly' : '' }}>
-                                    <i class="material-icons material-symbols-rounded leave-date-icon">calendar_month</i>
-                                </div>
-                                @error('to_date')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="leave-form-row">
-                            <label class="leave-form-label">Total Days <span class="text-danger">*</span></label>
-                            <div class="leave-form-field" style="max-width: 140px;">
-                                <input type="text" id="total_days_display" class="form-control" readonly
-                                    value="{{ old('total_days', isset($application) ? number_format((float) $application->total_days, 1) : '0') }}">
-                            </div>
-                        </div>
-
-                        <div class="leave-form-row align-top">
-                            <label class="leave-form-label pt-2">Reason For Exemption <span class="text-danger">*</span></label>
-                            <div class="leave-form-field">
-                                <textarea name="reason" rows="3" class="form-control" required
-                                    placeholder="Crack Muscles, Sprain Muscles, Fever..."
-                                    {{ ($readOnly ?? false) ? 'readonly' : '' }}>{{ old('reason', $application->reason ?? '') }}</textarea>
-                            </div>
-                        </div>
-
-                        <div class="leave-form-row">
-                            <label class="leave-form-label">Contact No. during Exemption <span class="text-danger">*</span></label>
-                            <div class="leave-form-field">
-                                <input type="text" name="contact_number" class="form-control @error('contact_number') is-invalid @enderror"
-                                    maxlength="10" inputmode="numeric" pattern="[6-9][0-9]{9}" required
-                                    placeholder="10-digit mobile number"
-                                    value="{{ old('contact_number', $application->contact_number ?? '') }}"
-                                    {{ ($readOnly ?? false) ? 'readonly' : '' }}>
-                                @error('contact_number')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
+                            <div class="form-check">
+                                <input class="form-check-input leave-type-radio" type="radio" name="leave_type_radio"
+                                    id="lt_stationed" value="STATIONED_LEAVE" {{ ! $isPt ? 'checked' : '' }}
+                                    {{ $typeLocked ? 'disabled' : '' }}>
+                                <label class="form-check-label" for="lt_stationed">Stationed Leave</label>
                             </div>
                         </div>
                     </div>
-
-                    @if($isPt)
-                    <div class="col-lg-4">
-                        <div class="leave-aside-card">
-                            <div class="leave-aside-head">
-                                <i class="material-icons material-symbols-rounded">calendar_month</i>
-                                <span>PT Balance</span>
-                            </div>
-                            <div class="pt-balance-value">{{ number_format($ptBalance['remaining'], 1) }} Days</div>
-                            <div class="pt-balance-as-on">(As on {{ $ptBalance['as_on'] }})</div>
-                        </div>
-
-                        <div class="leave-aside-card">
-                            <div class="leave-aside-head">
-                                <i class="material-icons material-symbols-rounded">info</i>
-                                <span>Note</span>
-                            </div>
-                            <p class="leave-note-text">
-                                PT exemption is approved automatically on submit. Save as draft if you want to edit later.
-                                @if($ptCutoffTimeDisplay)
-                                    Same-day applications are allowed only before <strong>{{ $ptCutoffTimeDisplay }}</strong>.
-                                @endif
-                            </p>
-                        </div>
+                    {{-- Course Name (auto-derived from enrollment, read-only) --}}
+                    <div class="col-6">
+                        <label for="course_name_display" class="leave-grid-label d-block">Course Name</label>
+                        <input type="text" id="course_name_display" class="form-control" readonly
+                            value="{{ $course->course_name ?? '' }}">
                     </div>
-                    @else
-                    <div class="col-lg-4">
-                        <div class="leave-aside-card">
-                            <div class="leave-aside-head">
-                                <i class="material-icons material-symbols-rounded">info</i>
-                                <span>Note</span>
-                            </div>
-                            <p class="leave-note-text">
-                                @if($stationedLeaveRequiresFacultyApproval ?? false)
-                                    Stationed leave stays pending until faculty approval. You can edit or delete it while pending or in draft.
-                                @else
-                                    Stationed leave is approved automatically on submit when faculty approval is not required. Save as draft if you want to edit later.
-                                @endif
-                                @if($stationedCutoffTimeDisplay)
-                                    Same-day applications are allowed only before <strong>{{ $stationedCutoffTimeDisplay }}</strong>.
-                                @endif
-                            </p>
-                        </div>
-                    </div>
-                    @endif
-                </div>
 
-                <div class="mt-4 pt-2">
-                    <h3 class="attachment-section-title">Attachment (Optional)</h3>
-                    <p class="text-muted small mb-2">
-                        Allowed file types: <strong>PDF</strong>, <strong>JPG</strong>, <strong>JPEG</strong>, <strong>PNG</strong>, <strong>DOC</strong>, <strong>DOCX</strong>.
-                        Max file size: <strong>5 MB</strong> per file.
-                    </p>
-                    @php
-                        $attachmentErrors = collect($errors->messages())->filter(
-                            fn ($_, $key) => str_starts_with($key, 'attachments.')
-                        )->flatten();
-                    @endphp
-                    @if($attachmentErrors->isNotEmpty())
-                        <div class="alert alert-danger py-2 small mb-2">
-                            @foreach($attachmentErrors as $error)
-                                <div>{{ $error }}</div>
+                    {{-- Nature --}}
+                    <div class="col-12 col-md-6">
+                        <label for="leave_nature_master_pk" class="leave-grid-label d-block">Nature for Leave <span class="text-danger">*</span></label>
+                        <select name="leave_nature_master_pk" id="leave_nature_master_pk" class="form-select" required {{ $isReadOnly ? 'disabled' : '' }}>
+                            <option value="">Select Nature</option>
+                            @foreach($natures as $nature)
+                                <option value="{{ $nature->pk }}"
+                                    {{ (string) old('leave_nature_master_pk', $application->leave_nature_master_pk ?? '') === (string) $nature->pk ? 'selected' : '' }}>
+                                    {{ $nature->nature_name }}
+                                </option>
                             @endforeach
-                        </div>
-                    @endif
-                    <div id="attachment-validation-error" class="alert alert-danger py-2 small d-none mb-2"></div>
-                    <div class="table-responsive">
-                        <table class="table attachment-table mb-2">
-                            <thead>
-                                <tr>
-                                    <th style="width:8%;">S. No.</th>
-                                    <th style="width:30%;">Attachment Title</th>
-                                    <th style="width:42%;">Attachment Name</th>
-                                    <th style="width:20%;">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="attachment-rows">
-                                @if(($application ?? null) && $application->attachments->isNotEmpty())
-                                    @foreach($application->attachments as $index => $attachment)
-                                        <tr>
-                                            <td class="attach-serial">{{ $index + 1 }}</td>
-                                            <td>{{ $attachment->attachment_title }}</td>
-                                            <td>
-                                                <a href="{{ asset('storage/' . $attachment->file_path) }}" target="_blank">
-                                                    {{ $attachment->original_file_name }}
-                                                </a>
-                                                @if(!($readOnly ?? false))
-                                                    <input type="hidden" name="existing_attachments[]" value="{{ $attachment->pk }}">
-                                                @endif
-                                            </td>
-                                            <td>
-                                                @if(!($readOnly ?? false))
-                                                    <button type="button" class="btn btn-sm btn-outline-danger remove-attachment-row border-0 p-1">
-                                                        <i class="material-icons material-symbols-rounded text-danger" style="font-size:20px;">delete</i>
-                                                    </button>
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                @else
-                                    <tr id="attachment-empty-row">
-                                        <td colspan="4" class="text-center text-muted py-3">No attachments added.</td>
-                                    </tr>
-                                @endif
-                            </tbody>
-                        </table>
+                        </select>
                     </div>
 
-                    @if(!($readOnly ?? false))
-                        <div class="text-end">
-                            <button type="button" class="btn btn-draft btn-sm" id="add-attachment-row">+ Add More</button>
+                    {{-- Date From --}}
+                    <div class="col-12 col-md-6">
+                        <label for="from_date" class="leave-grid-label d-block">Date From <span class="text-danger">*</span></label>
+                        <div class="leave-date-wrap">
+                            <input type="date" name="from_date" id="from_date" class="form-control @error('from_date') is-invalid @enderror" required
+                                value="{{ $fromDateValue }}"
+                                @if($isPt && $ptMinDate) min="{{ $ptMinDate }}" @elseif(! $isPt && $stationedMinDate) min="{{ $stationedMinDate }}" @endif
+                                {{ $isReadOnly ? 'readonly' : '' }}>
+                            <i class="material-icons material-symbols-rounded leave-date-icon">calendar_month</i>
                         </div>
-                    @endif
+                        @error('from_date')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    {{-- Date To --}}
+                    <div class="col-12 col-md-6">
+                        <label for="to_date" class="leave-grid-label d-block">Date To <span class="text-danger">*</span></label>
+                        <div class="leave-date-wrap">
+                            <input type="date" name="to_date" id="to_date" class="form-control @error('to_date') is-invalid @enderror" required
+                                value="{{ $toDateValue }}"
+                                @if($toDateMin) min="{{ $toDateMin }}" @endif
+                                {{ $isReadOnly ? 'readonly' : '' }}>
+                            <i class="material-icons material-symbols-rounded leave-date-icon">calendar_month</i>
+                        </div>
+                        @error('to_date')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    {{-- Total Days --}}
+                    <div class="col-12 col-md-6">
+                        <label for="total_days_display" class="leave-grid-label d-block">Total Days <span class="text-danger">*</span></label>
+                        <input type="text" id="total_days_display" class="form-control" readonly
+                            value="{{ old('total_days', isset($application) ? number_format((float) $application->total_days, 1) : '0') }}">
+                    </div>
+
+                    {{-- Reason --}}
+                    <div class="col-12 col-md-6">
+                        <label for="reason" class="leave-grid-label d-block">Reason <span class="text-danger">*</span></label>
+                        <textarea name="reason" id="reason" rows="3" class="form-control" required
+                            placeholder="eg. Enter reason for leave here..."
+                            {{ $isReadOnly ? 'readonly' : '' }}>{{ old('reason', $application->reason ?? '') }}</textarea>
+                    </div>
+
+                    {{-- Contact Number --}}
+                    <div class="col-12 col-md-6">
+                        <label for="contact_number" class="leave-grid-label d-block">Contact Number During Exemption <span class="text-danger">*</span></label>
+                        <input type="text" name="contact_number" id="contact_number" class="form-control @error('contact_number') is-invalid @enderror"
+                            maxlength="10" inputmode="numeric" pattern="[6-9][0-9]{9}" required
+                            placeholder="eg. 1234567894"
+                            value="{{ old('contact_number', $application->contact_number ?? '') }}"
+                            {{ $isReadOnly ? 'readonly' : '' }}>
+                        @error('contact_number')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    {{-- Attachments --}}
+                    <div class="col-12">
+                        <label class="leave-grid-label d-block">Attachments</label>
+
+                        @if(($application ?? null) && $application->attachments->isNotEmpty())
+                            <div class="leave-existing-attach mb-2">
+                                @foreach($application->attachments as $attachment)
+                                    <div class="d-flex align-items-center gap-2 mb-1 leave-existing-attach-row">
+                                        <i class="material-icons material-symbols-rounded text-secondary" style="font-size:18px;">attach_file</i>
+                                        <a href="{{ asset('storage/' . $attachment->file_path) }}" target="_blank" class="leave-existing-attach-link">
+                                            {{ $attachment->attachment_title ? $attachment->attachment_title . ' — ' : '' }}{{ $attachment->original_file_name }}
+                                        </a>
+                                        @if(! $isReadOnly)
+                                            <input type="hidden" name="existing_attachments[]" value="{{ $attachment->pk }}">
+                                            {{-- Staged removal: the file is only deleted when the form is
+                                                 saved (the hidden input above is disabled on remove, so its
+                                                 pk drops out of existing_attachments[]). Undo restores it. --}}
+                                            <button type="button" class="btn btn-sm btn-link text-danger p-0 leave-existing-attach-remove"
+                                                title="Remove attachment" aria-label="Remove attachment">
+                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
+                                            </button>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                            @if(! $isReadOnly)
+                                <p class="form-text mt-0 mb-2">To replace a file, remove the existing one and add a new attachment below.</p>
+                            @endif
+                        @endif
+
+                        @if(! $isReadOnly)
+                            <div id="leave-attachments-wrap">
+                                <div class="leave-attachment-row row g-2 align-items-center mb-2" data-index="0">
+                                    <div class="col-12 col-md-5">
+                                        <input type="text" name="attachments[0][title]"
+                                            class="form-control leave-attachment-title"
+                                            placeholder="Attachment name (eg. Medical certificate)">
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <input type="file" name="attachments[0][file]"
+                                            class="form-control leave-attachment-file"
+                                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                                    </div>
+                                    <div class="col-12 col-md-1 d-flex">
+                                        <button type="button"
+                                            class="btn btn-sm btn-outline-danger leave-attachment-remove d-none"
+                                            title="Remove attachment">
+                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">close</i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary mt-1" id="leave-attachment-add">
+                                <i class="material-icons material-symbols-rounded" style="font-size:16px;vertical-align:middle;">add</i>
+                                Add attachment
+                            </button>
+                            <div class="form-text">
+                                PDF, JPG, JPEG, PNG, DOC, DOCX &middot; max 5 MB each.
+                            </div>
+                        @endif
+
+                        @php
+                            $attachmentErrors = collect($errors->messages())->filter(
+                                fn ($_, $key) => str_starts_with($key, 'attachments.')
+                            )->flatten();
+                        @endphp
+                        @if($attachmentErrors->isNotEmpty())
+                            <div class="alert alert-danger py-2 small mt-2 mb-0">
+                                @foreach($attachmentErrors as $error)
+                                    <div>{{ $error }}</div>
+                                @endforeach
+                            </div>
+                        @endif
+                        <div id="attachment-validation-error" class="alert alert-danger py-2 small d-none mt-2 mb-0"></div>
+                    </div>
                 </div>
 
-                @if(!($readOnly ?? false))
-                <div class="leave-actions">
-                    <a href="{{ route('leave.my-leave') }}" class="btn btn-cancel">Cancel</a>
-                    <button type="submit" name="submit_action" value="draft" class="btn btn-draft">Save As Draft</button>
-                    <button type="submit" name="submit_action" value="submit" class="btn btn-submit text-white">Submit</button>
+                @if(! $isReadOnly)
+                <div class="leave-actions-end">
+                    <a href="{{ route('leave.my-leave') }}" class="btn btn-cancel-outline">Cancel</a>
+                    <button type="submit" name="submit_action" value="submit" class="btn btn-apply">Apply Exemption</button>
                 </div>
                 @endif
             </form>
+        </div>
+    </div>
         </div>
     </div>
 </div>
@@ -351,25 +320,30 @@
 @push('scripts')
 <script>
 $(function () {
-    let attachmentIndex = 0;
     const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'];
     const maxSizeBytes = 5 * 1024 * 1024;
-    const acceptTypes = '.pdf,.jpg,.jpeg,.png,.doc,.docx';
 
+    /* ── Leave type switch (navigates, mirrors previous tab behaviour) ── */
+    $('.leave-type-radio').on('change', function () {
+        if (this.disabled) {
+            return;
+        }
+        const url = $(this).closest('.leave-type-radios').data('applyUrl');
+        window.location.href = url + '?leave_type=' + encodeURIComponent(this.value);
+    });
+
+    /* ── Attachment validation ── */
     function validateAttachmentFile(file) {
         if (!file) {
             return null;
         }
-
         const ext = (file.name.split('.').pop() || '').toLowerCase();
         if (!allowedExtensions.includes(ext)) {
             return 'File "' + file.name + '" is not allowed. Use PDF, JPG, JPEG, PNG, DOC, or DOCX.';
         }
-
         if (file.size > maxSizeBytes) {
             return 'File "' + file.name + '" exceeds the 5 MB size limit.';
         }
-
         return null;
     }
 
@@ -382,38 +356,90 @@ $(function () {
         $('.leave-attachment-file').removeClass('is-invalid');
     }
 
-    function validateAllAttachments() {
+    $(document).on('change', '.leave-attachment-file', function () {
         clearAttachmentError();
+        const file = this.files && this.files[0];
+        if (!file) {
+            return;
+        }
+        const error = validateAttachmentFile(file);
+        if (error) {
+            $(this).addClass('is-invalid').val('');
+            showAttachmentError(error);
+        }
+    });
 
-        let hasError = false;
-        $('.leave-attachment-file').each(function () {
-            const file = this.files && this.files[0];
-            if (!file) {
-                return;
-            }
+    /* ── Add / remove attachment rows ── */
+    let attachmentIndex = $('#leave-attachments-wrap .leave-attachment-row').length;
 
-            const error = validateAttachmentFile(file);
-            if (error) {
-                hasError = true;
-                $(this).addClass('is-invalid');
-                showAttachmentError(error);
-                return false;
-            }
-        });
-
-        return !hasError;
+    function refreshRemoveButtons() {
+        const $rows = $('#leave-attachments-wrap .leave-attachment-row');
+        $rows.find('.leave-attachment-remove').toggleClass('d-none', $rows.length <= 1);
     }
 
+    $('#leave-attachment-add').on('click', function () {
+        const index = attachmentIndex++;
+        const row =
+            '<div class="leave-attachment-row row g-2 align-items-center mb-2" data-index="' + index + '">' +
+                '<div class="col-12 col-md-5">' +
+                    '<input type="text" name="attachments[' + index + '][title]" ' +
+                        'class="form-control leave-attachment-title" ' +
+                        'placeholder="Attachment name (eg. Medical certificate)">' +
+                '</div>' +
+                '<div class="col-12 col-md-6">' +
+                    '<input type="file" name="attachments[' + index + '][file]" ' +
+                        'class="form-control leave-attachment-file" ' +
+                        'accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">' +
+                '</div>' +
+                '<div class="col-12 col-md-1 d-flex">' +
+                    '<button type="button" class="btn btn-sm btn-outline-danger leave-attachment-remove" title="Remove attachment">' +
+                        '<i class="material-icons material-symbols-rounded" style="font-size:18px;">close</i>' +
+                    '</button>' +
+                '</div>' +
+            '</div>';
+        $('#leave-attachments-wrap').append(row);
+        refreshRemoveButtons();
+    });
+
+    $(document).on('click', '.leave-attachment-remove', function () {
+        $(this).closest('.leave-attachment-row').remove();
+        refreshRemoveButtons();
+    });
+
+    /* ── Existing (already-saved) attachments: remove / undo ── */
+    $(document).on('click', '.leave-existing-attach-remove', function () {
+        const $row = $(this).closest('.leave-existing-attach-row');
+        const $hidden = $row.find('input[name="existing_attachments[]"]');
+        const $link = $row.find('.leave-existing-attach-link');
+        const $icon = $(this).find('i');
+        const staged = $row.hasClass('leave-existing-removed');
+
+        if (!staged) {
+            // Stage for deletion — disabling the hidden input drops this pk from
+            // existing_attachments[], so the update removes the file on save.
+            $row.addClass('leave-existing-removed');
+            $hidden.prop('disabled', true);
+            $link.css({ 'text-decoration': 'line-through', 'opacity': '0.55' });
+            $(this).attr('title', 'Undo remove').attr('aria-label', 'Undo remove');
+            $icon.text('undo');
+        } else {
+            // Undo — keep the file.
+            $row.removeClass('leave-existing-removed');
+            $hidden.prop('disabled', false);
+            $link.css({ 'text-decoration': '', 'opacity': '' });
+            $(this).attr('title', 'Remove attachment').attr('aria-label', 'Remove attachment');
+            $icon.text('delete');
+        }
+    });
+
+    /* ── Date sync + total days ── */
     function syncEndDateMin() {
         const from = $('#from_date').val();
         const $toDate = $('#to_date');
-
         if (!from) {
             return;
         }
-
         $toDate.attr('min', from);
-
         const to = $toDate.val();
         if (!to || to < from) {
             $toDate.val(from);
@@ -445,54 +471,25 @@ $(function () {
     syncEndDateMin();
     updateTotalDays();
 
-    $('#add-attachment-row').on('click', function () {
-        $('#attachment-empty-row').remove();
-        const row = `
-            <tr>
-                <td class="attach-serial"></td>
-                <td><input type="text" name="attachments[${attachmentIndex}][title]" class="form-control form-control-sm" placeholder="Medical Certificate"></td>
-                <td><input type="file" name="attachments[${attachmentIndex}][file]" class="form-control form-control-sm leave-attachment-file" accept="${acceptTypes}"></td>
-                <td><button type="button" class="btn btn-sm border-0 p-1 remove-attachment-row"><i class="material-icons material-symbols-rounded text-danger" style="font-size:20px;">delete</i></button></td>
-            </tr>
-        `;
-        $('#attachment-rows').append(row);
-        attachmentIndex++;
-        refreshAttachmentSerial();
-    });
-
-    $(document).on('change', '.leave-attachment-file', function () {
-        clearAttachmentError();
-        const file = this.files && this.files[0];
-        if (!file) {
-            return;
-        }
-
-        const error = validateAttachmentFile(file);
-        if (error) {
-            $(this).addClass('is-invalid').val('');
-            showAttachmentError(error);
-        }
-    });
-
+    /* ── Block submit on invalid attachment ── */
     $('#leave-apply-form').on('submit', function (e) {
-        if (!validateAllAttachments()) {
+        clearAttachmentError();
+        let firstError = null;
+        $('.leave-attachment-file').each(function () {
+            const file = this.files && this.files[0];
+            const error = validateAttachmentFile(file);
+            if (error) {
+                $(this).addClass('is-invalid');
+                if (!firstError) {
+                    firstError = error;
+                }
+            }
+        });
+        if (firstError) {
+            showAttachmentError(firstError);
             e.preventDefault();
         }
     });
-
-    $(document).on('click', '.remove-attachment-row', function () {
-        $(this).closest('tr').remove();
-        refreshAttachmentSerial();
-        if ($('#attachment-rows tr').length === 0) {
-            $('#attachment-rows').html('<tr id="attachment-empty-row"><td colspan="4" class="text-center text-muted py-3">No attachments added.</td></tr>');
-        }
-    });
-
-    function refreshAttachmentSerial() {
-        $('#attachment-rows tr').not('#attachment-empty-row').each(function (idx) {
-            $(this).find('.attach-serial').text(idx + 1);
-        });
-    }
 });
 </script>
 @endpush

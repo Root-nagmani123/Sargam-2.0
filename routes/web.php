@@ -841,6 +841,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     // PT Exemption Master (Leave Management)
     Route::prefix('admin/pt-exemption-master')->name('admin.pt-exemption-master.')->controller(ExemptionMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/export', 'export')->name('export');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::post('/status/{id}', 'status')->name('status');
@@ -850,6 +851,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     // Stationed Leave Master (Leave Management)
     Route::prefix('admin/stationed-leave-master')->name('admin.stationed-leave-master.')->controller(StationedLeaveMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/export', 'export')->name('export');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/faculties', 'faculties')->name('faculties');
@@ -860,6 +862,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     // Faculty — Leave Approval (menu route: faculty-leave-approval)
     Route::controller(FacultyLeaveApprovalController::class)->group(function () {
         Route::get('/faculty-leave-approval', 'index')->name('faculty.leave-approval.index');
+        Route::get('/faculty-leave-approval/export', 'export')->name('faculty.leave-approval.export');
         Route::get('/faculty-leave-approval/{id}', 'show')->name('faculty.leave-approval.show');
         Route::post('/faculty-leave-approval/{id}/approve', 'approve')->name('faculty.leave-approval.approve');
         Route::post('/faculty-leave-approval/{id}/reject', 'reject')->name('faculty.leave-approval.reject');
@@ -870,6 +873,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         Route::get('/apply', 'apply')->name('apply');
         Route::post('/store', 'store')->name('store');
         Route::get('/my-leave', 'myLeave')->name('my-leave');
+        Route::get('/my-leave/export', 'myLeaveExport')->name('my-leave.export');
         Route::get('/balance', 'balance')->name('balance');
         Route::get('/{id}/edit', 'edit')->name('edit');
         Route::put('/{id}', 'update')->name('update');

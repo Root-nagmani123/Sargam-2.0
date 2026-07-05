@@ -17,6 +17,10 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             UserSeeder::class,
+            SportsMasterSeeder::class,
+            TravelTypeMasterSeeder::class,
+            MctpTravelModeMasterSeeder::class,
+            PickUpDropTypeMasterSeeder::class,
         ]);
     }
 }

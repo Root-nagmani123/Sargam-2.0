@@ -277,12 +277,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const bodyWrapper = document.querySelector('.body-wrapper');
         if (!bodyWrapper) return;
         
-        const allBodyPanes = bodyWrapper.querySelectorAll('.tab-pane');
+        // Only target direct child tab-panes of #mainNavbarContent, not nested tabs inside page content
+        const mainContent = bodyWrapper.querySelector('#mainNavbarContent');
+        if (!mainContent) return;
+        
+        const allBodyPanes = mainContent.querySelectorAll(':scope > .tab-pane');
         allBodyPanes.forEach(function(pane) {
             pane.classList.remove('show', 'active');
         });
         
-        const targetPane = bodyWrapper.querySelector(targetId + '.tab-pane');
+        const targetPane = mainContent.querySelector(':scope > ' + targetId + '.tab-pane');
         if (targetPane) {
             targetPane.classList.add('show', 'active');
             console.log('Body wrapper pane activated:', targetId);
@@ -359,31 +363,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
-        
-        // If we found a non-home tab with content, activate it
-        if (contentTabId) {
-            console.log('Auto-activating tab based on content:', contentTabId);
-
-            // Find and activate the corresponding header tab
-            const headerTab = document.querySelector(
-                '#mainNavbar a[href="' + contentTabId + '"], .mobile-tabbar a[href="' + contentTabId + '"]'
-            );
-            if (headerTab) {
-                // Remove active from all tabs
-                document.querySelectorAll('#mainNavbar [data-bs-toggle="tab"], .mobile-tabbar [data-bs-toggle="tab"]').forEach(function(tab) {
-                    tab.classList.remove('active');
-                    tab.setAttribute('aria-selected', 'false');
-                });
-
-                // Activate the correct header tab
-                headerTab.classList.add('active');
-                headerTab.setAttribute('aria-selected', 'true');
-
-                // Sync both content areas
-                syncBodyWrapperTab(contentTabId);
-                syncSidebarTab(contentTabId);
-            }
-        }
 
         // The header tab to highlight comes from the RBAC resolver — the SAME source
         // as the breadcrumb (window.SARGAM_ACTIVE_NAV_TAB). This keeps the active
