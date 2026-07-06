@@ -812,8 +812,8 @@ $(document).ready(function() {
                     $btn.prop('disabled', false);
                 }
             },
-            error: function() {
-                alert('Failed to end conversation.');
+            error: function(xhr) {
+                alert((xhr.responseJSON && xhr.responseJSON.message) || 'Failed to end conversation.');
                 $btn.prop('disabled', false);
             }
         });

@@ -1707,7 +1707,7 @@ public function memo_notice_conversation(Request $request)
         'message' => 'required|string|max:500',
         'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
         'status' => 'required|in:1,2',
-        'mark_of_deduction' => 'nullable|string|max:100',
+        'mark_of_deduction' => 'nullable|numeric|min:0',
         'conclusion_type' => 'nullable|exists:memo_conclusion_master,pk',
         'conclusion_remark' => 'nullable|string|max:500',
     ]);
@@ -1720,6 +1720,18 @@ public function memo_notice_conversation(Request $request)
         return $input->type === 'memo';
     });
 }
+
+    // "Marks Deduction" is looked up by name, not a hardcoded pk, since master data
+    // can be re-seeded — matches the client-side check in conversation.blade.php's
+    // toggleDeduction() (selectedText === 'Marks Deduction').
+    $validator->sometimes('mark_of_deduction', 'required|numeric|min:0', function ($input) {
+        if (empty($input->conclusion_type)) {
+            return false;
+        }
+        return DB::table('memo_conclusion_master')
+            ->where('pk', $input->conclusion_type)
+            ->value('discussion_name') === 'Marks Deduction';
+    });
 
     if ($validator->fails()) {
 
@@ -2952,12 +2964,29 @@ public function updateMemoStatus(Request $request, $id)
  */
 public function endChat(Request $request)
 {
-    $validated = $request->validate([
+    $validator = Validator::make($request->all(), [
         'id'                        => 'required|integer',
         'type'                      => 'required|in:notice,memo',
         'memo_conclusion_master_pk' => 'nullable|integer',
+        'marks_deducted'            => 'nullable|numeric|min:0',
         'conclusion_remark'         => 'nullable|string',
     ]);
+
+    // "Marks Deduction" is looked up by name, not a hardcoded pk — matches the
+    // client-side toggleEndChatMarks() check in index.blade.php.
+    $validator->sometimes('marks_deducted', 'required', function ($input) {
+        if (empty($input->memo_conclusion_master_pk)) {
+            return false;
+        }
+        return DB::table('memo_conclusion_master')
+            ->where('pk', $input->memo_conclusion_master_pk)
+            ->value('discussion_name') === 'Marks Deduction';
+    });
+
+    if ($validator->fails()) {
+        return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+    }
+    $validated = $validator->validated();
 
     try {
         if ($validated['type'] === 'memo') {
@@ -2967,6 +2996,7 @@ public function endChat(Request $request)
                     'status'                    => 2,
                     'communication_status'      => 2,
                     'memo_conclusion_master_pk' => $validated['memo_conclusion_master_pk'],
+                    'mark_of_deduction'         => $validated['marks_deducted'] ?? null,
                     'conclusion_remark'         => $validated['conclusion_remark'],
                     'modified_date'             => now(),
                 ]);
@@ -2976,6 +3006,7 @@ public function endChat(Request $request)
                 ->update([
                     'status'             => 2,
                     'conclusion_type_pk' => $validated['memo_conclusion_master_pk'],
+                    'mark_of_deduction'  => $validated['marks_deducted'] ?? null,
                     'conclusion_remark'  => $validated['conclusion_remark'],
                 ]);
         }
