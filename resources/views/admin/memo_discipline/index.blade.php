@@ -406,6 +406,7 @@
                                 <th class="text-center">Submitted</th>
                                 <th class="text-center">Final</th>
                                 <th>Remarks</th>
+                                <th>Created Date</th>
                                 <th>Status</th>
                                 @if(! hasRole('Officer Trainee'))
                                 <th class="text-end">Action</th>
@@ -426,6 +427,7 @@
                                 <td class="text-center fw-semibold text-warning">{{ $memo->mark_deduction_submit }}</td>
                                 <td class="text-center fw-semibold text-danger">{{ $memo->final_mark_deduction }}</td>
                                 <td class="text-muted">{{ $memo->remarks ?? '—' }}</td>
+                                <td class="text-muted">{{ !empty($memo->created_date) ? \Carbon\Carbon::parse($memo->created_date)->format('d M Y') : 'N/A' }}</td>
 
                                 <!-- Status -->
                                 <td>
@@ -493,9 +495,14 @@
                                     @else
                                     <span class="text-muted small">—</span>
                                     @endif
-                                    {{-- Delete: admins/faculty only, hard-deletes the discipline memo + its chat --}}
-                                    <a href="javascript:void(0)" class="btn btn-sm btn-outline-danger discipline-delete-record ms-1 border-0 bg-transparent text-primary"
-                                        data-id="{{ $memo->pk }}" title="Delete">
+                                    {{-- Delete: admins/faculty only, hard-deletes the discipline memo + its chat.
+                                         Active only while the memo is open (Recorded/Memo Sent); disabled once closed. --}}
+                                    @php $isMemoClosed = !in_array($memo->status, [1, 2]); @endphp
+                                    <a href="javascript:void(0)"
+                                        class="btn btn-sm btn-outline-danger discipline-delete-record ms-1 border-0 bg-transparent text-primary {{ $isMemoClosed ? 'disabled' : '' }}"
+                                        data-id="{{ $memo->pk }}"
+                                        title="{{ $isMemoClosed ? 'Cannot delete a closed memo' : 'Delete' }}"
+                                        @if($isMemoClosed) aria-disabled="true" tabindex="-1" style="pointer-events:none;opacity:.45;" @endif>
                                         <i class="material-icons material-symbols-rounded fs-5">delete</i>
                                     </a>
                                     @else
@@ -506,7 +513,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="{{ hasRole('Officer Trainee') ? 11 : 12 }}" class="text-center py-5 text-muted">
+                                <td colspan="{{ hasRole('Officer Trainee') ? 12 : 13 }}" class="text-center py-5 text-muted">
                                     <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                                     <span class="fw-medium">No memo records available</span>
                                 </td>
@@ -1162,6 +1169,7 @@ $(function () {
 
     /* ── Delete a discipline memo (admins only) ── */
     $(document).on('click', '.discipline-delete-record', function () {
+        if ($(this).hasClass('disabled')) { return; } // closed memo — delete not allowed
         var id = $(this).data('id');
         if (!id) { return; }
 

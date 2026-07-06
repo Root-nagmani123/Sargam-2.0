@@ -91,12 +91,22 @@ class MemoDisciplineController extends Controller
         ->when($searchFilter, function ($q) use ($searchFilter) {
             $q->where(function ($sub) use ($searchFilter) {
                 $sub->whereHas('student', function ($s) use ($searchFilter) {
-                        $s->where('display_name', 'like', "%{$searchFilter}%");
+                        $s->where('display_name', 'like', "%{$searchFilter}%")
+                          ->orWhere('generated_OT_code', 'like', "%{$searchFilter}%")
+                          ->orWhereHas('cadre', function ($c) use ($searchFilter) {
+                              $c->where('cadre_name', 'like', "%{$searchFilter}%");
+                          });
+                    })
+                    ->orWhereHas('course', function ($c) use ($searchFilter) {
+                        $c->where('course_name', 'like', "%{$searchFilter}%");
                     })
                     ->orWhereHas('discipline', function ($d) use ($searchFilter) {
                         $d->where('discipline_name', 'like', "%{$searchFilter}%");
                     })
-                    ->orWhere('remarks', 'like', "%{$searchFilter}%");
+                    ->orWhere('remarks', 'like', "%{$searchFilter}%")
+                    ->orWhere('mark_deduction_submit', 'like', "%{$searchFilter}%")
+                    ->orWhere('final_mark_deduction', 'like', "%{$searchFilter}%")
+                    ->orWhere('date', 'like', "%{$searchFilter}%");
             });
         })
         ->when($fromDateFilter && $toDateFilter, function ($q) use ($fromDateFilter, $toDateFilter) {
@@ -175,10 +185,16 @@ public function otIndex(Request $request)
         })
         ->when($searchFilter, function ($q) use ($searchFilter) {
             $q->where(function ($sub) use ($searchFilter) {
-                $sub->whereHas('discipline', function ($d) use ($searchFilter) {
+                $sub->whereHas('course', function ($c) use ($searchFilter) {
+                        $c->where('course_name', 'like', "%{$searchFilter}%");
+                    })
+                    ->orWhereHas('discipline', function ($d) use ($searchFilter) {
                         $d->where('discipline_name', 'like', "%{$searchFilter}%");
                     })
-                    ->orWhere('remarks', 'like', "%{$searchFilter}%");
+                    ->orWhere('remarks', 'like', "%{$searchFilter}%")
+                    ->orWhere('mark_deduction_submit', 'like', "%{$searchFilter}%")
+                    ->orWhere('final_mark_deduction', 'like', "%{$searchFilter}%")
+                    ->orWhere('date', 'like', "%{$searchFilter}%");
             });
         })
         ->when($fromDateFilter && $toDateFilter, function ($q) use ($fromDateFilter, $toDateFilter) {
@@ -296,12 +312,22 @@ public function exportCsv(Request $request)
         ->when($searchFilter, function ($q) use ($searchFilter) {
             $q->where(function ($sub) use ($searchFilter) {
                 $sub->whereHas('student', function ($s) use ($searchFilter) {
-                        $s->where('display_name', 'like', "%{$searchFilter}%");
+                        $s->where('display_name', 'like', "%{$searchFilter}%")
+                          ->orWhere('generated_OT_code', 'like', "%{$searchFilter}%")
+                          ->orWhereHas('cadre', function ($c) use ($searchFilter) {
+                              $c->where('cadre_name', 'like', "%{$searchFilter}%");
+                          });
+                    })
+                    ->orWhereHas('course', function ($c) use ($searchFilter) {
+                        $c->where('course_name', 'like', "%{$searchFilter}%");
                     })
                     ->orWhereHas('discipline', function ($d) use ($searchFilter) {
                         $d->where('discipline_name', 'like', "%{$searchFilter}%");
                     })
-                    ->orWhere('remarks', 'like', "%{$searchFilter}%");
+                    ->orWhere('remarks', 'like', "%{$searchFilter}%")
+                    ->orWhere('mark_deduction_submit', 'like', "%{$searchFilter}%")
+                    ->orWhere('final_mark_deduction', 'like', "%{$searchFilter}%")
+                    ->orWhere('date', 'like', "%{$searchFilter}%");
             });
         })
         ->when($fromDateFilter && $toDateFilter, function ($q) use ($fromDateFilter, $toDateFilter) {

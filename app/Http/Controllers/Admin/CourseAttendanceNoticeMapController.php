@@ -72,6 +72,7 @@ class CourseAttendanceNoticeMapController extends Controller
             't.subject_topic as topic_name',
             DB::raw('COALESCE(t.START_DATE, sns.date_) as session_date'),
             'cm.course_name',
+            'sns.created_date',
             DB::raw('"Notice" as type_notice_memo')
         );
 
@@ -155,7 +156,8 @@ class CourseAttendanceNoticeMapController extends Controller
                 't.subject_topic as topic_name',
                 't.START_DATE as session_date',
                 'mcm.discussion_name',
-                'cm.course_name'
+                'cm.course_name',
+                'student_memo_status.created_date'
             );
 
         if ($isOfficerTrainee) {
@@ -267,7 +269,11 @@ class CourseAttendanceNoticeMapController extends Controller
             $memos = $memos->filter(function($item) use ($searchFilter) {
                 return (isset($item->student_name) && stripos($item->student_name, $searchFilter) !== false)
                     || (isset($item->course_name) && stripos($item->course_name, $searchFilter) !== false)
-                    || (isset($item->topic_name) && stripos($item->topic_name, $searchFilter) !== false);
+                    || (isset($item->topic_name) && stripos($item->topic_name, $searchFilter) !== false)
+                    || (isset($item->type_notice_memo) && stripos($item->type_notice_memo, $searchFilter) !== false)
+                    || (isset($item->discussion_name) && stripos($item->discussion_name, $searchFilter) !== false)
+                    || (isset($item->conclusion_remark) && stripos($item->conclusion_remark, $searchFilter) !== false)
+                    || (isset($item->session_date) && stripos($item->session_date, $searchFilter) !== false);
             });
         }
 
@@ -465,6 +471,7 @@ $noticeCount = $memos->groupBy(function($item) {
                 't.subject_topic as topic_name',
                 't.START_DATE as session_date',
                 'cm.course_name',
+                'sns.created_date',
                 DB::raw('"Notice" as type_notice_memo')
             );
 
@@ -534,7 +541,8 @@ $noticeCount = $memos->groupBy(function($item) {
                     't.subject_topic as topic_name',
                     't.START_DATE as session_date',
                     'mcm.discussion_name',
-                    'cm.course_name'
+                    'cm.course_name',
+                    'student_memo_status.created_date'
                 );
 
             if ($isOfficerTrainee) {
@@ -649,7 +657,11 @@ $noticeCount = $memos->groupBy(function($item) {
                 $memos = $memos->filter(function($item) use ($searchFilter) {
                     return (isset($item->student_name) && stripos($item->student_name, $searchFilter) !== false)
                         || (isset($item->course_name) && stripos($item->course_name, $searchFilter) !== false)
-                        || (isset($item->topic_name) && stripos($item->topic_name, $searchFilter) !== false);
+                        || (isset($item->topic_name) && stripos($item->topic_name, $searchFilter) !== false)
+                        || (isset($item->type_notice_memo) && stripos($item->type_notice_memo, $searchFilter) !== false)
+                        || (isset($item->discussion_name) && stripos($item->discussion_name, $searchFilter) !== false)
+                        || (isset($item->conclusion_remark) && stripos($item->conclusion_remark, $searchFilter) !== false)
+                        || (isset($item->session_date) && stripos($item->session_date, $searchFilter) !== false);
                 });
             }
 

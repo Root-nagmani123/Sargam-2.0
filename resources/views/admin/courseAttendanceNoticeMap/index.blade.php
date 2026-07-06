@@ -285,6 +285,7 @@
                     </div>
                 </div>
             </form>
+            <div id="mnmListContainer">
             <div class="table-responsive">
                 <table id="mnmTable" class="table align-middle mb-0">
                     <thead>
@@ -297,6 +298,7 @@
                             <th>Topic</th>
                             <th>Conclusion Type</th>
                             <th>Conclusion Remark</th>
+                            <th>Created Date</th>
                             <th>Status</th>
                             <th class="text-center">Action</th>
                         </tr>
@@ -337,6 +339,7 @@
                             <td>{{ $memo->topic_name ?? 'N/A' }}</td>
                             <td>{{ ($memo->discussion_name ?? '') !== '' ? $memo->discussion_name : 'N/A' }}</td>
                             <td>{{ ($memo->conclusion_remark ?? '') !== '' ? $memo->conclusion_remark : 'N/A' }}</td>
+                            <td>{{ !empty($memo->created_date) ? date('d-m-Y', strtotime($memo->created_date)) : 'N/A' }}</td>
                             <td><span class="mnm-status {{ $stClass }}">{{ $stLabel }}</span></td>
                             <td>
                                 <div class="mnm-actions justify-content-center">
@@ -424,7 +427,7 @@
                         </tr>
                         @empty
                         <tr class="align-middle">
-                            <td colspan="10" class="text-center text-muted py-5">
+                            <td colspan="11" class="text-center text-muted py-5">
                                 <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                                 No records found
                             </td>
@@ -449,6 +452,7 @@
 
                 </div>
             </div>
+            </div><!-- /#mnmListContainer -->
 
         </div>
     </div>
@@ -942,9 +946,13 @@ $(document).ready(function() {
         loadMemoTemplates(courseId, null, $(this).val());
     });
 
-    // Filter form submission on change
+    // Filter form submission on change → AJAX (no full page reload)
     $('#program_name, #type, #status, #from_date, #to_date').on('change', function() {
-        $('#filterForm').submit();
+        if (typeof window.applyMnmFiltersAjax === 'function') {
+            window.applyMnmFiltersAjax();
+        } else {
+            $('#filterForm').get(0).submit();
+        }
     });
 
     // Handle Generate Memo button (editable mode)
@@ -1257,18 +1265,24 @@ $(document).ready(function() {
 @push('scripts')
 <script>
 $(function () {
-    // ── DataTable sorting for #mnmTable ──
-    if ($('#mnmTable tbody tr td[colspan]').length === 0) {
-        $('#mnmTable').DataTable({
-            paging: false,
-            searching: false,
-            ordering: true,
-            info: false,
-            columnDefs: [
-                { orderable: false, targets: [0, 9] }
-            ]
-        });
-    }
+    // ── DataTable sorting for #mnmTable (reusable so AJAX filtering can re-init) ──
+    window.reinitMnmTable = function () {
+        if ($.fn.DataTable.isDataTable('#mnmTable')) {
+            $('#mnmTable').DataTable().destroy();
+        }
+        if ($('#mnmTable tbody tr td[colspan]').length === 0) {
+            $('#mnmTable').DataTable({
+                paging: false,
+                searching: false,
+                ordering: true,
+                info: false,
+                columnDefs: [
+                    { orderable: false, targets: [0, 10] }
+                ]
+            });
+        }
+    };
+    window.reinitMnmTable();
 });
 </script>
 @endpush
@@ -1276,6 +1290,36 @@ $(function () {
 @push('scripts')
 <script>
 $(function () {
+    // ── AJAX filter/search: swap only the table container, no full page reload ──
+    function applyMnmFiltersAjax() {
+        var form = document.getElementById('filterForm');
+        var listContainer = document.getElementById('mnmListContainer');
+        if (!form || !listContainer) { $('#filterForm').get(0).submit(); return; }
+        var params = new URLSearchParams(new FormData(form)).toString();
+        var url = "{{ route('memo.notice.management.index') }}" + (params ? '?' + params : '');
+        listContainer.style.opacity = '0.5';
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.text(); })
+            .then(function (html) {
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                var newList = doc.querySelector('#mnmListContainer');
+                if (newList) { listContainer.innerHTML = newList.innerHTML; }
+                window.history.replaceState({}, '', url);
+            })
+            .catch(function () { alert('Failed to apply filters'); })
+            .finally(function () {
+                listContainer.style.opacity = '1';
+                if (typeof window.reinitMnmTable === 'function') { window.reinitMnmTable(); }
+            });
+    }
+    window.applyMnmFiltersAjax = applyMnmFiltersAjax;
+
+    // Any native form submit (e.g. Enter key) → AJAX instead of full reload.
+    $('#filterForm').on('submit', function (e) {
+        e.preventDefault();
+        applyMnmFiltersAjax();
+    });
+
     // ── Time Period presets → from/to dates, then submit ──
     function mnmFmt(d) { return d.toISOString().split('T')[0]; }
     $('#mnmTimePeriod').on('change', function () {
@@ -1295,7 +1339,7 @@ $(function () {
         }
         $('#from_date').val(from);
         $('#to_date').val(to);
-        $('#filterForm').submit();
+        applyMnmFiltersAjax();
     });
 
     // ── Search: toggle, search-as-you-type (debounced), Enter, clear ──
@@ -1309,12 +1353,11 @@ $(function () {
     $('#search').on('input', function () {
         $('#mnmSearchClear').toggle(this.value.length > 0);
         clearTimeout(mnmSearchTimer);
-        // Filters here submit the whole form (full reload); debounce so we only
-        // search once the user pauses typing, not on every keystroke.
-        mnmSearchTimer = setTimeout(function () { $('#filterForm').submit(); }, 500);
+        // Debounced AJAX search: only the table container reloads, not the page.
+        mnmSearchTimer = setTimeout(function () { applyMnmFiltersAjax(); }, 500);
     });
     $('#search').on('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); clearTimeout(mnmSearchTimer); $('#filterForm').submit(); }
+        if (e.key === 'Enter') { e.preventDefault(); clearTimeout(mnmSearchTimer); applyMnmFiltersAjax(); }
     });
     $('#mnmSearchClear').on('click', function () {
         var $s = $('#search');
@@ -1322,7 +1365,7 @@ $(function () {
         clearTimeout(mnmSearchTimer);
         if ($s.val() === '') { $s.trigger('focus'); return; }
         $s.val('');
-        $('#filterForm').submit();
+        applyMnmFiltersAjax();
     });
 
     // After a search reload, put the cursor back in the search box (at the end)
