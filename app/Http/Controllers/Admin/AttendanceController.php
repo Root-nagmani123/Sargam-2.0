@@ -216,6 +216,20 @@ class AttendanceController extends Controller
 
             $isSendNotice = ($currentPath === 'send_notice');
 
+            // Send Direct Notice should only ever list sessions for currently active
+            // courses (also excludes orphaned mappings with no matching course_master,
+            // which otherwise show up as a blank "N/A" course name). "Active" here
+            // matches the Course dropdown on this same page: the flag AND not already
+            // ended — a course can be flagged active_inactive=1 long after its
+            // end_date has passed.
+            if ($isSendNotice) {
+                $query->where('course_master.active_inactive', 1)
+                    ->where(function ($q) {
+                        $q->whereNull('course_master.end_date')
+                          ->orWhere('course_master.end_date', '>=', now()->toDateString());
+                    });
+            }
+
             $query->whereHas('timetable', function ($q) use ($fromDate, $toDate, $request, $isSendNotice) {
                 // Send Direct Notice lists course-groups independent of any session, so
                 // it is not narrowed by date / session / attendance-type (it still

@@ -359,35 +359,19 @@ $noticeCount = $memos->groupBy(function($item) {
             ? (($data['fromDateFilter'] ? Carbon::parse($data['fromDateFilter'])->format('d-m-Y') : '—') . ' to ' . ($data['toDateFilter'] ? Carbon::parse($data['toDateFilter'])->format('d-m-Y') : '—'))
             : 'All Dates';
 
-        $headers = ['S. No.', 'Program Name', 'Participant Name', 'Session Date', 'Topic', 'Conclusion Type', 'Conclusion Remark', 'Status'];
+        $headers = ['Name', 'OT/Participant Code', 'Cadre', 'Infraction', 'Date of Infraction', 'Remarks'];
 
         $rows = [];
-        $i = 0;
         foreach ($memos as $memo) {
-            $isNotice = ($memo->type_notice_memo ?? '') == 'Notice';
-            $st = $memo->status ?? null;
-            $cs = $memo->communication_status ?? null;
-            if ($isNotice) {
-                $statusLabel = $st == 1 ? 'Notice Sent' : 'Notice Chat Closed';
-            } elseif ($cs == 1) {
-                $statusLabel = 'Memo Chat Open';
-            } elseif ($cs == 2) {
-                $statusLabel = 'Memo Chat Closed';
-            } else {
-                $statusLabel = 'Memo Sent';
-            }
             $sessionDate = $memo->session_date ?? $memo->date_ ?? null;
 
             $rows[] = [
-                ++$i,
-                $memo->course_name ?? 'N/A',
                 $memo->student_name ?? 'N/A',
-                $isNotice ? 'Notice' : 'Memo',
-                $sessionDate ? Carbon::parse($sessionDate)->format('d-m-Y') : 'N/A',
+                $memo->generated_OT_code ?? 'N/A',
+                $memo->cadre_name ?? 'N/A',
                 $memo->topic_name ?? 'N/A',
-                ($memo->discussion_name ?? '') !== '' ? $memo->discussion_name : 'N/A',
-                ($memo->conclusion_remark ?? '') !== '' ? $memo->conclusion_remark : 'N/A',
-                $statusLabel,
+                $sessionDate ? Carbon::parse($sessionDate)->format('d M Y') : 'N/A',
+                $memo->message ?? '',
             ];
         }
 
@@ -444,6 +428,7 @@ $noticeCount = $memos->groupBy(function($item) {
         $noticesQuery = DB::table('course_student_attendance as csa')
             ->join('student_notice_status as sns', 'sns.course_student_attendance_pk', '=', 'csa.pk')
             ->leftJoin('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
+            ->leftJoin('cadre_master as crd', 'sm.cadre_master_pk', '=', 'crd.pk')
             ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
             ->leftJoin('course_master as cm', 'sns.course_master_pk', '=', 'cm.pk')
             // A Notice closed directly (End Chat) records its conclusion on sns itself —
@@ -468,6 +453,8 @@ $noticeCount = $memos->groupBy(function($item) {
                 'ncm.discussion_name',
                 'sm.display_name as student_name',
                 'sm.pk as student_id',
+                'sm.generated_OT_code',
+                'crd.cadre_name',
                 't.subject_topic as topic_name',
                 't.START_DATE as session_date',
                 'cm.course_name',
@@ -514,6 +501,7 @@ $noticeCount = $memos->groupBy(function($item) {
         if ($typeFilter == '0') {
             $memoQuery = DB::table('student_memo_status')
                 ->leftJoin('student_master as sm', 'student_memo_status.student_pk', '=', 'sm.pk')
+                ->leftJoin('cadre_master as crd', 'sm.cadre_master_pk', '=', 'crd.pk')
                 ->leftJoin('student_notice_status as sns', 'student_memo_status.student_notice_status_pk', '=', 'sns.pk')
                 ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
                 ->leftJoin('memo_conclusion_master as mcm', 'student_memo_status.memo_conclusion_master_pk', '=', 'mcm.pk')
@@ -538,6 +526,8 @@ $noticeCount = $memos->groupBy(function($item) {
                     'student_memo_status.status',
                     'sm.display_name as student_name',
                     'sm.pk as student_id',
+                    'sm.generated_OT_code',
+                    'crd.cadre_name',
                     't.subject_topic as topic_name',
                     't.START_DATE as session_date',
                     'mcm.discussion_name',
@@ -574,19 +564,20 @@ $noticeCount = $memos->groupBy(function($item) {
                 if ($notice->status == 2) {
                     $memoDataQuery = DB::table('student_memo_status')
                         ->leftJoin('student_master as sm', 'student_memo_status.student_pk', '=', 'sm.pk')
+                        ->leftJoin('cadre_master as crd', 'sm.cadre_master_pk', '=', 'crd.pk')
                         ->leftJoin('student_notice_status as sns', 'student_memo_status.student_notice_status_pk', '=', 'sns.pk')
                         ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
                         ->leftJoin('memo_conclusion_master as mcm', 'student_memo_status.memo_conclusion_master_pk', '=', 'mcm.pk')
                         ->leftJoin('course_master as cm', 'student_memo_status.course_master_pk', '=', 'cm.pk')
                         ->where('student_memo_status.student_notice_status_pk', $notice->notice_id);
-                    
+
                     if ($fromDateFilter) {
                         $memoDataQuery->whereDate('t.START_DATE', '>=', $fromDateFilter);
                     }
                     if ($toDateFilter) {
                         $memoDataQuery->whereDate('t.START_DATE', '<=', $toDateFilter);
                     }
-                    
+
                     $memoData = $memoDataQuery->select(
                             'student_memo_status.pk as memo_id',
                             'student_memo_status.pk as memo_notice_id',
@@ -607,6 +598,8 @@ $noticeCount = $memos->groupBy(function($item) {
                             'student_memo_status.status',
                             'sm.display_name as student_name',
                             'sm.pk as student_id',
+                            'sm.generated_OT_code',
+                            'crd.cadre_name',
                             't.subject_topic as topic_name',
                             't.START_DATE as session_date',
                             'mcm.discussion_name',
@@ -3096,10 +3089,17 @@ public function send_direct_notice_save(Request $request)
             ->groupBy('class_session')
             ->get();
 
+        // Only active courses, and only those assigned to this CC — Admin/Super
+        // Admin/PA get an empty restriction list back (see all active courses).
+        $data_course_id = get_Role_by_course();
+
         $courseMasters = CourseMaster::where('active_inactive', 1)
             ->where(function ($q) {
                 $q->whereNull('end_date')
                     ->orWhere('end_date', '>=', now()->toDateString());
+            })
+            ->when(!empty($data_course_id), function ($q) use ($data_course_id) {
+                $q->whereIn('pk', $data_course_id);
             })
             ->orderBy('couse_short_name')
             ->select('couse_short_name', 'course_name', 'pk')
