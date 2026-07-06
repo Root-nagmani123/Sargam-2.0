@@ -271,7 +271,13 @@
         }
 
         if ($length.length) {
-            var $pageSize = $length.find('select').addClass('form-select form-select-sm');
+            // Detach (not remove) the select BEFORE emptying the label. jQuery's
+            // .empty()/.remove() strip the event handlers + data of every
+            // descendant they clear — which would kill the `change.DT` handler
+            // DataTables binds directly on this select, leaving the "Showing"
+            // dropdown visible but inert. .detach() preserves those handlers so
+            // re-appending the same node keeps it working.
+            var $pageSize = $length.find('select').addClass('form-select form-select-sm').detach();
             $length.find('label')
                 .empty()
                 .append(document.createTextNode('Showing '))
@@ -366,6 +372,210 @@
 
     applyGlobalDefaults();
 
+    /**
+     * Global column-sorting: make every data column client-side sortable so
+     * users can click any header to sort the loaded rows. We normalise the init
+     * options BEFORE DataTables builds the table (the only reliable point to
+     * change column orderability).
+     *
+     * Rules:
+     *  - Server-side tables are left untouched (ordering is delegated to the
+     *    backend there; computed/formatted columns can't be ordered in SQL).
+     *  - `ordering: false` is flipped on so headers are clickable.
+     *  - column-level `orderable: false` is cleared, EXCEPT for Action-like /
+     *    checkbox columns (detected by data/name/title/className).
+     *  - columnDefs are left as-is: their `orderable:false` usually targets the
+     *    Action / checkbox / row-index columns by numeric index, which we want
+     *    to keep unsortable and can't safely distinguish here.
+     */
+    function looksLikeActionColumn(col) {
+        if (!col) { return false; }
+        var key = String(col.title || col.name || col.data || '').trim().toLowerCase();
+        if (key === 'action' || key === 'actions' || key === 'dt_rowindex') {
+            return true;
+        }
+        var cls = String(col.className || col.class || '').toLowerCase();
+        return /(^|\s)(action|actions|no-sort|dt-nosort|select-checkbox)(\s|$)/.test(cls);
+    }
+
+    function normalizeSortingOptions(options) {
+        if (!options || typeof options !== 'object') {
+            return options;
+        }
+
+        if (options.serverSide === true) {
+            // Server-side (Yajra) tables can't be safely converted to full
+            // client-side globally — their generated ajax request logic depends
+            // on the server-side request structure. So we turn OFF DataTables'
+            // server ordering and let enableClientSidePageSort() sort the loaded
+            // page in the browser instead.
+            //
+            // Opt-in escape hatch: a table can set `sargamServerOrder: true` in
+            // its parameters to KEEP DataTables' native (server-side) ordering —
+            // clicking a header then re-queries and sorts the WHOLE dataset
+            // (with pagination), instead of only reordering the visible page.
+            // enableClientSidePageSort() detects native ordering is on and skips.
+            if (options.sargamServerOrder !== true) {
+                options.ordering = false;
+            }
+            return options;
+        }
+
+        if (options.ordering === false) {
+            options.ordering = true;
+        }
+
+        if (Array.isArray(options.columns)) {
+            options.columns.forEach(function (col) {
+                if (col && col.orderable === false && !looksLikeActionColumn(col)) {
+                    col.orderable = true;
+                }
+            });
+        }
+
+        return options;
+    }
+
+    /* ── Client-side page sort for server-side tables ──────────────────────────
+       Server-side tables now have DataTables' own ordering disabled (above), so
+       we sort the CURRENTLY-LOADED rows in the browser on header click, toggling
+       asc/desc. We reuse the .sorting / .sorting_asc / .sorting_desc classes so
+       the sort-arrow styling applies. Sorts each loaded page (the accepted
+       client-side behaviour). */
+    function cellSortValue(cell) {
+        if (!cell) { return { text: '', num: null }; }
+        var text = (cell.textContent || '').replace(/\s+/g, ' ').trim();
+        var cleaned = text.replace(/[,%₹$]/g, '').trim();
+        var num = (cleaned !== '' && !isNaN(cleaned)) ? parseFloat(cleaned) : null;
+        return { text: text, num: num };
+    }
+
+    function sortVisiblePageRows(tableNode, colIdx, dir) {
+        var tbody = tableNode.tBodies && tableNode.tBodies[0];
+        if (!tbody) { return; }
+        var rows = Array.prototype.slice.call(tbody.rows).filter(function (r) {
+            return !r.querySelector('td[colspan], th[colspan]'); // skip empty / grouping rows
+        });
+        if (rows.length < 2) { return; }
+        var factor = dir === 'desc' ? -1 : 1;
+        rows.sort(function (a, b) {
+            var av = cellSortValue(a.cells[colIdx]);
+            var bv = cellSortValue(b.cells[colIdx]);
+            if (av.num !== null && bv.num !== null) {
+                return (av.num - bv.num) * factor;
+            }
+            return av.text.localeCompare(bv.text, undefined, { numeric: true, sensitivity: 'base' }) * factor;
+        });
+        var frag = document.createDocumentFragment();
+        rows.forEach(function (r) { frag.appendChild(r); });
+        tbody.appendChild(frag);
+    }
+
+    function enableClientSidePageSort(settings) {
+        if (!settings.oFeatures || !settings.oFeatures.bServerSide) {
+            return; // client-side tables sort natively via DataTables
+        }
+        if (settings.oFeatures.bSort) {
+            // Native (server-side) ordering is enabled for this table
+            // (sargamServerOrder opt-in) — DataTables sends the order to the
+            // server and sorts the full dataset, so don't add the page sorter.
+            return;
+        }
+        var api = new $.fn.dataTable.Api(settings);
+        var tableNode = api.table().node();
+        var $table = $(tableNode);
+        if ($table.data('sargamPageSort')) { return; }
+        $table.data('sargamPageSort', true);
+
+        var $container = $(api.table().container());
+        if (!$container.length) { $container = $table.closest('.dataTables_wrapper'); }
+        var sortState = { col: null, dir: 'asc' };
+
+        // Resolve the header DataTables actually manages. For scrollX/scrollY
+        // tables the visible, clickable header is a CLONE inside
+        // .dataTables_scrollHead; $table's own <thead> is hidden in the scroll
+        // body, so binding there would make header clicks do nothing (the
+        // "some tables don't sort" symptom). api.table().header() returns the
+        // clone when scrolling and the original thead otherwise — and because
+        // scrolling tables re-clone that header on every draw, we re-decorate
+        // it after each draw rather than caching the cells.
+        function headerCells() {
+            var $root;
+            try { $root = $(api.table().header()); } catch (e) { $root = $(); }
+            if (!$root.length) { $root = $table.find('thead'); }
+            var $row = $root.find('tr').last();
+            if (!$row.length) { $row = $table.find('thead tr').last(); }
+            return $row.children('th, td');
+        }
+
+        function decorateHeader() {
+            headerCells().each(function (idx) {
+                var $c = $(this);
+                var title = $c.text().replace(/\s+/g, ' ').trim().toLowerCase();
+                if (title === '' || title === 'action' || title === 'actions') { return; }
+                $c.attr('data-sargam-sort', idx).css('cursor', 'pointer');
+                // reflect the active sort direction (survives header re-clone)
+                if (sortState.col === idx) {
+                    $c.removeClass('sorting').addClass(sortState.dir === 'asc' ? 'sorting_asc' : 'sorting_desc');
+                } else {
+                    $c.removeClass('sorting_asc sorting_desc').addClass('sorting');
+                }
+            });
+        }
+
+        decorateHeader();
+
+        // Delegate on the stable container so the handler survives the header
+        // being re-cloned on redraw (scrollX/scrollY tables).
+        $container.off('click.sargamSort').on('click.sargamSort', 'thead [data-sargam-sort]', function () {
+            var col = parseInt($(this).attr('data-sargam-sort'), 10);
+            if (isNaN(col)) { return; }
+            if (sortState.col === col) {
+                sortState.dir = (sortState.dir === 'asc') ? 'desc' : 'asc';
+            } else {
+                sortState.col = col;
+                sortState.dir = 'asc';
+            }
+            decorateHeader();
+            sortVisiblePageRows(tableNode, col, sortState.dir);
+        });
+
+        // Each server draw (page change / filter) replaces the rows and, for
+        // scrolling tables, the header clone — so re-decorate and re-apply the
+        // active sort so the visible page stays sorted the way the user chose.
+        $table.on('draw.dt.sargamSort', function () {
+            decorateHeader();
+            if (sortState.col !== null) {
+                sortVisiblePageRows(tableNode, sortState.col, sortState.dir);
+            }
+        });
+    }
+
+    // Patch the DataTables initialisers once so the normalisation applies to
+    // every table on the page, without touching each call site.
+    (function patchDataTableInit() {
+        if (!$.fn.DataTable || $.fn.DataTable.__sargamSortPatched) {
+            return;
+        }
+
+        var origDataTable = $.fn.DataTable;
+        var origLegacy = $.fn.dataTable;
+
+        $.fn.DataTable = function (options) {
+            return origDataTable.call(this, normalizeSortingOptions(options));
+        };
+        $.extend($.fn.DataTable, origDataTable);
+        $.fn.DataTable.__sargamSortPatched = true;
+
+        if (typeof origLegacy === 'function') {
+            $.fn.dataTable = function (options) {
+                return origLegacy.call(this, normalizeSortingOptions(options));
+            };
+            $.extend($.fn.dataTable, origLegacy);
+            $.fn.dataTable.__sargamSortPatched = true;
+        }
+    })();
+
     $(document).on('preInit.dt' + NS, function (e, settings) {
         var api = new $.fn.dataTable.Api(settings);
         var $table = $(api.table().node());
@@ -389,6 +599,10 @@
         var api = new $.fn.dataTable.Api(settings);
         var $table = $(api.table().node());
 
+        // Client-side page sorting for server-side tables applies regardless of
+        // the UI-enhancement opt-out, so every table gets sortable headers.
+        try { enableClientSidePageSort(settings); } catch (err) { /* noop */ }
+
         if (!shouldEnhance($table)) {
             return;
         }
@@ -401,6 +615,7 @@
             enhanceFromSettings(settings);
         }, 300);
     });
+
 
     window.SargamDataTableUI = {
         enhance: enhance,

@@ -168,7 +168,7 @@ class FacultyDataTable extends DataTable
                     ->selectStyleSingle()
                     ->parameters([
                         'order' => [],
-                        'ordering' => false,
+                        'ordering' => true,
                         'searching' => true,
                         'lengthChange' => true,
                         'pageLength' => 10,

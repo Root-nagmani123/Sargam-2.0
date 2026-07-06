@@ -20,6 +20,7 @@
                         <th>Rank</th>
                         <th>Exam Year</th>
                         <th>Service Master PK</th>
+                        <th>Course Master PK</th>
                         <th>Web Auth</th>
                     </tr>
                 </thead>
@@ -36,6 +37,7 @@
                             <td>{{ $row['rank'] }}</td>
                             <td>{{ $row['exam_year'] }}</td>
                             <td>{{ $row['service_master_pk'] }}</td>
+                            <td>{{ $row['course_master_pk'] ?? '' }}</td>
                             <td>{{ $row['web_auth'] }}</td>
                         </tr>
                     @endforeach

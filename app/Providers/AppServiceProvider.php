@@ -3,10 +3,12 @@
 namespace App\Providers;
 
 use App\Support\FeedbackReportRouteRegistry;
+use App\Services\FC\FcPostArrivalAccessService;
 use App\Services\NotificationService;
 use App\Services\SidebarMenu\BreadcrumbResolver;
 use App\Services\SidebarMenu\MenuService;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -80,6 +82,20 @@ class AppServiceProvider extends ServiceProvider
             if (View::shared('feedbackReportRoutes', null) === null) {
                 $view->with('feedbackReportRoutes', $routes);
             }
+        });
+
+        View::composer('components.menu.fc-sidebar', function ($view) {
+            if (! Auth::check()) {
+                $view->with('fcActivityNavDepartments', collect());
+                $view->with('fcActivityNavCanSetup', false);
+                $view->with('fcSidebarShowMedical', false);
+
+                return;
+            }
+            $svc = app(FcPostArrivalAccessService::class);
+            $view->with('fcActivityNavDepartments', $svc->visibleDepartments());
+            $view->with('fcActivityNavCanSetup', $svc->canManageActivitySetup());
+            $view->with('fcSidebarShowMedical', $svc->canAccessMedicalModule());
         });
     }
 }
