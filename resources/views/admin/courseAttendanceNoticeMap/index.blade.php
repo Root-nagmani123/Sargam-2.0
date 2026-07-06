@@ -110,7 +110,7 @@
                             </select>
                         </div>
 
-                        <h6 class="an-section-title mt-4">Notice Preview</h6>
+                        <h6 class="an-section-title mt-4">Preview</h6>
                         <div class="an-note"><i class="bi bi-info-circle"></i> You may edit the Notice from Notice Template</div>
                         <div id="anPreviewWrap" class="an-preview" style="display:none;">
                             <h5 class="text-center fw-bold mb-2" id="anTplCourse"></h5>
@@ -153,7 +153,7 @@
                             </select>
                         </div>
 
-                        <h6 class="an-section-title">Notice Preview</h6>
+                        <h6 class="an-section-title">Preview</h6>
                         <div class="an-note"><i class="bi bi-info-circle"></i> You may edit the Notice from Notice Template</div>
                         <div id="editNoticePreviewWrap" class="an-preview" style="display:none;">
                             <h5 class="text-center fw-bold mb-2" id="editNoticeTplCourse"></h5>
@@ -636,7 +636,7 @@
                             </div>
                         </div>
 
-                        <h6 class="an-section-title mt-2">Template Preview</h6>
+                        <h6 class="an-section-title mt-2">Preview</h6>
                         <div id="memoPreviewWrap" class="an-preview" style="display:none;">
                             <h5 class="text-center fw-bold mb-2" id="memoPvCourse"></h5>
                             <p class="text-center mb-0 small">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
