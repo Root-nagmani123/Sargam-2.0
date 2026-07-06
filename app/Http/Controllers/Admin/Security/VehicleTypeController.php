@@ -11,7 +11,7 @@ class VehicleTypeController extends Controller
 {
     public function index()
     {
-        $vehicleTypes = SecVehicleType::orderBy('pk', 'desc')->paginate(10);
+        $vehicleTypes = SecVehicleType::orderBy('pk', 'desc')->get();
         return view('admin.security.vehicle_type.index', compact('vehicleTypes'));
     }
 

@@ -12,7 +12,6 @@ use App\Models\SecVehicleType;
 use App\Models\EmployeeMaster;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -30,7 +29,7 @@ class VehiclePassController extends Controller
         DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'VehiclePassController@index');
     }
 
-    public function index(Request $request)
+    public function index()
     {
         $user = Auth::user();
         $user_old_pk = EmployeeMaster::where('pk', $user->user_id)->first();
@@ -58,26 +57,8 @@ class VehiclePassController extends Controller
             $allPasses = collect($allPasses);
         }
 
-        $activeCollection = $allPasses->filter(fn ($m) => (int) $m->vech_card_status === 1)->values();
-        $archiveCollection = $allPasses->filter(fn ($m) => in_array((int) $m->vech_card_status, [2, 3], true))->values();
-
-        $perPage = 10;
-        $activePasses = static::paginateCollection(
-            $activeCollection,
-            (int) $request->get('page', 1) ?: 1,
-            $perPage,
-            $request->url(),
-            'page'
-        );
-        $activePasses->withQueryString();
-        $archivedPasses = static::paginateCollection(
-            $archiveCollection,
-            (int) $request->get('archive_page', 1) ?: 1,
-            $perPage,
-            $request->url(),
-            'archive_page'
-        );
-        $archivedPasses->withQueryString();
+        $activePasses = $allPasses->filter(fn ($m) => (int) $m->vech_card_status === 1)->values();
+        $archivedPasses = $allPasses->filter(fn ($m) => in_array((int) $m->vech_card_status, [2, 3], true))->values();
 
         return view('admin.security.vehicle_pass.index', compact('activePasses', 'archivedPasses'));
     }
@@ -107,18 +88,6 @@ class VehiclePassController extends Controller
             })
             ->orderBy('created_date', 'desc')
             ->get();
-    }
-
-    /**
-     * Paginate a collection with a custom page name (tab-specific pagination).
-     */
-    private static function paginateCollection(Collection $collection, int $currentPage, int $perPage, string $path, string $pageName): LengthAwarePaginator
-    {
-        $currentPage = max(1, $currentPage);
-        $total = $collection->count();
-        $slice = $collection->forPage($currentPage, $perPage)->values();
-
-        return new LengthAwarePaginator($slice, $total, $perPage, $currentPage, ['path' => $path, 'pageName' => $pageName]);
     }
 
     /**

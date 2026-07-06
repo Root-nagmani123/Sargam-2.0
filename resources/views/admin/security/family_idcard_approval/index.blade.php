@@ -82,7 +82,7 @@
                             title="Applications waiting for your approve or reject action at this stage.">
                         <i class="material-icons material-symbols-rounded d-inline align-middle" style="font-size:18px;">assignment_turned_in</i>
                         <span class="align-middle">Pending — your action</span>
-                        <span class="badge rounded-pill bg-white text-primary ms-1">{{ $newFamilyGroups->total() }}</span>
+                        <span class="badge rounded-pill bg-white text-primary ms-1">{{ $newFamilyGroups->count() }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -91,7 +91,7 @@
                             title="Shows only requests where Level 1 is already approved. Waiting for final approval, or view-only until the other officer acts.">
                         <i class="material-icons material-symbols-rounded d-inline align-middle" style="font-size:18px;">hourglass_top</i>
                         <span class="align-middle">Pending — other stage</span>
-                        <span class="badge rounded-pill bg-warning text-dark ms-1">{{ $processedFamilyGroups->total() }}</span>
+                        <span class="badge rounded-pill bg-warning text-dark ms-1">{{ $processedFamilyGroups->count() }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -100,7 +100,7 @@
                             title="Fully approved / issued family ID requests.">
                         <i class="material-icons material-symbols-rounded d-inline align-middle" style="font-size:18px;">check_circle</i>
                         <span class="align-middle">Approved</span>
-                        <span class="badge rounded-pill bg-success ms-1">{{ $issuedFamilyGroups->total() }}</span>
+                        <span class="badge rounded-pill bg-success ms-1">{{ $issuedFamilyGroups->count() }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -109,7 +109,7 @@
                             title="Applications rejected at any stage.">
                         <i class="material-icons material-symbols-rounded d-inline align-middle" style="font-size:18px;">cancel</i>
                         <span class="align-middle">Rejected</span>
-                        <span class="badge rounded-pill bg-danger ms-1">{{ $rejectedFamilyGroups->total() }}</span>
+                        <span class="badge rounded-pill bg-danger ms-1">{{ $rejectedFamilyGroups->count() }}</span>
                     </button>
                 </li>
             </ul>
@@ -122,48 +122,36 @@
             <div class="tab-content">
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'new' ? 'show active' : '' }}" id="fam-new-panel" role="tabpanel"
                      style="{{ ($activeTab ?? 'new') === 'new' ? 'display:block;' : 'display:none;' }}">
-                    @include('admin.security.family_idcard_approval._family_approval_table', ['groups' => $newFamilyGroups, 'familyMembersQueryString' => $familyMembersQueryString])
-                    <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <small class="text-muted">Showing {{ $newFamilyGroups->firstItem() ?? 0 }} to {{ $newFamilyGroups->lastItem() ?? 0 }} of {{ $newFamilyGroups->total() }} entries</small>
-                        {{ $newFamilyGroups->appends(array_merge(request()->query(), ['tab' => 'new']))->links() }}
-                    </div>
+                    @include('admin.security.family_idcard_approval._family_approval_table', ['groups' => $newFamilyGroups, 'familyMembersQueryString' => $familyMembersQueryString, 'tableId' => 'famNewTable'])
+                    @include('components.mess-master-datatables', ['tableId' => 'famNewTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 5, 'orderDir' => 'desc', 'actionColumnIndex' => 6, 'infoLabel' => 'requests'])
                 </div>
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'for_approval' ? 'show active' : '' }}" id="fam-for-panel" role="tabpanel"
                      style="{{ ($activeTab ?? 'new') === 'for_approval' ? 'display:block;' : 'display:none;' }}">
-                    @include('admin.security.family_idcard_approval._family_approval_table', ['groups' => $processedFamilyGroups, 'familyMembersQueryString' => $familyMembersQueryString])
-                    <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <small class="text-muted">Showing {{ $processedFamilyGroups->firstItem() ?? 0 }} to {{ $processedFamilyGroups->lastItem() ?? 0 }} of {{ $processedFamilyGroups->total() }} entries</small>
-                        {{ $processedFamilyGroups->appends(array_merge(request()->query(), ['tab' => 'for_approval']))->links() }}
-                    </div>
+                    @include('admin.security.family_idcard_approval._family_approval_table', ['groups' => $processedFamilyGroups, 'familyMembersQueryString' => $familyMembersQueryString, 'tableId' => 'famForApprovalTable'])
+                    @include('components.mess-master-datatables', ['tableId' => 'famForApprovalTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 5, 'orderDir' => 'desc', 'actionColumnIndex' => 6, 'infoLabel' => 'requests'])
                 </div>
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'issued' ? 'show active' : '' }}" id="fam-issued-panel" role="tabpanel"
                      style="{{ ($activeTab ?? 'new') === 'issued' ? 'display:block;' : 'display:none;' }}">
-                    @if($issuedFamilyGroups->total() === 0)
+                    @if($issuedFamilyGroups->count() === 0)
                         <div class="text-center text-muted py-5">
                             <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">verified</i>
                             <p class="mt-2 mb-0">No approved records in this tab.</p>
                         </div>
                     @else
-                        @include('admin.security.family_idcard_approval._family_approval_table', ['groups' => $issuedFamilyGroups, 'familyMembersQueryString' => $familyMembersQueryString])
-                        <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <small class="text-muted">Showing {{ $issuedFamilyGroups->firstItem() ?? 0 }} to {{ $issuedFamilyGroups->lastItem() ?? 0 }} of {{ $issuedFamilyGroups->total() }} entries</small>
-                            {{ $issuedFamilyGroups->appends(array_merge(request()->query(), ['tab' => 'issued']))->links() }}
-                        </div>
+                        @include('admin.security.family_idcard_approval._family_approval_table', ['groups' => $issuedFamilyGroups, 'familyMembersQueryString' => $familyMembersQueryString, 'tableId' => 'famIssuedTable'])
+                        @include('components.mess-master-datatables', ['tableId' => 'famIssuedTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 5, 'orderDir' => 'desc', 'actionColumnIndex' => 6, 'infoLabel' => 'requests'])
                     @endif
                 </div>
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'rejected' ? 'show active' : '' }}" id="fam-rejected-panel" role="tabpanel"
                      style="{{ ($activeTab ?? 'new') === 'rejected' ? 'display:block;' : 'display:none;' }}">
-                    @if($rejectedFamilyGroups->total() === 0)
+                    @if($rejectedFamilyGroups->count() === 0)
                         <div class="text-center text-muted py-5">
                             <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">cancel</i>
                             <p class="mt-2 mb-0">No rejected records found.</p>
                         </div>
                     @else
-                        @include('admin.security.family_idcard_approval._family_approval_table', ['groups' => $rejectedFamilyGroups, 'familyMembersQueryString' => $familyMembersQueryString])
-                        <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <small class="text-muted">Showing {{ $rejectedFamilyGroups->firstItem() ?? 0 }} to {{ $rejectedFamilyGroups->lastItem() ?? 0 }} of {{ $rejectedFamilyGroups->total() }} entries</small>
-                            {{ $rejectedFamilyGroups->appends(array_merge(request()->query(), ['tab' => 'rejected']))->links() }}
-                        </div>
+                        @include('admin.security.family_idcard_approval._family_approval_table', ['groups' => $rejectedFamilyGroups, 'familyMembersQueryString' => $familyMembersQueryString, 'tableId' => 'famRejectedTable'])
+                        @include('components.mess-master-datatables', ['tableId' => 'famRejectedTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 5, 'orderDir' => 'desc', 'actionColumnIndex' => 6, 'infoLabel' => 'requests'])
                     @endif
                 </div>
             </div>
@@ -315,6 +303,7 @@ document.querySelectorAll('#familyApprovalTabs .nav-link').forEach(function (btn
             url.searchParams.set('tab', tabKey);
             window.history.replaceState({}, '', url.toString());
         } catch (e) {}
+        if (typeof window.adjustAllDataTables === 'function') { window.adjustAllDataTables(); }
     });
 });
 </script>

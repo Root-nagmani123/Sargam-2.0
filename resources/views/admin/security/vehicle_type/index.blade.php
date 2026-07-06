@@ -34,7 +34,7 @@
                     <tbody>
                         @forelse($vehicleTypes as $index => $vt)
                             <tr data-pk="{{ $vt->pk }}">
-                                <td>{{ $vehicleTypes->firstItem() + $index }}</td>
+                                <td>{{ $index + 1 }}</td>
                                 <td>{{ $vt->vehicle_type }}</td>
                                 <td>{{ $vt->description ?? '--' }}</td>
                                 <td>
@@ -67,12 +67,10 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-3">
-                {{ $vehicleTypes->links() }}
-            </div>
         </div>
     </div>
 </div>
+@include('components.mess-master-datatables', ['tableId' => 'vehicleTypeTable', 'searchPlaceholder' => 'Search vehicle types...', 'orderColumn' => 0, 'actionColumnIndex' => [3, 4], 'infoLabel' => 'vehicle types'])
 
 <!-- Modal for Create/Edit -->
 <div class="modal fade" id="vehicleTypeModal" tabindex="-1">

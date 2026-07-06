@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Exports\EmployeeIDCardExport;
 use App\Models\DesignationMaster;
 use App\Models\SecurityParmIdApply;
-use Illuminate\Pagination\LengthAwarePaginator;
 use App\Models\SecurityParmIdApplyApproval;
 use App\Models\EmployeeMaster;
 use App\Support\DataTableRedisCache;
@@ -89,27 +88,12 @@ class EmployeeIDCardRequestController extends Controller
             ->filter(fn ($r) => ($r->request_for ?? '') === 'Extension' && ($r->status ?? '') === 'Approved')
             ->values();
 
-        $perPage = (int) $request->get('per_page', 15);
-        $perPage = $perPage >= 5 && $perPage <= 100 ? $perPage : 15;
-
-        $activeRequests = static::paginateCollection($activeCollection, (int) $request->get('active_page', 1) ?: 1, $perPage, $request->url(), 'active_page');
-        $activeRequests->withQueryString();
-        // Combined list (all statuses in one list)
-        $allRequestsPaged = static::paginateCollection($allRequests, (int) $request->get('page', 1) ?: 1, $perPage, $request->url(), 'page');
-        $allRequestsPaged->withQueryString();
-        $archivedRequests = static::paginateCollection($archivedCollection, (int) $request->get('archive_page', 1) ?: 1, $perPage, $request->url(), 'archive_page');
-        $archivedRequests->withQueryString();
-        $duplicationRequests = static::paginateCollection($duplicationCollection, (int) $request->get('duplication_page', 1) ?: 1, $perPage, $request->url(), 'duplication_page');
-        $duplicationRequests->withQueryString();
-        $extensionRequests = static::paginateCollection($extensionCollection, (int) $request->get('extension_page', 1) ?: 1, $perPage, $request->url(), 'extension_page');
-        $extensionRequests->withQueryString();
-
         return view('admin.employee_idcard.index', [
-            'allRequests' => $allRequestsPaged,
-            'activeRequests' => $activeRequests,
-            'archivedRequests' => $archivedRequests,
-            'duplicationRequests' => $duplicationRequests,
-            'extensionRequests' => $extensionRequests,
+            'allRequests' => $allRequests,
+            'activeRequests' => $activeCollection,
+            'archivedRequests' => $archivedCollection,
+            'duplicationRequests' => $duplicationCollection,
+            'extensionRequests' => $extensionCollection,
             'filter' => $filter,
             'list_status' => $listStatus,
             'dateFrom' => $dateFrom ?? '',
@@ -353,17 +337,6 @@ class EmployeeIDCardRequestController extends Controller
             $permQuery->whereIn('id_status', [SecurityParmIdApply::ID_STATUS_APPROVED, SecurityParmIdApply::ID_STATUS_REJECTED]);
             $contQuery->whereIn('id_status', [2, 3]);
         }
-    }
-
-    /**
-     * Paginate a collection with custom page name (for tab-specific pagination).
-     */
-    private static function paginateCollection(\Illuminate\Support\Collection $collection, int $currentPage, int $perPage, string $path, string $pageName): LengthAwarePaginator
-    {
-        $total = $collection->count();
-        $slice = $collection->forPage($currentPage, $perPage)->values();
-        $paginator = new LengthAwarePaginator($slice, $total, $perPage, $currentPage, ['path' => $path, 'pageName' => $pageName]);
-        return $paginator;
     }
 
     /**

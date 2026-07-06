@@ -8,7 +8,6 @@ use App\Models\SecurityFamilyIdApply;
 use App\Models\SecurityFamilyIdApplyApproval;
 use App\Support\IdCardSecurityMapper;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -177,14 +176,6 @@ class FamilyIDCardApprovalController extends Controller
             })->values();
         }
 
-        $perPage = (int) $request->get('per_page', 10);
-        $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 10;
-
-        $newPage = max(1, (int) $request->get('new_page', 1));
-        $forPage = max(1, (int) $request->get('for_page', 1));
-        $issuedPage = max(1, (int) $request->get('issued_page', 1));
-        $rejectPage = max(1, (int) $request->get('reject_page', 1));
-
         $newGroupsList = $groupList->filter(function ($g) {
             $isApproved = ((int) ($g->status_int ?? 1) === 2) && ((bool) ($g->has_level2 ?? false));
             $isRejected = ((int) ($g->status_int ?? 1) === 3);
@@ -222,34 +213,10 @@ class FamilyIDCardApprovalController extends Controller
             return ((int) ($g->status_int ?? 1) === 3);
         })->values();
 
-        $newFamilyGroups = new LengthAwarePaginator(
-            $newGroupsList->forPage($newPage, $perPage)->values(),
-            $newGroupsList->count(),
-            $perPage,
-            $newPage,
-            ['path' => $request->url(), 'pageName' => 'new_page', 'query' => $request->query()]
-        );
-        $processedFamilyGroups = new LengthAwarePaginator(
-            $processedGroupsList->forPage($forPage, $perPage)->values(),
-            $processedGroupsList->count(),
-            $perPage,
-            $forPage,
-            ['path' => $request->url(), 'pageName' => 'for_page', 'query' => $request->query()]
-        );
-        $issuedFamilyGroups = new LengthAwarePaginator(
-            $issuedGroupsList->forPage($issuedPage, $perPage)->values(),
-            $issuedGroupsList->count(),
-            $perPage,
-            $issuedPage,
-            ['path' => $request->url(), 'pageName' => 'issued_page', 'query' => $request->query()]
-        );
-        $rejectedFamilyGroups = new LengthAwarePaginator(
-            $rejectedGroupsList->forPage($rejectPage, $perPage)->values(),
-            $rejectedGroupsList->count(),
-            $perPage,
-            $rejectPage,
-            ['path' => $request->url(), 'pageName' => 'reject_page', 'query' => $request->query()]
-        );
+        $newFamilyGroups = $newGroupsList;
+        $processedFamilyGroups = $processedGroupsList;
+        $issuedFamilyGroups = $issuedGroupsList;
+        $rejectedFamilyGroups = $rejectedGroupsList;
 
         $activeTab = $request->get('tab', 'new');
         if ($activeTab === 'archive') {

@@ -21,7 +21,7 @@
             @endif
 
             <div class="table-responsive">
-                <table class="table table-striped mb-0">
+                <table class="table table-striped mb-0" id="visitorPassTable">
                     <thead>
                         <tr>
                             <th>Pass #</th>
@@ -95,10 +95,8 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-3">
-                {{ $visitorPasses->links() }}
-            </div>
         </div>
     </div>
 </div>
+@include('components.mess-master-datatables', ['tableId' => 'visitorPassTable', 'searchPlaceholder' => 'Search visitor passes...', 'orderColumn' => 0, 'actionColumnIndex' => 7, 'infoLabel' => 'visitor passes'])
 @endsection

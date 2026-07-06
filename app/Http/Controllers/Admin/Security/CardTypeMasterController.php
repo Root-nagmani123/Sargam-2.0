@@ -20,7 +20,7 @@ class CardTypeMasterController extends Controller
         if (Schema::hasColumn('sec_id_cardno_master', 'active_inactive')) {
             $query->select(['pk', 'sec_card_name', 'active_inactive']);
         }
-        $cardTypes = $query->paginate(15);
+        $cardTypes = $query->get();
 
         return view('admin.security.idcard_master.card_type.index', compact('cardTypes'));
     }

@@ -15,7 +15,6 @@ use Illuminate\Support\Facades\Schema;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
@@ -150,27 +149,11 @@ class FamilyIDCardRequestController extends Controller
         ];
     }
 
-    private static function paginateGroupCollection(Collection $groupList, int $perPage, int $page, string $path, string $pageName, array $query): LengthAwarePaginator
-    {
-        $page = max(1, $page);
-        $slice = $groupList->forPage($page, $perPage)->values();
-
-        return new LengthAwarePaginator(
-            $slice,
-            $groupList->count(),
-            $perPage,
-            $page,
-            ['path' => $path, 'pageName' => $pageName, 'query' => $query]
-        );
-    }
-
     public function index(Request $request)
     {
         $createdBy = Auth::user()->user_id;
         $search = trim((string) $request->get('search', ''));
         $cardType = trim((string) $request->get('card_type', ''));
-        $perPage = (int) $request->get('per_page', 10);
-        $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 10;
 
         $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
         $cacheKey = 'admin_family_idcard_index:v1:' . md5(json_encode([
@@ -192,31 +175,8 @@ class FamilyIDCardRequestController extends Controller
         if (! is_array($lists) || ! isset($lists['active'], $lists['archive'])) {
             $lists = $this->buildFamilyIdcardIndexGroupLists($createdBy, $search, $cardType);
         }
-        $activeGroups = $lists['active'] instanceof Collection ? $lists['active'] : collect($lists['active'] ?? []);
-        $archiveGroups = $lists['archive'] instanceof Collection ? $lists['archive'] : collect($lists['archive'] ?? []);
-
-        $queryParams = $request->query();
-        $activePage = (int) $request->get('page', 1) ?: 1;
-        $archivePage = (int) $request->get('archive_page', 1) ?: 1;
-
-        $activeRequests = static::paginateGroupCollection(
-            $activeGroups,
-            $perPage,
-            $activePage,
-            $request->url(),
-            'page',
-            $queryParams
-        );
-        $activeRequests->withQueryString();
-        $archivedRequests = static::paginateGroupCollection(
-            $archiveGroups,
-            $perPage,
-            $archivePage,
-            $request->url(),
-            'archive_page',
-            $queryParams
-        );
-        $archivedRequests->withQueryString();
+        $activeRequests = $lists['active'] instanceof Collection ? $lists['active'] : collect($lists['active'] ?? []);
+        $archivedRequests = $lists['archive'] instanceof Collection ? $lists['archive'] : collect($lists['archive'] ?? []);
 
         return view('admin.family_idcard.index', [
             'activeRequests' => $activeRequests,

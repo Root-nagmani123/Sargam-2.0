@@ -1,6 +1,6 @@
-{{-- @include vars: groups (LengthAwarePaginator), familyMembersQueryString --}}
+{{-- @include vars: groups (Collection), familyMembersQueryString, tableId --}}
 <div class="table-responsive">
-    <table class="table text-nowrap mb-0">
+    <table class="table text-nowrap mb-0" id="{{ $tableId }}">
         <thead>
             <tr>
                 <th>Submitted By</th>

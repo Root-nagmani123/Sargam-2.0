@@ -17,7 +17,7 @@ class VisitorPassController extends Controller
     {
         $visitorPasses = SecVisitorCardGenerated::with(['employee', 'visitorNames', 'createdBy'])
             ->orderBy('created_date', 'desc')
-            ->paginate(10);
+            ->get();
 
         return view('admin.security.visitor_pass.index', compact('visitorPasses'));
     }

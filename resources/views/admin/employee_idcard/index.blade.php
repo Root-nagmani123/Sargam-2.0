@@ -120,7 +120,7 @@
                             <tbody>
                                 @forelse($allRequests as $index => $request)
                                     <tr data-request-id="{{ $request->id }}" class="align-middle">
-                                        <td class="fw-medium ps-4">{{ ($allRequests->currentPage() - 1) * $allRequests->perPage() + $loop->iteration }}</td>
+                                        <td class="fw-medium ps-4">{{ $loop->iteration }}</td>
                                         <td>
                                             @php
                                                 $photoExists = $request->photo && \Storage::disk('public')->exists($request->photo);
@@ -203,12 +203,7 @@
                             </tbody>
                         </table>
                     </div>
-                    @if($allRequests->hasPages())
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-3 py-2 border-top bg-body-tertiary">
-                            <small class="text-body-secondary">Showing {{ $allRequests->firstItem() ?? 0 }} to {{ $allRequests->lastItem() ?? 0 }} of {{ $allRequests->total() }} entries</small>
-                            {{ $allRequests->links() }}
-                        </div>
-                    @endif
+                    @include('components.mess-master-datatables', ['tableId' => 'activeIdcardTable', 'searchPlaceholder' => 'Search ID card requests...', 'orderColumn' => 0, 'actionColumnIndex' => 9, 'infoLabel' => 'requests'])
                 </div>
 
                 <div class="tab-pane fade" id="duplication-panel" role="tabpanel" aria-labelledby="duplication-tab">
@@ -231,7 +226,7 @@
                             <tbody class="table-group-divider">
                                 @forelse($duplicationRequests as $index => $request)
                                     <tr data-request-id="{{ $request->id }}" class="align-middle">
-                                        <td class="fw-medium ps-4">{{ ($duplicationRequests->currentPage() - 1) * $duplicationRequests->perPage() + $loop->iteration }}</td>
+                                        <td class="fw-medium ps-4">{{ $loop->iteration }}</td>
                                         <td>
                                             @php
                                                 $photoExists = $request->photo && \Storage::disk('public')->exists($request->photo);
@@ -311,12 +306,7 @@
                             </tbody>
                         </table>
                     </div>
-                    @if($duplicationRequests->hasPages())
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-3 py-2 border-top bg-body-tertiary">
-                            <small class="text-body-secondary">Showing {{ $duplicationRequests->firstItem() ?? 0 }} to {{ $duplicationRequests->lastItem() ?? 0 }} of {{ $duplicationRequests->total() }} entries</small>
-                            {{ $duplicationRequests->links() }}
-                        </div>
-                    @endif
+                    @include('components.mess-master-datatables', ['tableId' => 'duplicationIdcardTable', 'searchPlaceholder' => 'Search duplication requests...', 'orderColumn' => 0, 'actionColumnIndex' => 9, 'infoLabel' => 'requests'])
                 </div>
 
 
@@ -339,7 +329,7 @@
                             <tbody class="table-group-divider">
                                 @forelse($archivedRequests as $index => $request)
                                     <tr data-request-id="{{ $request->id }}" class="align-middle">
-                                        <td class="fw-medium ps-4">{{ ($archivedRequests->currentPage() - 1) * $archivedRequests->perPage() + $loop->iteration }}</td>
+                                        <td class="fw-medium ps-4">{{ $loop->iteration }}</td>
                                         <td>
                                             @php
                                                 $photoExists = $request->photo && \Storage::disk('public')->exists($request->photo);
@@ -469,12 +459,7 @@
                             </tbody>
                         </table>
                     </div>
-                    @if($archivedRequests->hasPages())
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-3 py-2 border-top bg-body-tertiary">
-                            <small class="text-body-secondary">Showing {{ $archivedRequests->firstItem() ?? 0 }} to {{ $archivedRequests->lastItem() ?? 0 }} of {{ $archivedRequests->total() }} entries</small>
-                            {{ $archivedRequests->links() }}
-                        </div>
-                    @endif
+                    @include('components.mess-master-datatables', ['tableId' => 'archiveIdcardTable', 'searchPlaceholder' => 'Search archived requests...', 'orderColumn' => 0, 'actionColumnIndex' => 6, 'infoLabel' => 'requests'])
                 </div>
             </div>
         </div>
@@ -735,7 +720,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var duplicationTab = document.getElementById('duplication-tab');
     if (duplicationTab) {
         duplicationTab.addEventListener('click', function(e) {
-@if($duplicationRequests->total() === 0)
+@if($duplicationRequests->count() === 0)
             e.preventDefault();
             window.location.href = '{{ route('admin.duplicate_idcard.create') }}';
 @endif

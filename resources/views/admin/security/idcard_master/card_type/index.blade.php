@@ -28,7 +28,7 @@
             @endif
 
             <div class="table-responsive">
-                <table class="table mb-0">
+                <table class="table mb-0" id="cardTypeTable">
                     <thead>
                         <tr>
                             <th style="width:70px;">S.No.</th>
@@ -40,7 +40,7 @@
                     <tbody>
                         @forelse($cardTypes as $index => $ct)
                             <tr>
-                                <td>{{ $cardTypes->firstItem() + $index }}</td>
+                                <td>{{ $index + 1 }}</td>
                                 <td>{{ $ct->sec_card_name }}</td>
                                 <td>
                                     @php
@@ -94,12 +94,10 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-3">
-                {{ $cardTypes->links() }}
-            </div>
         </div>
     </div>
 </div>
+@include('components.mess-master-datatables', ['tableId' => 'cardTypeTable', 'searchPlaceholder' => 'Search card types...', 'orderColumn' => 0, 'actionColumnIndex' => [2, 3], 'infoLabel' => 'card types'])
 
 <div class="modal fade" id="cardTypeModal" tabindex="-1">
     <div class="modal-dialog">

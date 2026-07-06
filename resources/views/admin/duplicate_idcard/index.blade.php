@@ -49,7 +49,7 @@
             </div>
 
             <div class="table-responsive">
-                <table class="table text-nowrap align-middle">
+                <table class="table text-nowrap align-middle" id="duplicateIdcardTable">
                     <thead>
                         <tr>
                             <th>S. No.</th>
@@ -74,7 +74,7 @@
                     <tbody>
                         @forelse($requests as $idx => $r)
                             <tr>
-                                <td>{{ ($requests->currentPage()-1)*$requests->perPage() + $idx + 1 }}</td>
+                                <td>{{ $idx + 1 }}</td>
                                 <td>{{ $r->employee_name }}</td>
                                 <td>{{ $r->designation }}</td>
                                 <td>{{ $r->department }}</td>
@@ -139,16 +139,9 @@
                 </table>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center">
-                <div class="text-muted small">
-                    Showing {{ $requests->firstItem() ?? 0 }} to {{ $requests->lastItem() ?? 0 }} of {{ $requests->total() }} entries
-                </div>
-                <div>
-                    {{ $requests->links() }}
-                </div>
-            </div>
         </div>
     </div>
 </div>
+@include('components.mess-master-datatables', ['tableId' => 'duplicateIdcardTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 0, 'actionColumnIndex' => 16, 'infoLabel' => 'requests'])
 @endsection
 

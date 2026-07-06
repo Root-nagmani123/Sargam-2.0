@@ -13,7 +13,6 @@ use App\Models\SecurityDupPermIdApplyApproval;
 use App\Models\SecurityParmIdApply;
 use App\Models\SecurityFamilyIdApply;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -38,9 +37,6 @@ class DuplicateIDCardRequestController extends Controller
         }
 
         $search = trim((string) $request->get('search', ''));
-        $perPage = (int) $request->get('per_page', 10);
-        $perPage = in_array($perPage, [10, 25, 50, 100]) ? $perPage : 10;
-        $page = (int) $request->get('page', 1);
 
         $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
         $cacheKey = 'admin_duplicate_idcard_index:v1:' . md5(json_encode([
@@ -62,13 +58,7 @@ class DuplicateIDCardRequestController extends Controller
             $items = collect($items);
         }
 
-        $requests = new LengthAwarePaginator(
-            $items->forPage($page, $perPage),
-            $items->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
+        $requests = $items;
 
         return view('admin.duplicate_idcard.index', compact('requests'));
     }

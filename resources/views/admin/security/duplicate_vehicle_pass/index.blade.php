@@ -6,7 +6,7 @@
     <div class="print-only-header">
         <h5 class="mb-0">Duplicate Vehicle Pass Request - List</h5>
         <p class="text-muted small mb-0">Printed on: {{ now()->format('d-m-Y H:i') }}</p>
-        <p class="text-muted small mb-0">Showing {{ $requests->firstItem() ?? 0 }} to {{ $requests->lastItem() ?? 0 }} of {{ $requests->total() }} entries</p>
+        <p class="text-muted small mb-0">Total {{ $requests->count() }} entries</p>
     </div>
 
     <div class="no-print mb-3">
@@ -40,18 +40,6 @@
             </div>
             <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 no-print">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <form method="GET" class="d-flex align-items-center gap-2">
-                        <label class="text-muted small">Show</label>
-                        <select name="per_page" class="form-select form-select-sm" style="width:90px" onchange="this.form.submit()">
-                            @foreach([10, 25, 50, 100] as $n)
-                                <option value="{{ $n }}" {{ (int)request('per_page', 10) === $n ? 'selected' : '' }}>{{ $n }}</option>
-                            @endforeach
-                        </select>
-                        <span class="text-muted small">entries</span>
-                        @if(request('search'))
-                            <input type="hidden" name="search" value="{{ request('search') }}">
-                        @endif
-                    </form>
                     <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" id="toggleColumnsBtn" title="Show / hide document column">
                         <i class="material-icons material-symbols-rounded" style="font-size:18px;">view_column</i>
                         <span class="d-none d-sm-inline">Columns</span>
@@ -66,15 +54,6 @@
                     </button>
                 </div>
                 <div class="d-flex flex-wrap gap-2 align-items-center">
-                    <form method="GET" class="d-flex gap-2 align-items-center">
-                        <input type="hidden" name="per_page" value="{{ request('per_page', 10) }}">
-                        <label class="text-muted small mb-0">Search within table:</label>
-                        <input type="text" name="search" value="{{ request('search') }}" class="form-control " placeholder="Search..." style="width:200px">
-                        <button class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1">
-                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">search</i>
-                            <span>Search</span>
-                        </button>
-                    </form>
                     <a href="{{ route('admin.security.duplicate_vehicle_pass.create') }}" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1">
                         <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:18px;">add</i>
                         Add New Request
@@ -100,7 +79,7 @@
                     <tbody>
                         @forelse($requests as $idx => $r)
                             <tr>
-                                <td>{{ ($requests->currentPage() - 1) * $requests->perPage() + $idx + 1 }}</td>
+                                <td>{{ $idx + 1 }}</td>
                                 <td class="col-emp">{{ $r->employee_name ?? '--' }}</td>
                                 <td class="col-pass">{{ $r->vehicle_pass_no ?? '--' }}</td>
                                 <td class="col-type">{{ $r->vehicleType->vehicle_type ?? '--' }}</td>
@@ -176,17 +155,10 @@
                 </table>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2 no-print">
-                <div class="text-muted small">
-                    Showing {{ $requests->firstItem() ?? 0 }} to {{ $requests->lastItem() ?? 0 }} of {{ $requests->total() }} entries
-                </div>
-                <div>
-                    {{ $requests->links('pagination::bootstrap-5') }}
-                </div>
-            </div>
         </div>
     </div>
 </div>
+@include('components.mess-master-datatables', ['tableId' => 'duplicateVehPassTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 0, 'actionColumnIndex' => 8, 'infoLabel' => 'requests'])
 
 <style>
 /* Print-only header: hidden on screen */
@@ -224,6 +196,7 @@
     .duplicate-vehicle-pass-print-area form,
     .duplicate-vehicle-pass-print-area nav[aria-label="Pagination"],
     .duplicate-vehicle-pass-print-area .pagination,
+    .duplicate-vehicle-pass-print-area .dataTables_wrapper .row,
     .duplicate-vehicle-pass-print-area .alert { display: none !important; visibility: hidden !important; }
     /* Hide Actions column in print */
     .duplicate-vehicle-pass-print-area .col-action,

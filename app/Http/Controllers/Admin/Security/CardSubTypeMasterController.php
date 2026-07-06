@@ -17,7 +17,7 @@ class CardSubTypeMasterController extends Controller
             ->select('m.*', 't.sec_card_name')
             ->orderBy('t.sec_card_name')
             ->orderBy('m.config_name')
-            ->paginate(20);
+            ->get();
 
         return view('admin.security.idcard_master.sub_type.index', compact('subTypes'));
     }

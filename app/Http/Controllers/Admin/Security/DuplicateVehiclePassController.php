@@ -15,29 +15,18 @@ use Illuminate\Support\Facades\Storage;
 
 class DuplicateVehiclePassController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
         $user = Auth::user();
         $userOldPk = EmployeeMaster::where('pk', $user->user_id)->first();
         $employeePk = $user->user_id ?? null;
         $pkOld = $userOldPk->pk_old ?? null;
 
-        $query = VehiclePassDuplicateApplyTwfw::with(['vehicleType', 'employee'])
+        $requests = VehiclePassDuplicateApplyTwfw::with(['vehicleType', 'employee'])
             ->where('veh_created_by', $employeePk)
             ->orWhere('veh_created_by', $pkOld)
-            ->orderBy('created_date', 'desc');
-
-        if ($request->filled('search')) {
-            $term = trim($request->search);
-            $query->where(function ($q) use ($term) {
-                $q->where('vehicle_no', 'like', "%{$term}%")
-                    ->orWhere('vehicle_primary_pk', 'like', "%{$term}%")
-                    ->orWhere('employee_id_card', 'like', "%{$term}%");
-            });
-        }
-
-        $perPage = (int) $request->get('per_page', 10);
-        $requests = $query->paginate(min(max($perPage, 5), 100))->withQueryString();
+            ->orderBy('created_date', 'desc')
+            ->get();
 
         return view('admin.security.duplicate_vehicle_pass.index', compact('requests'));
     }

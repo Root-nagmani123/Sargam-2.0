@@ -27,7 +27,7 @@
             @endif
 
             <div class="table-responsive">
-                <table class="table mb-0">
+                <table class="table mb-0" id="subTypeTable">
                     <thead>
                         <tr>
                             <th style="width:70px;">S.No.</th>
@@ -41,7 +41,7 @@
                     <tbody>
                         @forelse($subTypes as $index => $st)
                             <tr>
-                                <td>{{ $subTypes->firstItem() + $index }}</td>
+                                <td>{{ $index + 1 }}</td>
                                 <td>{{ $st->sec_card_name }}</td>
                                 <td>
                                     @if($st->card_name === 'p')
@@ -99,12 +99,10 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-3">
-                {{ $subTypes->links() }}
-            </div>
         </div>
     </div>
 </div>
+@include('components.mess-master-datatables', ['tableId' => 'subTypeTable', 'searchPlaceholder' => 'Search sub types...', 'orderColumn' => 0, 'actionColumnIndex' => [4, 5], 'infoLabel' => 'sub types'])
 
 <div class="modal fade" id="subTypeModal" tabindex="-1">
     <div class="modal-dialog">

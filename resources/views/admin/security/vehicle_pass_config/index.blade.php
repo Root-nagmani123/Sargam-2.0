@@ -41,7 +41,7 @@
                     <tbody>
                         @forelse($configs as $index => $config)
                             <tr data-pk="{{ $config->pk }}">
-                                <td>{{ $configs->firstItem() + $index }}</td>
+                                <td>{{ $index + 1 }}</td>
                                 <td>
                                     @if($config->vehicleType)
                                         {{ $config->vehicleType->vehicle_type }}
@@ -86,12 +86,10 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-3">
-                {{ $configs->links() }}
-            </div>
         </div>
     </div>
 </div>
+@include('components.mess-master-datatables', ['tableId' => 'vehiclePassConfigTable', 'searchPlaceholder' => 'Search configurations...', 'orderColumn' => 0, 'actionColumnIndex' => [5, 6], 'infoLabel' => 'configurations'])
 @endsection
 
 @push('scripts')

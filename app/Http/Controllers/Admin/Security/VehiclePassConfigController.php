@@ -12,7 +12,7 @@ class VehiclePassConfigController extends Controller
 {
     public function index()
     {
-        $configs = SecVehiclePassConfig::with('vehicleType')->orderBy('pk', 'desc')->paginate(10);
+        $configs = SecVehiclePassConfig::with('vehicleType')->orderBy('pk', 'desc')->get();
         return view('admin.security.vehicle_pass_config.index', compact('configs'));
     }
 

@@ -10,16 +10,16 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-panel" type="button" role="tab" aria-controls="active-panel" aria-selected="true">
                     Active
-                    @if($activePasses->total() > 0)
-                        <span class="badge bg-white text-primary ms-1">{{ $activePasses->total() }}</span>
+                    @if($activePasses->count() > 0)
+                        <span class="badge bg-white text-primary ms-1">{{ $activePasses->count() }}</span>
                     @endif
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-panel" type="button" role="tab" aria-controls="archive-panel" aria-selected="false">
                     Archive
-                    @if($archivedPasses->total() > 0)
-                        <span class="badge bg-secondary ms-1">{{ $archivedPasses->total() }}</span>
+                    @if($archivedPasses->count() > 0)
+                        <span class="badge bg-secondary ms-1">{{ $archivedPasses->count() }}</span>
                     @endif
                 </button>
             </li>
@@ -104,7 +104,7 @@
             <div class="tab-content">
                 <div class="tab-pane show active" id="active-panel" role="tabpanel" aria-labelledby="active-tab">
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0 align-middle vehicle-pass-table">
+                        <table class="table table-hover mb-0 align-middle vehicle-pass-table" id="activeVehiclePassTable">
                             <thead>
                                 <tr>
                                     <th style="width: 50px;">
@@ -127,7 +127,7 @@
                                         <td class="align-middle">
                                             <input type="checkbox" class="form-check-input row-select" value="{{ $pass->vehicle_tw_pk }}" aria-label="Select row">
                                         </td>
-                                        <td class="fw-medium align-middle">{{ $activePasses->firstItem() + $index }}</td>
+                                        <td class="fw-medium align-middle">{{ $index + 1 }}</td>
                                         <td class="align-middle">{{ $pass->display_name }}</td>
                                         <td class="align-middle">{{ $pass->vehicle_req_id ?? '--' }}</td>
                                         <td class="align-middle">{{ $pass->vehicleType->vehicle_type ?? '--' }}</td>
@@ -187,19 +187,12 @@
                             </tbody>
                         </table>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center px-3 py-3 border-top flex-wrap gap-2">
-                        <div class="small text-muted">
-                            Showing <strong>{{ $activePasses->firstItem() ?? 0 }}</strong> to <strong>{{ $activePasses->lastItem() ?? 0 }}</strong> of <strong>{{ $activePasses->total() }}</strong> active requests
-                        </div>
-                        <nav>
-                            {{ $activePasses->links('pagination::bootstrap-5') }}
-                        </nav>
-                    </div>
+                    @include('components.mess-master-datatables', ['tableId' => 'activeVehiclePassTable', 'searchPlaceholder' => 'Search active requests...', 'orderColumn' => 1, 'actionColumnIndex' => [0, 9], 'infoLabel' => 'active requests'])
                 </div>
 
                 <div class="tab-pane fade" id="archive-panel" role="tabpanel" aria-labelledby="archive-tab">
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0 align-middle vehicle-pass-table">
+                        <table class="table table-hover mb-0 align-middle vehicle-pass-table" id="archiveVehiclePassTable">
                             <thead>
                                 <tr>
                                     <th>S.No.</th>
@@ -216,7 +209,7 @@
                             <tbody>
                                 @forelse($archivedPasses as $index => $pass)
                                     <tr>
-                                        <td class="fw-medium align-middle">{{ $archivedPasses->firstItem() + $index }}</td>
+                                        <td class="fw-medium align-middle">{{ $index + 1 }}</td>
                                         <td class="align-middle">{{ $pass->display_name }}</td>
                                         <td class="align-middle">{{ $pass->vehicle_req_id ?? '--' }}</td>
                                         <td class="align-middle">{{ $pass->vehicleType->vehicle_type ?? '--' }}</td>
@@ -262,14 +255,7 @@
                             </tbody>
                         </table>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center px-3 py-3 border-top flex-wrap gap-2">
-                        <div class="small text-muted">
-                            Showing <strong>{{ $archivedPasses->firstItem() ?? 0 }}</strong> to <strong>{{ $archivedPasses->lastItem() ?? 0 }}</strong> of <strong>{{ $archivedPasses->total() }}</strong> archived requests
-                        </div>
-                        <nav>
-                            {{ $archivedPasses->links('pagination::bootstrap-5', ['pageName' => 'archive_page']) }}
-                        </nav>
-                    </div>
+                    @include('components.mess-master-datatables', ['tableId' => 'archiveVehiclePassTable', 'searchPlaceholder' => 'Search archived requests...', 'orderColumn' => 0, 'actionColumnIndex' => 8, 'infoLabel' => 'archived requests'])
                 </div>
             </div>
         </div>
@@ -344,10 +330,12 @@ document.addEventListener('DOMContentLoaded', function() {
         activeTab.addEventListener('shown.bs.tab', function () {
             activePanel.style.display = 'block';
             archivePanel.style.display = 'none';
+            if (typeof window.adjustAllDataTables === 'function') { window.adjustAllDataTables(); }
         });
         archiveTab.addEventListener('shown.bs.tab', function () {
             activePanel.style.display = 'none';
             archivePanel.style.display = 'block';
+            if (typeof window.adjustAllDataTables === 'function') { window.adjustAllDataTables(); }
         });
     }
     if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {

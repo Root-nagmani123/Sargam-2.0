@@ -77,16 +77,16 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-panel" type="button" role="tab" aria-controls="active-panel" aria-selected="true">
                     Active
-                    @if($activeRequests->total() > 0)
-                        <span class="badge bg-white text-primary ms-1">{{ $activeRequests->total() }}</span>
+                    @if($activeRequests->count() > 0)
+                        <span class="badge bg-white text-primary ms-1">{{ $activeRequests->count() }}</span>
                     @endif
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-panel" type="button" role="tab" aria-controls="archive-panel" aria-selected="false">
                     Archive
-                    @if($archivedRequests->total() > 0)
-                        <span class="badge bg-secondary ms-1">{{ $archivedRequests->total() }}</span>
+                    @if($archivedRequests->count() > 0)
+                        <span class="badge bg-secondary ms-1">{{ $archivedRequests->count() }}</span>
                     @endif
                 </button>
             </li>
@@ -139,7 +139,7 @@
             <!-- Active Tab -->
             <div class="tab-pane show active" id="active-panel" role="tabpanel" aria-labelledby="active-tab">
                 <div class="table-responsive">
-                    <table class="table text-nowrap align-middle mb-0 family-idcard-table">
+                    <table class="table text-nowrap align-middle mb-0 family-idcard-table" id="familyIdcardActiveTable">
                         <thead>
                             <tr class="table-primary">
                                 <th>S.No.</th>
@@ -156,7 +156,7 @@
                         <tbody>
                             @forelse($activeRequests as $index => $req)
                                 <tr>
-                                    <td class="fw-medium">{{ $activeRequests->firstItem() + $index }}</td>
+                                    <td class="fw-medium">{{ $index + 1 }}</td>
                                     <td>{{ $req->created_at ? (\Carbon\Carbon::parse($req->created_at)->format('d-m-Y')) : '--' }}</td>
                                     <td>{{ $req->employee_id ?? '--' }}</td>
                                     <td>{{ $req->employee_name ?? '--' }}</td>
@@ -190,20 +190,13 @@
                         </tbody>
                     </table>
                 </div>
-                @if($activeRequests->count() > 0)
-                    <div class="d-flex justify-content-between align-items-center px-3 py-3 border-top flex-wrap gap-2 no-print">
-                        <div class="small text-muted">
-                            Showing <strong>{{ $activeRequests->firstItem() ?? 0 }}</strong> to <strong>{{ $activeRequests->lastItem() ?? 0 }}</strong> of <strong>{{ $activeRequests->total() }}</strong> entries
-                        </div>
-                        <nav>{{ $activeRequests->links('pagination::bootstrap-5') }}</nav>
-                    </div>
-                @endif
+                @include('components.mess-master-datatables', ['tableId' => 'familyIdcardActiveTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 0, 'actionColumnIndex' => 8, 'infoLabel' => 'requests'])
             </div>
 
             <!-- Archive Tab -->
             <div class="tab-pane fade" id="archive-panel" role="tabpanel" aria-labelledby="archive-tab">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0 align-middle family-idcard-table">
+                    <table class="table table-hover mb-0 align-middle family-idcard-table" id="familyIdcardArchiveTable">
                         <thead>
                             <tr class="table-primary">
                                 <th>S.No.</th>
@@ -220,7 +213,7 @@
                         <tbody>
                             @forelse($archivedRequests as $index => $req)
                                 <tr>
-                                    <td class="fw-medium">{{ $archivedRequests->firstItem() + $index }}</td>
+                                    <td class="fw-medium">{{ $index + 1 }}</td>
                                     <td>{{ $req->created_at ? (\Carbon\Carbon::parse($req->created_at)->format('d-m-Y')) : '--' }}</td>
                                     <td>{{ $req->employee_id ?? '--' }}</td>
                                     <td>{{ $req->employee_name ?? '--' }}</td>
@@ -248,14 +241,7 @@
                         </tbody>
                     </table>
                 </div>
-                @if($archivedRequests->count() > 0)
-                    <div class="d-flex justify-content-between align-items-center px-3 py-3 border-top flex-wrap gap-2 no-print">
-                        <div class="small text-muted">
-                            Showing <strong>{{ $archivedRequests->firstItem() ?? 0 }}</strong> to <strong>{{ $archivedRequests->lastItem() ?? 0 }}</strong> of <strong>{{ $archivedRequests->total() }}</strong> entries
-                        </div>
-                        <nav>{{ $archivedRequests->links('pagination::bootstrap-5') }}</nav>
-                    </div>
-                @endif
+                @include('components.mess-master-datatables', ['tableId' => 'familyIdcardArchiveTable', 'searchPlaceholder' => 'Search archived requests...', 'orderColumn' => 0, 'actionColumnIndex' => 8, 'infoLabel' => 'requests'])
             </div>
         </div>
     </div>
@@ -298,6 +284,8 @@
         .family-idcard-print-area * { visibility: visible !important; }
         .family-idcard-print-area .no-print,
         .family-idcard-print-area .no-print * { visibility: hidden !important; display: none !important; }
+        .family-idcard-print-area .dataTables_wrapper .row,
+        .family-idcard-print-area .pagination { display: none !important; visibility: hidden !important; }
         /* Show only the tab panel that is active when print was triggered (set by beforeprint) */
         .family-idcard-print-area.printing-archive .tab-pane#active-panel { display: none !important; visibility: hidden !important; }
         .family-idcard-print-area.printing-active .tab-pane#archive-panel { display: none !important; visibility: hidden !important; }
@@ -407,15 +395,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (infoEl) {
             if (isActive) {
-                var first = {{ $activeRequests->firstItem() ?? 0 }};
-                var last = {{ $activeRequests->lastItem() ?? 0 }};
-                var total = {{ $activeRequests->total() }};
-                infoEl.textContent = 'Active: Showing ' + first + ' to ' + last + ' of ' + total + ' entries';
+                var total = {{ $activeRequests->count() }};
+                infoEl.textContent = 'Active: ' + total + ' entries';
             } else {
-                var first = {{ $archivedRequests->firstItem() ?? 0 }};
-                var last = {{ $archivedRequests->lastItem() ?? 0 }};
-                var total = {{ $archivedRequests->total() }};
-                infoEl.textContent = 'Archive: Showing ' + first + ' to ' + last + ' of ' + total + ' entries';
+                var total = {{ $archivedRequests->count() }};
+                infoEl.textContent = 'Archive: ' + total + ' entries';
             }
         }
     });
