@@ -349,6 +349,15 @@
                                     <span class="mnm-action disabled" title="No notice"><i class="bi bi-file-earmark-text"></i><span>Notice</span></span>
                                     @endif
 
+                                    {{-- Memo: view the memo conversation/document page (same as Notice above) --}}
+                                    @if(!empty($memo->memo_id))
+                                    <a class="mnm-action" href="{{ route('memo.notice.management.conversation', ['id' => $memo->memo_id, 'type' => 'memo']) }}" title="View Memo Document">
+                                        <i class="bi bi-file-earmark"></i><span>Memo Doc</span>
+                                    </a>
+                                    @else
+                                    <span class="mnm-action disabled" title="No memo yet"><i class="bi bi-file-earmark"></i><span>Memo Doc</span></span>
+                                    @endif
+
                                     {{-- Edit Notice: template only, and only while still open --}}
                                     @if($isNotice && $canManageMemoNotice && $st == 1)
                                     <a href="javascript:void(0)" class="mnm-action edit-notice-btn" data-notice-id="{{ $memo->notice_id }}"
@@ -1124,7 +1133,7 @@ $(document).ready(function() {
             // Keep readonly fields as readonly
             $('#course_master_name, #date_memo_notice, #subject_master_id, #topic_id, #class_session_master_pk, #faculty_name, #student_name, #memo_number').prop('readonly', true);
             // Keep non-editable selects disabled
-            form.find('select').not('#memo_type_master_pk, #venue').prop('disabled', true);
+            form.find('select').not('#memo_type_master_pk, #venue, #memoTemplate').prop('disabled', true);
             // Show save button in generate mode
             saveButton.show().text('Save');
             modalTitle.text('Generate Memo');

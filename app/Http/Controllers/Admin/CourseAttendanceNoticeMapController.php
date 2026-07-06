@@ -1115,17 +1115,13 @@ $memo_conclusion_master = collect(); // default empty collection
             ->values();
     }
 
-    // Common: map display_name based on role
+    // Multiple distinct admins/faculty can post in the same conversation, so
+    // resolve each sender's real name + role instead of collapsing them all
+    // to a generic "Admin" label (same helper the Discipline memo chat uses).
     $memoNotice->transform(function ($item) {
-        if ($item->role_type == 'f') {
-            $creator = DB::table('users')->where('id', $item->created_by)->first();
-            $item->display_name = 'Admin';
-        } elseif ($item->role_type == 's') {
-            $student = DB::table('student_master')->where('pk', $item->created_by)->first();
-            $item->display_name = $student ? $student->display_name : 'Student';
-        } else {
-            $item->display_name = 'Unknown';
-        }
+        $identity = resolve_chat_sender_identity($item->created_by, $item->role_type);
+        $item->display_name = $identity['display_name'];
+        $item->role_name = $identity['role_name'];
         return $item;
     });
 
@@ -1496,17 +1492,13 @@ public function getNewMessages(Request $request, $id, $type)
         ->orderBy('pk', 'asc')
         ->get();
 
-    // Resolve display names
+    // Multiple distinct admins/faculty can post in the same conversation, so
+    // resolve each sender's real name + role instead of collapsing them all
+    // to a generic "Admin" label (same helper the Discipline memo chat uses).
     $messages = $messages->map(function ($msg) {
-        if ($msg->role_type === 'f') {
-            $user = DB::table('users')->where('id', $msg->created_by)->first();
-            $msg->display_name = $user->name ?? 'Admin';
-        } elseif ($msg->role_type === 's') {
-            $student = DB::table('student_master')->where('pk', $msg->created_by)->first();
-            $msg->display_name = $student->display_name ?? 'Student';
-        } else {
-            $msg->display_name = 'Unknown';
-        }
+        $identity = resolve_chat_sender_identity($msg->created_by, $msg->role_type);
+        $msg->display_name = $identity['display_name'];
+        $msg->role_name = $identity['role_name'];
         // Format date for display
         $msg->formatted_date = $msg->created_date
             ? \Carbon\Carbon::parse($msg->created_date, 'UTC')->timezone('Asia/Kolkata')->format('d-m-Y h:i A')
@@ -2266,17 +2258,13 @@ if (!$id || !is_numeric($id)) {
             
     }
 // print_r($memoNotice);die;
-    // Common: map display_name based on role
+    // Multiple distinct admins/faculty can post in the same conversation, so
+    // resolve each sender's real name + role instead of collapsing them all
+    // to a generic "Admin" label (same helper the Discipline memo chat uses).
     $memoNotice->transform(function ($item) {
-        if ($item->role_type == 'f') {
-            $creator = DB::table('users')->where('id', $item->created_by)->first();
-            $item->display_name = 'Admin';
-        } elseif ($item->role_type == 's') {
-            $student = DB::table('student_master')->where('pk', $item->created_by)->first();
-            $item->display_name = $student ? $student->display_name : 'Student';
-        } else {
-            $item->display_name = 'Unknown';
-        }
+        $identity = resolve_chat_sender_identity($item->created_by, $item->role_type);
+        $item->display_name = $identity['display_name'];
+        $item->role_name = $identity['role_name'];
         return $item;
     });
 
@@ -2534,24 +2522,14 @@ public function get_conversation_model($id, $type, $user_type, Request $request)
         $studentPk    = (int) ($smsRow->student_pk ?? 0);
     }
 
-    // Common mapper - fix N+1 by pre-fetching all users/students in bulk
-    $adminIds    = $conversations->where('role_type', 'f')->pluck('created_by')->unique()->toArray();
-    $studentIds  = $conversations->where('role_type', 's')->pluck('created_by')->unique()->toArray();
-
-    $adminNames   = DB::table('users')->whereIn('id', $adminIds)->pluck('name', 'id');
-    $studentNames = DB::table('student_master')->whereIn('pk', $studentIds)->pluck('display_name', 'pk');
-
-    $conversations = $conversations->map(function ($item) use ($adminNames, $studentNames) {
-        if ($item->role_type == 'f') {
-            $item->display_name = 'Admin';
-            $item->user_type = 'admin';
-        } elseif ($item->role_type == 's') {
-            $item->display_name = $studentNames[$item->created_by] ?? 'Student';
-            $item->user_type = 'student';
-        } else {
-            $item->display_name = 'Unknown';
-            $item->user_type = 'unknown';
-        }
+    // Multiple distinct admins/faculty can post in the same conversation, so
+    // resolve each sender's real name + role instead of collapsing them all
+    // to a generic "Admin" label (same helper the Discipline memo chat uses).
+    $conversations = $conversations->map(function ($item) {
+        $identity = resolve_chat_sender_identity($item->created_by, $item->role_type);
+        $item->display_name = $identity['display_name'];
+        $item->role_name = $identity['role_name'];
+        $item->user_type = $item->role_type == 'f' ? 'admin' : ($item->role_type == 's' ? 'student' : 'unknown');
         return $item;
     });
 
