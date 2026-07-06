@@ -755,6 +755,7 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
 
         return response()->json([
             'pk'                   => $memo->pk,
+            'course_master_pk'     => $memo->course_master_pk,
             'course_name'          => $memo->course->course_name ?? 'N/A',
             'student_name'         => trim(($memo->student->generated_OT_code ? $memo->student->generated_OT_code . '- ' : '') . ($memo->student->display_name ?? 'N/A')),
             'date'                 => $memo->date,

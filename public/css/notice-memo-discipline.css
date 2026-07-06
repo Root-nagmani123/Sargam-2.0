@@ -293,6 +293,14 @@
     border-color: #667085 transparent transparent transparent;
 }
 
+/* Generate/Edit Memo modal is scrollable, so its .modal-content (overflow:hidden)
+   and .modal-body (overflow-y:auto) clip an open Choices dropdown (e.g. Memo Type,
+   Venue). While a dropdown is open, let it escape the modal instead of being cropped. */
+#memo_generate .modal-content:has(.choices.is-open),
+#memo_generate .modal-body:has(.choices.is-open) {
+    overflow: visible;
+}
+
 /* ── Status pills (Send Memo/Notice) ── */
 .mnm-page .mnm-status { font-size: 0.78rem; font-weight: 600; padding: 0.4rem 0.85rem; border-radius: 999px; white-space: nowrap; display: inline-block; }
 .mnm-page .mnm-status--notice { background: #eff8ff; color: #175cd3; }

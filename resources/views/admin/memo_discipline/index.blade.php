@@ -532,8 +532,8 @@
     <!-- end Zero Configuration -->
 
     {{-- Edit Discipline Memo modal --}}
-    <div class="modal fade" id="editMemoModal" tabindex="-1" aria-labelledby="editMemoModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal fade gen-memo-modal" id="editMemoModal" tabindex="-1" aria-labelledby="editMemoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
             <div class="modal-content border-0 shadow">
                 <div class="modal-header">
                     <h5 class="modal-title fw-semibold" id="editMemoModalLabel">Edit Discipline Memo</h5>
@@ -569,6 +569,25 @@
                             <div class="col-12">
                                 <label class="form-label fw-semibold">Remarks</label>
                                 <textarea id="editMemoRemarks" name="remarks" class="form-control" rows="3" placeholder="Enter remarks..."></textarea>
+                            </div>
+                        </div>
+
+                        <h6 class="gm-section-title mt-3">Preview</h6>
+                        <div class="gm-preview" id="editMemoPreview">
+                            <h5 class="text-center fw-bold mb-1" id="emPvCourse">Course Name</h5>
+                            <p class="text-center mb-0 small">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+                            <hr>
+                            <p class="mb-2"><strong>Date:</strong> <span id="emPvDate">—</span></p>
+                            <div id="emPvTemplateContent" class="mb-2 small text-muted fst-italic">Select a discipline to preview content.</div>
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-2">
+                                    <thead><tr><th>#</th><th>OT</th></tr></thead>
+                                    <tbody id="emPvStudents"><tr><td colspan="2" class="text-muted">—</td></tr></tbody>
+                                </table>
+                            </div>
+                            <div class="text-end mb-0 small" id="emPvDirectorBlock" style="display:none;">
+                                <div id="emPvSignature"></div>
+                                <strong id="emPvDirectorName"></strong><br><span id="emPvDirectorDesig"></span>
                             </div>
                         </div>
                     </div>
@@ -1179,7 +1198,63 @@ $(function () {
     var editRouteBase   = "{{ rtrim(route('memo.discipline.edit', ''), '/') }}/";
     var updateRouteBase = "{{ rtrim(route('memo.discipline.update', ''), '/') }}/";
     var markRoute       = "{{ route('memo.discipline.getMarkDeduction') }}";
+    var tplRoute        = "{{ route('memo.discipline.templatesByDiscipline') }}";
     var csrf            = "{{ csrf_token() }}";
+
+    var emTemplateMap   = {};   // pk → template object (content + director fields)
+    var emSelectedTplPk = null; // discipline template auto-picked for the preview
+    var editCoursePk    = null; // course id of the memo being edited
+
+    // Preview: course / date / (single) student.
+    function updateEditPreview() {
+        $('#emPvCourse').text($('#editMemoCourse').val() || 'Course Name');
+        var d = $('#editMemoDate').val();
+        $('#emPvDate').text(d ? d.split('-').reverse().join('/') : '—');
+        var student = $('#editMemoStudent').val() || '';
+        var $rows = $('#emPvStudents').empty();
+        if (student) {
+            $rows.append($('<tr>').append($('<td>').text('1')).append($('<td>').text(student)));
+        } else {
+            $rows.append('<tr><td colspan="2" class="text-muted">—</td></tr>');
+        }
+    }
+
+    // Preview: template content + director block (mirrors the Generate modal).
+    function updateEditTemplatePreview() {
+        var tpl = emSelectedTplPk ? emTemplateMap[emSelectedTplPk] : null;
+        var $content = $('#emPvTemplateContent');
+        if (tpl && tpl.content) {
+            $content.removeClass('text-muted fst-italic').html(tpl.content);
+        } else {
+            $content.addClass('text-muted fst-italic').text('No template configured for this discipline.');
+        }
+        if (tpl && (tpl.director_name || tpl.director_designation)) {
+            $('#emPvSignature').html(tpl.signature_image
+                ? '<img src="/storage/' + tpl.signature_image + '" style="max-height:50px;display:block;margin-left:auto;margin-bottom:4px;" alt="Signature">'
+                : '');
+            $('#emPvDirectorName').text(tpl.director_name || '');
+            $('#emPvDirectorDesig').text(tpl.director_designation || '');
+            $('#emPvDirectorBlock').show();
+        } else {
+            $('#emPvDirectorBlock').hide();
+        }
+    }
+
+    // Load the discipline's template(s) for the preview (discipline-specific first).
+    function loadEditTemplates() {
+        var disc = $('#editMemoDiscipline').val();
+        emTemplateMap = {};
+        emSelectedTplPk = null;
+        if (!editCoursePk || !disc) { updateEditTemplatePreview(); return; }
+        $('#emPvTemplateContent').addClass('text-muted fst-italic').text('Loading preview…');
+        $.get(tplRoute, { course_id: editCoursePk, discipline_master_pk: disc }).done(function (res) {
+            if (Array.isArray(res) && res.length) {
+                res.forEach(function (t) { emTemplateMap[String(t.pk)] = t; });
+                emSelectedTplPk = String(res[0].pk);
+            }
+            updateEditTemplatePreview();
+        }).fail(function () { updateEditTemplatePreview(); });
+    }
 
     // ── Open modal: fetch memo data + disciplines ──
     $(document).on('click', '.btn-edit-memo', function () {
@@ -1188,6 +1263,11 @@ $(function () {
         $('#editMemoPk').val('');
         $('#editMemoDiscipline').html('<option value="">Loading…</option>');
         $('#editMemoSaveBtn').prop('disabled', true);
+        // Reset the preview for the freshly opened memo.
+        emTemplateMap = {}; emSelectedTplPk = null; editCoursePk = null;
+        $('#emPvDirectorBlock').hide();
+        $('#emPvTemplateContent').addClass('text-muted fst-italic').text('Loading preview…');
+        updateEditPreview();
 
         $.get(editRouteBase + id).done(function (data) {
             $('#editMemoPk').val(data.pk);
@@ -1206,6 +1286,12 @@ $(function () {
             });
             $sel.val(data.discipline_master_pk);
             $('#editMemoSaveBtn').prop('disabled', false);
+
+            // Preview mirrors the Generate modal: course/date/student + the
+            // discipline's template content & director signature.
+            editCoursePk = data.course_master_pk || null;
+            updateEditPreview();
+            loadEditTemplates();
         }).fail(function () {
             alert('Failed to load memo data.');
         });
@@ -1219,7 +1305,12 @@ $(function () {
         if (mark !== undefined && mark !== '') {
             $('#editMemoMarks').val(mark);
         }
+        loadEditTemplates();   // refresh preview template for the new discipline
+        updateEditPreview();
     });
+
+    // Date change → refresh the preview date.
+    $('#editMemoDate').on('change input', updateEditPreview);
 
     // ── Submit edit form ──
     $('#editMemoForm').on('submit', function (e) {
