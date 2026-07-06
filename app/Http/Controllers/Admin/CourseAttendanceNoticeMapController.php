@@ -47,6 +47,10 @@ class CourseAttendanceNoticeMapController extends Controller
         ->leftJoin('student_master as sm', 'sm.pk', '=', 'sns.student_pk')
         ->leftJoin('timetable as t', 't.pk', '=', 'sns.subject_topic')
         ->leftJoin('course_master as cm', 'cm.pk', '=', 'sns.course_master_pk')
+        // A Notice closed directly (End Chat) records its conclusion on sns itself —
+        // it never becomes a student_memo_status row, so that conclusion must be
+        // joined in here or a closed Notice always shows "N/A".
+        ->leftJoin('memo_conclusion_master as ncm', 'ncm.pk', '=', 'sns.conclusion_type_pk')
         ->select(
             'sns.pk as notice_id',
             'sns.pk as memo_notice_id',
@@ -61,6 +65,8 @@ class CourseAttendanceNoticeMapController extends Controller
             'sns.message',
             'sns.notice_memo',
             'sns.status',
+            'sns.conclusion_remark',
+            'ncm.discussion_name',
             'sm.display_name as student_name',
             'sm.pk as student_id',
             't.subject_topic as topic_name',
@@ -434,6 +440,10 @@ $noticeCount = $memos->groupBy(function($item) {
             ->leftJoin('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
             ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
             ->leftJoin('course_master as cm', 'sns.course_master_pk', '=', 'cm.pk')
+            // A Notice closed directly (End Chat) records its conclusion on sns itself —
+            // it never becomes a student_memo_status row, so that conclusion must be
+            // joined in here or a closed Notice always shows "N/A".
+            ->leftJoin('memo_conclusion_master as ncm', 'ncm.pk', '=', 'sns.conclusion_type_pk')
             ->select(
                 'sns.pk as notice_id',
                 'sns.pk as memo_notice_id',
@@ -448,6 +458,8 @@ $noticeCount = $memos->groupBy(function($item) {
                 'sns.message',
                 'sns.notice_memo',
                 'sns.status',
+                'sns.conclusion_remark',
+                'ncm.discussion_name',
                 'sm.display_name as student_name',
                 'sm.pk as student_id',
                 't.subject_topic as topic_name',
@@ -735,19 +747,31 @@ public function getTemplateByCourse(Request $request)
  */
 public function getTemplatesByType(Request $request)
 {
-    $courseId = $request->course_id;
-    $type     = $request->type === 'Memo' ? 'Memo' : 'Notice';
+    $courseId         = $request->course_id;
+    $type             = $request->type === 'Memo' ? 'Memo' : 'Notice';
+    $memoTypeMasterPk = $request->memo_type_master_pk;
 
     if (! $courseId) {
         return response()->json([]);
     }
 
-    $templates = DB::table('memo_notice_templates')
+    $query = DB::table('memo_notice_templates')
         ->where('course_master_pk', $courseId)
         ->where('memo_notice_type', $type)
         ->where('active_inactive', 1)
-        ->whereNull('deleted_at')
-        ->orderBy('title')
+        ->whereNull('deleted_at');
+
+    // A Memo template may be pinned to a specific Memo Type, or left
+    // type-agnostic (memo_type_master_pk null) as a fallback when no
+    // type-specific one exists — mirrors the Discipline Memo precedence.
+    if ($type === 'Memo' && $memoTypeMasterPk) {
+        $query->where(function ($q) use ($memoTypeMasterPk) {
+            $q->whereNull('memo_type_master_pk')
+              ->orWhere('memo_type_master_pk', $memoTypeMasterPk);
+        })->orderByRaw('memo_type_master_pk IS NULL'); // type-specific first, type-agnostic fallback last
+    }
+
+    $templates = $query->orderBy('title')
         ->get(['pk', 'title', 'content', 'director_name', 'director_designation', 'signature_image', 'memo_type_master_pk']);
 
     return response()->json($templates);
@@ -2835,8 +2859,11 @@ public function store_memo_status(Request $request)
         'date_memo_notice'               => 'required|date',
         'venue'                          => 'required|integer',
         'meeting_time'                   => 'required|date_format:H:i',
-        'memo_notice_template_pk'        => 'nullable|exists:memo_notice_templates,pk',
+        'memo_notice_template_pk'        => 'required|exists:memo_notice_templates,pk',
         'Remark'                         => 'nullable|string',
+    ], [
+        'memo_notice_template_pk.required' => 'No template is configured for the selected Memo Type on this course. Please configure one before generating the memo.',
+        'memo_notice_template_pk.exists'   => 'The selected template is invalid. Please choose another one.',
     ]);
 
     DB::table('student_memo_status')->insert([
@@ -2884,11 +2911,14 @@ public function updateMemoStatus(Request $request, $id)
     $validated = $request->validate([
         'student_pk'              => 'required|integer|exists:student_master,pk',
         'memo_type_master_pk'     => 'required|integer|exists:memo_type_master,pk',
-        'memo_notice_template_pk' => 'nullable|exists:memo_notice_templates,pk',
+        'memo_notice_template_pk' => 'required|exists:memo_notice_templates,pk',
         'venue'                   => 'required|integer',
         'date_memo_notice'        => 'required|date',
         'meeting_time'            => 'required|date_format:H:i',
         'Remark'                  => 'nullable|string',
+    ], [
+        'memo_notice_template_pk.required' => 'No template is configured for the selected Memo Type on this course. Please configure one before saving.',
+        'memo_notice_template_pk.exists'   => 'The selected template is invalid. Please choose another one.',
     ]);
 
     // Reassignment must stay within the memo's own course.

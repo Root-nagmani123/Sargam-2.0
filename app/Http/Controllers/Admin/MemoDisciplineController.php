@@ -754,14 +754,16 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
             ->get(['pk', 'discipline_name', 'mark_deduction']);
 
         return response()->json([
-            'pk'                   => $memo->pk,
-            'course_name'          => $memo->course->course_name ?? 'N/A',
-            'student_name'         => trim(($memo->student->generated_OT_code ? $memo->student->generated_OT_code . '- ' : '') . ($memo->student->display_name ?? 'N/A')),
-            'date'                 => $memo->date,
-            'discipline_master_pk' => $memo->discipline_master_pk,
-            'mark_deduction_submit' => $memo->mark_deduction_submit,
-            'remarks'              => $memo->remarks ?? '',
-            'disciplines'          => $disciplines,
+            'pk'                      => $memo->pk,
+            'course_master_pk'        => $memo->course_master_pk,
+            'course_name'             => $memo->course->course_name ?? 'N/A',
+            'student_name'            => trim(($memo->student->generated_OT_code ? $memo->student->generated_OT_code . '- ' : '') . ($memo->student->display_name ?? 'N/A')),
+            'date'                    => $memo->date,
+            'discipline_master_pk'    => $memo->discipline_master_pk,
+            'mark_deduction_submit'   => $memo->mark_deduction_submit,
+            'remarks'                 => $memo->remarks ?? '',
+            'memo_notice_template_pk' => $memo->memo_notice_template_pk,
+            'disciplines'             => $disciplines,
         ]);
     }
 
@@ -774,18 +776,44 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
         }
 
         $validated = $request->validate([
-            'date'                  => 'required|date',
-            'discipline_master_pk'  => 'required|exists:discipline_master,pk',
-            'mark_deduction_submit' => 'required|numeric|min:0',
-            'remarks'               => 'nullable|string|max:500',
+            'date'                    => 'required|date',
+            'discipline_master_pk'    => 'required|exists:discipline_master,pk',
+            'mark_deduction_submit'   => 'required|numeric|min:0',
+            'remarks'                 => 'nullable|string|max:500',
+            'memo_notice_template_pk' => 'nullable|exists:memo_notice_templates,pk',
         ]);
 
+        // The Edit modal's Template field is populated (and re-populated on discipline
+        // change) from the same discipline-scoped list as Generate, so normally the
+        // user's pick arrives here directly. Only auto-resolve as a fallback — same
+        // precedence as getTemplatesByDiscipline(): discipline-specific first,
+        // course-wide (discipline_master_pk null) second — when nothing was submitted
+        // (e.g. a stale pin from before this field existed, or no template configured
+        // for this discipline yet).
+        $templatePk = $validated['memo_notice_template_pk'] ?? null;
+        if (!$templatePk) {
+            $bestTemplate = MemoNoticeTemplate::query()
+                ->where('memo_notice_type', 'Discipline Memo')
+                ->where('active_inactive', 1)
+                ->whereNull('deleted_at')
+                ->where('course_master_pk', $memo->course_master_pk)
+                ->where(function ($q) use ($validated) {
+                    $q->whereNull('discipline_master_pk')
+                      ->orWhere('discipline_master_pk', $validated['discipline_master_pk']);
+                })
+                ->orderByRaw('discipline_master_pk IS NULL')
+                ->orderBy('title')
+                ->first();
+            $templatePk = $bestTemplate->pk ?? null;
+        }
+
         $memo->update([
-            'date'                  => $validated['date'],
-            'discipline_master_pk'  => $validated['discipline_master_pk'],
-            'mark_deduction_submit' => $validated['mark_deduction_submit'],
-            'remarks'               => $validated['remarks'] ?? null,
-            'modified_date'         => now(),
+            'date'                    => $validated['date'],
+            'discipline_master_pk'    => $validated['discipline_master_pk'],
+            'mark_deduction_submit'   => $validated['mark_deduction_submit'],
+            'remarks'                 => $validated['remarks'] ?? null,
+            'memo_notice_template_pk' => $templatePk,
+            'modified_date'           => now(),
         ]);
 
         return response()->json(['success' => true, 'message' => 'Discipline memo updated successfully.']);

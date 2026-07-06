@@ -591,10 +591,13 @@
                             </div>
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="memoTemplate" class="form-label">Template</label>
-                                <select name="memo_notice_template_pk" id="memoTemplate" class="form-select">
+                                <select name="memo_notice_template_pk" id="memoTemplate" class="form-select @error('memo_notice_template_pk') is-invalid @enderror">
                                     <option value="">Select Template</option>
                                 </select>
-                                <small class="text-muted">Memo template to use. Depends on the course.</small>
+                                <small class="text-muted">Memo template to use. Depends on the Memo Type/course.</small>
+                                @error('memo_notice_template_pk')
+                                <span class="text-danger">{{ $message }}</span>
+                                @enderror
                             </div>
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="memo_type" class="form-label">Memo Type</label>
@@ -896,6 +899,11 @@ $(document).ready(function() {
             memo_type_master_pk: memoTypeMasterPk || ''
         }).done(function (res) {
             memoTemplateCache = res || [];
+            if (!memoTemplateCache.length) {
+                $t.html('<option value="">No template configured for this Memo Type</option>');
+                renderMemoTemplatePreview(null);
+                return;
+            }
             memoTemplateCache.forEach(function (tpl) {
                 $t.append($('<option>').val(tpl.pk).text(tpl.title));
             });
@@ -1191,7 +1199,11 @@ $(document).ready(function() {
                 }
             },
             error: function (xhr) {
-                toastr.error((xhr.responseJSON && xhr.responseJSON.message) || 'Update failed.');
+                var res = xhr.responseJSON;
+                // A 422 validation failure carries field-specific messages in `errors`;
+                // surface those instead of the generic "The given data was invalid."
+                var firstFieldError = res && res.errors ? Object.values(res.errors)[0][0] : null;
+                toastr.error(firstFieldError || (res && res.message) || 'Update failed.');
                 $btn.prop('disabled', false);
             }
         });
