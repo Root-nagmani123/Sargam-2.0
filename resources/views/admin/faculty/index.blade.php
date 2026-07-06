@@ -12,6 +12,17 @@
                 white-space: nowrap;
             }
         }
+        .btn-faculty-export {
+            border-color: #004a93;
+            color: #004a93;
+        }
+        .btn-faculty-export:hover,
+        .btn-faculty-export:focus,
+        .btn-faculty-export:active {
+            background-color: #004a93;
+            border-color: #004a93;
+            color: #fff !important;
+        }
     </style>
 @endpush
 
@@ -47,8 +58,8 @@
 
                                 <!-- Export Excel -->
                                 <a href="{{ route('faculty.excel.export') }}"
-                                    class="btn btn-outline-primary d-flex align-items-center gap-1 shadow-sm"
-                                    style="border-color:#004a93; color:#004a93;" aria-label="Export Faculty Excel">
+                                    class="btn btn-outline-primary btn-faculty-export d-flex align-items-center gap-1 shadow-sm"
+                                    aria-label="Export Faculty Excel">
                                     <span class="material-symbols-rounded fs-5">export_notes</span>
                                     Export Excel
                                 </a>

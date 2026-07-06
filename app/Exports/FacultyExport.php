@@ -17,11 +17,16 @@ class FacultyExport implements FromCollection, WithHeadings, WithMapping, Should
 {
     private int $index = 0;
     private array $sectorMap = [];
+    private array $serviceMap = [];
 
     public function __construct()
     {
         $this->sectorMap = DB::table('faculty_sector_master')
             ->pluck('name', 'pk')
+            ->toArray();
+
+        $this->serviceMap = DB::table('service_master')
+            ->pluck('service_name', 'pk')
             ->toArray();
     }
 
@@ -60,6 +65,7 @@ class FacultyExport implements FromCollection, WithHeadings, WithMapping, Should
             'IFSC Code',
             'PAN Number',
             'Current Sector',
+            'Service',
             'Area of Expertise',
         ];
     }
@@ -127,7 +133,8 @@ class FacultyExport implements FromCollection, WithHeadings, WithMapping, Should
             return optional($mapItem->facultyExpertise)->expertise_name;
         })->filter()->implode(', ');
 
-        $sectorName = $this->sectorMap[$faculty->faculty_sector] ?? '-';
+        $sectorName  = $this->sectorMap[$faculty->faculty_sector] ?? '-';
+        $serviceName = $this->serviceMap[$faculty->service_master_pk] ?? '-';
 
         return [
             ++$this->index,
@@ -166,6 +173,7 @@ class FacultyExport implements FromCollection, WithHeadings, WithMapping, Should
             $faculty->PAN_No ?? '',
 
             $sectorName,
+            $serviceName,
             $expertiseAreas,
         ];
     }
