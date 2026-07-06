@@ -566,6 +566,13 @@
                                 <label class="form-label fw-semibold">Discipline Marks <span class="text-danger">*</span></label>
                                 <input type="number" step="0.01" min="0" id="editMemoMarks" name="mark_deduction_submit" class="form-control" required>
                             </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Template</label>
+                                <select id="editMemoTemplate" name="memo_notice_template_pk" class="form-select">
+                                    <option value="">Select Discipline first</option>
+                                </select>
+                                <small class="text-muted">Changes to match the selected discipline.</small>
+                            </div>
                             <div class="col-12">
                                 <label class="form-label fw-semibold">Remarks</label>
                                 <textarea id="editMemoRemarks" name="remarks" class="form-control" rows="3" placeholder="Enter remarks..."></textarea>
@@ -1198,8 +1205,35 @@ $(function () {
     var editRouteBase   = "{{ rtrim(route('memo.discipline.edit', ''), '/') }}/";
     var updateRouteBase = "{{ rtrim(route('memo.discipline.update', ''), '/') }}/";
     var markRoute       = "{{ route('memo.discipline.getMarkDeduction') }}";
-    var tplRoute        = "{{ route('memo.discipline.templatesByDiscipline') }}";
+    var routeTemplates  = "{{ route('memo.discipline.templatesByDiscipline') }}";
     var csrf            = "{{ csrf_token() }}";
+    var editMemoCourseId = null;
+
+    // Reload the Template list for the current course + given discipline.
+    // Mirrors the Generate modal's loadTemplates(): discipline-specific templates
+    // first, course-wide fallback last (see getTemplatesByDiscipline()).
+    function loadEditTemplates(disciplineId, selectedPk) {
+        var $t = $('#editMemoTemplate');
+        if (!editMemoCourseId || !disciplineId) {
+            $t.html('<option value="">Select Discipline first</option>');
+            return;
+        }
+        $t.html('<option value="">Loading templates...</option>');
+        $.get(routeTemplates, { course_id: editMemoCourseId, discipline_master_pk: disciplineId }).done(function (res) {
+            $t.empty();
+            if (Array.isArray(res) && res.length) {
+                res.forEach(function (t) {
+                    var label = t.title + (t.discipline_master_pk ? '' : ' (course default)');
+                    $t.append($('<option>').val(t.pk).text(label));
+                });
+                $t.val(selectedPk && $t.find('option[value="' + selectedPk + '"]').length ? String(selectedPk) : String(res[0].pk));
+            } else {
+                $t.append('<option value="">No template configured</option>');
+            }
+        }).fail(function () {
+            $t.html('<option value="">Failed to load templates</option>');
+        });
+    }
 
     var emTemplateMap   = {};   // pk → template object (content + director fields)
     var emSelectedTplPk = null; // discipline template auto-picked for the preview
@@ -1262,6 +1296,7 @@ $(function () {
         $('#editMemoForm')[0].reset();
         $('#editMemoPk').val('');
         $('#editMemoDiscipline').html('<option value="">Loading…</option>');
+        $('#editMemoTemplate').html('<option value="">Select Discipline first</option>');
         $('#editMemoSaveBtn').prop('disabled', true);
         // Reset the preview for the freshly opened memo.
         emTemplateMap = {}; emSelectedTplPk = null; editCoursePk = null;
@@ -1276,6 +1311,7 @@ $(function () {
             $('#editMemoDate').val(data.date);
             $('#editMemoMarks').val(data.mark_deduction_submit);
             $('#editMemoRemarks').val(data.remarks);
+            editMemoCourseId = data.course_master_pk;
 
             var $sel = $('#editMemoDiscipline').empty().append('<option value="">Select Discipline</option>');
             (data.disciplines || []).forEach(function (d) {
@@ -1285,6 +1321,7 @@ $(function () {
                 );
             });
             $sel.val(data.discipline_master_pk);
+            loadEditTemplates(data.discipline_master_pk, data.memo_notice_template_pk);
             $('#editMemoSaveBtn').prop('disabled', false);
 
             // Preview mirrors the Generate modal: course/date/student + the
@@ -1299,13 +1336,13 @@ $(function () {
         editMemoModal.show();
     });
 
-    // ── Auto-fill marks when discipline changes ──
+    // ── Discipline changes → auto-fill marks + reload templates for the new discipline ──
     $('#editMemoDiscipline').on('change', function () {
         var mark = $('option:selected', this).data('mark');
         if (mark !== undefined && mark !== '') {
             $('#editMemoMarks').val(mark);
         }
-        loadEditTemplates();   // refresh preview template for the new discipline
+         loadEditTemplates($(this).val(), null);   // refresh preview template for the new discipline
         updateEditPreview();
     });
 
@@ -1322,11 +1359,12 @@ $(function () {
             url: updateRouteBase + id,
             type: 'POST',
             data: {
-                _token:                csrf,
-                date:                  $('#editMemoDate').val(),
-                discipline_master_pk:  $('#editMemoDiscipline').val(),
-                mark_deduction_submit: $('#editMemoMarks').val(),
-                remarks:               $('#editMemoRemarks').val(),
+                _token:                    csrf,
+                date:                      $('#editMemoDate').val(),
+                discipline_master_pk:      $('#editMemoDiscipline').val(),
+                mark_deduction_submit:     $('#editMemoMarks').val(),
+                remarks:                   $('#editMemoRemarks').val(),
+                memo_notice_template_pk:   $('#editMemoTemplate').val(),
             },
             success: function (res) {
                 if (res.success) {

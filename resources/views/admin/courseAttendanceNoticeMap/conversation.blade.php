@@ -125,6 +125,7 @@
                     <thead>
                         <tr>
                             <th>Name</th>
+                            <th>Role</th>
                             <th>Conversation</th>
                             <th>Date & Time</th>
                             <th>Delete</th>
@@ -135,6 +136,7 @@
                         @forelse ($memoNotice as $row)
                         <tr data-pk="{{ $row->pk }}">
                             <td>{{ $row->display_name ?? 'N/A' }}</td>
+                            <td>{{ $row->role_name ?? '---' }}</td>
                             <td>{{ $row->student_decip_incharge_msg }}</td>
                             <td>{{ \Carbon\Carbon::parse($row->created_date ?? 'now', 'UTC')->timezone('Asia/Kolkata')->format('d-m-Y h:i A') }}
                             </td>
@@ -160,7 +162,7 @@
                         </tr>
                         @empty
                         <tr id="emptyRow">
-                            <td colspan="5" class="text-center text-muted">No conversation found.</td>
+                            <td colspan="6" class="text-center text-muted">No conversation found.</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -361,6 +363,7 @@
 
         tr.innerHTML =
             '<td>' + escHtml(msg.display_name || 'N/A') + '</td>' +
+            '<td>' + escHtml(msg.role_name || '---') + '</td>' +
             '<td>' + escHtml(msg.student_decip_incharge_msg || '') + '</td>' +
             '<td>' + escHtml(msg.formatted_date || '') + '</td>' +
             '<td><span class="text-muted">N/A</span></td>' +

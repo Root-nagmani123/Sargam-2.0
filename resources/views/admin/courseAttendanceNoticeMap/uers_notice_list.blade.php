@@ -193,6 +193,32 @@ $(document).ready(function() {
         }
     }
 
+    // Poll-only refresh: swap in just the new messages, never touch the composer.
+    // A background poll replacing the whole panel can race the native file-picker
+    // dialog — the dialog stays open (blocking the user) for as long as they're
+    // browsing folders, but page timers keep running underneath it. If a poll fires
+    // before they've picked a file, the composer (and its <input type=file>) gets
+    // replaced while the OS dialog is still open; the eventual file selection then
+    // fires a change event on a detached input that can no longer bubble up to our
+    // document-level listener, so nothing shows and nothing sends. Only ever
+    // touching the message list during polling avoids this race entirely.
+    function mergeNewMessages(html, memoId) {
+        const chatBody = document.getElementById('chatBody');
+        const w = chatBody && chatBody.querySelector('.chat-wrapper');
+        if (!w || w.dataset.memoId !== String(memoId)) return;
+
+        const scroll = document.getElementById('conversationScroll');
+        if (!scroll) return;
+        const wasAtBottom = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 60;
+
+        const parsed = new DOMParser().parseFromString(html, 'text/html');
+        const newScroll = parsed.getElementById('conversationScroll');
+        if (!newScroll) return;
+
+        scroll.innerHTML = newScroll.innerHTML;
+        if (wasAtBottom) scroll.scrollTop = scroll.scrollHeight;
+    }
+
     $('.view-conversation').on('click', function() {
         let memoId = $(this).data('id');
         let topic = $(this).data('topic');
@@ -217,17 +243,10 @@ $(document).ready(function() {
         chatOffcanvas.show();
     });
 
-    function isComposerBusy() {
-        const chatBody = document.getElementById('chatBody');
-        const ta = chatBody && chatBody.querySelector('.chat-input');
-        return !!(ta && (document.activeElement === ta || ta.value.trim().length > 0));
-    }
-
     // Start real-time polling when offcanvas is visible
     chatOffcanvasEl.addEventListener('shown.bs.offcanvas', function() {
         if (pollInterval) clearInterval(pollInterval);
         pollInterval = setInterval(function() {
-            if (isComposerBusy()) return; // don't wipe out text the user is mid-typing
             const w = document.querySelector('#chatBody .chat-wrapper');
             if (!w) return;
             const memoId   = w.dataset.memoId;
@@ -235,7 +254,7 @@ $(document).ready(function() {
             const userType = w.dataset.userType;
             if (!memoId) return;
             loadConversation(memoId, type, userType)
-                .then(html => applyConversationHtml(html, memoId, false))
+                .then(html => mergeNewMessages(html, memoId))
                 .catch(() => {});
         }, 5000); // poll every 5 seconds
     });

@@ -349,6 +349,15 @@
                                     <span class="mnm-action disabled" title="No notice"><i class="bi bi-file-earmark-text"></i><span>Notice</span></span>
                                     @endif
 
+                                    {{-- Memo: view the memo conversation/document page (same as Notice above) --}}
+                                    @if(!empty($memo->memo_id))
+                                    <a class="mnm-action" href="{{ route('memo.notice.management.conversation', ['id' => $memo->memo_id, 'type' => 'memo']) }}" title="View Memo Document">
+                                        <i class="bi bi-file-earmark"></i><span>Memo Doc</span>
+                                    </a>
+                                    @else
+                                    <span class="mnm-action disabled" title="No memo yet"><i class="bi bi-file-earmark"></i><span>Memo Doc</span></span>
+                                    @endif
+
                                     {{-- Edit Notice: template only, and only while still open --}}
                                     @if($isNotice && $canManageMemoNotice && $st == 1)
                                     <a href="javascript:void(0)" class="mnm-action edit-notice-btn" data-notice-id="{{ $memo->notice_id }}"
@@ -582,10 +591,13 @@
                             </div>
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="memoTemplate" class="form-label">Template</label>
-                                <select name="memo_notice_template_pk" id="memoTemplate" class="form-select">
+                                <select name="memo_notice_template_pk" id="memoTemplate" class="form-select @error('memo_notice_template_pk') is-invalid @enderror">
                                     <option value="">Select Template</option>
                                 </select>
-                                <small class="text-muted">Memo template to use. Depends on the course.</small>
+                                <small class="text-muted">Memo template to use. Depends on the Memo Type/course.</small>
+                                @error('memo_notice_template_pk')
+                                <span class="text-danger">{{ $message }}</span>
+                                @enderror
                             </div>
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="memo_type" class="form-label">Memo Type</label>
@@ -887,6 +899,11 @@ $(document).ready(function() {
             memo_type_master_pk: memoTypeMasterPk || ''
         }).done(function (res) {
             memoTemplateCache = res || [];
+            if (!memoTemplateCache.length) {
+                $t.html('<option value="">No template configured for this Memo Type</option>');
+                renderMemoTemplatePreview(null);
+                return;
+            }
             memoTemplateCache.forEach(function (tpl) {
                 $t.append($('<option>').val(tpl.pk).text(tpl.title));
             });
@@ -1140,7 +1157,7 @@ $(document).ready(function() {
             // Keep readonly fields as readonly
             $('#course_master_name, #date_memo_notice, #subject_master_id, #topic_id, #class_session_master_pk, #faculty_name, #student_name, #memo_number').prop('readonly', true);
             // Keep non-editable selects disabled
-            form.find('select').not('#memo_type_master_pk, #venue').prop('disabled', true);
+            form.find('select').not('#memo_type_master_pk, #venue, #memoTemplate').prop('disabled', true);
             // Show save button in generate mode
             saveButton.show().text('Save');
             modalTitle.text('Generate Memo');
@@ -1182,7 +1199,11 @@ $(document).ready(function() {
                 }
             },
             error: function (xhr) {
-                toastr.error((xhr.responseJSON && xhr.responseJSON.message) || 'Update failed.');
+                var res = xhr.responseJSON;
+                // A 422 validation failure carries field-specific messages in `errors`;
+                // surface those instead of the generic "The given data was invalid."
+                var firstFieldError = res && res.errors ? Object.values(res.errors)[0][0] : null;
+                toastr.error(firstFieldError || (res && res.message) || 'Update failed.');
                 $btn.prop('disabled', false);
             }
         });
