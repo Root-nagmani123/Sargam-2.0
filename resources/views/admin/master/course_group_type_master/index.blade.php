@@ -378,7 +378,7 @@ $(function() {
         }
 
         if ($length.length) {
-            const $select = $length.find('select').addClass('form-select form-select-sm');
+            const $select = $length.find('select').addClass('form-select form-select-sm').detach();
             $length.find('label')
                 .empty()
                 .append(document.createTextNode('Showing '))

@@ -225,7 +225,7 @@ $courseQuery->whereNotNull('end_date')
     'responsive' => false,
     'scrollX' => false,
     'autoWidth' => false,
-    'ordering' => false,
+    'ordering' => true,
     'searching' => true,
     'lengthChange' => true,
     'pageLength' => 10,

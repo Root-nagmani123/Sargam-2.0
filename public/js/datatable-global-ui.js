@@ -271,7 +271,13 @@
         }
 
         if ($length.length) {
-            var $pageSize = $length.find('select').addClass('form-select form-select-sm');
+            // Detach (not remove) the select BEFORE emptying the label. jQuery's
+            // .empty()/.remove() strip the event handlers + data of every
+            // descendant they clear — which would kill the `change.DT` handler
+            // DataTables binds directly on this select, leaving the "Showing"
+            // dropdown visible but inert. .detach() preserves those handlers so
+            // re-appending the same node keeps it working.
+            var $pageSize = $length.find('select').addClass('form-select form-select-sm').detach();
             $length.find('label')
                 .empty()
                 .append(document.createTextNode('Showing '))
@@ -403,7 +409,15 @@
             // on the server-side request structure. So we turn OFF DataTables'
             // server ordering and let enableClientSidePageSort() sort the loaded
             // page in the browser instead.
-            options.ordering = false;
+            //
+            // Opt-in escape hatch: a table can set `sargamServerOrder: true` in
+            // its parameters to KEEP DataTables' native (server-side) ordering —
+            // clicking a header then re-queries and sorts the WHOLE dataset
+            // (with pagination), instead of only reordering the visible page.
+            // enableClientSidePageSort() detects native ordering is on and skips.
+            if (options.sargamServerOrder !== true) {
+                options.ordering = false;
+            }
             return options;
         }
 
@@ -461,39 +475,76 @@
         if (!settings.oFeatures || !settings.oFeatures.bServerSide) {
             return; // client-side tables sort natively via DataTables
         }
+        if (settings.oFeatures.bSort) {
+            // Native (server-side) ordering is enabled for this table
+            // (sargamServerOrder opt-in) — DataTables sends the order to the
+            // server and sorts the full dataset, so don't add the page sorter.
+            return;
+        }
         var api = new $.fn.dataTable.Api(settings);
         var tableNode = api.table().node();
         var $table = $(tableNode);
         if ($table.data('sargamPageSort')) { return; }
         $table.data('sargamPageSort', true);
 
-        var $headRow = $table.find('thead tr').last();
-        var $cells = $headRow.children('th, td');
+        var $container = $(api.table().container());
+        if (!$container.length) { $container = $table.closest('.dataTables_wrapper'); }
         var sortState = { col: null, dir: 'asc' };
 
-        $cells.each(function (idx) {
-            var $c = $(this);
-            var title = $c.text().replace(/\s+/g, ' ').trim().toLowerCase();
-            if (title === '' || title === 'action' || title === 'actions') { return; }
-            $c.addClass('sorting').attr('data-sargam-sort', idx).css('cursor', 'pointer');
-        });
+        // Resolve the header DataTables actually manages. For scrollX/scrollY
+        // tables the visible, clickable header is a CLONE inside
+        // .dataTables_scrollHead; $table's own <thead> is hidden in the scroll
+        // body, so binding there would make header clicks do nothing (the
+        // "some tables don't sort" symptom). api.table().header() returns the
+        // clone when scrolling and the original thead otherwise — and because
+        // scrolling tables re-clone that header on every draw, we re-decorate
+        // it after each draw rather than caching the cells.
+        function headerCells() {
+            var $root;
+            try { $root = $(api.table().header()); } catch (e) { $root = $(); }
+            if (!$root.length) { $root = $table.find('thead'); }
+            var $row = $root.find('tr').last();
+            if (!$row.length) { $row = $table.find('thead tr').last(); }
+            return $row.children('th, td');
+        }
 
-        $headRow.on('click.sargamSort', '[data-sargam-sort]', function () {
+        function decorateHeader() {
+            headerCells().each(function (idx) {
+                var $c = $(this);
+                var title = $c.text().replace(/\s+/g, ' ').trim().toLowerCase();
+                if (title === '' || title === 'action' || title === 'actions') { return; }
+                $c.attr('data-sargam-sort', idx).css('cursor', 'pointer');
+                // reflect the active sort direction (survives header re-clone)
+                if (sortState.col === idx) {
+                    $c.removeClass('sorting').addClass(sortState.dir === 'asc' ? 'sorting_asc' : 'sorting_desc');
+                } else {
+                    $c.removeClass('sorting_asc sorting_desc').addClass('sorting');
+                }
+            });
+        }
+
+        decorateHeader();
+
+        // Delegate on the stable container so the handler survives the header
+        // being re-cloned on redraw (scrollX/scrollY tables).
+        $container.off('click.sargamSort').on('click.sargamSort', 'thead [data-sargam-sort]', function () {
             var col = parseInt($(this).attr('data-sargam-sort'), 10);
+            if (isNaN(col)) { return; }
             if (sortState.col === col) {
                 sortState.dir = (sortState.dir === 'asc') ? 'desc' : 'asc';
             } else {
                 sortState.col = col;
                 sortState.dir = 'asc';
             }
-            $cells.filter('[data-sargam-sort]').removeClass('sorting_asc sorting_desc').addClass('sorting');
-            $(this).removeClass('sorting').addClass(sortState.dir === 'asc' ? 'sorting_asc' : 'sorting_desc');
+            decorateHeader();
             sortVisiblePageRows(tableNode, col, sortState.dir);
         });
 
-        // Each server draw (page change / filter) replaces the rows; re-apply the
+        // Each server draw (page change / filter) replaces the rows and, for
+        // scrolling tables, the header clone — so re-decorate and re-apply the
         // active sort so the visible page stays sorted the way the user chose.
         $table.on('draw.dt.sargamSort', function () {
+            decorateHeader();
             if (sortState.col !== null) {
                 sortVisiblePageRows(tableNode, sortState.col, sortState.dir);
             }
