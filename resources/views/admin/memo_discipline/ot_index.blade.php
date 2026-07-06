@@ -92,6 +92,7 @@
                             <th class="text-center">Marks Submitted</th>
                             <th class="text-center">Final Marks</th>
                             <th>Remarks</th>
+                            <th>Created Date</th>
                             <th>Status</th>
                         </tr>
                     </thead>
@@ -105,6 +106,7 @@
                             <td class="text-center fw-semibold text-warning">{{ $memo->mark_deduction_submit }}</td>
                             <td class="text-center fw-semibold text-danger">{{ $memo->final_mark_deduction }}</td>
                             <td class="text-muted">{{ $memo->remarks ?? '—' }}</td>
+                            <td class="text-muted">{{ !empty($memo->created_date) ? \Carbon\Carbon::parse($memo->created_date)->format('d M Y') : 'N/A' }}</td>
                             <td>
                                 @if ($memo->status == 1)
                                 <span class="badge bg-success-subtle text-success">
@@ -145,7 +147,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="8" class="text-center py-5 text-muted">
+                            <td colspan="9" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                                 <span class="fw-medium">No discipline memos available</span>
                             </td>
