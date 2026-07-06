@@ -583,6 +583,14 @@ class NotificationService
             }
         }
 
+        // Discipline memo show route expects an encrypted memo pk.
+        if ($type === 'memo' && $moduleName === 'memodiscipline') {
+            $memoPk = (int) ($notification->reference_pk ?? 0);
+            if ($memoPk > 0) {
+                return route('memo.discipline.memo.show', encrypt($memoPk));
+            }
+        }
+
         // Mess low stock: reference_pk holds mess_stores.id so the report opens filtered to that store.
         if ($type === 'mess_stock' && $moduleName === 'lowstock') {
             $storeId = (int) ($notification->reference_pk ?? 0);

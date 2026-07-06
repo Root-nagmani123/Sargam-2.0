@@ -9,6 +9,7 @@ use App\Models\CourseMaster;
 use App\Models\MemoDiscipline;
 use App\Models\DisciplineMaster;
 use App\Services\NotificationService;
+use App\Services\NotificationReceiverService;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -535,47 +536,57 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
             'discipline_pk' => 'required|exists:discipline_memo_status,pk',
         ]);
 
-        if ($validated) {
-            $memo = MemoDiscipline::find($request->discipline_pk);
-            if ($memo && $memo->status != 2) {
-                $memo->status = 2;
-                $memo->modified_date = now();
-                $memo->save();
-
-                // Notify the OT student
-                $credential = DB::table('user_credentials')
-                    ->where('user_id', $memo->student_master_pk)
-                    ->where('user_category', 'S')
-                    ->first();
-
-                if ($credential) {
-                    app(NotificationService::class)->create(
-                        $credential->pk,
-                        'memo',
-                        'MemoDiscipline',
-                        $memo->pk,
-                        'Discipline Memo Generated',
-                        'A discipline memo has been issued to you. Please review and respond.'
-                    );
-                }
-
-                return response()->json([
-                    'status' => true,
-                    'message' => 'Memo sent successfully.'
-                ]);
-
-            } else {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Memo not found or already sent.'
-                ]);
-            }
-        } else {
+        if (!$validated) {
             return response()->json([
                 'status' => false,
                 'message' => 'Validation failed.'
             ]);
         }
+
+        $memo = MemoDiscipline::with([
+            'course:pk,course_name',
+            'discipline:pk,discipline_name',
+        ])->find($request->discipline_pk);
+
+        if (!$memo || $memo->status == 2) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Memo not found or already sent.'
+            ]);
+        }
+
+        $memo->status = 2;
+        $memo->modified_date = now();
+        $memo->save();
+
+        try {
+            $receiverService = app(NotificationReceiverService::class);
+            $receiverUserId = $receiverService->getStudentUserId((int) $memo->student_master_pk);
+
+            if ($receiverUserId) {
+                $courseName = $memo->course->course_name ?? 'your course';
+                $disciplineName = $memo->discipline->discipline_name ?? 'discipline';
+                $memoDate = $memo->date
+                    ? Carbon::parse($memo->date)->format('d M Y')
+                    : now()->format('d M Y');
+
+                app(NotificationService::class)->create(
+                    (int) $receiverUserId,
+                    'memo',
+                    'MemoDiscipline',
+                    (int) $memo->pk,
+                    'Discipline Memo Issued',
+                    "A discipline memo for \"{$disciplineName}\" has been issued for {$courseName} on {$memoDate}. Please review and respond."
+                );
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to send discipline memo notification: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Memo sent successfully.'
+        ]);
     }
     function getConversationModel(Request $request, $memoId,$type){
         // $memo = MemoDiscipline::with([
@@ -685,20 +696,20 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
                     );
                 }
             } else {
-                // Admin/Faculty sent a message → notify the OT student
-                $credential = DB::table('user_credentials')
-                    ->where('user_id', $memo->student_master_pk)
-                    ->where('user_category', 'S')
-                    ->first();
-                if ($credential) {
-                    app(NotificationService::class)->create(
-                        $credential->pk,
-                        'memo',
-                        'MemoDiscipline',
-                        $memo->pk,
-                        'New Message on Your Discipline Memo',
-                        'The incharge has replied to your discipline memo.'
-                    );
+                // Admin/Faculty sent a message → notify the OT student (skip if closing — close notification sent below)
+                if ((int) $request->status !== 2) {
+                    $receiverUserId = app(NotificationReceiverService::class)
+                        ->getStudentUserId((int) $memo->student_master_pk);
+                    if ($receiverUserId) {
+                        app(NotificationService::class)->create(
+                            (int) $receiverUserId,
+                            'memo',
+                            'MemoDiscipline',
+                            (int) $memo->pk,
+                            'New Message on Your Discipline Memo',
+                            'The incharge has replied to your discipline memo.'
+                        );
+                    }
                 }
             }
         }
@@ -712,6 +723,49 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
                 'conclusion_type_pk' => $request->conclusion_type,
                 'modified_date' => now(),
             ]);
+
+            try {
+                $closedMemo = MemoDiscipline::with([
+                    'course:pk,course_name',
+                    'discipline:pk,discipline_name',
+                ])->find($request->memo_discipline_id);
+
+                if ($closedMemo) {
+                    $receiverUserId = app(NotificationReceiverService::class)
+                        ->getStudentUserId((int) $closedMemo->student_master_pk);
+
+                    if ($receiverUserId) {
+                        $courseName = $closedMemo->course->course_name ?? 'your course';
+                        $disciplineName = $closedMemo->discipline->discipline_name ?? 'discipline';
+                        $conclusionName = DB::table('memo_conclusion_master')
+                            ->where('pk', $request->conclusion_type)
+                            ->value('discussion_name');
+                        $finalMarks = $request->mark_of_deduction;
+
+                        $message = "Your discipline memo for \"{$disciplineName}\" ({$courseName}) has been closed.";
+                        if ($conclusionName) {
+                            $message .= " Conclusion: {$conclusionName}.";
+                        }
+                        if ($finalMarks !== null && $finalMarks !== '') {
+                            $message .= " Final mark deduction: {$finalMarks}.";
+                        }
+                        if (!empty($request->conclusion_remark)) {
+                            $message .= ' Remark: ' . $request->conclusion_remark;
+                        }
+
+                        app(NotificationService::class)->create(
+                            (int) $receiverUserId,
+                            'memo',
+                            'MemoDiscipline',
+                            (int) $closedMemo->pk,
+                            'Discipline Memo Closed',
+                            $message
+                        );
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::error('Failed to send discipline memo close notification: ' . $e->getMessage());
+            }
         }
 
         DB::commit();
