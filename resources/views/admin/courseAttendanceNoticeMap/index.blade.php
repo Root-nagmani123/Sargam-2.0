@@ -696,9 +696,13 @@
                             <select class="form-select" id="endChatConclusion" name="memo_conclusion_master_pk" required>
                                 <option value="">Select Conclusion Type</option>
                                 @foreach(($conclusions ?? []) as $c)
-                                    <option value="{{ $c->pk }}">{{ $c->discussion_name }}</option>
+                                    <option value="{{ $c->pk }}" data-name="{{ \Illuminate\Support\Str::lower($c->discussion_name) }}">{{ $c->discussion_name }}</option>
                                 @endforeach
                             </select>
+                        </div>
+                        <div class="mb-3 d-none" id="endChatMarksWrap">
+                            <label for="endChatMarks" class="form-label fw-semibold">Marks to Deduct <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="endChatMarks" name="marks_deducted" min="0" step="0.5" placeholder="eg. Enter marks to deduct (e.g. 1.5, 2.5)" disabled>
                         </div>
                         <div class="mb-1">
                             <label for="endChatRemark" class="form-label fw-semibold">Conclusion Remarks</label>
@@ -776,8 +780,20 @@ $(document).ready(function() {
         $('#endChatForm')[0].reset();
         $('#endChatId').val(window.currentConv.id);
         $('#endChatType').val(window.currentConv.type);
+        toggleEndChatMarks(); // reset marks field to hidden state
         new bootstrap.Modal(document.getElementById('end_chat_modal')).show();
     });
+
+    // ── Show a "Marks to Deduct" field only when the "Marks Deduction" conclusion is chosen ──
+    function toggleEndChatMarks() {
+        const name = ($('#endChatConclusion').find('option:selected').data('name') || '').toString();
+        const isDeduction = name.indexOf('marks deduction') !== -1;
+        $('#endChatMarksWrap').toggleClass('d-none', !isDeduction);
+        // Only submit + require the value when the field is visible
+        $('#endChatMarks').prop('disabled', !isDeduction).prop('required', isDeduction);
+        if (!isDeduction) { $('#endChatMarks').val(''); }
+    }
+    $('#endChatConclusion').on('change', toggleEndChatMarks);
 
     $('#endChatForm').on('submit', function(e) {
         e.preventDefault();

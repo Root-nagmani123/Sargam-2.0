@@ -1209,29 +1209,37 @@ $(function () {
     var csrf            = "{{ csrf_token() }}";
     var editMemoCourseId = null;
 
-    // Reload the Template list for the current course + given discipline.
+    // Reload the Template list AND the preview for the current course + given discipline.
     // Mirrors the Generate modal's loadTemplates(): discipline-specific templates
     // first, course-wide fallback last (see getTemplatesByDiscipline()).
     function loadEditTemplates(disciplineId, selectedPk) {
         var $t = $('#editMemoTemplate');
+        emTemplateMap = {};
+        emSelectedTplPk = null;
         if (!editMemoCourseId || !disciplineId) {
             $t.html('<option value="">Select Discipline first</option>');
+            updateEditTemplatePreview();
             return;
         }
         $t.html('<option value="">Loading templates...</option>');
+        $('#emPvTemplateContent').addClass('text-muted fst-italic').text('Loading preview…');
         $.get(routeTemplates, { course_id: editMemoCourseId, discipline_master_pk: disciplineId }).done(function (res) {
             $t.empty();
             if (Array.isArray(res) && res.length) {
                 res.forEach(function (t) {
                     var label = t.title + (t.discipline_master_pk ? '' : ' (course default)');
                     $t.append($('<option>').val(t.pk).text(label));
+                    emTemplateMap[String(t.pk)] = t;
                 });
                 $t.val(selectedPk && $t.find('option[value="' + selectedPk + '"]').length ? String(selectedPk) : String(res[0].pk));
+                emSelectedTplPk = $t.val();
             } else {
                 $t.append('<option value="">No template configured</option>');
             }
+            updateEditTemplatePreview();
         }).fail(function () {
             $t.html('<option value="">Failed to load templates</option>');
+            updateEditTemplatePreview();
         });
     }
 
@@ -1274,22 +1282,6 @@ $(function () {
         }
     }
 
-    // Load the discipline's template(s) for the preview (discipline-specific first).
-    function loadEditTemplates() {
-        var disc = $('#editMemoDiscipline').val();
-        emTemplateMap = {};
-        emSelectedTplPk = null;
-        if (!editCoursePk || !disc) { updateEditTemplatePreview(); return; }
-        $('#emPvTemplateContent').addClass('text-muted fst-italic').text('Loading preview…');
-        $.get(tplRoute, { course_id: editCoursePk, discipline_master_pk: disc }).done(function (res) {
-            if (Array.isArray(res) && res.length) {
-                res.forEach(function (t) { emTemplateMap[String(t.pk)] = t; });
-                emSelectedTplPk = String(res[0].pk);
-            }
-            updateEditTemplatePreview();
-        }).fail(function () { updateEditTemplatePreview(); });
-    }
-
     // ── Open modal: fetch memo data + disciplines ──
     $(document).on('click', '.btn-edit-memo', function () {
         var id = $(this).data('id');
@@ -1321,14 +1313,13 @@ $(function () {
                 );
             });
             $sel.val(data.discipline_master_pk);
-            loadEditTemplates(data.discipline_master_pk, data.memo_notice_template_pk);
-            $('#editMemoSaveBtn').prop('disabled', false);
-
             // Preview mirrors the Generate modal: course/date/student + the
             // discipline's template content & director signature.
             editCoursePk = data.course_master_pk || null;
             updateEditPreview();
-            loadEditTemplates();
+            // Populates the template dropdown AND the template-content preview.
+            loadEditTemplates(data.discipline_master_pk, data.memo_notice_template_pk);
+            $('#editMemoSaveBtn').prop('disabled', false);
         }).fail(function () {
             alert('Failed to load memo data.');
         });
@@ -1342,8 +1333,14 @@ $(function () {
         if (mark !== undefined && mark !== '') {
             $('#editMemoMarks').val(mark);
         }
-         loadEditTemplates($(this).val(), null);   // refresh preview template for the new discipline
+         loadEditTemplates($(this).val(), null);   // refresh dropdown + preview for the new discipline
         updateEditPreview();
+    });
+
+    // Template selection changes → refresh the preview content.
+    $('#editMemoTemplate').on('change', function () {
+        emSelectedTplPk = $(this).val() || null;
+        updateEditTemplatePreview();
     });
 
     // Date change → refresh the preview date.
