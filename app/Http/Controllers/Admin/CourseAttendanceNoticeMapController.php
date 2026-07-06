@@ -882,7 +882,10 @@ public function getSessionsByCourse(Request $request)
     $html = '<option value="">Select Session</option>';
     foreach ($sessions as $session) {
         $value = $session->class_session;
-        $label = $labelsByShiftTime[$value] ?? $value;
+        // Shift-based sessions store just the shift name; show its time range
+        // alongside the name so it's identifiable the same way raw time-range
+        // sessions (e.g. "01:53 PM - 03:53 PM") already are.
+        $label = isset($labelsByShiftTime[$value]) ? $labelsByShiftTime[$value] . ' (' . $value . ')' : $value;
         $html .= '<option value="' . e($value) . '">' . e($label) . '</option>';
     }
     return $html;
