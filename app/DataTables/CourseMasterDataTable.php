@@ -136,18 +136,18 @@ class CourseMasterDataTable extends DataTable
      */
     public function query(CourseMaster $model): QueryBuilder
     {
-        $data_course_id =  get_Role_by_course();
-         if(!empty($data_course_id))
-        {
-            $model = $model->whereIn('pk',$data_course_id);
+        $query = $model->newQuery();
+
+        $data_course_id = get_Role_by_course();
+        if (!empty($data_course_id)) {
+            $query->whereIn('pk', $data_course_id);
         }
-        $query = $model->orderBy('pk', 'desc')->newQuery();
-        
+
         // Apply status filter if provided
         $statusFilter = request('status_filter');
         $courseFilter = request('course_filter');
         $currentDate = Carbon::now()->format('Y-m-d');
-        
+
         if ($statusFilter === 'active' || !$statusFilter) {
             // Active courses: end_date is today or in the future (current and upcoming courses)
             $query->where('end_date', '>=', $currentDate);
@@ -155,12 +155,20 @@ class CourseMasterDataTable extends DataTable
             // Archived courses: end_date has already passed (expired courses)
             $query->where('end_date', '<', $currentDate);
         }
-        
+
         // Apply course filter if provided
         if (!empty($courseFilter)) {
             $query->where('pk', $courseFilter);
         }
-        
+
+        // Default newest-first, but ONLY when the user hasn't clicked a column
+        // to sort — otherwise this base order would dominate (pk is unique, so a
+        // requested secondary sort would never take visible effect). When an
+        // order is requested, Yajra applies it on the unordered query.
+        if (empty(request('order'))) {
+            $query->orderBy('pk', 'desc');
+        }
+
         return $query;
     }
 
@@ -182,7 +190,11 @@ class CourseMasterDataTable extends DataTable
                 'responsive' => true,
                 'scrollX' => false,
                 'autoWidth' => false,
-                'ordering' => false,
+                'ordering' => true,
+                // Keep DataTables' native server-side ordering (see
+                // datatable-global-ui.js): clicking a header re-queries and
+                // sorts the FULL dataset, not just the visible page.
+                'sargamServerOrder' => true,
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
@@ -220,11 +232,11 @@ class CourseMasterDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S. No.')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::make('course_name')->title('Course Name')->orderable(false)->searchable(true),
-            Column::make('couse_short_name')->title('Short Name')->orderable(false)->searchable(true),
-            Column::make('course_year')->title('Course Year')->orderable(false)->searchable(true)->addClass('text-center'),
-            Column::make('start_year')->title('Start Date')->orderable(false)->searchable(false)->addClass('text-center'),
-            Column::make('end_date')->title('End Date')->orderable(false)->searchable(false)->addClass('text-center'),
+            Column::make('course_name')->title('Course Name')->orderable(true)->searchable(true),
+            Column::make('couse_short_name')->title('Short Name')->orderable(true)->searchable(true),
+            Column::make('course_year')->title('Course Year')->orderable(true)->searchable(true)->addClass('text-center'),
+            Column::make('start_year')->title('Start Date')->orderable(true)->searchable(false)->addClass('text-center'),
+            Column::make('end_date')->title('End Date')->orderable(true)->searchable(false)->addClass('text-center'),
             Column::computed('status')->title('Status')->orderable(false)->searchable(false)->addClass('text-center'),
             Column::computed('action')->title('Action')->orderable(false)->searchable(false)->addClass('text-center'),
         ];

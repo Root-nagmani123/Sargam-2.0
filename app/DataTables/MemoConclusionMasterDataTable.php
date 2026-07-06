@@ -114,7 +114,7 @@ class MemoConclusionMasterDataTable extends DataTable
             ->parameters([
                 'responsive' => false,
                 'autoWidth' => false,
-                'ordering' => false,
+                'ordering' => true,
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,

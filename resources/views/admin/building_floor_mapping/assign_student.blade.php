@@ -243,7 +243,7 @@
             }
 
             if ($length.length) {
-                var $select = $length.find('select').addClass('form-select form-select-sm');
+                var $select = $length.find('select').addClass('form-select form-select-sm').detach();
                 $length.find('label')
                     .empty()
                     .append(document.createTextNode('Showing '))
