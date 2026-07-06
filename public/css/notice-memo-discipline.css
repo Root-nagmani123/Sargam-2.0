@@ -758,9 +758,16 @@
     cursor: pointer;
     margin: 0;
     transition: border-color .15s ease, background .15s ease;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    /* Allow long column names to wrap instead of being cropped. */
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* Let the label text wrap within the flex chip (min-width:0 lets a flex item
+   shrink below its content size so wrapping/anywhere-breaking can take effect). */
+.sn-colvis-chip span {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .sn-colvis-chip:hover {
