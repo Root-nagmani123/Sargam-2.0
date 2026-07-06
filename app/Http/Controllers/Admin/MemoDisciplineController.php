@@ -20,6 +20,12 @@ class MemoDisciplineController extends Controller
 {
  public function index(Request $request)
 {
+    // Officer Trainees are managed on their own dedicated page (view own records + chat),
+    // not this admin management page.
+    if (isOfficerTraineeUser()) {
+        return redirect()->route('memo.discipline.ot_index');
+    }
+
     $data_course_id = get_Role_by_course();
 
     // Courses
@@ -119,6 +125,82 @@ class MemoDisciplineController extends Controller
         'toDateFilter',
         'sessions',
         'venues'
+    ));
+}
+
+/**
+ * Officer Trainee view: the signed-in OT's own discipline memos only, read-only,
+ * with the conversation (chat) offcanvas. No generate / edit / delete / send.
+ */
+public function otIndex(Request $request)
+{
+    $studentPk = Auth::user()->user_id;
+
+    // Courses the OT is enrolled in — powers the Program Name filter dropdown.
+    $courses = DB::table('student_master_course__map as smcm')
+        ->join('course_master as cm', 'smcm.course_master_pk', '=', 'cm.pk')
+        ->where('smcm.student_master_pk', $studentPk)
+        ->select('cm.*')
+        ->orderBy('cm.course_name')
+        ->get();
+
+    $programNameFilter = $request->program_name;
+    $statusFilter      = $request->status;
+    $searchFilter      = $request->search;
+    $disciplineFilter  = $request->discipline_master_pk;
+
+    // OT page defaults to their full history (no implicit "today" restriction).
+    $fromDateFilter = $request->get('from_date') ?: null;
+    $toDateFilter   = $request->get('to_date') ?: null;
+
+    $disciplines = DisciplineMaster::where('active_inactive', 1)
+        ->select('discipline_name')
+        ->distinct()
+        ->orderBy('discipline_name')
+        ->get();
+
+    $memos = MemoDiscipline::with([
+            'course:pk,course_name',
+            'discipline:pk,discipline_name,active_inactive',
+        ])
+        ->where('student_master_pk', $studentPk)
+        ->when($programNameFilter, function ($q) use ($programNameFilter) {
+            $q->where('course_master_pk', $programNameFilter);
+        })
+        ->when($statusFilter !== null && $statusFilter !== '', function ($q) use ($statusFilter) {
+            $q->where('status', $statusFilter);
+        })
+        ->when($disciplineFilter, function ($q) use ($disciplineFilter) {
+            $q->whereHas('discipline', fn($d) => $d->where('discipline_name', $disciplineFilter));
+        })
+        ->when($searchFilter, function ($q) use ($searchFilter) {
+            $q->where(function ($sub) use ($searchFilter) {
+                $sub->whereHas('discipline', function ($d) use ($searchFilter) {
+                        $d->where('discipline_name', 'like', "%{$searchFilter}%");
+                    })
+                    ->orWhere('remarks', 'like', "%{$searchFilter}%");
+            });
+        })
+        ->when($fromDateFilter && $toDateFilter, function ($q) use ($fromDateFilter, $toDateFilter) {
+            $q->whereBetween('date', [$fromDateFilter, $toDateFilter]);
+        })
+        ->whereHas('discipline', function ($q) {
+            $q->where('active_inactive', 1);
+        })
+        ->orderBy('pk', 'desc')
+        ->paginate(10)
+        ->appends($request->all());
+
+    return view('admin.memo_discipline.ot_index', compact(
+        'memos',
+        'courses',
+        'disciplines',
+        'programNameFilter',
+        'statusFilter',
+        'disciplineFilter',
+        'searchFilter',
+        'fromDateFilter',
+        'toDateFilter'
     ));
 }
 

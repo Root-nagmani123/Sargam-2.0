@@ -110,7 +110,7 @@
                             </select>
                         </div>
 
-                        <h6 class="an-section-title mt-4">Notice Preview</h6>
+                        <h6 class="an-section-title mt-4">Preview</h6>
                         <div class="an-note"><i class="bi bi-info-circle"></i> You may edit the Notice from Notice Template</div>
                         <div id="anPreviewWrap" class="an-preview" style="display:none;">
                             <h5 class="text-center fw-bold mb-2" id="anTplCourse"></h5>
@@ -153,7 +153,7 @@
                             </select>
                         </div>
 
-                        <h6 class="an-section-title">Notice Preview</h6>
+                        <h6 class="an-section-title">Preview</h6>
                         <div class="an-note"><i class="bi bi-info-circle"></i> You may edit the Notice from Notice Template</div>
                         <div id="editNoticePreviewWrap" class="an-preview" style="display:none;">
                             <h5 class="text-center fw-bold mb-2" id="editNoticeTplCourse"></h5>
@@ -369,13 +369,13 @@
                                     {{-- Chats: open the conversation offcanvas --}}
                                     @if($isNotice)
                                     <a class="mnm-action view-conversation" data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas"
-                                        data-type="notice" data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}" data-participant="{{ $memo->student_name }}" title="Open chat">
+                                        data-type="notice" data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}" data-participant="{{ $memo->student_name }}" data-closed="{{ $stClass === 'mnm-status--closed' ? '1' : '0' }}" title="Open chat">
                                         <i class="bi bi-chat-dots"></i><span>Chats</span>
                                         @if($hasBell)<span class="mnm-dot"></span>@endif
                                     </a>
                                     @else
                                     <a class="mnm-action view-conversation" data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas"
-                                        data-type="memo" data-id="{{ $memo->memo_id }}" data-topic="{{ $memo->topic_name }}" data-participant="{{ $memo->student_name }}" title="Open chat">
+                                        data-type="memo" data-id="{{ $memo->memo_id }}" data-topic="{{ $memo->topic_name }}" data-participant="{{ $memo->student_name }}" data-closed="{{ $stClass === 'mnm-status--closed' ? '1' : '0' }}" title="Open chat">
                                         <i class="bi bi-chat-dots"></i><span>Chats</span>
                                         @if($cs == 1)<span class="mnm-dot"></span>@endif
                                     </a>
@@ -403,13 +403,21 @@
                                     <span class="mnm-action disabled" title="Memo not available yet"><i class="bi bi-file-earmark"></i><span>Memo</span></span>
                                     @endif
 
-                                    {{-- Delete: admins/faculty only, hard-deletes the notice/memo + its chat --}}
+                                    {{-- Delete: admins/faculty only, hard-deletes the notice/memo + its chat.
+                                         Only allowed while the notice/memo is still open — disabled once it's
+                                         closed ($stClass is 'mnm-status--closed' for Notice/Memo Chat Closed). --}}
                                     @if($canManageMemoNotice)
-                                    <a href="javascript:void(0)" class="mnm-action mnm-delete-record" style="color:#d92d20;"
-                                        data-id="{{ $isNotice ? $memo->notice_id : $memo->memo_id }}"
-                                        data-type="{{ $isNotice ? 'notice' : 'memo' }}" title="Delete">
-                                        <i class="bi bi-trash3"></i><span>Delete</span>
-                                    </a>
+                                        @if($stClass === 'mnm-status--closed')
+                                        <span class="mnm-action disabled" title="Cannot delete a closed {{ $isNotice ? 'notice' : 'memo' }}">
+                                            <i class="bi bi-trash3"></i><span>Delete</span>
+                                        </span>
+                                        @else
+                                        <a href="javascript:void(0)" class="mnm-action mnm-delete-record" style="color:#d92d20;"
+                                            data-id="{{ $isNotice ? $memo->notice_id : $memo->memo_id }}"
+                                            data-type="{{ $isNotice ? 'notice' : 'memo' }}" title="Delete">
+                                            <i class="bi bi-trash3"></i><span>Delete</span>
+                                        </a>
+                                        @endif
                                     @endif
                                 </div>
                             </td>
@@ -645,7 +653,7 @@
                             </div>
                         </div>
 
-                        <h6 class="an-section-title mt-2">Template Preview</h6>
+                        <h6 class="an-section-title mt-2">Preview</h6>
                         <div id="memoPreviewWrap" class="an-preview" style="display:none;">
                             <h5 class="text-center fw-bold mb-2" id="memoPvCourse"></h5>
                             <p class="text-center mb-0 small">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
@@ -691,7 +699,7 @@
                         </div>
                         <div class="mb-1">
                             <label for="endChatRemark" class="form-label fw-semibold">Conclusion Remarks</label>
-                            <textarea class="form-control" id="endChatRemark" name="conclusion_remark" rows="4" placeholder="eg. Lorem ipsum dolor"></textarea>
+                            <textarea class="form-control" id="endChatRemark" name="conclusion_remark" rows="4" placeholder="eg. Enter your remarks here..."></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -718,10 +726,11 @@ $(document).ready(function() {
         let topic = $(this).data('topic');
         let type = $(this).data('type');
         let participant = $(this).data('participant') || '—';
+        let isClosed = String($(this).data('closed')) === '1';
         $('#userType').val(type);
         let user_type = 'admin';
 
-        window.currentConv = { id: memoId, type: type };
+        window.currentConv = { id: memoId, type: type, closed: isClosed };
 
         $('#conversationTopic').text("Topic: " + (topic || '—'));
         $('#conversationParticipant').text("Participant: " + participant);
@@ -729,6 +738,12 @@ $(document).ready(function() {
         // Reflect the current conversation type in the Notice/Memo toggle.
         $('.conv-toggle-btn').removeClass('active');
         $('.conv-toggle-btn[data-conv-type="' + type + '"]').addClass('active');
+
+        // End Chat is only allowed while the notice/memo is still open — a closed
+        // conversation can't be ended again, so disable the button for it.
+        $('#endChatBtn')
+            .prop('disabled', isClosed)
+            .attr('title', isClosed ? 'This ' + type + ' is already closed' : 'End Chat');
         $('#chatBody').html('<p class="text-muted text-center">Loading conversation...</p>');
 
         $.ajax({
@@ -752,6 +767,7 @@ $(document).ready(function() {
     // ── End Chat: open the conclusion modal for the current conversation ──
     $('#endChatBtn').on('click', function() {
         if (!window.currentConv || !window.currentConv.id) { return; }
+        if (window.currentConv.closed) { return; } // closed notice/memo can't be ended
         $('#endChatId').val(window.currentConv.id);
         $('#endChatType').val(window.currentConv.type);
         $('#endChatForm')[0].reset();

@@ -998,6 +998,8 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
     });
     Route::prefix('memo/discipline')->name('memo.discipline.')->group(function () {
         Route::get('/', [MemoDisciplineController::class, 'index'])->name('index');
+        // Officer Trainee: dedicated, read-only "my discipline memos" page (view own records + chat).
+        Route::get('/my-memos', [MemoDisciplineController::class, 'otIndex'])->name('ot_index');
         Route::delete('/delete/{id}', [MemoDisciplineController::class, 'destroy'])->name('destroy');
         Route::get('/export-csv', [MemoDisciplineController::class, 'exportCsv'])->name('export_csv');
         Route::get('create', [MemoDisciplineController::class, 'create'])->name('create');

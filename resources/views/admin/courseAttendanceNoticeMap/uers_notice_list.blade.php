@@ -1,13 +1,17 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Memo Management - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Memo Management')
 
 @section('setup_content')
 <div class="container-fluid">
-<x-breadcrum title="Notice /Memo Management" />
+<x-breadcrum title="Notice /Memo Management">
+     <a href="{{ route('ot.notice.memo.view') }}" class="ms-2">
+                                <button class="btn btn-primary">Memo/Notice All activity</button>
+                            </a>
+                            </x-breadcrum>
     <x-session_message />
     <!-- start Zero Configuration -->
-    <div class="card" style="border-left:4px solid #004a93;">
+    <div class="card">
         <div class="card-body">
             <div class="row">
                 <div class="col-6">
@@ -21,9 +25,6 @@
                             <a href="javascript:void(0)" id="searchToggle">
                                 <i class="material-icons menu-icon material-symbols-rounded"
                                     style="font-size: 24px;">search</i>
-                            </a>
-                            <a href="{{ route('ot.notice.memo.view') }}" class="ms-2">
-                                <button class="btn btn-primary">Memo/Notice All activity</button>
                             </a>
 
                             <input type="text" class="form-control search-input ms-2" id="searchInput"
