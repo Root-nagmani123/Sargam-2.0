@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 
-@section('title', 'Discipline Memo - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Discipline Memo')
 
 @section('setup_content')
 <link rel="stylesheet" href="{{ asset('css/notice-memo-discipline.css') }}?v={{ @filemtime(public_path('css/notice-memo-discipline.css')) ?: time() }}">
