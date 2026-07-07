@@ -221,7 +221,27 @@
                 @endunless
             </div>
             @unless(isOfficerTraineeUser())
-            <a href="{{ route('memo.notice.management.export_csv', request()->query()) }}" class="mnm-download">
+            @php
+                // Built from the controller's own resolved filter values, coerced to strings
+                // via ?? '' — NOT request()->query() and NOT route()'s array-param form.
+                // ConvertEmptyStringsToNull turns "from_date=" into PHP null before this
+                // renders; route()'s array-parameter builder then silently DROPS null-valued
+                // keys entirely (while $request->has() on the receiving end still treats an
+                // explicitly-present "from_date=" as present). So either shortcut produces a
+                // Download link with NO from_date/to_date keys at all whenever no date filter
+                // is active — exportCsv() then reads that as "brand new request, default to
+                // today-only", silently downloading the wrong (empty) dataset. See the same
+                // fix in memo_discipline/index.blade.php's Download link.
+                $mnmDownloadUrl = route('memo.notice.management.export_csv') . '?' . http_build_query([
+                    'program_name' => $programNameFilter ?? '',
+                    'type' => $typeFilter ?? '',
+                    'status' => $statusFilter ?? '',
+                    'from_date' => $fromDateFilter ?? '',
+                    'to_date' => $toDateFilter ?? '',
+                    'search' => $searchFilter ?? '',
+                ]);
+            @endphp
+            <a href="{{ $mnmDownloadUrl }}" class="mnm-download">
                 <i class="bi bi-download"></i> Download
             </a>
             @endunless

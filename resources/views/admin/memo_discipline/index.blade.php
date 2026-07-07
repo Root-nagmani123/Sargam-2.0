@@ -174,7 +174,27 @@
             @endif
             <a href="{{ route('memo.discipline.index') }}" class="disc-tab js-nav-tab active">Send Discipline Memo</a>
         </div>
-        <a href="{{ route('memo.discipline.export_csv', request()->query()) }}" class="disc-download">
+        @php
+            // Built from the controller's own resolved filter values, coerced to strings
+            // via ?? '' — NOT request()->query() and NOT route()'s array-param form.
+            // ConvertEmptyStringsToNull turns "from_date=" into PHP null before this
+            // renders; route()'s array-parameter builder then silently DROPS null-valued
+            // keys entirely (while $request->has() on the receiving end still treats an
+            // explicitly-present "from_date=" as present). So either of those shortcuts
+            // produces a Download link with NO from_date/to_date keys at all whenever no
+            // date filter is active — exportCsv() then reads that as "brand new request,
+            // default to today-only", silently downloading the wrong (empty) dataset.
+            // http_build_query() with real '' strings guarantees the keys stay present.
+            $discDownloadUrl = route('memo.discipline.export_csv') . '?' . http_build_query([
+                'program_name' => $programNameFilter ?? '',
+                'discipline_master_pk' => $disciplineFilter ?? '',
+                'status' => $statusFilter ?? '',
+                'from_date' => $fromDateFilter ?? '',
+                'to_date' => $toDateFilter ?? '',
+                'search' => $searchFilter ?? '',
+            ]);
+        @endphp
+        <a href="{{ $discDownloadUrl }}" id="discDownloadLink" class="disc-download">
             <i class="bi bi-download"></i> Download
         </a>
     </div>
@@ -300,6 +320,16 @@
                             if (newList) listContainer.innerHTML = newList.innerHTML;
                             window.history.replaceState({}, '', url);
                             updateFilterCount();
+
+                            // The Download link is a static server-rendered href from page
+                            // load — without this, it would keep pointing at whatever
+                            // filters were active on that initial load (e.g. today-only)
+                            // even after AJAX-applying different filters, silently
+                            // exporting the wrong/empty dataset.
+                            const downloadLink = document.getElementById('discDownloadLink');
+                            if (downloadLink) {
+                                downloadLink.href = "{{ route('memo.discipline.export_csv') }}" + (params ? '?' + params : '');
+                            }
                         })
                         .catch(function() {
                             alert('Failed to apply filters');
