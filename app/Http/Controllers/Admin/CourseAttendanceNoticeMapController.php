@@ -1376,72 +1376,12 @@ public function store_memo_notice(Request $request)
     $inserted = DB::table('student_notice_status')->insert($data);
 
     if ($inserted) {
-        // Send notifications to students using services
-        try {
-            $notificationService = app(NotificationService::class);
-            $receiverService = app(NotificationReceiverService::class);
-            
-            // Collect unique student PKs from the inserted data
-            $studentPks = array_unique(array_column($data, 'student_pk'));
-            
-            // Get receiver user IDs for students using NotificationReceiverService
-            $receiverUserIds = $receiverService->getMemoNoticeReceivers($studentPks);
-            
-            // Get course and subject information for notification message
-            $course = CourseMaster::find($validated['course_master_pk']);
-            $subject = SubjectMaster::find($validated['subject_master_id']);
-            $topic = Timetable::find($validated['topic_id']);
-            
-            $courseName = $course ? $course->course_name : 'Course';
-            $subjectName = $subject ? $subject->subject_name : 'Subject';
-            $topicName = $topic ? $topic->subject_topic : 'Topic';
-            $memoNoticeType = $validated['submission_type'] == 1 ? 'Memo' : 'Notice';
-            $date = date('d M Y', strtotime($validated['date_memo_notice']));
-            
-            // Build notification message
-            $message = "A {$memoNoticeType} has been issued for {$courseName} - {$subjectName} ({$topicName}) on {$date}.";
-            if (!empty($validated['Remark'])) {
-                $message .= " Remark: {$validated['Remark']}";
-            }
-            
-            // Get the inserted notice records to use their PKs as reference_pk
-            // Create mapping of student_pk to course_student_attendance_pk from inserted data
-            $studentToAttendanceMap = [];
-            foreach ($data as $record) {
-                $studentToAttendanceMap[$record['student_pk']] = $record['course_student_attendance_pk'];
-            }
-            
-            // Query back using course_student_attendance_pk to get the exact inserted records
-            $courseAttendancePks = array_values(array_unique(array_column($data, 'course_student_attendance_pk')));
-            $insertedNotices = DB::table('student_notice_status')
-                ->whereIn('course_student_attendance_pk', $courseAttendancePks)
-                ->select('pk', 'student_pk', 'course_student_attendance_pk')
-                ->get()
-                ->keyBy('student_pk');
-            
-            // Send notifications to each student with their specific notice PK as reference
-            foreach ($receiverUserIds as $receiverUserId) {
-                // Find the student_pk for this user_id (user_id in user_credentials = student_pk in student_master)
-                $studentPk = $receiverUserId; // In user_credentials, user_id for students is the student_master.pk
-                
-                if (isset($insertedNotices[$studentPk])) {
-                    $referencePk = $insertedNotices[$studentPk]->pk;
-                    
-                    $notificationService->create(
-                        (int)$receiverUserId,
-                        'memo_notice',
-                        'Memo/Notice',
-                        $referencePk,
-                        "{$memoNoticeType} Issued",
-                        $message
-                    );
-                }
-            }
-        } catch (\Exception $e) {
-            // Log error but don't fail the request
-            \Log::error('Failed to send memo/notice notifications: ' . $e->getMessage());
-        }
-        
+        $this->sendIssuedNoticeNotifications(
+            $data,
+            (int) $validated['submission_type'],
+            $validated['Remark'] ?? null
+        );
+
         return redirect()->route('memo.notice.management.index')->with('success', 'Memo/Notice created successfully.');
     } else {
         return redirect()->back()->with('error', 'Failed to create Memo/Notice. Please try again.');
@@ -1845,7 +1785,7 @@ public function memo_notice_conversation(Request $request)
                     // Get course and subject information for notification message
                     $course = null;
                     $subject = null;
-                    $topic = null;
+                    $topicName = 'Topic';
                     
                     if (isset($memoNotice->course_master_pk)) {
                         $course = CourseMaster::find($memoNotice->course_master_pk);
@@ -1854,12 +1794,11 @@ public function memo_notice_conversation(Request $request)
                         $subject = SubjectMaster::find($memoNotice->subject_master_pk);
                     }
                     if (isset($memoNotice->subject_topic)) {
-                        $topic = Timetable::find($memoNotice->subject_topic);
+                        $topicName = DB::table('timetable')->where('pk', $memoNotice->subject_topic)->value('subject_topic') ?? 'Topic';
                     }
                     
                     $courseName = $course ? $course->course_name : 'Course';
                     $subjectName = $subject ? $subject->subject_name : 'Subject';
-                    $topicName = $topic ? $topic->subject_topic : 'Topic';
                     $memoNoticeType = ucfirst($type);
                     $date = isset($memoNotice->date_) ? date('d M Y', strtotime($memoNotice->date_)) : date('d M Y');
                     
@@ -2380,6 +2319,142 @@ public function memo_notice_conversation_student(Request $request)
 }
 
 /**
+ * Notify each OT (student) that a notice/memo was issued to them.
+ * notice_memo / submission_type: 1 = Notice, 2 = Memo.
+ *
+ * @param  array<int, array<string, mixed>>  $insertedRows
+ */
+private function sendIssuedNoticeNotifications(array $insertedRows, int $submissionType, ?string $remark = null): void
+{
+    if ($insertedRows === []) {
+        return;
+    }
+
+    try {
+        $notificationService = app(NotificationService::class);
+        $receiverService = app(NotificationReceiverService::class);
+
+        $studentPks = array_values(array_unique(array_map(
+            static fn (array $row) => (int) $row['student_pk'],
+            $insertedRows
+        )));
+
+        $firstRow = $insertedRows[0];
+        $topicId = $firstRow['subject_topic'] ?? null;
+        $noticeDate = $firstRow['date_'] ?? null;
+        $coursePk = $firstRow['course_master_pk'] ?? null;
+        $subjectPk = $firstRow['subject_master_pk'] ?? null;
+
+        $noticeQuery = DB::table('student_notice_status')
+            ->whereIn('student_pk', $studentPks)
+            ->select('pk', 'student_pk');
+
+        if ($topicId !== null) {
+            $noticeQuery->where('subject_topic', $topicId);
+        }
+        if ($noticeDate !== null) {
+            $noticeQuery->where('date_', $noticeDate);
+        }
+
+        $insertedNotices = $noticeQuery
+            ->get()
+            ->keyBy(static fn ($row) => (int) $row->student_pk);
+
+        $course = $coursePk ? CourseMaster::find($coursePk) : null;
+        $subject = $subjectPk ? SubjectMaster::find($subjectPk) : null;
+        $topicName = 'Topic';
+        if ($topicId) {
+            $topicName = DB::table('timetable')->where('pk', $topicId)->value('subject_topic') ?? 'Topic';
+        }
+
+        $noticeTypeLabel = $submissionType === 1 ? 'Notice' : 'Memo';
+        $courseName = $course->course_name ?? 'Course';
+        $subjectName = $subject->subject_name ?? 'Subject';
+        $dateLabel = $noticeDate
+            ? date('d M Y', strtotime((string) $noticeDate))
+            : date('d M Y');
+
+        $message = "A {$noticeTypeLabel} has been issued for {$courseName} - {$subjectName} ({$topicName}) on {$dateLabel}.";
+        if (!empty($remark)) {
+            $message .= " Remark: {$remark}";
+        }
+
+        foreach ($studentPks as $studentPk) {
+            $receiverUserId = $receiverService->getStudentUserId($studentPk);
+            if (!$receiverUserId) {
+                continue;
+            }
+
+            $noticeRow = $insertedNotices->get($studentPk);
+            if (!$noticeRow) {
+                continue;
+            }
+
+            $notificationService->create(
+                (int) $receiverUserId,
+                'memo_notice',
+                $noticeTypeLabel,
+                (int) $noticeRow->pk,
+                "{$noticeTypeLabel} Issued",
+                $message
+            );
+        }
+    } catch (\Exception $e) {
+        \Log::error('Failed to send memo/notice notifications: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Notify the OT that a memo was generated/sent for them.
+ */
+private function sendIssuedMemoNotification(
+    int $memoPk,
+    int $studentPk,
+    int $coursePk,
+    int $noticeStatusPk,
+    string $memoDate,
+    ?string $remark = null
+): void {
+    try {
+        $receiverUserId = app(NotificationReceiverService::class)->getStudentUserId($studentPk);
+        if (!$receiverUserId) {
+            return;
+        }
+
+        $courseName = CourseMaster::where('pk', $coursePk)->value('course_name') ?? 'Course';
+
+        $notice = DB::table('student_notice_status as sns')
+            ->leftJoin('subject_master as sm', 'sns.subject_master_pk', '=', 'sm.pk')
+            ->where('sns.pk', $noticeStatusPk)
+            ->select('sns.subject_topic', 'sm.subject_name')
+            ->first();
+
+        $subjectName = $notice->subject_name ?? 'Subject';
+        $topicName = 'Topic';
+        if (!empty($notice->subject_topic)) {
+            $topicName = DB::table('timetable')->where('pk', $notice->subject_topic)->value('subject_topic') ?? 'Topic';
+        }
+
+        $dateLabel = date('d M Y', strtotime($memoDate));
+        $message = "A Memo has been issued for {$courseName} - {$subjectName} ({$topicName}) on {$dateLabel}.";
+        if (!empty($remark)) {
+            $message .= " Remark: {$remark}";
+        }
+
+        app(NotificationService::class)->create(
+            (int) $receiverUserId,
+            'memo_notice',
+            'Memo',
+            $memoPk,
+            'Memo Issued',
+            $message
+        );
+    } catch (\Exception $e) {
+        \Log::error('Failed to send memo notification: ' . $e->getMessage());
+    }
+}
+
+/**
  * Resolve the bell notification receiver ids (user_credentials.user_id) for the admin/incharge
  * who issued a notice/memo. The notice's faculty_master_pk (scalar or JSON array like "[14,9]")
  * maps to faculty_master.employee_master_pk, which equals user_credentials.user_id used by the header bell.
@@ -2866,7 +2941,7 @@ public function store_memo_status(Request $request)
         'memo_notice_template_pk.exists'   => 'The selected template is invalid. Please choose another one.',
     ]);
 
-    DB::table('student_memo_status')->insert([
+    $memoPk = DB::table('student_memo_status')->insertGetId([
         'student_notice_status_pk' => $validated['student_notice_status_pk'],
         'memo_type_master_pk'             => $validated['memo_type_master_pk'],
         'student_pk'                      => $validated['student_pk'],
@@ -2883,6 +2958,15 @@ public function store_memo_status(Request $request)
         'status'                      => 1,
         'communication_status' => 1, // Assuming 1 means 'active'
     ]);
+
+    $this->sendIssuedMemoNotification(
+        (int) $memoPk,
+        (int) $validated['student_pk'],
+        (int) $validated['course_master_pk'],
+        (int) $validated['student_notice_status_pk'],
+        $validated['date_memo_notice'],
+        $validated['Remark'] ?? null
+    );
 
     return redirect()->back()->with('success', 'Memo saved successfully.');
 
@@ -3011,6 +3095,8 @@ public function send_direct_notice_save(Request $request)
         }
 
         DB::table('student_notice_status')->insert($rows);
+
+        $this->sendIssuedNoticeNotifications($rows, 1, $request->remark);
 
         return redirect()->route('memo.notice.management.index')
             ->with('success', 'Notices sent successfully.');
@@ -3221,6 +3307,8 @@ function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
     // print_r($data);die;
    $insertdata =  DB::table('student_notice_status')->insert($data);
    if($insertdata){
+    $this->sendIssuedNoticeNotifications($data, 1);
+
     return redirect('admin/memo-notice-management')->with('success', 'Notice sent successfully.');
    }
 }catch (\Exception $e) {
