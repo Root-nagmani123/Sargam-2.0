@@ -364,6 +364,7 @@ body {
                             </div>
 
                             <!-- FEEDBACK TABLE -->
+                            @if ($data['has_ratings'] ?? true)
                             <div class="table-responsive mb-4">
                                 <table class="table table-bordered">
                                     <thead>
@@ -425,6 +426,12 @@ body {
                                 {{-- <small>* is defined as Total Student Count:
                                                 {{ $data['participants'] ?? 0 }}</small> --}}
                             </div>
+                            @else
+                            <div class="alert alert-secondary text-center mb-4">
+                                <i class="bi bi-chat-left-text me-1"></i>
+                                Remark-only feedback — numeric ratings were not collected for this session.
+                            </div>
+                            @endif
 
                             <!-- REMARKS -->
                             @if (!empty($data['remarks']))

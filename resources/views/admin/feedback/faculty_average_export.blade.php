@@ -344,8 +344,13 @@
 @if ($feedbackData->isNotEmpty())
     <div class="summary-stats">
         <span class="stat-pill"><strong>{{ $feedbackData->count() }}</strong> Sessions</span>
-        <span class="stat-pill">Avg Content: <strong>{{ number_format($feedbackData->avg('content_percentage'), 2) }}%</strong></span>
-        <span class="stat-pill">Avg Presentation: <strong>{{ number_format($feedbackData->avg('presentation_percentage'), 2) }}%</strong></span>
+        {{-- Averages exclude remark-only sessions (0% = no rating), so they are not deflated. --}}
+        @php
+            $ratedContent = $feedbackData->where('content_percentage', '>', 0);
+            $ratedPresentation = $feedbackData->where('presentation_percentage', '>', 0);
+        @endphp
+        <span class="stat-pill">Avg Content: <strong>{{ $ratedContent->isNotEmpty() ? number_format($ratedContent->avg('content_percentage'), 2) . '%' : 'N/A' }}</strong></span>
+        <span class="stat-pill">Avg Presentation: <strong>{{ $ratedPresentation->isNotEmpty() ? number_format($ratedPresentation->avg('presentation_percentage'), 2) . '%' : 'N/A' }}</strong></span>
         <span class="stat-pill">Total Participants: <strong>{{ $totalParticipants ?? $feedbackData->sum('participants') }}</strong></span>
     </div>
 @endif
@@ -377,11 +382,11 @@
                     <td class="faculty-name">{{ $data['faculty_name'] }}</td>
                     <td>{{ $data['topic_name'] }}</td>
                     <td>{{ $data['program_name'] }}</td>
-                    <td class="text-center {{ $data['content_percentage'] >= 80 ? 'percentage-good' : ($data['content_percentage'] >= 60 ? 'percentage-average' : 'percentage-low') }}">
-                        {{ number_format($data['content_percentage'], 2) }}%
+                    <td class="text-center {{ $data['content_percentage'] > 0 ? ($data['content_percentage'] >= 80 ? 'percentage-good' : ($data['content_percentage'] >= 60 ? 'percentage-average' : 'percentage-low')) : '' }}">
+                        {{ $data['content_percentage'] > 0 ? number_format($data['content_percentage'], 2) . '%' : 'N/A' }}
                     </td>
-                    <td class="text-center {{ $data['presentation_percentage'] >= 80 ? 'percentage-good' : ($data['presentation_percentage'] >= 60 ? 'percentage-average' : 'percentage-low') }}">
-                        {{ number_format($data['presentation_percentage'], 2) }}%
+                    <td class="text-center {{ $data['presentation_percentage'] > 0 ? ($data['presentation_percentage'] >= 80 ? 'percentage-good' : ($data['presentation_percentage'] >= 60 ? 'percentage-average' : 'percentage-low')) : '' }}">
+                        {{ $data['presentation_percentage'] > 0 ? number_format($data['presentation_percentage'], 2) . '%' : 'N/A' }}
                     </td>
                     <td class="text-center">{{ $data['participants'] }}</td>
                     <td>{{ \Carbon\Carbon::parse($data['session_date'])->format('d-M-Y') }}</td>
