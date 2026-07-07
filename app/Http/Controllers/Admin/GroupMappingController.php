@@ -74,7 +74,22 @@ class GroupMappingController extends Controller
         $facilities = $dropdowns['facilities'] ?? [];
         $filterFaculties = $dropdowns['filterFaculties'] ?? [];
 
-        return $dataTable->render('admin.group_mapping.index', compact('courses', 'groupTypes', 'facilities', 'filterFaculties'));
+        // Courses for the "Add Group Mapping" modal. The $courses list above is the
+        // status FILTER list (derived from existing mappings), so a brand-new course
+        // with no mapping yet can never be selected to create its first mapping. The
+        // Add modal instead needs EVERY active (non-expired) course. Computed fresh
+        // (not from the cached dropdowns) so a just-created course shows immediately.
+        $today = Carbon::today();
+        $allActiveCourses = CourseMaster::where('active_inactive', '1')
+            ->where(function ($q) use ($today) {
+                $q->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', $today);
+            })
+            ->orderBy('course_name')
+            ->pluck('course_name', 'pk')
+            ->toArray();
+
+        return $dataTable->render('admin.group_mapping.index', compact('courses', 'groupTypes', 'facilities', 'filterFaculties', 'allActiveCourses'));
     }
 
     public function filterFaculties(Request $request)
@@ -200,15 +215,19 @@ class GroupMappingController extends Controller
      */
     function create()
     {
-        $data_course_id =  get_Role_by_course();
-          
-        $courses = CourseMaster::where('active_inactive', '1');
-           $courses->where('end_date', '>', now());
-              if(!empty($data_course_id))
-            {
-                $courses = CourseMaster::whereIn('pk',$data_course_id);
-            }
-            $courses = $courses->orderBy('pk', 'desc')
+        // Group mappings can be created for ANY current course, so list every active
+        // (non-expired) course — not just the ones tagged to the viewer's role via
+        // course_master.user_role_master_pk (that supporting-section scope was hiding
+        // active courses belonging to other roles). Page access is already gated by
+        // route middleware. A course counts as active when active_inactive = 1 and it
+        // has no end date or has not yet ended.
+        $today = Carbon::today();
+        $courses = CourseMaster::where('active_inactive', '1')
+            ->where(function ($q) use ($today) {
+                $q->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', $today);
+            })
+            ->orderBy('pk', 'desc')
             ->pluck('course_name', 'pk')
             ->toArray();
         $courseGroupTypeMaster = CourseGroupTypeMaster::pluck('type_name', 'pk')->toArray();
