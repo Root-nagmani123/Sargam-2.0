@@ -64,9 +64,9 @@
                                     <td class="sm-col-name">{{ $module->module_name }}</td>
                                     <td class="sm-module-status-cell">
                                         @if ($module->active_inactive == 1)
-                                        <span class="badge rounded-pill programme-status-badge programme-status-badge--active">Active</span>
+                                        <span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>
                                         @else
-                                        <span class="badge rounded-pill programme-status-badge programme-status-badge--inactive">Inactive</span>
+                                        <span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>
                                         @endif
                                     </td>
                                     <td class="text-end sm-col-actions">

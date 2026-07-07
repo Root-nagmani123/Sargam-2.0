@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use App\DataTables\StudentAttendanceListDataTable;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\AttendanceDataExport;
+use App\Exports\AttendanceListExport;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 
@@ -196,74 +197,7 @@ class AttendanceController extends Controller
         }
         
         try {
-            $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : null;
-            $toDate = $request->to_date ? date('Y-m-d', strtotime($request->to_date)) : null;
-
-            // Join course_master so short/full names are always on the row for DataTables (eager loads alone are unreliable here).
-            $query = CourseGroupTimetableMapping::query()
-                ->leftJoin('course_master', 'course_master.pk', '=', 'course_group_timetable_mapping.Programme_pk')
-                ->select(
-                    'course_group_timetable_mapping.*',
-                    'course_master.couse_short_name as attendance_course_short_name',
-                    'course_master.course_name as attendance_course_full_name'
-                )
-                ->with([
-                    'group',
-                    'timetable',
-                    'timetable.classSession:pk,shift_name,start_time,end_time',
-                    'timetable.venue:venue_id,venue_name',
-                ]);
-
-            $query->whereHas('timetable', function ($q) use ($fromDate, $toDate, $request) {
-
-                if ($fromDate) {
-                    $q->whereDate('START_DATE', '>=', $fromDate);
-                }
-                if ($toDate) {
-                    $q->whereDate('END_DATE', '<=', $toDate);
-                }
-
-                if ($request->attendance_type === 'manual') {
-                    $q->where('session_type', 2)
-                        ->where('class_session', $request->session_value);
-                } elseif ($request->attendance_type === 'normal') {
-                    $q->where('session_type', 1)
-                        ->where('class_session', $request->session_value);
-                } elseif ($request->attendance_type === 'full_day') {
-                    $q->where('full_day', 1);
-                }
-            });
-
-            // Filter for Internal Faculty: Show only courses where faculty is CC or ACC
-            if (hasRole('Internal Faculty')) {
-                $userId = auth()->user()->user_id;
-                $facultyPk = FacultyMaster::where('employee_master_pk', $userId)->value('pk');
-                
-                if ($facultyPk) {
-                    // Get course IDs where faculty is CC or ACC
-                    $coordinatorCourseIds = CourseCordinatorMaster::where(function($q) use ($facultyPk) {
-                        $q->where('Coordinator_name', $facultyPk)
-                          ->orWhere('Assistant_Coordinator_name', $facultyPk);
-                    })
-                    ->pluck('courses_master_pk')
-                    ->unique()
-                    ->toArray();
-                    
-                    if (!empty($coordinatorCourseIds)) {
-                        $query->whereIn('Programme_pk', $coordinatorCourseIds);
-                    } else {
-                        // If no courses found, return empty result
-                        $query->whereRaw('1 = 0');
-                    }
-                } else {
-                    // If faculty PK not found, return empty result
-                    $query->whereRaw('1 = 0');
-                }
-            }
-
-            if (!empty($request->programme)) {
-                $query->where('Programme_pk', $request->programme);
-            }
+            $query = $this->buildAttendanceQuery($request);
 
             return DataTables::of($query)
                 ->addIndexColumn()
@@ -307,31 +241,22 @@ class AttendanceController extends Controller
                 ->addColumn('faculty_name', function ($row) {
                     return $this->resolveTimetableFacultyNames($row->timetable);
                 })
+                ->addColumn('status', function ($row) {
+                    // "Marked" only when every student in this group+course has a
+                    // saved attendance row for this session; otherwise "Pending".
+                    $isMarked = $this->isAttendanceMarked($row);
+                    $badgeClass = $isMarked ? 'programme-status-badge--active' : 'programme-status-badge--inactive';
+                    $label = $isMarked ? 'Marked' : 'Pending';
+
+                    return '<span class="badge rounded-pill programme-status-badge ' . $badgeClass . '">' . $label . '</span>';
+                })
                 ->addColumn('actions', function ($row) use ($currentPath) {
-                    // Mark Attendance button turns green only when all students are saved (status != 0)
-                    static $markedCache = [];
-                    $cacheKey = ($row->group_pk ?? '') . '|' . ($row->Programme_pk ?? '') . '|' . ($row->timetable_pk ?? '');
-
-                    if (!array_key_exists($cacheKey, $markedCache)) {
-                        // Mark as "saved" only when ALL students in this group+course
-                        // have a saved attendance row (status != 0) for this timetable.
-                        $expectedCount = StudentCourseGroupMap::where(
-                            'group_type_master_course_master_map_pk',
-                            $row->group_pk
-                        )->count();
-
-                        $markedCount = CourseStudentAttendance::where([
-                            'course_master_pk' => $row->Programme_pk,
-                            'group_type_master_course_master_map_pk' => $row->group_pk,
-                            'timetable_pk' => $row->timetable_pk,
-                        ])->where('status', '!=', 0)->count();
-
-                        $markedCache[$cacheKey] = $expectedCount > 0 && $markedCount === $expectedCount;
-                    }
-
-                    $isMarked = (bool) ($markedCache[$cacheKey] ?? false);
+                    // Mark-attendance action = fingerprint icon; turns green once
+                    // every student in the group+course has a saved row (status != 0).
+                    $isMarked = $this->isAttendanceMarked($row);
                     $markBtnClass = $isMarked ? 'btn btn-success btn-sm' : 'btn btn-primary btn-sm';
-                    $markBtnLabel = $isMarked ? 'Attendance Marked' : 'Mark Attendance';
+                    $markIconClass = $isMarked ? 'att-action-icon is-marked' : 'att-action-icon';
+                    $markTitle = $isMarked ? 'Attendance Marked' : 'Mark Attendance';
 
         // if ($currentPath === 'user_attendance') {
              if (hasRole('Student-OT')) {
@@ -361,21 +286,21 @@ class AttendanceController extends Controller
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
-        ]) . '" class="' . $markBtnClass . '">' . $markBtnLabel . '</a>';
+        ]) . '" class="' . $markIconClass . '" title="' . $markTitle . '" aria-label="' . $markTitle . '"><i class="bi bi-fingerprint" aria-hidden="true"></i></a>';
         }
         else{
             return '<a href="' . route('attendance.mark', [
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
-        ]) . '" class="' . $markBtnClass . '">' . $markBtnLabel . '</a>';
+        ]) . '" class="' . $markIconClass . '" title="' . $markTitle . '" aria-label="' . $markTitle . '"><i class="bi bi-fingerprint" aria-hidden="true"></i></a>';
         }
 
         // Admin Page
        
     })
 
-    ->rawColumns(['actions', 'programme_name'])
+    ->rawColumns(['actions', 'programme_name', 'status'])
     ->make(true);
 
             // return view('admin.attendance.partial.attendance', compact('attendanceData'));
@@ -388,6 +313,170 @@ class AttendanceController extends Controller
             ], 500);
 
         }
+    }
+
+    /**
+     * Shared base query for the attendance list — applies the same date range,
+     * attendance-type/session, role (Internal Faculty) and course filters used
+     * by both the DataTable list and the CSV export, so the two never drift.
+     */
+    private function buildAttendanceQuery(Request $request)
+    {
+        $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : null;
+        $toDate = $request->to_date ? date('Y-m-d', strtotime($request->to_date)) : null;
+
+        // Join course_master so short/full names are always on the row (eager loads alone are unreliable here).
+        $query = CourseGroupTimetableMapping::query()
+            ->leftJoin('course_master', 'course_master.pk', '=', 'course_group_timetable_mapping.Programme_pk')
+            ->select(
+                'course_group_timetable_mapping.*',
+                'course_master.couse_short_name as attendance_course_short_name',
+                'course_master.course_name as attendance_course_full_name'
+            )
+            ->with([
+                'group',
+                'timetable',
+                'timetable.classSession:pk,shift_name,start_time,end_time',
+                'timetable.venue:venue_id,venue_name',
+            ]);
+
+        $query->whereHas('timetable', function ($q) use ($fromDate, $toDate, $request) {
+
+            if ($fromDate) {
+                $q->whereDate('START_DATE', '>=', $fromDate);
+            }
+            if ($toDate) {
+                $q->whereDate('END_DATE', '<=', $toDate);
+            }
+
+            if ($request->attendance_type === 'manual') {
+                $q->where('session_type', 2)
+                    ->where('class_session', $request->session_value);
+            } elseif ($request->attendance_type === 'normal') {
+                $q->where('session_type', 1)
+                    ->where('class_session', $request->session_value);
+            } elseif ($request->attendance_type === 'full_day') {
+                $q->where('full_day', 1);
+            }
+        });
+
+        // Filter for Internal Faculty: Show only courses where faculty is CC or ACC
+        if (hasRole('Internal Faculty')) {
+            $userId = auth()->user()->user_id;
+            $facultyPk = FacultyMaster::where('employee_master_pk', $userId)->value('pk');
+
+            if ($facultyPk) {
+                // Get course IDs where faculty is CC or ACC
+                $coordinatorCourseIds = CourseCordinatorMaster::where(function ($q) use ($facultyPk) {
+                    $q->where('Coordinator_name', $facultyPk)
+                      ->orWhere('Assistant_Coordinator_name', $facultyPk);
+                })
+                ->pluck('courses_master_pk')
+                ->unique()
+                ->toArray();
+
+                if (!empty($coordinatorCourseIds)) {
+                    $query->whereIn('Programme_pk', $coordinatorCourseIds);
+                } else {
+                    // If no courses found, return empty result
+                    $query->whereRaw('1 = 0');
+                }
+            } else {
+                // If faculty PK not found, return empty result
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        if (!empty($request->programme)) {
+            $query->where('Programme_pk', $request->programme);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Download the currently-filtered attendance list as a CSV (Maatwebsite
+     * Excel, same export-class pattern the Mess reports use).
+     */
+    public function exportAttendanceList(Request $request)
+    {
+        try {
+            $query = $this->buildAttendanceQuery($request);
+
+            $rows = [];
+            $serial = 1;
+
+            foreach ($query->get() as $row) {
+                $timetable = $row->timetable;
+
+                // Topic (plain text)
+                $topic = optional($timetable)->subject_topic;
+                $topic = ($topic === null || $topic === '')
+                    ? 'N/A'
+                    : trim(preg_replace('/\s+/u', ' ', strip_tags((string) $topic)));
+
+                // Date range (START_DATE to END_DATE)
+                $startDate = optional($timetable)->START_DATE;
+                $endDate   = optional($timetable)->END_DATE;
+                $start = $startDate ? format_date($startDate, 'd/m/Y') : '';
+                $end   = $endDate ? format_date($endDate, 'd/m/Y') : '';
+                $date = ($start && $end) ? $start . ' to ' . $end : $start . $end;
+
+                $courseName = trim((string) ($row->attendance_course_full_name
+                    ?? $row->attendance_course_short_name ?? ''));
+
+                $rows[] = [
+                    $serial++,
+                    $topic,
+                    $date,
+                    optional($timetable)->class_session ?? '',
+                    optional($timetable)->venue->venue_name ?? 'N/A',
+                    $row->group->group_name ?? 'NO GROUP',
+                    $courseName !== '' ? $courseName : 'N/A',
+                    $this->resolveTimetableFacultyNames($timetable),
+                    $this->isAttendanceMarked($row) ? 'Marked' : 'Pending',
+                ];
+            }
+
+            $filename = 'Attendance_List_' . date('YmdHis') . '.csv';
+
+            return Excel::download(
+                new AttendanceListExport($rows),
+                $filename,
+                \Maatwebsite\Excel\Excel::CSV
+            );
+        } catch (\Exception $e) {
+            Log::error('Error exporting attendance list: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'An error occurred while exporting the attendance list: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * True only when ALL students in this group+course have a saved attendance
+     * row (status != 0) for the given session. Cached per-request so the Status
+     * and Action columns share a single count query per row.
+     */
+    private function isAttendanceMarked($row): bool
+    {
+        static $markedCache = [];
+        $cacheKey = ($row->group_pk ?? '') . '|' . ($row->Programme_pk ?? '') . '|' . ($row->timetable_pk ?? '');
+
+        if (!array_key_exists($cacheKey, $markedCache)) {
+            $expectedCount = StudentCourseGroupMap::where(
+                'group_type_master_course_master_map_pk',
+                $row->group_pk
+            )->count();
+
+            $markedCount = CourseStudentAttendance::where([
+                'course_master_pk' => $row->Programme_pk,
+                'group_type_master_course_master_map_pk' => $row->group_pk,
+                'timetable_pk' => $row->timetable_pk,
+            ])->where('status', '!=', 0)->count();
+
+            $markedCache[$cacheKey] = $expectedCount > 0 && $markedCount === $expectedCount;
+        }
+
+        return (bool) ($markedCache[$cacheKey] ?? false);
     }
 
     function markAttendanceView($group_pk, $course_pk, $timetable_pk)

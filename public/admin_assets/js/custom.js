@@ -1729,7 +1729,7 @@ function performAttendanceSearch() {
     // let viewType = $('#view_type').val();
 
     let sessionTypeValue = '';
-    let attendanceType = $('input[name="attendance_type"]:checked').val();
+    let attendanceType = $('#attendance_type').val();
     if(attendanceType === 'normal') {
         sessionTypeValue = $('#session').val();
     }
@@ -1806,39 +1806,32 @@ function attendanceChoicesClear($select) {
     }
 }
 
-// Reset attendance filter
+// Reset attendance filter — return every filter to its default and reload
+// the grid in its default (today) state.
 $(document).on('click', '#resetAttendance', function () {
-    // Clear date fields
-    $('#from_date').val('');
-    $('#to_date').val('');
-
+    // Course → none
     attendanceChoicesClear($('#programme'));
 
-    // Reset attendance type to 'full_day'
-    $('#full_day').prop('checked', true);
-    $('input[name="attendance_type"]').trigger('change');
+    // Attendance type → Full Day (its change handler clears + hides the session dropdowns)
+    var attTypeEl = $('#attendance_type')[0];
+    if (attTypeEl && attTypeEl._choicesInstance) {
+        attTypeEl._choicesInstance.setChoiceByValue('full_day');
+    }
+    $('#attendance_type').val('full_day').trigger('change');
 
     attendanceChoicesClear($('#session'));
     attendanceChoicesClear($('#manual_session'));
-
-    // Hide session containers
     $('#normal_session_container').hide();
     $('#manual_session_container').hide();
 
-    // Destroy DataTable if it exists
-    if ($.fn.DataTable.isDataTable('#attendanceTable')) {
-        attendanceTable.destroy();
-        attendanceTable = null;
-    }
+    // Time Period → Today. Reseed the hidden range directly; the blade's
+    // daterange handler only re-syncs the picker display (no search of its own).
+    var today = new Date().toISOString().split('T')[0];
+    $('#from_date').val(today);
+    $('#to_date').val(today);
+    $(document).trigger('attendance:reset-daterange');
 
-    // Restore default message row - show all elements with this ID
-    $('#defaultMessageRow').show();
-
-    // If no default message row exists, the table body should be empty after destroy
-    // DataTable destroy should restore original HTML, but ensure default message is visible
-    if ($('#attendanceTable tbody tr').length === 0) {
-        $('#defaultMessageRow').show();
-    }
+    performAttendanceSearch();
 });
 
 let attendanceTable; // global variable
@@ -1847,6 +1840,13 @@ function drawAttendanceTable() {
     if ($.fn.DataTable.isDataTable('#attendanceTable')) {
         attendanceTable.destroy(); // destroy previous instance
     }
+
+    // The global DataTables UI enhancer relocates the search box + pagination
+    // into #attendanceDtSearch / #attendanceDtFooter. destroy() leaves those
+    // moved nodes orphaned in our static slots, so clear them (and the
+    // "footer ready" flag) so the enhancer re-populates from the new instance.
+    $('#attendanceDtSearch').empty();
+    $('#attendanceDtFooter').removeData().empty();
 
     // Hide default message when table is initialized
     $('#defaultMessageRow').hide();
@@ -1879,6 +1879,7 @@ function drawAttendanceTable() {
             { data: 'group_name', name: 'group_name' },
             { data: 'programme_name', name: 'programme_name' },
             { data: 'faculty_name', name: 'faculty_name' },
+            { data: 'status', name: 'status', orderable: false, searchable: false },
             { data: 'actions', name: 'actions', orderable: false, searchable: false }
         ]
     });
@@ -1891,7 +1892,7 @@ $(document).ready(function() {
     $('#manual_session_container').hide();
 
 
-    $('input[name="attendance_type"]').change(function() {
+    $(document).on('change', '#attendance_type', function() {
         $('#normal_session_container').hide();
         $('#manual_session_container').hide();
 
@@ -1906,8 +1907,8 @@ $(document).ready(function() {
         // For 'full_day', both remain hidden
     });
 
-    // Trigger change on page load to show/hide based on default checked radio
-    $('input[name="attendance_type"]:checked').trigger('change');
+    // Trigger change on page load to show/hide based on the default selection
+    $('#attendance_type').trigger('change');
 });
 // End of students in attendance
 

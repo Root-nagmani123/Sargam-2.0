@@ -803,6 +803,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     Route::prefix('attendance')->name('attendance.')->controller(AttendanceController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/get-attendance-list', 'getAttendanceList')->name('get.attendance.list');
+        Route::get('/export-list', 'exportAttendanceList')->name('export_list');
         Route::get('/create', 'create')->name('create');
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::get('/mark/{group_pk}/{course_pk}/{timetable_pk}', 'markAttendanceView')->name('mark');
