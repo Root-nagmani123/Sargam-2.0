@@ -415,7 +415,6 @@
                                 <th>Name</th>
                                 <th>Email</th>
                                 <th>Cadre</th>
-                                <th>Status</th>
                                 <th>Date &amp; Session</th>
                                 <th>Topic</th>
                                 <th>House Name</th>
@@ -444,7 +443,6 @@
                                 <th>Name</th>
                                 <th>Email</th>
                                 <th>Cadre</th>
-                                <th>Status</th>
                                 <th>Date &amp; Session</th>
                                 <th>Topic</th>
                                 <th>Total Medical Exemption Count</th>
@@ -614,7 +612,6 @@
                 { data: 'name', name: 'name', orderable: true, searchable: true },
                 { data: 'email', name: 'email' },
                 { data: 'cadre', name: 'cadre' },
-                { data: 'status', name: 'status', searchable: false },
                 { data: 'date_session', name: 'date_session' },
                 { data: 'topic', name: 'topic' },
                 { data: 'house_name', name: 'house_name' },
@@ -635,7 +632,6 @@
                 { data: 'name', name: 'name', orderable: true, searchable: true },
                 { data: 'email', name: 'email' },
                 { data: 'cadre', name: 'cadre' },
-                { data: 'status', name: 'status', searchable: false },
                 { data: 'date_session', name: 'date_session' },
                 { data: 'topic', name: 'topic' },
                 { data: 'total_medical_exception_count', name: 'total_medical_exception_count', searchable: false },
