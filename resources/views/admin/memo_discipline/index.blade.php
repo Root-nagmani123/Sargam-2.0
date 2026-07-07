@@ -174,7 +174,27 @@
             @endif
             <a href="{{ route('memo.discipline.index') }}" class="disc-tab js-nav-tab active">Send Discipline Memo</a>
         </div>
-        <a href="{{ route('memo.discipline.export_csv', request()->query()) }}" class="disc-download">
+        @php
+            // Built from the controller's own resolved filter values, coerced to strings
+            // via ?? '' — NOT request()->query() and NOT route()'s array-param form.
+            // ConvertEmptyStringsToNull turns "from_date=" into PHP null before this
+            // renders; route()'s array-parameter builder then silently DROPS null-valued
+            // keys entirely (while $request->has() on the receiving end still treats an
+            // explicitly-present "from_date=" as present). So either of those shortcuts
+            // produces a Download link with NO from_date/to_date keys at all whenever no
+            // date filter is active — exportCsv() then reads that as "brand new request,
+            // default to today-only", silently downloading the wrong (empty) dataset.
+            // http_build_query() with real '' strings guarantees the keys stay present.
+            $discDownloadUrl = route('memo.discipline.export_csv') . '?' . http_build_query([
+                'program_name' => $programNameFilter ?? '',
+                'discipline_master_pk' => $disciplineFilter ?? '',
+                'status' => $statusFilter ?? '',
+                'from_date' => $fromDateFilter ?? '',
+                'to_date' => $toDateFilter ?? '',
+                'search' => $searchFilter ?? '',
+            ]);
+        @endphp
+        <a href="{{ $discDownloadUrl }}" id="discDownloadLink" class="disc-download">
             <i class="bi bi-download"></i> Download
         </a>
     </div>
@@ -217,10 +237,10 @@
                     </select>
 
                     <select class="form-select" id="discTimePeriod" aria-label="Time Period">
+                        <option value="all">All</option>
                         <option value="today" {{ $isToday ? 'selected' : '' }}>Today</option>
                         <option value="week">This Week</option>
                         <option value="month">This Month</option>
-                        <option value="all">All</option>
                         <option value="custom" {{ $hasRange ? 'selected' : '' }}>Custom Range</option>
                     </select>
                     <input type="date" class="form-control {{ $hasRange ? '' : 'd-none' }}" id="from_date"
@@ -268,14 +288,13 @@
                     if (badge) badge.textContent = activeCount;
                 }
 
-                // Apply filters via AJAX
-                function applyFiltersAjax() {
+                // Fetch a fully-formed list URL and swap ONLY the list container.
+                // The filter form lives OUTSIDE this container, so its values are never
+                // touched — that is what keeps filters intact across pagination.
+                function discFetchAndRender(url) {
                     const form = document.getElementById('filterForm');
                     const listContainer = document.getElementById('memoDisciplineListContainer');
-                    if (!form || !listContainer) return;
-                    const formData = new FormData(form);
-                    const params = new URLSearchParams(formData).toString();
-                    const url = "{{ route('memo.discipline.index') }}" + (params ? '?' + params : '');
+                    if (!listContainer) return;
                     listContainer.style.opacity = '0.5';
                     fetch(url, {
                             headers: {
@@ -292,17 +311,35 @@
                             const currentSummary = document.getElementById('filterSummary');
                             if (newSummary) {
                                 if (currentSummary) currentSummary.replaceWith(newSummary.cloneNode(true));
-                                else form.querySelector('.row').appendChild(newSummary.cloneNode(true));
-                            } else {
-                                if (currentSummary) currentSummary.remove();
+                                else if (form) {
+                                    const anchor = form.querySelector('.row, .disc-filter-bar');
+                                    if (anchor) anchor.appendChild(newSummary.cloneNode(true));
+                                }
+                            } else if (currentSummary) {
+                                currentSummary.remove();
                             }
                             const newList = doc.querySelector('#memoDisciplineListContainer');
+                            // Tear down the current DataTable BEFORE its DOM is removed, so its
+                            // settings don't leak and block a clean re-init (which can blank the rows).
+                            if (window.jQuery && $.fn.DataTable && $.fn.DataTable.isDataTable('#discTable')) {
+                                $('#discTable').DataTable().destroy();
+                            }
                             if (newList) listContainer.innerHTML = newList.innerHTML;
                             window.history.replaceState({}, '', url);
                             updateFilterCount();
+
+                            // The Download link is a static server-rendered href from page
+                            // load — without this, it would keep pointing at whatever
+                            // filters were active on that initial load (e.g. today-only)
+                            // even after AJAX-applying different filters, silently
+                            // exporting the wrong/empty dataset.
+                            const downloadLink = document.getElementById('discDownloadLink');
+                            if (downloadLink) {
+                                downloadLink.href = "{{ route('memo.discipline.export_csv') }}" + (params ? '?' + params : '');
+                            }
                         })
                         .catch(function() {
-                            alert('Failed to apply filters');
+                            alert('Failed to load records');
                         })
                         .finally(function() {
                             listContainer.style.opacity = '1';
@@ -311,7 +348,35 @@
                             }
                         });
                 }
+                window.discFetchAndRender = discFetchAndRender;
+
+                // Apply the filter form (+ current page size) via AJAX — always page 1.
+                function applyFiltersAjax() {
+                    const form = document.getElementById('filterForm');
+                    if (!form) return;
+                    const params = new URLSearchParams(new FormData(form));
+                    const pp = document.getElementById('discPerPage');
+                    if (pp && pp.value) params.set('per_page', pp.value);
+                    const q = params.toString();
+                    discFetchAndRender("{{ route('memo.discipline.index') }}" + (q ? '?' + q : ''));
+                }
                 window.applyFiltersAjax = applyFiltersAjax;
+
+                // Pagination is a NORMAL full-page navigation (no AJAX). The links now
+                // carry every RESOLVED filter (controller ->appends()), so a reload
+                // reproduces the same filtered view on the requested page — filters are
+                // preserved and the server returns the rows directly. (AJAX-swapping the
+                // DataTable-managed table proved unreliable and could blank the rows.)
+
+                // Page-size dropdown → reload from page 1 with the new size + current filters.
+                document.addEventListener('change', function(e) {
+                    if (e.target && e.target.id === 'discPerPage') {
+                        const form = document.getElementById('filterForm');
+                        const params = new URLSearchParams(form ? new FormData(form) : undefined);
+                        params.set('per_page', e.target.value);
+                        window.location.href = "{{ route('memo.discipline.index') }}" + '?' + params.toString();
+                    }
+                });
 
                 // Submit form via AJAX instead of full page reload
                 const filterForm = document.getElementById('filterForm');
@@ -393,7 +458,10 @@
             <hr class="my-3">
             <div id="memoDisciplineListContainer">
                 <div class="table-responsive">
-                    <table id="discTable" class="table align-middle mb-0 text-nowrap">
+                    {{-- data-sargam-dt-ui="false": this page uses server-side Laravel
+                         pagination with its own .programme-dt-footer below. Opt out of the
+                         global DataTables UI enhancer so it doesn't hijack + empty that footer. --}}
+                    <table id="discTable" class="table align-middle mb-0 text-nowrap" data-sargam-dt-ui="false">
                         <thead>
                             <tr>
                                 <th>S. No.</th>
@@ -522,15 +590,26 @@
                         </tbody>
                     </table>
                 </div>
-                <!-- Pagination -->
-                <div class="card-footer bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div class="text-muted small">
-                        Showing {{ $memos->firstItem() ?? 0 }} to {{ $memos->lastItem() ?? 0 }}
-                        of {{ $memos->total() }} records
-                    </div>
-
-                    <div>
+                <!-- Pagination (design-system footer: numbered pages + "Showing [N] of M items") -->
+                @php
+                    $discPerPage = (int) request('per_page', 10);
+                    if (!in_array($discPerPage, [10, 25, 50, 100, 200], true)) $discPerPage = 10;
+                @endphp
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
+                    <div class="programme-dt-pagination">
                         {{ $memos->links('vendor.pagination.custom') }}
+                    </div>
+                    <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                        <div class="dataTables_length">
+                            <label class="mb-0">Showing
+                                <select id="discPerPage" class="form-select form-select-sm" aria-label="Rows per page">
+                                    @foreach([10, 25, 50, 100, 200] as $pp)
+                                    <option value="{{ $pp }}" {{ $discPerPage === $pp ? 'selected' : '' }}>{{ $pp }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                        </div>
+                        <div class="dataTables_info">of {{ number_format($memos->total()) }} items</div>
                     </div>
                 </div>
             </div>
