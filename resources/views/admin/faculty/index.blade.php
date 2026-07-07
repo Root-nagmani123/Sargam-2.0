@@ -12,6 +12,17 @@
                 white-space: nowrap;
             }
         }
+        .btn-faculty-export {
+            border-color: #004a93;
+            color: #004a93;
+        }
+        .btn-faculty-export:hover,
+        .btn-faculty-export:focus,
+        .btn-faculty-export:active {
+            background-color: #004a93;
+            border-color: #004a93;
+            color: #fff !important;
+        }
     </style>
 @endpush
 

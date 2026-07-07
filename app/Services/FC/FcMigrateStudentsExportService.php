@@ -228,16 +228,48 @@ class FcMigrateStudentsExportService
      */
     public function applyUserCredentialsMatchExists(Builder $query, bool $mustExist): void
     {
-        $callback = function ($sub) {
-            $sub->select(DB::raw(1))
-                ->from('user_credentials as uc')
-                ->whereRaw($this->userCredentialsMatchWhereSql('uc'));
-        };
+        // Each identifier (username / mobile / email) is matched with its own
+        // single-column EXISTS subquery instead of one subquery that ORs all three
+        // columns together. A combined OR forces MySQL to full-scan user_credentials
+        // once per roster row (the TRIM/CAST/LOWER wrappers make it unindexable as a
+        // group); split single-column lookups let each run as an index scan/seek.
+        //
+        // The result set is unchanged. Logically EXISTS(a OR b OR c) == EXISTS(a) OR
+        // EXISTS(b) OR EXISTS(c), and the contact_no/email "is present" guards are
+        // constant per roster row so they factor out of the subquery unchanged.
+        $usernameMatch = fn ($sub) => $sub->select(DB::raw(1))->from('user_credentials as uc')
+            ->whereRaw('TRIM(CAST(uc.user_name AS CHAR)) = TRIM(CAST(r.user_id AS CHAR))');
+        $mobileMatch = fn ($sub) => $sub->select(DB::raw(1))->from('user_credentials as uc')
+            ->whereRaw('TRIM(CAST(uc.mobile_no AS CHAR)) = TRIM(CAST(r.contact_no AS CHAR))');
+        $emailMatch = fn ($sub) => $sub->select(DB::raw(1))->from('user_credentials as uc')
+            ->whereRaw('LOWER(TRIM(uc.email_id)) = LOWER(TRIM(r.email))');
 
         if ($mustExist) {
-            $query->whereExists($callback);
+            // Migrated: username matches, OR (has contact AND mobile matches),
+            // OR (has email AND email matches).
+            $query->where(function ($q) use ($usernameMatch, $mobileMatch, $emailMatch) {
+                $q->whereExists($usernameMatch)
+                    ->orWhere(function ($q2) use ($mobileMatch) {
+                        $q2->whereRaw("TRIM(COALESCE(r.contact_no, '')) <> ''")
+                            ->whereExists($mobileMatch);
+                    })
+                    ->orWhere(function ($q3) use ($emailMatch) {
+                        $q3->whereRaw("TRIM(COALESCE(r.email, '')) <> ''")
+                            ->whereExists($emailMatch);
+                    });
+            });
         } else {
-            $query->whereNotExists($callback);
+            // Eligible: username does NOT match, AND (no contact OR mobile does not
+            // match), AND (no email OR email does not match).
+            $query->whereNotExists($usernameMatch)
+                ->where(function ($q) use ($mobileMatch) {
+                    $q->whereRaw("TRIM(COALESCE(r.contact_no, '')) = ''")
+                        ->orWhereNotExists($mobileMatch);
+                })
+                ->where(function ($q) use ($emailMatch) {
+                    $q->whereRaw("TRIM(COALESCE(r.email, '')) = ''")
+                        ->orWhereNotExists($emailMatch);
+                });
         }
     }
 
