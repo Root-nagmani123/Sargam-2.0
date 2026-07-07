@@ -2638,8 +2638,8 @@ class UserController extends Controller
         }
 
         $fcRegUsername = trim((string) ($student->user_id ?? ''));
-        $fcJoiningDocuments = $fcRegUsername !== ''
-            ? app(RegistrationService::class)->joiningDocumentChecklistForDisplay($fcRegUsername)
+        $fcJoiningDocuments = ($fcRegUsername !== '' && is_numeric($fcRegUsername))
+            ? app(RegistrationService::class)->joiningDocumentChecklistForDisplay((int) $fcRegUsername)
             : collect();
 
         return view('admin.dashboard.student_detail', compact(
