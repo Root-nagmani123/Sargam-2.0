@@ -465,7 +465,7 @@
                 <div class="d-flex align-items-start justify-content-between gap-2">
                     <h4 class="conv-title mb-0">Conversation</h4>
                     <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn conv-endchat" id="endChatBtn">End Chat</button>
+                        <button type="button" class="btn conv-endchat" id="endChatBtn" disabled title="Open a conversation first">End Chat</button>
                         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close conversation panel" title="Close"></button>
                     </div>
                 </div>
@@ -750,11 +750,12 @@ $(document).ready(function() {
         $('.conv-toggle-btn').removeClass('active');
         $('.conv-toggle-btn[data-conv-type="' + type + '"]').addClass('active');
 
-        // End Chat is only allowed while the notice/memo is still open — a closed
-        // conversation can't be ended again, so disable the button for it.
+        // Keep End Chat disabled until the conversation actually loads into the
+        // chat window. It's enabled only once the chat is open AND still active
+        // (a closed notice/memo can't be ended again).
         $('#endChatBtn')
-            .prop('disabled', isClosed)
-            .attr('title', isClosed ? 'This ' + type + ' is already closed' : 'End Chat');
+            .prop('disabled', true)
+            .attr('title', 'Loading conversation…');
         $('#chatBody').html('<p class="text-muted text-center">Loading conversation...</p>');
 
         $.ajax({
@@ -762,11 +763,17 @@ $(document).ready(function() {
             type: 'GET',
             success: function(res) {
                 $('#chatBody').html(res);
+                // Chat is now open in the window → enable End Chat unless it's closed.
+                $('#endChatBtn')
+                    .prop('disabled', isClosed)
+                    .attr('title', isClosed ? 'This ' + type + ' is already closed' : 'End Chat');
             },
             error: function() {
                 $('#chatBody').html(
                     '<p class="text-danger text-center">Failed to load conversation.</p>'
                 );
+                // Load failed — no chat open, keep End Chat disabled.
+                $('#endChatBtn').prop('disabled', true).attr('title', 'Open a conversation first');
             }
         });
 
@@ -827,6 +834,10 @@ $(document).ready(function() {
     document.getElementById('chatOffcanvas').addEventListener('hidden.bs.offcanvas', function () {
         // Do NOT reset _memoNoticeListenersRegistered — document-level listeners persist across opens
         // Resetting it causes duplicate listener registration on each re-open
+
+        // No chat is open now → disable End Chat until a conversation is opened again.
+        window.currentConv = { id: null, type: null };
+        $('#endChatBtn').prop('disabled', true).attr('title', 'Open a conversation first');
     });});
 </script>
 @push('scripts')
