@@ -1046,12 +1046,16 @@ class UserController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function studentList()
+    public function studentList(Request $request)
     {
-        $payload = $this->resolveDashboardStudentListPayload();
+        $payload = $this->resolveDashboardStudentListPayload($request);
         $students = $payload['students'];
         $availableCourses = $payload['availableCourses'];
         $facultyPk = $payload['facultyPk'];
+
+        if ($request->ajax() && $request->has('draw')) {
+            return $this->dashboardStudentListDataTableResponse($request, $students);
+        }
 
         // Get counsellor type names and courses from group_type_master_course_master_map
         // From group_type_master_course_master_map, get faculty_id, type_name and course_name
@@ -1082,6 +1086,29 @@ class UserController extends Controller
             ->distinct()
             ->orderBy('cgroup.type_name')
             ->get();
+
+        // CC/ACC counsellor faculty options for the dependent dropdown shown when the
+        // "CC/ACC" role filter is selected. A student's counsellor is the faculty
+        // (gmap.facility_id) of the course group they belong to. Derive the list from
+        // the students already in scope so it stays consistent with the rows shown —
+        // a Super Admin sees every counsellor, a coordinator sees all counsellors
+        // across their courses (not just themselves).
+        $counsellorFaculties = $students
+            ->map(function ($m) {
+                $gmap = $m->groupMapping->groupTypeMasterCourseMasterMap ?? null;
+                if (! $gmap || empty($gmap->facility_id)) {
+                    return null;
+                }
+
+                return (object) [
+                    'faculty_pk' => $gmap->facility_id,
+                    'faculty_name' => $gmap->Faculty->full_name ?? ('Faculty #' . $gmap->facility_id),
+                ];
+            })
+            ->filter()
+            ->unique('faculty_pk')
+            ->sortBy('faculty_name')
+            ->values();
 
         // Get courses from group_type_master_course_master_map and merge with available courses
         // Only include active courses (active_inactive = 1 and end_date >= now())
@@ -1147,7 +1174,45 @@ class UserController extends Controller
             ->orderBy('gmap.group_name')
             ->get();
 
-        return view('admin.dashboard.student_list', compact('students', 'availableCourses', 'counsellorTypes', 'groupNames'));
+        // Distinct Cadre / House Name options (from the unfiltered set) for the "+3 Filters" panel.
+        $cadreOptions = $students
+            ->map(fn ($m) => $m->studentMaster->cadre->cadre_name ?? null)
+            ->filter()->unique()->sort()->values();
+        $houseOptions = $students
+            ->map(fn ($m) => $m->house_name ?? null)
+            ->filter()->unique()->sort()->values();
+
+        // Server-side filters (Course / ACC / Group / Cadre / House) + Present-Absent attendance tab.
+        $students = $this->applyDashboardStudentListFilters($students, $request);
+
+        // Split into both tabs so the view can render both panels and switch
+        // between them client-side (no page reload on tab change).
+        $presentStudents = $students->filter(fn ($m) => ($m->attendance_present ?? true) === true)->values();
+        $absentStudents = $students->filter(fn ($m) => ($m->attendance_present ?? true) === false)->values();
+
+        $attendance = $request->input('attendance', 'present');
+        $students = $attendance === 'absent' ? $absentStudents : $presentStudents;
+
+        $dutyTypes = DB::table('mdo_duty_type_master')
+            ->where('active_inactive', 1)
+            ->orderBy('mdo_duty_type_name')
+            ->get(['pk', 'mdo_duty_type_name']);
+
+        $filters = [
+            'course_id' => (string) $request->input('course_id', ''),
+            'role_filter' => (string) $request->input('role_filter', ''),
+            'faculty_filter' => (string) $request->input('faculty_filter', ''),
+            'group_pk' => (string) $request->input('group_pk', ''),
+            'duty_type' => (string) $request->input('duty_type', ''),
+            'from_date' => (string) $request->input('from_date', ''),
+            'to_date' => (string) $request->input('to_date', ''),
+            'attendance' => (string) $request->input('attendance', 'present'),
+            'cadre' => (string) $request->input('cadre', ''),
+            'house' => (string) $request->input('house', ''),
+            'counsellor_faculty' => (string) $request->input('counsellor_faculty', ''),
+        ];
+
+        return view('admin.dashboard.student_list', compact('students', 'presentStudents', 'absentStudents', 'availableCourses', 'counsellorTypes', 'counsellorFaculties', 'groupNames', 'dutyTypes', 'filters', 'cadreOptions', 'houseOptions'));
     }
 
     /**
@@ -1155,22 +1220,35 @@ class UserController extends Controller
      */
     public function studentListExport(Request $request, string $format)
     {
-        if (! in_array($format, ['csv', 'pdf'], true)) {
+        if (! in_array($format, ['csv', 'pdf', 'print'], true)) {
             abort(404);
         }
 
-        if (! is_faculty_portal_user()) {
+        if (! is_faculty_portal_user() && ! hasRole('Super Admin')) {
             abort(403, 'You are not authorized to export the student list.');
         }
 
-        $payload = $this->resolveDashboardStudentListPayload();
+        $payload = $this->resolveDashboardStudentListPayload($request);
         $students = $this->applyDashboardStudentListFilters($payload['students'], $request);
         $exportData = $this->dashboardStudentListExportData($students);
 
         $timestamp = now()->format('Ymd_His');
         $fileBase = "student_list_{$timestamp}";
 
+        // Browser-printable report: same clean layout as the PDF, rendered as
+        // HTML in a new tab that auto-opens the print dialog.
+        if ($format === 'print') {
+            return view('admin.dashboard.export.student_list_print', [
+                'headings' => $exportData['headings'],
+                'rows' => $exportData['rows'],
+                'generatedAt' => now()->format('d-m-Y H:i'),
+                'filterSummary' => $this->dashboardStudentListFilterSummary($request),
+            ]);
+        }
+
         if ($format === 'pdf') {
+            ini_set('memory_limit', '512M');
+
             $pdf = Pdf::loadView('admin.dashboard.export.student_list_pdf', [
                 'headings' => $exportData['headings'],
                 'rows' => $exportData['rows'],
@@ -1191,51 +1269,68 @@ class UserController extends Controller
     /**
      * @return array{students: \Illuminate\Support\Collection, availableCourses: \Illuminate\Support\Collection, facultyPk: int|null}
      */
-    private function resolveDashboardStudentListPayload(): array
+    private function resolveDashboardStudentListPayload(?Request $request = null): array
     {
         $students = collect([]);
         $availableCourses = collect([]);
         $facultyPk = null;
 
-        if (is_faculty_portal_user()) {
-            $facultyPk = get_auth_faculty_master_pk();
+        $facultyPk = get_auth_faculty_master_pk();
+        $isSuperAdmin = hasRole('Super Admin');
 
-            if ($facultyPk) {
+        // Super Admin sees students of every active course; faculty / CC / ACC are
+        // scoped to their courses below. A coordinator/ACC is reached via their
+        // faculty pk even if their login role isn't a standard faculty-portal role.
+        // (Exclude Student-OT: their user_id can collide with a faculty pk.)
+        if ($isSuperAdmin || is_faculty_portal_user() || ($facultyPk && ! hasRole('Student-OT'))) {
+
+            if ($isSuperAdmin || $facultyPk) {
                 $source1Students = collect([]);
-                $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
 
-                if ($coordinatorCourses->isNotEmpty()) {
-                    $activeCoordinatorCourses = CourseMaster::whereIn('pk', $coordinatorCourses)
-                        ->where('active_inactive', 1)
+                // Course set feeding the primary (enrollment) student source.
+                if ($isSuperAdmin) {
+                    $activeCoordinatorCourses = CourseMaster::where('active_inactive', 1)
                         ->where('end_date', '>=', now())
                         ->pluck('pk');
-
-                    if ($activeCoordinatorCourses->isNotEmpty()) {
-                        $source1StudentMaps = StudentMasterCourseMap::with([
-                            'studentMaster.cadre',
-                            'course',
-                        ])
-                            ->whereIn('course_master_pk', $activeCoordinatorCourses)
+                } else {
+                    $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
+                    $activeCoordinatorCourses = $coordinatorCourses->isNotEmpty()
+                        ? CourseMaster::whereIn('pk', $coordinatorCourses)
                             ->where('active_inactive', 1)
-                            ->get();
+                            ->where('end_date', '>=', now())
+                            ->pluck('pk')
+                        : collect([]);
+                }
 
-                        foreach ($source1StudentMaps as $studentMap) {
-                            $stdObj = new \stdClass();
-                            $stdObj->student_master_pk = $studentMap->student_master_pk;
-                            $stdObj->course_master_pk = $studentMap->course_master_pk;
-                            $stdObj->studentMaster = $studentMap->studentMaster;
-                            $stdObj->course = $studentMap->course;
-                            $stdObj->source = 'cc_acc';
-                            $source1Students->push($stdObj);
-                        }
+                if ($activeCoordinatorCourses->isNotEmpty()) {
+                    $source1StudentMaps = StudentMasterCourseMap::with([
+                        'studentMaster.cadre',
+                        'course',
+                    ])
+                        ->whereIn('course_master_pk', $activeCoordinatorCourses)
+                        ->where('active_inactive', 1)
+                        ->get();
+
+                    foreach ($source1StudentMaps as $studentMap) {
+                        $stdObj = new \stdClass();
+                        $stdObj->student_master_pk = $studentMap->student_master_pk;
+                        $stdObj->course_master_pk = $studentMap->course_master_pk;
+                        $stdObj->studentMaster = $studentMap->studentMaster;
+                        $stdObj->course = $studentMap->course;
+                        $stdObj->source = 'cc_acc';
+                        $source1Students->push($stdObj);
                     }
                 }
 
                 $source2Students = collect([]);
-                $groupMappings = DB::table('group_type_master_course_master_map')
-                    ->where('facility_id', $facultyPk)
-                    ->where('active_inactive', 1)
-                    ->get();
+                // Group-mapping source is faculty-specific; Super Admin already has
+                // every student via source1, so skip it when there's no faculty pk.
+                $groupMappings = $facultyPk
+                    ? DB::table('group_type_master_course_master_map')
+                        ->where('facility_id', $facultyPk)
+                        ->where('active_inactive', 1)
+                        ->get()
+                    : collect([]);
 
                 if ($groupMappings->isNotEmpty()) {
                     $groupMapCourseIds = $groupMappings->pluck('course_name')->unique();
@@ -1300,6 +1395,35 @@ class UserController extends Controller
 
                 $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
 
+                // Time Period + Duty Type filters scope the count columns.
+                $fromDate = $request?->input('from_date') ?: null;
+                $toDate = $request?->input('to_date') ?: null;
+                $dutyType = $request?->input('duty_type') ?: null;
+
+                // Include students who have discipline memos but were dropped from the
+                // active-course list (their course has expired or their enrolment is
+                // inactive), so their memo history still surfaces here. Scoped to what
+                // the current viewer is allowed to see.
+                $this->appendStudentsWithMemos($uniqueStudents, $seenStudentCourseKeys, $isSuperAdmin, $facultyPk);
+
+                // Batch-load House Name (hostel room, keyed by student_master.user_id == hostel user_name)
+                // and the latest attendance status per student (for Present/Absent).
+                $studentPks = $uniqueStudents->pluck('student_master_pk')->filter()->unique()->values()->all();
+                $userIds = $uniqueStudents
+                    ->map(fn ($m) => $m->studentMaster->user_id ?? null)
+                    ->filter()->unique()->values()->all();
+
+                $houseByUser = ! empty($userIds)
+                    ? DB::table('ot_hostel_room_details')
+                        ->where('active_inactive', 1)
+                        ->whereIn('user_name', $userIds)
+                        ->pluck('hostel_room_name', 'user_name')
+                    : collect();
+
+                // Present/Absent status per student, resolved from the most recent day
+                // that student has attendance for (Absent if absent in ANY session that day).
+                $attendanceStatus = $this->resolveStudentAttendanceStatus($studentPks);
+
                 foreach ($uniqueStudents as $studentMap) {
                     $studentPk = $studentMap->student_master_pk;
                     $coursePk = $studentMap->course_master_pk ?? null;
@@ -1320,7 +1444,11 @@ class UserController extends Controller
                         $studentMap->groupMapping = $groupMap;
                     }
 
-                    $studentMap->total_duty_count = MDOEscotDutyMap::where('selected_student_list', $studentPk)->count();
+                    $studentMap->total_duty_count = MDOEscotDutyMap::where('selected_student_list', $studentPk)
+                        ->when($dutyType, fn ($q) => $q->where('mdo_duty_type_master_pk', $dutyType))
+                        ->when($fromDate, fn ($q) => $q->whereDate('mdo_date', '>=', $fromDate))
+                        ->when($toDate, fn ($q) => $q->whereDate('mdo_date', '<=', $toDate))
+                        ->count();
                     $studentMap->total_medical_exception_count = StudentMedicalExemption::where('student_master_pk', $studentPk)
                         ->where('active_inactive', 1)
                         ->count();
@@ -1328,6 +1456,8 @@ class UserController extends Controller
                         ->where('leave_type', LeaveApplication::TYPE_PT_EXEMPTION)
                         ->where('active_inactive', 1)
                         ->where('status', LeaveApplication::STATUS_APPROVED)
+                        ->when($fromDate, fn ($q) => $q->whereDate('from_date', '>=', $fromDate))
+                        ->when($toDate, fn ($q) => $q->whereDate('from_date', '<=', $toDate))
                         ->count();
                     $studentMap->total_stationed_leave_count = LeaveApplication::where('student_master_pk', $studentPk)
                         ->where('leave_type', LeaveApplication::TYPE_STATIONED_LEAVE)
@@ -1336,12 +1466,24 @@ class UserController extends Controller
                             LeaveApplication::STATUS_APPROVED,
                             LeaveApplication::STATUS_PENDING,
                         ])
+                        ->when($fromDate, fn ($q) => $q->whereDate('from_date', '>=', $fromDate))
+                        ->when($toDate, fn ($q) => $q->whereDate('from_date', '<=', $toDate))
                         ->count();
 
                     $notices = $noticeMemoService->getNotices($studentPk);
                     $memos = $noticeMemoService->getMemos($studentPk);
                     $studentMap->total_notice_count = $notices->count();
                     $studentMap->total_memo_count = $memos->count();
+
+                    $uid = $studentMap->studentMaster->user_id ?? null;
+                    $studentMap->house_name = ($uid && isset($houseByUser[$uid])) ? $houseByUser[$uid] : null;
+                    // Absent if absent in any session on their most recent attendance day.
+                    $att = $attendanceStatus[$studentPk] ?? null;
+                    $studentMap->attendance_present = $att['present'] ?? true;
+                    // Session (date / time / topic) shown for that day.
+                    $studentMap->session_date = $att['session_date'] ?? null;
+                    $studentMap->session_time = $att['session_time'] ?? null;
+                    $studentMap->session_topic = $att['session_topic'] ?? null;
                 }
 
                 $students = $uniqueStudents->filter(function ($studentMap) {
@@ -1366,22 +1508,297 @@ class UserController extends Controller
                     ->values()
                     ->sortBy('course_name');
             }
+        } elseif (hasRole('Super Admin')) {
+            $activeCourseIds = CourseMaster::where('active_inactive', 1)
+                ->where('end_date', '>=', now())
+                ->pluck('pk');
+
+            $superAdminStudentMaps = StudentMasterCourseMap::with([
+                'studentMaster.cadre',
+                'course',
+            ])
+                ->whereIn('course_master_pk', $activeCourseIds)
+                ->where('active_inactive', 1)
+                ->get();
+
+            $seenStudentCourseKeys = [];
+            $uniqueStudents = collect([]);
+
+            foreach ($superAdminStudentMaps as $studentMap) {
+                $stdObj = new \stdClass();
+                $stdObj->student_master_pk = $studentMap->student_master_pk;
+                $stdObj->course_master_pk = $studentMap->course_master_pk;
+                $stdObj->studentMaster = $studentMap->studentMaster;
+                $stdObj->course = $studentMap->course;
+                $stdObj->source = 'super_admin';
+
+                $key = $stdObj->student_master_pk . '_' . ($stdObj->course_master_pk ?? 0);
+                if (! in_array($key, $seenStudentCourseKeys, true)) {
+                    $seenStudentCourseKeys[] = $key;
+                    $uniqueStudents->push($stdObj);
+                }
+            }
+
+            $this->augmentStudentListEntries($uniqueStudents, $request);
+
+            $students = $uniqueStudents->filter(fn ($m) => ! empty($m->studentMaster))->values();
+
+            $availableCourses = $students->pluck('course')
+                ->filter(function ($course) {
+                    return $course
+                        && isset($course->active_inactive)
+                        && $course->active_inactive == 1
+                        && isset($course->end_date)
+                        && Carbon::parse($course->end_date)->gte(now());
+                })
+                ->unique('pk')
+                ->map(fn ($c) => ['pk' => $c->pk, 'course_name' => $c->course_name])
+                ->values()
+                ->sortBy('course_name');
         }
 
         return compact('students', 'availableCourses', 'facultyPk');
+    }
+
+    /**
+     * Append students who have discipline memos but are missing from the active-course
+     * list (their course has expired, or their enrolment map is inactive). Each is given
+     * course context from their most recent enrolment so the row renders normally. The
+     * caller's existing per-student loop then fills in memo/attendance/other counts.
+     *
+     * Super Admin sees every memo student; a faculty only sees memo students within
+     * their remit (canFacultyViewStudent).
+     *
+     * @param  \Illuminate\Support\Collection  $uniqueStudents
+     * @param  array<int, string>  $seenStudentCourseKeys
+     * @param  int|null  $facultyPk
+     */
+    private function appendStudentsWithMemos(\Illuminate\Support\Collection $uniqueStudents, array &$seenStudentCourseKeys, bool $isSuperAdmin, $facultyPk): void
+    {
+        $memoStudentPks = DB::table('student_memo_status')
+            ->distinct()
+            ->pluck('student_pk')
+            ->filter()
+            ->map(fn ($v) => (int) $v)
+            ->unique()
+            ->all();
+
+        if (empty($memoStudentPks)) {
+            return;
+        }
+
+        // Students already on the list (any course row) — skip them.
+        $existingPks = $uniqueStudents
+            ->pluck('student_master_pk')
+            ->map(fn ($v) => (int) $v)
+            ->unique()
+            ->flip();
+
+        foreach ($memoStudentPks as $studentPk) {
+            if (isset($existingPks[$studentPk])) {
+                continue;
+            }
+
+            // Faculty may only see memo students within their remit.
+            if (! $isSuperAdmin && $facultyPk && ! $this->canFacultyViewStudent($facultyPk, $studentPk)) {
+                continue;
+            }
+
+            // Most recent enrolment (any status) provides the course context to display.
+            $courseMap = StudentMasterCourseMap::with(['studentMaster.cadre', 'course'])
+                ->where('student_master_pk', $studentPk)
+                ->orderByDesc('pk')
+                ->first();
+
+            $student = $courseMap?->studentMaster ?? StudentMaster::with('cadre')->find($studentPk);
+            if (! $student) {
+                continue;
+            }
+
+            $stdObj = new \stdClass();
+            $stdObj->student_master_pk = $studentPk;
+            $stdObj->course_master_pk = $courseMap->course_master_pk ?? null;
+            $stdObj->studentMaster = $student;
+            $stdObj->course = $courseMap?->course;
+            $stdObj->source = 'memo';
+
+            $key = $studentPk . '_' . ($stdObj->course_master_pk ?? 0);
+            if (in_array($key, $seenStudentCourseKeys, true)) {
+                continue;
+            }
+
+            $seenStudentCourseKeys[] = $key;
+            $uniqueStudents->push($stdObj);
+        }
+    }
+
+    private function augmentStudentListEntries(\Illuminate\Support\Collection $uniqueStudents, ?Request $request = null): void
+    {
+        $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
+
+        $fromDate = $request?->input('from_date') ?: null;
+        $toDate = $request?->input('to_date') ?: null;
+        $dutyType = $request?->input('duty_type') ?: null;
+
+        $studentPks = $uniqueStudents->pluck('student_master_pk')->filter()->unique()->values()->all();
+        $userIds = $uniqueStudents
+            ->map(fn ($m) => $m->studentMaster->user_id ?? null)
+            ->filter()->unique()->values()->all();
+
+        $houseByUser = ! empty($userIds)
+            ? DB::table('ot_hostel_room_details')
+                ->where('active_inactive', 1)
+                ->whereIn('user_name', $userIds)
+                ->pluck('hostel_room_name', 'user_name')
+            : collect();
+
+        // Present/Absent status per student, resolved from the most recent day that
+        // student has attendance for (Absent if absent in ANY session that day).
+        $attendanceStatus = $this->resolveStudentAttendanceStatus($studentPks);
+
+        foreach ($uniqueStudents as $studentMap) {
+            $studentPk = $studentMap->student_master_pk;
+            $coursePk = $studentMap->course_master_pk ?? null;
+
+            if (! isset($studentMap->groupMapping) && $coursePk) {
+                $groupMap = StudentCourseGroupMap::with([
+                    'groupTypeMasterCourseMasterMap.courseGroupType',
+                    'groupTypeMasterCourseMasterMap.Faculty',
+                    'groupTypeMasterCourseMasterMap.courseGroup',
+                ])
+                    ->where('student_master_pk', $studentPk)
+                    ->where('active_inactive', 1)
+                    ->whereHas('groupTypeMasterCourseMasterMap', function ($query) use ($coursePk) {
+                        $query->where('course_name', $coursePk);
+                    })
+                    ->first();
+
+                $studentMap->groupMapping = $groupMap;
+            }
+
+            $studentMap->total_duty_count = MDOEscotDutyMap::where('selected_student_list', $studentPk)
+                ->when($dutyType, fn ($q) => $q->where('mdo_duty_type_master_pk', $dutyType))
+                ->when($fromDate, fn ($q) => $q->whereDate('mdo_date', '>=', $fromDate))
+                ->when($toDate, fn ($q) => $q->whereDate('mdo_date', '<=', $toDate))
+                ->count();
+            $studentMap->total_medical_exception_count = StudentMedicalExemption::where('student_master_pk', $studentPk)
+                ->where('active_inactive', 1)
+                ->count();
+            $studentMap->total_pt_exemption_count = LeaveApplication::where('student_master_pk', $studentPk)
+                ->where('leave_type', LeaveApplication::TYPE_PT_EXEMPTION)
+                ->where('active_inactive', 1)
+                ->where('status', LeaveApplication::STATUS_APPROVED)
+                ->when($fromDate, fn ($q) => $q->whereDate('from_date', '>=', $fromDate))
+                ->when($toDate, fn ($q) => $q->whereDate('from_date', '<=', $toDate))
+                ->count();
+            $studentMap->total_stationed_leave_count = LeaveApplication::where('student_master_pk', $studentPk)
+                ->where('leave_type', LeaveApplication::TYPE_STATIONED_LEAVE)
+                ->where('active_inactive', 1)
+                ->whereIn('status', [
+                    LeaveApplication::STATUS_APPROVED,
+                    LeaveApplication::STATUS_PENDING,
+                ])
+                ->when($fromDate, fn ($q) => $q->whereDate('from_date', '>=', $fromDate))
+                ->when($toDate, fn ($q) => $q->whereDate('from_date', '<=', $toDate))
+                ->count();
+
+            $notices = $noticeMemoService->getNotices($studentPk);
+            $memos = $noticeMemoService->getMemos($studentPk);
+            $studentMap->total_notice_count = $notices->count();
+            $studentMap->total_memo_count = $memos->count();
+
+            $uid = $studentMap->studentMaster->user_id ?? null;
+            $studentMap->house_name = ($uid && isset($houseByUser[$uid])) ? $houseByUser[$uid] : null;
+            $att = $attendanceStatus[$studentPk] ?? null;
+            $studentMap->attendance_present = $att['present'] ?? true;
+            $studentMap->session_date = $att['session_date'] ?? null;
+            $studentMap->session_time = $att['session_time'] ?? null;
+            $studentMap->session_topic = $att['session_topic'] ?? null;
+        }
+    }
+
+    /**
+     * Resolve each student's Present/Absent status from their most recent session.
+     * Rule: a student is ABSENT if that single latest session is marked Absent
+     * (status 3); otherwise Present. Also returns that session's details
+     * (date/time/topic) for display, so the status always matches the shown session.
+     *
+     * @param  array<int, int>  $studentPks
+     * @return array<int, array{present: bool, session_date: ?string, session_time: ?string, session_topic: ?string}>
+     */
+    private function resolveStudentAttendanceStatus(array $studentPks): array
+    {
+        if (empty($studentPks)) {
+            return [];
+        }
+
+        // All attendance rows for these students, joined to their timetable session
+        // (date / time / topic). Newest-first so the first row of a day is its latest.
+        $rowsByStudent = DB::table('course_student_attendance as a')
+            ->join('timetable as t', 'a.timetable_pk', '=', 't.pk')
+            ->whereIn('a.Student_master_pk', $studentPks)
+            ->orderByDesc('a.pk')
+            ->get([
+                'a.Student_master_pk as spk',
+                'a.status',
+                't.START_DATE as session_date',
+                't.class_session as session_time',
+                't.subject_topic as session_topic',
+            ])
+            ->groupBy('spk');
+
+        $result = [];
+        foreach ($rowsByStudent as $spk => $sessions) {
+            // The student's most recent attendance day (by session date, not row id).
+            $latestDay = $sessions
+                ->map(fn ($r) => $r->session_date ? Carbon::parse($r->session_date)->toDateString() : null)
+                ->filter()
+                ->sort()
+                ->last();
+
+            if (! $latestDay) {
+                continue;
+            }
+
+            // Present/Absent is decided by the single most recent session (not by
+            // aggregating the whole day). Rows are pk-desc, so the first row of the
+            // latest day is that day's latest session — the one shown in the list.
+            $latest = $sessions->first(
+                fn ($r) => $r->session_date && Carbon::parse($r->session_date)->toDateString() === $latestDay
+            );
+
+            if (! $latest) {
+                continue;
+            }
+
+            $result[(int) $spk] = [
+                'present' => (int) $latest->status !== 3,
+                'session_date' => $latest->session_date ?? null,
+                'session_time' => $latest->session_time ?? null,
+                'session_topic' => $latest->session_topic ?? null,
+            ];
+        }
+
+        return $result;
     }
 
     private function applyDashboardStudentListFilters($students, Request $request)
     {
         $courseId = $request->input('course_id');
         $roleFilter = $request->input('role_filter');
+        $counsellorFaculty = $request->input('counsellor_faculty');
         $groupPk = $request->input('group_pk');
-        $search = strtolower(trim((string) $request->input('search', '')));
+        $cadre = $request->input('cadre');
+        $house = $request->input('house');
+        $searchInput = $request->input('search', '');
+        $searchValue = is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput;
+        $search = strtolower(trim((string) $searchValue));
 
-        return $students->filter(function ($studentMap) use ($courseId, $roleFilter, $groupPk, $search) {
+        return $students->filter(function ($studentMap) use ($courseId, $roleFilter, $counsellorFaculty, $groupPk, $cadre, $house, $search) {
             $student = $studentMap->studentMaster;
             $course = $studentMap->course;
             $counsellorTypePk = (string) ($studentMap->groupMapping->groupTypeMasterCourseMasterMap->type_name ?? '');
+            $rowFacilityId = (string) ($studentMap->groupMapping->groupTypeMasterCourseMasterMap->facility_id ?? '');
             $rowGroupPk = (string) ($studentMap->groupMapping->groupTypeMasterCourseMasterMap->pk ?? '');
             $rowCourseId = (string) ($course->pk ?? '');
 
@@ -1389,8 +1806,21 @@ class UserController extends Controller
                 return false;
             }
 
+            if ($cadre && (string) ($student->cadre->cadre_name ?? '') !== (string) $cadre) {
+                return false;
+            }
+
+            if ($house && (string) ($studentMap->house_name ?? '') !== (string) $house) {
+                return false;
+            }
+
             if ($roleFilter === 'cc_acc') {
                 if ($counsellorTypePk === '') {
+                    return false;
+                }
+                // Optional narrowing to a specific CC/ACC faculty (counsellor).
+                if ($counsellorFaculty !== null && $counsellorFaculty !== ''
+                    && $rowFacilityId !== (string) $counsellorFaculty) {
                     return false;
                 }
             } elseif ($roleFilter !== null && $roleFilter !== '') {
@@ -1422,6 +1852,150 @@ class UserController extends Controller
 
             return true;
         })->values();
+    }
+
+    /**
+     * Server-side JSON for dashboard student list DataTables.
+     */
+    private function dashboardStudentListDataTableResponse(Request $request, $students)
+    {
+        $attendance = (string) $request->input('attendance', 'present');
+        $attendanceStudents = $attendance === 'absent'
+            ? $students->filter(fn ($m) => ($m->attendance_present ?? true) === false)->values()
+            : $students->filter(fn ($m) => ($m->attendance_present ?? true) === true)->values();
+
+        $recordsTotal = $attendanceStudents->count();
+        $filteredStudents = $this->applyDashboardStudentListFilters($attendanceStudents, $request)->values();
+        $recordsFiltered = $filteredStudents->count();
+
+        $columnMap = $attendance === 'absent'
+            ? [
+                0 => 'serial_no',
+                1 => 'ot_code',
+                2 => 'name',
+                3 => 'email',
+                4 => 'cadre',
+                5 => 'status',
+                6 => 'session',
+                7 => 'topic',
+                8 => 'duty',
+                9 => 'pt',
+                10 => 'stationed',
+            ]
+            : [
+                0 => 'serial_no',
+                1 => 'ot_code',
+                2 => 'name',
+                3 => 'email',
+                4 => 'cadre',
+                5 => 'status',
+                6 => 'session',
+                7 => 'topic',
+                8 => 'house',
+                9 => 'duty',
+                10 => 'medical',
+                11 => 'pt',
+                12 => 'stationed',
+                13 => 'notice',
+                14 => 'memo',
+            ];
+
+        $orderCol = (int) $request->input('order.0.column', 0);
+        $orderDir = strtolower((string) $request->input('order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+        $sortKey = $columnMap[$orderCol] ?? 'serial_no';
+
+        if ($sortKey !== 'serial_no') {
+            $filteredStudents = $filteredStudents->sortBy(function ($studentMap) use ($sortKey) {
+                return $this->dashboardStudentListSortValue($studentMap, $sortKey);
+            }, SORT_NATURAL | SORT_FLAG_CASE, $orderDir === 'desc')->values();
+        }
+
+        $start = max(0, (int) $request->input('start', 0));
+        $length = (int) $request->input('length', 10);
+        if ($length < 0) {
+            $pagedStudents = $filteredStudents->slice($start)->values();
+        } else {
+            $pagedStudents = $filteredStudents->slice($start, $length)->values();
+        }
+
+        $data = [];
+        foreach ($pagedStudents as $idx => $studentMap) {
+            $student = $studentMap->studentMaster;
+            if (! $student) {
+                continue;
+            }
+
+            $detailUrl = route('admin.dashboard.students.detail', encrypt($student->pk));
+            $displayName = $student->display_name ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
+            $sessionDate = $studentMap->session_date ? Carbon::parse($studentMap->session_date)->format('d-m-Y') : 'N/A';
+            $sessionTime = $studentMap->session_time ?? '';
+            $sessionHtml = '<div class="fw-medium">' . e($sessionDate) . '</div>'
+                . ($sessionTime !== '' ? '<div class="small text-muted">' . e($sessionTime) . '</div>' : '');
+
+            $baseRow = [
+                's_no' => $start + $idx + 1,
+                'ot_code' => $student->generated_OT_code ?? 'N/A',
+                'name' => '<a href="' . e($detailUrl) . '" class="sl-count">' . e($displayName) . '</a>',
+                'email' => $student->email ?? 'N/A',
+                'cadre' => $student->cadre->cadre_name ?? 'N/A',
+                'status' => ($studentMap->attendance_present ?? true)
+                    ? '<span class="sl-status-badge sl-status-present">Present</span>'
+                    : '<span class="sl-status-badge sl-status-absent">Absent</span>',
+                'date_session' => $sessionHtml,
+                'topic' => $studentMap->session_topic ?: 'N/A',
+            ];
+
+            $sectionUrl = fn ($section) => $detailUrl . '?section=' . $section;
+
+            if ($attendance === 'absent') {
+                $data[] = $baseRow + [
+                    'total_duty_count' => '<a href="' . e($sectionUrl('dutiesSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_duty_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
+                    'total_pt_exemption_count' => '<a href="' . e($sectionUrl('ptExemptionsSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_pt_exemption_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
+                    'total_stationed_leave_count' => '<a href="' . e($sectionUrl('stationedLeavesSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_stationed_leave_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
+                ];
+                continue;
+            }
+
+            $data[] = $baseRow + [
+                'house_name' => $studentMap->house_name ?? 'N/A',
+                'total_duty_count' => '<a href="' . e($sectionUrl('dutiesSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_duty_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
+                'total_medical_exception_count' => '<a href="' . e($sectionUrl('medicalExceptionsSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_medical_exception_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
+                'total_pt_exemption_count' => '<a href="' . e($sectionUrl('ptExemptionsSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_pt_exemption_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
+                'total_stationed_leave_count' => '<a href="' . e($sectionUrl('stationedLeavesSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_stationed_leave_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
+                'total_notice_count' => '<a href="' . e($sectionUrl('noticesSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_notice_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
+                'total_memo_count' => '<a href="' . e($sectionUrl('memosSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_memo_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
+            ];
+        }
+
+        return response()->json([
+            'draw' => (int) $request->input('draw', 1),
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+        ]);
+    }
+
+    private function dashboardStudentListSortValue($studentMap, string $sortKey)
+    {
+        $student = $studentMap->studentMaster;
+
+        return match ($sortKey) {
+            'ot_code' => strtolower((string) ($student->generated_OT_code ?? '')),
+            'name' => strtolower(trim((string) (($student->display_name ?? '') ?: trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''))))),
+            'email' => strtolower((string) ($student->email ?? '')),
+            'cadre' => strtolower((string) ($student->cadre->cadre_name ?? '')),
+            'status' => (int) ($studentMap->attendance_present ?? true),
+            'session' => (string) ($studentMap->session_date ?? ''),
+            'topic' => strtolower((string) ($studentMap->session_topic ?? '')),
+            'house' => strtolower((string) ($studentMap->house_name ?? '')),
+            'duty' => (int) ($studentMap->total_duty_count ?? 0),
+            'medical' => (int) ($studentMap->total_medical_exception_count ?? 0),
+            'pt' => (int) ($studentMap->total_pt_exemption_count ?? 0),
+            'stationed' => (int) ($studentMap->total_stationed_leave_count ?? 0),
+            'notice' => (int) ($studentMap->total_notice_count ?? 0),
+            'memo' => (int) ($studentMap->total_memo_count ?? 0),
+            default => '',
+        };
     }
 
     /**
@@ -1486,6 +2060,11 @@ class UserController extends Controller
                 $type = DB::table('course_group_type_master')->where('pk', $request->role_filter)->value('type_name');
                 $parts[] = 'Role: ' . ($type ?? $request->role_filter);
             }
+        }
+
+        if ($request->filled('faculty_filter')) {
+            $facultyName = DB::table('faculty_master')->where('pk', $request->faculty_filter)->value('full_name');
+            $parts[] = 'Faculty: ' . ($facultyName ?? $request->faculty_filter);
         }
 
         if ($request->filled('group_pk')) {

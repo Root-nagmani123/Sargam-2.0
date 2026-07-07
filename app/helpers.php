@@ -616,7 +616,8 @@ function is_faculty_portal_user(): bool
         return true;
     }
 
-    return hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Faculty');
+    return hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Faculty')
+        || hasRole('CC') || hasRole('ACC');
 }
 
 /**
@@ -826,6 +827,60 @@ if (!function_exists('get_timetable_faculty_names')) {
 
         $ordered = array_values(array_unique(array_filter($ordered)));
         return !empty($ordered) ? implode(', ', $ordered) : $fallback;
+    }
+}
+
+if (!function_exists('resolve_chat_sender_identity')) {
+    /**
+     * Resolve a memo/notice chat message's sender name + role.
+     *
+     * role_type 's' → created_by is student_master.pk.
+     * role_type 'f' (or anything else) → created_by is user_credentials.user_id,
+     * which maps to employee_master.pk (see App\Models\User doc comment). Multiple
+     * distinct admins/faculty can post in the same conversation, so callers must not
+     * collapse all of them to a generic "Admin" label — resolve the real name + role.
+     *
+     * @return array{display_name: string, role_name: ?string}
+     */
+    function resolve_chat_sender_identity($createdBy, ?string $roleType, string $fallback = 'Unknown'): array
+    {
+        if ($roleType === 's') {
+            $name = \Illuminate\Support\Facades\DB::table('student_master')->where('pk', $createdBy)->value('display_name');
+            return ['display_name' => $name ?: 'Student', 'role_name' => 'Officer Trainee'];
+        }
+
+        $uc = \Illuminate\Support\Facades\DB::table('user_credentials')
+            ->where('user_id', $createdBy)
+            ->where('user_category', '!=', 'S')
+            ->first();
+
+        // Fallback for legacy rows saved with user_credentials.pk instead of .user_id.
+        if (!$uc) {
+            $uc = \Illuminate\Support\Facades\DB::table('user_credentials')
+                ->where('pk', $createdBy)
+                ->where('user_category', '!=', 'S')
+                ->first();
+        }
+
+        if (!$uc) {
+            return ['display_name' => $fallback, 'role_name' => null];
+        }
+
+        $employeeName = \Illuminate\Support\Facades\DB::table('employee_master')
+            ->where('pk', $uc->user_id)
+            ->selectRaw("TRIM(CONCAT(COALESCE(first_name,''),' ',COALESCE(middle_name,''),' ',COALESCE(last_name,''))) as full_name")
+            ->value('full_name');
+
+        $roleName = \Illuminate\Support\Facades\DB::table('model_has_roles')
+            ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+            ->where('model_has_roles.model_id', $uc->pk)
+            ->where('model_has_roles.model_type', \App\Models\User::class)
+            ->value('roles.name');
+
+        return [
+            'display_name' => $employeeName ?: ($uc->user_name ?: $fallback),
+            'role_name' => $roleName,
+        ];
     }
 }
 

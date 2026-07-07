@@ -24,7 +24,7 @@
     <meta name="description" content="Login to Sargam - LBSNAA Portal. Secure access for students, faculty, and staff.">
     <meta name="keywords" content="LBSNAA, Sargam, Login, Government of India">
     <meta name="author" content="LBSNAA">
-    <meta name="theme-color" content="#003d7a">
+    <meta name="theme-color" content="#004a93">
     <meta name="color-scheme" content="light">
     
     <meta property="og:title" content="Login - Sargam | LBSNAA">
@@ -56,13 +56,16 @@
     ============================================ */
 
     :root {
-        --primary: #0f4c81;
-        --primary-hover: #0a3a64;
-        --primary-light: #e8f4fd;
-        --primary-subtle: #f0f7ff;
+        /* ── Brand palette — aligned with app design system (sargam-app.css --ds-*) ── */
+        --primary: #004a93;          /* --ds-primary / --bs-primary */
+        --primary-hover: #003d7a;    /* brand hover used across breadcrumb/course/calendar */
+        --primary-light: #e6eff8;
+        --primary-subtle: #f0f6fc;
+        --secondary: #b12923;        /* --ds-secondary (brand red) */
+        /* National-identity accents (GIGW) */
         --accent-saffron: #ff9933;
         --accent-green: #138808;
-        --accent-orange: #ff6b35;
+        --accent-orange: #ff6b35;    /* high-visibility focus ring (WCAG) */
         --text-heading: #0f172a;
         --text-body: #334155;
         --text-muted: #64748b;
@@ -70,20 +73,21 @@
         --surface: #ffffff;
         --surface-hover: #f8fafc;
         --border: #e2e8f0;
-        --border-focus: #0f4c81;
+        --border-focus: #004a93;
         --success: #059669;
         --error: #dc2626;
         --shadow-card: 0 20px 60px -12px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.1);
         --shadow-input: 0 1px 2px rgba(0,0,0,0.05);
-        --shadow-input-focus: 0 0 0 4px rgba(15,76,129,0.12);
-        --shadow-btn: 0 4px 14px rgba(15,76,129,0.4);
-        --shadow-btn-hover: 0 8px 24px rgba(15,76,129,0.5);
-        --radius-sm: 0.375rem;
-        --radius-md: 0.5rem;
-        --radius-lg: 0.75rem;
-        --radius-xl: 1rem;
-        --radius-2xl: 1.25rem;
-        --radius-3xl: 1.5rem;
+        --shadow-input-focus: 0 0 0 4px rgba(0,74,147,0.12);
+        --shadow-btn: 0 4px 14px rgba(0,74,147,0.35);
+        --shadow-btn-hover: 0 8px 24px rgba(0,74,147,0.45);
+        /* Radius — aligned to DS: inputs/buttons ~8px, card 16px (softened for auth surface) */
+        --radius-sm: 0.25rem;   /* --ds-radius-1 */
+        --radius-md: 0.5rem;    /* --ds-radius-2 */
+        --radius-lg: 0.5rem;    /* inputs, buttons, badges */
+        --radius-xl: 0.75rem;
+        --radius-2xl: 0.875rem;
+        --radius-3xl: 1rem;     /* login card */
         --transition: 250ms cubic-bezier(0.4, 0, 0.2, 1);
         --font-sans: 'Inter', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
@@ -184,9 +188,9 @@
         height: 100%;
         background: linear-gradient(
             160deg,
-            rgba(10, 25, 47, 0.88) 0%,
-            rgba(15, 76, 129, 0.72) 40%,
-            rgba(10, 58, 100, 0.82) 100%
+            rgba(0, 30, 61, 0.88) 0%,
+            rgba(0, 74, 147, 0.72) 40%,
+            rgba(0, 61, 122, 0.82) 100%
         );
         z-index: 1;
     }
@@ -201,7 +205,7 @@
         background-image: 
             radial-gradient(ellipse at 20% 50%, rgba(255,153,51,0.08) 0%, transparent 50%),
             radial-gradient(ellipse at 80% 20%, rgba(19,136,8,0.06) 0%, transparent 50%),
-            radial-gradient(ellipse at 50% 80%, rgba(15,76,129,0.1) 0%, transparent 50%);
+            radial-gradient(ellipse at 50% 80%, rgba(0,74,147,0.1) 0%, transparent 50%);
         z-index: 2;
         pointer-events: none;
     }

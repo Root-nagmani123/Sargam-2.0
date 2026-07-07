@@ -1,13 +1,17 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Memo Management - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Memo Management')
 
 @section('setup_content')
 <div class="container-fluid">
-<x-breadcrum title="Notice /Memo Management" />
+<x-breadcrum title="Notice /Memo Management">
+     <a href="{{ route('ot.notice.memo.view') }}" class="ms-2">
+                                <button class="btn btn-primary">Memo/Notice All activity</button>
+                            </a>
+                            </x-breadcrum>
     <x-session_message />
     <!-- start Zero Configuration -->
-    <div class="card" style="border-left:4px solid #004a93;">
+    <div class="card">
         <div class="card-body">
             <div class="row">
                 <div class="col-6">
@@ -21,9 +25,6 @@
                             <a href="javascript:void(0)" id="searchToggle">
                                 <i class="material-icons menu-icon material-symbols-rounded"
                                     style="font-size: 24px;">search</i>
-                            </a>
-                            <a href="{{ route('ot.notice.memo.view') }}" class="ms-2">
-                                <button class="btn btn-primary">Memo/Notice All activity</button>
                             </a>
 
                             <input type="text" class="form-control search-input ms-2" id="searchInput"
@@ -192,6 +193,32 @@ $(document).ready(function() {
         }
     }
 
+    // Poll-only refresh: swap in just the new messages, never touch the composer.
+    // A background poll replacing the whole panel can race the native file-picker
+    // dialog — the dialog stays open (blocking the user) for as long as they're
+    // browsing folders, but page timers keep running underneath it. If a poll fires
+    // before they've picked a file, the composer (and its <input type=file>) gets
+    // replaced while the OS dialog is still open; the eventual file selection then
+    // fires a change event on a detached input that can no longer bubble up to our
+    // document-level listener, so nothing shows and nothing sends. Only ever
+    // touching the message list during polling avoids this race entirely.
+    function mergeNewMessages(html, memoId) {
+        const chatBody = document.getElementById('chatBody');
+        const w = chatBody && chatBody.querySelector('.chat-wrapper');
+        if (!w || w.dataset.memoId !== String(memoId)) return;
+
+        const scroll = document.getElementById('conversationScroll');
+        if (!scroll) return;
+        const wasAtBottom = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 60;
+
+        const parsed = new DOMParser().parseFromString(html, 'text/html');
+        const newScroll = parsed.getElementById('conversationScroll');
+        if (!newScroll) return;
+
+        scroll.innerHTML = newScroll.innerHTML;
+        if (wasAtBottom) scroll.scrollTop = scroll.scrollHeight;
+    }
+
     $('.view-conversation').on('click', function() {
         let memoId = $(this).data('id');
         let topic = $(this).data('topic');
@@ -227,7 +254,7 @@ $(document).ready(function() {
             const userType = w.dataset.userType;
             if (!memoId) return;
             loadConversation(memoId, type, userType)
-                .then(html => applyConversationHtml(html, memoId, false))
+                .then(html => mergeNewMessages(html, memoId))
                 .catch(() => {});
         }, 5000); // poll every 5 seconds
     });

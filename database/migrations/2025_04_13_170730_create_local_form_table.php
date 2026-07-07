@@ -13,6 +13,10 @@ return new class extends Migration
      */
     public function up()
     {
+        if (Schema::hasTable('local_form')) {
+            return;
+        }
+
         Schema::create('local_form', function (Blueprint $table) {
             $table->id();
             $table->string('name');

@@ -20,7 +20,7 @@
                         <!-- Select Course -->
                         <div class="col-6">
                             <label class="form-label">Select Course <span class="text-danger">*</span></label>
-                            <select name="course_master_pk" class="form-select" required>
+                            <select name="course_master_pk" id="mtCourse" class="form-select" required>
                                 <option value="">All Courses</option>
                                 @foreach ($courses as $course)
                                     <option value="{{ $course->pk }}"
@@ -54,12 +54,33 @@
                         </div>
                          <div class="col-3">
                             <label class="form-label">Memo / Notice Type <span class="text-danger">*</span></label>
-                            <select name="memo_notice_type" class="form-select" required>
-                                <option value="" disabled selected>Select Type</option>
+                            <select name="memo_notice_type" id="mtType" class="form-select" required>
+                                <option value="" disabled>Select Type</option>
                                 <option value="Memo" {{ old('memo_notice_type', $template->memo_notice_type) == 'Memo' ? 'selected' : '' }}>Memo</option>
                                 <option value="Notice" {{ old('memo_notice_type', $template->memo_notice_type) == 'Notice' ? 'selected' : '' }}>Notice</option>
                                 <option value="Discipline Memo" {{ old('memo_notice_type', $template->memo_notice_type) == 'Discipline Memo' ? 'selected' : '' }}>Discipline Memo</option>
                             </select>
+                        </div>
+
+                        {{-- Discipline: only for Discipline Memo templates --}}
+                        <div class="col-6 {{ old('memo_notice_type', $template->memo_notice_type) == 'Discipline Memo' ? '' : 'd-none' }}" id="mtDisciplineWrap">
+                            <label class="form-label">Discipline <span class="text-danger">*</span></label>
+                            <select name="discipline_master_pk" id="mtDiscipline" class="form-select" data-old="{{ old('discipline_master_pk', $template->discipline_master_pk) }}">
+                                <option value="">Select Discipline</option>
+                            </select>
+                            <small class="text-muted">This template will be offered when generating a memo for this discipline.</small>
+                        </div>
+
+                        {{-- Memo Type: only for Memo templates --}}
+                        <div class="col-6 {{ old('memo_notice_type', $template->memo_notice_type) == 'Memo' ? '' : 'd-none' }}" id="mtMemoTypeWrap">
+                            <label class="form-label">Memo Type <span class="text-danger">*</span></label>
+                            <select name="memo_type_master_pk" id="mtMemoType" class="form-select">
+                                <option value="">Select Memo Type</option>
+                                @foreach($memoTypes as $mtype)
+                                    <option value="{{ $mtype->pk }}" {{ old('memo_type_master_pk', $template->memo_type_master_pk) == $mtype->pk ? 'selected' : '' }}>{{ $mtype->memo_type_name }}</option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted">This template will be offered when generating a memo of this type.</small>
                         </div>
 
                         <!-- Content -->
@@ -148,6 +169,47 @@
                     }
                 }
             });
+
+            // ── Discipline field: only for "Discipline Memo" type, filtered by course ──
+            var mtDisciplines = @json($disciplines);
+
+            function populateDisciplines() {
+                var courseId = String($('#mtCourse').val() || '');
+                var $sel = $('#mtDiscipline');
+                var previous = $sel.attr('data-old') || $sel.val() || '';
+                $sel.empty().append('<option value="">Select Discipline</option>');
+                mtDisciplines
+                    .filter(function (d) { return String(d.course_master_pk) === courseId; })
+                    .forEach(function (d) {
+                        $sel.append($('<option>').val(d.pk).text(d.discipline_name));
+                    });
+                if (previous) { $sel.val(String(previous)); }
+                $sel.removeAttr('data-old');
+            }
+
+            function toggleDisciplineField() {
+                var isDiscipline = $('#mtType').val() === 'Discipline Memo';
+                $('#mtDisciplineWrap').toggleClass('d-none', !isDiscipline);
+                $('#mtDiscipline').prop('required', isDiscipline);
+                if (isDiscipline) { populateDisciplines(); }
+            }
+
+            // ── Memo Type field: only for "Memo" type ──
+            function toggleMemoTypeField() {
+                var isMemo = $('#mtType').val() === 'Memo';
+                $('#mtMemoTypeWrap').toggleClass('d-none', !isMemo);
+                $('#mtMemoType').prop('required', isMemo);
+            }
+
+            $('#mtType').on('change', function () {
+                toggleDisciplineField();
+                toggleMemoTypeField();
+            });
+            $('#mtCourse').on('change', function () {
+                if ($('#mtType').val() === 'Discipline Memo') { populateDisciplines(); }
+            });
+            toggleDisciplineField();
+            toggleMemoTypeField();
 
             /** PDF Upload Function **/
             function uploadPDF(file) {

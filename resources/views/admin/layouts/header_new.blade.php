@@ -132,13 +132,13 @@
             aria-expanded="false"
             aria-label="Notifications">
 
-            <i class="material-icons material-symbols-rounded" style="font-size:20px;">
-                notifications_none
-            </i>
-
             @php
                 $unreadCount = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
             @endphp
+
+            <i class="material-icons material-symbols-rounded header-notification-bell {{ $unreadCount > 0 ? 'header-notification-bell--ring' : '' }}" style="font-size:20px;">
+                {{ $unreadCount > 0 ? 'notifications_active' : 'notifications_none' }}
+            </i>
 
             @if($unreadCount > 0)
                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
@@ -156,7 +156,7 @@
                 <span class="fw-bold text-dark" style="font-size:1rem;">Notifications</span>
                 @if($unreadCount > 0)
                     <button type="button"
-                        class="btn btn-sm btn-link text-primary p-0 text-decoration-underline fw-medium"
+                        class="btn btn-sm btn-link text-primary p-0 text-decoration-underline fw-medium js-mark-all-btn"
                         style="font-size:0.8125rem;"
                         onclick="markAllAsRead()">
                         Mark all as read
@@ -171,7 +171,7 @@
 
                 @if($notifications->count() > 0)
                     @foreach($notifications as $notification)
-                        <li>
+                        <li class="px-2 py-2">
                             <a class="dropdown-item notification-item {{ $notification->is_read ? '' : 'unread' }}"
                                href="javascript:void(0)"
                                onclick="markAsRead({{ $notification->pk }})">
@@ -268,7 +268,7 @@
                 <span class="d-block fw-semibold text-dark text-truncate" style="font-size: 1.05rem; max-width:220px;">{{ trim((Auth::user()->first_name ?? '') . ' ' . (Auth::user()->last_name ?? '')) ?: (Auth::user()->name ?? 'User') }}</span>
                 <span class="d-block text-body-secondary text-truncate" style="font-size:0.8125rem; max-width:220px;">{{ Auth::user()->getRoleNames()->implode(', ') ?: 'Employee' }}</span>
             </span>
-            <i class="bi bi-chevron-down text-body-secondary ms-1" style="font-size:11px;"></i>
+            <i class="bi bi-chevron-down header-profile-caret text-body-secondary ms-1" style="font-size:11px;"></i>
         </button>
         <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2 mt-2" style="min-width: 250px;">
             <!-- User identity card -->
@@ -393,12 +393,12 @@
                             class="nav-link mobile-tab-link border-0 bg-transparent p-0 position-relative"
                             id="notificationBtnMobile" data-bs-toggle="offcanvas" data-bs-target="#notificationOffcanvasMobile"
                             aria-controls="notificationOffcanvasMobile" aria-label="Notifications" title="Notifications">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">notifications_active</i>
                             @php
                             $unreadCountMobile = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
                             @endphp
+                            <i class="material-icons material-symbols-rounded header-notification-bell {{ $unreadCountMobile > 0 ? 'header-notification-bell--ring' : '' }}" aria-hidden="true">notifications_active</i>
                             @if($unreadCountMobile > 0)
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 9px;">
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge-mobile" style="font-size: 9px;">
                                 {{ $unreadCountMobile > 99 ? '99+' : $unreadCountMobile }}
                             </span>
                             @endif
@@ -423,7 +423,7 @@
                 <div class="offcanvas-header border-bottom py-3">
                     <h5 class="offcanvas-title fw-semibold" id="notificationOffcanvasMobileLabel">Notifications</h5>
                     @if($unreadCountMobile > 0)
-                    <button type="button" class="btn btn-sm btn-link text-primary p-0" onclick="markAllAsRead()">
+                    <button type="button" class="btn btn-sm btn-link text-primary p-0 js-mark-all-btn" onclick="markAllAsRead()">
                         Mark all as read
                     </button>
                     @endif
@@ -483,6 +483,32 @@
     font-size: 9px;
     padding: 2px 5px;
     line-height: 1;
+}
+
+/* Bell ring animation — plays while there are unread notifications */
+.header-notification-bell {
+    display: inline-block;
+    transform-origin: top center;
+}
+.header-notification-bell--ring {
+    /* Ring in a short burst (~0.7s), then rest until the 4s cycle repeats. */
+    animation: header-notification-bell-ring 4s ease-in-out infinite;
+    color: #d97706 !important;
+}
+@keyframes header-notification-bell-ring {
+    0%  { transform: rotate(0); }
+    2%  { transform: rotate(16deg); }
+    4%  { transform: rotate(-14deg); }
+    6%  { transform: rotate(12deg); }
+    8%  { transform: rotate(-10deg); }
+    10% { transform: rotate(8deg); }
+    12% { transform: rotate(-6deg); }
+    14% { transform: rotate(4deg); }
+    16% { transform: rotate(-2deg); }
+    18%, 100% { transform: rotate(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .header-notification-bell--ring { animation: none; }
 }
 .notification-dropdown {
     width: 360px;
@@ -711,6 +737,22 @@
 .header-profile-dropdown > button {
     gap: 10px;
     cursor: pointer;
+}
+
+/* Caret hidden by default; appears on hover / focus, flips when the menu is open */
+.header-profile-dropdown .header-profile-caret {
+    opacity: 0;
+    transform: translateY(-2px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.header-profile-dropdown:hover .header-profile-caret,
+.header-profile-dropdown:focus-within .header-profile-caret {
+    opacity: 1;
+    transform: translateY(0);
+}
+.header-profile-dropdown > button[aria-expanded="true"] .header-profile-caret {
+    opacity: 1;
+    transform: rotate(180deg);
 }
 .header-profile-dropdown:hover > .dropdown-menu {
     display: block;
@@ -1486,12 +1528,90 @@
                     })
                     .then(response => response.json())
                     .then(data => {
-                        if (data.success) {
-                            location.reload();
-                        }
+                        if (!data.success) { return; }
+                        // Refresh only the notification UI — no full page reload.
+                        document.querySelectorAll('#notificationList .notification-item.unread, #notificationListMobile .notification-item.unread')
+                            .forEach(function (el) { el.classList.remove('unread'); });
+                        // Clear the badges and stop the bell ringing.
+                        document.querySelectorAll('.notification-badge, .notification-badge-mobile')
+                            .forEach(function (el) { el.remove(); });
+                        document.querySelectorAll('.header-notification-bell')
+                            .forEach(function (el) { el.classList.remove('header-notification-bell--ring'); });
+                        var deskIcon = document.querySelector('#notificationDropdown .header-notification-bell');
+                        if (deskIcon) { deskIcon.textContent = 'notifications_none'; }
+                        // Hide the "Mark all as read" buttons (nothing left to mark).
+                        document.querySelectorAll('.js-mark-all-btn')
+                            .forEach(function (btn) { btn.style.display = 'none'; });
                     })
                     .catch(error => console.error('Error:', error));
             }
+
+            // ── Live notification polling: ring the bell when a new one arrives ──
+            (function () {
+                var panelsUrl = '{{ route("admin.notifications.panels") }}';
+                var lastUnread = {{ (int) ($unreadCount ?? 0) }};
+
+                function setBellRing(count) {
+                    document.querySelectorAll('.header-notification-bell').forEach(function (el) {
+                        el.classList.toggle('header-notification-bell--ring', count > 0);
+                    });
+                    var deskIcon = document.querySelector('#notificationDropdown .header-notification-bell');
+                    if (deskIcon) { deskIcon.textContent = count > 0 ? 'notifications_active' : 'notifications_none'; }
+                }
+
+                function setBadge(btnId, badgeClass, count) {
+                    var btn = document.getElementById(btnId);
+                    if (!btn) { return; }
+                    var badge = btn.querySelector('.' + badgeClass);
+                    if (count > 0) {
+                        var label = count > 99 ? '99+' : String(count);
+                        if (!badge) {
+                            badge = document.createElement('span');
+                            badge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger ' + badgeClass;
+                            if (badgeClass === 'notification-badge-mobile') { badge.style.fontSize = '9px'; }
+                            btn.appendChild(badge);
+                        }
+                        badge.textContent = label;
+                    } else if (badge) {
+                        badge.remove();
+                    }
+                }
+
+                function applyUnread(count) {
+                    setBellRing(count);
+                    setBadge('notificationDropdown', 'notification-badge', count);
+                    setBadge('notificationBtnMobile', 'notification-badge-mobile', count);
+                }
+
+                function poll() {
+                    fetch(panelsUrl, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            if (!data || !data.success) { return; }
+                            var count = data.unread_count || 0;
+                            applyUnread(count);
+                            // A fresh arrival: briefly re-trigger the ring even if it was already ringing.
+                            if (count > lastUnread) {
+                                document.querySelectorAll('.header-notification-bell').forEach(function (el) {
+                                    el.classList.remove('header-notification-bell--ring');
+                                    void el.offsetWidth; // reflow so the animation restarts
+                                    el.classList.add('header-notification-bell--ring');
+                                });
+                            }
+                            lastUnread = count;
+                        })
+                        .catch(function () { /* ignore transient network errors */ });
+                }
+
+                // Poll every 30s while the tab is visible.
+                setInterval(function () {
+                    if (document.visibilityState === 'visible') { poll(); }
+                }, 30000);
+                // Re-sync as soon as the user returns to the tab.
+                document.addEventListener('visibilitychange', function () {
+                    if (document.visibilityState === 'visible') { poll(); }
+                });
+            })();
             </script>
         </nav>
     </div>

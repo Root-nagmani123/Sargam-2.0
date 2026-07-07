@@ -230,7 +230,7 @@
 @media (min-width: 992px) {
     .header-logo-emblem { height: 48px !important; }
     .header-logo { height: 36px !important; margin-left: 10px !important; }
-    .header-brand-divider { height: 42px; margin: 0 0.85rem; }
+    .header-brand-divider { height: 42px; margin: 0 20px; }
 }
 .header-app-name {
     font-size: 1.25rem;
