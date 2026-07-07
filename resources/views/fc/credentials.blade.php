@@ -34,23 +34,25 @@
                 @csrf
                 <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">Create Your Login Credentials
                 </h3>
+                <p class="text-muted small text-center mb-3">
+                    Your username and password are saved to your registration record first.
+                    Login is enabled after the administrator runs data migration.
+                </p>
                 <hr>
 
                 <!-- Username -->
                 <div class="col-md-12">
                     <label class="form-label">User Name</label>
                     <input type="text" class="form-control" placeholder="Enter your User Name" name="reg_name"
-                        value="{{ old('reg_name') }}" required>
+                        id="reg_name" value="{{ strtolower((string) old('reg_name', '')) }}" required
+                        autocomplete="username" autocapitalize="none" spellcheck="false"
+                        pattern="[a-z][a-z0-9._]{5,19}"
+                        title="Lowercase letters, numbers, dots and underscores only (6–20 characters).">
+                    <div class="form-text text-muted">Use lowercase only — capital letters are converted automatically.</div>
                 </div>
 
-                <!-- Mobile Number -->
-                <div class="col-md-12">
-                    <label class="form-label">Mobile Number</label>
-                    <input type="text" class="form-control" placeholder="Enter your Mobile Number" name="reg_mobile"
-                        value="{{ old('reg_mobile', session('fc_user_mobile')) }}" required pattern="\d{10,15}"
-                        title="Enter a valid mobile number (10-15 digits)"
-                        {{ session('fc_user_mobile') ? 'readonly' : '' }}>
-                </div>
+                <!-- Mobile Number (hidden — taken from the registration link; required by the backend lookup) -->
+                <input type="hidden" name="reg_mobile" value="{{ old('reg_mobile', session('fc_user_mobile')) }}">
 
 
                 <!-- Password -->
@@ -92,6 +94,24 @@
 </main>
 <!-- Toggle Password Visibility Script -->
 <script>
+(function () {
+    var usernameInput = document.getElementById('reg_name');
+    if (!usernameInput) {
+        return;
+    }
+    function toLowerUsername() {
+        var pos = usernameInput.selectionStart;
+        usernameInput.value = usernameInput.value.toLowerCase();
+        if (pos !== null) {
+            usernameInput.setSelectionRange(pos, pos);
+        }
+    }
+    usernameInput.addEventListener('input', toLowerUsername);
+    usernameInput.addEventListener('paste', function () {
+        setTimeout(toLowerUsername, 0);
+    });
+})();
+
 function togglePassword(id, btn) {
     const input = document.getElementById(id);
     const icon = btn.querySelector('i');

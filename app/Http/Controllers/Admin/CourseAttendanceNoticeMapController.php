@@ -47,6 +47,10 @@ class CourseAttendanceNoticeMapController extends Controller
         ->leftJoin('student_master as sm', 'sm.pk', '=', 'sns.student_pk')
         ->leftJoin('timetable as t', 't.pk', '=', 'sns.subject_topic')
         ->leftJoin('course_master as cm', 'cm.pk', '=', 'sns.course_master_pk')
+        // A Notice closed directly (End Chat) records its conclusion on sns itself —
+        // it never becomes a student_memo_status row, so that conclusion must be
+        // joined in here or a closed Notice always shows "N/A".
+        ->leftJoin('memo_conclusion_master as ncm', 'ncm.pk', '=', 'sns.conclusion_type_pk')
         ->select(
             'sns.pk as notice_id',
             'sns.pk as memo_notice_id',
@@ -61,11 +65,14 @@ class CourseAttendanceNoticeMapController extends Controller
             'sns.message',
             'sns.notice_memo',
             'sns.status',
+            'sns.conclusion_remark',
+            'ncm.discussion_name',
             'sm.display_name as student_name',
             'sm.pk as student_id',
             't.subject_topic as topic_name',
             DB::raw('COALESCE(t.START_DATE, sns.date_) as session_date'),
             'cm.course_name',
+            'sns.created_date',
             DB::raw('"Notice" as type_notice_memo')
         );
 
@@ -149,7 +156,8 @@ class CourseAttendanceNoticeMapController extends Controller
                 't.subject_topic as topic_name',
                 't.START_DATE as session_date',
                 'mcm.discussion_name',
-                'cm.course_name'
+                'cm.course_name',
+                'student_memo_status.created_date'
             );
 
         if ($isOfficerTrainee) {
@@ -261,7 +269,11 @@ class CourseAttendanceNoticeMapController extends Controller
             $memos = $memos->filter(function($item) use ($searchFilter) {
                 return (isset($item->student_name) && stripos($item->student_name, $searchFilter) !== false)
                     || (isset($item->course_name) && stripos($item->course_name, $searchFilter) !== false)
-                    || (isset($item->topic_name) && stripos($item->topic_name, $searchFilter) !== false);
+                    || (isset($item->topic_name) && stripos($item->topic_name, $searchFilter) !== false)
+                    || (isset($item->type_notice_memo) && stripos($item->type_notice_memo, $searchFilter) !== false)
+                    || (isset($item->discussion_name) && stripos($item->discussion_name, $searchFilter) !== false)
+                    || (isset($item->conclusion_remark) && stripos($item->conclusion_remark, $searchFilter) !== false)
+                    || (isset($item->session_date) && stripos($item->session_date, $searchFilter) !== false);
             });
         }
 
@@ -314,7 +326,8 @@ $noticeCount = $memos->groupBy(function($item) {
 })->map(function ($group) {
     return $group->where('type_notice_memo', 'Notice')->count();
 });
-    return view('admin.courseAttendanceNoticeMap.index', compact('memos', 'venue', 'memo_master', 'conclusions', 'courses', 'programNameFilter', 'typeFilter', 'statusFilter', 'searchFilter', 'fromDateFilter', 'toDateFilter','noticeCount'));
+    $canManageMemoNotice = $this->userCanManageMemoNotice();
+    return view('admin.courseAttendanceNoticeMap.index', compact('memos', 'venue', 'memo_master', 'conclusions', 'courses', 'programNameFilter', 'typeFilter', 'statusFilter', 'searchFilter', 'fromDateFilter', 'toDateFilter','noticeCount', 'canManageMemoNotice'));
 }
 
     public function exportPdf(Request $request)
@@ -346,35 +359,19 @@ $noticeCount = $memos->groupBy(function($item) {
             ? (($data['fromDateFilter'] ? Carbon::parse($data['fromDateFilter'])->format('d-m-Y') : '—') . ' to ' . ($data['toDateFilter'] ? Carbon::parse($data['toDateFilter'])->format('d-m-Y') : '—'))
             : 'All Dates';
 
-        $headers = ['S. No.', 'Program Name', 'Participant Name', 'Session Date', 'Topic', 'Conclusion Type', 'Conclusion Remark', 'Status'];
+        $headers = ['Name', 'OT/Participant Code', 'Cadre', 'Infraction', 'Date of Infraction', 'Remarks'];
 
         $rows = [];
-        $i = 0;
         foreach ($memos as $memo) {
-            $isNotice = ($memo->type_notice_memo ?? '') == 'Notice';
-            $st = $memo->status ?? null;
-            $cs = $memo->communication_status ?? null;
-            if ($isNotice) {
-                $statusLabel = $st == 1 ? 'Notice Sent' : 'Notice Chat Closed';
-            } elseif ($cs == 1) {
-                $statusLabel = 'Memo Chat Open';
-            } elseif ($cs == 2) {
-                $statusLabel = 'Memo Chat Closed';
-            } else {
-                $statusLabel = 'Memo Sent';
-            }
             $sessionDate = $memo->session_date ?? $memo->date_ ?? null;
 
             $rows[] = [
-                ++$i,
-                $memo->course_name ?? 'N/A',
                 $memo->student_name ?? 'N/A',
-                $isNotice ? 'Notice' : 'Memo',
-                $sessionDate ? Carbon::parse($sessionDate)->format('d-m-Y') : 'N/A',
+                $memo->generated_OT_code ?? 'N/A',
+                $memo->cadre_name ?? 'N/A',
                 $memo->topic_name ?? 'N/A',
-                ($memo->discussion_name ?? '') !== '' ? $memo->discussion_name : 'N/A',
-                ($memo->conclusion_remark ?? '') !== '' ? $memo->conclusion_remark : 'N/A',
-                $statusLabel,
+                $sessionDate ? Carbon::parse($sessionDate)->format('d M Y') : 'N/A',
+                $memo->message ?? '',
             ];
         }
 
@@ -431,8 +428,13 @@ $noticeCount = $memos->groupBy(function($item) {
         $noticesQuery = DB::table('course_student_attendance as csa')
             ->join('student_notice_status as sns', 'sns.course_student_attendance_pk', '=', 'csa.pk')
             ->leftJoin('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
+            ->leftJoin('cadre_master as crd', 'sm.cadre_master_pk', '=', 'crd.pk')
             ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
             ->leftJoin('course_master as cm', 'sns.course_master_pk', '=', 'cm.pk')
+            // A Notice closed directly (End Chat) records its conclusion on sns itself —
+            // it never becomes a student_memo_status row, so that conclusion must be
+            // joined in here or a closed Notice always shows "N/A".
+            ->leftJoin('memo_conclusion_master as ncm', 'ncm.pk', '=', 'sns.conclusion_type_pk')
             ->select(
                 'sns.pk as notice_id',
                 'sns.pk as memo_notice_id',
@@ -447,11 +449,16 @@ $noticeCount = $memos->groupBy(function($item) {
                 'sns.message',
                 'sns.notice_memo',
                 'sns.status',
+                'sns.conclusion_remark',
+                'ncm.discussion_name',
                 'sm.display_name as student_name',
                 'sm.pk as student_id',
+                'sm.generated_OT_code',
+                'crd.cadre_name',
                 't.subject_topic as topic_name',
                 't.START_DATE as session_date',
                 'cm.course_name',
+                'sns.created_date',
                 DB::raw('"Notice" as type_notice_memo')
             );
 
@@ -494,6 +501,7 @@ $noticeCount = $memos->groupBy(function($item) {
         if ($typeFilter == '0') {
             $memoQuery = DB::table('student_memo_status')
                 ->leftJoin('student_master as sm', 'student_memo_status.student_pk', '=', 'sm.pk')
+                ->leftJoin('cadre_master as crd', 'sm.cadre_master_pk', '=', 'crd.pk')
                 ->leftJoin('student_notice_status as sns', 'student_memo_status.student_notice_status_pk', '=', 'sns.pk')
                 ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
                 ->leftJoin('memo_conclusion_master as mcm', 'student_memo_status.memo_conclusion_master_pk', '=', 'mcm.pk')
@@ -518,10 +526,13 @@ $noticeCount = $memos->groupBy(function($item) {
                     'student_memo_status.status',
                     'sm.display_name as student_name',
                     'sm.pk as student_id',
+                    'sm.generated_OT_code',
+                    'crd.cadre_name',
                     't.subject_topic as topic_name',
                     't.START_DATE as session_date',
                     'mcm.discussion_name',
-                    'cm.course_name'
+                    'cm.course_name',
+                    'student_memo_status.created_date'
                 );
 
             if ($isOfficerTrainee) {
@@ -553,19 +564,20 @@ $noticeCount = $memos->groupBy(function($item) {
                 if ($notice->status == 2) {
                     $memoDataQuery = DB::table('student_memo_status')
                         ->leftJoin('student_master as sm', 'student_memo_status.student_pk', '=', 'sm.pk')
+                        ->leftJoin('cadre_master as crd', 'sm.cadre_master_pk', '=', 'crd.pk')
                         ->leftJoin('student_notice_status as sns', 'student_memo_status.student_notice_status_pk', '=', 'sns.pk')
                         ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
                         ->leftJoin('memo_conclusion_master as mcm', 'student_memo_status.memo_conclusion_master_pk', '=', 'mcm.pk')
                         ->leftJoin('course_master as cm', 'student_memo_status.course_master_pk', '=', 'cm.pk')
                         ->where('student_memo_status.student_notice_status_pk', $notice->notice_id);
-                    
+
                     if ($fromDateFilter) {
                         $memoDataQuery->whereDate('t.START_DATE', '>=', $fromDateFilter);
                     }
                     if ($toDateFilter) {
                         $memoDataQuery->whereDate('t.START_DATE', '<=', $toDateFilter);
                     }
-                    
+
                     $memoData = $memoDataQuery->select(
                             'student_memo_status.pk as memo_id',
                             'student_memo_status.pk as memo_notice_id',
@@ -586,6 +598,8 @@ $noticeCount = $memos->groupBy(function($item) {
                             'student_memo_status.status',
                             'sm.display_name as student_name',
                             'sm.pk as student_id',
+                            'sm.generated_OT_code',
+                            'crd.cadre_name',
                             't.subject_topic as topic_name',
                             't.START_DATE as session_date',
                             'mcm.discussion_name',
@@ -636,7 +650,11 @@ $noticeCount = $memos->groupBy(function($item) {
                 $memos = $memos->filter(function($item) use ($searchFilter) {
                     return (isset($item->student_name) && stripos($item->student_name, $searchFilter) !== false)
                         || (isset($item->course_name) && stripos($item->course_name, $searchFilter) !== false)
-                        || (isset($item->topic_name) && stripos($item->topic_name, $searchFilter) !== false);
+                        || (isset($item->topic_name) && stripos($item->topic_name, $searchFilter) !== false)
+                        || (isset($item->type_notice_memo) && stripos($item->type_notice_memo, $searchFilter) !== false)
+                        || (isset($item->discussion_name) && stripos($item->discussion_name, $searchFilter) !== false)
+                        || (isset($item->conclusion_remark) && stripos($item->conclusion_remark, $searchFilter) !== false)
+                        || (isset($item->session_date) && stripos($item->session_date, $searchFilter) !== false);
                 });
             }
 
@@ -734,20 +752,32 @@ public function getTemplateByCourse(Request $request)
  */
 public function getTemplatesByType(Request $request)
 {
-    $courseId = $request->course_id;
-    $type     = $request->type === 'Memo' ? 'Memo' : 'Notice';
+    $courseId         = $request->course_id;
+    $type             = $request->type === 'Memo' ? 'Memo' : 'Notice';
+    $memoTypeMasterPk = $request->memo_type_master_pk;
 
     if (! $courseId) {
         return response()->json([]);
     }
 
-    $templates = DB::table('memo_notice_templates')
+    $query = DB::table('memo_notice_templates')
         ->where('course_master_pk', $courseId)
         ->where('memo_notice_type', $type)
         ->where('active_inactive', 1)
-        ->whereNull('deleted_at')
-        ->orderBy('title')
-        ->get(['pk', 'title', 'content', 'director_name', 'director_designation']);
+        ->whereNull('deleted_at');
+
+    // A Memo template may be pinned to a specific Memo Type, or left
+    // type-agnostic (memo_type_master_pk null) as a fallback when no
+    // type-specific one exists — mirrors the Discipline Memo precedence.
+    if ($type === 'Memo' && $memoTypeMasterPk) {
+        $query->where(function ($q) use ($memoTypeMasterPk) {
+            $q->whereNull('memo_type_master_pk')
+              ->orWhere('memo_type_master_pk', $memoTypeMasterPk);
+        })->orderByRaw('memo_type_master_pk IS NULL'); // type-specific first, type-agnostic fallback last
+    }
+
+    $templates = $query->orderBy('title')
+        ->get(['pk', 'title', 'content', 'director_name', 'director_designation', 'signature_image', 'memo_type_master_pk']);
 
     return response()->json($templates);
 }
@@ -881,7 +911,10 @@ public function getSessionsByCourse(Request $request)
     $html = '<option value="">Select Session</option>';
     foreach ($sessions as $session) {
         $value = $session->class_session;
-        $label = $labelsByShiftTime[$value] ?? $value;
+        // Shift-based sessions store just the shift name; show its time range
+        // alongside the name so it's identifiable the same way raw time-range
+        // sessions (e.g. "01:53 PM - 03:53 PM") already are.
+        $label = isset($labelsByShiftTime[$value]) ? $labelsByShiftTime[$value] . ' (' . $value . ')' : $value;
         $html .= '<option value="' . e($value) . '">' . e($label) . '</option>';
     }
     return $html;
@@ -1005,6 +1038,7 @@ $memo_conclusion_master = collect(); // default empty collection
     })
     ->where('sns.pk', $id)
     ->select(
+        'sns.student_pk',
         'sns.course_master_pk',
         't.subject_topic',
         'v.venue_name',
@@ -1057,6 +1091,8 @@ $memo_conclusion_master = collect(); // default empty collection
     })
     ->where('sms.pk', $id)
     ->select(
+        'sms.student_pk',
+        'sms.course_master_pk',
         't.subject_topic',
         'v.venue_name',
         't.class_session as session_time',
@@ -1075,26 +1111,54 @@ $memo_conclusion_master = collect(); // default empty collection
         'sms.communication_status as notice_current_status'
     )
     ->first();
-          
-            
+
+
     }
 
-    // Common: map display_name based on role
+    // Build the full list of sessions this student has been noticed for on this course,
+    // grouped by date, so the notice's session table reflects all of them (not just this one).
+    $sessionRows = collect();
+    if (!empty($template_details) && !empty($template_details->student_pk) && !empty($template_details->course_master_pk)) {
+        $sessionRows = DB::table('student_notice_status as sns2')
+            ->leftJoin('timetable as t2', 'sns2.subject_topic', '=', 't2.pk')
+            ->leftJoin('venue_master as v2', 't2.venue_id', '=', 'v2.venue_id')
+            ->where('sns2.student_pk', $template_details->student_pk)
+            ->where('sns2.course_master_pk', $template_details->course_master_pk)
+            ->orderBy('sns2.date_')
+            ->select(
+                'sns2.date_ as session_date',
+                't2.subject_topic',
+                'v2.venue_name',
+                't2.class_session as session_time'
+            )
+            ->get()
+            ->groupBy(function ($row) {
+                return \Carbon\Carbon::parse($row->session_date)->format('Y-m-d');
+            })
+            ->map(function ($rows) {
+                return (object) [
+                    'session_date'  => $rows->first()->session_date,
+                    'session_count' => $rows->count(),
+                    'topics'        => $rows->pluck('subject_topic')->filter()->unique()->implode(', '),
+                    'venues'        => $rows->pluck('venue_name')->filter()->unique()->implode(', '),
+                    'sessions'      => $rows->pluck('session_time')->filter()->unique()->implode(', '),
+                ];
+            })
+            ->values();
+    }
+
+    // Multiple distinct admins/faculty can post in the same conversation, so
+    // resolve each sender's real name + role instead of collapsing them all
+    // to a generic "Admin" label (same helper the Discipline memo chat uses).
     $memoNotice->transform(function ($item) {
-        if ($item->role_type == 'f') {
-            $creator = DB::table('users')->where('id', $item->created_by)->first();
-            $item->display_name = 'Admin';
-        } elseif ($item->role_type == 's') {
-            $student = DB::table('student_master')->where('pk', $item->created_by)->first();
-            $item->display_name = $student ? $student->display_name : 'Student';
-        } else {
-            $item->display_name = 'Unknown';
-        }
+        $identity = resolve_chat_sender_identity($item->created_by, $item->role_type);
+        $item->display_name = $identity['display_name'];
+        $item->role_name = $identity['role_name'];
         return $item;
     });
 
 // print_r($memoNotice);die;
-    return view('admin.courseAttendanceNoticeMap.conversation', compact('id', 'memoNotice', 'type', 'memo_conclusion_master','template_details'));
+    return view('admin.courseAttendanceNoticeMap.conversation', compact('id', 'memoNotice', 'type', 'memo_conclusion_master','template_details', 'sessionRows'));
 }
 
 function conversation_bkp($id,$type){
@@ -1253,7 +1317,7 @@ public function store_memo_notice(Request $request)
         'selected_student_list' => 'required|array|min:1',
         'Remark' => 'nullable|string|max:500',
         'submission_type' => 'required|in:1,2',
-        'memo_notice_template_pk' => 'nullable|exists:memo_notice_templates,pk',
+        'memo_notice_template_pk' => 'required|exists:memo_notice_templates,pk',
     ]);
 
     // Guard: only include memo_notice_template_pk if the column exists (migration may not have run)
@@ -1460,17 +1524,13 @@ public function getNewMessages(Request $request, $id, $type)
         ->orderBy('pk', 'asc')
         ->get();
 
-    // Resolve display names
+    // Multiple distinct admins/faculty can post in the same conversation, so
+    // resolve each sender's real name + role instead of collapsing them all
+    // to a generic "Admin" label (same helper the Discipline memo chat uses).
     $messages = $messages->map(function ($msg) {
-        if ($msg->role_type === 'f') {
-            $user = DB::table('users')->where('id', $msg->created_by)->first();
-            $msg->display_name = $user->name ?? 'Admin';
-        } elseif ($msg->role_type === 's') {
-            $student = DB::table('student_master')->where('pk', $msg->created_by)->first();
-            $msg->display_name = $student->display_name ?? 'Student';
-        } else {
-            $msg->display_name = 'Unknown';
-        }
+        $identity = resolve_chat_sender_identity($msg->created_by, $msg->role_type);
+        $msg->display_name = $identity['display_name'];
+        $msg->role_name = $identity['role_name'];
         // Format date for display
         $msg->formatted_date = $msg->created_date
             ? \Carbon\Carbon::parse($msg->created_date, 'UTC')->timezone('Asia/Kolkata')->format('d-m-Y h:i A')
@@ -1555,7 +1615,83 @@ protected function deleteConversationFiles(string $table, string $fk, int $id): 
 protected function userCanManageMemoNotice(): bool
 {
     return hasRole('Internal Faculty') || hasRole('Guest Faculty')
-        || hasRole('Super Admin') || hasRole('Training Induction Admin');
+        || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction');
+}
+
+/**
+ * Notice detail for the "Edit Notice" modal — the only editable field is the
+ * template; everything else shown is read-only context for the live preview.
+ */
+public function editNotice($id)
+{
+    if (! $this->userCanManageMemoNotice()) {
+        return response()->json(['message' => 'You are not authorized to edit this notice.'], 403);
+    }
+
+    $notice = DB::table('student_notice_status as sns')
+        ->leftJoin('course_master as cm', 'cm.pk', '=', 'sns.course_master_pk')
+        ->leftJoin('timetable as t', 't.pk', '=', 'sns.subject_topic')
+        ->leftJoin('venue_master as v', 'v.venue_id', '=', 'sns.venue_id')
+        ->leftJoin('student_master as sm', 'sm.pk', '=', 'sns.student_pk')
+        ->where('sns.pk', $id)
+        ->select(
+            'sns.pk',
+            'sns.course_master_pk',
+            'sns.date_',
+            'sns.class_session_master_pk',
+            'sns.memo_notice_template_pk',
+            'sns.message',
+            'sns.status',
+            'cm.course_name',
+            't.subject_topic as topic_name',
+            'v.venue_name',
+            'sm.display_name as student_name',
+            'sm.generated_OT_code'
+        )
+        ->first();
+
+    if (!$notice) {
+        return response()->json(['message' => 'Notice not found.'], 404);
+    }
+
+    return response()->json([
+        'pk' => $notice->pk,
+        'course_master_pk' => $notice->course_master_pk,
+        'course_name' => $notice->course_name ?? 'N/A',
+        'date_' => $notice->date_,
+        'topic_name' => $notice->topic_name ?? 'N/A',
+        'venue_name' => $notice->venue_name ?? 'N/A',
+        'session_name' => $notice->class_session_master_pk ?? 'N/A',
+        'memo_notice_template_pk' => $notice->memo_notice_template_pk,
+        'student_name' => $notice->student_name ?? 'N/A',
+        'generated_OT_code' => $notice->generated_OT_code,
+        'message' => $notice->message,
+    ]);
+}
+
+public function updateNoticeTemplate(Request $request, $id)
+{
+    if (! $this->userCanManageMemoNotice()) {
+        return response()->json(['success' => false, 'message' => 'You are not authorized to edit this notice.'], 403);
+    }
+
+    $notice = DB::table('student_notice_status')->where('pk', $id)->first();
+    if (!$notice) {
+        return response()->json(['success' => false, 'message' => 'Notice not found.'], 404);
+    }
+    if ($notice->status == 2) {
+        return response()->json(['success' => false, 'message' => 'Closed notices cannot be edited.'], 422);
+    }
+
+    $validated = $request->validate([
+        'memo_notice_template_pk' => 'required|exists:memo_notice_templates,pk',
+    ]);
+
+    DB::table('student_notice_status')->where('pk', $id)->update([
+        'memo_notice_template_pk' => $validated['memo_notice_template_pk'],
+    ]);
+
+    return response()->json(['success' => true, 'message' => 'Notice updated successfully.']);
 }
 public function memo_notice_conversation(Request $request)
 {
@@ -1574,9 +1710,9 @@ public function memo_notice_conversation(Request $request)
         'date' => 'required|date',
         'time' => 'required',
         'message' => 'required|string|max:500',
-        'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:1048',
+        'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
         'status' => 'required|in:1,2',
-        'mark_of_deduction' => 'nullable|string|max:100',
+        'mark_of_deduction' => 'nullable|numeric|min:0',
         'conclusion_type' => 'nullable|exists:memo_conclusion_master,pk',
         'conclusion_remark' => 'nullable|string|max:500',
     ]);
@@ -1589,6 +1725,18 @@ public function memo_notice_conversation(Request $request)
         return $input->type === 'memo';
     });
 }
+
+    // "Marks Deduction" is looked up by name, not a hardcoded pk, since master data
+    // can be re-seeded — matches the client-side check in conversation.blade.php's
+    // toggleDeduction() (selectedText === 'Marks Deduction').
+    $validator->sometimes('mark_of_deduction', 'required|numeric|min:0', function ($input) {
+        if (empty($input->conclusion_type)) {
+            return false;
+        }
+        return DB::table('memo_conclusion_master')
+            ->where('pk', $input->conclusion_type)
+            ->value('discussion_name') === 'Marks Deduction';
+    });
 
     if ($validator->fails()) {
 
@@ -2154,17 +2302,13 @@ if (!$id || !is_numeric($id)) {
             
     }
 // print_r($memoNotice);die;
-    // Common: map display_name based on role
+    // Multiple distinct admins/faculty can post in the same conversation, so
+    // resolve each sender's real name + role instead of collapsing them all
+    // to a generic "Admin" label (same helper the Discipline memo chat uses).
     $memoNotice->transform(function ($item) {
-        if ($item->role_type == 'f') {
-            $creator = DB::table('users')->where('id', $item->created_by)->first();
-            $item->display_name = 'Admin';
-        } elseif ($item->role_type == 's') {
-            $student = DB::table('student_master')->where('pk', $item->created_by)->first();
-            $item->display_name = $student ? $student->display_name : 'Student';
-        } else {
-            $item->display_name = 'Unknown';
-        }
+        $identity = resolve_chat_sender_identity($item->created_by, $item->role_type);
+        $item->display_name = $identity['display_name'];
+        $item->role_name = $identity['role_name'];
         return $item;
     });
 
@@ -2422,24 +2566,14 @@ public function get_conversation_model($id, $type, $user_type, Request $request)
         $studentPk    = (int) ($smsRow->student_pk ?? 0);
     }
 
-    // Common mapper - fix N+1 by pre-fetching all users/students in bulk
-    $adminIds    = $conversations->where('role_type', 'f')->pluck('created_by')->unique()->toArray();
-    $studentIds  = $conversations->where('role_type', 's')->pluck('created_by')->unique()->toArray();
-
-    $adminNames   = DB::table('users')->whereIn('id', $adminIds)->pluck('name', 'id');
-    $studentNames = DB::table('student_master')->whereIn('pk', $studentIds)->pluck('display_name', 'pk');
-
-    $conversations = $conversations->map(function ($item) use ($adminNames, $studentNames) {
-        if ($item->role_type == 'f') {
-            $item->display_name = 'Admin';
-            $item->user_type = 'admin';
-        } elseif ($item->role_type == 's') {
-            $item->display_name = $studentNames[$item->created_by] ?? 'Student';
-            $item->user_type = 'student';
-        } else {
-            $item->display_name = 'Unknown';
-            $item->user_type = 'unknown';
-        }
+    // Multiple distinct admins/faculty can post in the same conversation, so
+    // resolve each sender's real name + role instead of collapsing them all
+    // to a generic "Admin" label (same helper the Discipline memo chat uses).
+    $conversations = $conversations->map(function ($item) {
+        $identity = resolve_chat_sender_identity($item->created_by, $item->role_type);
+        $item->display_name = $identity['display_name'];
+        $item->role_name = $identity['role_name'];
+        $item->user_type = $item->role_type == 'f' ? 'admin' : ($item->role_type == 's' ? 'student' : 'unknown');
         return $item;
     });
 
@@ -2707,6 +2841,7 @@ public function getGeneratedMemoData(Request $request)
     return response()->json([
         // Memo-specific fields
         'memo_type_master_pk' => $memo->memo_type_master_pk ?? null,
+        'memo_notice_template_pk' => $memo->memo_notice_template_pk ?? null,
         'venue_master_pk' => $memo->venue_master_pk ?? null,
         'date' => $memo->date ?? null,
         'start_time' => $memo->start_time ?? null,
@@ -2741,8 +2876,11 @@ public function store_memo_status(Request $request)
         'date_memo_notice'               => 'required|date',
         'venue'                          => 'required|integer',
         'meeting_time'                   => 'required|date_format:H:i',
-        'memo_notice_template_pk'        => 'nullable|exists:memo_notice_templates,pk',
+        'memo_notice_template_pk'        => 'required|exists:memo_notice_templates,pk',
         'Remark'                         => 'nullable|string',
+    ], [
+        'memo_notice_template_pk.required' => 'No template is configured for the selected Memo Type on this course. Please configure one before generating the memo.',
+        'memo_notice_template_pk.exists'   => 'The selected template is invalid. Please choose another one.',
     ]);
 
     DB::table('student_memo_status')->insert([
@@ -2768,18 +2906,92 @@ public function store_memo_status(Request $request)
 }
 
 /**
+ * Edit an already-generated memo: Memo Type, Template, participant (student),
+ * Venue, Date, Meeting Time and Message are all correctable after the fact.
+ * Does not touch the source student_notice_status row — this reassigns the
+ * memo itself, not the original notice's history.
+ */
+public function updateMemoStatus(Request $request, $id)
+{
+    if (! $this->userCanManageMemoNotice()) {
+        return response()->json(['success' => false, 'message' => 'You are not authorized to edit this memo.'], 403);
+    }
+
+    $memo = DB::table('student_memo_status')->where('pk', $id)->first();
+    if (!$memo) {
+        return response()->json(['success' => false, 'message' => 'Memo not found.'], 404);
+    }
+    if ($memo->status == 2) {
+        return response()->json(['success' => false, 'message' => 'Closed memos cannot be edited.'], 422);
+    }
+
+    $validated = $request->validate([
+        'student_pk'              => 'required|integer|exists:student_master,pk',
+        'memo_type_master_pk'     => 'required|integer|exists:memo_type_master,pk',
+        'memo_notice_template_pk' => 'required|exists:memo_notice_templates,pk',
+        'venue'                   => 'required|integer',
+        'date_memo_notice'        => 'required|date',
+        'meeting_time'            => 'required|date_format:H:i',
+        'Remark'                  => 'nullable|string',
+    ], [
+        'memo_notice_template_pk.required' => 'No template is configured for the selected Memo Type on this course. Please configure one before saving.',
+        'memo_notice_template_pk.exists'   => 'The selected template is invalid. Please choose another one.',
+    ]);
+
+    // Reassignment must stay within the memo's own course.
+    $belongsToCourse = DB::table('student_master_course__map')
+        ->where('course_master_pk', $memo->course_master_pk)
+        ->where('student_master_pk', $validated['student_pk'])
+        ->where('active_inactive', 1)
+        ->exists();
+    if (!$belongsToCourse) {
+        return response()->json(['success' => false, 'message' => 'Selected student is not enrolled in this course.'], 422);
+    }
+
+    DB::table('student_memo_status')->where('pk', $id)->update([
+        'student_pk'              => $validated['student_pk'],
+        'memo_type_master_pk'     => $validated['memo_type_master_pk'],
+        'memo_notice_template_pk' => $validated['memo_notice_template_pk'] ?? null,
+        'venue_master_pk'         => $validated['venue'],
+        'date'                    => $validated['date_memo_notice'],
+        'start_time'              => $validated['meeting_time'],
+        'message'                 => $validated['Remark'] ?? null,
+        'modified_date'           => now(),
+    ]);
+
+    return response()->json(['success' => true, 'message' => 'Memo updated successfully.']);
+}
+
+/**
  * Conclude (close) a notice/memo conversation from the chat panel's "End Chat" action.
  * Memo  → sets status/communication_status to closed and records the conclusion type + remark.
  * Notice → closes the notice (status = 2).
  */
 public function endChat(Request $request)
 {
-    $validated = $request->validate([
+    $validator = Validator::make($request->all(), [
         'id'                        => 'required|integer',
         'type'                      => 'required|in:notice,memo',
         'memo_conclusion_master_pk' => 'nullable|integer',
+        'marks_deducted'            => 'nullable|numeric|min:0',
         'conclusion_remark'         => 'nullable|string',
     ]);
+
+    // "Marks Deduction" is looked up by name, not a hardcoded pk — matches the
+    // client-side toggleEndChatMarks() check in index.blade.php.
+    $validator->sometimes('marks_deducted', 'required', function ($input) {
+        if (empty($input->memo_conclusion_master_pk)) {
+            return false;
+        }
+        return DB::table('memo_conclusion_master')
+            ->where('pk', $input->memo_conclusion_master_pk)
+            ->value('discussion_name') === 'Marks Deduction';
+    });
+
+    if ($validator->fails()) {
+        return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+    }
+    $validated = $validator->validated();
 
     try {
         if ($validated['type'] === 'memo') {
@@ -2789,13 +3001,19 @@ public function endChat(Request $request)
                     'status'                    => 2,
                     'communication_status'      => 2,
                     'memo_conclusion_master_pk' => $validated['memo_conclusion_master_pk'],
+                    'mark_of_deduction'         => $validated['marks_deducted'] ?? null,
                     'conclusion_remark'         => $validated['conclusion_remark'],
                     'modified_date'             => now(),
                 ]);
         } else {
             DB::table('student_notice_status')
                 ->where('pk', $validated['id'])
-                ->update(['status' => 2]);
+                ->update([
+                    'status'             => 2,
+                    'conclusion_type_pk' => $validated['memo_conclusion_master_pk'],
+                    'mark_of_deduction'  => $validated['marks_deducted'] ?? null,
+                    'conclusion_remark'  => $validated['conclusion_remark'],
+                ]);
         }
 
         return response()->json(['success' => true, 'message' => 'Conversation ended successfully.']);
@@ -2871,10 +3089,17 @@ public function send_direct_notice_save(Request $request)
             ->groupBy('class_session')
             ->get();
 
+        // Only active courses, and only those assigned to this CC — Admin/Super
+        // Admin/PA get an empty restriction list back (see all active courses).
+        $data_course_id = get_Role_by_course();
+
         $courseMasters = CourseMaster::where('active_inactive', 1)
             ->where(function ($q) {
                 $q->whereNull('end_date')
                     ->orWhere('end_date', '>=', now()->toDateString());
+            })
+            ->when(!empty($data_course_id), function ($q) use ($data_course_id) {
+                $q->whereIn('pk', $data_course_id);
             })
             ->orderBy('couse_short_name')
             ->select('couse_short_name', 'course_name', 'pk')

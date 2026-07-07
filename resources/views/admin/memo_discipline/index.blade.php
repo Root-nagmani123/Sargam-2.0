@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 
-@section('title', 'Discipline Memo - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Discipline Memo')
 
 @section('setup_content')
 <link rel="stylesheet" href="{{ asset('css/notice-memo-discipline.css') }}?v={{ @filemtime(public_path('css/notice-memo-discipline.css')) ?: time() }}">
@@ -406,6 +406,7 @@
                                 <th class="text-center">Submitted</th>
                                 <th class="text-center">Final</th>
                                 <th>Remarks</th>
+                                <th>Created Date</th>
                                 <th>Status</th>
                                 @if(! hasRole('Officer Trainee'))
                                 <th class="text-end">Action</th>
@@ -426,6 +427,7 @@
                                 <td class="text-center fw-semibold text-warning">{{ $memo->mark_deduction_submit }}</td>
                                 <td class="text-center fw-semibold text-danger">{{ $memo->final_mark_deduction }}</td>
                                 <td class="text-muted">{{ $memo->remarks ?? '—' }}</td>
+                                <td class="text-muted">{{ !empty($memo->created_date) ? \Carbon\Carbon::parse($memo->created_date)->format('d M Y') : 'N/A' }}</td>
 
                                 <!-- Status -->
                                 <td>
@@ -493,9 +495,14 @@
                                     @else
                                     <span class="text-muted small">—</span>
                                     @endif
-                                    {{-- Delete: admins/faculty only, hard-deletes the discipline memo + its chat --}}
-                                    <a href="javascript:void(0)" class="btn btn-sm btn-outline-danger discipline-delete-record ms-1 border-0 bg-transparent text-primary"
-                                        data-id="{{ $memo->pk }}" title="Delete">
+                                    {{-- Delete: admins/faculty only, hard-deletes the discipline memo + its chat.
+                                         Active only while the memo is open (Recorded/Memo Sent); disabled once closed. --}}
+                                    @php $isMemoClosed = !in_array($memo->status, [1, 2]); @endphp
+                                    <a href="javascript:void(0)"
+                                        class="btn btn-sm btn-outline-danger discipline-delete-record ms-1 border-0 bg-transparent text-primary {{ $isMemoClosed ? 'disabled' : '' }}"
+                                        data-id="{{ $memo->pk }}"
+                                        title="{{ $isMemoClosed ? 'Cannot delete a closed memo' : 'Delete' }}"
+                                        @if($isMemoClosed) aria-disabled="true" tabindex="-1" style="pointer-events:none;opacity:.45;" @endif>
                                         <i class="material-icons material-symbols-rounded fs-5">delete</i>
                                     </a>
                                     @else
@@ -506,7 +513,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="{{ hasRole('Officer Trainee') ? 11 : 12 }}" class="text-center py-5 text-muted">
+                                <td colspan="{{ hasRole('Officer Trainee') ? 12 : 13 }}" class="text-center py-5 text-muted">
                                     <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                                     <span class="fw-medium">No memo records available</span>
                                 </td>
@@ -532,8 +539,8 @@
     <!-- end Zero Configuration -->
 
     {{-- Edit Discipline Memo modal --}}
-    <div class="modal fade" id="editMemoModal" tabindex="-1" aria-labelledby="editMemoModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal fade gen-memo-modal" id="editMemoModal" tabindex="-1" aria-labelledby="editMemoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
             <div class="modal-content border-0 shadow">
                 <div class="modal-header">
                     <h5 class="modal-title fw-semibold" id="editMemoModalLabel">Edit Discipline Memo</h5>
@@ -566,9 +573,35 @@
                                 <label class="form-label fw-semibold">Discipline Marks <span class="text-danger">*</span></label>
                                 <input type="number" step="0.01" min="0" id="editMemoMarks" name="mark_deduction_submit" class="form-control" required>
                             </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Template</label>
+                                <select id="editMemoTemplate" name="memo_notice_template_pk" class="form-select">
+                                    <option value="">Select Discipline first</option>
+                                </select>
+                                <small class="text-muted">Changes to match the selected discipline.</small>
+                            </div>
                             <div class="col-12">
                                 <label class="form-label fw-semibold">Remarks</label>
                                 <textarea id="editMemoRemarks" name="remarks" class="form-control" rows="3" placeholder="Enter remarks..."></textarea>
+                            </div>
+                        </div>
+
+                        <h6 class="gm-section-title mt-3">Preview</h6>
+                        <div class="gm-preview" id="editMemoPreview">
+                            <h5 class="text-center fw-bold mb-1" id="emPvCourse">Course Name</h5>
+                            <p class="text-center mb-0 small">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+                            <hr>
+                            <p class="mb-2"><strong>Date:</strong> <span id="emPvDate">—</span></p>
+                            <div id="emPvTemplateContent" class="mb-2 small text-muted fst-italic">Select a discipline to preview content.</div>
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-2">
+                                    <thead><tr><th>#</th><th>OT</th></tr></thead>
+                                    <tbody id="emPvStudents"><tr><td colspan="2" class="text-muted">—</td></tr></tbody>
+                                </table>
+                            </div>
+                            <div class="text-end mb-0 small" id="emPvDirectorBlock" style="display:none;">
+                                <div id="emPvSignature"></div>
+                                <strong id="emPvDirectorName"></strong><br><span id="emPvDirectorDesig"></span>
                             </div>
                         </div>
                     </div>
@@ -897,7 +930,25 @@ $(function () {
     });
     $(genModalEl).on('hidden.bs.modal', function () {
         if (pendingOpenPicker) { pendingOpenPicker = false; pickerModal.show(); }
+        else { resetGenMemoForm(); }
     });
+
+    // Clear everything on a real close (Cancel, backdrop click, Esc, or after submit) —
+    // but not when hiding temporarily to open the student picker (handled above).
+    function resetGenMemoForm() {
+        var form = document.getElementById('genMemoForm');
+        if (form) form.reset();
+        gmDefaulters = [];
+        gmSelected = [];
+        gmTemplateMap = {};
+        $('#gmDiscipline').html('<option value="">Select Discipline</option>');
+        $('#gmTemplate').html('<option value="">Select Discipline first</option>');
+        $('#gmSelectedHidden').empty();
+        syncSelection();
+        $('#gmPvCourse').text('Course Name');
+        $('#gmPvDate').text('—');
+        updateTemplatePreview();
+    }
     $(pickerModalEl).on('hidden.bs.modal', function () {
         // Closing the picker (Save or dismiss) always returns to the Generate modal.
         genModal.show();
@@ -1118,6 +1169,7 @@ $(function () {
 
     /* ── Delete a discipline memo (admins only) ── */
     $(document).on('click', '.discipline-delete-record', function () {
+        if ($(this).hasClass('disabled')) { return; } // closed memo — delete not allowed
         var id = $(this).data('id');
         if (!id) { return; }
 
@@ -1161,7 +1213,82 @@ $(function () {
     var editRouteBase   = "{{ rtrim(route('memo.discipline.edit', ''), '/') }}/";
     var updateRouteBase = "{{ rtrim(route('memo.discipline.update', ''), '/') }}/";
     var markRoute       = "{{ route('memo.discipline.getMarkDeduction') }}";
+    var routeTemplates  = "{{ route('memo.discipline.templatesByDiscipline') }}";
     var csrf            = "{{ csrf_token() }}";
+    var editMemoCourseId = null;
+
+    // Reload the Template list AND the preview for the current course + given discipline.
+    // Mirrors the Generate modal's loadTemplates(): discipline-specific templates
+    // first, course-wide fallback last (see getTemplatesByDiscipline()).
+    function loadEditTemplates(disciplineId, selectedPk) {
+        var $t = $('#editMemoTemplate');
+        emTemplateMap = {};
+        emSelectedTplPk = null;
+        if (!editMemoCourseId || !disciplineId) {
+            $t.html('<option value="">Select Discipline first</option>');
+            updateEditTemplatePreview();
+            return;
+        }
+        $t.html('<option value="">Loading templates...</option>');
+        $('#emPvTemplateContent').addClass('text-muted fst-italic').text('Loading preview…');
+        $.get(routeTemplates, { course_id: editMemoCourseId, discipline_master_pk: disciplineId }).done(function (res) {
+            $t.empty();
+            if (Array.isArray(res) && res.length) {
+                res.forEach(function (t) {
+                    var label = t.title + (t.discipline_master_pk ? '' : ' (course default)');
+                    $t.append($('<option>').val(t.pk).text(label));
+                    emTemplateMap[String(t.pk)] = t;
+                });
+                $t.val(selectedPk && $t.find('option[value="' + selectedPk + '"]').length ? String(selectedPk) : String(res[0].pk));
+                emSelectedTplPk = $t.val();
+            } else {
+                $t.append('<option value="">No template configured</option>');
+            }
+            updateEditTemplatePreview();
+        }).fail(function () {
+            $t.html('<option value="">Failed to load templates</option>');
+            updateEditTemplatePreview();
+        });
+    }
+
+    var emTemplateMap   = {};   // pk → template object (content + director fields)
+    var emSelectedTplPk = null; // discipline template auto-picked for the preview
+    var editCoursePk    = null; // course id of the memo being edited
+
+    // Preview: course / date / (single) student.
+    function updateEditPreview() {
+        $('#emPvCourse').text($('#editMemoCourse').val() || 'Course Name');
+        var d = $('#editMemoDate').val();
+        $('#emPvDate').text(d ? d.split('-').reverse().join('/') : '—');
+        var student = $('#editMemoStudent').val() || '';
+        var $rows = $('#emPvStudents').empty();
+        if (student) {
+            $rows.append($('<tr>').append($('<td>').text('1')).append($('<td>').text(student)));
+        } else {
+            $rows.append('<tr><td colspan="2" class="text-muted">—</td></tr>');
+        }
+    }
+
+    // Preview: template content + director block (mirrors the Generate modal).
+    function updateEditTemplatePreview() {
+        var tpl = emSelectedTplPk ? emTemplateMap[emSelectedTplPk] : null;
+        var $content = $('#emPvTemplateContent');
+        if (tpl && tpl.content) {
+            $content.removeClass('text-muted fst-italic').html(tpl.content);
+        } else {
+            $content.addClass('text-muted fst-italic').text('No template configured for this discipline.');
+        }
+        if (tpl && (tpl.director_name || tpl.director_designation)) {
+            $('#emPvSignature').html(tpl.signature_image
+                ? '<img src="/storage/' + tpl.signature_image + '" style="max-height:50px;display:block;margin-left:auto;margin-bottom:4px;" alt="Signature">'
+                : '');
+            $('#emPvDirectorName').text(tpl.director_name || '');
+            $('#emPvDirectorDesig').text(tpl.director_designation || '');
+            $('#emPvDirectorBlock').show();
+        } else {
+            $('#emPvDirectorBlock').hide();
+        }
+    }
 
     // ── Open modal: fetch memo data + disciplines ──
     $(document).on('click', '.btn-edit-memo', function () {
@@ -1169,7 +1296,13 @@ $(function () {
         $('#editMemoForm')[0].reset();
         $('#editMemoPk').val('');
         $('#editMemoDiscipline').html('<option value="">Loading…</option>');
+        $('#editMemoTemplate').html('<option value="">Select Discipline first</option>');
         $('#editMemoSaveBtn').prop('disabled', true);
+        // Reset the preview for the freshly opened memo.
+        emTemplateMap = {}; emSelectedTplPk = null; editCoursePk = null;
+        $('#emPvDirectorBlock').hide();
+        $('#emPvTemplateContent').addClass('text-muted fst-italic').text('Loading preview…');
+        updateEditPreview();
 
         $.get(editRouteBase + id).done(function (data) {
             $('#editMemoPk').val(data.pk);
@@ -1178,6 +1311,7 @@ $(function () {
             $('#editMemoDate').val(data.date);
             $('#editMemoMarks').val(data.mark_deduction_submit);
             $('#editMemoRemarks').val(data.remarks);
+            editMemoCourseId = data.course_master_pk;
 
             var $sel = $('#editMemoDiscipline').empty().append('<option value="">Select Discipline</option>');
             (data.disciplines || []).forEach(function (d) {
@@ -1187,6 +1321,12 @@ $(function () {
                 );
             });
             $sel.val(data.discipline_master_pk);
+            // Preview mirrors the Generate modal: course/date/student + the
+            // discipline's template content & director signature.
+            editCoursePk = data.course_master_pk || null;
+            updateEditPreview();
+            // Populates the template dropdown AND the template-content preview.
+            loadEditTemplates(data.discipline_master_pk, data.memo_notice_template_pk);
             $('#editMemoSaveBtn').prop('disabled', false);
         }).fail(function () {
             alert('Failed to load memo data.');
@@ -1195,13 +1335,24 @@ $(function () {
         editMemoModal.show();
     });
 
-    // ── Auto-fill marks when discipline changes ──
+    // ── Discipline changes → auto-fill marks + reload templates for the new discipline ──
     $('#editMemoDiscipline').on('change', function () {
         var mark = $('option:selected', this).data('mark');
         if (mark !== undefined && mark !== '') {
             $('#editMemoMarks').val(mark);
         }
+         loadEditTemplates($(this).val(), null);   // refresh dropdown + preview for the new discipline
+        updateEditPreview();
     });
+
+    // Template selection changes → refresh the preview content.
+    $('#editMemoTemplate').on('change', function () {
+        emSelectedTplPk = $(this).val() || null;
+        updateEditTemplatePreview();
+    });
+
+    // Date change → refresh the preview date.
+    $('#editMemoDate').on('change input', updateEditPreview);
 
     // ── Submit edit form ──
     $('#editMemoForm').on('submit', function (e) {
@@ -1213,11 +1364,12 @@ $(function () {
             url: updateRouteBase + id,
             type: 'POST',
             data: {
-                _token:                csrf,
-                date:                  $('#editMemoDate').val(),
-                discipline_master_pk:  $('#editMemoDiscipline').val(),
-                mark_deduction_submit: $('#editMemoMarks').val(),
-                remarks:               $('#editMemoRemarks').val(),
+                _token:                    csrf,
+                date:                      $('#editMemoDate').val(),
+                discipline_master_pk:      $('#editMemoDiscipline').val(),
+                mark_deduction_submit:     $('#editMemoMarks').val(),
+                remarks:                   $('#editMemoRemarks').val(),
+                memo_notice_template_pk:   $('#editMemoTemplate').val(),
             },
             success: function (res) {
                 if (res.success) {

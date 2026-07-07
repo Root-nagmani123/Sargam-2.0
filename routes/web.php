@@ -100,6 +100,27 @@ Route::get('clear-cache', function () {
     Artisan::call('optimize:clear');
     return redirect()->back()->with('success', 'Cache cleared successfully');
 });
+
+// Read-only: list pending/ran migrations from a server with no shell/SSH access.
+// Check this BEFORE run-migrations — migrate runs everything pending, not just
+// whichever one you're chasing, and some pending migrations may not be reversible.
+Route::middleware(['auth'])->get('migration-status', function () {
+    if (!hasRole('Super Admin')) {
+        abort(403);
+    }
+    Artisan::call('migrate:status');
+    return '<pre>' . e(Artisan::output()) . '</pre>';
+})->name('migration.status');
+
+// Run pending DB migrations from a server with no shell/SSH access (e.g. preprod).
+// Gated to authenticated Super Admins only — this alters the schema.
+Route::middleware(['auth'])->get('run-migrations', function () {
+    if (!hasRole('Super Admin')) {
+        abort(403);
+    }
+    Artisan::call('migrate', ['--force' => true]);
+    return '<pre>' . e(Artisan::output()) . '</pre>';
+})->name('run.migrations');
 // Authentication Routes
 Auth::routes(['verify' => true, 'register' => false]);
 
@@ -831,6 +852,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     // PT Exemption Master (Leave Management)
     Route::prefix('admin/pt-exemption-master')->name('admin.pt-exemption-master.')->controller(ExemptionMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/export', 'export')->name('export');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::post('/status/{id}', 'status')->name('status');
@@ -840,6 +862,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     // Stationed Leave Master (Leave Management)
     Route::prefix('admin/stationed-leave-master')->name('admin.stationed-leave-master.')->controller(StationedLeaveMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/export', 'export')->name('export');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/faculties', 'faculties')->name('faculties');
@@ -850,6 +873,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     // Faculty — Leave Approval (menu route: faculty-leave-approval)
     Route::controller(FacultyLeaveApprovalController::class)->group(function () {
         Route::get('/faculty-leave-approval', 'index')->name('faculty.leave-approval.index');
+        Route::get('/faculty-leave-approval/export', 'export')->name('faculty.leave-approval.export');
         Route::get('/faculty-leave-approval/{id}', 'show')->name('faculty.leave-approval.show');
         Route::post('/faculty-leave-approval/{id}/approve', 'approve')->name('faculty.leave-approval.approve');
         Route::post('/faculty-leave-approval/{id}/reject', 'reject')->name('faculty.leave-approval.reject');
@@ -860,6 +884,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         Route::get('/apply', 'apply')->name('apply');
         Route::post('/store', 'store')->name('store');
         Route::get('/my-leave', 'myLeave')->name('my-leave');
+        Route::get('/my-leave/export', 'myLeaveExport')->name('my-leave.export');
         Route::get('/balance', 'balance')->name('balance');
         Route::get('/{id}/edit', 'edit')->name('edit');
         Route::put('/{id}', 'update')->name('update');
@@ -921,6 +946,9 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
             Route::post('/get-student-attendance-by-topic', 'getStudentAttendanceBytopic')->name('getStudentAttendanceBytopic'); // <-- New AJAX route
             Route::post('/store_memo_notice', 'store_memo_notice')->name('store_memo_notice');
             Route::post('/store_memo_status', 'store_memo_status')->name('store_memo_status');
+            Route::post('/memo/update/{id}', 'updateMemoStatus')->name('update_memo_status');
+            Route::get('/notice/edit/{id}', 'editNotice')->name('editNotice');
+            Route::post('/notice/update-template/{id}', 'updateNoticeTemplate')->name('update_notice_template');
             Route::post('/end-chat', 'endChat')->name('endChat');
             Route::post('/memo_notice_conversation', 'memo_notice_conversation')->name('memo_notice_conversation');
             Route::post('/memo_notice_conversation_student', 'memo_notice_conversation_student')->name('memo_notice_conversation_student');
@@ -970,6 +998,8 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
     });
     Route::prefix('memo/discipline')->name('memo.discipline.')->group(function () {
         Route::get('/', [MemoDisciplineController::class, 'index'])->name('index');
+        // Officer Trainee: dedicated, read-only "my discipline memos" page (view own records + chat).
+        Route::get('/my-memos', [MemoDisciplineController::class, 'otIndex'])->name('ot_index');
         Route::delete('/delete/{id}', [MemoDisciplineController::class, 'destroy'])->name('destroy');
         Route::get('/export-csv', [MemoDisciplineController::class, 'exportCsv'])->name('export_csv');
         Route::get('create', [MemoDisciplineController::class, 'create'])->name('create');

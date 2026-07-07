@@ -28,7 +28,10 @@
                             @endif
 
                             <form class="row g-3 g-md-4" method="POST" action="{{ route('fc.login.verify') }}">
-                                @csrf
+                                {{-- TEMPORARY (load testing): skip CSRF field when FC_LOADTEST_BYPASS_CSRF is on. Renders normally otherwise. --}}
+                                @unless(filter_var(env('FC_LOADTEST_BYPASS_CSRF', false), FILTER_VALIDATE_BOOLEAN))
+                                    @csrf
+                                @endunless
 
                                 <div class="col-12 text-center">
                                     <h1 class="h4 fw-bold text-primary mb-0">Login to Foundation Course</h1>

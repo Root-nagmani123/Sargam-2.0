@@ -105,12 +105,12 @@
 
                         <div class="mt-4">
                             <label class="form-label">Select Template <span class="text-danger">*</span></label>
-                            <select class="form-select" name="memo_notice_template_pk" id="anTemplate">
+                            <select class="form-select" name="memo_notice_template_pk" id="anTemplate" required>
                                 <option value="">Select Course first</option>
                             </select>
                         </div>
 
-                        <h6 class="an-section-title mt-4">Notice Preview</h6>
+                        <h6 class="an-section-title mt-4">Preview</h6>
                         <div class="an-note"><i class="bi bi-info-circle"></i> You may edit the Notice from Notice Template</div>
                         <div id="anPreviewWrap" class="an-preview" style="display:none;">
                             <h5 class="text-center fw-bold mb-2" id="anTplCourse"></h5>
@@ -128,6 +128,63 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-primary px-4" id="anSendBtn">Send Notice</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {{-- Edit Notice modal — template is the only editable field --}}
+    <div class="modal fade add-notice-modal" id="editNoticeModal" tabindex="-1" aria-labelledby="editNoticeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editNoticeModalLabel">Edit Notice</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editNoticeForm">
+                    @csrf
+                    <input type="hidden" id="editNoticePk">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Select Template <span class="text-danger">*</span></label>
+                            <select class="form-select" id="editNoticeTemplate" required>
+                                <option value="">Select Template</option>
+                            </select>
+                        </div>
+
+                        <h6 class="an-section-title">Preview</h6>
+                        <div class="an-note"><i class="bi bi-info-circle"></i> You may edit the Notice from Notice Template</div>
+                        <div id="editNoticePreviewWrap" class="an-preview" style="display:none;">
+                            <h5 class="text-center fw-bold mb-2" id="editNoticeTplCourse"></h5>
+                            <p class="text-center mb-0 small">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+                            <hr>
+                            <p class="mb-1" id="editNoticeTplType"></p>
+                            <p class="mb-1"><strong>Date:</strong> <span id="editNoticeTplDate"></span></p>
+                            <div class="table-responsive mb-3">
+                                <table class="table table-sm table-bordered mb-0">
+                                    <thead class="table-light">
+                                        <tr><th>Date</th><th>No. of Session(s)</th><th>Topics</th><th>Venue</th><th>Session(s)</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td id="editNoticeInfoDate"></td>
+                                            <td>1</td>
+                                            <td id="editNoticeInfoTopic"></td>
+                                            <td id="editNoticeInfoVenue"></td>
+                                            <td id="editNoticeInfoSession"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div id="editNoticeTplContent" class="mb-3"></div>
+                            <p class="text-end mb-0"><strong id="editNoticeTplDirector"></strong><br><span id="editNoticeTplDesig"></span></p>
+                        </div>
+                        <div id="editNoticePreviewNone" class="an-preview-none text-muted" style="display:none;">No active Notice template for this course.</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary px-4" id="editNoticeSaveBtn">Send Notice</button>
                     </div>
                 </form>
             </div>
@@ -228,6 +285,7 @@
                     </div>
                 </div>
             </form>
+            <div id="mnmListContainer">
             <div class="table-responsive">
                 <table id="mnmTable" class="table align-middle mb-0">
                     <thead>
@@ -240,6 +298,7 @@
                             <th>Topic</th>
                             <th>Conclusion Type</th>
                             <th>Conclusion Remark</th>
+                            <th>Created Date</th>
                             <th>Status</th>
                             <th class="text-center">Action</th>
                         </tr>
@@ -280,6 +339,7 @@
                             <td>{{ $memo->topic_name ?? 'N/A' }}</td>
                             <td>{{ ($memo->discussion_name ?? '') !== '' ? $memo->discussion_name : 'N/A' }}</td>
                             <td>{{ ($memo->conclusion_remark ?? '') !== '' ? $memo->conclusion_remark : 'N/A' }}</td>
+                            <td>{{ !empty($memo->created_date) ? date('d-m-Y', strtotime($memo->created_date)) : 'N/A' }}</td>
                             <td><span class="mnm-status {{ $stClass }}">{{ $stLabel }}</span></td>
                             <td>
                                 <div class="mnm-actions justify-content-center">
@@ -292,16 +352,33 @@
                                     <span class="mnm-action disabled" title="No notice"><i class="bi bi-file-earmark-text"></i><span>Notice</span></span>
                                     @endif
 
+                                    {{-- Memo: view the memo conversation/document page (same as Notice above) --}}
+                                    @if(!empty($memo->memo_id))
+                                    <a class="mnm-action" href="{{ route('memo.notice.management.conversation', ['id' => $memo->memo_id, 'type' => 'memo']) }}" title="View Memo Document">
+                                        <i class="bi bi-file-earmark"></i><span>Memo Doc</span>
+                                    </a>
+                                    @else
+                                    <span class="mnm-action disabled" title="No memo yet"><i class="bi bi-file-earmark"></i><span>Memo Doc</span></span>
+                                    @endif
+
+                                    {{-- Edit Notice: template only, and only while still open --}}
+                                    @if($isNotice && $canManageMemoNotice && $st == 1)
+                                    <a href="javascript:void(0)" class="mnm-action edit-notice-btn" data-notice-id="{{ $memo->notice_id }}"
+                                        data-bs-toggle="modal" data-bs-target="#editNoticeModal" title="Edit Notice">
+                                        <i class="bi bi-pencil"></i><span>Edit</span>
+                                    </a>
+                                    @endif
+
                                     {{-- Chats: open the conversation offcanvas --}}
                                     @if($isNotice)
                                     <a class="mnm-action view-conversation" data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas"
-                                        data-type="notice" data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}" data-participant="{{ $memo->student_name }}" title="Open chat">
+                                        data-type="notice" data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}" data-participant="{{ $memo->student_name }}" data-closed="{{ $stClass === 'mnm-status--closed' ? '1' : '0' }}" title="Open chat">
                                         <i class="bi bi-chat-dots"></i><span>Chats</span>
                                         @if($hasBell)<span class="mnm-dot"></span>@endif
                                     </a>
                                     @else
                                     <a class="mnm-action view-conversation" data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas"
-                                        data-type="memo" data-id="{{ $memo->memo_id }}" data-topic="{{ $memo->topic_name }}" data-participant="{{ $memo->student_name }}" title="Open chat">
+                                        data-type="memo" data-id="{{ $memo->memo_id }}" data-topic="{{ $memo->topic_name }}" data-participant="{{ $memo->student_name }}" data-closed="{{ $stClass === 'mnm-status--closed' ? '1' : '0' }}" title="Open chat">
                                         <i class="bi bi-chat-dots"></i><span>Chats</span>
                                         @if($cs == 1)<span class="mnm-dot"></span>@endif
                                     </a>
@@ -319,24 +396,38 @@
                                         <i class="bi bi-file-earmark-check"></i><span>Memo</span>
                                         @if($cs == 1)<span class="mnm-dot"></span>@endif
                                     </a>
+                                    @if($canManageMemoNotice && $cs != 2)
+                                    <a href="javascript:void(0)" class="mnm-action edit-memo-btn" data-memo-id="{{ $memo->memo_id }}"
+                                        data-bs-toggle="modal" data-bs-target="#memo_generate" title="Edit Memo">
+                                        <i class="bi bi-pencil"></i><span>Edit</span>
+                                    </a>
+                                    @endif
                                     @else
                                     <span class="mnm-action disabled" title="Memo not available yet"><i class="bi bi-file-earmark"></i><span>Memo</span></span>
                                     @endif
 
-                                    {{-- Delete: admins/faculty only, hard-deletes the notice/memo + its chat --}}
-                                    @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin'))
-                                    <a href="javascript:void(0)" class="mnm-action mnm-delete-record" style="color:#d92d20;"
-                                        data-id="{{ $isNotice ? $memo->notice_id : $memo->memo_id }}"
-                                        data-type="{{ $isNotice ? 'notice' : 'memo' }}" title="Delete">
-                                        <i class="bi bi-trash3"></i><span>Delete</span>
-                                    </a>
+                                    {{-- Delete: admins/faculty only, hard-deletes the notice/memo + its chat.
+                                         Only allowed while the notice/memo is still open — disabled once it's
+                                         closed ($stClass is 'mnm-status--closed' for Notice/Memo Chat Closed). --}}
+                                    @if($canManageMemoNotice)
+                                        @if($stClass === 'mnm-status--closed')
+                                        <span class="mnm-action disabled" title="Cannot delete a closed {{ $isNotice ? 'notice' : 'memo' }}">
+                                            <i class="bi bi-trash3"></i><span>Delete</span>
+                                        </span>
+                                        @else
+                                        <a href="javascript:void(0)" class="mnm-action mnm-delete-record" style="color:#d92d20;"
+                                            data-id="{{ $isNotice ? $memo->notice_id : $memo->memo_id }}"
+                                            data-type="{{ $isNotice ? 'notice' : 'memo' }}" title="Delete">
+                                            <i class="bi bi-trash3"></i><span>Delete</span>
+                                        </a>
+                                        @endif
                                     @endif
                                 </div>
                             </td>
                         </tr>
                         @empty
                         <tr class="align-middle">
-                            <td colspan="10" class="text-center text-muted py-5">
+                            <td colspan="11" class="text-center text-muted py-5">
                                 <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                                 No records found
                             </td>
@@ -361,6 +452,7 @@
 
                 </div>
             </div>
+            </div><!-- /#mnmListContainer -->
 
         </div>
     </div>
@@ -373,7 +465,7 @@
                 <div class="d-flex align-items-start justify-content-between gap-2">
                     <h4 class="conv-title mb-0">Conversation</h4>
                     <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn conv-endchat" id="endChatBtn">End Chat</button>
+                        <button type="button" class="btn conv-endchat" id="endChatBtn" disabled title="Open a conversation first">End Chat</button>
                         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close conversation panel" title="Close"></button>
                     </div>
                 </div>
@@ -477,7 +569,7 @@
 
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="session_name" class="form-label">Session</label>
-                                <input type="text" id="class_session_master_pk" class="form-control" value="{{ old('class_session_master_pk') }}" readonly>
+                                <input type="text" id="class_session_master_pk" name="class_session_master_pk" class="form-control" value="{{ old('class_session_master_pk') }}" readonly>
                                 @error('session_name')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
@@ -485,24 +577,31 @@
 
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="faculty_name" class="form-label">Faculty Name</label>
-                                <input type="text" id="faculty_name" class="form-control" value="{{ old('faculty_name') }}" readonly>
+                                <input type="text" id="faculty_name" name="faculty_name" class="form-control" value="{{ old('faculty_name') }}" readonly>
                                 @error('faculty_name')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="student_name" class="form-label">Student Name</label>
-                                <input type="text" id="student_name" class="form-control" value="{{ old('student_name') }}" readonly>
+                                <input type="text" id="student_name" name="student_name" class="form-control" value="{{ old('student_name') }}" readonly>
+                                <select id="student_pk_select" class="form-select d-none">
+                                    <option value="">Select Student</option>
+                                </select>
+                                <small class="text-muted d-none" id="studentReassignHint">Reassign this memo to a different student enrolled in the same course.</small>
                                 @error('student_name')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="memoTemplate" class="form-label">Template</label>
-                                <select name="memo_notice_template_pk" id="memoTemplate" class="form-select">
+                                <select name="memo_notice_template_pk" id="memoTemplate" class="form-select @error('memo_notice_template_pk') is-invalid @enderror">
                                     <option value="">Select Template</option>
                                 </select>
-                                <small class="text-muted">Memo template to use. Depends on the course.</small>
+                                <small class="text-muted">Memo template to use. Depends on the Memo Type/course.</small>
+                                @error('memo_notice_template_pk')
+                                <span class="text-danger">{{ $message }}</span>
+                                @enderror
                             </div>
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="memo_type" class="form-label">Memo Type</label>
@@ -539,7 +638,7 @@
                             </div>
                             <div class="col-12 col-md-3 mb-3">
                                 <label for="memo_date" class="form-label">Date</label>
-                                <input type="date" id="memo_date" class="form-control" min="{{ date('Y-m-d') }}">
+                                <input type="date" id="memo_date" name="memo_date" class="form-control" min="{{ date('Y-m-d') }}" value="{{ old('memo_date') }}">
                                 @error('memo_date')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
@@ -560,6 +659,18 @@
                                 @enderror
                             </div>
                         </div>
+
+                        <h6 class="an-section-title mt-2">Preview</h6>
+                        <div id="memoPreviewWrap" class="an-preview" style="display:none;">
+                            <h5 class="text-center fw-bold mb-2" id="memoPvCourse"></h5>
+                            <p class="text-center mb-0 small">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+                            <hr>
+                            <p class="mb-1"><strong>Date:</strong> <span id="memoPvDate"></span></p>
+                            <div id="memoPvContent" class="mb-3"></div>
+                            <div id="memoPvSignature" class="text-end mb-2"></div>
+                            <p class="text-end mb-0"><strong id="memoPvDirector"></strong><br><span id="memoPvDesig"></span></p>
+                        </div>
+                        <div id="memoPreviewNone" class="an-preview-none text-muted" style="display:none;">No matching template found — select a Memo Type and/or Template.</div>
 
                 </div>
                 <div class="modal-footer bg-light">
@@ -589,13 +700,17 @@
                             <select class="form-select" id="endChatConclusion" name="memo_conclusion_master_pk" required>
                                 <option value="">Select Conclusion Type</option>
                                 @foreach(($conclusions ?? []) as $c)
-                                    <option value="{{ $c->pk }}">{{ $c->discussion_name }}</option>
+                                    <option value="{{ $c->pk }}" data-name="{{ \Illuminate\Support\Str::lower($c->discussion_name) }}">{{ $c->discussion_name }}</option>
                                 @endforeach
                             </select>
                         </div>
+                        <div class="mb-3 d-none" id="endChatMarksWrap">
+                            <label for="endChatMarks" class="form-label fw-semibold">Marks to Deduct <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="endChatMarks" name="marks_deducted" min="0" step="0.5" placeholder="eg. Enter marks to deduct (e.g. 1.5, 2.5)" disabled>
+                        </div>
                         <div class="mb-1">
                             <label for="endChatRemark" class="form-label fw-semibold">Conclusion Remarks</label>
-                            <textarea class="form-control" id="endChatRemark" name="conclusion_remark" rows="4" placeholder="eg. Lorem ipsum dolor"></textarea>
+                            <textarea class="form-control" id="endChatRemark" name="conclusion_remark" rows="4" placeholder="eg. Enter your remarks here..."></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -617,15 +732,16 @@ $(document).ready(function() {
     // Holds the conversation currently open in the offcanvas (used by End Chat).
     window.currentConv = { id: null, type: null };
 
-    $('.view-conversation').on('click', function() {
+    $(document).on('click', '.view-conversation', function() {
         let memoId = $(this).data('id');
         let topic = $(this).data('topic');
         let type = $(this).data('type');
         let participant = $(this).data('participant') || '—';
+        let isClosed = String($(this).data('closed')) === '1';
         $('#userType').val(type);
         let user_type = 'admin';
 
-        window.currentConv = { id: memoId, type: type };
+        window.currentConv = { id: memoId, type: type, closed: isClosed };
 
         $('#conversationTopic').text("Topic: " + (topic || '—'));
         $('#conversationParticipant').text("Participant: " + participant);
@@ -633,6 +749,13 @@ $(document).ready(function() {
         // Reflect the current conversation type in the Notice/Memo toggle.
         $('.conv-toggle-btn').removeClass('active');
         $('.conv-toggle-btn[data-conv-type="' + type + '"]').addClass('active');
+
+        // Keep End Chat disabled until the conversation actually loads into the
+        // chat window. It's enabled only once the chat is open AND still active
+        // (a closed notice/memo can't be ended again).
+        $('#endChatBtn')
+            .prop('disabled', true)
+            .attr('title', 'Loading conversation…');
         $('#chatBody').html('<p class="text-muted text-center">Loading conversation...</p>');
 
         $.ajax({
@@ -640,11 +763,17 @@ $(document).ready(function() {
             type: 'GET',
             success: function(res) {
                 $('#chatBody').html(res);
+                // Chat is now open in the window → enable End Chat unless it's closed.
+                $('#endChatBtn')
+                    .prop('disabled', isClosed)
+                    .attr('title', isClosed ? 'This ' + type + ' is already closed' : 'End Chat');
             },
             error: function() {
                 $('#chatBody').html(
                     '<p class="text-danger text-center">Failed to load conversation.</p>'
                 );
+                // Load failed — no chat open, keep End Chat disabled.
+                $('#endChatBtn').prop('disabled', true).attr('title', 'Open a conversation first');
             }
         });
 
@@ -656,13 +785,26 @@ $(document).ready(function() {
     // ── End Chat: open the conclusion modal for the current conversation ──
     $('#endChatBtn').on('click', function() {
         if (!window.currentConv || !window.currentConv.id) { return; }
+        if (window.currentConv.closed) { return; } // closed notice/memo can't be ended
         $('#endChatId').val(window.currentConv.id);
         $('#endChatType').val(window.currentConv.type);
         $('#endChatForm')[0].reset();
         $('#endChatId').val(window.currentConv.id);
         $('#endChatType').val(window.currentConv.type);
+        toggleEndChatMarks(); // reset marks field to hidden state
         new bootstrap.Modal(document.getElementById('end_chat_modal')).show();
     });
+
+    // ── Show a "Marks to Deduct" field only when the "Marks Deduction" conclusion is chosen ──
+    function toggleEndChatMarks() {
+        const name = ($('#endChatConclusion').find('option:selected').data('name') || '').toString();
+        const isDeduction = name.indexOf('marks deduction') !== -1;
+        $('#endChatMarksWrap').toggleClass('d-none', !isDeduction);
+        // Only submit + require the value when the field is visible
+        $('#endChatMarks').prop('disabled', !isDeduction).prop('required', isDeduction);
+        if (!isDeduction) { $('#endChatMarks').val(''); }
+    }
+    $('#endChatConclusion').on('change', toggleEndChatMarks);
 
     $('#endChatForm').on('submit', function(e) {
         e.preventDefault();
@@ -681,8 +823,8 @@ $(document).ready(function() {
                     $btn.prop('disabled', false);
                 }
             },
-            error: function() {
-                alert('Failed to end conversation.');
+            error: function(xhr) {
+                alert((xhr.responseJSON && xhr.responseJSON.message) || 'Failed to end conversation.');
                 $btn.prop('disabled', false);
             }
         });
@@ -692,6 +834,10 @@ $(document).ready(function() {
     document.getElementById('chatOffcanvas').addEventListener('hidden.bs.offcanvas', function () {
         // Do NOT reset _memoNoticeListenersRegistered — document-level listeners persist across opens
         // Resetting it causes duplicate listener registration on each re-open
+
+        // No chat is open now → disable End Chat until a conversation is opened again.
+        window.currentConv = { id: null, type: null };
+        $('#endChatBtn').prop('disabled', true).attr('title', 'Open a conversation first');
     });});
 </script>
 @push('scripts')
@@ -752,30 +898,84 @@ $(document).ready(function() {
 
     initMemoChoices();
 
-    // Load Memo templates for a course into the Generate Memo picker (optionally preselect one).
-    function loadMemoTemplates(courseId, selectedPk) {
-        var $t = $('#memoTemplate');
-        $t.html('<option value="">Select Template</option>');
-        if (!courseId) { return; }
-        $.get("{{ route('memo.notice.management.getTemplatesByType') }}", { course_id: courseId, type: 'Memo' })
-            .done(function (res) {
-                (res || []).forEach(function (tpl) {
-                    $t.append($('<option>').val(tpl.pk).text(tpl.title));
-                });
-                if (selectedPk) { $t.val(String(selectedPk)); }
-                else if ((res || []).length === 1) { $t.val(String(res[0].pk)); }
-            });
+    var memoTemplateCache = []; // Memo templates for the currently-loaded course (+ memo type)
+
+    function renderMemoTemplatePreview(tpl) {
+        if (tpl && (tpl.content || tpl.director_name)) {
+            $('#memoPvCourse').text($('#course_master_name').val() || '');
+            $('#memoPvDate').text($('#memo_date').val() || $('#date_memo_notice').val() || '');
+            $('#memoPvContent').html(tpl.content || '');
+            $('#memoPvDirector').text(tpl.director_name || '');
+            $('#memoPvDesig').text(tpl.director_designation || '');
+            $('#memoPvSignature').html(tpl.signature_image
+                ? '<img src="/storage/' + tpl.signature_image + '" alt="Signature" style="max-height:60px;">'
+                : '');
+            $('#memoPreviewNone').hide();
+            $('#memoPreviewWrap').show();
+        } else {
+            $('#memoPreviewWrap').hide();
+            $('#memoPreviewNone').show();
+        }
     }
 
-    // Filter form submission on change
+    // Load Memo templates for a course (+ optional memo type filter) into the picker.
+    function loadMemoTemplates(courseId, selectedPk, memoTypeMasterPk) {
+        var $t = $('#memoTemplate');
+        memoTemplateCache = [];
+        $t.html('<option value="">Select Template</option>');
+        if (!courseId) { renderMemoTemplatePreview(null); return; }
+        $.get("{{ route('memo.notice.management.getTemplatesByType') }}", {
+            course_id: courseId,
+            type: 'Memo',
+            memo_type_master_pk: memoTypeMasterPk || ''
+        }).done(function (res) {
+            memoTemplateCache = res || [];
+            if (!memoTemplateCache.length) {
+                $t.html('<option value="">No template configured for this Memo Type</option>');
+                renderMemoTemplatePreview(null);
+                return;
+            }
+            memoTemplateCache.forEach(function (tpl) {
+                $t.append($('<option>').val(tpl.pk).text(tpl.title));
+            });
+            if (selectedPk) { $t.val(String(selectedPk)); }
+            else if (memoTemplateCache.length === 1) { $t.val(String(memoTemplateCache[0].pk)); }
+            var chosen = memoTemplateCache.find(function (t) { return String(t.pk) === String($t.val()); });
+            renderMemoTemplatePreview(chosen || null);
+        });
+    }
+
+    $('#memoTemplate').on('change', function () {
+        var pk = String($(this).val() || '');
+        var tpl = memoTemplateCache.find(function (t) { return String(t.pk) === pk; });
+        renderMemoTemplatePreview(tpl || null);
+    });
+
+    // Memo Type changed → reload the Template list filtered to that type.
+    $('#memo_type_master_pk').on('change', function () {
+        var courseId = $('#course_master_pk').val();
+        loadMemoTemplates(courseId, null, $(this).val());
+    });
+
+    // Filter form submission on change → AJAX (no full page reload)
     $('#program_name, #type, #status, #from_date, #to_date').on('change', function() {
-        $('#filterForm').submit();
+        if (typeof window.applyMnmFiltersAjax === 'function') {
+            window.applyMnmFiltersAjax();
+        } else {
+            $('#filterForm').get(0).submit();
+        }
     });
 
     // Handle Generate Memo button (editable mode)
-    $('.generate-memo-btn').on('click', function() {
+    $(document).on('click', '.generate-memo-btn', function() {
         let memoId = $(this).data('id');
         setModalMode('generate');
+
+        // Fresh generate: don't carry over a memo type left selected from a
+        // previously-generated memo in this same page session, or its stale
+        // value will filter out this course's templates and leave the preview blank.
+        $('#memo_type_master_pk').val('');
+        syncMemoChoicesById('memo_type_master_pk');
 
         $.ajax({
             url: "{{ route('memo.notice.management.get_memo_data') }}",
@@ -808,7 +1008,7 @@ $(document).ready(function() {
                 $('#memo_date').val(today);
 
                 // Load Memo templates for this course so the sender can pick one.
-                loadMemoTemplates(res.course_master_pk, null);
+                loadMemoTemplates(res.course_master_pk, null, $('#memo_type_master_pk').val());
             },
             error: function() {
                 alert('Something went wrong!');
@@ -817,7 +1017,7 @@ $(document).ready(function() {
     });
 
     // Handle Preview Memo button (read-only mode)
-    $('.preview-memo-btn').on('click', function() {
+    $(document).on('click', '.preview-memo-btn', function() {
         let memoId = $(this).data('memo-id');
         // Set preview mode immediately to hide save button
         setModalMode('preview');
@@ -872,6 +1072,10 @@ $(document).ready(function() {
                 if (res.message) {
                     $('#textarea').val(res.message);
                 }
+
+                // Fetch the actual template content so the detail/view mode shows
+                // what the memo document says, not just the field selections.
+                loadMemoTemplates(res.course_master_pk, res.memo_notice_template_pk, res.memo_type_master_pk);
             },
             error: function(xhr, status, error) {
                 console.error('Error fetching memo data:', error);
@@ -881,21 +1085,106 @@ $(document).ready(function() {
         });
     });
 
-    // Function to set modal mode (generate or preview)
+    var currentEditMemoId = null;
+
+    // Populate the student-reassignment picker for a course, preselecting the current student.
+    function loadMemoStudentRoster(courseId, selectedStudentPk) {
+        var $sel = $('#student_pk_select');
+        $sel.html('<option value="">Select Student</option>');
+        if (!courseId) { return; }
+        $.get("{{ route('memo.notice.management.students_by_course') }}", { course_id: courseId })
+            .done(function (res) {
+                (res || []).forEach(function (s) {
+                    var label = s.display_name + (s.generated_OT_code ? ' (' + s.generated_OT_code + ')' : '');
+                    $sel.append($('<option>').val(s.pk).text(label));
+                });
+                if (selectedStudentPk) { $sel.val(String(selectedStudentPk)); }
+            });
+    }
+
+    // Handle Edit Memo button (editable mode, existing memo)
+    $(document).on('click', '.edit-memo-btn', function() {
+        var memoId = $(this).data('memo-id');
+        currentEditMemoId = memoId;
+        setModalMode('edit');
+
+        if (!memoId) {
+            alert('Memo ID not found!');
+            return;
+        }
+
+        $.ajax({
+            url: "{{ route('memo.notice.management.get_generated_memo_data') }}",
+            type: "POST",
+            data: {
+                _token: "{{ csrf_token() }}",
+                memo_id: memoId
+            },
+            success: function(res) {
+                $('#course_master_name').val(res.course_master_name || '');
+                $('#date_memo_notice').val(res.date_ || '');
+                $('#student_name').val(res.student_name || '');
+                $('#subject_master_id').val(res.subject_master_name || res.student_name || '');
+                $('#topic_id').val(res.subject_topic || '');
+                $('#student_notice_status_pk').val(res.student_notice_status_pk || '');
+                $('#course_master_pk').val(res.course_master_pk || '');
+                $('#memo_count').val(res.memo_count || '');
+
+                $('#session_name').val(res.session_name || '');
+                $('#class_session_master_pk').val(res.class_session_master_pk || '');
+                $('#faculty_name').val(res.faculty_name || '');
+                $('#student_pk').val(res.student_pk || '');
+                $('#memo_number').val(res.memo_number || '');
+
+                if (res.memo_type_master_pk) {
+                    $('#memo_type_master_pk').val(res.memo_type_master_pk);
+                    syncMemoChoicesById('memo_type_master_pk');
+                }
+                if (res.venue_master_pk) {
+                    $('#venue').val(res.venue_master_pk);
+                    syncMemoChoicesById('venue');
+                }
+                if (res.date) { $('#memo_date').val(res.date); }
+                if (res.start_time) { $('#meeting_time').val(res.start_time); }
+                if (res.message) { $('#textarea').val(res.message); }
+
+                loadMemoTemplates(res.course_master_pk, res.memo_notice_template_pk, res.memo_type_master_pk);
+                loadMemoStudentRoster(res.course_master_pk, res.student_pk);
+            },
+            error: function(xhr) {
+                toastr.error((xhr.responseJSON && xhr.responseJSON.message) || 'Failed to load memo data.');
+            }
+        });
+    });
+
+    // Function to set modal mode (generate, edit, or preview)
+    var currentModalMode = 'generate';
     function setModalMode(mode) {
+        currentModalMode = mode;
         const modal = $('#memo_generate');
         const form = modal.find('form');
         // Use more specific selector for save button
         const saveButton = modal.find('.modal-footer').find('button[type="submit"]');
         const modalTitle = $('#memo_generateLabel');
 
+        // Student field: text display in generate/preview, a reassignable select in edit mode.
+        $('#student_name').toggleClass('d-none', mode === 'edit');
+        $('#student_pk_select').toggleClass('d-none', mode !== 'edit');
+        $('#studentReassignHint').toggleClass('d-none', mode !== 'edit');
+
         if (mode === 'preview') {
             // Preview mode: make all fields read-only
             form.find('input[type="text"], input[type="date"], input[type="time"], textarea').prop('readonly', true);
             form.find('select').prop('disabled', true);
-            // Hide save button in preview mode
             saveButton.hide();
             modalTitle.text('Preview Memo');
+        } else if (mode === 'edit') {
+            // Edit mode: an already-generated memo — everything correctable is editable.
+            form.find('input, textarea').prop('readonly', false);
+            form.find('select').prop('disabled', false);
+            $('#course_master_name, #date_memo_notice, #subject_master_id, #topic_id, #class_session_master_pk, #faculty_name, #memo_number').prop('readonly', true);
+            saveButton.show().text('Save Changes');
+            modalTitle.text('Edit Memo');
         } else {
             // Generate mode: enable editable fields
             form.find('input, textarea').prop('readonly', false);
@@ -903,9 +1192,9 @@ $(document).ready(function() {
             // Keep readonly fields as readonly
             $('#course_master_name, #date_memo_notice, #subject_master_id, #topic_id, #class_session_master_pk, #faculty_name, #student_name, #memo_number').prop('readonly', true);
             // Keep non-editable selects disabled
-            form.find('select').not('#memo_type_master_pk, #venue').prop('disabled', true);
+            form.find('select').not('#memo_type_master_pk, #venue, #memoTemplate').prop('disabled', true);
             // Show save button in generate mode
-            saveButton.show();
+            saveButton.show().text('Save');
             modalTitle.text('Generate Memo');
         }
 
@@ -913,9 +1202,52 @@ $(document).ready(function() {
         syncMemoChoicesById('venue');
     }
 
+    // Submit routing: edit mode goes through AJAX to updateMemoStatus; generate mode
+    // uses the form's native action (store_memo_status).
+    $('#memo_generate form').on('submit', function (e) {
+        if (currentModalMode !== 'edit') { return; } // let the native POST proceed
+        e.preventDefault();
+        if (!currentEditMemoId) { return; }
+
+        var $btn = $(this).find('.modal-footer button[type="submit"]').prop('disabled', true);
+        $.ajax({
+            url: "{{ rtrim(route('memo.notice.management.update_memo_status', ''), '/') }}/" + currentEditMemoId,
+            type: 'POST',
+            data: {
+                _token: "{{ csrf_token() }}",
+                student_pk: $('#student_pk_select').val(),
+                memo_type_master_pk: $('#memo_type_master_pk').val(),
+                memo_notice_template_pk: $('#memoTemplate').val(),
+                venue: $('#venue').val(),
+                date_memo_notice: $('#memo_date').val(),
+                meeting_time: $('#meeting_time').val(),
+                Remark: $('#textarea').val()
+            },
+            success: function (res) {
+                if (res.success) {
+                    toastr.success(res.message || 'Memo updated successfully.');
+                    $('#memo_generate').modal('hide');
+                    setTimeout(function () { window.location.reload(); }, 600);
+                } else {
+                    toastr.error(res.message || 'Update failed.');
+                    $btn.prop('disabled', false);
+                }
+            },
+            error: function (xhr) {
+                var res = xhr.responseJSON;
+                // A 422 validation failure carries field-specific messages in `errors`;
+                // surface those instead of the generic "The given data was invalid."
+                var firstFieldError = res && res.errors ? Object.values(res.errors)[0][0] : null;
+                toastr.error(firstFieldError || (res && res.message) || 'Update failed.');
+                $btn.prop('disabled', false);
+            }
+        });
+    });
+
     // Reset modal when closed
     $('#memo_generate').on('hidden.bs.modal', function() {
         $(this).find('form')[0].reset();
+        currentEditMemoId = null;
         setModalMode('generate'); // Reset to default mode
     });
 
@@ -928,6 +1260,14 @@ $(document).ready(function() {
     }
     syncMemoChoicesById('memo_type_master_pk');
     syncMemoChoicesById('venue');
+    // Re-fetch the Template options for the previously-selected course/memo type
+    // so the previously-chosen template is re-selected instead of reverting to
+    // "Select Template" (its <option> only exists once templates are (re)loaded).
+    loadMemoTemplates(
+        @json(old('course_master_pk')),
+        @json(old('memo_notice_template_pk')),
+        @json(old('memo_type_master_pk'))
+    );
     @endif
 });
 </script>
@@ -936,18 +1276,24 @@ $(document).ready(function() {
 @push('scripts')
 <script>
 $(function () {
-    // ── DataTable sorting for #mnmTable ──
-    if ($('#mnmTable tbody tr td[colspan]').length === 0) {
-        $('#mnmTable').DataTable({
-            paging: false,
-            searching: false,
-            ordering: true,
-            info: false,
-            columnDefs: [
-                { orderable: false, targets: [0, 9] }
-            ]
-        });
-    }
+    // ── DataTable sorting for #mnmTable (reusable so AJAX filtering can re-init) ──
+    window.reinitMnmTable = function () {
+        if ($.fn.DataTable.isDataTable('#mnmTable')) {
+            $('#mnmTable').DataTable().destroy();
+        }
+        if ($('#mnmTable tbody tr td[colspan]').length === 0) {
+            $('#mnmTable').DataTable({
+                paging: false,
+                searching: false,
+                ordering: true,
+                info: false,
+                columnDefs: [
+                    { orderable: false, targets: [0, 10] }
+                ]
+            });
+        }
+    };
+    window.reinitMnmTable();
 });
 </script>
 @endpush
@@ -955,6 +1301,36 @@ $(function () {
 @push('scripts')
 <script>
 $(function () {
+    // ── AJAX filter/search: swap only the table container, no full page reload ──
+    function applyMnmFiltersAjax() {
+        var form = document.getElementById('filterForm');
+        var listContainer = document.getElementById('mnmListContainer');
+        if (!form || !listContainer) { $('#filterForm').get(0).submit(); return; }
+        var params = new URLSearchParams(new FormData(form)).toString();
+        var url = "{{ route('memo.notice.management.index') }}" + (params ? '?' + params : '');
+        listContainer.style.opacity = '0.5';
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.text(); })
+            .then(function (html) {
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                var newList = doc.querySelector('#mnmListContainer');
+                if (newList) { listContainer.innerHTML = newList.innerHTML; }
+                window.history.replaceState({}, '', url);
+            })
+            .catch(function () { alert('Failed to apply filters'); })
+            .finally(function () {
+                listContainer.style.opacity = '1';
+                if (typeof window.reinitMnmTable === 'function') { window.reinitMnmTable(); }
+            });
+    }
+    window.applyMnmFiltersAjax = applyMnmFiltersAjax;
+
+    // Any native form submit (e.g. Enter key) → AJAX instead of full reload.
+    $('#filterForm').on('submit', function (e) {
+        e.preventDefault();
+        applyMnmFiltersAjax();
+    });
+
     // ── Time Period presets → from/to dates, then submit ──
     function mnmFmt(d) { return d.toISOString().split('T')[0]; }
     $('#mnmTimePeriod').on('change', function () {
@@ -974,7 +1350,7 @@ $(function () {
         }
         $('#from_date').val(from);
         $('#to_date').val(to);
-        $('#filterForm').submit();
+        applyMnmFiltersAjax();
     });
 
     // ── Search: toggle, search-as-you-type (debounced), Enter, clear ──
@@ -988,12 +1364,11 @@ $(function () {
     $('#search').on('input', function () {
         $('#mnmSearchClear').toggle(this.value.length > 0);
         clearTimeout(mnmSearchTimer);
-        // Filters here submit the whole form (full reload); debounce so we only
-        // search once the user pauses typing, not on every keystroke.
-        mnmSearchTimer = setTimeout(function () { $('#filterForm').submit(); }, 500);
+        // Debounced AJAX search: only the table container reloads, not the page.
+        mnmSearchTimer = setTimeout(function () { applyMnmFiltersAjax(); }, 500);
     });
     $('#search').on('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); clearTimeout(mnmSearchTimer); $('#filterForm').submit(); }
+        if (e.key === 'Enter') { e.preventDefault(); clearTimeout(mnmSearchTimer); applyMnmFiltersAjax(); }
     });
     $('#mnmSearchClear').on('click', function () {
         var $s = $('#search');
@@ -1001,7 +1376,7 @@ $(function () {
         clearTimeout(mnmSearchTimer);
         if ($s.val() === '') { $s.trigger('focus'); return; }
         $s.val('');
-        $('#filterForm').submit();
+        applyMnmFiltersAjax();
     });
 
     // After a search reload, put the cursor back in the search box (at the end)
@@ -1227,6 +1602,22 @@ $(function () {
         if (!$('#anDate').val()) $('#anDate').val(todayStr);
     });
 
+    // Clear everything on close (Cancel, backdrop click, Esc, or after submit)
+    // so the next "Add Notice" doesn't reopen with stale course/session/students/template.
+    function resetAddNoticeForm() {
+        var form = document.getElementById('addNoticeForm');
+        if (form) form.reset();
+        $('#anSession').html('<option value="">Select Session</option>').prop('disabled', true);
+        $('#anVenue').html('<option value="">Select Venue</option>').prop('disabled', true);
+        clearSubjectTopicDetails();
+        resetStudents();
+        anTemplateCache = [];
+        $('#anTemplate').html('<option value="">Select Course first</option>');
+        $('#anPreviewWrap, #anPreviewNone').hide();
+        $('#anHiddenInputs').empty();
+    }
+    $('#addNoticeModal').on('hidden.bs.modal', resetAddNoticeForm);
+
     $('#anCourse').on('change', function () { loadSessions(); loadTemplate($(this).val()); });
     $('#anDate').on('change', loadSessions);
     $('#anSession').on('change', loadVenues);
@@ -1321,6 +1712,109 @@ $(function () {
                     toastr.error((xhr.responseJSON && xhr.responseJSON.message) || 'Failed to delete.');
                 }
             });
+        });
+    });
+});
+</script>
+@endpush
+
+@push('scripts')
+<script>
+/* ── Edit Notice (template only) ── */
+$(function () {
+    var editNoticeTemplateCache = [];
+
+    function renderEditNoticePreview(tpl, ctx) {
+        if (tpl && (tpl.content || tpl.director_name)) {
+            $('#editNoticeTplCourse').text(ctx.course_name || '');
+            $('#editNoticeTplType').text('SHOW CAUSE NOTICE');
+            $('#editNoticeTplDate').text(ctx.date_ ? new Date(ctx.date_).toLocaleDateString('en-GB') : '');
+            $('#editNoticeInfoDate').text(ctx.date_ ? new Date(ctx.date_).toLocaleDateString('en-GB') : '');
+            $('#editNoticeInfoTopic').text(ctx.topic_name || '');
+            $('#editNoticeInfoVenue').text(ctx.venue_name || '');
+            $('#editNoticeInfoSession').text(ctx.session_name || '');
+            $('#editNoticeTplContent').html(tpl.content || '');
+            $('#editNoticeTplDirector').text(tpl.director_name || '');
+            $('#editNoticeTplDesig').text(tpl.director_designation || '');
+            $('#editNoticePreviewNone').hide();
+            $('#editNoticePreviewWrap').show();
+        } else {
+            $('#editNoticePreviewWrap').hide();
+            $('#editNoticePreviewNone').show();
+        }
+    }
+
+    var editNoticeCtx = {};
+
+    $(document).on('click', '.edit-notice-btn', function () {
+        var noticeId = $(this).data('notice-id');
+        if (!noticeId) { return; }
+
+        $('#editNoticeForm')[0].reset();
+        $('#editNoticePk').val('');
+        $('#editNoticeTemplate').html('<option value="">Loading…</option>').prop('disabled', true);
+        $('#editNoticePreviewWrap, #editNoticePreviewNone').hide();
+        $('#editNoticeSaveBtn').prop('disabled', true);
+
+        $.get("{{ rtrim(route('memo.notice.management.editNotice', ''), '/') }}/" + noticeId)
+            .done(function (data) {
+                editNoticeCtx = data;
+                $('#editNoticePk').val(data.pk);
+
+                $.get("{{ route('memo.notice.management.getTemplatesByType') }}", { course_id: data.course_master_pk, type: 'Notice' })
+                    .done(function (res) {
+                        editNoticeTemplateCache = res || [];
+                        var $sel = $('#editNoticeTemplate').prop('disabled', false).empty()
+                            .append('<option value="">Select Template</option>');
+                        editNoticeTemplateCache.forEach(function (tpl) {
+                            $sel.append($('<option>').val(tpl.pk).text(tpl.title));
+                        });
+                        var preselect = data.memo_notice_template_pk || (editNoticeTemplateCache.length === 1 ? editNoticeTemplateCache[0].pk : '');
+                        if (preselect) { $sel.val(String(preselect)); }
+                        var chosen = editNoticeTemplateCache.find(function (t) { return String(t.pk) === String($sel.val()); });
+                        renderEditNoticePreview(chosen || null, editNoticeCtx);
+                        $('#editNoticeSaveBtn').prop('disabled', false);
+                    });
+            })
+            .fail(function (xhr) {
+                toastr.error((xhr.responseJSON && xhr.responseJSON.message) || 'Failed to load notice data.');
+            });
+    });
+
+    $('#editNoticeTemplate').on('change', function () {
+        var pk = String($(this).val() || '');
+        var tpl = editNoticeTemplateCache.find(function (t) { return String(t.pk) === pk; });
+        renderEditNoticePreview(tpl || null, editNoticeCtx);
+    });
+
+    $('#editNoticeForm').on('submit', function (e) {
+        e.preventDefault();
+        var id = $('#editNoticePk').val();
+        var templatePk = $('#editNoticeTemplate').val();
+        if (!templatePk) { toastr.error('Please select a template.'); return; }
+
+        var $btn = $('#editNoticeSaveBtn').prop('disabled', true);
+        $.ajax({
+            url: "{{ rtrim(route('memo.notice.management.update_notice_template', ''), '/') }}/" + id,
+            type: 'POST',
+            data: {
+                _token: "{{ csrf_token() }}",
+                memo_notice_template_pk: templatePk
+            },
+            success: function (res) {
+                if (res.success) {
+                    toastr.success(res.message || 'Notice updated successfully.');
+                    $('#editNoticeModal').modal('hide');
+                    setTimeout(function () { window.location.reload(); }, 600);
+                } else {
+                    toastr.error(res.message || 'Update failed.');
+                    $btn.prop('disabled', false);
+                }
+            },
+            error: function (xhr) {
+                toastr.error((xhr.responseJSON && xhr.responseJSON.message) || 'Update failed.');
+                $btn.prop('disabled', false);
+            }
         });
     });
 });

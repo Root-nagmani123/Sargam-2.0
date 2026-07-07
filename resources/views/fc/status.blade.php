@@ -1,530 +1,211 @@
-{{-- @extends('fc.layouts.master')
-
-@section('title', 'Foundation Course Status | Lal Bahadur Shastri National Academy of Administration')
-
-@section('setup_content')
-<style>
-  .card-body{
-    padding: 0.5rem !important;
-  }
-</style>
-<main style="flex: 1;">
-    <div class="container-fluid mt-5">
-        <!-- Page Title -->
-        <div class="text-center mb-4">
-            <h2 style="color: #004a93; font-size: 42px; font-weight: 700;">105<sup>th</sup> Foundation Course</h2>
-            <p class="text-muted" style="font-size: 20px;">
-                <i class="bi bi-calendar3"></i> (June 18th, 2025 – December 31st, 2025)
-            </p>
-        </div>
-        <!-- Status Overview -->
-        <div class="row mb-4">
-          <h4 class="fw-bold text-muted text-center bg-primary-subtle text-primary p-2">Status count</h4>
-            <div class="col-md-3">
-                <div class="card bg-danger text-white">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Not Responded</h5>
-                        <p class="card-text">653 Participants</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-2">
-                <div class="card bg-success text-white">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">CSE 2024 Registered</h5>
-                        <p class="card-text">137 Participants</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-2">
-                <div class="card bg-primary text-white">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Service wise List</h5>
-                        <p class="card-text">1 Service</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-2">
-                <div class="card bg-secondary text-white">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Applied for Exemption</h5>
-                        <p class="card-text">59 Participants</p>
-                    </div>
-                </div>    
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-warning text-white" style="background-color: #ffa500 !important;">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Incomplete Registrations</h5>
-                        <p class="card-text">160 Participants</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tabs as Status Buttons -->
-        
-        <!-- Tabs as Status Buttons -->
-        <div class="container-fluid">
-            <ul class="nav nav-tabs justify-content-start mb-4" id="statusTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active text-danger" id="not-responded-tab" data-bs-toggle="tab"
-                        data-bs-target="#not-responded" type="button" role="tab">Not Responded</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link text-success" id="registered-tab" data-bs-toggle="tab"
-                        data-bs-target="#registered" type="button" role="tab">CSE 2024 Registered</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link text-primary" id="service-tab" data-bs-toggle="tab"
-                        data-bs-target="#service" type="button" role="tab">Service wise List</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link text-secondary" id="exemption-tab" data-bs-toggle="tab"
-                        data-bs-target="#exemption" type="button" role="tab">Applied for Exemption</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link text-warning" id="incomplete-tab" data-bs-toggle="tab"
-                        data-bs-target="#incomplete" type="button" role="tab" style="color: #ffa500 !important;">Incomplete</button>
-                </li>
-            </ul>
-
-            <div class="tab-content" id="statusTabsContent">
-                <!-- Not Responded Tab -->
-                <div class="tab-pane fade show active" id="not-responded" role="tabpanel">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-danger text-white fw-bold">Not Responded Participants</div>
-                      <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-bordered text-center m-0 text-nowrap align-middle table-hover 
-                                    table-striped">
-                                <thead class="table-danger">
-                                    <tr>
-                                        <th>S.No</th>
-                                        <th>Name</th>
-                                        <th>Service</th>
-                                        <th>Rank</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>1</td>
-                                        <td>MAYANK TRIPATHI</td>
-                                        <td>NOT APPLICABLE</td>
-                                        <td>10</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                      </div>
-                        
-                        
-                    </div>
-                </div>
-
-                <!-- CSE 2024 Registered Tab -->
-                <div class="tab-pane fade" id="registered" role="tabpanel">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-success text-white fw-bold">CSE 2024 Registered</div>
-                        <div class="table-responsive">
-                            <table class="table table-bordered text-center m-0">
-                                <thead class="table-success">
-                                    <tr>
-                                        <th>S.No</th>
-                                        <th>Name</th>
-                                        <th>Service</th>
-                                        <th>Rank</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>1</td>
-                                        <td>Example User</td>
-                                        <td>IAS</td>
-                                        <td>1</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Service wise Tab -->
-                <div class="tab-pane fade" id="service" role="tabpanel">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-primary text-white fw-bold">Service-wise List</div>
-                        <div class="table-responsive">
-                            <table class="table table-bordered text-center m-0">
-                                <thead class="table-primary">
-                                    <tr>
-                                      <th>Sr.No</th>
-                                        <th>Service</th>
-                                        <th>Count</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                      <td>1</td>
-                                        <td>IAS</td>
-                                        <td>50</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Exemption Tab -->
-                <div class="tab-pane fade" id="exemption" role="tabpanel">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-secondary text-white fw-bold">Applied for Exemption</div>
-                        <div class="table-responsive">
-                            <table class="table table-bordered text-center m-0">
-                                <thead class="table-secondary">
-                                    <tr>
-                                        <th>S.No</th>
-                                        <th>Name</th>
-                                        <th>Service</th>
-                                        <th>Rank</th>
-                                        <th>Reason</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>1</td>
-                                        <td>John Doe</td>
-                                        <td>IPS</td>
-                                        <td>1</td>
-                                        <td>Medical</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Incomplete Tab -->
-                <div class="tab-pane fade" id="incomplete" role="tabpanel">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-warning text-white fw-bold" style="background-color: #ffa500 !important;">Incomplete Registrations</div>
-                        <div class="table-responsive">
-                            <table class="table table-bordered text-center m-0">
-                                <thead class="table-warning">
-                                    <tr>
-                                        <th>S.No</th>
-                                        <th>Name</th>
-                                         <th>Service</th>
-                                          <th>Rank</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>1</td>
-                                        <td>Amit Kumar</td>
-                                        <td>IAS</td>
-                                        <td>2</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </>
-</main>
-
-@endsection --}}
-
 @extends('fc.layouts.master')
 
-@section('title', 'Foundation Course Status | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Status of Registrations')
 
-@section('setup_content')
-<style>
-  .card-body {
-    padding: 0.5rem !important;
-  }
-  .table-responsive {
-    min-height: 300px;
-  }
-  .pagination {
-    justify-content: center;
-    margin-top: 15px;
-  }
-</style>
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/fc-registration-status.css') }}?v={{ @filemtime(public_path('css/fc-registration-status.css')) ?: time() }}">
+@endpush
 
-<main style="flex: 1;">
-    <div class="container-fluid mt-5">
-        <!-- Page Title -->
-        <div class="text-center mb-4">
-            <h2 style="color: #004a93; font-size: 42px; font-weight: 700;">105<sup>th</sup> Foundation Course</h2>
-            <p class="text-muted" style="font-size: 20px;">
-                <i class="bi bi-calendar3"></i> (June 18th, 2025 – December 31st, 2025)
-            </p>
-        </div>
+@section('content')
+@php
+    use App\Services\FC\FcRegistrationStatusService;
+    $tabs = [
+        FcRegistrationStatusService::TAB_NOT_RESPONDED => ['theme' => 'not-responded', 'label' => 'Not Responded'],
+        FcRegistrationStatusService::TAB_REGISTERED => ['theme' => 'registered', 'label' => 'CSE 2024 Registered'],
+        FcRegistrationStatusService::TAB_SERVICE => ['theme' => 'service', 'label' => 'Service wise List'],
+        FcRegistrationStatusService::TAB_EXEMPTION => ['theme' => 'exemption', 'label' => 'Applied for Exemption'],
+        FcRegistrationStatusService::TAB_INCOMPLETE => ['theme' => 'incomplete', 'label' => 'Incomplete'],
+    ];
+@endphp
 
-        <!-- Status Overview -->
-        <div class="row mb-4">
-            <h4 class="fw-bold text-muted text-center bg-primary-subtle text-primary p-2">Status count</h4>
-            <div class="col-md-3">
-                <div class="card bg-danger text-white">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Not Responded</h5>
-                        <p class="card-text">{{ number_format($notResponded) }} Participants</p>
+<main class="fc-status-page" id="fcStatusPage"
+    data-data-url="{{ route('fc.status.data') }}"
+    data-initial-tab="{{ $activeTab }}"
+    data-initial-page="{{ $participants?->currentPage() ?? 1 }}">
+    <div class="fc-status-shell py-2">
+            <header class="fc-status-hero text-center">
+                <div class="row align-items-center g-3">
+                    <div class="col-lg-3 text-lg-start text-center">
+                        <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA" height="76" class="img-fluid" style="max-height:76px;">
+                    </div>
+                    <div class="col-lg-6">
+                        <h1 class="course-title">{{ $courseMeta['title'] }}</h1>
+                        @if($courseMeta['date_line'])
+                            <p class="course-dates">{{ $courseMeta['date_line'] }}</p>
+                        @endif
+                    </div>
+                    <div class="col-lg-3 text-lg-end text-center">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/3/3e/75th_Independence_Day_of_India_Logo.png" alt="Azadi Ka Amrit Mahotsav" height="58" class="img-fluid" style="max-height:58px;" onerror="this.style.display='none'">
                     </div>
                 </div>
+            </header>
+
+            <section class="fc-status-board" aria-labelledby="fcStatusBoardTitle">
+                <h2 id="fcStatusBoardTitle" class="fc-status-board__title mb-0">Status of Registrations</h2>
+                <nav class="fc-status-tabs" aria-label="Registration status categories" role="tablist">
+                    @foreach($tabs as $tabKey => $tabDef)
+                        <a href="#"
+                           role="tab"
+                           class="fc-status-tab {{ $activeTab === $tabKey ? 'is-active' : '' }}"
+                           data-tab="{{ $tabKey }}"
+                           data-theme="{{ $tabDef['theme'] }}"
+                           aria-selected="{{ $activeTab === $tabKey ? 'true' : 'false' }}"
+                           @if($activeTab === $tabKey) aria-current="true" @endif>
+                            <span>{{ $tabDef['label'] }}</span>
+                            <span class="fc-status-badge fc-status-badge--{{ $tabDef['theme'] }}">{{ number_format($counts[$tabKey] ?? 0) }}</span>
+                        </a>
+                    @endforeach
+                </nav>
+            </section>
+
+            <h3 class="fc-status-list-title" id="fcStatusListTitle">{{ $tabMeta['list_title'] }}</h3>
+
+            <div id="fcStatusPanel" class="fc-status-panel-host" aria-live="polite" aria-busy="false">
+                @include('fc.status._results', [
+                    'activeTab' => $activeTab,
+                    'tabMeta' => $tabMeta,
+                    'serviceList' => $serviceList,
+                    'participants' => $participants,
+                ])
             </div>
-            <div class="col-md-2">
-                <div class="card bg-success text-white">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">CSE 2024 Registered</h5>
-                        <p class="card-text">{{ number_format($registered) }} Participants</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-2">
-                <div class="card bg-primary text-white">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Service wise List</h5>
-                        <p class="card-text">{{ number_format($services->count()) }} Services</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-2">
-                <div class="card bg-secondary text-white">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Applied for Exemption</h5>
-                        <p class="card-text">{{ number_format($exemption) }} Participants</p>
-                    </div>
-                </div>    
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-warning text-white" style="background-color: #ffa500 !important;">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Incomplete Registrations</h5>
-                        <p class="card-text">{{ number_format($incomplete) }} Participants</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tabs -->
-        <div class="container-fluid">
-            <ul class="nav nav-tabs justify-content-start mb-4" id="statusTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active text-danger" id="not-responded-tab" data-bs-toggle="tab"
-                        data-bs-target="#not-responded" type="button" role="tab">Not Responded</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link text-success" id="registered-tab" data-bs-toggle="tab"
-                        data-bs-target="#registered" type="button" role="tab">CSE 2024 Registered</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link text-primary" id="service-tab" data-bs-toggle="tab"
-                        data-bs-target="#service" type="button" role="tab">Service wise List</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link text-secondary" id="exemption-tab" data-bs-toggle="tab"
-                        data-bs-target="#exemption" type="button" role="tab">Applied for Exemption</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link text-warning" id="incomplete-tab" data-bs-toggle="tab"
-                        data-bs-target="#incomplete" type="button" role="tab" style="color: #ffa500 !important;">Incomplete</button>
-                </li>
-            </ul>
-
-            <div class="tab-content" id="statusTabsContent">
-                <!-- Not Responded Tab -->
-                <div class="tab-pane fade show active" id="not-responded" role="tabpanel">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-danger text-white fw-bold">Not Responded Participants</div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-bordered text-center m-0 text-nowrap align-middle table-hover table-striped">
-                                    <thead class="table-danger">
-                                        <tr>
-                                            <th>S.No</th>
-                                            <th>Name</th>
-                                            <th>Service</th>
-                                            <th>Rank</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse($notRespondedData as $index => $participant)
-                                        {{-- @dd($participant); --}}
-                                        <tr>
-                                            <td>{{ $index + 1 }}</td>
-                                            <td>{{ $participant->full_name }}</td>
-                                            <td>{{ $participant->service->service_short_name ?? 'NOT APPLICABLE' }}</td>
-                                            <td>{{ $participant->rank }}</td>
-                                        </tr>
-                                        @empty
-                                        <tr>
-                                            <td colspan="4" class="text-center">No records found</td>
-                                        </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="d-flex justify-content-center mt-3">
-                                {{ $notRespondedData->links() }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- CSE 2024 Registered Tab -->
-                <div class="tab-pane fade" id="registered" role="tabpanel">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-success text-white fw-bold">CSE 2024 Registered</div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-bordered text-center m-0">
-                                    <thead class="table-success">
-                                        <tr>
-                                            <th>S.No</th>
-                                            <th>Name</th>
-                                            <th>Service</th>
-                                            <th>Rank</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse($registeredData as $index => $participant)
-                                        <tr>
-                                            <td>{{ $index + 1 }}</td>
-                                            <td>{{ $participant->full_name }}</td>
-                                            <td>{{ $participant->service->name ?? 'NOT APPLICABLE' }}</td>
-                                            <td>{{ $participant->rank }}</td>
-                                        </tr>
-                                        @empty
-                                        <tr>
-                                            <td colspan="4" class="text-center">No records found</td>
-                                        </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="d-flex justify-content-center mt-3">
-                                {{ $registeredData->links() }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Service wise Tab -->
-                <div class="tab-pane fade" id="service" role="tabpanel">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-primary text-white fw-bold">Service-wise List</div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-bordered text-center m-0">
-                                    <thead class="table-primary">
-                                        <tr>
-                                            <th>Sr.No</th>
-                                            <th>Service</th>
-                                            <th>Count</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse($services as $index => $service)
-                                        <tr>
-                                            <td>{{ $index + 1 }}</td>
-                                            <td>{{ $service->service->name ?? 'NOT APPLICABLE' }}</td>
-                                            <td>{{ $service->count }}</td>
-                                        </tr>
-                                        @empty
-                                        <tr>
-                                            <td colspan="3" class="text-center">No services found</td>
-                                        </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Exemption Tab -->
-                <div class="tab-pane fade" id="exemption" role="tabpanel">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-secondary text-white fw-bold">Applied for Exemption</div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-bordered text-center m-0">
-                                    <thead class="table-secondary">
-                                        <tr>
-                                            <th>S.No</th>
-                                            <th>Name</th>
-                                            <th>Service</th>
-                                            <th>Rank</th>
-                                            <th>Reason</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse($exemptionData as $index => $participant)
-                                        <tr>
-                                            <td>{{ $index + 1 }}</td>
-                                            <td>{{ $participant->full_name }}</td>
-                                            <td>{{ $participant->service->name ?? 'NOT APPLICABLE' }}</td>
-                                            <td>{{ $participant->rank }}</td>
-                                            <td>Medical</td>
-                                        </tr>
-                                        @empty
-                                        <tr>
-                                            <td colspan="5" class="text-center">No records found</td>
-                                        </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="d-flex justify-content-center mt-3">
-                                {{ $exemptionData->links() }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Incomplete Tab -->
-                <div class="tab-pane fade" id="incomplete" role="tabpanel">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-warning text-white fw-bold" style="background-color: #ffa500 !important;">Incomplete Registrations</div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-bordered text-center m-0">
-                                    <thead class="table-warning">
-                                        <tr>
-                                            <th>S.No</th>
-                                            <th>Name</th>
-                                            <th>Service</th>
-                                            <th>Rank</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse($incompleteData as $index => $participant)
-                                        <tr>
-                                            <td>{{ $index + 1 }}</td>
-                                            <td>{{ $participant->full_name }}</td>
-                                            <td>{{ $participant->service->name ?? 'NOT APPLICABLE' }}</td>
-                                            <td>{{ $participant->rank }}</td>
-                                        </tr>
-                                        @empty
-                                        <tr>
-                                            <td colspan="4" class="text-center">No records found</td>
-                                        </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="d-flex justify-content-center mt-3">
-                                {{ $incompleteData->links() }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
-</main>
 
+    <footer class="fc-status-footer">
+        <div class="fc-status-shell d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <span>Copyright © {{ date('Y') }}. LBSNAA. All Rights Reserved.</span>
+                <span>Logged user: {{ (int) $loggedUserCount }}</span>
+        </div>
+    </footer>
+</main>
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    var page = document.getElementById('fcStatusPage');
+    var panel = document.getElementById('fcStatusPanel');
+    var listTitle = document.getElementById('fcStatusListTitle');
+    if (!page || !panel) return;
+
+    var dataUrl = page.getAttribute('data-data-url');
+    var currentTab = page.getAttribute('data-initial-tab') || 'not-responded';
+    var loading = false;
+
+    function setBusy(busy) {
+        panel.setAttribute('aria-busy', busy ? 'true' : 'false');
+        panel.classList.toggle('is-loading', busy);
+    }
+
+    function setActiveTab(tab) {
+        currentTab = tab;
+        document.querySelectorAll('.fc-status-tab').forEach(function (el) {
+            var on = el.getAttribute('data-tab') === tab;
+            el.classList.toggle('is-active', on);
+            el.setAttribute('aria-selected', on ? 'true' : 'false');
+            if (on) {
+                el.setAttribute('aria-current', 'true');
+            } else {
+                el.removeAttribute('aria-current');
+            }
+        });
+    }
+
+    function updateHistory(tab, pageNum, push) {
+        var url = new URL(window.location.href);
+        url.searchParams.set('tab', tab);
+        if (pageNum > 1) {
+            url.searchParams.set('page', String(pageNum));
+        } else {
+            url.searchParams.delete('page');
+        }
+        var state = { tab: tab, page: pageNum };
+        if (push) {
+            history.pushState(state, '', url);
+        } else {
+            history.replaceState(state, '', url);
+        }
+    }
+
+    function scrollToPanel(smooth) {
+        var target = document.getElementById('fcStatusResults') || panel;
+        var top = target.getBoundingClientRect().top + window.pageYOffset - 12;
+        window.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'auto' });
+    }
+
+    function bindPagination() {
+        panel.querySelectorAll('a.fc-status-page-link[href]').forEach(function (link) {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                var u = new URL(link.href, window.location.origin);
+                var tab = u.searchParams.get('tab') || currentTab;
+                var p = parseInt(u.searchParams.get('page') || '1', 10);
+                loadFragment(tab, p, true, true);
+            });
+        });
+    }
+
+    function loadFragment(tab, pageNum, pushHistory, scroll) {
+        if (loading) return;
+        loading = true;
+        setBusy(true);
+
+        var url = new URL(dataUrl, window.location.origin);
+        url.searchParams.set('tab', tab);
+        url.searchParams.set('page', String(pageNum || 1));
+
+        fetch(url.toString(), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            },
+            credentials: 'same-origin'
+        })
+            .then(function (res) {
+                if (!res.ok) throw new Error('Failed to load data');
+                return res.json();
+            })
+            .then(function (data) {
+                panel.innerHTML = data.html;
+                if (listTitle && data.list_title) {
+                    listTitle.textContent = data.list_title;
+                }
+                setActiveTab(data.tab || tab);
+                updateHistory(data.tab || tab, pageNum || 1, pushHistory);
+                bindPagination();
+                if (scroll) {
+                    requestAnimationFrame(function () { scrollToPanel(true); });
+                }
+            })
+            .catch(function () {
+                panel.innerHTML = '<div class="alert alert-danger m-3 mb-0">Could not load data. Please refresh the page.</div>';
+            })
+            .finally(function () {
+                loading = false;
+                setBusy(false);
+            });
+    }
+
+    document.querySelectorAll('.fc-status-tab[data-tab]').forEach(function (tabEl) {
+        tabEl.addEventListener('click', function (e) {
+            e.preventDefault();
+            var tab = tabEl.getAttribute('data-tab');
+            if (!tab || tab === currentTab) return;
+            loadFragment(tab, 1, true, false);
+        });
+    });
+
+    bindPagination();
+
+    window.addEventListener('popstate', function (e) {
+        var tab = (e.state && e.state.tab) || new URL(window.location.href).searchParams.get('tab') || 'not-responded';
+        var p = parseInt((e.state && e.state.page) || new URL(window.location.href).searchParams.get('page') || '1', 10);
+        loadFragment(tab, p, false, false);
+    });
+
+    document.documentElement.classList.add('fc-status-smooth-scroll');
+
+    var initialPage = parseInt(page.getAttribute('data-initial-page') || '1', 10);
+    history.replaceState({ tab: currentTab, page: initialPage }, '', window.location.href);
+})();
+</script>
+@endpush

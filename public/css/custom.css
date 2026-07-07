@@ -194,7 +194,7 @@ body.custom-loaded {
     padding: 0 1rem;
     font-size: 0.9375rem;
     font-weight: 500;
-    color: #004a93;
+    color: #747475;
     border-radius: 8px;
     background: #fff;
     white-space: nowrap;
@@ -202,8 +202,8 @@ body.custom-loaded {
 }
 
 .programme-dt-btn-columns:hover {
-    background: #fff;
-    color: #004a93;
+    background: #747475;
+    color: #fff;
 }
 
 .programme-dt-btn-columns i {
