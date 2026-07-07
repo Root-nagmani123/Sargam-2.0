@@ -16,7 +16,6 @@ use App\Support\DataTableRedisCache;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use App\Services\CourseService;
-use Illuminate\Support\Facades\Cache;
 
 
 class CourseController extends Controller
@@ -191,7 +190,6 @@ class CourseController extends Controller
             DB::commit();
 
             CourseMasterDataTable::bumpListingCacheEpoch();
-            Cache::increment('role_by_course_epoch');
 
             return redirect()->route('programme.index')->with('success', 'Course created successfully');
 

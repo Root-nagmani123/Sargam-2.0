@@ -403,7 +403,15 @@
                 @endif
             </div>
 
-            <!-- Rating Table -->
+            <!-- Rating Table (hidden for remark-only sessions, matching the on-screen report) -->
+            @php
+                $isRemarkOnly = (($data['Content Percentage'] ?? '') === 'N/A') && (($data['Presentation Percentage'] ?? '') === 'N/A');
+            @endphp
+            @if ($isRemarkOnly)
+                <div style="margin:10px 0;padding:10px 14px;background:#e8f6f8;border:1px solid #b8e0e6;border-radius:6px;text-align:center;color:#0b6b78;font-size:12px;">
+                    Remark-only feedback — numeric ratings were not collected for this session.
+                </div>
+            @else
             <table class="feedback-table">
                 <thead>
                     <tr>
@@ -445,6 +453,7 @@
                     </tr>
                 </tbody>
             </table>
+            @endif
 
             <!-- Remarks -->
             @if (!empty($data['Remarks']))
