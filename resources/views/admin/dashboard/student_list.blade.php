@@ -5,6 +5,7 @@
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<link rel="stylesheet" href="{{ asset('css/dashboard-stat-cards.css') }}?v=2" />
 <style>
     /* ── Title bar (programme name) ── */
     .student-list-page .sl-title-card .sl-title-text { color: #101828; letter-spacing: 0.2px; }
@@ -267,6 +268,59 @@
     <x-breadcrum title="{{ $listTitle ?? 'Student List' }}" :showBack="true" />
     <x-session_message />
 
+    {{-- Summary cards — TODAY's actual marked attendance (distinct students),
+         resolved server-side in the controller ($cardCounts). These are a
+         fixed daily snapshot and intentionally do NOT follow the table filters. --}}
+    @php $cardCounts = $cardCounts ?? ['total' => 0, 'present_today' => 0, 'absent_today' => 0]; @endphp
+    <div class="row row-cols-1 row-cols-sm-3 g-3 mb-3 sl-summary-cards">
+        <div class="col">
+            <a href="{{ route('admin.dashboard.ot-participants') }}" class="text-decoration-none d-block h-100">
+                <div class="card stat-card h-100 p-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="stat-icon-wrapper stat-icon-amber">
+                            <i class="material-symbols-rounded" aria-hidden="true">campaign</i>
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <p class="stat-title">OT/ Participants Attendance</p>
+                            <p class="stat-value">{{ $pad($cardCounts['total']) }}</p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @php $todayIso = \Carbon\Carbon::today()->toDateString(); @endphp
+        <div class="col">
+            <a href="{{ route('admin.dashboard.students', ['attendance' => 'present', 'from_date' => $todayIso, 'to_date' => $todayIso]) }}" class="text-decoration-none d-block h-100">
+                <div class="card stat-card h-100 p-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="stat-icon-wrapper stat-icon-green">
+                            <i class="material-symbols-rounded" aria-hidden="true">groups</i>
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <p class="stat-title">Present Today</p>
+                            <p class="stat-value">{{ $pad($cardCounts['present_today']) }}</p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col">
+            <a href="{{ route('admin.dashboard.students', ['attendance' => 'absent', 'from_date' => $todayIso, 'to_date' => $todayIso]) }}" class="text-decoration-none d-block h-100">
+                <div class="card stat-card h-100 p-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="stat-icon-wrapper stat-icon-rose">
+                            <i class="material-symbols-rounded" aria-hidden="true">badge</i>
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <p class="stat-title">Absent Today</p>
+                            <p class="stat-value">{{ $pad($cardCounts['absent_today']) }}</p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
     {{-- All / Present / Absent tabs + Print / Download --}}
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
         <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white" role="group" aria-label="Attendance status">
@@ -374,6 +428,7 @@
                                     <th>Session</th>
                                     <th>Topic</th>
                                     <th>Faculty</th>
+                                    <th>Absent Reason</th>
                                     <th>Attendance Status</th>
                                     <th>MDO</th>
                                     <th>Escort/Moderator Duty</th>
@@ -417,6 +472,7 @@
         const filters = @json($filters ?? []);
         const baseUrl = "{{ route('admin.dashboard.students') }}";
         const LOCKED_COLUMNS = [0, 1, 2];
+        const ABSENT_REASON_COL = 8; // "Absent Reason" — shown only on the Absent tab
         let dt = null;
         let currentAttendance = (filters.attendance === 'present' || filters.attendance === 'absent') ? filters.attendance : 'all';
         let loadingRequests = 0;
@@ -473,6 +529,13 @@
             });
         }
 
+        function applyAbsentReasonVisibility() {
+            if (!dt) { return; }
+            dt.column(ABSENT_REASON_COL).visible(currentAttendance === 'absent', false);
+            dt.columns.adjust();
+            relayoutPinnedColumns();
+        }
+
         function relayoutPinnedColumns() {
             if (!dt) { return; }
             const tableNode = dt.table().node();
@@ -518,6 +581,7 @@
                 { data: 'session', name: 'session', searchable: false },
                 { data: 'topic', name: 'topic' },
                 { data: 'faculty', name: 'faculty', searchable: false },
+                { data: 'absent_reason', name: 'absent_reason', orderable: false, searchable: false },
                 { data: 'status', name: 'status', searchable: false },
                 { data: 'mdo', name: 'mdo', searchable: false },
                 { data: 'escort', name: 'escort', searchable: false },
@@ -540,6 +604,7 @@
             currentAttendance = att;
             $('.programme-status-tabs .programme-status-pill').removeClass('active');
             $(this).addClass('active');
+            applyAbsentReasonVisibility();
             syncUrl();
             if (dt) { dt.ajax.reload(null, true); }
         });
@@ -628,6 +693,7 @@
             studentPersistHiddenCols(hidden);
             dt.columns().every(function() {
                 const idx = this.index();
+                if (idx === ABSENT_REASON_COL) { this.visible(currentAttendance === 'absent', false); return; }
                 if (LOCKED_COLUMNS.indexOf(idx) !== -1) { this.visible(true, false); return; }
                 this.visible(hidden.indexOf(idx) === -1, false);
             });
@@ -638,6 +704,7 @@
             $grid.empty();
             dt.columns().every(function() {
                 const idx = this.index();
+                if (idx === ABSENT_REASON_COL) { return; } // driven by the Present/Absent tab, not user-toggleable
                 const title = $(this.header()).text().replace(/\s+/g, ' ').trim();
                 if (!title) { return; }
                 const isLocked = LOCKED_COLUMNS.indexOf(idx) !== -1;

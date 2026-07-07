@@ -1057,6 +1057,34 @@ class UserController extends Controller
             return $this->dashboardStudentListDataTableResponse($request, $students);
         }
 
+        // Attendance summary cards (top of page) reflect TODAY's actual marked
+        // attendance only — distinct students marked in a session dated today —
+        // independent of the table's live filters. A student with no session
+        // marked today is simply not counted here (unlike the per-row roster
+        // default further down, which shows unmarked students as "Present").
+        $todayStr = now()->toDateString();
+        $scopePks = $students->pluck('student_master_pk')->filter()->unique()->values()->all();
+        $cardCounts = [
+            'total' => count($scopePks),
+            'present_today' => 0,
+            'absent_today' => 0,
+        ];
+        if (! empty($scopePks)) {
+            $todayAttendance = DB::table('course_student_attendance as a')
+                ->join('timetable as t', 'a.timetable_pk', '=', 't.pk')
+                ->whereIn('a.Student_master_pk', $scopePks)
+                ->whereDate('t.START_DATE', $todayStr)
+                ->get(['a.Student_master_pk as spk', 'a.status']);
+            // present = any today-session not marked Absent (status 3); absent =
+            // marked Absent. Counted per distinct student.
+            $cardCounts['absent_today'] = $todayAttendance
+                ->filter(fn ($r) => (int) $r->status === 3)
+                ->pluck('spk')->unique()->count();
+            $cardCounts['present_today'] = $todayAttendance
+                ->reject(fn ($r) => (int) $r->status === 3)
+                ->pluck('spk')->unique()->count();
+        }
+
         // Get counsellor type names and courses from group_type_master_course_master_map
         // From group_type_master_course_master_map, get faculty_id, type_name and course_name
         // Then match type_name (pk) with course_group_type_master to get the type_name
@@ -1253,7 +1281,316 @@ class UserController extends Controller
             'participant' => (string) $request->input('participant', ''),
         ];
 
-        return view('admin.dashboard.student_list', compact('students', 'presentStudents', 'absentStudents', 'availableCourses', 'counsellorTypes', 'counsellorFaculties', 'groupNames', 'dutyTypes', 'filters', 'cadreOptions', 'houseOptions', 'sessionOptions', 'participantOptions', 'tabCounts', 'listTitle'));
+        return view('admin.dashboard.student_list', compact('students', 'presentStudents', 'absentStudents', 'availableCourses', 'counsellorTypes', 'counsellorFaculties', 'groupNames', 'dutyTypes', 'filters', 'cadreOptions', 'houseOptions', 'sessionOptions', 'participantOptions', 'tabCounts', 'cardCounts', 'listTitle'));
+    }
+
+    /**
+     * OT / Participants List — the drill-down opened from the "OT/ Participants
+     * Attendance" dashboard card. One row per participant (not per session),
+     * split into Present / Absent tabs, with per-student Medical Exemption,
+     * PT Exception and Stationed Leave counts.
+     */
+    public function otParticipantsList(Request $request)
+    {
+        $payload = $this->resolveDashboardStudentListPayload($request);
+        $availableCourses = $payload['availableCourses'];
+
+        // Apply the shared filters to the session rows, then collapse to one row
+        // per participant. A participant counts as Absent when they have at least
+        // one Absent (status 3) session in scope; otherwise Present.
+        $sessionRows = $this->applyDashboardStudentListFilters($payload['students'], $request);
+
+        $byStudent = [];
+        foreach ($sessionRows as $m) {
+            $spk = $m->student_master_pk;
+            if (! $spk) {
+                continue;
+            }
+            if (! isset($byStudent[$spk])) {
+                $byStudent[$spk] = (object) [
+                    'student_master_pk' => $spk,
+                    'studentMaster' => $m->studentMaster,
+                    'house_name' => $m->house_name ?? null,
+                    'topic' => null,
+                    'topic_date' => null,
+                    'is_absent' => false,
+                ];
+            }
+            if (($m->attendance_present ?? true) === false) {
+                $byStudent[$spk]->is_absent = true;
+            }
+            if (empty($byStudent[$spk]->house_name) && ! empty($m->house_name)) {
+                $byStudent[$spk]->house_name = $m->house_name;
+            }
+            // Keep the most recent session's topic as this participant's Topic Name.
+            $topic = trim((string) ($m->session_topic ?? ''));
+            if ($topic !== '') {
+                $d = $m->session_date ?? null;
+                if ($byStudent[$spk]->topic === null || ($d && (string) $d > (string) $byStudent[$spk]->topic_date)) {
+                    $byStudent[$spk]->topic = $topic;
+                    $byStudent[$spk]->topic_date = $d;
+                }
+            }
+        }
+        $participants = collect(array_values($byStudent));
+
+        $presentParticipants = $participants->reject(fn ($p) => $p->is_absent)->values();
+        $absentParticipants = $participants->filter(fn ($p) => $p->is_absent)->values();
+
+        $tabCounts = [
+            'present' => $presentParticipants->count(),
+            'absent' => $absentParticipants->count(),
+        ];
+
+        $attendance = $request->input('attendance', 'present') === 'absent' ? 'absent' : 'present';
+        $rows = $attendance === 'absent' ? $absentParticipants : $presentParticipants;
+
+        $rowMeta = $this->otParticipantsRowMeta(
+            $participants->pluck('student_master_pk')->all()
+        );
+
+        if ($request->ajax() && $request->has('draw')) {
+            return $this->otParticipantsDataTableResponse($request, $rows, $rowMeta, $tabCounts, $attendance);
+        }
+
+        // Filter option lists (mirrors the student list page).
+        $students = $payload['students'];
+        $cadreOptions = $students
+            ->map(fn ($m) => $m->studentMaster->cadre->cadre_name ?? null)
+            ->filter()->unique()->sort()->values();
+        $houseOptions = $students
+            ->map(fn ($m) => $m->house_name ?? null)
+            ->filter()->unique()->sort()->values();
+        $sessionOptions = $students
+            ->map(fn ($m) => $m->session_time ?? null)
+            ->filter(fn ($s) => $s !== null && trim((string) $s) !== '')
+            ->unique()->sort()->values();
+        $participantOptions = $students
+            ->map(function ($m) {
+                $s = $m->studentMaster;
+                if (! $s) {
+                    return null;
+                }
+                $name = $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''));
+                $code = $s->generated_OT_code ?? '';
+                return (object) [
+                    'pk' => (string) $s->pk,
+                    'label' => trim(($code !== '' ? $code . ' — ' : '') . $name),
+                ];
+            })
+            ->filter()->unique('pk')->sortBy('label')->values();
+
+        $filters = [
+            'from_date' => (string) $request->input('from_date', ''),
+            'to_date' => (string) $request->input('to_date', ''),
+            'attendance' => $attendance,
+            'session' => (string) $request->input('session', ''),
+            'participant' => (string) $request->input('participant', ''),
+        ];
+
+        return view('admin.dashboard.ot_participants_list', compact(
+            'availableCourses', 'filters', 'cadreOptions', 'houseOptions',
+            'sessionOptions', 'participantOptions', 'tabCounts'
+        ));
+    }
+
+    /**
+     * Per-student meta for the OT participants list, batched for the whole set:
+     *   medical         → student_medical_exemption rows (active)
+     *   pt              → leave_application rows, leave_type = PT_EXEMPTION
+     *   stationed       → leave_application rows, leave_type = STATIONED_LEAVE
+     *   duty_count/type → mdo_escot_duty_map rows (type from mdo_duty_type_master)
+     *   notice_memo     → student_memo_status memo_count (OT-portal memos)
+     *   discipline_memo → discipline_memo_status rows
+     *
+     * @param  array<int, int>  $studentPks
+     * @return array<int, array{medical:int,pt:int,stationed:int,duty_count:int,duty_type:string,notice_memo:int,discipline_memo:int}>
+     */
+    private function otParticipantsRowMeta(array $studentPks): array
+    {
+        $out = [];
+        if (empty($studentPks)) {
+            return $out;
+        }
+        foreach ($studentPks as $pk) {
+            $out[$pk] = [
+                'medical' => 0, 'pt' => 0, 'stationed' => 0,
+                'duty_count' => 0, 'duty_type' => '-',
+                'notice_memo' => 0, 'discipline_memo' => 0,
+            ];
+        }
+
+        $medical = DB::table('student_medical_exemption')
+            ->whereIn('student_master_pk', $studentPks)
+            ->where('active_inactive', 1)
+            ->selectRaw('student_master_pk, COUNT(*) c')
+            ->groupBy('student_master_pk')
+            ->pluck('c', 'student_master_pk');
+        foreach ($medical as $pk => $c) {
+            if (isset($out[$pk])) {
+                $out[$pk]['medical'] = (int) $c;
+            }
+        }
+
+        $leaves = DB::table('leave_application')
+            ->whereIn('student_master_pk', $studentPks)
+            ->where('active_inactive', 1)
+            ->selectRaw('student_master_pk, leave_type, COUNT(*) c')
+            ->groupBy('student_master_pk', 'leave_type')
+            ->get();
+        foreach ($leaves as $r) {
+            $pk = $r->student_master_pk;
+            if (! isset($out[$pk])) {
+                continue;
+            }
+            if ($r->leave_type === 'PT_EXEMPTION') {
+                $out[$pk]['pt'] = (int) $r->c;
+            } elseif ($r->leave_type === 'STATIONED_LEAVE') {
+                $out[$pk]['stationed'] = (int) $r->c;
+            }
+        }
+
+        // Duty count + type. selected_student_list carries the assigned OT pk;
+        // count all duties for a student and surface the first duty type seen.
+        $duties = DB::table('mdo_escot_duty_map as d')
+            ->leftJoin('mdo_duty_type_master as m', 'd.mdo_duty_type_master_pk', '=', 'm.pk')
+            ->whereIn('d.selected_student_list', $studentPks)
+            ->get(['d.selected_student_list as spk', 'm.mdo_duty_type_name as type']);
+        foreach ($duties as $r) {
+            $pk = (int) $r->spk;
+            if (! isset($out[$pk])) {
+                continue;
+            }
+            $out[$pk]['duty_count']++;
+            if ($out[$pk]['duty_type'] === '-' && ! empty($r->type)) {
+                $out[$pk]['duty_type'] = $r->type;
+            }
+        }
+
+        // Notice / Memo (OT-portal): sum of memo_count per student.
+        $memo = DB::table('student_memo_status')
+            ->whereIn('student_pk', $studentPks)
+            ->selectRaw('student_pk, COALESCE(SUM(memo_count), COUNT(*)) c')
+            ->groupBy('student_pk')
+            ->pluck('c', 'student_pk');
+        foreach ($memo as $pk => $c) {
+            if (isset($out[$pk])) {
+                $out[$pk]['notice_memo'] = (int) $c;
+            }
+        }
+
+        // Discipline memos.
+        $disc = DB::table('discipline_memo_status')
+            ->whereIn('student_master_pk', $studentPks)
+            ->selectRaw('student_master_pk, COUNT(*) c')
+            ->groupBy('student_master_pk')
+            ->pluck('c', 'student_master_pk');
+        foreach ($disc as $pk => $c) {
+            if (isset($out[$pk])) {
+                $out[$pk]['discipline_memo'] = (int) $c;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Server-side JSON for the OT / Participants List DataTable.
+     */
+    private function otParticipantsDataTableResponse(Request $request, $rows, array $rowMeta, array $tabCounts, string $attendance)
+    {
+        $searchInput = $request->input('search');
+        $search = strtolower(trim((string) (is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput)));
+        if ($search !== '') {
+            $rows = $rows->filter(function ($p) use ($search) {
+                $s = $p->studentMaster;
+                if (! $s) {
+                    return false;
+                }
+                $name = strtolower((string) ($s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''))));
+                $code = strtolower((string) ($s->generated_OT_code ?? ''));
+                $email = strtolower((string) ($s->email ?? ''));
+                return str_contains($name, $search) || str_contains($code, $search) || str_contains($email, $search);
+            })->values();
+        }
+
+        $recordsTotal = $tabCounts[$attendance] ?? 0;
+        $recordsFiltered = $rows->count();
+
+        // Sorting (S.No / OT Code / Name / Email / Cadre / House).
+        $columnMap = [1 => 'ot_code', 2 => 'name', 3 => 'email', 4 => 'cadre', 5 => 'house'];
+        $orderCol = (int) $request->input('order.0.column', 0);
+        $orderDir = strtolower((string) $request->input('order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+        $sortKey = $columnMap[$orderCol] ?? null;
+        if ($sortKey !== null) {
+            $rows = $rows->sortBy(function ($p) use ($sortKey) {
+                $s = $p->studentMaster;
+                return match ($sortKey) {
+                    'ot_code' => (string) ($s->generated_OT_code ?? ''),
+                    'name' => (string) ($s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''))),
+                    'email' => (string) ($s->email ?? ''),
+                    'cadre' => (string) ($s->cadre->cadre_name ?? ''),
+                    'house' => (string) ($p->house_name ?? ''),
+                    default => '',
+                };
+            }, SORT_NATURAL | SORT_FLAG_CASE, $orderDir === 'desc')->values();
+        }
+
+        $start = max(0, (int) $request->input('start', 0));
+        $length = (int) $request->input('length', 10);
+        $paged = $length < 0 ? $rows->slice($start)->values() : $rows->slice($start, $length)->values();
+
+        $data = [];
+        foreach ($paged as $idx => $p) {
+            $s = $p->studentMaster;
+            if (! $s) {
+                continue;
+            }
+            $meta = $rowMeta[$p->student_master_pk] ?? [
+                'medical' => 0, 'pt' => 0, 'stationed' => 0,
+                'duty_count' => 0, 'duty_type' => '-', 'notice_memo' => 0, 'discipline_memo' => 0,
+            ];
+            $detailUrl = route('admin.dashboard.students.detail', encrypt($s->pk));
+            $name = $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''));
+
+            $data[] = [
+                's_no' => $start + $idx + 1,
+                'ot_code' => e($s->generated_OT_code ?? 'N/A'),
+                'name' => '<a href="' . e($detailUrl) . '" class="sl-count">' . e($name) . '</a>',
+                'email' => e($s->email ?? 'N/A'),
+                'cadre' => e($s->cadre->cadre_name ?? 'N/A'),
+                'house' => e($p->house_name ?: 'N/A'),
+                'topic' => e($p->topic ?: 'N/A'),
+                'duty_count' => $this->otCountCell($meta['duty_count']),
+                'duty_type' => e($meta['duty_type'] ?: '-'),
+                'medical' => $this->otCountCell($meta['medical']),
+                'pt' => $this->otCountCell($meta['pt']),
+                'stationed' => $this->otCountCell($meta['stationed']),
+                'notice_memo' => $this->otCountCell($meta['notice_memo']),
+                'discipline_memo' => $this->otCountCell($meta['discipline_memo']),
+            ];
+        }
+
+        return response()->json([
+            'draw' => (int) $request->input('draw', 1),
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'counts' => $tabCounts,
+            'data' => $data,
+        ]);
+    }
+
+    /**
+     * A zero-padded count cell for the OT participants list. Blank counts render
+     * as a muted dash; non-zero counts render as a blue badge-style number.
+     */
+    private function otCountCell(int $n): string
+    {
+        if ($n <= 0) {
+            return '<span class="text-muted">-</span>';
+        }
+
+        return '<span class="sl-count">' . str_pad((string) $n, 2, '0', STR_PAD_LEFT) . '</span>';
     }
 
     /**
@@ -1897,17 +2234,41 @@ class UserController extends Controller
     {
         $expanded = collect();
 
+        // Tracks which attendance sessions have already been rendered for each
+        // student, so the same session never repeats across two of that
+        // student's roster rows once the course fallback below kicks in.
+        $emittedByStudent = [];
+
         foreach ($uniqueStudents as $studentMap) {
             $studentPk = $studentMap->student_master_pk;
             $coursePk = $studentMap->course_master_pk ?? null;
 
             $sessions = $attendanceSessions[$studentPk] ?? [];
 
-            // Keep only this course-row's own sessions so a student enrolled in
-            // multiple courses doesn't repeat another course's sessions.
+            // Prefer this enrolment row's own course so a student enrolled in
+            // several courses shows each course's sessions on its own row. But
+            // the enrolment course and the course attendance was actually marked
+            // under do NOT always match in the data — so when this row's course
+            // has no sessions of its own, fall back to the student's remaining
+            // sessions instead of dropping them. Dropping them wrongly showed the
+            // student as an unmarked "Present" default with empty
+            // Session / Topic / Faculty (the N/A rows).
             if ($coursePk !== null && (int) $coursePk !== 0) {
-                $sessions = array_values(array_filter($sessions, function ($s) use ($coursePk) {
+                $courseSessions = array_values(array_filter($sessions, function ($s) use ($coursePk) {
                     return (string) ($s['course_master_pk'] ?? '') === (string) $coursePk;
+                }));
+                if (! empty($courseSessions)) {
+                    $sessions = $courseSessions;
+                }
+            }
+
+            // Never render a session already shown on an earlier row for this
+            // student (guards the fallback above against duplicating sessions
+            // across a multi-course student's rows).
+            $already = $emittedByStudent[$studentPk] ?? [];
+            if (! empty($already)) {
+                $sessions = array_values(array_filter($sessions, function ($s) use ($already) {
+                    return ! in_array((int) ($s['attendance_pk'] ?? 0), $already, true);
                 }));
             }
 
@@ -1949,6 +2310,7 @@ class UserController extends Controller
                 $row->session_internal_faculty = $session['session_internal_faculty'] ?? null;
                 $row->has_session_in_range = true;
                 $expanded->push($row);
+                $emittedByStudent[$studentPk][] = (int) ($session['attendance_pk'] ?? 0);
             }
         }
 
@@ -2107,7 +2469,8 @@ class UserController extends Controller
         $recordsTotal = $counts[$attendance] ?? $counts['all'];
         $recordsFiltered = $rows->count();
 
-        // Unified 12-column layout (same for All / Present / Absent).
+        // Column layout. The "Absent Reason" column (index 8) is only shown on the
+        // Absent tab client-side, but the data key is always emitted.
         $columnMap = [
             0 => 'serial_no',
             1 => 'ot_code',
@@ -2117,10 +2480,11 @@ class UserController extends Controller
             5 => 'session',
             6 => 'topic',
             7 => 'faculty',
-            8 => 'status',
-            9 => 'mdo',
-            10 => 'escort',
-            11 => 'other_exempt',
+            // 8 => absent_reason (not sortable)
+            9 => 'status',
+            10 => 'mdo',
+            11 => 'escort',
+            12 => 'other_exempt',
         ];
 
         $orderCol = (int) $request->input('order.0.column', 0);
@@ -2139,6 +2503,11 @@ class UserController extends Controller
             ? $rows->slice($start)->values()
             : $rows->slice($start, $length)->values();
 
+        // Absent Reason (shown only on the Absent tab): attendance stores no reason
+        // field, so derive it from a leave / medical exemption that overlaps the
+        // absent session's date. Batched for the current page.
+        $absentReasons = $this->dashboardAbsentReasons($pagedStudents);
+
         $data = [];
         foreach ($pagedStudents as $idx => $studentMap) {
             $student = $studentMap->studentMaster;
@@ -2149,6 +2518,7 @@ class UserController extends Controller
             $detailUrl = route('admin.dashboard.students.detail', encrypt($student->pk));
             $displayName = $student->display_name ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
             $statusCode = (int) ($studentMap->attendance_status ?? 0);
+            $isAbsent = ($studentMap->attendance_present ?? true) === false;
 
             $data[] = [
                 's_no' => $start + $idx + 1,
@@ -2162,6 +2532,7 @@ class UserController extends Controller
                     $studentMap->session_faculty_master ?? null,
                     $studentMap->session_internal_faculty ?? null
                 )),
+                'absent_reason' => $isAbsent ? e($absentReasons[$idx] ?? '-') : '-',
                 'status' => '<span class="sl-status-badge '
                     . (($studentMap->attendance_present ?? true) ? 'sl-status-present' : 'sl-status-absent')
                     . '">' . (($studentMap->attendance_present ?? true) ? 'Present' : 'Absent') . '</span>',
@@ -2178,6 +2549,89 @@ class UserController extends Controller
             'counts' => $counts,
             'data' => $data,
         ]);
+    }
+
+    /**
+     * Derive an "Absent Reason" for each row on the current page. Attendance
+     * itself records no reason, so we look for a leave application or medical
+     * exemption that covers the absent session's own date. Returns a label per
+     * row index ("Medical Exemption" / "PT Exemption" / "Stationed Leave"), or
+     * "-" when nothing overlaps. Only absent rows are considered.
+     *
+     * @param  \Illuminate\Support\Collection  $pagedStudents
+     * @return array<int, string>
+     */
+    private function dashboardAbsentReasons(\Illuminate\Support\Collection $pagedStudents): array
+    {
+        $reasons = [];
+
+        $pks = [];
+        foreach ($pagedStudents as $idx => $m) {
+            if (($m->attendance_present ?? true) === false && ! empty($m->student_master_pk)) {
+                $pks[] = (int) $m->student_master_pk;
+            }
+        }
+        $pks = array_values(array_unique($pks));
+        if (empty($pks)) {
+            return $reasons;
+        }
+
+        $leaves = DB::table('leave_application')
+            ->whereIn('student_master_pk', $pks)
+            ->where('active_inactive', 1)
+            ->get(['student_master_pk', 'leave_type', 'from_date', 'to_date'])
+            ->groupBy('student_master_pk');
+
+        $medical = DB::table('student_medical_exemption')
+            ->whereIn('student_master_pk', $pks)
+            ->where('active_inactive', 1)
+            ->get(['student_master_pk', 'from_date', 'to_date'])
+            ->groupBy('student_master_pk');
+
+        $covers = function ($from, $to, string $date): bool {
+            if (empty($from)) {
+                return false;
+            }
+            $f = \Illuminate\Support\Carbon::parse($from)->toDateString();
+            if ($f > $date) {
+                return false;
+            }
+            if (empty($to)) {
+                return true; // open-ended
+            }
+            return \Illuminate\Support\Carbon::parse($to)->toDateString() >= $date;
+        };
+
+        foreach ($pagedStudents as $idx => $m) {
+            if (($m->attendance_present ?? true) !== false) {
+                continue;
+            }
+            $spk = (int) ($m->student_master_pk ?? 0);
+            $date = ! empty($m->session_date) ? \Illuminate\Support\Carbon::parse($m->session_date)->toDateString() : null;
+            $reason = '-';
+
+            if ($spk && $date) {
+                foreach ($medical[$spk] ?? [] as $r) {
+                    if ($covers($r->from_date, $r->to_date, $date)) {
+                        $reason = 'Medical Exemption';
+                        break;
+                    }
+                }
+                if ($reason === '-') {
+                    foreach ($leaves[$spk] ?? [] as $r) {
+                        if ($covers($r->from_date, $r->to_date, $date)) {
+                            $reason = $r->leave_type === 'PT_EXEMPTION' ? 'PT Exemption'
+                                : ($r->leave_type === 'STATIONED_LEAVE' ? 'Stationed Leave' : 'Leave');
+                            break;
+                        }
+                    }
+                }
+            }
+
+            $reasons[$idx] = $reason;
+        }
+
+        return $reasons;
     }
 
     /**

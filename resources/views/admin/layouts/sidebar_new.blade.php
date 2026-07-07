@@ -871,11 +871,23 @@ document.querySelectorAll('.mini-nav-item').forEach(item => {
 
 // On load
 document.addEventListener('DOMContentLoaded', () => {
-    const activeId = localStorage.getItem('active-mini-nav');
+    // The server resolves the correct group for the current page
+    // (SARGAM_ACTIVE_GROUP_ID). It MUST win over the last-clicked group cached in
+    // localStorage — otherwise a group from a different category (e.g. the last
+    // Time Table you opened) wrongly steals the highlight on this page.
+    const serverGroup = (window.SARGAM_ACTIVE_GROUP_ID != null)
+        ? String(window.SARGAM_ACTIVE_GROUP_ID)
+        : null;
+    const activeId = serverGroup || localStorage.getItem('active-mini-nav');
     if (activeId) {
-        document.querySelectorAll('.mini-nav-item').forEach(item => item.classList.remove('selected'));
         const activeEl = document.getElementById(activeId);
-        if (activeEl) activeEl.classList.add('selected');
+        // Only re-point the highlight when the target group exists in THIS
+        // category's mini-nav; never blank out the server's selection otherwise.
+        if (activeEl) {
+            document.querySelectorAll('.mini-nav-item').forEach(item => item.classList.remove('selected'));
+            activeEl.classList.add('selected');
+            if (serverGroup) { try { localStorage.setItem('active-mini-nav', serverGroup); } catch (e) {} }
+        }
     }
 });
 </script>
