@@ -1564,7 +1564,7 @@ class FeedbackController extends Controller
                 'cm.active_inactive as program_status',
                 'cm.end_date as program_end_date',
                 'fm.full_name as faculty_name',
-                'fm.faculty_type',
+                'tt.faculty_type',
                 'tf.faculty_pk',
                 'tt.START_DATE',
                 'tt.END_DATE',
@@ -1592,7 +1592,7 @@ class FeedbackController extends Controller
               ->whereNotNull('tf.content')
               ->whereNotNull('tf.presentation');
         // Group by - ADD class_session to group by
-        $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
+        $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'tt.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
 
         // Apply filters
         if ($programId && $programId !== '') {
@@ -1605,7 +1605,7 @@ class FeedbackController extends Controller
         }
 
         if (!empty($facultyType)) {
-            $query->whereIn('fm.faculty_type', $facultyType);
+            $query->whereIn('tt.faculty_type', $facultyType);
         }
 
         if ($fromDate) {
@@ -1856,25 +1856,31 @@ class FeedbackController extends Controller
         // Validate: keep only allowed values
         $validTypes = array_values(array_filter((array) $selectedTypes, fn($t) => in_array($t, ['1', '2'], true)));
 
-        // Build query
-        $query = DB::table('faculty_master')
-            ->select('full_name', 'faculty_type')
-            ->whereNotNull('full_name')
-            ->where('full_name', '!=', '');
+        // Build query from actual session records so suggestions reflect how
+        // faculty were scheduled (session-level type on the timetable), matching
+        // the report's classification rather than the faculty's global type.
+        $query = DB::table('topic_feedback as tf')
+            ->join('timetable as tt', 'tf.timetable_pk', '=', 'tt.pk')
+            ->join('faculty_master as fm', 'tf.faculty_pk', '=', 'fm.pk')
+            ->select('fm.full_name', 'tt.faculty_type')
+            ->where('tf.is_submitted', 1)
+            ->whereNotNull('fm.full_name')
+            ->where('fm.full_name', '!=', '')
+            ->groupBy('fm.full_name', 'tt.faculty_type');
 
         // Only apply type filter when specific types are requested
         if (!empty($validTypes)) {
-            $query->whereIn('faculty_type', $validTypes);
+            $query->whereIn('tt.faculty_type', $validTypes);
         } else {
             // No type filter — search across Guest (2) and Internal (1)
-            $query->whereIn('faculty_type', ['1', '2']);
+            $query->whereIn('tt.faculty_type', ['1', '2']);
         }
 
         if (!empty($searchTerm)) {
-            $query->where('full_name', 'LIKE', '%' . $searchTerm . '%');
+            $query->where('fm.full_name', 'LIKE', '%' . $searchTerm . '%');
         }
 
-        $faculties = $query->orderBy('full_name')->limit(20)->get();
+        $faculties = $query->orderBy('fm.full_name')->limit(20)->get();
 
         // Map faculty types to display names (only Internal and Guest)
         $facultyTypeMap = [
@@ -1924,7 +1930,7 @@ class FeedbackController extends Controller
                 'cm.active_inactive as program_status',
                 'cm.end_date as program_end_date',
                 'fm.full_name as faculty_name',
-                'fm.faculty_type',
+                'tt.faculty_type',
                 'tf.faculty_pk',
                 'tt.START_DATE',
                 'tt.END_DATE',
@@ -1954,7 +1960,7 @@ class FeedbackController extends Controller
 
         $this->applyFeedbackReportCourseScope($query);
 
-        $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
+        $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'tt.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
 
         if ($programId && $programId !== '') {
             $this->assertFacultyReportProgramAccess((int) $programId);
@@ -1966,7 +1972,7 @@ class FeedbackController extends Controller
         }
 
         if (!empty($facultyType)) {
-            $query->whereIn('fm.faculty_type', $facultyType);
+            $query->whereIn('tt.faculty_type', $facultyType);
         }
 
         if ($fromDate) {
@@ -2212,7 +2218,7 @@ class FeedbackController extends Controller
                     'cm.active_inactive as program_status',
                     'cm.end_date as program_end_date',
                     'fm.full_name as faculty_name',
-                    'fm.faculty_type',
+                    'tt.faculty_type',
                     'tf.faculty_pk',
                     'tt.START_DATE',
                     'tt.END_DATE',
@@ -2237,7 +2243,7 @@ class FeedbackController extends Controller
 
             $this->applyFeedbackReportCourseScope($query);
 
-            $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
+            $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'tt.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
 
             if ($programId && $programId !== '') {
                 $this->assertFacultyReportProgramAccess((int) $programId);
@@ -2247,7 +2253,7 @@ class FeedbackController extends Controller
                 $query->where('fm.full_name', 'LIKE', '%' . $facultyName . '%');
             }
             if (!empty($facultyType)) {
-                $query->whereIn('fm.faculty_type', $facultyType);
+                $query->whereIn('tt.faculty_type', $facultyType);
             }
             if ($fromDate) {
                 $query->whereDate('tt.START_DATE', '>=', $fromDate);
@@ -2813,7 +2819,7 @@ class FeedbackController extends Controller
                     'cm.active_inactive as program_status',
                     'cm.end_date as program_end_date',
                     'fm.full_name as faculty_name',
-                    'fm.faculty_type',
+                    'tt.faculty_type',
                     'tf.faculty_pk',
                     'tt.START_DATE',
                     'tt.END_DATE',
@@ -2841,7 +2847,7 @@ class FeedbackController extends Controller
             }
 
             if (!empty($facultyType)) {
-                $query->whereIn('fm.faculty_type', $facultyType);
+                $query->whereIn('tt.faculty_type', $facultyType);
             }
 
             if ($fromDate) {
@@ -3049,7 +3055,7 @@ class FeedbackController extends Controller
                     'cm.active_inactive as program_status',
                     'cm.end_date as program_end_date',
                     'fm.full_name as faculty_name',
-                    'fm.faculty_type',
+                    'tt.faculty_type',
                     'tt.START_DATE',
                     'tt.END_DATE',
                     'tt.subject_topic as topic_name'
@@ -3073,7 +3079,7 @@ class FeedbackController extends Controller
             }
 
             if (!empty($facultyType)) {
-                $query->whereIn('fm.faculty_type', $facultyType);
+                $query->whereIn('tt.faculty_type', $facultyType);
             }
 
             if ($fromDate) {
