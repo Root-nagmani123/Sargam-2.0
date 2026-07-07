@@ -47,7 +47,7 @@ class GroupMappingController extends Controller
                 'seconds' => 'GROUP_MAPPING_DATATABLE_CACHE_SECONDS',
             ],
             'GroupMappingController@indexDropdowns',
-            function () use ($data_course_id) {
+            function () {
                 // Course Name filter is status-aware (mirrors the Faculty filter). On
                 // page load the Active tab is selected, so seed it with active-course
                 // options; the Archived tab reloads via the filter-courses endpoint.
@@ -74,22 +74,25 @@ class GroupMappingController extends Controller
         $facilities = $dropdowns['facilities'] ?? [];
         $filterFaculties = $dropdowns['filterFaculties'] ?? [];
 
-        // Courses for the "Add Group Mapping" modal. The $courses list above is the
-        // status FILTER list (derived from existing mappings), so a brand-new course
-        // with no mapping yet can never be selected to create its first mapping. The
-        // Add modal instead needs EVERY active (non-expired) course. Computed fresh
-        // (not from the cached dropdowns) so a just-created course shows immediately.
+        // Not cached: the Add Group Mapping / Add Student / Add in Bulk dropdowns
+        // must offer every active (non-expired) course immediately after creation,
+        // including ones with no group mapping yet — unlike $courses above, which
+        // only lists courses that already have a mapping and is cached against the
+        // mapping epoch. A null end_date means the course has no expiry.
         $today = Carbon::today();
-        $allActiveCourses = CourseMaster::where('active_inactive', '1')
+        $allCourses = CourseMaster::where('active_inactive', '1')
             ->where(function ($q) use ($today) {
                 $q->whereNull('end_date')
                     ->orWhereDate('end_date', '>=', $today);
+            })
+            ->when(!empty($data_course_id), function ($query) use ($data_course_id) {
+                $query->whereIn('pk', $data_course_id);
             })
             ->orderBy('course_name')
             ->pluck('course_name', 'pk')
             ->toArray();
 
-        return $dataTable->render('admin.group_mapping.index', compact('courses', 'groupTypes', 'facilities', 'filterFaculties', 'allActiveCourses'));
+        return $dataTable->render('admin.group_mapping.index', compact('courses', 'allCourses', 'groupTypes', 'facilities', 'filterFaculties'));
     }
 
     public function filterFaculties(Request $request)
