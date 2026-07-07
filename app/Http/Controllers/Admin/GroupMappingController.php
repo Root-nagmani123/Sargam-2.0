@@ -47,7 +47,7 @@ class GroupMappingController extends Controller
                 'seconds' => 'GROUP_MAPPING_DATATABLE_CACHE_SECONDS',
             ],
             'GroupMappingController@indexDropdowns',
-            function () use ($data_course_id) {
+            function () {
                 // Course Name filter is status-aware (mirrors the Faculty filter). On
                 // page load the Active tab is selected, so seed it with active-course
                 // options; the Archived tab reloads via the filter-courses endpoint.
@@ -74,7 +74,20 @@ class GroupMappingController extends Controller
         $facilities = $dropdowns['facilities'] ?? [];
         $filterFaculties = $dropdowns['filterFaculties'] ?? [];
 
-        return $dataTable->render('admin.group_mapping.index', compact('courses', 'groupTypes', 'facilities', 'filterFaculties'));
+        // Not cached: the "Add Group Mapping" dropdown must offer every active
+        // course immediately after creation, including ones with no group
+        // mapping yet — unlike $courses above, which only lists courses that
+        // already have a mapping and is cached against the mapping epoch.
+        $allCourses = CourseMaster::where('active_inactive', '1')
+            ->where('end_date', '>', now())
+            ->when(!empty($data_course_id), function ($query) use ($data_course_id) {
+                $query->whereIn('pk', $data_course_id);
+            })
+            ->orderBy('course_name')
+            ->pluck('course_name', 'pk')
+            ->toArray();
+
+        return $dataTable->render('admin.group_mapping.index', compact('courses', 'allCourses', 'groupTypes', 'facilities', 'filterFaculties'));
     }
 
     public function filterFaculties(Request $request)

@@ -181,8 +181,8 @@
                             <label for="gmCourseId" class="form-label cgt-field-label mb-2">Course Name <span class="text-danger">*</span></label>
                             <select class="form-select" id="gmCourseId" name="course_id" required>
                                 <option value="">Select Course Name</option>
-                                @foreach($courses ?? [] as $pk => $name)
-                                <option value="{{ $pk }}" {{ count($courses ?? []) === 1 ? 'selected' : '' }}>{{ $name }}</option>
+                                @foreach($allCourses ?? [] as $pk => $name)
+                                <option value="{{ $pk }}" {{ count($allCourses ?? []) === 1 ? 'selected' : '' }}>{{ $name }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -256,8 +256,8 @@
                         <label for="studentCourse" class="form-label cgt-field-label">Course Name <span class="text-danger">*</span></label>
                         <select class="form-select rounded-1" id="studentCourse" name="course_master_pk" required>
                             <option value="">Select Course Name</option>
-                            @foreach($courses ?? [] as $pk => $name)
-                            <option value="{{ $pk }}" {{ count($courses) === 1 ? 'selected' : '' }}>{{ $name }}</option>
+                            @foreach($allCourses ?? [] as $pk => $name)
+                            <option value="{{ $pk }}" {{ count($allCourses ?? []) === 1 ? 'selected' : '' }}>{{ $name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -335,8 +335,8 @@
                             <label for="course_master_pk_model" class="form-label cgt-field-label">Course Name <span class="text-danger">*</span></label>
                             <select name="course_master_pk" id="course_master_pk_model" class="form-select rounded-1" required>
                                 <option value="">Select</option>
-                                @foreach($courses ?? [] as $pk => $name)
-                                <option value="{{ $pk }}" {{ count($courses) === 1 ? 'selected' : '' }}>{{ $name }}</option>
+                                @foreach($allCourses ?? [] as $pk => $name)
+                                <option value="{{ $pk }}" {{ count($allCourses ?? []) === 1 ? 'selected' : '' }}>{{ $name }}</option>
                                 @endforeach
                             </select>
                         </div>
