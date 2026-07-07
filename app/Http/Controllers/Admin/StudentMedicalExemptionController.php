@@ -252,16 +252,11 @@ class StudentMedicalExemptionController extends Controller
 
     	public function create()
 {
-    $courses = CourseMaster::where('active_inactive', '1');
-
-    $data_course_id = get_Role_by_course();
-
-    // if (!empty($data_course_id)) {
-    //     $courses = $courses->whereIn('pk', $data_course_id);
-    // }
-
-    $courses = $courses
+    // Every active (non-expired) course — the medical-exemption form is not
+    // role-scoped by course (a doctor can raise an exemption for any current course).
+    $courses = CourseMaster::where('active_inactive', '1')
         ->where('end_date', '>', now())
+        ->orderBy('course_name')
         ->get();
 
     $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
@@ -273,6 +268,57 @@ class StudentMedicalExemptionController extends Controller
         'specialities'
     ));
 }
+
+    /**
+     * Students (course-group mapped) for a course — mirrors getStudentsByCourse so the
+     * edit form can server-render the OT dropdown for the record's own course.
+     */
+    private function studentsForCourse($courseId)
+    {
+        if (empty($courseId)) {
+            return collect();
+        }
+
+        return DB::table('student_course_group_map as scg')
+            ->join('group_type_master_course_master_map as gm', 'scg.group_type_master_course_master_map_pk', '=', 'gm.pk')
+            ->join('student_master as sm', 'scg.student_master_pk', '=', 'sm.pk')
+            ->where('gm.course_name', $courseId)
+            ->where('sm.status', '1')
+            ->select('sm.pk', 'sm.generated_OT_code', 'sm.display_name')
+            ->distinct()
+            ->orderBy('sm.display_name')
+            ->get();
+    }
+
+    /**
+     * Combine a date ("Y-m-d") and a time ("H:i") into "Y-m-d H:i", or null.
+     */
+    private function combineDateTime($date, $time): ?string
+    {
+        $date = trim((string) $date);
+        if ($date === '') {
+            return null;
+        }
+        $time = trim((string) $time);
+        return $time === '' ? $date : ($date . ' ' . $time);
+    }
+
+    /**
+     * Inclusive number of days between two datetimes (same day = 1).
+     */
+    private function computeDays($from, $to): ?int
+    {
+        if (empty($from) || empty($to)) {
+            return null;
+        }
+        try {
+            $f = \Carbon\Carbon::parse($from)->startOfDay();
+            $t = \Carbon\Carbon::parse($to)->startOfDay();
+            return (int) $f->diffInDays($t) + 1;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
 
 
    public function create_2701226()
@@ -346,23 +392,45 @@ class StudentMedicalExemptionController extends Controller
             }
         }
 
+        // Combine the split Arrival / Departure date + time inputs into datetimes.
+        $request->merge([
+            'from_date' => $this->combineDateTime($request->arrival_date, $request->arrival_time),
+            'to_date'   => $this->combineDateTime($request->departure_date, $request->departure_time),
+        ]);
+
         $validated = $request->validate([
             'course_master_pk' => 'required|numeric',
             'student_master_pk' => 'required|numeric',
             'employee_master_pk' => 'required|numeric',
             'exemption_category_master_pk' => 'required|numeric',
+            'opd_category' => 'required|string|max:50',
+            'arrival_date' => 'required|date',
+            'arrival_time' => 'required',
+            'departure_date' => 'required|date',
+            'departure_time' => 'required',
             'from_date' => 'required|date',
-            'to_date' => 'nullable|date|after_or_equal:from_date',
-            'opd_category' => 'nullable|string|max:50',
+            'to_date' => 'required|date|after_or_equal:from_date',
+            'pt_outdoor_advise' => 'nullable|string|max:255',
             'exemption_medical_speciality_pk' => 'required|numeric',
             'Description' => 'nullable|string',
             'active_inactive' => 'nullable|boolean',
             'Doc_upload' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:5120',
         ], [
+            'course_master_pk.required' => 'Please select an officer trainee.',
+            'student_master_pk.required' => 'Please select an officer trainee.',
+            'opd_category.required' => 'Please select IPD/OPD/After OPD/Referral.',
+            'departure_date.required' => 'The departure date is required.',
+            'departure_time.required' => 'The departure time is required.',
+            'to_date.after_or_equal' => 'The departure date/time must be after the arrival date/time.',
             'Doc_upload.file'  => 'The attachment must be a valid file.',
             'Doc_upload.mimes' => 'Only PDF, JPG, JPEG, PNG, DOC, or DOCX files are allowed.',
             'Doc_upload.max'   => 'The attachment file must not exceed 5 MB (5120 KB).',
         ]);
+
+        // Days = inclusive span between arrival and departure dates.
+        $validated['days'] = $this->computeDays($validated['from_date'], $validated['to_date']);
+        // Strip the split-input helpers (not table columns).
+        unset($validated['arrival_date'], $validated['arrival_time'], $validated['departure_date'], $validated['departure_time']);
 
         // Check for overlapping time ranges for the same student
         $overlapError = $this->checkOverlap(
@@ -447,17 +515,24 @@ class StudentMedicalExemptionController extends Controller
     {
         $record = StudentMedicalExemption::findOrFail(decrypt($id));
 
-        $courses = CourseMaster::where('active_inactive', '1');
-        $data_course_id =  get_Role_by_course();
-        if (!empty($data_course_id)) {
-            $courses = $courses->whereIn('pk', $data_course_id);
+        // All active (non-expired) courses — not role-scoped (matches the Add form).
+        $courses = CourseMaster::where('active_inactive', '1')
+            ->where('end_date', '>', now())
+            ->orderBy('course_name')
+            ->get();
+
+        // Ensure the record's own (possibly archived) course is selectable too.
+        if ($record->course_master_pk && !$courses->contains('pk', $record->course_master_pk)) {
+            $ownCourse = CourseMaster::find($record->course_master_pk);
+            if ($ownCourse) {
+                $courses->push($ownCourse);
+            }
         }
-        $courses = $courses->where('end_date', '>', now())
-            ->get();
-        $students = StudentMaster::select('pk', 'generated_OT_code', 'display_name')
-            ->where('status', '1')
-            ->orderBy('display_name', 'asc')
-            ->get();
+
+        // Students of the record's course for the OT dropdown (the cascade reloads
+        // this list when the course is changed).
+        $students = $this->studentsForCourse($record->course_master_pk);
+
         $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
         $specialities = ExemptionMedicalSpecialityMaster::where('active_inactive', '1')->get();
 
@@ -476,23 +551,43 @@ class StudentMedicalExemptionController extends Controller
             }
         }
 
+        // Combine the split Arrival / Departure date + time inputs into datetimes.
+        $request->merge([
+            'from_date' => $this->combineDateTime($request->arrival_date, $request->arrival_time),
+            'to_date'   => $this->combineDateTime($request->departure_date, $request->departure_time),
+        ]);
+
         $validated = $request->validate([
             'course_master_pk' => 'required|numeric',
             'student_master_pk' => 'required|numeric',
             'employee_master_pk' => 'nullable|numeric',
             'exemption_category_master_pk' => 'required|numeric',
+            'opd_category' => 'required|string|max:50',
+            'arrival_date' => 'required|date',
+            'arrival_time' => 'required',
+            'departure_date' => 'required|date',
+            'departure_time' => 'required',
             'from_date' => 'required|date',
-            'to_date' => 'nullable|date|after_or_equal:from_date',
-            'opd_category' => 'nullable|string|max:50',
+            'to_date' => 'required|date|after_or_equal:from_date',
+            'pt_outdoor_advise' => 'nullable|string|max:255',
             'exemption_medical_speciality_pk' => 'required|numeric',
             'Description' => 'nullable|string',
             'active_inactive' => 'required|boolean',
             'Doc_upload' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:5120',
         ], [
+            'course_master_pk.required' => 'Please select an officer trainee.',
+            'student_master_pk.required' => 'Please select an officer trainee.',
+            'opd_category.required' => 'Please select IPD/OPD/After OPD/Referral.',
+            'departure_date.required' => 'The departure date is required.',
+            'departure_time.required' => 'The departure time is required.',
+            'to_date.after_or_equal' => 'The departure date/time must be after the arrival date/time.',
             'Doc_upload.file'  => 'The attachment must be a valid file.',
             'Doc_upload.mimes' => 'Only PDF, JPG, JPEG, PNG, DOC, or DOCX files are allowed.',
             'Doc_upload.max'   => 'The attachment file must not exceed 5 MB (5120 KB).',
         ]);
+
+        $validated['days'] = $this->computeDays($validated['from_date'], $validated['to_date']);
+        unset($validated['arrival_date'], $validated['arrival_time'], $validated['departure_date'], $validated['departure_time']);
 
         $record = StudentMedicalExemption::findOrFail(decrypt($id));
 
