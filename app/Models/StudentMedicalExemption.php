@@ -19,6 +19,8 @@ class StudentMedicalExemption extends Model
         'from_date',
         'to_date',
         'opd_category',
+        'pt_outdoor_advise',
+        'days',
         'exemption_medical_speciality_pk',
         'Description',
         'Doc_upload',

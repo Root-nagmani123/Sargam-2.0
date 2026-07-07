@@ -708,7 +708,7 @@ select.sme-filter-control {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary px-4" id="smeFormSubmit" disabled>Submit</button>
+                    <button type="button" class="btn btn-primary px-4" id="smeFormSubmit" disabled>Add Student Medical Exemption</button>
                 </div>
             </div>
         </div>
@@ -977,7 +977,8 @@ $(document).ready(function() {
 
     function loadModalForm(url, title){
         $('#smeFormModalLabel').text(title);
-        $('#smeFormSubmit').prop('disabled', true);
+        // Submit button mirrors the context: "Add ..." on add, "Edit ..." on edit.
+        $('#smeFormSubmit').text(title).prop('disabled', true);
         $('#smeFormBody').html('<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>');
         smeFormModal.show();
 
@@ -1067,7 +1068,22 @@ $(document).ready(function() {
             }
         });
 
-        // Course -> students (the Add form carries #courseDropdown)
+        // Days = inclusive span between the Arrival and Departure dates (read-only field).
+        $form.on('change', '#arrivalDate, #departureDate', function(){
+            var a = document.getElementById('arrivalDate');
+            var d = document.getElementById('departureDate');
+            var out = document.getElementById('daysField');
+            if (!a || !d || !out) return;
+            if (a.value && d.value) {
+                var diff = Math.floor((new Date(d.value) - new Date(a.value)) / 86400000);
+                out.value = (diff >= 0) ? (diff + 1) : '';
+            } else {
+                out.value = '';
+            }
+        });
+
+        // Course -> students (legacy Add/Edit form carried #courseDropdown; harmless no-op
+        // for the current single officer-trainee dropdown which has no #courseDropdown)
         $form.on('change', '#courseDropdown', function(){
             var courseId = $(this).val();
             if (!courseId){ rebuildModalStudents([], 'Select Course First'); return; }
