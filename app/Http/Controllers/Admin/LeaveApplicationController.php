@@ -405,7 +405,7 @@ class LeaveApplicationController extends Controller
         }
     }
 
-    protected function myLeaveDatatable(Request $request)
+    protected function baseMyLeaveQuery(Request $request)
     {
         $context = $this->leaveService->resolveStudentContext((int) Auth::user()->pk);
 
@@ -421,23 +421,44 @@ class LeaveApplicationController extends Controller
             $query->where('status', (int) $request->status);
         }
 
-        return DataTables::of($query)
+        if ($request->filled('from_date')) {
+            $query->whereDate('from_date', '>=', $request->input('from_date'));
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('from_date', '<=', $request->input('to_date'));
+        }
+
+        return $query;
+    }
+
+    protected function myLeaveDatatable(Request $request)
+    {
+        return DataTables::of($this->baseMyLeaveQuery($request))
             ->addIndexColumn()
             ->addColumn('leave_type_label', fn ($row) => $row->leave_type_label)
             ->addColumn('from_date_display', fn ($row) => $row->from_date?->format('d-m-Y') ?? '-')
             ->addColumn('to_date_display', fn ($row) => $row->to_date?->format('d-m-Y') ?? '-')
             ->addColumn('total_days_display', fn ($row) => number_format((float) $row->total_days, 1))
             ->addColumn('status_badge', function ($row) {
-                return '<span class="badge rounded-pill ' . $row->status_badge_class . '">' . e($row->status_label) . '</span>';
+                $map = [
+                    LeaveApplication::STATUS_DRAFT => ['Draft', 'draft'],
+                    LeaveApplication::STATUS_PENDING => ['Pending', 'pending'],
+                    LeaveApplication::STATUS_APPROVED => ['Approved', 'approved'],
+                    LeaveApplication::STATUS_REJECTED => ['Rejected', 'rejected'],
+                ];
+                [$label, $variant] = $map[(int) $row->status] ?? [$row->status_label, 'draft'];
+
+                return '<span class="badge rounded-pill leave-status leave-status--' . $variant . '">' . e($label) . '</span>';
             })
             ->addColumn('action', function ($row) {
-                $html = '<div class="d-inline-flex align-items-center gap-2">';
+                $html = '<div class="d-inline-flex align-items-center justify-content-center gap-2 programme-action-group">';
 
                 if (in_array((int) $row->status, [LeaveApplication::STATUS_DRAFT, LeaveApplication::STATUS_PENDING], true)) {
-                    $html .= '<a href="' . route('leave.edit', $row->pk) . '" class="text-primary" title="Edit"><i class="material-icons material-symbols-rounded" style="font-size:20px;">edit</i></a>';
-                    $html .= '<a href="javascript:void(0)" class="text-danger leave-delete-btn" data-id="' . $row->pk . '" title="Delete"><i class="material-icons material-symbols-rounded" style="font-size:20px;">delete</i></a>';
+                    $html .= '<a href="' . route('leave.edit', $row->pk) . '" class="programme-action-btn" title="Edit" aria-label="Edit"><i class="bi bi-pencil"></i></a>';
+                    $html .= '<a href="javascript:void(0)" class="programme-action-btn programme-action-btn--danger leave-delete-btn" data-id="' . $row->pk . '" title="Delete" aria-label="Delete"><i class="bi bi-trash3"></i></a>';
                 } else {
-                    $html .= '<a href="' . route('leave.view', $row->pk) . '" class="text-primary" title="View"><i class="material-icons material-symbols-rounded" style="font-size:20px;">visibility</i></a>';
+                    $html .= '<a href="' . route('leave.view', $row->pk) . '" class="programme-action-btn" title="View" aria-label="View"><i class="bi bi-eye"></i></a>';
                 }
 
                 $html .= '</div>';
@@ -446,6 +467,33 @@ class LeaveApplicationController extends Controller
             })
             ->rawColumns(['status_badge', 'action'])
             ->make(true);
+    }
+
+    public function myLeaveExport(Request $request)
+    {
+        $rows = $this->baseMyLeaveQuery($request)->get();
+
+        $columns = ['S. No.', 'Leave Type', 'From Date', 'To Date', 'Total Days', 'Status'];
+        $filename = 'My_Leave_Applications_' . now()->format('Ymd_His') . '.csv';
+
+        return response()->streamDownload(function () use ($rows, $columns) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, $columns);
+
+            $serial = 1;
+            foreach ($rows as $row) {
+                fputcsv($out, [
+                    $serial++,
+                    $row->leave_type_label,
+                    $row->from_date?->format('d-m-Y') ?? '-',
+                    $row->to_date?->format('d-m-Y') ?? '-',
+                    number_format((float) $row->total_days, 1),
+                    $row->status_label,
+                ]);
+            }
+
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
     }
 
     protected function findOwnedApplication(int $studentPk, $id): LeaveApplication

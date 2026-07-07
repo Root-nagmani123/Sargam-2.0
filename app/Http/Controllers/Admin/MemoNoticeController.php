@@ -98,7 +98,12 @@ class MemoNoticeController extends Controller
             ->orderBy('discipline_name')
             ->get(['pk', 'discipline_name', 'course_master_pk']);
 
-        return view('admin.courseAttendanceNoticeMap.memo_notice_create', compact('courses', 'disciplines'));
+        // Memo Types (for the Memo-specific template link, shown only when memo_notice_type = 'Memo').
+        $memoTypes = \App\Models\MemoTypeMaster::where('active_inactive', 1)
+            ->orderBy('memo_type_name')
+            ->get(['pk', 'memo_type_name']);
+
+        return view('admin.courseAttendanceNoticeMap.memo_notice_create', compact('courses', 'disciplines', 'memoTypes'));
     }
 
 
@@ -108,6 +113,7 @@ class MemoNoticeController extends Controller
         $validated = $request->validate([
             'course_master_pk' => 'nullable|integer',
             'discipline_master_pk' => 'nullable|integer|exists:discipline_master,pk|required_if:memo_notice_type,Discipline Memo',
+            'memo_type_master_pk' => 'nullable|integer|exists:memo_type_master,pk|required_if:memo_notice_type,Memo',
             'title' => 'required|string|max:255',
             'director' => 'required|string|max:255',
             'designation' => 'required|string|max:255',
@@ -116,11 +122,17 @@ class MemoNoticeController extends Controller
             'signature_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ], [
             'discipline_master_pk.required_if' => 'Please select a discipline for a Discipline Memo template.',
+            'memo_type_master_pk.required_if' => 'Please select a Memo Type for a Memo template.',
         ]);
 
         // A discipline only applies to Discipline Memo templates; other types stay course-wide.
         $disciplinePk = $validated['memo_notice_type'] === 'Discipline Memo'
             ? ($validated['discipline_master_pk'] ?? null)
+            : null;
+
+        // A memo type only applies to Memo templates; other types stay memo-type-agnostic.
+        $memoTypePk = $validated['memo_notice_type'] === 'Memo'
+            ? ($validated['memo_type_master_pk'] ?? null)
             : null;
 
         // Notice/Memo may have several templates per course (picked at send time);
@@ -146,6 +158,7 @@ class MemoNoticeController extends Controller
         MemoNoticeTemplate::create([
             'course_master_pk' => $validated['course_master_pk'] ?: null,
             'discipline_master_pk' => $disciplinePk,
+            'memo_type_master_pk' => $memoTypePk,
             'title' => $validated['title'],
             'director_name' => $validated['director'],
             'director_designation' => $validated['designation'],
@@ -201,7 +214,11 @@ class MemoNoticeController extends Controller
             ->orderBy('discipline_name')
             ->get(['pk', 'discipline_name', 'course_master_pk']);
 
-        return view('admin.courseAttendanceNoticeMap.memo_notice_edit', compact('template', 'courses', 'disciplines'));
+        $memoTypes = \App\Models\MemoTypeMaster::where('active_inactive', 1)
+            ->orderBy('memo_type_name')
+            ->get(['pk', 'memo_type_name']);
+
+        return view('admin.courseAttendanceNoticeMap.memo_notice_edit', compact('template', 'courses', 'disciplines', 'memoTypes'));
     }
 
 
@@ -214,6 +231,7 @@ class MemoNoticeController extends Controller
         $validated = $request->validate([
             'course_master_pk' => 'nullable|integer',
             'discipline_master_pk' => 'nullable|integer|exists:discipline_master,pk|required_if:memo_notice_type,Discipline Memo',
+            'memo_type_master_pk' => 'nullable|integer|exists:memo_type_master,pk|required_if:memo_notice_type,Memo',
             'title' => 'required|string|max:255',
             'director' => 'required|string|max:255',
             'designation' => 'required|string|max:255',
@@ -222,10 +240,15 @@ class MemoNoticeController extends Controller
             'signature_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ], [
             'discipline_master_pk.required_if' => 'Please select a discipline for a Discipline Memo template.',
+            'memo_type_master_pk.required_if' => 'Please select a Memo Type for a Memo template.',
         ]);
 
         $disciplinePk = $validated['memo_notice_type'] === 'Discipline Memo'
             ? ($validated['discipline_master_pk'] ?? null)
+            : null;
+
+        $memoTypePk = $validated['memo_notice_type'] === 'Memo'
+            ? ($validated['memo_type_master_pk'] ?? null)
             : null;
 
         // Only Discipline Memo is limited to one active template per course + discipline;
@@ -247,6 +270,7 @@ class MemoNoticeController extends Controller
         $updateData = [
             'course_master_pk' => $validated['course_master_pk'] ?: null,
             'discipline_master_pk' => $disciplinePk,
+            'memo_type_master_pk' => $memoTypePk,
             'title' => $validated['title'],
             'director_name' => $validated['director'],
             'director_designation' => $validated['designation'],

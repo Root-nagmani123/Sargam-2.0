@@ -37,6 +37,11 @@ class MemoNoticeTemplate extends Model
         return $this->belongsTo(DisciplineMaster::class, 'discipline_master_pk', 'pk');
     }
 
+    public function memoType()
+    {
+        return $this->belongsTo(\App\Models\MemoTypeMaster::class, 'memo_type_master_pk', 'pk');
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');

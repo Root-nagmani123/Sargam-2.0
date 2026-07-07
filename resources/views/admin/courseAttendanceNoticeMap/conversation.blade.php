@@ -53,6 +53,15 @@
                         </tr>
                     </thead>
                     <tbody>
+                        @forelse($sessionRows ?? [] as $row)
+                        <tr>
+                            <td>{{ \Carbon\Carbon::parse($row->session_date)->format('d/m/Y') }}</td>
+                            <td>{{ $row->session_count }}</td>
+                            <td>{{ $row->topics ?: 'Topic Name' }}</td>
+                            <td>{{ $row->venues ?: 'Venue' }}</td>
+                            <td>{{ $row->sessions ?: '06:00-07:00' }}</td>
+                        </tr>
+                        @empty
                         <tr>
                             <td>{{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}
                             </td>
@@ -61,6 +70,7 @@
                             <td>{{ $template_details->venue_name ?? 'Venue' }}</td>
                             <td>{{ $template_details->session_time ?? '06:00-07:00' }}</td>
                         </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -73,7 +83,8 @@
             <p>
                 <strong>{{ $template_details->display_name ?? 'Student Name' }},
                     {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>
-                Remarks: {{ $type == 'memo' ? 'Show Cause Memo' : 'Show Cause Notice' }} for
+                Remarks: {{ $type == 'memo' ? 'Show Cause Memo' : 'Show Cause Notice' }} for absence in
+                {{ $template_details->subject_topic ?? 'the session' }} on
                 {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}
             </p>
 
@@ -114,6 +125,7 @@
                     <thead>
                         <tr>
                             <th>Name</th>
+                            <th>Role</th>
                             <th>Conversation</th>
                             <th>Date & Time</th>
                             <th>Delete</th>
@@ -124,6 +136,7 @@
                         @forelse ($memoNotice as $row)
                         <tr data-pk="{{ $row->pk }}">
                             <td>{{ $row->display_name ?? 'N/A' }}</td>
+                            <td>{{ $row->role_name ?? '---' }}</td>
                             <td>{{ $row->student_decip_incharge_msg }}</td>
                             <td>{{ \Carbon\Carbon::parse($row->created_date ?? 'now', 'UTC')->timezone('Asia/Kolkata')->format('d-m-Y h:i A') }}
                             </td>
@@ -149,7 +162,7 @@
                         </tr>
                         @empty
                         <tr id="emptyRow">
-                            <td colspan="5" class="text-center text-muted">No conversation found.</td>
+                            <td colspan="6" class="text-center text-muted">No conversation found.</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -197,6 +210,7 @@
                                 accept=".jpg,.jpeg,.png,.pdf">
                             <div id="conv_file_preview" class="mt-1"></div>
                             <small class="text-muted">Allowed: JPG, PNG, PDF · Max 2 MB</small>
+                            @error('document') <small class="d-block text-danger">{{ $message }}</small> @enderror
                         </div>
 
                         <!-- Status -->
@@ -230,10 +244,15 @@
                             </select>
                         </div>
 
+                        {{-- Looked up by name, not a hardcoded pk — master data can be re-seeded. --}}
+                        @php
+                            $oldConclusionIsDeduction = old('conclusion_type')
+                                && optional($memo_conclusion_master->firstWhere('pk', old('conclusion_type')))->discussion_name === 'Marks Deduction';
+                        @endphp
                         <!-- Mark of Deduction -->
                         <div class="col-6">
-                            <div id="deduction_div" style="{{ old('conclusion_type') == 2 ? '' : 'display:none;' }}">
-                                <label class="form-label">Mark of Deduction</label>
+                            <div id="deduction_div" style="{{ $oldConclusionIsDeduction ? '' : 'display:none;' }}">
+                                <label class="form-label">Mark of Deduction <span class="text-danger deduction-required-mark" style="display:none;">*</span></label>
                                 <input type="number" class="form-control" name="mark_of_deduction" step="0.01" min="0"
                                     value="{{ old('mark_of_deduction') }}">
                                 @error('mark_of_deduction')
@@ -349,6 +368,7 @@
 
         tr.innerHTML =
             '<td>' + escHtml(msg.display_name || 'N/A') + '</td>' +
+            '<td>' + escHtml(msg.role_name || '---') + '</td>' +
             '<td>' + escHtml(msg.student_decip_incharge_msg || '') + '</td>' +
             '<td>' + escHtml(msg.formatted_date || '') + '</td>' +
             '<td><span class="text-muted">N/A</span></td>' +
@@ -396,14 +416,17 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!conclusionType) return;
 
         const selectedText = conclusionType.options[conclusionType.selectedIndex].text;
+        const input = deductionDiv.querySelector('input');
+        const requiredMark = deductionDiv.querySelector('.deduction-required-mark');
 
         if (selectedText === 'Marks Deduction') {
             deductionDiv.style.display = 'block';
+            if (input) input.required = true;
+            if (requiredMark) requiredMark.style.display = '';
         } else {
             deductionDiv.style.display = 'none';
-            if (deductionDiv.querySelector('input')) {
-                deductionDiv.querySelector('input').value = '';
-            }
+            if (input) { input.required = false; input.value = ''; }
+            if (requiredMark) requiredMark.style.display = 'none';
         }
     }
 

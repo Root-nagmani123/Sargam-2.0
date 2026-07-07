@@ -20,7 +20,8 @@
                         <p class="text-muted small mb-0">Please fill in all required information for your exemption application.</p>
                     </header>
 
-                    <form method="POST" action="{{ route('fc.exemption.apply', $exemption->pk) }}" enctype="multipart/form-data">
+                    <form method="POST" action="{{ route('fc.exemption.apply', $exemption->pk) }}" enctype="multipart/form-data"
+                        id="exemptionApplicationForm" novalidate>
                         @csrf
                         <input type="hidden" name="exemption_category" value="{{ $exemption->pk }}">
 
@@ -61,6 +62,16 @@
                                         @endfor
                                     </select>
                                 </div>
+
+                                <div class="col-md-6">
+                                    <label for="institution_name" class="form-label fw-semibold">Institution
+                                        Name <span class="text-danger">*</span></label>
+                                    <input type="text"
+                                        class="form-control rounded-3 @error('institution_name') is-invalid @enderror"
+                                        id="institution_name" name="institution_name"
+                                        placeholder="Enter institution name" value="{{ old('institution_name') }}"
+                                        required>
+                                </div>
                             @endif
 
                             @php
@@ -83,9 +94,13 @@
                                         Upload Medical Exemption Document <span class="text-danger">*</span>
                                     </label>
                                     <input type="file" class="form-control rounded-3 @error('medical_doc') is-invalid @enderror"
-                                        id="medical_doc" name="medical_doc" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required>
+                                        id="medical_doc" name="medical_doc" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                        data-max-bytes="{{ $medicalDocMaxBytes ?? 5242880 }}" required>
                                     <div class="form-text">Supported formats: PDF, Word (.doc, .docx), JPG, JPEG, PNG. Max file
-                                        size: 5 MB.</div>
+                                        size: {{ ($medicalDocMaxKb ?? 5120) / 1024 }} MB.</div>
+                                    <div id="medical_doc_client_error" class="invalid-feedback d-block @if (!$errors->has('medical_doc')) d-none @endif">
+                                        {{ $errors->first('medical_doc') }}
+                                    </div>
                                 </div>
                             @endif
 
@@ -123,7 +138,7 @@
                             </div>
 
                             <div class="col-12 d-flex flex-wrap justify-content-center gap-3 pt-2">
-                                <button type="submit" class="btn btn-primary rounded-3 px-4 py-2 fw-semibold"
+                                <button type="submit" id="exemptionSubmitBtn" class="btn btn-primary rounded-3 px-4 py-2 fw-semibold"
                                     style="background-color: #004a93; border-color: #004a93;">
                                     Submit Application
                                 </button>
@@ -151,6 +166,91 @@
     <!-- SweetAlert2 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+    @if (stripos($exemption->Exemption_name, 'medical') !== false)
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var form = document.getElementById('exemptionApplicationForm');
+                var fileInput = document.getElementById('medical_doc');
+                var errorEl = document.getElementById('medical_doc_client_error');
+                var submitBtn = document.getElementById('exemptionSubmitBtn');
+                if (!form || !fileInput) {
+                    return;
+                }
+
+                var maxBytes = parseInt(fileInput.getAttribute('data-max-bytes') || '5242880', 10);
+                var maxMbLabel = (maxBytes / 1024 / 1024).toFixed(0);
+                var allowedExt = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
+
+                function showFileError(message) {
+                    if (errorEl) {
+                        errorEl.textContent = message;
+                        errorEl.classList.remove('d-none');
+                    }
+                    fileInput.classList.add('is-invalid');
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'File not allowed',
+                            text: message,
+                            icon: 'error',
+                            confirmButtonColor: '#004a93',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                }
+
+                function clearFileError() {
+                    if (errorEl) {
+                        errorEl.textContent = '';
+                        errorEl.classList.add('d-none');
+                    }
+                    fileInput.classList.remove('is-invalid');
+                }
+
+                function validateMedicalFile(file) {
+                    if (!file) {
+                        return null;
+                    }
+                    var parts = file.name.split('.');
+                    var ext = parts.length > 1 ? parts.pop().toLowerCase() : '';
+                    if (allowedExt.indexOf(ext) === -1) {
+                        return 'Only PDF, Word (.doc, .docx), JPG, JPEG, and PNG files are allowed.';
+                    }
+                    if (file.size > maxBytes) {
+                        var sizeMb = (file.size / 1024 / 1024).toFixed(2);
+                        return 'File is too large (' + sizeMb + ' MB). Maximum allowed size is ' + maxMbLabel + ' MB.';
+                    }
+                    return null;
+                }
+
+                fileInput.addEventListener('change', function () {
+                    var file = this.files && this.files[0];
+                    var err = validateMedicalFile(file);
+                    if (err) {
+                        this.value = '';
+                        showFileError(err);
+                        return;
+                    }
+                    clearFileError();
+                });
+
+                form.addEventListener('submit', function (e) {
+                    var file = fileInput.files && fileInput.files[0];
+                    var err = validateMedicalFile(file);
+                    if (err) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        showFileError(err);
+                        return false;
+                    }
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Submitting…';
+                    }
+                });
+            });
+        </script>
+    @endif
+
     @if (session('already_applied'))
         <script>
             document.addEventListener("DOMContentLoaded", function() {
@@ -167,18 +267,25 @@
 
     @if ($errors->any())
         <script>
-            let errorMessages = '';
-            @foreach ($errors->all() as $error)
-                errorMessages += `{{ $error }}\n`;
-            @endforeach
-
-            Swal.fire({
-                title: 'Validation Error',
-                text: errorMessages.trim(),
-                icon: 'error',
-                confirmButtonColor: '#004a93',
-                confirmButtonText: 'OK'
+            document.addEventListener('DOMContentLoaded', function () {
+                var errorMessages = @json($errors->all());
+                if (typeof Swal !== 'undefined' && errorMessages.length) {
+                    Swal.fire({
+                        title: 'Validation Error',
+                        text: errorMessages.join('\n'),
+                        icon: 'error',
+                        confirmButtonColor: '#004a93',
+                        confirmButtonText: 'OK'
+                    });
+                }
+                @if (session('captcha_refresh'))
+                    refreshCaptcha();
+                @endif
             });
+        </script>
+    @elseif (session('captcha_refresh'))
+        <script>
+            document.addEventListener('DOMContentLoaded', refreshCaptcha);
         </script>
     @endif
 @endpush

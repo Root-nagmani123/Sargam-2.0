@@ -293,6 +293,14 @@
     border-color: #667085 transparent transparent transparent;
 }
 
+/* Generate/Edit Memo modal is scrollable, so its .modal-content (overflow:hidden)
+   and .modal-body (overflow-y:auto) clip an open Choices dropdown (e.g. Memo Type,
+   Venue). While a dropdown is open, let it escape the modal instead of being cropped. */
+#memo_generate .modal-content:has(.choices.is-open),
+#memo_generate .modal-body:has(.choices.is-open) {
+    overflow: visible;
+}
+
 /* ── Status pills (Send Memo/Notice) ── */
 .mnm-page .mnm-status { font-size: 0.78rem; font-weight: 600; padding: 0.4rem 0.85rem; border-radius: 999px; white-space: nowrap; display: inline-block; }
 .mnm-page .mnm-status--notice { background: #eff8ff; color: #175cd3; }
@@ -758,9 +766,16 @@
     cursor: pointer;
     margin: 0;
     transition: border-color .15s ease, background .15s ease;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    /* Allow long column names to wrap instead of being cropped. */
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* Let the label text wrap within the flex chip (min-width:0 lets a flex item
+   shrink below its content size so wrapping/anywhere-breaking can take effect). */
+.sn-colvis-chip span {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .sn-colvis-chip:hover {
@@ -1102,7 +1117,22 @@
     background: #fff;
     font-size: 0.82rem;
     max-height: 280px;
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+}
+/* Pasted rich-text template content can carry fixed-width inline styles, images,
+   or long unbroken strings/URLs — constrain them so they can't push the preview
+   box (or the modal around it) wider than its container. */
+.an-preview img,
+.an-preview svg,
+.an-preview table {
+    max-width: 100%;
+    height: auto;
+}
+.an-preview * {
+    max-width: 100%;
 }
 .an-preview-none { padding: 0.5rem; }
 

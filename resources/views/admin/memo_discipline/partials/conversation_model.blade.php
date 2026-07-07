@@ -113,7 +113,7 @@
           {{-- Admin identity is always shown (name + role), never collapsed to "You" —
                a memo's admin-side conversation can involve multiple distinct admins. --}}
           <span class="chat-user">
-            {{ $isAdminMsg ? $msg->display_name . (!empty($msg->role_name) ? ' · ' . $msg->role_name : '') : ($isOwn ? 'You' : $msg->display_name) }}
+            {{ $isAdminMsg ? $msg->display_name . (!empty($msg->role_name) ? ' · ' . $msg->role_name : '') : ($isOwn ? 'You' : $msg->display_name . ' (OT)') }}
           </span>
           <span class="chat-time">{{ $msgTime->format('d M Y, h:i A') }}</span>
         </div>
@@ -399,17 +399,50 @@
         // until the offcanvas was closed and reopened.
         let pollTimer = null;
 
-        function isComposerBusy() {
-            const wrapper = getCurrentWrapper();
-            const ta = wrapper && wrapper.querySelector('.chat-input');
-            return !!(ta && document.activeElement === ta && ta.value.trim().length > 0);
+        // Poll-only refresh: swap in just the new messages, never touch the composer.
+        // A background poll replacing the whole panel can race the native file-picker
+        // dialog — it stays open (blocking the user) for as long as they're browsing
+        // folders, but page timers keep running underneath it. If a poll fires before
+        // they've picked a file, the composer (and its <input type=file>) gets replaced
+        // while the OS dialog is still open; the eventual file selection then fires a
+        // change event on a detached input that can no longer bubble up to our
+        // document-level listener, so nothing shows and nothing sends. Only ever
+        // touching the message list during polling avoids this race entirely.
+        function mergeNewMessages() {
+            const w = getCurrentWrapper();
+            if (!w) return;
+            const memoId = w.dataset.memoId;
+            const type   = w.dataset.type;
+            if (!memoId) return;
+
+            const url = '/memo/discipline/get_conversation_model/'
+                + encodeURIComponent(memoId) + '/' + encodeURIComponent(type);
+
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+              .then(r => r.text())
+              .then(html => {
+                  const w2 = getCurrentWrapper();
+                  if (!w2 || w2.dataset.memoId !== memoId) return;
+
+                  const scroll = document.getElementById('conversationScroll');
+                  if (!scroll) return;
+                  const wasAtBottom = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 60;
+
+                  const parsed = new DOMParser().parseFromString(html, 'text/html');
+                  const newScroll = parsed.getElementById('conversationScroll');
+                  if (!newScroll) return;
+
+                  scroll.innerHTML = newScroll.innerHTML;
+                  if (wasAtBottom) scroll.scrollTop = scroll.scrollHeight;
+              })
+              .catch(() => {});
         }
 
         function startPolling() {
             stopPolling();
             pollTimer = setInterval(function () {
-                if (isSending || isComposerBusy()) return;
-                reloadConversation(false);
+                if (isSending) return;
+                mergeNewMessages();
             }, 4000);
         }
 

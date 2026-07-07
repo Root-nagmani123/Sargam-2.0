@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 
-@section('title', 'Discipline Memo - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Discipline Memo')
 
 @section('setup_content')
 <link rel="stylesheet" href="{{ asset('css/notice-memo-discipline.css') }}?v={{ @filemtime(public_path('css/notice-memo-discipline.css')) ?: time() }}">
@@ -174,7 +174,27 @@
             @endif
             <a href="{{ route('memo.discipline.index') }}" class="disc-tab js-nav-tab active">Send Discipline Memo</a>
         </div>
-        <a href="{{ route('memo.discipline.export_csv', request()->query()) }}" class="disc-download">
+        @php
+            // Built from the controller's own resolved filter values, coerced to strings
+            // via ?? '' — NOT request()->query() and NOT route()'s array-param form.
+            // ConvertEmptyStringsToNull turns "from_date=" into PHP null before this
+            // renders; route()'s array-parameter builder then silently DROPS null-valued
+            // keys entirely (while $request->has() on the receiving end still treats an
+            // explicitly-present "from_date=" as present). So either of those shortcuts
+            // produces a Download link with NO from_date/to_date keys at all whenever no
+            // date filter is active — exportCsv() then reads that as "brand new request,
+            // default to today-only", silently downloading the wrong (empty) dataset.
+            // http_build_query() with real '' strings guarantees the keys stay present.
+            $discDownloadUrl = route('memo.discipline.export_csv') . '?' . http_build_query([
+                'program_name' => $programNameFilter ?? '',
+                'discipline_master_pk' => $disciplineFilter ?? '',
+                'status' => $statusFilter ?? '',
+                'from_date' => $fromDateFilter ?? '',
+                'to_date' => $toDateFilter ?? '',
+                'search' => $searchFilter ?? '',
+            ]);
+        @endphp
+        <a href="{{ $discDownloadUrl }}" id="discDownloadLink" class="disc-download">
             <i class="bi bi-download"></i> Download
         </a>
     </div>
@@ -217,10 +237,10 @@
                     </select>
 
                     <select class="form-select" id="discTimePeriod" aria-label="Time Period">
+                        <option value="all">All</option>
                         <option value="today" {{ $isToday ? 'selected' : '' }}>Today</option>
                         <option value="week">This Week</option>
                         <option value="month">This Month</option>
-                        <option value="all">All</option>
                         <option value="custom" {{ $hasRange ? 'selected' : '' }}>Custom Range</option>
                     </select>
                     <input type="date" class="form-control {{ $hasRange ? '' : 'd-none' }}" id="from_date"
@@ -268,14 +288,13 @@
                     if (badge) badge.textContent = activeCount;
                 }
 
-                // Apply filters via AJAX
-                function applyFiltersAjax() {
+                // Fetch a fully-formed list URL and swap ONLY the list container.
+                // The filter form lives OUTSIDE this container, so its values are never
+                // touched — that is what keeps filters intact across pagination.
+                function discFetchAndRender(url) {
                     const form = document.getElementById('filterForm');
                     const listContainer = document.getElementById('memoDisciplineListContainer');
-                    if (!form || !listContainer) return;
-                    const formData = new FormData(form);
-                    const params = new URLSearchParams(formData).toString();
-                    const url = "{{ route('memo.discipline.index') }}" + (params ? '?' + params : '');
+                    if (!listContainer) return;
                     listContainer.style.opacity = '0.5';
                     fetch(url, {
                             headers: {
@@ -292,17 +311,35 @@
                             const currentSummary = document.getElementById('filterSummary');
                             if (newSummary) {
                                 if (currentSummary) currentSummary.replaceWith(newSummary.cloneNode(true));
-                                else form.querySelector('.row').appendChild(newSummary.cloneNode(true));
-                            } else {
-                                if (currentSummary) currentSummary.remove();
+                                else if (form) {
+                                    const anchor = form.querySelector('.row, .disc-filter-bar');
+                                    if (anchor) anchor.appendChild(newSummary.cloneNode(true));
+                                }
+                            } else if (currentSummary) {
+                                currentSummary.remove();
                             }
                             const newList = doc.querySelector('#memoDisciplineListContainer');
+                            // Tear down the current DataTable BEFORE its DOM is removed, so its
+                            // settings don't leak and block a clean re-init (which can blank the rows).
+                            if (window.jQuery && $.fn.DataTable && $.fn.DataTable.isDataTable('#discTable')) {
+                                $('#discTable').DataTable().destroy();
+                            }
                             if (newList) listContainer.innerHTML = newList.innerHTML;
                             window.history.replaceState({}, '', url);
                             updateFilterCount();
+
+                            // The Download link is a static server-rendered href from page
+                            // load — without this, it would keep pointing at whatever
+                            // filters were active on that initial load (e.g. today-only)
+                            // even after AJAX-applying different filters, silently
+                            // exporting the wrong/empty dataset.
+                            const downloadLink = document.getElementById('discDownloadLink');
+                            if (downloadLink) {
+                                downloadLink.href = "{{ route('memo.discipline.export_csv') }}" + (params ? '?' + params : '');
+                            }
                         })
                         .catch(function() {
-                            alert('Failed to apply filters');
+                            alert('Failed to load records');
                         })
                         .finally(function() {
                             listContainer.style.opacity = '1';
@@ -311,7 +348,35 @@
                             }
                         });
                 }
+                window.discFetchAndRender = discFetchAndRender;
+
+                // Apply the filter form (+ current page size) via AJAX — always page 1.
+                function applyFiltersAjax() {
+                    const form = document.getElementById('filterForm');
+                    if (!form) return;
+                    const params = new URLSearchParams(new FormData(form));
+                    const pp = document.getElementById('discPerPage');
+                    if (pp && pp.value) params.set('per_page', pp.value);
+                    const q = params.toString();
+                    discFetchAndRender("{{ route('memo.discipline.index') }}" + (q ? '?' + q : ''));
+                }
                 window.applyFiltersAjax = applyFiltersAjax;
+
+                // Pagination is a NORMAL full-page navigation (no AJAX). The links now
+                // carry every RESOLVED filter (controller ->appends()), so a reload
+                // reproduces the same filtered view on the requested page — filters are
+                // preserved and the server returns the rows directly. (AJAX-swapping the
+                // DataTable-managed table proved unreliable and could blank the rows.)
+
+                // Page-size dropdown → reload from page 1 with the new size + current filters.
+                document.addEventListener('change', function(e) {
+                    if (e.target && e.target.id === 'discPerPage') {
+                        const form = document.getElementById('filterForm');
+                        const params = new URLSearchParams(form ? new FormData(form) : undefined);
+                        params.set('per_page', e.target.value);
+                        window.location.href = "{{ route('memo.discipline.index') }}" + '?' + params.toString();
+                    }
+                });
 
                 // Submit form via AJAX instead of full page reload
                 const filterForm = document.getElementById('filterForm');
@@ -393,7 +458,10 @@
             <hr class="my-3">
             <div id="memoDisciplineListContainer">
                 <div class="table-responsive">
-                    <table id="discTable" class="table align-middle mb-0 text-nowrap">
+                    {{-- data-sargam-dt-ui="false": this page uses server-side Laravel
+                         pagination with its own .programme-dt-footer below. Opt out of the
+                         global DataTables UI enhancer so it doesn't hijack + empty that footer. --}}
+                    <table id="discTable" class="table align-middle mb-0 text-nowrap" data-sargam-dt-ui="false">
                         <thead>
                             <tr>
                                 <th>S. No.</th>
@@ -406,6 +474,7 @@
                                 <th class="text-center">Submitted</th>
                                 <th class="text-center">Final</th>
                                 <th>Remarks</th>
+                                <th>Created Date</th>
                                 <th>Status</th>
                                 @if(! hasRole('Officer Trainee'))
                                 <th class="text-end">Action</th>
@@ -426,6 +495,7 @@
                                 <td class="text-center fw-semibold text-warning">{{ $memo->mark_deduction_submit }}</td>
                                 <td class="text-center fw-semibold text-danger">{{ $memo->final_mark_deduction }}</td>
                                 <td class="text-muted">{{ $memo->remarks ?? '—' }}</td>
+                                <td class="text-muted">{{ !empty($memo->created_date) ? \Carbon\Carbon::parse($memo->created_date)->format('d M Y') : 'N/A' }}</td>
 
                                 <!-- Status -->
                                 <td>
@@ -493,9 +563,14 @@
                                     @else
                                     <span class="text-muted small">—</span>
                                     @endif
-                                    {{-- Delete: admins/faculty only, hard-deletes the discipline memo + its chat --}}
-                                    <a href="javascript:void(0)" class="btn btn-sm btn-outline-danger discipline-delete-record ms-1 border-0 bg-transparent text-primary"
-                                        data-id="{{ $memo->pk }}" title="Delete">
+                                    {{-- Delete: admins/faculty only, hard-deletes the discipline memo + its chat.
+                                         Active only while the memo is open (Recorded/Memo Sent); disabled once closed. --}}
+                                    @php $isMemoClosed = !in_array($memo->status, [1, 2]); @endphp
+                                    <a href="javascript:void(0)"
+                                        class="btn btn-sm btn-outline-danger discipline-delete-record ms-1 border-0 bg-transparent text-primary {{ $isMemoClosed ? 'disabled' : '' }}"
+                                        data-id="{{ $memo->pk }}"
+                                        title="{{ $isMemoClosed ? 'Cannot delete a closed memo' : 'Delete' }}"
+                                        @if($isMemoClosed) aria-disabled="true" tabindex="-1" style="pointer-events:none;opacity:.45;" @endif>
                                         <i class="material-icons material-symbols-rounded fs-5">delete</i>
                                     </a>
                                     @else
@@ -506,7 +581,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="{{ hasRole('Officer Trainee') ? 11 : 12 }}" class="text-center py-5 text-muted">
+                                <td colspan="{{ hasRole('Officer Trainee') ? 12 : 13 }}" class="text-center py-5 text-muted">
                                     <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                                     <span class="fw-medium">No memo records available</span>
                                 </td>
@@ -515,15 +590,26 @@
                         </tbody>
                     </table>
                 </div>
-                <!-- Pagination -->
-                <div class="card-footer bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div class="text-muted small">
-                        Showing {{ $memos->firstItem() ?? 0 }} to {{ $memos->lastItem() ?? 0 }}
-                        of {{ $memos->total() }} records
-                    </div>
-
-                    <div>
+                <!-- Pagination (design-system footer: numbered pages + "Showing [N] of M items") -->
+                @php
+                    $discPerPage = (int) request('per_page', 10);
+                    if (!in_array($discPerPage, [10, 25, 50, 100, 200], true)) $discPerPage = 10;
+                @endphp
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
+                    <div class="programme-dt-pagination">
                         {{ $memos->links('vendor.pagination.custom') }}
+                    </div>
+                    <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                        <div class="dataTables_length">
+                            <label class="mb-0">Showing
+                                <select id="discPerPage" class="form-select form-select-sm" aria-label="Rows per page">
+                                    @foreach([10, 25, 50, 100, 200] as $pp)
+                                    <option value="{{ $pp }}" {{ $discPerPage === $pp ? 'selected' : '' }}>{{ $pp }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                        </div>
+                        <div class="dataTables_info">of {{ number_format($memos->total()) }} items</div>
                     </div>
                 </div>
             </div>
@@ -532,8 +618,8 @@
     <!-- end Zero Configuration -->
 
     {{-- Edit Discipline Memo modal --}}
-    <div class="modal fade" id="editMemoModal" tabindex="-1" aria-labelledby="editMemoModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal fade gen-memo-modal" id="editMemoModal" tabindex="-1" aria-labelledby="editMemoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
             <div class="modal-content border-0 shadow">
                 <div class="modal-header">
                     <h5 class="modal-title fw-semibold" id="editMemoModalLabel">Edit Discipline Memo</h5>
@@ -566,9 +652,35 @@
                                 <label class="form-label fw-semibold">Discipline Marks <span class="text-danger">*</span></label>
                                 <input type="number" step="0.01" min="0" id="editMemoMarks" name="mark_deduction_submit" class="form-control" required>
                             </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Template</label>
+                                <select id="editMemoTemplate" name="memo_notice_template_pk" class="form-select">
+                                    <option value="">Select Discipline first</option>
+                                </select>
+                                <small class="text-muted">Changes to match the selected discipline.</small>
+                            </div>
                             <div class="col-12">
                                 <label class="form-label fw-semibold">Remarks</label>
                                 <textarea id="editMemoRemarks" name="remarks" class="form-control" rows="3" placeholder="Enter remarks..."></textarea>
+                            </div>
+                        </div>
+
+                        <h6 class="gm-section-title mt-3">Preview</h6>
+                        <div class="gm-preview" id="editMemoPreview">
+                            <h5 class="text-center fw-bold mb-1" id="emPvCourse">Course Name</h5>
+                            <p class="text-center mb-0 small">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+                            <hr>
+                            <p class="mb-2"><strong>Date:</strong> <span id="emPvDate">—</span></p>
+                            <div id="emPvTemplateContent" class="mb-2 small text-muted fst-italic">Select a discipline to preview content.</div>
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-2">
+                                    <thead><tr><th>#</th><th>OT</th></tr></thead>
+                                    <tbody id="emPvStudents"><tr><td colspan="2" class="text-muted">—</td></tr></tbody>
+                                </table>
+                            </div>
+                            <div class="text-end mb-0 small" id="emPvDirectorBlock" style="display:none;">
+                                <div id="emPvSignature"></div>
+                                <strong id="emPvDirectorName"></strong><br><span id="emPvDirectorDesig"></span>
                             </div>
                         </div>
                     </div>
@@ -897,7 +1009,25 @@ $(function () {
     });
     $(genModalEl).on('hidden.bs.modal', function () {
         if (pendingOpenPicker) { pendingOpenPicker = false; pickerModal.show(); }
+        else { resetGenMemoForm(); }
     });
+
+    // Clear everything on a real close (Cancel, backdrop click, Esc, or after submit) —
+    // but not when hiding temporarily to open the student picker (handled above).
+    function resetGenMemoForm() {
+        var form = document.getElementById('genMemoForm');
+        if (form) form.reset();
+        gmDefaulters = [];
+        gmSelected = [];
+        gmTemplateMap = {};
+        $('#gmDiscipline').html('<option value="">Select Discipline</option>');
+        $('#gmTemplate').html('<option value="">Select Discipline first</option>');
+        $('#gmSelectedHidden').empty();
+        syncSelection();
+        $('#gmPvCourse').text('Course Name');
+        $('#gmPvDate').text('—');
+        updateTemplatePreview();
+    }
     $(pickerModalEl).on('hidden.bs.modal', function () {
         // Closing the picker (Save or dismiss) always returns to the Generate modal.
         genModal.show();
@@ -1118,6 +1248,7 @@ $(function () {
 
     /* ── Delete a discipline memo (admins only) ── */
     $(document).on('click', '.discipline-delete-record', function () {
+        if ($(this).hasClass('disabled')) { return; } // closed memo — delete not allowed
         var id = $(this).data('id');
         if (!id) { return; }
 
@@ -1161,7 +1292,82 @@ $(function () {
     var editRouteBase   = "{{ rtrim(route('memo.discipline.edit', ''), '/') }}/";
     var updateRouteBase = "{{ rtrim(route('memo.discipline.update', ''), '/') }}/";
     var markRoute       = "{{ route('memo.discipline.getMarkDeduction') }}";
+    var routeTemplates  = "{{ route('memo.discipline.templatesByDiscipline') }}";
     var csrf            = "{{ csrf_token() }}";
+    var editMemoCourseId = null;
+
+    // Reload the Template list AND the preview for the current course + given discipline.
+    // Mirrors the Generate modal's loadTemplates(): discipline-specific templates
+    // first, course-wide fallback last (see getTemplatesByDiscipline()).
+    function loadEditTemplates(disciplineId, selectedPk) {
+        var $t = $('#editMemoTemplate');
+        emTemplateMap = {};
+        emSelectedTplPk = null;
+        if (!editMemoCourseId || !disciplineId) {
+            $t.html('<option value="">Select Discipline first</option>');
+            updateEditTemplatePreview();
+            return;
+        }
+        $t.html('<option value="">Loading templates...</option>');
+        $('#emPvTemplateContent').addClass('text-muted fst-italic').text('Loading preview…');
+        $.get(routeTemplates, { course_id: editMemoCourseId, discipline_master_pk: disciplineId }).done(function (res) {
+            $t.empty();
+            if (Array.isArray(res) && res.length) {
+                res.forEach(function (t) {
+                    var label = t.title + (t.discipline_master_pk ? '' : ' (course default)');
+                    $t.append($('<option>').val(t.pk).text(label));
+                    emTemplateMap[String(t.pk)] = t;
+                });
+                $t.val(selectedPk && $t.find('option[value="' + selectedPk + '"]').length ? String(selectedPk) : String(res[0].pk));
+                emSelectedTplPk = $t.val();
+            } else {
+                $t.append('<option value="">No template configured</option>');
+            }
+            updateEditTemplatePreview();
+        }).fail(function () {
+            $t.html('<option value="">Failed to load templates</option>');
+            updateEditTemplatePreview();
+        });
+    }
+
+    var emTemplateMap   = {};   // pk → template object (content + director fields)
+    var emSelectedTplPk = null; // discipline template auto-picked for the preview
+    var editCoursePk    = null; // course id of the memo being edited
+
+    // Preview: course / date / (single) student.
+    function updateEditPreview() {
+        $('#emPvCourse').text($('#editMemoCourse').val() || 'Course Name');
+        var d = $('#editMemoDate').val();
+        $('#emPvDate').text(d ? d.split('-').reverse().join('/') : '—');
+        var student = $('#editMemoStudent').val() || '';
+        var $rows = $('#emPvStudents').empty();
+        if (student) {
+            $rows.append($('<tr>').append($('<td>').text('1')).append($('<td>').text(student)));
+        } else {
+            $rows.append('<tr><td colspan="2" class="text-muted">—</td></tr>');
+        }
+    }
+
+    // Preview: template content + director block (mirrors the Generate modal).
+    function updateEditTemplatePreview() {
+        var tpl = emSelectedTplPk ? emTemplateMap[emSelectedTplPk] : null;
+        var $content = $('#emPvTemplateContent');
+        if (tpl && tpl.content) {
+            $content.removeClass('text-muted fst-italic').html(tpl.content);
+        } else {
+            $content.addClass('text-muted fst-italic').text('No template configured for this discipline.');
+        }
+        if (tpl && (tpl.director_name || tpl.director_designation)) {
+            $('#emPvSignature').html(tpl.signature_image
+                ? '<img src="/storage/' + tpl.signature_image + '" style="max-height:50px;display:block;margin-left:auto;margin-bottom:4px;" alt="Signature">'
+                : '');
+            $('#emPvDirectorName').text(tpl.director_name || '');
+            $('#emPvDirectorDesig').text(tpl.director_designation || '');
+            $('#emPvDirectorBlock').show();
+        } else {
+            $('#emPvDirectorBlock').hide();
+        }
+    }
 
     // ── Open modal: fetch memo data + disciplines ──
     $(document).on('click', '.btn-edit-memo', function () {
@@ -1169,7 +1375,13 @@ $(function () {
         $('#editMemoForm')[0].reset();
         $('#editMemoPk').val('');
         $('#editMemoDiscipline').html('<option value="">Loading…</option>');
+        $('#editMemoTemplate').html('<option value="">Select Discipline first</option>');
         $('#editMemoSaveBtn').prop('disabled', true);
+        // Reset the preview for the freshly opened memo.
+        emTemplateMap = {}; emSelectedTplPk = null; editCoursePk = null;
+        $('#emPvDirectorBlock').hide();
+        $('#emPvTemplateContent').addClass('text-muted fst-italic').text('Loading preview…');
+        updateEditPreview();
 
         $.get(editRouteBase + id).done(function (data) {
             $('#editMemoPk').val(data.pk);
@@ -1178,6 +1390,7 @@ $(function () {
             $('#editMemoDate').val(data.date);
             $('#editMemoMarks').val(data.mark_deduction_submit);
             $('#editMemoRemarks').val(data.remarks);
+            editMemoCourseId = data.course_master_pk;
 
             var $sel = $('#editMemoDiscipline').empty().append('<option value="">Select Discipline</option>');
             (data.disciplines || []).forEach(function (d) {
@@ -1187,6 +1400,12 @@ $(function () {
                 );
             });
             $sel.val(data.discipline_master_pk);
+            // Preview mirrors the Generate modal: course/date/student + the
+            // discipline's template content & director signature.
+            editCoursePk = data.course_master_pk || null;
+            updateEditPreview();
+            // Populates the template dropdown AND the template-content preview.
+            loadEditTemplates(data.discipline_master_pk, data.memo_notice_template_pk);
             $('#editMemoSaveBtn').prop('disabled', false);
         }).fail(function () {
             alert('Failed to load memo data.');
@@ -1195,13 +1414,24 @@ $(function () {
         editMemoModal.show();
     });
 
-    // ── Auto-fill marks when discipline changes ──
+    // ── Discipline changes → auto-fill marks + reload templates for the new discipline ──
     $('#editMemoDiscipline').on('change', function () {
         var mark = $('option:selected', this).data('mark');
         if (mark !== undefined && mark !== '') {
             $('#editMemoMarks').val(mark);
         }
+         loadEditTemplates($(this).val(), null);   // refresh dropdown + preview for the new discipline
+        updateEditPreview();
     });
+
+    // Template selection changes → refresh the preview content.
+    $('#editMemoTemplate').on('change', function () {
+        emSelectedTplPk = $(this).val() || null;
+        updateEditTemplatePreview();
+    });
+
+    // Date change → refresh the preview date.
+    $('#editMemoDate').on('change input', updateEditPreview);
 
     // ── Submit edit form ──
     $('#editMemoForm').on('submit', function (e) {
@@ -1213,11 +1443,12 @@ $(function () {
             url: updateRouteBase + id,
             type: 'POST',
             data: {
-                _token:                csrf,
-                date:                  $('#editMemoDate').val(),
-                discipline_master_pk:  $('#editMemoDiscipline').val(),
-                mark_deduction_submit: $('#editMemoMarks').val(),
-                remarks:               $('#editMemoRemarks').val(),
+                _token:                    csrf,
+                date:                      $('#editMemoDate').val(),
+                discipline_master_pk:      $('#editMemoDiscipline').val(),
+                mark_deduction_submit:     $('#editMemoMarks').val(),
+                remarks:                   $('#editMemoRemarks').val(),
+                memo_notice_template_pk:   $('#editMemoTemplate').val(),
             },
             success: function (res) {
                 if (res.success) {

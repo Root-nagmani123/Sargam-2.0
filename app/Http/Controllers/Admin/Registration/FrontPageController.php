@@ -4,11 +4,21 @@ namespace App\Http\Controllers\Admin\Registration;
 
 // namespace App\Models;
 use App\Http\Controllers\Controller;
+use App\Services\FC\FcRegistrationIntentService;
+use App\Services\FC\FcRegistrationStatusService;
+use App\Services\FC\FcRosterApplicationGuardService;
+use App\Services\FC\FcRosterAuthService;
+use App\Support\FcEncryptedFormId;
 use Illuminate\Http\Request;
+use App\Models\FC\FcForm;
 use App\Models\FrontPage;
+use App\Models\FacultyMaster;
+use App\Models\DesignationMaster;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use App\Models\PathPage;
 use App\Models\PathPageFaq;
 use App\Models\ExemptionCategory;
@@ -22,10 +32,68 @@ use Carbon\Carbon;
 
 class FrontPageController extends Controller
 {
+    /** Matches validation rule max:5120 (kilobytes) for medical_doc uploads. */
+    private const MEDICAL_DOC_MAX_KB = 5120;
+
+    public function __construct(
+        private FcRegistrationIntentService $fcRegistrationIntent,
+        private FcRegistrationStatusService $fcRegistrationStatus,
+        private FcRosterApplicationGuardService $rosterGuard,
+    ) {
+    }
+
+    private function redirectToChoosePathWithWarning(string $message)
+    {
+        return redirect()
+            ->route('fc.choose.path', $this->intentQueryForFcFormLinks())
+            ->with('warning', $message);
+    }
+
     public function index()
     {
         $data = FrontPage::first(); // fetch latest/only record
-        return view('admin.forms.home_page', compact('data'));
+
+        // Faculty list for the Coordinator Name dropdown (same source as Create Course).
+        // Keyed by full_name so the saved value remains a name string and the public
+        // front page (which prints coordinator_name directly) keeps working unchanged.
+        $facultyList = FacultyMaster::orderBy('full_name')->pluck('full_name', 'full_name')->toArray();
+
+        // Preserve a previously saved coordinator name even if it is no longer in the faculty list.
+        if ($data && !empty($data->coordinator_name) && !isset($facultyList[$data->coordinator_name])) {
+            $facultyList = [$data->coordinator_name => $data->coordinator_name] + $facultyList;
+        }
+
+        // Map of coordinator (faculty) name => their designation name, so the
+        // Coordinator Designation field can auto-fill when a coordinator is picked.
+        // Chain: faculty_master.employee_master_pk -> employee_master.designation_master_pk -> designation_master.
+        $coordinatorDesignations = FacultyMaster::query()
+            ->join('employee_master', 'faculty_master.employee_master_pk', '=', 'employee_master.pk')
+            ->join('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
+            ->whereNotNull('faculty_master.full_name')
+            ->pluck('designation_master.designation_name', 'faculty_master.full_name')
+            ->toArray();
+
+        // Options for the Coordinator Designation searchable dropdown. Keyed by name so the
+        // saved value stays a string (the public front page prints coordinator_designation directly).
+        $designationList = DesignationMaster::where('active_inactive', 1)
+            ->orderBy('designation_name')
+            ->pluck('designation_name', 'designation_name')
+            ->toArray();
+
+        // Ensure every designation that a coordinator can auto-fill is selectable (even if inactive).
+        foreach ($coordinatorDesignations as $desigName) {
+            if (!empty($desigName) && !isset($designationList[$desigName])) {
+                $designationList[$desigName] = $desigName;
+            }
+        }
+
+        // Preserve the currently saved designation even if it is inactive or no longer in the master.
+        if ($data && !empty($data->coordinator_designation) && !isset($designationList[$data->coordinator_designation])) {
+            $designationList[$data->coordinator_designation] = $data->coordinator_designation;
+        }
+        asort($designationList);
+
+        return view('admin.forms.home_page', compact('data', 'facultyList', 'coordinatorDesignations', 'designationList'));
     }
 
     public function storeOrUpdate(Request $request)
@@ -65,15 +133,41 @@ class FrontPageController extends Controller
         return redirect()->back()->with('success', 'Front Page content saved successfully.');
     }
     // foundation page
-    public function foundationIndex()
+    public function foundationIndex(Request $request)
     {
-        $data = FrontPage::first(); // Fetch the first row from front_pages table
-        return view('fc.front_page', compact('data'));
+        $this->fcRegistrationIntent->ingestFormQuery($request);
+        $data = FrontPage::first();
+        $pathPage = PathPage::first();
+        $intentQuery = $this->intentQueryForFcFormLinks();
+        // Only show programme name when this visit used a form-specific landing URL (?form= token).
+        $programmeIntentLabel = $this->fcRegistrationIntent->requestHasFormToken($request)
+            ? $this->resolvedIntendedProgrammeName()
+            : null;
+
+        return view('fc.front_page', compact('data', 'pathPage', 'intentQuery', 'programmeIntentLabel'));
+    }
+
+    /**
+     * Public programme name for the active intended form (never the raw id).
+     */
+    private function resolvedIntendedProgrammeName(): ?string
+    {
+        $id = session(FcRegistrationIntentService::SESSION_FORM_ID);
+        if (! is_numeric($id) || (int) $id < 1) {
+            return null;
+        }
+
+        return FcForm::query()
+            ->whereKey((int) $id)
+            ->where('is_active', true)
+            ->value('form_name');
     }
 
     //Authentication method
-    public function authindex()
+    public function authindex(Request $request)
     {
+        $this->fcRegistrationIntent->ingestFormQuery($request);
+
         return view('fc.login');
     }
 
@@ -96,26 +190,13 @@ class FrontPageController extends Controller
             ->first();
         // @dd($registration);
         if (!$registration) {
-            // return back()
-            //     ->withErrors(['web_auth' => 'Invalid contact number or web auth code.'])
-            //     ->withInput();
             return back()
                 ->withErrors(['web_auth' => 'Invalid contact number or web auth code.'])
                 ->withInput();
         }
 
-        // Step 3: Check if already registered (application_type = 1)
-        $alreadyRegistered = DB::table('fc_registration_master')
-            ->where('contact_no', $request->reg_mobile)
-            ->where('web_auth', $request->reg_web_code)
-            ->where('is_registered', 1) // Only block if truly registered
-            ->exists();
-
-
-        if ($alreadyRegistered) {
-            return redirect()->route('fc.choose.path')->with([
-                'warning' => 'You have already registered. Please proceed with exemption or contact support.'
-            ]);
+        if ($blocked = $this->rosterGuard->registrationBlockedReason($registration)) {
+            return $this->redirectToChoosePathWithWarning($blocked);
         }
 
 
@@ -143,30 +224,57 @@ class FrontPageController extends Controller
         //     'success' => 'You have been successfully authenticated. Please create your credentials.'
         // ]);
 
-        return redirect()->route('credential.registration.create')->with([
-            'sweet_success' => 'You have been successfully authenticated. Please create your credentials.'
+        return redirect()->route('credential.registration.create', $this->intentQueryForFcFormLinks())->with([
+            'sweet_success' => 'You have been successfully authenticated. Please create your credentials.',
         ]);
     }
 
     // Show the registration form
-    public function credential_index()
+    public function credential_index(Request $request)
     {
-        return view('fc.credentials'); // Adjust blade path if needed
+        $this->fcRegistrationIntent->ingestFormQuery($request);
+
+        $mobile = session('fc_user_mobile');
+        $webAuth = session('fc_user_web_auth');
+        if ($mobile && $webAuth) {
+            $registration = DB::table('fc_registration_master')
+                ->where('contact_no', $mobile)
+                ->where('web_auth', $webAuth)
+                ->first();
+
+            if ($registration && ($blocked = $this->rosterGuard->registrationBlockedReason($registration))) {
+                return $this->redirectToChoosePathWithWarning($blocked);
+            }
+        }
+
+        return view('fc.credentials');
     }
 
     // Store user credentials
     public function credential_store(Request $request)
     {
-        // @dd($request->all());
+        $request->merge([
+            'reg_name' => Str::lower(trim((string) $request->input('reg_name', ''))),
+        ]);
+
         $request->validate([
-            // 'reg_name' => 'required|string|max:100|unique:user_credentials,user_name',
             'reg_name' => [
                 'required',
                 'string',
                 'min:6',
                 'max:20',
-                'regex:/^(?=.{6,20}$)(?!.*[_.]{2})[a-zA-Z][a-zA-Z0-9._]*[a-zA-Z0-9]$/',
+                'lowercase',
+                'regex:/^(?=.{6,20}$)(?!.*[_.]{2})[a-z][a-z0-9._]*[a-z0-9]$/',
                 'unique:user_credentials,user_name',
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    $takenOnRoster = DB::table('fc_registration_master')
+                        ->where('user_id', $value)
+                        ->where('contact_no', '!=', request('reg_mobile'))
+                        ->exists();
+                    if ($takenOnRoster) {
+                        $fail('The username has already been taken.');
+                    }
+                },
             ],
 
             'reg_mobile' => 'required|digits:10',
@@ -179,8 +287,8 @@ class FrontPageController extends Controller
             ],
             'reg_confirm_password' => 'required|same:reg_password',
         ], [
-            'reg_name.regex' => 'username must start with a letter and can contain letters, numbers, dots, and underscores. 
-            No consecutive dots/underscores or ending with special characters.',
+            'reg_name.regex' => 'Username must be lowercase, start with a letter, and may contain letters, numbers, dots, and underscores. No consecutive dots/underscores or ending with a special character.',
+            'reg_name.lowercase' => 'Username must not contain capital letters.',
             'reg_name.unique' => 'The username has already been taken.',
             'reg_mobile.required' => 'Mobile number is required.',
             'reg_mobile.digits' => 'Mobile number must be 10 digits.',
@@ -197,58 +305,90 @@ class FrontPageController extends Controller
 
 
         $registration = DB::table('fc_registration_master')
-            ->where('contact_no', $request->ex_mobile)
-            ->where('web_auth', $request->reg_web_code)
+            ->where('contact_no', $request->reg_mobile)
             ->first();
 
-        $currentAppType = $registration->application_type ?? 0;
-        $isRegistered   = $registration->is_registered ?? 0;
-
-        // Prevent duplicate registration
-        if ($isRegistered == 1) {
-            return back()->withErrors(['reg_mobile' => 'This mobile number is already registered.'])->withInput();
+        if (!$registration) {
+            return back()->withErrors(['reg_mobile' => 'No foundation course registration found for this mobile number.'])->withInput();
         }
 
-        // Determine if we need to update the type to "registered"
-        $newAppType = ($currentAppType == 0 || $currentAppType == 2) ? 1 : $currentAppType;
-
-        // Update only if necessary
-        if ($newAppType != $currentAppType || $isRegistered == 0) {
-
-            DB::table('fc_registration_master')
-                ->where('contact_no', $request->reg_mobile)
-                // ->where('web_auth', $request->reg_web_code)
-                ->update([
-                    'application_type' => $newAppType,
-                    'is_registered' => 1, //  mark registration
-                ]);
+        if ($blocked = $this->rosterGuard->registrationBlockedReason($registration)) {
+            return $this->redirectToChoosePathWithWarning($blocked);
         }
 
-        $hashedPassword = Hash::make($request->reg_password);
+        // Stage credentials only; application_type = 1 is set with is_registered after steps 1 & 2.
+        DB::table('fc_registration_master')
+            ->where('contact_no', $request->reg_mobile)
+            ->update([
+                'user_id' => $request->reg_name,
+                'password' => Hash::make($request->reg_password),
+            ]);
 
-        DB::table('user_credentials')->updateOrInsert(
-            ['mobile_no' => $request->reg_mobile], // Condition to find existing user by mobile
-            [
-                'user_name' => $request->reg_name,
-                'jbp_password' => $hashedPassword,
-                'reg_date' => now(),
-                'Active_inactive' => 1,
-                'last_login' => now(), // Optional: include this if needed
-            ]
+        // Email the username and password to the trainee (best-effort: never block account creation).
+        $this->sendCredentialsEmail($registration->email ?? null, $request->reg_name, $request->reg_password, $registration->pk ?? null);
+
+        return redirect()->route('fc.login', $this->intentQueryForFcFormLinks())->with(
+            'sweet_success',
+            'Credentials saved successfully. Please log in to complete your registration form.'
         );
-
-        // return redirect()->route('fc.login')->with('success', 'Credentials created successfully.');
-        return redirect()->route('fc.login')->with('sweet_success', 'Credentials created successfully.');
     }
 
     // Show the login form
-    public function showLoginForm()
+    public function showLoginForm(Request $request)
     {
+        $this->fcRegistrationIntent->ingestFormQuery($request);
+
         return view('fc.fc_login'); // Adjust to your login blade path
     }
 
+    // Log the foundation-course (staged) user out and return to the FC login page.
+    // session()->invalidate() flushes the staged roster pk, so the user is fully signed out.
+    public function logout(Request $request)
+    {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('fc.login');
+    }
+
+    /**
+     * Email the FC login credentials (username + password) to the trainee.
+     * Best-effort: any mail failure is logged but never blocks account creation.
+     */
+    protected function sendCredentialsEmail(?string $email, string $username, string $password, ?int $registrationPk = null): void
+    {
+        $email = trim((string) $email);
+        if ($email === '') {
+            return;
+        }
+
+        try {
+            $fromAddress = config('mail.from.address') ?: 'no-reply@lbsnaa.gov.in';
+            $fromName = config('mail.from.name') ?: 'LBSNAA Foundation Course';
+
+            $body = "Dear Candidate,\n\n"
+                . "Your login credentials for the LBSNAA Foundation Course registration portal have been created successfully.\n\n"
+                . "Username: {$username}\n"
+                . "Password: {$password}\n\n"
+                . "Please keep these credentials confidential and do not share them with anyone.\n\n"
+                . "Regards,\n"
+                . "Lal Bahadur Shastri National Academy of Administration, Mussoorie";
+
+            Mail::raw($body, function ($mail) use ($email, $fromAddress, $fromName) {
+                $mail->from($fromAddress, $fromName)
+                    ->to($email)
+                    ->subject('Your Foundation Course Login Credentials');
+            });
+        } catch (\Throwable $e) {
+            Log::error('Failed to send FC credentials email: ' . $e->getMessage(), [
+                'registration_pk' => $registrationPk,
+            ]);
+        }
+    }
+
     //user login verification
-    public function verifyLogin(Request $request)
+    public function verifyLogin(Request $request, FcRosterAuthService $rosterAuth)
     {
         // Validate input
         $request->validate([
@@ -256,36 +396,28 @@ class FrontPageController extends Controller
             'reg_password' => 'required|string',
         ]);
 
-        //trim extra spaces
-        $regName = trim($request->reg_name);
+        $regName = $rosterAuth->normalizeLoginUsername($request->reg_name);
 
-        // Fetch user record from user_credentials
-        $user = User::where('user_name', $regName)
-            ->where('Active_inactive', 1)
-            ->first();
+        $intentFormId = session(FcRegistrationIntentService::SESSION_FORM_ID);
+        $intentSetAt = session(FcRegistrationIntentService::SESSION_FORM_SET_AT);
+        $intentFormId = is_numeric($intentFormId) ? (int) $intentFormId : null;
+        $intentSetAt = is_numeric($intentSetAt) ? (int) $intentSetAt : null;
 
-        // Check if user exists and password matches
-        if ($user && Hash::check($request->reg_password, $user->jbp_password)) {
-
-            // Log in via Laravel Auth
-            Auth::login($user);
-
-            // Find the first visible form
-            $form = DB::table('local_form')
-                ->where('visible', 1)
-                ->orderBy('id')
-                ->first();
-
-            if (!$form) {
-                return redirect()->route('fc.choose.path')->with('success', 'Login successful!');
-            }
-
-            // Redirect to the form page
-            return redirect()->route('forms.show', ['formId' => $form->id])->with('success', 'Login successful!');
+        if ($rosterAuth->usernameExistsInUserCredentials($regName)) {
+            return back()->withErrors([
+                'reg_name' => 'User already exists. Your account has been migrated — please use the main login page.',
+            ])->withInput();
         }
 
+        // FC login: authenticate only against fc_registration_master (main /login uses user_credentials).
+        $roster = $rosterAuth->findStagedRosterByLogin($regName);
+        if ($roster && $rosterAuth->verifyStagedPassword($roster, $request->reg_password)) {
+            $this->fcRegistrationIntent->forgetIntent();
+            $rosterAuth->establishStagedSession($roster);
 
-        // If invalid credentials
+            return $this->fcRegistrationIntent->redirectAfterFcWebLogin($intentFormId, $intentSetAt);
+        }
+
         return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
     }
 
@@ -486,8 +618,10 @@ class FrontPageController extends Controller
     // }
 
 
-    public function choosePath()
+    public function choosePath(Request $request)
     {
+        $this->fcRegistrationIntent->ingestFormQuery($request);
+
         $pathPage = PathPage::first();
 
         // Defaults
@@ -519,7 +653,22 @@ class FrontPageController extends Controller
             }
         }
 
-        return view('fc.path', compact('pathPage', 'showRegistration', 'showExemption'));
+        $intentQuery = $this->intentQueryForFcFormLinks();
+
+        return view('fc.path', compact('pathPage', 'showRegistration', 'showExemption', 'intentQuery'));
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function intentQueryForFcFormLinks(): array
+    {
+        $id = session(FcRegistrationIntentService::SESSION_FORM_ID);
+        if (! is_numeric($id) || (int) $id < 1) {
+            return [];
+        }
+
+        return ['form' => FcEncryptedFormId::encode((int) $id)];
     }
 
 
@@ -655,17 +804,21 @@ class FrontPageController extends Controller
 
     public function showExemptionCategory(Request $request)
     {
+        $this->fcRegistrationIntent->ingestFormQuery($request);
+
         $userMobile = session('fc_user_mobile');
         $webAuth = session('fc_user_web_auth');
-        // Check if user has already applied for exemption
-        // $hasApplied = DB::table('fc_registration_master')
-        //     ->where('contact_no', $userMobile)
-        //     ->where('web_auth', $webAuth)
-        //     ->where('fc_exemption_master_pk', '!=', 0) // Check if exemption is applied
-        //     ->exists();
+        if ($userMobile && $webAuth) {
+            $registration = DB::table('fc_registration_master')
+                ->where('contact_no', $userMobile)
+                ->where('web_auth', $webAuth)
+                ->first();
 
-        // $hasApplied = $hasApplied ? true : false; // Convert to boolean
-        // Fetch exemption categories
+            if ($registration && ($blocked = $this->rosterGuard->exemptionBlockedReason($registration))) {
+                return $this->redirectToChoosePathWithWarning($blocked);
+            }
+        }
+
         $exemptions = DB::table('fc_exemption_master')
             ->where('is_notice', false)
             ->where('visible', true)
@@ -801,7 +954,11 @@ class FrontPageController extends Controller
             abort(404, 'Exemption category not found.');
         }
 
-        return view('fc.exemption_application', compact('exemption'));
+        return view('fc.exemption_application', [
+            'exemption' => $exemption,
+            'medicalDocMaxKb' => self::MEDICAL_DOC_MAX_KB,
+            'medicalDocMaxBytes' => self::MEDICAL_DOC_MAX_KB * 1024,
+        ]);
     }
 
     // apply exemption store
@@ -814,6 +971,7 @@ class FrontPageController extends Controller
             'captcha' => 'required|captcha',
             'course' => 'nullable|string|max:255',   // Blade field -> DB previous_fc_course_name
             'year' => 'nullable|digits:4',           // Blade field -> DB fc_date
+            'institution_name' => 'nullable|string|max:255', // Blade field -> DB previous_fc_institution_name
             'roll_number' => 'nullable|string|max:50', // Blade field -> DB appearing_roll_no
         ];
 
@@ -832,6 +990,7 @@ class FrontPageController extends Controller
             'captcha.captcha' => 'The captcha you entered is incorrect. Please try again.',
             'course.string' => 'Course name must be a valid string.',
             'year.digits' => 'Year must be a valid 4-digit year.',
+            'institution_name.string' => 'Institution name must be a valid string.',
             'roll_number.string' => 'Roll number must be a valid string.',
         ];
 
@@ -848,9 +1007,20 @@ class FrontPageController extends Controller
             }
         }
 
+        if ($exemption && stripos($exemption->Exemption_name, 'completed foundation course') !== false) {
+            $rules['course'] = 'required|string|max:255';
+            $rules['year'] = 'required|digits:4';
+            $rules['institution_name'] = 'required|string|max:255';
+            $messages['course.required'] = 'Course name is required for this exemption category.';
+            $messages['year.required'] = 'Year is required for this exemption category.';
+            $messages['institution_name.required'] = 'Institution name is required for this exemption category.';
+        }
+
         if ($exemption && strtolower($exemption->Exemption_name) === 'medical') {
-            $rules['medical_doc'] = 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120';
+            $rules['medical_doc'] = 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:'.self::MEDICAL_DOC_MAX_KB;
             $messages['medical_doc.required'] = 'Medical exemption document is required for medical exemptions.';
+            $messages['medical_doc.max'] = 'Medical document must not be larger than '.(self::MEDICAL_DOC_MAX_KB / 1024).' MB.';
+            $messages['medical_doc.mimes'] = 'Medical document must be PDF, Word (.doc, .docx), JPG, JPEG, or PNG.';
         }
 
         $validator = Validator::make($request->all(), $rules);
@@ -873,6 +1043,11 @@ class FrontPageController extends Controller
                 ->withErrors(['reg_web_code' => 'Invalid Web Code or Mobile Number.'])
                 ->withInput();
         }
+
+        if ($blocked = $this->rosterGuard->exemptionBlockedReason($registration)) {
+            return $this->redirectToChoosePathWithWarning($blocked);
+        }
+
         $username = $registration->user_id ?? null;
 
         $medicalDocPath = null;
@@ -892,28 +1067,19 @@ class FrontPageController extends Controller
                 'medical_exemption_doc' => $medicalDocPath,
                 'previous_fc_course_name' => !empty($request->course) ? $request->course : null,
                 'fc_date'                 => !empty($request->year) ? $request->year : null,
+                // 'previous_fc_institution_name' => !empty($request->institution_name) ? $request->institution_name : null,
                 'appearing_roll_no'       => !empty($request->roll_number) ? $request->roll_number : null,
 
             ]
         );
 
-        //  Safely increment exemption_count if registration found
-        if ($registration && $registration->pk) {
-            DB::table('fc_registration_master')
-                ->where('pk', $registration->pk)
-                ->update([
-                    'exemption_count' => DB::raw('COALESCE(exemption_count, 0) + 1'),
-                ]);
-        }
-        // Determine and update application_type if needed
-        $currentAppType = $registration->application_type ?? null;
-
-        if ($currentAppType === 0 || $currentAppType === '0' || $currentAppType === 1 || $currentAppType === '1') {
-            DB::table('fc_registration_master')
-                ->where('contact_no', $request->ex_mobile)
-                ->where('web_auth', $request->reg_web_code)
-                ->update(['application_type' => 2]);
-        }
+        DB::table('fc_registration_master')
+            ->where('contact_no', $request->ex_mobile)
+            ->where('web_auth', $request->reg_web_code)
+            ->update([
+                'application_type' => FcRosterApplicationGuardService::APPLICATION_EXEMPTION,
+                'exemption_count' => DB::raw('GREATEST(COALESCE(exemption_count, 0), 1)'),
+            ]);
 
         return redirect()->route('fc.thank_you')->with('success', 'Exemption form submitted successfully.');
     }
@@ -959,7 +1125,7 @@ class FrontPageController extends Controller
             ]);
 
         // return redirect()->route('fc.login')->with('success', 'Password reset successful. Please login with new credentials.');
-        return redirect()->route('fc.login')
+        return redirect()->route('fc.login', $this->intentQueryForFcFormLinks())
             ->with('sweet_success', 'Password reset successful. Please login with new credentials.');
     }
 
@@ -1061,65 +1227,52 @@ class FrontPageController extends Controller
     //     ));
     // }
 
-    public function student_status()
+    public function student_status(Request $request)
     {
-        // Get counts for each status using model constants
-        $notResponded = FoundationCourseStatus::where('admission_status', FoundationCourseStatus::STATUS_NOT_RESPONDED)
-            ->count();
+        $payload = $this->buildStatusPayload($request);
 
-        $registered = FoundationCourseStatus::where('admission_status', FoundationCourseStatus::STATUS_REGISTERED)
-            ->count();
+        return view('fc.status', [
+            'activeTab' => $payload['activeTab'],
+            'counts' => $this->fcRegistrationStatus->counts(),
+            'courseMeta' => $this->fcRegistrationStatus->courseMeta(),
+            'tabMeta' => $payload['tabMeta'],
+            'serviceList' => $payload['serviceList'],
+            'participants' => $payload['participants'],
+            'loggedUserCount' => auth()->check() ? 1 : 0,
+        ]);
+    }
 
-        $exemption = FoundationCourseStatus::where('application_type', FoundationCourseStatus::APPLICATION_EXEMPTION)
-            ->count();
+    public function student_statusFragment(Request $request)
+    {
+        $payload = $this->buildStatusPayload($request);
 
-        $incomplete = FoundationCourseStatus::where('final_submit', FoundationCourseStatus::SUBMISSION_DRAFT)
-            ->count();
+        return response()->json([
+            'html' => view('fc.status._results', [
+                'activeTab' => $payload['activeTab'],
+                'tabMeta' => $payload['tabMeta'],
+                'serviceList' => $payload['serviceList'],
+                'participants' => $payload['participants'],
+            ])->render(),
+            'tab' => $payload['activeTab'],
+            'theme' => $payload['tabMeta']['theme'],
+            'list_title' => $payload['tabMeta']['list_title'],
+        ]);
+    }
 
-        // Get service-wise counts with eager loading
-        // $services = FoundationCourseStatus::with('service')
-        //     ->select('service_master_pk', \DB::raw('count(*) as count'))
-        //     ->groupBy('service_master_pk')
-        //     ->get();
-        $services = FoundationCourseStatus::with(['service' => function ($query) {
-            $query->select('pk', 'service_short_name'); // Only select needed columns
-        }])
-            ->select('service_master_pk', DB::raw('count(*) as count'))
-            ->groupBy('service_master_pk')
-            ->get();
-        // @dd($services);
+    private function buildStatusPayload(Request $request): array
+    {
+        $activeTab = $this->fcRegistrationStatus->resolveTab($request->query('tab'));
+        $page = max(1, (int) $request->query('page', 1));
+        $tabMeta = $this->fcRegistrationStatus->tabMeta($activeTab);
 
-        // Get data for each tab with pagination
-        // $notRespondedData = FoundationCourseStatus::where('admission_status', FoundationCourseStatus::STATUS_NOT_RESPONDED)
-        //     ->select('first_name', 'middle_name', 'last_name', 'service_master_pk', 'rank')
-        //     ->paginate(10);
-        $notRespondedData = FoundationCourseStatus::with('service')
-            ->where('admission_status', 0) // Directly using the status value
-            ->select('first_name', 'middle_name', 'last_name', 'service_master_pk', 'rank')
-            ->paginate(10);
+        $serviceList = $activeTab === FcRegistrationStatusService::TAB_SERVICE
+            ? $this->fcRegistrationStatus->serviceWiseCounts()
+            : collect();
 
-        $registeredData = FoundationCourseStatus::where('admission_status', FoundationCourseStatus::STATUS_REGISTERED)
-            ->select('first_name', 'middle_name', 'last_name', 'service_master_pk', 'rank')
-            ->paginate(10);
+        $participants = $activeTab !== FcRegistrationStatusService::TAB_SERVICE
+            ? $this->fcRegistrationStatus->participantsForTab($activeTab, 25, $page)
+            : null;
 
-        $exemptionData = FoundationCourseStatus::where('application_type', FoundationCourseStatus::APPLICATION_EXEMPTION)
-            ->select('first_name', 'middle_name', 'last_name', 'service_master_pk', 'rank')
-            ->paginate(10);
-
-        $incompleteData = FoundationCourseStatus::where('final_submit', FoundationCourseStatus::SUBMISSION_DRAFT)
-            ->select('first_name', 'middle_name', 'last_name', 'service_master_pk', 'rank')
-            ->paginate(10);
-
-        return view('fc.status', compact(
-            'notResponded',
-            'registered',
-            'exemption',
-            'incomplete',
-            'services',
-            'notRespondedData',
-            'registeredData',
-            'exemptionData',
-            'incompleteData'
-        ));
+        return compact('activeTab', 'tabMeta', 'serviceList', 'participants');
     }
 }

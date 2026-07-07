@@ -20,6 +20,12 @@ class MemoDisciplineController extends Controller
 {
  public function index(Request $request)
 {
+    // Officer Trainees are managed on their own dedicated page (view own records + chat),
+    // not this admin management page.
+    if (isOfficerTraineeUser()) {
+        return redirect()->route('memo.discipline.ot_index');
+    }
+
     $data_course_id = get_Role_by_course();
 
     // Courses
@@ -59,6 +65,13 @@ class MemoDisciplineController extends Controller
         ->orderBy('discipline_name')
         ->get();
 
+    // Page size (design-system footer "Showing [N] of M items" dropdown).
+    $allowedPerPage = [10, 25, 50, 100, 200];
+    $perPage = (int) $request->get('per_page', 10);
+    if (!in_array($perPage, $allowedPerPage, true)) {
+        $perPage = 10;
+    }
+
     $memos = MemoDiscipline::with([
             'course:pk,course_name',
             'discipline:pk,discipline_name,active_inactive',
@@ -85,12 +98,22 @@ class MemoDisciplineController extends Controller
         ->when($searchFilter, function ($q) use ($searchFilter) {
             $q->where(function ($sub) use ($searchFilter) {
                 $sub->whereHas('student', function ($s) use ($searchFilter) {
-                        $s->where('display_name', 'like', "%{$searchFilter}%");
+                        $s->where('display_name', 'like', "%{$searchFilter}%")
+                          ->orWhere('generated_OT_code', 'like', "%{$searchFilter}%")
+                          ->orWhereHas('cadre', function ($c) use ($searchFilter) {
+                              $c->where('cadre_name', 'like', "%{$searchFilter}%");
+                          });
+                    })
+                    ->orWhereHas('course', function ($c) use ($searchFilter) {
+                        $c->where('course_name', 'like', "%{$searchFilter}%");
                     })
                     ->orWhereHas('discipline', function ($d) use ($searchFilter) {
                         $d->where('discipline_name', 'like', "%{$searchFilter}%");
                     })
-                    ->orWhere('remarks', 'like', "%{$searchFilter}%");
+                    ->orWhere('remarks', 'like', "%{$searchFilter}%")
+                    ->orWhere('mark_deduction_submit', 'like', "%{$searchFilter}%")
+                    ->orWhere('final_mark_deduction', 'like', "%{$searchFilter}%")
+                    ->orWhere('date', 'like', "%{$searchFilter}%");
             });
         })
         ->when($fromDateFilter && $toDateFilter, function ($q) use ($fromDateFilter, $toDateFilter) {
@@ -100,8 +123,19 @@ class MemoDisciplineController extends Controller
             $q->where('active_inactive', 1);
         })
         ->orderBy('pk', 'desc')
-        ->paginate(10)
-        ->appends($request->all());
+        ->paginate($perPage)
+        // Append the RESOLVED filter values (not just $request->all()) so every
+        // pagination link reproduces the exact filtered view on a full reload —
+        // otherwise the server-defaulted date filter is dropped and filters "reset".
+        ->appends([
+            'program_name'         => $programNameFilter ?? '',
+            'discipline_master_pk' => $disciplineFilter ?? '',
+            'status'               => $statusFilter ?? '',
+            'search'               => $searchFilter ?? '',
+            'from_date'            => $fromDateFilter ?? '',
+            'to_date'              => $toDateFilter ?? '',
+            'per_page'             => $perPage,
+        ]);
 
     // Optional Session/Venue selects shown in the Generate Discipline Memo modal.
     $sessions = \App\Models\ClassSessionMaster::all();
@@ -119,6 +153,106 @@ class MemoDisciplineController extends Controller
         'toDateFilter',
         'sessions',
         'venues'
+    ));
+}
+
+/**
+ * Officer Trainee view: the signed-in OT's own discipline memos only, read-only,
+ * with the conversation (chat) offcanvas. No generate / edit / delete / send.
+ */
+public function otIndex(Request $request)
+{
+    $studentPk = Auth::user()->user_id;
+
+    // Courses the OT is enrolled in — powers the Program Name filter dropdown.
+    $courses = DB::table('student_master_course__map as smcm')
+        ->join('course_master as cm', 'smcm.course_master_pk', '=', 'cm.pk')
+        ->where('smcm.student_master_pk', $studentPk)
+        ->select('cm.*')
+        ->orderBy('cm.course_name')
+        ->get();
+
+    $programNameFilter = $request->program_name;
+    $statusFilter      = $request->status;
+    $searchFilter      = $request->search;
+    $disciplineFilter  = $request->discipline_master_pk;
+
+    // OT page defaults to their full history (no implicit "today" restriction).
+    $fromDateFilter = $request->get('from_date') ?: null;
+    $toDateFilter   = $request->get('to_date') ?: null;
+
+    $disciplines = DisciplineMaster::where('active_inactive', 1)
+        ->select('discipline_name')
+        ->distinct()
+        ->orderBy('discipline_name')
+        ->get();
+
+    // Page size (design-system footer "Showing [N] of M items" dropdown).
+    $allowedPerPage = [10, 25, 50, 100, 200];
+    $perPage = (int) $request->get('per_page', 10);
+    if (!in_array($perPage, $allowedPerPage, true)) {
+        $perPage = 10;
+    }
+
+    $memos = MemoDiscipline::with([
+            'course:pk,course_name',
+            'discipline:pk,discipline_name,active_inactive',
+        ])
+        ->where('student_master_pk', $studentPk)
+        ->when($programNameFilter, function ($q) use ($programNameFilter) {
+            $q->where('course_master_pk', $programNameFilter);
+        })
+        ->when($statusFilter !== null && $statusFilter !== '', function ($q) use ($statusFilter) {
+            $q->where('status', $statusFilter);
+        })
+        ->when($disciplineFilter, function ($q) use ($disciplineFilter) {
+            $q->whereHas('discipline', fn($d) => $d->where('discipline_name', $disciplineFilter));
+        })
+        ->when($searchFilter, function ($q) use ($searchFilter) {
+            $q->where(function ($sub) use ($searchFilter) {
+                $sub->whereHas('course', function ($c) use ($searchFilter) {
+                        $c->where('course_name', 'like', "%{$searchFilter}%");
+                    })
+                    ->orWhereHas('discipline', function ($d) use ($searchFilter) {
+                        $d->where('discipline_name', 'like', "%{$searchFilter}%");
+                    })
+                    ->orWhere('remarks', 'like', "%{$searchFilter}%")
+                    ->orWhere('mark_deduction_submit', 'like', "%{$searchFilter}%")
+                    ->orWhere('final_mark_deduction', 'like', "%{$searchFilter}%")
+                    ->orWhere('date', 'like', "%{$searchFilter}%");
+            });
+        })
+        ->when($fromDateFilter && $toDateFilter, function ($q) use ($fromDateFilter, $toDateFilter) {
+            $q->whereBetween('date', [$fromDateFilter, $toDateFilter]);
+        })
+        ->whereHas('discipline', function ($q) {
+            $q->where('active_inactive', 1);
+        })
+        ->orderBy('pk', 'desc')
+        ->paginate($perPage)
+        // Append the RESOLVED filter values (not just $request->all()) so every
+        // pagination link reproduces the exact filtered view on a full reload —
+        // otherwise the server-defaulted date filter is dropped and filters "reset".
+        ->appends([
+            'program_name'         => $programNameFilter ?? '',
+            'discipline_master_pk' => $disciplineFilter ?? '',
+            'status'               => $statusFilter ?? '',
+            'search'               => $searchFilter ?? '',
+            'from_date'            => $fromDateFilter ?? '',
+            'to_date'              => $toDateFilter ?? '',
+            'per_page'             => $perPage,
+        ]);
+
+    return view('admin.memo_discipline.ot_index', compact(
+        'memos',
+        'courses',
+        'disciplines',
+        'programNameFilter',
+        'statusFilter',
+        'disciplineFilter',
+        'searchFilter',
+        'fromDateFilter',
+        'toDateFilter'
     ));
 }
 
@@ -214,12 +348,22 @@ public function exportCsv(Request $request)
         ->when($searchFilter, function ($q) use ($searchFilter) {
             $q->where(function ($sub) use ($searchFilter) {
                 $sub->whereHas('student', function ($s) use ($searchFilter) {
-                        $s->where('display_name', 'like', "%{$searchFilter}%");
+                        $s->where('display_name', 'like', "%{$searchFilter}%")
+                          ->orWhere('generated_OT_code', 'like', "%{$searchFilter}%")
+                          ->orWhereHas('cadre', function ($c) use ($searchFilter) {
+                              $c->where('cadre_name', 'like', "%{$searchFilter}%");
+                          });
+                    })
+                    ->orWhereHas('course', function ($c) use ($searchFilter) {
+                        $c->where('course_name', 'like', "%{$searchFilter}%");
                     })
                     ->orWhereHas('discipline', function ($d) use ($searchFilter) {
                         $d->where('discipline_name', 'like', "%{$searchFilter}%");
                     })
-                    ->orWhere('remarks', 'like', "%{$searchFilter}%");
+                    ->orWhere('remarks', 'like', "%{$searchFilter}%")
+                    ->orWhere('mark_deduction_submit', 'like', "%{$searchFilter}%")
+                    ->orWhere('final_mark_deduction', 'like', "%{$searchFilter}%")
+                    ->orWhere('date', 'like', "%{$searchFilter}%");
             });
         })
         ->when($fromDateFilter && $toDateFilter, function ($q) use ($fromDateFilter, $toDateFilter) {
@@ -672,14 +816,16 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
             ->get(['pk', 'discipline_name', 'mark_deduction']);
 
         return response()->json([
-            'pk'                   => $memo->pk,
-            'course_name'          => $memo->course->course_name ?? 'N/A',
-            'student_name'         => trim(($memo->student->generated_OT_code ? $memo->student->generated_OT_code . '- ' : '') . ($memo->student->display_name ?? 'N/A')),
-            'date'                 => $memo->date,
-            'discipline_master_pk' => $memo->discipline_master_pk,
-            'mark_deduction_submit' => $memo->mark_deduction_submit,
-            'remarks'              => $memo->remarks ?? '',
-            'disciplines'          => $disciplines,
+            'pk'                      => $memo->pk,
+            'course_master_pk'        => $memo->course_master_pk,
+            'course_name'             => $memo->course->course_name ?? 'N/A',
+            'student_name'            => trim(($memo->student->generated_OT_code ? $memo->student->generated_OT_code . '- ' : '') . ($memo->student->display_name ?? 'N/A')),
+            'date'                    => $memo->date,
+            'discipline_master_pk'    => $memo->discipline_master_pk,
+            'mark_deduction_submit'   => $memo->mark_deduction_submit,
+            'remarks'                 => $memo->remarks ?? '',
+            'memo_notice_template_pk' => $memo->memo_notice_template_pk,
+            'disciplines'             => $disciplines,
         ]);
     }
 
@@ -692,18 +838,44 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
         }
 
         $validated = $request->validate([
-            'date'                  => 'required|date',
-            'discipline_master_pk'  => 'required|exists:discipline_master,pk',
-            'mark_deduction_submit' => 'required|numeric|min:0',
-            'remarks'               => 'nullable|string|max:500',
+            'date'                    => 'required|date',
+            'discipline_master_pk'    => 'required|exists:discipline_master,pk',
+            'mark_deduction_submit'   => 'required|numeric|min:0',
+            'remarks'                 => 'nullable|string|max:500',
+            'memo_notice_template_pk' => 'nullable|exists:memo_notice_templates,pk',
         ]);
 
+        // The Edit modal's Template field is populated (and re-populated on discipline
+        // change) from the same discipline-scoped list as Generate, so normally the
+        // user's pick arrives here directly. Only auto-resolve as a fallback — same
+        // precedence as getTemplatesByDiscipline(): discipline-specific first,
+        // course-wide (discipline_master_pk null) second — when nothing was submitted
+        // (e.g. a stale pin from before this field existed, or no template configured
+        // for this discipline yet).
+        $templatePk = $validated['memo_notice_template_pk'] ?? null;
+        if (!$templatePk) {
+            $bestTemplate = MemoNoticeTemplate::query()
+                ->where('memo_notice_type', 'Discipline Memo')
+                ->where('active_inactive', 1)
+                ->whereNull('deleted_at')
+                ->where('course_master_pk', $memo->course_master_pk)
+                ->where(function ($q) use ($validated) {
+                    $q->whereNull('discipline_master_pk')
+                      ->orWhere('discipline_master_pk', $validated['discipline_master_pk']);
+                })
+                ->orderByRaw('discipline_master_pk IS NULL')
+                ->orderBy('title')
+                ->first();
+            $templatePk = $bestTemplate->pk ?? null;
+        }
+
         $memo->update([
-            'date'                  => $validated['date'],
-            'discipline_master_pk'  => $validated['discipline_master_pk'],
-            'mark_deduction_submit' => $validated['mark_deduction_submit'],
-            'remarks'               => $validated['remarks'] ?? null,
-            'modified_date'         => now(),
+            'date'                    => $validated['date'],
+            'discipline_master_pk'    => $validated['discipline_master_pk'],
+            'mark_deduction_submit'   => $validated['mark_deduction_submit'],
+            'remarks'                 => $validated['remarks'] ?? null,
+            'memo_notice_template_pk' => $templatePk,
+            'modified_date'           => now(),
         ]);
 
         return response()->json(['success' => true, 'message' => 'Discipline memo updated successfully.']);

@@ -64,6 +64,18 @@
                             <small class="text-muted">This template will be offered when generating a memo for this discipline.</small>
                         </div>
 
+                        {{-- Memo Type: only relevant for Memo templates (per-memo-type template). --}}
+                        <div class="col-6 d-none" id="mtMemoTypeWrap">
+                            <label class="form-label">Memo Type <span class="text-danger">*</span></label>
+                            <select name="memo_type_master_pk" id="mtMemoType" class="form-select">
+                                <option value="">Select Memo Type</option>
+                                @foreach($memoTypes as $mtype)
+                                    <option value="{{ $mtype->pk }}" {{ old('memo_type_master_pk') == $mtype->pk ? 'selected' : '' }}>{{ $mtype->memo_type_name }}</option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted">This template will be offered when generating a memo of this type.</small>
+                        </div>
+
                         <div class="col-12">
                             <label class="form-label">Memo / Notice Content <span class="text-danger">*</span></label>
                             <textarea name="content" class="form-control" id="content" rows="3" required></textarea>
@@ -130,11 +142,22 @@
                 if (isDiscipline) { populateDisciplines(); }
             }
 
-            $('#mtType').on('change', toggleDisciplineField);
+            // ── Memo Type field: only for "Memo" type ──
+            function toggleMemoTypeField() {
+                var isMemo = $('#mtType').val() === 'Memo';
+                $('#mtMemoTypeWrap').toggleClass('d-none', !isMemo);
+                $('#mtMemoType').prop('required', isMemo);
+            }
+
+            $('#mtType').on('change', function () {
+                toggleDisciplineField();
+                toggleMemoTypeField();
+            });
             $('#mtCourse').on('change', function () {
                 if ($('#mtType').val() === 'Discipline Memo') { populateDisciplines(); }
             });
             toggleDisciplineField(); // reflect old() state on validation errors
+            toggleMemoTypeField();
         });
     </script>
 @endsection

@@ -387,3 +387,41 @@ a.dropdown-item:focus-visible {
 .ds-section        { margin-bottom: var(--ds-space-4); }   /* 24px — between sections */
 .ds-block-gap,
 .ds-block          { margin-bottom: var(--ds-space-5); }   /* 32px — between major blocks */
+
+/* ── DataTables sort indicators ─────────────────────────────────────────────
+   The admin theme (admin_assets/css/styles.css) hides the DataTables sort
+   arrows with `display:none !important`, and DataTables' own arrows are nearly
+   invisible anyway (opacity .125) — so sortable columns don't look sortable.
+   Re-show the arrows on every table and highlight the ACTIVE direction in the
+   brand colour. These selectors are more specific than the theme's + use
+   !important, so they win regardless of load order. Disabled columns are NOT
+   targeted (no .sorting_* class / the *_disabled variants), so they stay bare. */
+table.dataTable > thead > tr > th.sorting::before,
+table.dataTable > thead > tr > th.sorting::after,
+table.dataTable > thead > tr > th.sorting_asc::before,
+table.dataTable > thead > tr > th.sorting_asc::after,
+table.dataTable > thead > tr > th.sorting_desc::before,
+table.dataTable > thead > tr > th.sorting_desc::after,
+table.dataTable > thead > tr > td.sorting::before,
+table.dataTable > thead > tr > td.sorting::after,
+table.dataTable > thead > tr > td.sorting_asc::before,
+table.dataTable > thead > tr > td.sorting_asc::after,
+table.dataTable > thead > tr > td.sorting_desc::before,
+table.dataTable > thead > tr > td.sorting_desc::after {
+    display: block !important;
+    opacity: 0.45 !important;
+    color: #667085;
+}
+
+/* Active sort direction: bold + brand blue. */
+table.dataTable > thead > tr > th.sorting_asc::before,
+table.dataTable > thead > tr > th.sorting_desc::after,
+table.dataTable > thead > tr > td.sorting_asc::before,
+table.dataTable > thead > tr > td.sorting_desc::after {
+    opacity: 1 !important;
+    color: #004a93 !important;
+}
+
+table.dataTable > thead > tr > th.sorting,
+table.dataTable > thead > tr > th.sorting_asc,
+table.dataTable > thead > tr > th.sorting_desc { cursor: pointer; }

@@ -148,7 +148,36 @@ class AttendanceController extends Controller
             }
 
 
-            return view('admin.attendance.index', compact('courseMasters', 'sessions', 'maunalSessions'));
+            // Split the resolved course set into Active vs Archived (same rule as
+            // Course Master): Active = running/upcoming (end date null or today+),
+            // Archived = already ended. Both stay within the user's scoped set.
+            $candidateCoursePks = collect($courseMasters)->pluck('pk')->filter()->all();
+            $archivedCourseMasters = [];
+
+            if (! empty($candidateCoursePks)) {
+                $currentDate = Carbon::today();
+                $courseSplitSelect = ['course_master.couse_short_name', 'course_master.course_name', 'course_master.pk'];
+
+                $archivedCourseMasters = CourseMaster::whereIn('course_master.pk', $candidateCoursePks)
+                    ->where('course_master.active_inactive', 1)
+                    ->whereNotNull('course_master.end_date')
+                    ->whereDate('course_master.end_date', '<', $currentDate)
+                    ->select($courseSplitSelect)
+                    ->orderBy('course_master.couse_short_name')
+                    ->get()->toArray();
+
+                $courseMasters = CourseMaster::whereIn('course_master.pk', $candidateCoursePks)
+                    ->where('course_master.active_inactive', 1)
+                    ->where(function ($q) use ($currentDate) {
+                        $q->whereNull('course_master.end_date')
+                            ->orWhereDate('course_master.end_date', '>=', $currentDate);
+                    })
+                    ->select($courseSplitSelect)
+                    ->orderBy('course_master.couse_short_name')
+                    ->get()->toArray();
+            }
+
+            return view('admin.attendance.index', compact('courseMasters', 'archivedCourseMasters', 'sessions', 'maunalSessions'));
         } catch (\Exception $e) {
             dd($e->getMessage());
             // Handle the exception
@@ -186,6 +215,20 @@ class AttendanceController extends Controller
                 ]);
 
             $isSendNotice = ($currentPath === 'send_notice');
+
+            // Send Direct Notice should only ever list sessions for currently active
+            // courses (also excludes orphaned mappings with no matching course_master,
+            // which otherwise show up as a blank "N/A" course name). "Active" here
+            // matches the Course dropdown on this same page: the flag AND not already
+            // ended — a course can be flagged active_inactive=1 long after its
+            // end_date has passed.
+            if ($isSendNotice) {
+                $query->where('course_master.active_inactive', 1)
+                    ->where(function ($q) {
+                        $q->whereNull('course_master.end_date')
+                          ->orWhere('course_master.end_date', '>=', now()->toDateString());
+                    });
+            }
 
             $query->whereHas('timetable', function ($q) use ($fromDate, $toDate, $request, $isSendNotice) {
                 // Send Direct Notice lists course-groups independent of any session, so

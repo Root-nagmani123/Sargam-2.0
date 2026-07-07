@@ -50,6 +50,7 @@ use App\Models\VenueMaster;
 use App\Models\CourseCordinatorMaster;
 use App\Models\StudentMasterCourseMap;
 use App\Models\StudentMaster;
+use App\Services\FC\RegistrationService;
 use App\Models\CourseStudentAttendance;
 use App\Models\CourseGroupTimetableMapping;
 use App\Models\SecurityParmIdApply;
@@ -2443,6 +2444,11 @@ class UserController extends Controller
             $attendanceSummary->total_expected_sessions = $totalExpectedSessions;
         }
 
+        $fcRegUsername = trim((string) ($student->user_id ?? ''));
+        $fcJoiningDocuments = $fcRegUsername !== ''
+            ? app(RegistrationService::class)->joiningDocumentChecklistForDisplay($fcRegUsername)
+            : collect();
+
         return view('admin.dashboard.student_detail', compact(
             'student',
             'medicalExemptions',
@@ -2452,7 +2458,9 @@ class UserController extends Controller
             'notices',
             'memos',
             'enrolledCourses',
-            'attendanceSummary'
+            'attendanceSummary',
+            'fcRegUsername',
+            'fcJoiningDocuments'
         ));
     }
 

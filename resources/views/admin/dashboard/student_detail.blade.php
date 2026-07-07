@@ -107,6 +107,76 @@
         </div>
     </div>
 
+    @if($fcRegUsername !== '')
+        <div class="card mb-4" id="fcJoiningDocumentsSection">
+            <div class="card-header bg-white border-bottom py-2 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-semibold text-primary">
+                    <i class="fas fa-file-upload me-2"></i>Foundation course – joining documents
+                </h6>
+                <small class="text-muted">Registration login: <code>{{ $fcRegUsername }}</code></small>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Document</th>
+                                <th class="text-center">Mandatory</th>
+                                <th class="text-center">Uploaded</th>
+                                <th class="text-center">Verified</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($fcJoiningDocuments as $i => $doc)
+                                <tr>
+                                    <td>{{ $i + 1 }}</td>
+                                    <td>{{ $doc->documentMaster?->document_name ?? $doc->document_name }}</td>
+                                    <td class="text-center">
+                                        @if($doc->documentMaster?->is_mandatory)
+                                            <span class="badge bg-danger-subtle text-danger" style="font-size:10px;">Yes</span>
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
+                                    <td class="text-center">
+                                        @if($doc->is_uploaded)
+                                            @php $docUrl = view_file_link($doc->file_path ?? null); @endphp
+                                            @if($docUrl)
+                                                <a href="{{ $docUrl }}" target="_blank" rel="noopener" class="btn btn-xs btn-outline-success py-0 px-2" style="font-size:10px;">
+                                                    <i class="fas fa-eye me-1"></i>View
+                                                </a>
+                                            @else
+                                                <span class="text-warning small">Path missing</span>
+                                            @endif
+                                        @else
+                                            <span class="text-muted small">Not uploaded</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-center">
+                                        @if($doc->is_verified)
+                                            <i class="fas fa-check-circle text-success"></i>
+                                        @else
+                                            <i class="fas fa-clock text-warning"></i>
+                                        @endif
+                                    </td>
+                                    <td class="small">{{ $doc->remarks ?? '—' }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-3">
+                                        No active joining document types in the master checklist. Configure them under FC Form Builder (document masters).
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- Summary Cards -->
     @unless($focusSection)
     <div class="row g-3 mb-4">

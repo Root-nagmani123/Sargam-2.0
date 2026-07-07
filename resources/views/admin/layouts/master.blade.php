@@ -1023,7 +1023,6 @@
                     window.hideSargamLoader();
                 }
             }
-            icon.classList.remove("rotated");
         });
     </script>
     <script src="{{ asset('admin_assets/js/sidebar-dynamic-toggle.js') }}"></script>

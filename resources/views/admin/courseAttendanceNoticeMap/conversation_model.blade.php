@@ -109,7 +109,11 @@
     <div class="chat-row {{ $isOwn ? 'chat-right' : 'chat-left' }}">
       <div class="chat-bubble" data-message-id="{{ data_get($msg, 'id', data_get($msg, 'pk', '')) }}">
         <div class="chat-head">
-          <span class="chat-user">{{ $isOwn ? 'You' : $msg->display_name }}</span>
+          {{-- Admin identity is always shown (name + role), never collapsed to "You" —
+               this conversation can involve multiple distinct admins. --}}
+          <span class="chat-user">
+            {{ $isAdminMsg ? $msg->display_name . (!empty($msg->role_name) ? ' · ' . $msg->role_name : '') : ($isOwn ? 'You' : $msg->display_name) }}
+          </span>
           <span class="chat-time">{{ $msgTime->format('d M Y, h:i A') }}</span>
         </div>
 
