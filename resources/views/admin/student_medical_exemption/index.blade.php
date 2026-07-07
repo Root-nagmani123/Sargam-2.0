@@ -221,6 +221,16 @@ select.sme-filter-control {
 #smeFormBody .is-invalid { border-color: var(--bs-danger); }
 #smeFormBody .form-control,
 #smeFormBody .form-select { min-height: 44px; border-radius: var(--ds-radius-2); }
+#smeFormBody textarea.form-control {
+    min-height: 88px;
+    resize: vertical;
+    line-height: 1.5;
+}
+#smeFormBody .sme-remarks-row {
+    margin-top: var(--ds-space-1);
+    padding-top: var(--ds-space-3);
+    border-top: 1px dashed var(--ds-line);
+}
 
 /* Column Visibility modal — grid of bordered checkbox chips */
 .sme-col-grid {
@@ -1008,7 +1018,8 @@ $(document).ready(function() {
         var choices = [{ value: '', label: placeholder || 'Search Student', selected: true, disabled: !!loading }];
         (list || []).forEach(function(s){
             modalOtMap[String(s.pk)] = s.generated_OT_code || '';
-            choices.push({ value: String(s.pk), label: s.display_name });
+            var label = s.display_name + (s.generated_OT_code ? ' (' + s.generated_OT_code + ')' : '');
+            choices.push({ value: String(s.pk), label: label });
         });
         modalStudentChoices.clearStore();
         modalStudentChoices.setChoices(choices, 'value', 'label', true);

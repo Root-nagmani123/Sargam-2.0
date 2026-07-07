@@ -23,6 +23,16 @@
 .sme-form .form-control,
 .sme-form .form-select { min-height: 44px; border-radius: var(--ds-radius-2); }
 .sme-form input[readonly].sme-days { background: var(--bs-secondary-bg, #eef1f4); color: var(--ds-ink); }
+.sme-form textarea.form-control {
+    min-height: 88px;
+    resize: vertical;
+    line-height: 1.5;
+}
+.sme-remarks-row {
+    margin-top: var(--ds-space-1);
+    padding-top: var(--ds-space-3);
+    border-top: 1px dashed var(--ds-line);
+}
 .sme-form-footer {
     margin-top: var(--ds-space-4);
     padding-top: var(--ds-space-3);
@@ -147,18 +157,6 @@
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">Provisional Diagnosis/ Remarks</label>
-                        <input type="text" name="Description" class="form-control" placeholder="eg. Lorem ipsum dolor" value="{{ $record->Description }}">
-                        @error('Description')<small class="text-danger">{{ $message }}</small>@enderror
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">PT/Outdoor Advise</label>
-                        <input type="text" name="pt_outdoor_advise" class="form-control" placeholder="eg. Yoga" value="{{ $record->pt_outdoor_advise }}">
-                        @error('pt_outdoor_advise')<small class="text-danger">{{ $message }}</small>@enderror
-                    </div>
-
-                    <div class="col-md-4">
                         <label class="form-label">Medical Speciality <span class="text-danger">*</span></label>
                         <select name="exemption_medical_speciality_pk" class="form-select" required>
                             <option value="">Select Speciality</option>
@@ -183,6 +181,22 @@
                             <option value="0" {{ $record->active_inactive == 0 ? 'selected' : '' }}>Inactive</option>
                         </select>
                         @error('active_inactive')<small class="text-danger">{{ $message }}</small>@enderror
+                    </div>
+
+                    <div class="col-12">
+                        <div class="row g-3 sme-remarks-row">
+                            <div class="col-md-6">
+                                <label class="form-label">Provisional Diagnosis/ Remarks</label>
+                                <textarea name="Description" class="form-control" rows="3" placeholder="eg. Lorem ipsum dolor">{{ $record->Description }}</textarea>
+                                @error('Description')<small class="text-danger">{{ $message }}</small>@enderror
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">PT/Outdoor Advise</label>
+                                <textarea name="pt_outdoor_advise" class="form-control" rows="3" placeholder="eg. Yoga">{{ $record->pt_outdoor_advise }}</textarea>
+                                @error('pt_outdoor_advise')<small class="text-danger">{{ $message }}</small>@enderror
+                            </div>
+                        </div>
                     </div>
 
                     <div class="col-12">

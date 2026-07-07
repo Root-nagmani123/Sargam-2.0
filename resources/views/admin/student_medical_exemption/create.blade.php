@@ -33,6 +33,16 @@
     background: var(--bs-secondary-bg, #eef1f4);
     color: var(--ds-ink);
 }
+.sme-form textarea.form-control {
+    min-height: 88px;
+    resize: vertical;
+    line-height: 1.5;
+}
+.sme-remarks-row {
+    margin-top: var(--ds-space-1);
+    padding-top: var(--ds-space-3);
+    border-top: 1px dashed var(--ds-line);
+}
 .sme-form-footer {
     margin-top: var(--ds-space-4);
     padding-top: var(--ds-space-3);
@@ -144,18 +154,6 @@
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">Provisional Diagnosis/ Remarks</label>
-                        <input type="text" name="Description" class="form-control" placeholder="eg. Lorem ipsum dolor" value="{{ old('Description') }}">
-                        @error('Description')<small class="text-danger">{{ $message }}</small>@enderror
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">PT/Outdoor Advise</label>
-                        <input type="text" name="pt_outdoor_advise" class="form-control" placeholder="eg. Yoga" value="{{ old('pt_outdoor_advise') }}">
-                        @error('pt_outdoor_advise')<small class="text-danger">{{ $message }}</small>@enderror
-                    </div>
-
-                    <div class="col-md-4">
                         <label class="form-label">Medical Speciality <span class="text-danger">*</span></label>
                         <select name="exemption_medical_speciality_pk" class="form-select" required>
                             <option value="">Select Speciality</option>
@@ -171,6 +169,22 @@
                     <div class="col-md-4">
                         <label class="form-label">Days</label>
                         <input type="number" name="days" id="daysField" class="form-control sme-days" placeholder="eg. 6" readonly value="{{ old('days') }}">
+                    </div>
+
+                    <div class="col-12">
+                        <div class="row g-3 sme-remarks-row">
+                            <div class="col-md-6">
+                                <label class="form-label">Provisional Diagnosis/ Remarks</label>
+                                <textarea name="Description" class="form-control" rows="3" placeholder="eg. Lorem ipsum dolor">{{ old('Description') }}</textarea>
+                                @error('Description')<small class="text-danger">{{ $message }}</small>@enderror
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">PT/Outdoor Advise</label>
+                                <textarea name="pt_outdoor_advise" class="form-control" rows="3" placeholder="eg. Yoga">{{ old('pt_outdoor_advise') }}</textarea>
+                                @error('pt_outdoor_advise')<small class="text-danger">{{ $message }}</small>@enderror
+                            </div>
+                        </div>
                     </div>
 
                     <div class="col-12">
