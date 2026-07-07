@@ -100,6 +100,27 @@ Route::get('clear-cache', function () {
     Artisan::call('optimize:clear');
     return redirect()->back()->with('success', 'Cache cleared successfully');
 });
+
+// Read-only: list pending/ran migrations from a server with no shell/SSH access.
+// Check this BEFORE run-migrations — migrate runs everything pending, not just
+// whichever one you're chasing, and some pending migrations may not be reversible.
+Route::middleware(['auth'])->get('migration-status', function () {
+    if (!hasRole('Super Admin')) {
+        abort(403);
+    }
+    Artisan::call('migrate:status');
+    return '<pre>' . e(Artisan::output()) . '</pre>';
+})->name('migration.status');
+
+// Run pending DB migrations from a server with no shell/SSH access (e.g. preprod).
+// Gated to authenticated Super Admins only — this alters the schema.
+Route::middleware(['auth'])->get('run-migrations', function () {
+    if (!hasRole('Super Admin')) {
+        abort(403);
+    }
+    Artisan::call('migrate', ['--force' => true]);
+    return '<pre>' . e(Artisan::output()) . '</pre>';
+})->name('run.migrations');
 // Authentication Routes
 Auth::routes(['verify' => true, 'register' => false]);
 
@@ -917,15 +938,24 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
             Route::get('/Subject-by-course', 'getSubjectByCourse')->name('getSubjectByCourse'); // <-- New AJAX route
             Route::get('/Topic-by-subject', 'getTopicBysubject')->name('getTopicBysubject'); // <-- New AJAX route
             Route::get('/get-timetable-Details-By-topic', 'gettimetableDetailsBytopic')->name('gettimetableDetailsBytopic'); // <-- New AJAX route
+            Route::get('/sessions-by-course', 'getSessionsByCourse')->name('getSessionsByCourse');
+            Route::get('/venues-by-session', 'getVenuesBySession')->name('getVenuesBySession');
+            Route::get('/timetable-by-session-venue', 'getTimetableDetailsBySessionVenue')->name('getTimetableDetailsBySessionVenue');
             Route::get('/get-template-by-course', 'getTemplateByCourse')->name('getTemplateByCourse'); // <-- Template AJAX route
+            Route::get('/templates-by-type', 'getTemplatesByType')->name('getTemplatesByType'); // list templates for a course+type picker
             Route::post('/get-student-attendance-by-topic', 'getStudentAttendanceBytopic')->name('getStudentAttendanceBytopic'); // <-- New AJAX route
             Route::post('/store_memo_notice', 'store_memo_notice')->name('store_memo_notice');
             Route::post('/store_memo_status', 'store_memo_status')->name('store_memo_status');
+            Route::post('/memo/update/{id}', 'updateMemoStatus')->name('update_memo_status');
+            Route::get('/notice/edit/{id}', 'editNotice')->name('editNotice');
+            Route::post('/notice/update-template/{id}', 'updateNoticeTemplate')->name('update_notice_template');
+            Route::post('/end-chat', 'endChat')->name('endChat');
             Route::post('/memo_notice_conversation', 'memo_notice_conversation')->name('memo_notice_conversation');
             Route::post('/memo_notice_conversation_student', 'memo_notice_conversation_student')->name('memo_notice_conversation_student');
             Route::post('/memo_notice_conversation_model', 'memo_notice_conversation_model')->name('memo_notice_conversation_model');
             Route::delete('/notice-delete-Message/{id}/{type}', [CourseAttendanceNoticeMapController::class, 'noticedeleteMessage'])
                 ->name('noticedeleteMessage');
+            Route::delete('/record-delete/{id}/{type}', 'destroyRecord')->name('destroy');
             //  Route::get('/user_chat', function () {
             //     return view('admin.courseAttendanceNoticeMap.chat');
             // })->name('admin.courseAttendanceNoticeMap.chat');
@@ -934,11 +964,16 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
             Route::post('/memo/get-data', 'getMemoData')->name('get_memo_data');
             Route::post('/memo/get-generated-data', 'getGeneratedMemoData')->name('get_generated_memo_data');
             Route::get('/export-pdf', 'exportPdf')->name('export_pdf');
+            Route::get('/export-csv', 'exportCsv')->name('export_csv');
             Route::get('/messages/{id}/{type}', 'getNewMessages')->name('getNewMessages');
+            Route::get('/global-search', 'globalSearch')->name('global_search');
+            Route::get('/students-by-course', 'getStudentsByCourse')->name('students_by_course');
         });
 
     Route::get('/send_notice', [CourseAttendanceNoticeMapController::class, 'send_only_notice'])->name('send.notice.management.index');
     Route::get('/send_notice/students', [CourseAttendanceNoticeMapController::class, 'getStudentsForNotice'])->name('send.notice.students');
+    Route::get('/send_notice/list/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'noticeListModal'])->name('send.notice.list.modal');
+    Route::get('/send_notice/list-page/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'noticeListPage'])->name('send.notice.list.page');
     Route::post('/send_notice_direct_save', [CourseAttendanceNoticeMapController::class, 'send_direct_notice_save'])->name('send.notice.direct.save');
     Route::get('/attendance_send_notice/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'view_all_notice_list'])->name('attendance.send_notice');
     Route::post('/notice_direct_save', [CourseAttendanceNoticeMapController::class, 'notice_direct_save'])->name('notice.direct.save');
@@ -963,12 +998,18 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
     });
     Route::prefix('memo/discipline')->name('memo.discipline.')->group(function () {
         Route::get('/', [MemoDisciplineController::class, 'index'])->name('index');
+        // Officer Trainee: dedicated, read-only "my discipline memos" page (view own records + chat).
+        Route::get('/my-memos', [MemoDisciplineController::class, 'otIndex'])->name('ot_index');
+        Route::delete('/delete/{id}', [MemoDisciplineController::class, 'destroy'])->name('destroy');
+        Route::get('/export-csv', [MemoDisciplineController::class, 'exportCsv'])->name('export_csv');
         Route::get('create', [MemoDisciplineController::class, 'create'])->name('create');
         Route::get('edit/{id}', [MemoDisciplineController::class, 'edit'])->name('edit');
+        Route::post('update/{id}', [MemoDisciplineController::class, 'update'])->name('update');
         Route::post('/discipline_generate_memo_store', [MemoDisciplineController::class, 'discipline_generate_memo_store'])->name('discipline_generate_memo_store');
 
         Route::get('/get-student-by-course', [MemoDisciplineController::class, 'getStudentByCourse'])->name('getStudentByCourse');
         Route::get('/getMarkDeduction', [MemoDisciplineController::class, 'getMarkDeduction'])->name('getMarkDeduction');
+        Route::get('/templates-by-discipline', [MemoDisciplineController::class, 'getTemplatesByDiscipline'])->name('templatesByDiscipline');
 
         Route::post('/send-memo', [MemoDisciplineController::class, 'sendMemo'])->name('sendMemo');
         Route::post('/close-memo', [MemoDisciplineController::class, 'closeMemo'])->name('closeMemo');

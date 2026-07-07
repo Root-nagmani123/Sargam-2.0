@@ -83,6 +83,104 @@
     {!! $dataTable->scripts() !!}
 
 <script>
+// Move the Yajra DataTable's search / pagination / length / count into the
+// programme-dt-* slots so they render (the table's DOM routes them into hidden
+// rows by default). Mirrors the programme / course-group-type index pattern.
+$(function () {
+    function enhanceFacultyDtControls() {
+        var $wrapper = $('#faculty-table_wrapper');
+        if (!$wrapper.length) { return; }
+
+        var $searchSlot = $('#facultyDtSearch');
+        var $footer = $('#facultyDtFooter');
+
+        if ($searchSlot.length && !$searchSlot.find('.dataTables_filter').length) {
+            var $filter = $wrapper.find('.dataTables_filter').first();
+            if ($filter.length) {
+                $filter.find('input')
+                    .addClass('form-control shadow-none')
+                    .attr('placeholder', 'Search')
+                    .attr('aria-label', 'Search faculty');
+                $filter.find('label').contents().filter(function () {
+                    return this.nodeType === 3;
+                }).remove();
+                $searchSlot.append($filter);
+            }
+        }
+
+        if ($footer.data('dtReady')) { updateFacultyDtCount(); return; }
+        if (!$footer.length) { return; }
+        // If the global DataTable UI already populated this footer, don't duplicate it.
+        if ($footer.find('.dataTables_info, .dataTables_paginate, .dataTables_length').length) {
+            $footer.data('dtReady', true);
+            updateFacultyDtCount();
+            return;
+        }
+
+        var $paginate = $wrapper.find('.dataTables_paginate').first();
+        var $length = $wrapper.find('.dataTables_length').first();
+        var $info = $wrapper.find('.dataTables_info').first();
+
+        var $pagCol = $('<div class="programme-dt-pagination"></div>');
+        var $countCol = $('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>');
+
+        if ($paginate.length) {
+            $paginate.find('.pagination').addClass('mb-0');
+            $pagCol.append($paginate);
+        }
+
+        if ($length.length) {
+            // Detach (not empty) the select so DataTables' change.DT handler survives.
+            var $select = $length.find('select').addClass('form-select form-select-sm').detach();
+            $length.find('label')
+                .empty()
+                .append(document.createTextNode('Showing '))
+                .append($select)
+                .append(document.createTextNode(' '));
+            $countCol.append($length);
+        }
+
+        if ($info.length) {
+            $info.addClass('mb-0');
+            $countCol.append($info);
+        }
+
+        $footer.append($pagCol).append($countCol);
+        $footer.data('dtReady', true);
+    }
+
+    function updateFacultyDtCount() {
+        if (!$.fn.DataTable.isDataTable('#faculty-table')) { return; }
+        var info = $('#faculty-table').DataTable().page.info();
+        var $info = $('#facultyDtFooter .dataTables_info');
+        if ($info.length && info && info.recordsDisplay !== undefined) {
+            $info.text('of ' + info.recordsDisplay.toLocaleString() + ' items');
+        }
+    }
+
+    // Yajra initialises the table itself; wait for it, then wire up the slots.
+    var facultyInitTimer = setInterval(function () {
+        if (!$.fn.DataTable.isDataTable('#faculty-table')) { return; }
+        clearInterval(facultyInitTimer);
+
+        var $wrapper = $('#faculty-table_wrapper');
+        enhanceFacultyDtControls();
+        updateFacultyDtCount();
+
+        $('#faculty-table').on('draw.dt', function () {
+            if ($wrapper.find('.dataTables_paginate').length && !$('#facultyDtFooter .dataTables_paginate').length) {
+                $('#facultyDtFooter').empty().data('dtReady', false);
+                enhanceFacultyDtControls();
+            }
+            updateFacultyDtCount();
+        });
+
+        setTimeout(function () { enhanceFacultyDtControls(); updateFacultyDtCount(); }, 300);
+    }, 50);
+});
+</script>
+
+<script>
 // Delete Faculty with SweetAlert Confirmation
 $(document).on('click', '.delete-faculty-btn', function(e) {
     e.preventDefault();

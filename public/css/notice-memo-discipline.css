@@ -1,0 +1,1220 @@
+/*
+ * Shared stylesheet for the Notice / Memo / Discipline listing pages:
+ *   - Send Direct Notice   (.send-notice-page  / .sn-*  / #sendNoticeTable)
+ *   - Send Memo / Notice   (.mnm-page          / .mnm-* / #mnmTable)
+ *   - Send Discipline Memo (.disc-page         / .disc-*/ #discTable)
+ *
+ * One file drives the chrome (tabs, filters, tables, chat/offcanvas, pills) for
+ * all three pages. Class prefixes are kept per page (their JS references them),
+ * but identical rules are written once via grouped selectors so the three pages
+ * stay visually in sync. Edit here to restyle all three at once.
+ */
+
+/* ── Design tokens (GIGW palette) ── */
+:root {
+    --gigw-primary: #004a93;
+    --gigw-primary-dark: #003366;
+    --gigw-secondary: #0066cc;
+    --gigw-light-bg: #f8f9fa;
+    --gigw-border: #dee2e6;
+    --gigw-text-muted: #6c757d;
+    --gigw-success: #198754;
+    --gigw-white: #ffffff;
+}
+
+.blink {
+    animation: blinker 1s linear infinite;
+}
+
+@keyframes blinker {
+    50% { opacity: 0; }
+}
+
+/* ============================================================
+   LISTING CHROME — unified across the three pages
+   ============================================================ */
+
+/* Tab bar: borderless inactive tabs, solid blue active pill (per mockups) */
+.send-notice-page .sn-tabs,
+.mnm-page .mnm-tabs,
+.disc-page .disc-tabs {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+    background: #fff;
+    border-radius: 12px;
+    padding: 5px;
+}
+
+.send-notice-page .sn-tab,
+.mnm-page .mnm-tab,
+.disc-page .disc-tab {
+    border: 0;
+    background: transparent;
+    color: #1f2937;
+    font-weight: 500;
+    font-size: 0.95rem;
+    padding: 0.5rem 1.15rem;
+    border-radius: 8px;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+}
+
+.send-notice-page .sn-tab:hover:not(.active),
+.mnm-page .mnm-tab:hover:not(.active),
+.disc-page .disc-tab:hover:not(.active) {
+    background: #f3f4f6;
+    color: #004a93;
+}
+
+.send-notice-page .sn-tab.active,
+.mnm-page .mnm-tab.active,
+.disc-page .disc-tab.active {
+    background: #004a93;
+    color: #fff;
+    font-weight: 600;
+}
+
+/* Download link */
+.mnm-page .mnm-download,
+.disc-page .disc-download {
+    background: #fff;
+    color: #004a93;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.mnm-page .mnm-download:hover,
+.disc-page .disc-download:hover {
+    background: #f0f6ff;
+}
+
+/* Filter bar */
+.send-notice-page .sn-filter-bar,
+.mnm-page .mnm-filter-bar,
+.disc-page .disc-filter-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.send-notice-page .sn-filter-label,
+.mnm-page .mnm-filter-label,
+.disc-page .disc-filter-label {
+    color: #667085;
+    font-weight: 600;
+    font-size: 0.875rem;
+    margin-right: 0.25rem;
+}
+
+/* Native <select> / input controls (Send Direct Notice) */
+.send-notice-page .sn-control {
+    min-height: 40px;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: #344054;
+    padding: 0.4rem 2rem 0.4rem 0.85rem;
+    background-color: #fff;
+    max-width: 200px;
+}
+
+.send-notice-page .sn-control:focus {
+    border-color: #004a93;
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+    outline: none;
+}
+
+/* Reset button */
+.send-notice-page .sn-reset,
+.mnm-page .mnm-reset,
+.disc-page .disc-reset {
+    border: 1px solid #f04438;
+    color: #f04438;
+    background: #fff;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-radius: 8px;
+    min-height: 40px;
+    padding: 0.4rem 1rem;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.send-notice-page .sn-reset:hover,
+.mnm-page .mnm-reset:hover,
+.disc-page .disc-reset:hover {
+    background: #fef3f2;
+    color: #f04438;
+}
+
+/* Icon buttons (Columns / Search) */
+.send-notice-page .sn-icon-btn,
+.mnm-page .mnm-icon-btn,
+.disc-page .disc-icon-btn {
+    border: 1px solid #d0d5dd;
+    background: #fff;
+    color: #344054;
+    border-radius: 8px;
+    min-height: 40px;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.send-notice-page .sn-icon-btn:hover,
+.mnm-page .mnm-icon-btn:hover,
+.disc-page .disc-icon-btn:hover {
+    background: #f9fafb;
+}
+
+/* Column dropdown menu (memo/notice + discipline still use a dropdown) */
+.mnm-page .mnm-column-menu,
+.disc-page .disc-column-menu {
+    min-width: 220px;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+/* Search input */
+.send-notice-page .sn-search-input,
+.mnm-page .mnm-search-input,
+.disc-page .disc-search-input {
+    min-height: 40px;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.875rem;
+    max-width: 220px;
+}
+
+/* Table header / body */
+.send-notice-page table#sendNoticeTable thead th,
+.mnm-page table#mnmTable thead th,
+.disc-page table#discTable thead th {
+    background: #f2f4f7;
+    color: #475467;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
+    border-bottom: 1px solid #e4e7ec;
+    vertical-align: middle;
+}
+
+.send-notice-page table#sendNoticeTable tbody td,
+.mnm-page table#mnmTable tbody td,
+.disc-page table#discTable tbody td {
+    font-size: 0.875rem;
+    color: #344054;
+    vertical-align: middle;
+}
+
+/* DataTables current page button */
+.send-notice-page .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.disc-page .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: #004a93 !important;
+    border-color: #004a93 !important;
+    color: #fff !important;
+    border-radius: 6px;
+}
+
+.send-notice-page .attendance-course-cell {
+    cursor: help;
+}
+
+/* ── Choices.js filter dropdowns ── */
+.choices__inner.form-select {
+    /* Avoid the double dropdown arrow when Choices wraps a .form-select */
+    background-image: none !important;
+    padding-right: 2.25rem !important;
+}
+
+.send-notice-page .choices,
+.mnm-page .choices,
+.disc-page .choices {
+    margin-bottom: 0;
+    max-width: 200px;
+    min-width: 150px;
+}
+
+.send-notice-page .choices__inner,
+.mnm-page .choices__inner,
+.disc-page .choices__inner {
+    min-height: 40px;
+    padding: 4px 7.5px 4px 10px;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 0.875rem;
+    color: #344054;
+}
+
+.send-notice-page .choices.is-focused .choices__inner,
+.send-notice-page .choices.is-open .choices__inner,
+.mnm-page .choices.is-focused .choices__inner,
+.mnm-page .choices.is-open .choices__inner,
+.disc-page .choices.is-focused .choices__inner,
+.disc-page .choices.is-open .choices__inner {
+    border-color: #004a93;
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+}
+
+.send-notice-page .choices__list--single,
+.mnm-page .choices__list--single,
+.disc-page .choices__list--single {
+    padding: 4px 16px 4px 4px;
+}
+
+.send-notice-page .choices__list--dropdown .choices__item--selectable,
+.send-notice-page .choices__list[aria-expanded] .choices__item--selectable,
+.mnm-page .choices__list--dropdown .choices__item--selectable,
+.mnm-page .choices__list[aria-expanded] .choices__item--selectable,
+.disc-page .choices__list--dropdown .choices__item--selectable,
+.disc-page .choices__list[aria-expanded] .choices__item--selectable {
+    font-size: 0.875rem;
+}
+
+.send-notice-page .choices[data-type*="select-one"]::after,
+.mnm-page .choices[data-type*="select-one"]::after,
+.disc-page .choices[data-type*="select-one"]::after {
+    border-color: #667085 transparent transparent transparent;
+}
+
+/* Generate/Edit Memo modal is scrollable, so its .modal-content (overflow:hidden)
+   and .modal-body (overflow-y:auto) clip an open Choices dropdown (e.g. Memo Type,
+   Venue). While a dropdown is open, let it escape the modal instead of being cropped. */
+#memo_generate .modal-content:has(.choices.is-open),
+#memo_generate .modal-body:has(.choices.is-open) {
+    overflow: visible;
+}
+
+/* ── Status pills (Send Memo/Notice) ── */
+.mnm-page .mnm-status { font-size: 0.78rem; font-weight: 600; padding: 0.4rem 0.85rem; border-radius: 999px; white-space: nowrap; display: inline-block; }
+.mnm-page .mnm-status--notice { background: #eff8ff; color: #175cd3; }
+.mnm-page .mnm-status--memo-open { background: #fef7e6; color: #b54708; }
+.mnm-page .mnm-status--memo-sent { background: #fef3f2; color: #b42318; }
+.mnm-page .mnm-status--closed { background: #ecfdf3; color: #027a48; }
+
+/* ── Action icon buttons (Notice / Chats / Memo) ── */
+.mnm-page .mnm-actions { display: inline-flex; align-items: flex-start; gap: 0.9rem; }
+.mnm-page .mnm-action {
+    display: inline-flex; flex-direction: column; align-items: center; gap: 0.15rem;
+    border: 0; background: transparent; color: #004a93; text-decoration: none;
+    font-size: 0.72rem; font-weight: 500; line-height: 1; cursor: pointer; position: relative;
+}
+.mnm-page .mnm-action i { font-size: 1.15rem; }
+.mnm-page .mnm-action:hover:not(.disabled) { color: #003d7a; }
+.mnm-page .mnm-action.disabled { color: #98a2b3; cursor: not-allowed; pointer-events: none; }
+.mnm-page .mnm-action .mnm-dot {
+    position: absolute; top: -3px; right: 6px; width: 8px; height: 8px;
+    background: #f04438; border-radius: 50%; border: 1px solid #fff;
+}
+
+/* ============================================================
+   CONVERSATION OFFCANVAS + CHAT (shared by all three pages)
+   ============================================================ */
+.offcanvas {
+    width: 480px !important;
+    max-width: 90vw;
+    box-shadow: -4px 0 20px rgba(0, 74, 147, 0.15);
+}
+
+.offcanvas-header {
+    background: linear-gradient(135deg, var(--gigw-primary), var(--gigw-secondary));
+    color: var(--gigw-white);
+    padding: 1.5rem;
+    border-bottom: 3px solid var(--gigw-primary-dark);
+    min-height: 80px;
+}
+
+.offcanvas-title {
+    font-weight: 600;
+    font-size: 1.25rem;
+    letter-spacing: 0.3px;
+    margin-bottom: 0.25rem;
+    color: var(--gigw-white);
+}
+
+#type_side_menu {
+    font-size: 0.875rem;
+    font-weight: 500;
+    opacity: 0.95;
+    margin: 0;
+    color: var(--gigw-white);
+    background-color: rgba(255, 255, 255, 0.2);
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    display: inline-block;
+}
+
+.offcanvas .btn-close {
+    background-color: rgba(255, 255, 255, 0.3);
+    opacity: 1;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    transition: all 0.2s ease;
+}
+
+.offcanvas .btn-close:hover {
+    background-color: rgba(255, 255, 255, 0.5);
+    transform: scale(1.1);
+}
+
+.offcanvas .btn-close:focus {
+    outline: 3px solid var(--gigw-white);
+    outline-offset: 2px;
+    box-shadow: none;
+}
+
+.offcanvas-body {
+    padding: 1.5rem;
+    background-color: #fafbfc;
+}
+
+.chat-body {
+    height: 480px;
+    overflow-y: auto;
+    background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
+    padding: 1.25rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--gigw-border);
+    box-shadow: inset 0 2px 8px rgba(0, 74, 147, 0.05);
+    scroll-behavior: smooth;
+}
+
+.chat-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chat-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.chat-body::-webkit-scrollbar-thumb {
+    background: var(--gigw-primary);
+    border-radius: 10px;
+    transition: background 0.3s ease;
+}
+
+.chat-body::-webkit-scrollbar-thumb:hover {
+    background: var(--gigw-primary-dark);
+}
+
+.chat-message {
+    margin-bottom: 1rem;
+    animation: slideIn 0.3s ease;
+    clear: both;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.chat-message.user {
+    text-align: right;
+}
+
+.chat-message .message {
+    display: inline-block;
+    padding: 0.75rem 1rem;
+    border-radius: 1.25rem;
+    max-width: 80%;
+    word-wrap: break-word;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.chat-message .message:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.chat-message.bot .message {
+    background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);
+    color: #212529;
+    border: 1px solid #dee2e6;
+    border-left: 4px solid var(--gigw-primary);
+}
+
+.chat-message.user .message {
+    background: linear-gradient(135deg, var(--gigw-primary), var(--gigw-secondary));
+    color: var(--gigw-white);
+    border: none;
+}
+
+.chat-body .text-muted {
+    color: var(--gigw-text-muted) !important;
+    font-style: italic;
+    padding: 2rem;
+    text-align: center;
+}
+
+.offcanvas:focus-visible {
+    outline: 3px solid var(--gigw-primary);
+    outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+    .offcanvas {
+        width: 100% !important;
+    }
+
+    .offcanvas-header {
+        padding: 1rem;
+        min-height: 70px;
+    }
+
+    .offcanvas-title {
+        font-size: 1.1rem;
+    }
+
+    .chat-body {
+        height: calc(100vh - 250px);
+        padding: 1rem;
+    }
+
+    .chat-message .message {
+        max-width: 85%;
+        font-size: 0.9rem;
+    }
+}
+
+.table .sticky-status {
+    position: sticky;
+    right: 0;
+    background: #fff;
+    z-index: 10;
+    box-shadow: -4px 0 6px rgba(0, 0, 0, 0.08);
+}
+
+.offcanvas * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.chat-row {
+    display: flex;
+    margin-bottom: 15px;
+}
+
+.chat-row.right {
+    justify-content: flex-end;
+}
+
+.chat-row.left {
+    justify-content: flex-start;
+}
+
+.chat-bubble {
+    max-width: 80%;
+    background: #f4f5f7;
+    padding: 12px 15px;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e2e2;
+}
+
+.chat-row.right .chat-bubble {
+    background: #e7f1ff;
+    border-color: #c9ddff;
+}
+
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.chat-sender {
+    color: #003e7e;
+    font-weight: 600;
+}
+
+.chat-time {
+    font-size: 11px;
+    color: #6c757d;
+}
+
+.chat-text {
+    margin: 0;
+    font-size: 14px;
+    color: #222;
+    line-height: 1.4;
+}
+
+.chat-attachment {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    font-size: 14px;
+    color: #004a93;
+    text-decoration: none;
+}
+
+.chat-attachment:hover {
+    text-decoration: underline;
+}
+
+.chat-footer {
+    background: #fff;
+}
+
+.chat-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.attachment-btn {
+    cursor: pointer;
+    color: #004a93;
+    font-size: 22px;
+}
+
+.chat-textarea {
+    resize: none;
+    height: 40px;
+    font-size: 14px;
+}
+
+.chat-send-btn {
+    height: 40px;
+    padding: 0 20px;
+}
+
+#chatBody {
+    padding-bottom: 20px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #b3b3b3 #efefef;
+}
+
+#chatBody::-webkit-scrollbar {
+    width: 8px;
+}
+
+#chatBody::-webkit-scrollbar-thumb {
+    background: #b3b3b3;
+    border-radius: 4px;
+}
+
+*:focus-visible {
+    outline: 3px solid #004a93 !important;
+    border-radius: 4px;
+}
+
+/* Conversation offcanvas (chat panel header/toggle) */
+#chatOffcanvas .conv-header { background: #fff !important; color: #101828 !important; border-bottom: 1px solid #eaecf0; display: block; padding: 1.1rem 1.25rem; min-height: 0; }
+#chatOffcanvas .conv-title { font-size: 1.15rem; font-weight: 700; color: #101828; }
+#chatOffcanvas .conv-endchat { border: 1px solid #f04438; color: #f04438; background: #fff; font-weight: 600; font-size: 0.85rem; border-radius: 8px; padding: 0.35rem 0.9rem; }
+#chatOffcanvas .conv-endchat:hover { background: #fef3f2; }
+#chatOffcanvas .conv-endchat:disabled { opacity: .5; cursor: not-allowed; }
+#chatOffcanvas .conv-sub { font-size: 0.85rem; line-height: 1.6; }
+#chatOffcanvas .conv-sub > div { color: #004a93; font-weight: 500; }
+#chatOffcanvas .conv-toggle { display: flex; width: 100%; border: 1px solid #e5e9f0; border-radius: 10px; overflow: hidden; background: #eef1f5; padding: 3px; gap: 3px; }
+#chatOffcanvas .conv-toggle-btn { flex: 1; border: 0; background: transparent; color: #5b6b7f; font-weight: 600; font-size: 0.9rem; padding: 0.5rem 0; border-radius: 8px; text-align: center; }
+#chatOffcanvas .conv-toggle-btn.active { background: #004a93; color: #fff; border-radius: 8px; }
+#chatOffcanvas .conv-header .btn-close { background-color: transparent; opacity: .5; width: auto; height: auto; }
+#chatOffcanvas .conv-header .btn-close:hover { opacity: .8; }
+
+/* ============================================================
+   SEND DIRECT NOTICE — Time Period range calendar (flatpickr)
+   ============================================================ */
+.send-notice-page .sn-date-range {
+    min-height: 40px;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: #344054;
+    padding: 0.4rem 0.85rem;
+    background-color: #fff;
+    max-width: 230px;
+}
+
+.send-notice-page .sn-date-range:focus {
+    border-color: #004a93;
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+    outline: none;
+}
+
+.flatpickr-calendar.sn-flatpickr {
+    border: 1px solid #e4e7ec;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(16, 24, 40, 0.14);
+    padding: 6px;
+}
+
+.flatpickr-calendar.sn-flatpickr .flatpickr-months .flatpickr-month {
+    color: #101828;
+}
+
+.flatpickr-calendar.sn-flatpickr .flatpickr-current-month .cur-month,
+.flatpickr-calendar.sn-flatpickr .flatpickr-current-month input.cur-year {
+    font-weight: 600;
+    color: #101828;
+}
+
+.flatpickr-calendar.sn-flatpickr .flatpickr-weekday {
+    color: #667085;
+    font-weight: 600;
+}
+
+.flatpickr-calendar.sn-flatpickr .flatpickr-day {
+    border-radius: 8px;
+    color: #344054;
+}
+
+.flatpickr-calendar.sn-flatpickr .flatpickr-day:hover {
+    background: #eef4ff;
+    border-color: #eef4ff;
+}
+
+.flatpickr-calendar.sn-flatpickr .flatpickr-day.today {
+    border-color: #004a93;
+}
+
+.flatpickr-calendar.sn-flatpickr .flatpickr-day.selected,
+.flatpickr-calendar.sn-flatpickr .flatpickr-day.startRange,
+.flatpickr-calendar.sn-flatpickr .flatpickr-day.endRange {
+    background: #004a93;
+    border-color: #004a93;
+    color: #fff;
+    box-shadow: none;
+}
+
+.flatpickr-calendar.sn-flatpickr .flatpickr-day.inRange {
+    background: #eef4ff;
+    border-color: #eef4ff;
+    color: #004a93;
+    box-shadow: -5px 0 0 #eef4ff, 5px 0 0 #eef4ff;
+}
+
+.flatpickr-calendar.sn-flatpickr .flatpickr-day.flatpickr-disabled,
+.flatpickr-calendar.sn-flatpickr .flatpickr-day.prevMonthDay,
+.flatpickr-calendar.sn-flatpickr .flatpickr-day.nextMonthDay {
+    color: #d0d5dd;
+}
+
+/* ============================================================
+   SEND DIRECT NOTICE — Column Visibility modal
+   ============================================================ */
+.sn-colvis-modal .modal-content {
+    border: 0;
+    border-radius: 14px;
+    box-shadow: 0 20px 48px rgba(16, 24, 40, 0.18);
+}
+
+.sn-colvis-modal .modal-header {
+    border-bottom: 1px solid #eaecf0;
+    padding: 1.1rem 1.35rem;
+}
+
+.sn-colvis-modal .modal-title {
+    font-weight: 700;
+    color: #101828;
+    font-size: 1.1rem;
+}
+
+.sn-colvis-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+}
+
+@media (max-width: 575.98px) {
+    .sn-colvis-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.sn-colvis-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 10px;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.875rem;
+    color: #344054;
+    font-weight: 500;
+    cursor: pointer;
+    margin: 0;
+    transition: border-color .15s ease, background .15s ease;
+    /* Allow long column names to wrap instead of being cropped. */
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* Let the label text wrap within the flex chip (min-width:0 lets a flex item
+   shrink below its content size so wrapping/anywhere-breaking can take effect). */
+.sn-colvis-chip span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.sn-colvis-chip:hover {
+    background: #f9fafb;
+    border-color: #98a2b3;
+}
+
+.sn-colvis-chip:has(input:checked) {
+    border-color: #004a93;
+    background: #f0f6ff;
+    color: #004a93;
+}
+
+.sn-colvis-chip .form-check-input {
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.sn-colvis-chip .form-check-input:checked {
+    background-color: #004a93;
+    border-color: #004a93;
+}
+
+.sn-colvis-modal .btn-close-colvis {
+    border: 1px solid #004a93;
+    color: #004a93;
+    background: #fff;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-radius: 8px;
+    padding: 0.45rem 1.5rem;
+}
+
+.sn-colvis-modal .btn-close-colvis:hover {
+    background: #f0f6ff;
+}
+
+/* ============================================================
+   SEND DIRECT NOTICE — "Notice List" modal
+   ============================================================ */
+.notice-list-modal .modal-content {
+    border: 0;
+    border-radius: 14px;
+    box-shadow: 0 20px 48px rgba(16, 24, 40, 0.18);
+    overflow: hidden;
+}
+
+.notice-list-modal .modal-header {
+    border-bottom: 1px solid #eaecf0;
+    padding: 1rem 1.25rem;
+}
+
+.notice-list-modal .modal-title {
+    font-weight: 700;
+    color: #101828;
+    font-size: 1.15rem;
+}
+
+.notice-list-modal .btn-back {
+    border: 0;
+    background: transparent;
+    color: #101828;
+    font-size: 1.15rem;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.35rem;
+    border-radius: 8px;
+    line-height: 1;
+}
+
+.notice-list-modal .btn-back:hover {
+    background: #f2f4f7;
+}
+
+.notice-list-modal .nlm-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    flex-wrap: wrap;
+}
+
+.notice-list-modal .nlm-search {
+    position: relative;
+    flex: 1;
+    max-width: 420px;
+    min-width: 200px;
+}
+
+.notice-list-modal .nlm-search i {
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #98a2b3;
+    font-size: 0.9rem;
+}
+
+.notice-list-modal .nlm-search input {
+    width: 100%;
+    min-height: 42px;
+    border: 1px solid #e4e7ec;
+    border-radius: 10px;
+    padding: 0.5rem 0.85rem 0.5rem 2.25rem;
+    font-size: 0.9rem;
+    color: #344054;
+}
+
+.notice-list-modal .nlm-search input:focus {
+    outline: none;
+    border-color: #004a93;
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+}
+
+.notice-list-modal .nlm-send-btn {
+    background: #004a93;
+    border: 0;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-radius: 10px;
+    padding: 0.6rem 1.35rem;
+    white-space: nowrap;
+}
+
+.notice-list-modal .nlm-send-btn:hover {
+    background: #003d7a;
+}
+
+.notice-list-modal .nlm-send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.notice-list-modal .nlm-table thead th {
+    background: #f2f4f7;
+    color: #475467;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-bottom: 1px solid #e4e7ec;
+    border-top: 1px solid #e4e7ec;
+    white-space: nowrap;
+    padding: 0.7rem 1rem;
+    vertical-align: middle;
+}
+
+.notice-list-modal .nlm-table tbody td {
+    font-size: 0.875rem;
+    color: #344054;
+    padding: 0.7rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f2f4f7;
+}
+
+.notice-list-modal .nlm-table thead th:first-child,
+.notice-list-modal .nlm-table tbody td:first-child {
+    padding-left: 1.25rem;
+}
+
+.notice-list-modal .nlm-table thead th:last-child,
+.notice-list-modal .nlm-table tbody td:last-child {
+    padding-right: 1.25rem;
+}
+
+.notice-list-modal .nlm-check-col {
+    width: 44px;
+}
+
+.notice-list-modal .form-check-input:checked {
+    background-color: #004a93;
+    border-color: #004a93;
+}
+
+.notice-list-modal .nlm-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.notice-list-modal .nlm-badge--late {
+    background: #fef7e6;
+    color: #b54708;
+}
+
+.notice-list-modal .nlm-badge--present {
+    background: #ecfdf3;
+    color: #027a48;
+}
+
+.notice-list-modal .nlm-badge--absent {
+    background: #fef3f2;
+    color: #b42318;
+}
+
+.notice-list-modal .nlm-row-notice {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+    color: #004a93;
+    text-decoration: none;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+}
+
+.notice-list-modal .nlm-row-notice i {
+    font-size: 1rem;
+}
+
+.notice-list-modal .nlm-row-notice:hover {
+    color: #003d7a;
+}
+
+.notice-list-modal .nlm-footer {
+    padding: 0.85rem 1.25rem;
+    border-top: 1px solid #eaecf0;
+}
+
+/* ============================================================
+   SEND MEMO / NOTICE — "Add Notice" modal (dual-listbox)
+   ============================================================ */
+#addNoticeModal .modal-dialog { max-height: 90vh; }
+#addNoticeModal .modal-content { max-height: 90vh; overflow: hidden; border: 0; border-radius: 14px; box-shadow: 0 20px 48px rgba(16, 24, 40, 0.18); }
+/* .modal-content is a flex column, but the <form> wrapping modal-body/modal-footer isn't —
+   without this, the flex height constraint never reaches modal-body and it can't scroll. */
+#addNoticeModal .modal-content > form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+#addNoticeModal .modal-header { border-bottom: 1px solid #eaecf0; padding: 1rem 1.5rem; flex-shrink: 0; }
+#addNoticeModal .modal-title { font-weight: 700; color: #101828; }
+#addNoticeModal .modal-body { padding: 1.25rem 1.5rem; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+#addNoticeModal .modal-footer { border-top: 1px solid #eaecf0; padding: 1rem 1.5rem; flex-shrink: 0; }
+.add-notice-modal .form-label { font-weight: 500; font-size: 0.85rem; color: #344054; }
+.an-section-title { font-weight: 600; color: #101828; font-size: 0.95rem; margin: 0.25rem 0 0.5rem; }
+
+.an-select-look {
+    background-color: #f9fafb;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23667085' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.85rem center;
+    background-size: 12px 8px;
+    cursor: default;
+}
+
+.an-dual {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1rem;
+    align-items: stretch;
+}
+
+.an-panel {
+    border: 1px solid #e4e7ec;
+    border-radius: 12px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.an-panel-title { font-weight: 600; font-size: 0.85rem; color: #344054; margin-bottom: 0.5rem; }
+
+.an-search { position: relative; margin-bottom: 0.5rem; }
+.an-search i { position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%); color: #98a2b3; font-size: 0.8rem; }
+.an-search input {
+    width: 100%;
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    padding: 0.35rem 0.5rem 0.35rem 1.8rem;
+    font-size: 0.8rem;
+}
+.an-search input:focus { outline: none; border-color: #004a93; box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.1); }
+
+.an-selectall { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: #667085; margin-bottom: 0.35rem; }
+
+.an-list {
+    flex: 1;
+    min-height: 170px;
+    max-height: 230px;
+    overflow-y: auto;
+    border-top: 1px solid #f2f4f7;
+    padding-top: 0.35rem;
+}
+
+.an-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.3rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: #344054;
+    margin: 0;
+    cursor: pointer;
+}
+.an-item:hover { background: #f7f9fc; }
+.an-item .form-check-input:checked,
+.an-selectall .form-check-input:checked { background-color: #004a93; border-color: #004a93; }
+.an-empty { font-size: 0.8rem; padding: 0.5rem 0.3rem; }
+
+.an-moves { display: flex; flex-direction: column; justify-content: center; gap: 0.5rem; }
+.an-move-btn {
+    border: 1px solid #cfe0f3;
+    background: #eef5fd;
+    color: #004a93;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 0.4rem 0.6rem;
+    white-space: nowrap;
+}
+.an-move-btn:hover { background: #e0edfb; }
+
+.an-note {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #fff8e6;
+    border: 1px solid #fde8b5;
+    color: #b54708;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.82rem;
+    margin-bottom: 0.75rem;
+}
+
+.an-preview {
+    border: 1px solid #e4e7ec;
+    border-radius: 10px;
+    padding: 1rem;
+    background: #fff;
+    font-size: 0.82rem;
+    max-height: 280px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+}
+/* Pasted rich-text template content can carry fixed-width inline styles, images,
+   or long unbroken strings/URLs — constrain them so they can't push the preview
+   box (or the modal around it) wider than its container. */
+.an-preview img,
+.an-preview svg,
+.an-preview table {
+    max-width: 100%;
+    height: auto;
+}
+.an-preview * {
+    max-width: 100%;
+}
+.an-preview-none { padding: 0.5rem; }
+
+@media (max-width: 767.98px) {
+    .an-dual { grid-template-columns: 1fr; }
+    .an-moves { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+}
+
+/* ============================================================
+   SEND DISCIPLINE MEMO — Generate modal + Student picker
+   ============================================================ */
+.gen-memo-modal .modal-content,
+.student-picker-modal .modal-content { border: 0; border-radius: 14px; box-shadow: 0 20px 48px rgba(16, 24, 40, 0.18); }
+.gen-memo-modal .modal-header,
+.student-picker-modal .modal-header { border-bottom: 1px solid #eaecf0; }
+.gen-memo-modal .modal-title,
+.student-picker-modal .modal-title { font-weight: 700; color: #101828; }
+
+.gen-memo-modal .gm-note {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #fff8e6;
+    border: 1px solid #fde8b5;
+    color: #b54708;
+    border-radius: 8px;
+    padding: 0.55rem 0.8rem;
+    font-size: 0.82rem;
+    margin-bottom: 1rem;
+}
+
+.gen-memo-modal .gm-section-title { font-weight: 600; color: #101828; font-size: 0.95rem; margin-bottom: 0.5rem; }
+
+.gen-memo-modal .gm-picker-trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border: 1px solid #ced4da;
+    background: #fff;
+    border-radius: 8px;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.9rem;
+    color: #344054;
+    text-align: left;
+}
+.gen-memo-modal .gm-picker-trigger:hover { border-color: #004a93; }
+.gen-memo-modal .gm-picker-trigger i { color: #98a2b3; font-size: 0.8rem; }
+
+.gen-memo-modal .gm-preview {
+    border: 1px solid #e4e7ec;
+    border-radius: 10px;
+    padding: 1rem;
+    background: #fff;
+    font-size: 0.82rem;
+    max-height: 300px;
+    overflow: auto;
+}
+
+/* These modals wrap their .modal-body AND .modal-footer inside a <form>.
+   That breaks Bootstrap's `modal-dialog-scrollable` layout: the body is no
+   longer a direct flex child of .modal-content, so it can't scroll — instead
+   the form overflows and .modal-content (overflow:hidden) clips the footer out
+   of view, hiding the Cancel / Send buttons (worse when zoomed in). Making the
+   form the flex column restores the intended behaviour: the body scrolls and
+   the footer stays pinned and visible. */
+.gen-memo-modal .modal-dialog-scrollable .modal-content > form,
+.add-notice-modal .modal-dialog-scrollable .modal-content > form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+.gen-memo-modal .modal-dialog-scrollable .modal-content > form > .modal-body,
+.add-notice-modal .modal-dialog-scrollable .modal-content > form > .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+.gen-memo-modal .modal-dialog-scrollable .modal-content > form > .modal-footer,
+.add-notice-modal .modal-dialog-scrollable .modal-content > form > .modal-footer {
+    flex-shrink: 0;
+}

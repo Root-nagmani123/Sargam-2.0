@@ -5,6 +5,7 @@ namespace App\Exports;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
@@ -13,7 +14,7 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
  * visible columns into headings + plain rows so the same class can serve both
  * the CSV and XLSX writers while respecting the active filters/search.
  */
-class UsersExport implements FromArray, WithHeadings, ShouldAutoSize, WithStyles
+class UsersExport implements FromArray, WithHeadings, ShouldAutoSize, WithStrictNullComparison, WithStyles
 {
     /** @var array<int, string> */
     protected array $headings;

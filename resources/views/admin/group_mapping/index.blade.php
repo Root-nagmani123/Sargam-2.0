@@ -181,8 +181,8 @@
                             <label for="gmCourseId" class="form-label cgt-field-label mb-2">Course Name <span class="text-danger">*</span></label>
                             <select class="form-select" id="gmCourseId" name="course_id" required>
                                 <option value="">Select Course Name</option>
-                                @foreach($courses ?? [] as $pk => $name)
-                                <option value="{{ $pk }}" {{ count($courses ?? []) === 1 ? 'selected' : '' }}>{{ $name }}</option>
+                                @foreach($allActiveCourses ?? [] as $pk => $name)
+                                <option value="{{ $pk }}" {{ count($allActiveCourses ?? []) === 1 ? 'selected' : '' }}>{{ $name }}</option>
                                 @endforeach
                             </select>
                         </div>

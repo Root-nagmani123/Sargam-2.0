@@ -392,13 +392,17 @@
             text-align: center !important;
         }
 
-        /* Sidebar link text */
+        /* Sidebar link text — wrap to the next line when it exceeds the menu width
+           (instead of truncating with an ellipsis); applies to normal & active alike. */
         #sidebar-setup .sidebar-google-style .sidebarmenu .sidebar-link .hide-menu,
         #sidebar-setup .sidebar-google-style .sidebarmenu .sidebar-link span:not(.material-icons) {
             flex: 1 !important;
-            white-space: nowrap !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
+            min-width: 0 !important;
+            white-space: normal !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            overflow-wrap: anywhere !important;
+            word-break: break-word !important;
         }
 
         /* Chevron/arrow for expandable items */
@@ -478,7 +482,8 @@
             background: #dbeafe !important;
             color: #1e40af !important;
             font-weight: 500 !important;
-            width: 210px !important;
+            width: auto !important;
+            white-space: normal !important;
         }
 
         /* Remove any default bullets/markers on sub items */

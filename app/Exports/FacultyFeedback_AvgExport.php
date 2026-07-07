@@ -85,8 +85,8 @@ class FacultyFeedback_AvgExport implements
             $row['faculty_name'] ?? '',
             $row['topic_name'] ?? '',
             $row['program_name'] ?? '',
-            number_format($row['content_percentage'] ?? 0, 2) . '%',
-            number_format($row['presentation_percentage'] ?? 0, 2) . '%',
+            ($row['content_percentage'] ?? 0) > 0 ? number_format($row['content_percentage'], 2) . '%' : 'N/A',
+            ($row['presentation_percentage'] ?? 0) > 0 ? number_format($row['presentation_percentage'], 2) . '%' : 'N/A',
             $row['participants'] ?? 0,
             !empty($row['session_date']) 
                 ? Carbon::parse($row['session_date'])->format('d M Y') 

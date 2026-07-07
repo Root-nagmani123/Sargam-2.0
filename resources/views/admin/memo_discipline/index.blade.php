@@ -1,551 +1,270 @@
 @extends('admin.layouts.master')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 
-@section('title', 'Discipline Memo - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Discipline Memo')
 
 @section('setup_content')
-<style>
-/* GIGW Color Palette */
-:root {
-    --gigw-primary: #004a93;
-    --gigw-primary-dark: #003366;
-    --gigw-secondary: #0066cc;
-    --gigw-light-bg: #f8f9fa;
-    --gigw-border: #dee2e6;
-    --gigw-text-muted: #6c757d;
-    --gigw-success: #198754;
-    --gigw-white: #ffffff;
-}
-
-/* Enhanced Offcanvas */
-.offcanvas {
-    width: 480px !important;
-    max-width: 90vw;
-    box-shadow: -4px 0 20px rgba(0, 74, 147, 0.15);
-}
-
-.offcanvas-header {
-    background: linear-gradient(135deg, var(--gigw-primary), var(--gigw-secondary));
-    color: var(--gigw-white);
-    padding: 1.5rem;
-    border-bottom: 3px solid var(--gigw-primary-dark);
-    min-height: 80px;
-}
-
-.offcanvas-title {
-    font-weight: 600;
-    font-size: 1.25rem;
-    letter-spacing: 0.3px;
-    margin-bottom: 0.25rem;
-    color: var(--gigw-white);
-}
-
-#type_side_menu {
-    font-size: 0.875rem;
-    font-weight: 500;
-    opacity: 0.95;
-    margin: 0;
-    color: var(--gigw-white);
-    background-color: rgba(255, 255, 255, 0.2);
-    padding: 0.25rem 0.75rem;
-    border-radius: 1rem;
-    display: inline-block;
-}
-
-.offcanvas .btn-close {
-    background-color: rgba(255, 255, 255, 0.3);
-    opacity: 1;
-    border-radius: 50%;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    transition: all 0.2s ease;
-}
-
-.offcanvas .btn-close:hover {
-    background-color: rgba(255, 255, 255, 0.5);
-    transform: scale(1.1);
-}
-
-.offcanvas .btn-close:focus {
-    outline: 3px solid var(--gigw-white);
-    outline-offset: 2px;
-    box-shadow: none;
-}
-
-.offcanvas-body {
-    padding: 1.5rem;
-    background-color: #fafbfc;
-}
-
-/* Enhanced Chat Body */
-.chat-body {
-    height: 480px;
-    overflow-y: auto;
-    background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
-    padding: 1.25rem;
-    border-radius: 0.75rem;
-    border: 1px solid var(--gigw-border);
-    box-shadow: inset 0 2px 8px rgba(0, 74, 147, 0.05);
-    scroll-behavior: smooth;
-}
-
-.chat-body::-webkit-scrollbar {
-    width: 8px;
-}
-
-.chat-body::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-}
-
-.chat-body::-webkit-scrollbar-thumb {
-    background: var(--gigw-primary);
-    border-radius: 10px;
-    transition: background 0.3s ease;
-}
-
-.chat-body::-webkit-scrollbar-thumb:hover {
-    background: var(--gigw-primary-dark);
-}
-
-/* Enhanced Chat Messages */
-.chat-message {
-    margin-bottom: 1rem;
-    animation: slideIn 0.3s ease;
-    clear: both;
-}
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.chat-message.user {
-    text-align: right;
-}
-
-.chat-message .message {
-    display: inline-block;
-    padding: 0.75rem 1rem;
-    border-radius: 1.25rem;
-    max-width: 80%;
-    word-wrap: break-word;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s ease;
-    font-size: 0.95rem;
-    line-height: 1.5;
-}
-
-.chat-message .message:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.chat-message.bot .message {
-    background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);
-    color: #212529;
-    border: 1px solid #dee2e6;
-    border-left: 4px solid var(--gigw-primary);
-}
-
-.chat-message.user .message {
-    background: linear-gradient(135deg, var(--gigw-primary), var(--gigw-secondary));
-    color: var(--gigw-white);
-    border: none;
-}
-
-/* Loading State */
-.chat-body .text-muted {
-    color: var(--gigw-text-muted) !important;
-    font-style: italic;
-    padding: 2rem;
-    text-align: center;
-}
-
-/* Accessibility Enhancements */
-.offcanvas:focus-visible {
-    outline: 3px solid var(--gigw-primary);
-    outline-offset: 2px;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .offcanvas {
-        width: 100% !important;
-    }
-
-    .offcanvas-header {
-        padding: 1rem;
-        min-height: 70px;
-    }
-
-    .offcanvas-title {
-        font-size: 1.1rem;
-    }
-
-    .chat-body {
-        height: calc(100vh - 250px);
-        padding: 1rem;
-    }
-
-    .chat-message .message {
-        max-width: 85%;
-        font-size: 0.9rem;
-    }
-}
-
-/* Sticky Table Status */
-.table .sticky-status {
-    position: sticky;
-    right: 0;
-    background: #fff;
-    z-index: 10;
-    box-shadow: -4px 0 6px rgba(0, 0, 0, 0.08);
-}
-
-/* WCAG 2.1 AA Compliance */
-.offcanvas * {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-
-/* Chat Row Layout */
-.chat-row {
-    display: flex;
-    margin-bottom: 15px;
-}
-
-.chat-row.right {
-    justify-content: flex-end;
-}
-
-.chat-row.left {
-    justify-content: flex-start;
-}
-
-/* Message Bubble */
-.chat-bubble {
-    max-width: 80%;
-    background: #f4f5f7;
-    padding: 12px 15px;
-    border-radius: 12px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e2e2e2;
-}
-
-.chat-row.right .chat-bubble {
-    background: #e7f1ff;
-    border-color: #c9ddff;
-}
-
-/* Header */
-.chat-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 4px;
-}
-
-.chat-sender {
-    color: #003e7e;
-    font-weight: 600;
-}
-
-.chat-time {
-    font-size: 11px;
-    color: #6c757d;
-}
-
-/* Message Text */
-.chat-text {
-    margin: 0;
-    font-size: 14px;
-    color: #222;
-    line-height: 1.4;
-}
-
-/* Attachments */
-.chat-attachment {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    margin-top: 8px;
-    font-size: 14px;
-    color: #004a93;
-    text-decoration: none;
-}
-
-.chat-attachment:hover {
-    text-decoration: underline;
-}
-
-/* Footer Input */
-.chat-footer {
-    background: #fff;
-}
-
-.chat-input-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.attachment-btn {
-    cursor: pointer;
-    color: #004a93;
-    font-size: 22px;
-}
-
-.chat-textarea {
-    resize: none;
-    height: 40px;
-    font-size: 14px;
-}
-
-.chat-send-btn {
-    height: 40px;
-    padding: 0 20px;
-}
-
-/* Scrollable message area */
-#chatBody {
-    padding-bottom: 20px;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: #b3b3b3 #efefef;
-}
-
-#chatBody::-webkit-scrollbar {
-    width: 8px;
-}
-
-#chatBody::-webkit-scrollbar-thumb {
-    background: #b3b3b3;
-    border-radius: 4px;
-}
-
-/* Accessibility: Focus outline */
-*:focus-visible {
-    outline: 3px solid #004a93 !important;
-    border-radius: 4px;
-}
-
-/* Choices.js + Bootstrap: avoid double dropdown arrow */
-.choices__inner.form-select {
-    background-image: none !important;
-    padding-right: 2.25rem !important;
-}
-</style>
-<div class="container-fluid">
-    <x-breadcrum title="Discipline Memo" />
+<link rel="stylesheet" href="{{ asset('css/notice-memo-discipline.css') }}?v={{ @filemtime(public_path('css/notice-memo-discipline.css')) ?: time() }}">
+<div class="container-fluid disc-page">
+    <x-breadcrum title="Send Discipline Memo">
+        @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') ||
+        hasRole('Training Induction Admin') || hasRole('Training-Induction'))
+        <button type="button" data-bs-toggle="modal" data-bs-target="#genMemoModal"
+            class="btn btn-primary d-inline-flex align-items-center gap-1 px-3 shadow-sm">
+            <i class="material-icons material-symbols-rounded" style="font-size:20px;">add</i>
+            Generate Discipline Memo
+        </button>
+        @endif
+    </x-breadcrum>
     <x-session_message />
 
-    <!-- start Zero Configuration -->
-    <div class="card" style="border-left:4px solid #004a93;">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-6">
-                    <h4 class="card-title">Discipline Memo</h4>
+    {{-- Generate Discipline Memo modal --}}
+    <div class="modal fade gen-memo-modal" id="genMemoModal" tabindex="-1" aria-labelledby="genMemoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="genMemoModalLabel">Generate Discipline Memo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="col-6">
-                    <div class="d-flex justify-content-end align-items-center gap-2">
-
-                        <!-- Add Group Mapping -->
-                        @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') ||
-                        hasRole('Training Induction Admin') || hasRole('Training-Induction'))
-                        <a href="{{ route('memo.discipline.create') }}"
-                            class="btn btn-primary d-flex align-items-center">
-                            <i class="material-icons menu-icon material-symbols-rounded"
-                                style="font-size: 24px;">add</i>
-                            Discipline Memo
-                        </a>
-                        @endif
-
-
-                    </div>
-                </div>
-            </div>
-            <hr class="my-3">
-            <form method="GET" action="{{ route('memo.discipline.index') }}" id="filterForm" class="mb-4">
-                <div class="row g-3">
-                    <!-- Program Filter -->
-                    <div class="col-md-6 col-lg-3">
-                        <div class="form-group">
-                            <label for="program_name" class="form-label fw-semibold">
-                                <i class="bi bi-book me-1"></i>Program Name
-                            </label>
-                            <select class="form-select form-select-md" id="program_name" name="program_name"
-                                aria-label="Select program">
-                                <option value="">All Programs</option>
-                                @foreach($courses as $course)
-                                <option value="{{ $course->pk }}"
-                                    {{ (string)$programNameFilter == (string)$course->pk ? 'selected' : '' }}
-                                    data-course-code="{{ $course->course_code ?? '' }}">
-                                    {{ $course->course_name }}
-                                    @if(isset($course->course_code) && $course->course_code)
-                                    ({{ $course->course_code }})
-                                    @endif
-                                </option>
-                                @endforeach
-                            </select>
-                            <div class="form-text">Filter by academic program</div>
+                <form action="{{ route('memo.discipline.discipline_generate_memo_store') }}" method="POST" id="genMemoForm">
+                    @csrf
+                    <input type="hidden" name="submission_type" value="1">
+                    <div class="modal-body">
+                        <div class="gm-note">
+                            <i class="bi bi-info-circle"></i>
+                            As you submit this form the Notice will be automatically sent to the concerned person.
                         </div>
-                    </div>
 
-                    <!-- Status Filter -->
-                    <div class="col-md-6 col-lg-2">
-                        <div class="form-group">
-                            <label for="status" class="form-label fw-semibold">
-                                <i class="bi bi-flag me-1"></i>Status
-                            </label>
-                            <select class="form-select form-select-md" id="status" name="status"
-                                aria-label="Select status">
-                                <option value="">All Status</option>
-                                <option value="2" {{ $statusFilter == '2' ? 'selected' : '' }}>Recorded</option>
-                                <option value="3" {{ $statusFilter == '3' ? 'selected' : '' }}>Closed</option>
-                                <option value="1" {{ $statusFilter == '1' ? 'selected' : '' }}>Pending</option>
-                            </select>
-                            <div class="form-text">Filter by memo status</div>
-                        </div>
-                    </div>
-
-                    <!-- Search Filter -->
-                    <div class="col-md-6 col-lg-3">
-                        <div class="form-group">
-                            <label for="search" class="form-label fw-semibold">
-                                <i class="bi bi-search me-1"></i>Search
-                            </label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0">
-                                    <i class="bi bi-search text-muted"></i>
-                                </span>
-                                <input type="text" class="form-control border-start-0" id="search" name="search"
-                                    placeholder="Student name, ID, or memo details..." value="{{ $searchFilter }}"
-                                    aria-label="Search memos">
+                        <div class="row g-3 mb-2">
+                            <div class="col-md-6">
+                                <label class="form-label">Course Name <span class="text-danger">*</span></label>
+                                <select class="form-select" name="course_master_pk" id="gmCourse" required>
+                                    <option value="">Select Course Name</option>
+                                    @foreach($courses as $course)
+                                        <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                                    @endforeach
+                                </select>
                             </div>
-                            <div class="form-text">Search across multiple fields</div>
-                        </div>
-                    </div>
-
-                    <!-- Date Range Filters -->
-                    <div class="col-md-6 col-lg-4">
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <label for="from_date" class="form-label fw-semibold small text-body-secondary">
-                                    <i class="bi bi-calendar-event me-1"></i>From Date
-                                </label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-body-secondary border-end-0">
-                                        <i class="bi bi-calendar-minus text-muted"></i>
-                                    </span>
-                                    <input type="date" class="form-control" id="from_date" name="from_date"
-                                        value="{{ $fromDateFilter ?? '' }}"
-                                        max="{{ \Carbon\Carbon::today()->toDateString() }}" aria-label="Start date">
-                                </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Date <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" name="date_of_memo" id="gmDate" max="{{ date('Y-m-d') }}">
                             </div>
-                            <div class="col-6">
-                                <label for="to_date" class="form-label fw-semibold small text-body-secondary">
-                                    <i class="bi bi-calendar-event me-1"></i>To Date
-                                </label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-body-secondary border-end-0">
-                                        <i class="bi bi-calendar-plus text-muted"></i>
-                                    </span>
-                                    <input type="date" class="form-control" id="to_date" name="to_date"
-                                        value="{{ $toDateFilter ?? '' }}"
-                                        max="{{ \Carbon\Carbon::today()->toDateString() }}" aria-label="End date">
-                                </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Discipline <span class="text-danger">*</span></label>
+                                <select class="form-select" name="discipline_master_pk" id="gmDiscipline" required>
+                                    <option value="">Select Discipline</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Discipline Marks <span class="text-danger">*</span></label>
+                                <input type="number" step="0.01" min="0" class="form-control" name="discipline_marks" id="gmMarks" placeholder="eg. 24.50" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Template</label>
+                                <select class="form-select" name="memo_notice_template_pk" id="gmTemplate">
+                                    <option value="">Select Discipline first</option>
+                                </select>
+                                <small class="text-muted">Notice template to use. Options depend on the selected discipline.</small>
                             </div>
                             <div class="col-12">
-                                <div class="form-text">Select date range for memos</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Action Buttons -->
-                    <div class="col-12 mt-3">
-                        <div
-                            class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 p-3 bg-light rounded border">
-                            <div class="d-flex align-items-center">
-                                <span class="me-2 text-muted">
-                                    <i class="bi bi-filter-circle me-1"></i>
-                                </span>
-                                <small class="text-muted">
-                                    <span id="activeFilterCount" class="badge bg-primary me-2">0</span>
-                                    Active filters
-                                </small>
-                            </div>
-                            <div class="d-flex flex-wrap gap-2">
-                              
-                                <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center"
-                                    id="clearFiltersBtn" aria-label="Remove filters and show all">
-                                    <i class="bi bi-x-circle me-1"></i>
-                                    Clear Filters
-                                </a>
-
-                                <button type="submit" class="btn btn-primary d-flex align-items-center"
-                                    aria-label="Apply selected filters">
-                                    <i class="bi bi-funnel me-2"></i>
-                                    Apply Filters
+                                <label class="form-label">Select Students <span class="text-danger">*</span></label>
+                                <button type="button" class="gm-picker-trigger" id="gmSelectStudents">
+                                    <span id="gmSelectedSummary" class="text-muted">Select Students</span>
+                                    <i class="bi bi-chevron-down"></i>
                                 </button>
+                                <div id="gmSelectedHidden"></div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Filter Summary (Optional, shows when filters are active) -->
-                    @if($programNameFilter || $statusFilter || $searchFilter || ($fromDateFilter && $toDateFilter))
-                    <div class="col-12" id="filterSummary">
-                        <div class="alert alert-info fade show d-flex align-items-start gap-2 rounded-3 border-0 shadow-sm filter-summary-alert" id="filterSummaryAlert" role="alert">
-                            <i class="bi bi-info-circle fs-5 flex-shrink-0 mt-1"></i>
-                            <div class="flex-grow-1">
-                                <strong class="d-block mb-2">Active Filters</strong>
-                                <div class="d-flex flex-wrap gap-2 align-items-center">
-                                    @if($programNameFilter)
-                                    @php
-                                    $selectedCourse = $courses->where('pk', $programNameFilter)->first();
-                                    @endphp
-                                    <span class="badge rounded-pill bg-primary d-inline-flex align-items-center gap-1 py-2">
-                                        Program: {{ $selectedCourse->course_name ?? 'Selected' }}
-                                        <a href="#" class="text-white text-decoration-none opacity-75 hover-opacity-100" onclick="removeFilter('program_name'); return false;" aria-label="Remove program filter"><i class="bi bi-x-lg small"></i></a>
-                                    </span>
-                                    @endif
-                                    @if($statusFilter)
-                                    @php
-                                    $statusLabels = ['1' => 'Recorded', '2' => 'Memo Sent', '3' => 'Closed'];
-                                    @endphp
-                                    <span class="badge rounded-pill bg-success d-inline-flex align-items-center gap-1 py-2">
-                                        Status: {{ $statusLabels[$statusFilter] ?? 'Selected' }}
-                                        <a href="#" class="text-white text-decoration-none opacity-75" onclick="removeFilter('status'); return false;" aria-label="Remove status filter"><i class="bi bi-x-lg small"></i></a>
-                                    </span>
-                                    @endif
-                                    @if($searchFilter)
-                                    <span class="badge rounded-pill bg-warning text-dark d-inline-flex align-items-center gap-1 py-2">
-                                        Search: "{{ substr($searchFilter, 0, 20) }}{{ strlen($searchFilter) > 20 ? '...' : '' }}"
-                                        <a href="#" class="text-dark text-decoration-none opacity-75" onclick="removeFilter('search'); return false;" aria-label="Remove search filter"><i class="bi bi-x-lg small"></i></a>
-                                    </span>
-                                    @endif
-                                    @if($fromDateFilter && $toDateFilter)
-                                    <span class="badge rounded-pill bg-info text-dark d-inline-flex align-items-center gap-1 py-2">
-                                        Date: {{ \Carbon\Carbon::parse($fromDateFilter)->format('M d') }} - {{ \Carbon\Carbon::parse($toDateFilter)->format('M d, Y') }}
-                                        <a href="#" class="text-dark text-decoration-none opacity-75" onclick="removeDateFilters(); return false;" aria-label="Remove date filter"><i class="bi bi-x-lg small"></i></a>
-                                    </span>
-                                    @endif
-                                </div>
+                        <h6 class="gm-section-title mt-3">Preview</h6>
+                        <div class="gm-preview" id="gmPreview">
+                            <h5 class="text-center fw-bold mb-1" id="gmPvCourse">Course Name</h5>
+                            <p class="text-center mb-0 small">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+                            <hr>
+                            <p class="mb-2"><strong>Date:</strong> <span id="gmPvDate">—</span></p>
+                            {{-- Template body rendered here --}}
+                            <div id="gmPvTemplateContent" class="mb-2 small text-muted fst-italic">Select a discipline and template to preview content.</div>
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-2">
+                                    <thead><tr><th>#</th><th>OT</th></tr></thead>
+                                    <tbody id="gmPvStudents"><tr><td colspan="2" class="text-muted">No students selected.</td></tr></tbody>
+                                </table>
                             </div>
-                            <button type="button" class="btn-close flex-shrink-0 filter-summary-close" aria-label="Close"></button>
+                            <div class="text-end mb-0 small" id="gmPvDirectorBlock" style="display:none;">
+                                <div id="gmPvSignature"></div>
+                                <strong id="gmPvDirectorName"></strong><br><span id="gmPvDirectorDesig"></span>
+                            </div>
                         </div>
-                        <a href="#" id="showFilterDetailsLink" class="show-filter-details-link d-none small text-primary text-decoration-none d-inline-flex align-items-center gap-1 mt-1" aria-label="Show active filter details">
-                            <i class="bi bi-chevron-down"></i> Show active filter details
-                        </a>
+
+                        <div class="col-12">
+                            <label class="form-label mt-3">Message (If Any)</label>
+                            <textarea class="form-control" name="Remark" id="gmRemark" rows="2" placeholder="Enter remarks..."></textarea>
+                        </div>
                     </div>
-                    @endif
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary px-4">Send Discipline Memo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {{-- Student List picker (dual-listbox) — opens from "Select Students" --}}
+    <div class="modal fade student-picker-modal" id="studentPickerModal" tabindex="-1" aria-labelledby="studentPickerLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="studentPickerLabel">Student List</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="an-dual">
+                        <div class="an-panel">
+                            <div class="an-panel-title">Defaulter Students</div>
+                            <div class="an-search"><i class="bi bi-search"></i><input type="text" class="an-filter" data-target="spAvailable" placeholder="Search"></div>
+                            <label class="an-selectall"><input type="checkbox" class="form-check-input an-select-all" data-panel="spAvailable"> Select All</label>
+                            <div class="an-list" id="spAvailable"></div>
+                        </div>
+                        <div class="an-moves">
+                            <button type="button" class="an-move-btn" data-move="all-right">Move all right</button>
+                            <button type="button" class="an-move-btn" data-move="right">Move right</button>
+                            <button type="button" class="an-move-btn" data-move="left">Move left</button>
+                            <button type="button" class="an-move-btn" data-move="all-left">Move all left</button>
+                        </div>
+                        <div class="an-panel">
+                            <div class="an-panel-title">Selected Students</div>
+                            <div class="an-search"><i class="bi bi-search"></i><input type="text" class="an-filter" data-target="spSelected" placeholder="Search"></div>
+                            <label class="an-selectall"><input type="checkbox" class="form-check-input an-select-all" data-panel="spSelected"> Select All</label>
+                            <div class="an-list" id="spSelected"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary px-4" id="spSaveBtn">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Column Visibility modal --}}
+    <div class="modal fade sn-colvis-modal" id="discColumnModal" tabindex="-1" aria-labelledby="discColumnModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="discColumnModalLabel">Column Visibility</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="sn-colvis-grid" id="discColumnGrid"></div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn-close-colvis" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Tabs + Download --}}
+    <div class="card-body py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div class="disc-tabs">
+            @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction'))
+            <a href="{{ route('send.notice.management.index') }}" class="disc-tab js-nav-tab">Send Direct Notice</a>
+            <a href="{{ route('memo.notice.management.index') }}" class="disc-tab js-nav-tab">Send Memo / Notice</a>
+            @endif
+            <a href="{{ route('memo.discipline.index') }}" class="disc-tab js-nav-tab active">Send Discipline Memo</a>
+        </div>
+        @php
+            // Built from the controller's own resolved filter values, coerced to strings
+            // via ?? '' — NOT request()->query() and NOT route()'s array-param form.
+            // ConvertEmptyStringsToNull turns "from_date=" into PHP null before this
+            // renders; route()'s array-parameter builder then silently DROPS null-valued
+            // keys entirely (while $request->has() on the receiving end still treats an
+            // explicitly-present "from_date=" as present). So either of those shortcuts
+            // produces a Download link with NO from_date/to_date keys at all whenever no
+            // date filter is active — exportCsv() then reads that as "brand new request,
+            // default to today-only", silently downloading the wrong (empty) dataset.
+            // http_build_query() with real '' strings guarantees the keys stay present.
+            $discDownloadUrl = route('memo.discipline.export_csv') . '?' . http_build_query([
+                'program_name' => $programNameFilter ?? '',
+                'discipline_master_pk' => $disciplineFilter ?? '',
+                'status' => $statusFilter ?? '',
+                'from_date' => $fromDateFilter ?? '',
+                'to_date' => $toDateFilter ?? '',
+                'search' => $searchFilter ?? '',
+            ]);
+        @endphp
+        <a href="{{ $discDownloadUrl }}" id="discDownloadLink" class="disc-download">
+            <i class="bi bi-download"></i> Download
+        </a>
+    </div>
+
+    <!-- start Zero Configuration -->
+    <div class="card shadow-sm border-0 overflow-hidden">
+        <div class="card-body">
+            @php
+            $today = \Carbon\Carbon::today()->toDateString();
+            $isToday = $fromDateFilter === $today && $toDateFilter === $today;
+            $hasRange = ($fromDateFilter || $toDateFilter) && !$isToday;
+            @endphp
+            <form method="GET" action="{{ route('memo.discipline.index') }}" id="filterForm">
+                <div class="disc-filter-bar mb-3">
+                    <span class="disc-filter-label">Filters</span>
+
+                    <select class="form-select" id="program_name" name="program_name" aria-label="Program Name">
+                        <option value="">Program Name</option>
+                        @foreach($courses as $course)
+                        <option value="{{ $course->pk }}"
+                            {{ (string)$programNameFilter == (string)$course->pk ? 'selected' : '' }}>
+                            {{ $course->course_name }}</option>
+                        @endforeach
+                    </select>
+
+                    <select class="form-select" id="discipline_master_pk" name="discipline_master_pk" aria-label="Discipline Type">
+                        <option value="">Discipline Type</option>
+                        @foreach($disciplines as $disc)
+                        <option value="{{ $disc->discipline_name }}" {{ $disciplineFilter == $disc->discipline_name ? 'selected' : '' }}>
+                            {{ $disc->discipline_name }}
+                        </option>
+                        @endforeach
+                    </select>
+
+                    <select class="form-select" id="status" name="status" aria-label="Status">
+                        <option value="">Status</option>
+                        <option value="1" {{ $statusFilter == '1' ? 'selected' : '' }}>Recorded</option>
+                        <option value="2" {{ $statusFilter == '2' ? 'selected' : '' }}>Memo Sent</option>
+                        <option value="3" {{ $statusFilter == '3' ? 'selected' : '' }}>Closed</option>
+                    </select>
+
+                    <select class="form-select" id="discTimePeriod" aria-label="Time Period">
+                        <option value="all">All</option>
+                        <option value="today" {{ $isToday ? 'selected' : '' }}>Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="custom" {{ $hasRange ? 'selected' : '' }}>Custom Range</option>
+                    </select>
+                    <input type="date" class="form-control {{ $hasRange ? '' : 'd-none' }}" id="from_date"
+                        name="from_date" value="{{ $fromDateFilter }}" max="{{ $today }}" style="max-width:160px;">
+                    <input type="date" class="form-control {{ $hasRange ? '' : 'd-none' }}" id="to_date" name="to_date"
+                        value="{{ $toDateFilter }}" max="{{ $today }}" style="max-width:160px;">
+
+                    <a href="{{ route('memo.discipline.index') }}" class="disc-reset">Reset Filters</a>
+
+                    <div class="ms-auto d-flex align-items-center gap-2">
+                        <button type="button" class="disc-icon-btn" data-bs-toggle="modal" data-bs-target="#discColumnModal">
+                            <i class="bi bi-layout-three-columns"></i> Columns
+                        </button>
+                        <button type="button" class="disc-icon-btn" id="discSearchToggle" aria-label="Search"><i
+                                class="bi bi-search"></i></button>
+                        <div class="disc-search-wrap {{ $searchFilter ? '' : 'd-none' }}" id="discSearchWrap" style="position:relative;">
+                            <input type="text" class="disc-search-input" id="search" name="search"
+                                placeholder="Search..." value="{{ $searchFilter }}" autocomplete="off" style="padding-right:1.9rem;">
+                            <button type="button" id="discSearchClear" aria-label="Clear search" title="Clear"
+                                style="position:absolute;top:50%;right:.35rem;transform:translateY(-50%);border:0;background:transparent;color:#94a3b8;line-height:1;padding:.15rem;{{ $searchFilter ? '' : 'display:none;' }}">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </form>
 
@@ -569,17 +288,22 @@
                     if (badge) badge.textContent = activeCount;
                 }
 
-                // Apply filters via AJAX
-                function applyFiltersAjax() {
+                // Fetch a fully-formed list URL and swap ONLY the list container.
+                // The filter form lives OUTSIDE this container, so its values are never
+                // touched — that is what keeps filters intact across pagination.
+                function discFetchAndRender(url) {
                     const form = document.getElementById('filterForm');
                     const listContainer = document.getElementById('memoDisciplineListContainer');
-                    if (!form || !listContainer) return;
-                    const formData = new FormData(form);
-                    const params = new URLSearchParams(formData).toString();
-                    const url = "{{ route('memo.discipline.index') }}" + (params ? '?' + params : '');
+                    if (!listContainer) return;
                     listContainer.style.opacity = '0.5';
-                    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                        .then(function(r) { return r.text(); })
+                    fetch(url, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(function(r) {
+                            return r.text();
+                        })
                         .then(function(html) {
                             const parser = new DOMParser();
                             const doc = parser.parseFromString(html, 'text/html');
@@ -587,19 +311,75 @@
                             const currentSummary = document.getElementById('filterSummary');
                             if (newSummary) {
                                 if (currentSummary) currentSummary.replaceWith(newSummary.cloneNode(true));
-                                else form.querySelector('.row').appendChild(newSummary.cloneNode(true));
-                            } else {
-                                if (currentSummary) currentSummary.remove();
+                                else if (form) {
+                                    const anchor = form.querySelector('.row, .disc-filter-bar');
+                                    if (anchor) anchor.appendChild(newSummary.cloneNode(true));
+                                }
+                            } else if (currentSummary) {
+                                currentSummary.remove();
                             }
                             const newList = doc.querySelector('#memoDisciplineListContainer');
+                            // Tear down the current DataTable BEFORE its DOM is removed, so its
+                            // settings don't leak and block a clean re-init (which can blank the rows).
+                            if (window.jQuery && $.fn.DataTable && $.fn.DataTable.isDataTable('#discTable')) {
+                                $('#discTable').DataTable().destroy();
+                            }
                             if (newList) listContainer.innerHTML = newList.innerHTML;
                             window.history.replaceState({}, '', url);
                             updateFilterCount();
+
+                            // The Download link is a static server-rendered href from page
+                            // load — without this, it would keep pointing at whatever
+                            // filters were active on that initial load (e.g. today-only)
+                            // even after AJAX-applying different filters, silently
+                            // exporting the wrong/empty dataset. Reuse this fetch's own
+                            // query string (minus per_page, which the export doesn't use).
+                            const downloadLink = document.getElementById('discDownloadLink');
+                            if (downloadLink) {
+                                const listParams = new URLSearchParams(url.split('?')[1] || '');
+                                listParams.delete('per_page');
+                                downloadLink.href = "{{ route('memo.discipline.export_csv') }}" + '?' + listParams.toString();
+                            }
                         })
-                        .catch(function() { alert('Failed to apply filters'); })
-                        .finally(function() { listContainer.style.opacity = '1'; });
+                        .catch(function() {
+                            alert('Failed to load records');
+                        })
+                        .finally(function() {
+                            listContainer.style.opacity = '1';
+                            if (typeof window.reinitDiscTable === 'function') {
+                                window.reinitDiscTable();
+                            }
+                        });
+                }
+                window.discFetchAndRender = discFetchAndRender;
+
+                // Apply the filter form (+ current page size) via AJAX — always page 1.
+                function applyFiltersAjax() {
+                    const form = document.getElementById('filterForm');
+                    if (!form) return;
+                    const params = new URLSearchParams(new FormData(form));
+                    const pp = document.getElementById('discPerPage');
+                    if (pp && pp.value) params.set('per_page', pp.value);
+                    const q = params.toString();
+                    discFetchAndRender("{{ route('memo.discipline.index') }}" + (q ? '?' + q : ''));
                 }
                 window.applyFiltersAjax = applyFiltersAjax;
+
+                // Pagination is a NORMAL full-page navigation (no AJAX). The links now
+                // carry every RESOLVED filter (controller ->appends()), so a reload
+                // reproduces the same filtered view on the requested page — filters are
+                // preserved and the server returns the rows directly. (AJAX-swapping the
+                // DataTable-managed table proved unreliable and could blank the rows.)
+
+                // Page-size dropdown → reload from page 1 with the new size + current filters.
+                document.addEventListener('change', function(e) {
+                    if (e.target && e.target.id === 'discPerPage') {
+                        const form = document.getElementById('filterForm');
+                        const params = new URLSearchParams(form ? new FormData(form) : undefined);
+                        params.set('per_page', e.target.value);
+                        window.location.href = "{{ route('memo.discipline.index') }}" + '?' + params.toString();
+                    }
+                });
 
                 // Submit form via AJAX instead of full page reload
                 const filterForm = document.getElementById('filterForm');
@@ -623,9 +403,15 @@
                 const clearFiltersBtn = document.getElementById('clearFiltersBtn');
                 if (clearFiltersBtn && filterForm) {
                     clearFiltersBtn.addEventListener('click', function() {
-                        filterForm.querySelectorAll('select').forEach(function(s) { s.value = ''; });
-                        filterForm.querySelectorAll('input[type="text"]').forEach(function(i) { i.value = ''; });
-                        filterForm.querySelectorAll('input[type="date"]').forEach(function(i) { i.value = ''; });
+                        filterForm.querySelectorAll('select').forEach(function(s) {
+                            s.value = '';
+                        });
+                        filterForm.querySelectorAll('input[type="text"]').forEach(function(i) {
+                            i.value = '';
+                        });
+                        filterForm.querySelectorAll('input[type="date"]').forEach(function(i) {
+                            i.value = '';
+                        });
                         applyFiltersAjax();
                     });
                 }
@@ -674,165 +460,241 @@
 
             <hr class="my-3">
             <div id="memoDisciplineListContainer">
-            <div class="table-responsive rounded-3 border">
-                    <table class="table align-middle mb-0 text-nowrap">
-                    <thead>
-                        <tr>
-                            <th width="60">#</th>
-                            <th>Program</th>
-                            <th>Participant</th>
-                            <th>Date</th>
-                            <th>Discipline</th>
-                            <th class="text-center">Submitted</th>
-                            <th class="text-center">Final</th>
-                            <th>Remarks</th>
-                            <th>Status</th>
-                            @if(! hasRole('Officer Trainee'))
-                            <th class="text-end">Action</th>
-                            @endif
-                        </tr>
-                    </thead>
+                <div class="table-responsive">
+                    {{-- data-sargam-dt-ui="false": this page uses server-side Laravel
+                         pagination with its own .programme-dt-footer below. Opt out of the
+                         global DataTables UI enhancer so it doesn't hijack + empty that footer. --}}
+                    <table id="discTable" class="table align-middle mb-0 text-nowrap" data-sargam-dt-ui="false">
+                        <thead>
+                            <tr>
+                                <th>S. No.</th>
+                                <th>Program Name</th>
+                                <th>Name</th>
+                                <th>OT/Participant Code</th>
+                                <th>Cadre</th>
+                                <th>Date of Infraction</th>
+                                <th>Infraction</th>
+                                <th class="text-center">Submitted</th>
+                                <th class="text-center">Final</th>
+                                <th>Remarks</th>
+                                <th>Created Date</th>
+                                <th>Status</th>
+                                @if(! hasRole('Officer Trainee'))
+                                <th class="text-end">Action</th>
+                                @endif
+                            </tr>
+                        </thead>
 
-                    <tbody>
-                        @if ($memos->isEmpty())
-                        <tr>
-                            <td colspan="10" class="text-center py-5 text-muted">
-                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                                <span class="fw-medium">No memo records available</span>
-                            </td>
-                        </tr>
-                        @else
-                        @foreach ($memos as $index => $memo)
-                        <tr>
-                            <!-- Serial -->
-                            <td class="fw-semibold text-muted">
-                                {{ $memos->firstItem() + $index }}
-                            </td>
+                        <tbody>
+                            @forelse ($memos as $index => $memo)
+                            <tr>
+                                <td class="fw-semibold text-muted">{{ $memos->firstItem() + $index }}</td>
+                                <td class="fw-semibold">{{ $memo->course->course_name ?? 'N/A' }}</td>
+                                <td class="fw-semibold">{{ $memo->student->display_name ?? 'N/A' }}</td>
+                                <td class="text-muted">{{ $memo->student->generated_OT_code ?? 'N/A' }}</td>
+                                <td class="text-muted">{{ $memo->student->cadre->cadre_name ?? 'N/A' }}</td>
+                                <td class="text-muted">{{ $memo->date ? \Carbon\Carbon::parse($memo->date)->format('d M Y') : 'N/A' }}</td>
+                                <td><span class="badge bg-info-subtle text-info">{{ $memo->discipline->discipline_name ?? 'N/A' }}</span></td>
+                                <td class="text-center fw-semibold text-warning">{{ $memo->mark_deduction_submit }}</td>
+                                <td class="text-center fw-semibold text-danger">{{ $memo->final_mark_deduction }}</td>
+                                <td class="text-muted">{{ $memo->remarks ?? '—' }}</td>
+                                <td class="text-muted">{{ !empty($memo->created_date) ? \Carbon\Carbon::parse($memo->created_date)->format('d M Y') : 'N/A' }}</td>
 
-                            <!-- Program -->
-                            <td>
-                                <div class="fw-semibold">
-                                    {{ $memo->course->course_name ?? 'N/A' }}
-                                </div>
-                            </td>
+                                <!-- Status -->
+                                <td>
+                                    @if ($memo->status == 1)
+                                    <span class="badge bg-success-subtle text-success">
+                                        <i class="bi bi-check-circle me-1"></i> Recorded
+                                    </span>
+                                    <div class="mt-1 d-flex gap-2">
+                                        <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
+                                            class="link-primary small fw-medium">
+                                            View Memo
+                                        </a>
+                                    </div>
+                                    @elseif ($memo->status == 2)
+                                    <span class="badge bg-warning-subtle text-warning">
+                                        <i class="bi bi-envelope me-1"></i> Memo Sent
+                                    </span>
+                                    <div class="mt-1 d-flex gap-2">
+                                        <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
+                                            class="link-primary small fw-medium">
+                                            View Memo
+                                        </a>
+                                        <a class="text-success view-conversation" data-bs-toggle="offcanvas"
+                                            data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
+                                            data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction')) ? 'admin' : 'OT' }}">
+                                            <i class="material-icons material-symbols-rounded fs-5">chat</i>
+                                        </a>
+                                    </div>
+                                    @else
+                                    <span class="badge bg-secondary-subtle text-secondary">
+                                        <i class="bi bi-lock me-1"></i> Closed
+                                    </span>
+                                    <div class="mt-1 d-flex gap-2">
+                                        <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
+                                            class="link-primary small fw-medium">
+                                            View Memo
+                                        </a>
+                                        <a class="text-success view-conversation" data-bs-toggle="offcanvas"
+                                            data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
+                                            data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction')) ? 'admin' : 'OT' }}">
+                                            <i class="material-icons material-symbols-rounded fs-5">chat</i>
+                                        </a>
+                                    </div>
+                                    @endif
+                                </td>
 
-                            <!-- Participant -->
-                            <td>
-                                <div class="fw-semibold">
-                                    {{ $memo->student->display_name ?? 'N/A' }}
-                                </div>
-                            </td>
-
-                            <!-- Date -->
-                            <td class="text-muted">
-                                {{ \Carbon\Carbon::parse($memo->date)->format('d M Y') }}
-                            </td>
-
-                            <!-- Discipline -->
-                            <td>
-                                <span class="badge bg-info-subtle text-info">
-                                    {{ $memo->discipline->discipline_name ?? 'N/A' }}
-                                </span>
-                            </td>
-
-                            <!-- Marks -->
-                            <td class="text-center fw-semibold text-warning">
-                                {{ $memo->mark_deduction_submit }}
-                            </td>
-
-                            <td class="text-center fw-semibold text-danger">
-                                {{ $memo->final_mark_deduction }}
-                            </td>
-
-                            <!-- Remarks -->
-                            <td class="text-muted small">
-                                {{ $memo->remarks ?? '-' }}
-                            </td>
-
-                            <!-- Status -->
-                            <td>
-                                @if ($memo->status == 1)
-                                <span class="badge bg-success-subtle text-success">
-                                    <i class="bi bi-check-circle me-1"></i> Recorded
-                                </span>
-                                @elseif ($memo->status == 2)
-                                <span class="badge bg-warning-subtle text-warning">
-                                    <i class="bi bi-envelope me-1"></i> Memo Sent
-                                </span>
-                                <div class="mt-1 d-flex gap-2">
+                                <!-- Action -->
+                                @if(! hasRole('Officer Trainee'))
+                                <td class="text-end">
+                                    @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction'))
+                                    @if($memo->status == 1)
+                                    <button class="btn btn-sm btn-outline-secondary btn-edit-memo me-1"
+                                        data-id="{{ $memo->pk }}" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-primary border-0 bg-transparent text-primary" data-discipline="{{ $memo->pk }}"
+                                        id="sendMemoBtn">
+                                        <i class="material-icons material-symbols-rounded fs-5">send</i>
+                                    </button>
+                                    @elseif($memo->status == 2)
                                     <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
-                                        class="link-primary small fw-medium">
-                                        View Memo
+                                        class="btn btn-sm btn-outline-danger border-0 bg-transparent text-primary">
+                                        <i class="material-icons material-symbols-rounded fs-5">close</i> Close
                                     </a>
-
-                                    <a class="text-success view-conversation" data-bs-toggle="offcanvas"
-                                        data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
-                                        data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin')) ? 'admin' : 'OT' }}">
-                                        <i class="material-icons material-symbols-rounded fs-5">chat</i>
+                                    @else
+                                    <span class="text-muted small">—</span>
+                                    @endif
+                                    {{-- Delete: admins/faculty only, hard-deletes the discipline memo + its chat.
+                                         Active only while the memo is open (Recorded/Memo Sent); disabled once closed. --}}
+                                    @php $isMemoClosed = !in_array($memo->status, [1, 2]); @endphp
+                                    <a href="javascript:void(0)"
+                                        class="btn btn-sm btn-outline-danger discipline-delete-record ms-1 border-0 bg-transparent text-primary {{ $isMemoClosed ? 'disabled' : '' }}"
+                                        data-id="{{ $memo->pk }}"
+                                        title="{{ $isMemoClosed ? 'Cannot delete a closed memo' : 'Delete' }}"
+                                        @if($isMemoClosed) aria-disabled="true" tabindex="-1" style="pointer-events:none;opacity:.45;" @endif>
+                                        <i class="material-icons material-symbols-rounded fs-5">delete</i>
                                     </a>
-                                </div>
-                                @else
-                                <span class="badge bg-secondary-subtle text-secondary">
-                                    <i class="bi bi-lock me-1"></i> Closed
-                                </span>
-                                <div class="mt-1 d-flex gap-2">
-                                    <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
-                                        class="link-primary small fw-medium">
-                                        View Memo
-                                    </a>
-                                    <a class="text-success view-conversation" data-bs-toggle="offcanvas"
-                                        data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
-                                        data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin')) ? 'admin' : 'OT' }}">
-                                        <i class="material-icons material-symbols-rounded fs-5">chat</i>
-                                    </a>
-                                </div>
+                                    @else
+                                    <span class="text-muted small">—</span>
+                                    @endif
+                                </td>
                                 @endif
-                            </td>
-
-                            <!-- Action -->
-                            @if(! hasRole('Officer Trainee'))
-                            <td class="text-end">
-                                @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin')
-                                || hasRole('Training Induction Admin'))
-                                @if($memo->status == 1)
-                                <button class="btn btn-sm btn-outline-primary" data-discipline="{{ $memo->pk }}"
-                                    id="sendMemoBtn">
-                                    <i class="bi bi-envelope-paper me-1"></i> Send
-                                </button>
-                                @elseif($memo->status == 2)
-                                <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
-                                    class="btn btn-sm btn-outline-danger">
-                                    <i class="bi bi-x-circle me-1"></i> Close
-                                </a>
-                                @else
-                                <span class="text-muted small">—</span>
-                                @endif
-                                @else
-                                <span class="text-muted small">—</span>
-                                @endif
-                            </td>
-                            @endif
-                        </tr>
-                        @endforeach
-                        @endif
-                    </tbody>
-                </table>
-            </div>
-            <!-- Pagination -->
-            <div class="card-footer bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div class="text-muted small">
-                    Showing {{ $memos->firstItem() ?? 0 }} to {{ $memos->lastItem() ?? 0 }}
-                    of {{ $memos->total() }} records
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="{{ hasRole('Officer Trainee') ? 12 : 13 }}" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                    <span class="fw-medium">No memo records available</span>
+                                </td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
-
-                <div>
-                    {{ $memos->links('vendor.pagination.custom') }}
+                <!-- Pagination (design-system footer: numbered pages + "Showing [N] of M items") -->
+                @php
+                    $discPerPage = (int) request('per_page', 10);
+                    if (!in_array($discPerPage, [10, 25, 50, 100, 200], true)) $discPerPage = 10;
+                @endphp
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
+                    <div class="programme-dt-pagination">
+                        {{ $memos->links('vendor.pagination.custom') }}
+                    </div>
+                    <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                        <div class="dataTables_length">
+                            <label class="mb-0">Showing
+                                <select id="discPerPage" class="form-select form-select-sm" aria-label="Rows per page">
+                                    @foreach([10, 25, 50, 100, 200] as $pp)
+                                    <option value="{{ $pp }}" {{ $discPerPage === $pp ? 'selected' : '' }}>{{ $pp }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                        </div>
+                        <div class="dataTables_info">of {{ number_format($memos->total()) }} items</div>
+                    </div>
                 </div>
-            </div>
             </div>
         </div>
     </div>
     <!-- end Zero Configuration -->
+
+    {{-- Edit Discipline Memo modal --}}
+    <div class="modal fade gen-memo-modal" id="editMemoModal" tabindex="-1" aria-labelledby="editMemoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-semibold" id="editMemoModalLabel">Edit Discipline Memo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editMemoForm">
+                    @csrf
+                    <input type="hidden" id="editMemoPk">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Course</label>
+                                <input type="text" id="editMemoCourse" class="form-control" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Participant</label>
+                                <input type="text" id="editMemoStudent" class="form-control" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
+                                <input type="date" id="editMemoDate" name="date" class="form-control" max="{{ date('Y-m-d') }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Discipline <span class="text-danger">*</span></label>
+                                <select id="editMemoDiscipline" name="discipline_master_pk" class="form-select" required>
+                                    <option value="">Select Discipline</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Discipline Marks <span class="text-danger">*</span></label>
+                                <input type="number" step="0.01" min="0" id="editMemoMarks" name="mark_deduction_submit" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Template</label>
+                                <select id="editMemoTemplate" name="memo_notice_template_pk" class="form-select">
+                                    <option value="">Select Discipline first</option>
+                                </select>
+                                <small class="text-muted">Changes to match the selected discipline.</small>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Remarks</label>
+                                <textarea id="editMemoRemarks" name="remarks" class="form-control" rows="3" placeholder="Enter remarks..."></textarea>
+                            </div>
+                        </div>
+
+                        <h6 class="gm-section-title mt-3">Preview</h6>
+                        <div class="gm-preview" id="editMemoPreview">
+                            <h5 class="text-center fw-bold mb-1" id="emPvCourse">Course Name</h5>
+                            <p class="text-center mb-0 small">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+                            <hr>
+                            <p class="mb-2"><strong>Date:</strong> <span id="emPvDate">—</span></p>
+                            <div id="emPvTemplateContent" class="mb-2 small text-muted fst-italic">Select a discipline to preview content.</div>
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-2">
+                                    <thead><tr><th>#</th><th>OT</th></tr></thead>
+                                    <tbody id="emPvStudents"><tr><td colspan="2" class="text-muted">—</td></tr></tbody>
+                                </table>
+                            </div>
+                            <div class="text-end mb-0 small" id="emPvDirectorBlock" style="display:none;">
+                                <div id="emPvSignature"></div>
+                                <strong id="emPvDirectorName"></strong><br><span id="emPvDirectorDesig"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary px-4" id="editMemoSaveBtn">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <!-- Enhanced Offcanvas with GIGW Guidelines -->
     <div class="offcanvas offcanvas-end" tabindex="-1" id="chatOffcanvas" aria-labelledby="conversationTopic"
@@ -874,7 +736,37 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    const disciplineChoicesIds = ['program_name', 'status'];
+
+    @php
+        $discActionTargets = hasRole('Officer Trainee') ? '[0]' : '[0, -1]';
+    @endphp
+
+    window.reinitDiscTable = function () {
+        if ($.fn.DataTable.isDataTable('#discTable')) {
+            $('#discTable').DataTable().destroy();
+        }
+        if ($('#discTable tbody tr td[colspan]').length === 0) {
+            $('#discTable').DataTable({
+                paging: false,
+                searching: false,
+                ordering: true,
+                info: false,
+                columnDefs: [
+                    { orderable: false, targets: {!! $discActionTargets !!} }
+                ]
+            });
+        }
+    };
+
+    window.reinitDiscTable();
+});
+</script>
+@endpush
+
+@push('scripts')
+<script>
+$(document).ready(function() {
+    const disciplineChoicesIds = ['program_name', 'discipline_master_pk', 'status', 'discTimePeriod'];
 
     function initDisciplineChoices() {
         if (typeof window.Choices === 'undefined') return;
@@ -890,16 +782,22 @@ $(document).ready(function() {
                 allowHTML: false,
                 classNames: {
                     containerInner: ['choices__inner', 'form-select', 'shadow-sm'],
-                    input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
+                    input: ['choices__input', 'form-control', 'form-control-sm', 'border-0',
+                        'shadow-none', 'my-1'
+                    ],
                     inputCloned: ['choices__input--cloned'],
-                    listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
+                    listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0',
+                        'shadow-sm', 'w-100'
+                    ],
                     item: ['choices__item', 'dropdown-item', 'rounded-0'],
                     itemSelectable: ['choices__item--selectable'],
                     itemDisabled: ['choices__item--disabled', 'disabled'],
                     itemChoice: ['choices__item--choice'],
                     placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
                     highlightedState: ['is-highlighted', 'active'],
-                    notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2']
+                    notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small',
+                        'py-2'
+                    ]
                 }
             });
 
@@ -912,11 +810,107 @@ $(document).ready(function() {
     /* ===============================
        FILTER (AJAX - no page refresh)
     =============================== */
-    $('#program_name, #status').on('change', function() {
+    function discRunFilter() {
         if (typeof window.applyFiltersAjax === 'function') {
             window.applyFiltersAjax();
         } else {
             $('#filterForm')[0].submit();
+        }
+    }
+
+    $('#program_name, #discipline_master_pk, #status, #from_date, #to_date').on('change', discRunFilter);
+
+    /* ── Time Period presets → from/to dates ── */
+    function discFmt(d) {
+        return d.toISOString().split('T')[0];
+    }
+    $('#discTimePeriod').on('change', function() {
+        var v = $(this).val();
+        var today = new Date();
+        $('#from_date, #to_date').addClass('d-none');
+        if (v === 'custom') {
+            $('#from_date, #to_date').removeClass('d-none');
+            return;
+        }
+        var from = '',
+            to = '';
+        if (v === 'today') {
+            from = to = discFmt(today);
+        } else if (v === 'week') {
+            var ws = new Date(today);
+            ws.setDate(today.getDate() - today.getDay());
+            from = discFmt(ws);
+            to = discFmt(today);
+        } else if (v === 'month') {
+            from = discFmt(new Date(today.getFullYear(), today.getMonth(), 1));
+            to = discFmt(today);
+        }
+        // v === 'all' → leave both empty (controller returns all when params present but empty)
+        $('#from_date').val(from);
+        $('#to_date').val(to);
+        discRunFilter();
+    });
+
+    /* ── Search: toggle, live (debounced) filtering, clear ── */
+    $('#discSearchToggle').on('click', function() {
+        var $wrap = $('#discSearchWrap');
+        $wrap.toggleClass('d-none');
+        if (!$wrap.hasClass('d-none')) {
+            $('#search').trigger('focus');
+        }
+    });
+
+    var discSearchTimer = null;
+    $('#search').on('input', function() {
+        $('#discSearchClear').toggle(this.value.length > 0);
+        clearTimeout(discSearchTimer);
+        discSearchTimer = setTimeout(discRunFilter, 350); // search as you type
+    });
+    $('#search').on('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(discSearchTimer);
+            discRunFilter();
+        }
+    });
+    $('#discSearchClear').on('click', function() {
+        var $s = $('#search');
+        $s.val('');
+        $(this).hide();
+        clearTimeout(discSearchTimer);
+        discRunFilter();
+        $s.trigger('focus');
+    });
+
+    /* ── Column Visibility modal (built from the actual header cells) ── */
+    var $discGrid = $('#discColumnGrid');
+    $('#discTable thead th').each(function(i) {
+        var label = $(this).text().trim() || ('Column ' + (i + 1));
+        var id = 'discCol' + i;
+        $discGrid.append(
+            '<label class="sn-colvis-chip" for="' + id + '" title="' + label + '">' +
+            '<input type="checkbox" class="form-check-input disc-col-toggle" id="' + id +
+            '" data-col="' + i + '" checked> ' +
+            '<span>' + label + '</span></label>'
+        );
+    });
+    $discGrid.on('change', '.disc-col-toggle', function() {
+        var nth = parseInt($(this).data('col'), 10) + 1;
+        var show = this.checked;
+        $('#discTable tr').each(function() {
+            $(this).children(':nth-child(' + nth + ')').toggle(show);
+        });
+    });
+
+    /* ── Guarantee a full page reload when switching tabs ── */
+    $(document).on('click', '.js-nav-tab', function(e) {
+        if ($(this).hasClass('active')) {
+            return;
+        }
+        var href = this.getAttribute('href');
+        if (href) {
+            e.preventDefault();
+            window.location.assign(href);
         }
     });
 
@@ -966,8 +960,8 @@ $(document).ready(function() {
         let memoId = $(this).data('id');
         let type = $(this).data('type');
 
-        $('#conversationTopic').text("Topic: Discipline Conversation");
-        $('#type_side_menu').text(type);
+        $('#conversationTopic').text("Discipline Memo Conversation");
+        $('#type_side_menu').text(type === 'OT' ? 'Officer Trainee view' : 'Incharge view');
         $('#chatBody').html('<p class="text-muted text-center">Loading conversation...</p>');
 
         $.ajax({
@@ -990,6 +984,494 @@ $(document).ready(function() {
 });
 </script>
 
+@endpush
+
+@push('scripts')
+<script>
+/* ── Generate Discipline Memo modal + Student picker ── */
+$(function () {
+    var routeStudents  = "{{ route('memo.discipline.getStudentByCourse') }}";
+    var routeMark      = "{{ route('memo.discipline.getMarkDeduction') }}";
+    var routeTemplates = "{{ route('memo.discipline.templatesByDiscipline') }}";
+    var todayStr       = "{{ date('Y-m-d') }}";
+
+    var gmDefaulters = [];   // [{pk, name}] for the current course
+    var gmSelected   = [];   // array of selected pks (strings)
+    var gmTemplateMap = {};  // pk → template object (includes content, director fields)
+
+    var genModalEl = document.getElementById('genMemoModal');
+    var pickerModalEl = document.getElementById('studentPickerModal');
+    var genModal = bootstrap.Modal.getOrCreateInstance(genModalEl);
+    var pickerModal = bootstrap.Modal.getOrCreateInstance(pickerModalEl);
+    var pendingOpenPicker = false;
+
+    // One-at-a-time flow: Generate → (hide) → Picker → (hide/Save) → Generate.
+    $('#gmSelectStudents').on('click', function () {
+        pendingOpenPicker = true;
+        genModal.hide();
+    });
+    $(genModalEl).on('hidden.bs.modal', function () {
+        if (pendingOpenPicker) { pendingOpenPicker = false; pickerModal.show(); }
+        else { resetGenMemoForm(); }
+    });
+
+    // Clear everything on a real close (Cancel, backdrop click, Esc, or after submit) —
+    // but not when hiding temporarily to open the student picker (handled above).
+    function resetGenMemoForm() {
+        var form = document.getElementById('genMemoForm');
+        if (form) form.reset();
+        gmDefaulters = [];
+        gmSelected = [];
+        gmTemplateMap = {};
+        $('#gmDiscipline').html('<option value="">Select Discipline</option>');
+        $('#gmTemplate').html('<option value="">Select Discipline first</option>');
+        $('#gmSelectedHidden').empty();
+        syncSelection();
+        $('#gmPvCourse').text('Course Name');
+        $('#gmPvDate').text('—');
+        updateTemplatePreview();
+    }
+    $(pickerModalEl).on('hidden.bs.modal', function () {
+        // Closing the picker (Save or dismiss) always returns to the Generate modal.
+        genModal.show();
+    });
+
+    function nameByPk(pk) {
+        var f = gmDefaulters.filter(function (d) { return String(d.pk) === String(pk); })[0];
+        return f ? f.name : '';
+    }
+
+    // ── Main form: summary, hidden inputs, preview ──
+    function syncSelection() {
+        // Summary text
+        $('#gmSelectedSummary')
+            .toggleClass('text-muted', gmSelected.length === 0)
+            .text(gmSelected.length ? (gmSelected.length + ' student' + (gmSelected.length > 1 ? 's' : '') + ' selected') : 'Select Students');
+
+        // Hidden inputs for submit
+        var $h = $('#gmSelectedHidden').empty();
+        gmSelected.forEach(function (pk) {
+            $h.append($('<input type="hidden" name="selected_student_list[]">').val(pk));
+        });
+
+        // Preview student rows
+        var $rows = $('#gmPvStudents').empty();
+        if (!gmSelected.length) {
+            $rows.append('<tr><td colspan="2" class="text-muted">No students selected.</td></tr>');
+        } else {
+            gmSelected.forEach(function (pk, i) {
+                $rows.append($('<tr>').append($('<td>').text(i + 1)).append($('<td>').text(nameByPk(pk))));
+            });
+        }
+    }
+
+    function updatePreview() {
+        $('#gmPvCourse').text($('#gmCourse option:selected').text() || 'Course Name');
+        var d = $('#gmDate').val();
+        $('#gmPvDate').text(d ? d.split('-').reverse().join('/') : '—');
+    }
+
+    function updateTemplatePreview() {
+        var pk = $('#gmTemplate').val();
+        var tpl = pk ? gmTemplateMap[pk] : null;
+        var $content = $('#gmPvTemplateContent');
+        var $dirBlock = $('#gmPvDirectorBlock');
+
+        if (tpl && tpl.content) {
+            $content.removeClass('text-muted fst-italic').html(tpl.content);
+        } else {
+            $content.addClass('text-muted fst-italic').text(pk ? 'No content in this template.' : 'Select a discipline and template to preview content.');
+        }
+
+        if (tpl && (tpl.director_name || tpl.director_designation)) {
+            if (tpl.signature_image) {
+                $('#gmPvSignature').html('<img src="/storage/' + tpl.signature_image + '" style="max-height:50px;display:block;margin-left:auto;margin-bottom:4px;" alt="Signature">');
+            } else {
+                $('#gmPvSignature').empty();
+            }
+            $('#gmPvDirectorName').text(tpl.director_name || '');
+            $('#gmPvDirectorDesig').text(tpl.director_designation || '');
+            $dirBlock.show();
+        } else {
+            $dirBlock.hide();
+        }
+    }
+
+    // ── Course change → load defaulters + disciplines ──
+    $('#gmCourse').on('change', function () {
+        var courseId = $(this).val();
+        gmDefaulters = [];
+        gmSelected = [];
+        $('#gmDiscipline').html('<option value="">Select Discipline</option>');
+        $('#gmMarks').val('');
+        $('#gmTemplate').html('<option value="">Select Discipline first</option>');
+        syncSelection();
+        updatePreview();
+        if (!courseId) return;
+
+        $.get(routeStudents, { course_id: courseId }).done(function (res) {
+            if (res && res.status) {
+                gmDefaulters = (res.students || []).map(function (s) {
+                    return { pk: String(s.pk), name: s.display_name + (s.generated_OT_code ? ' (' + s.generated_OT_code + ')' : '') };
+                });
+                (res.discipline_master_data || []).forEach(function (d) {
+                    $('#gmDiscipline').append($('<option>').val(d.pk).text(d.discipline_name));
+                });
+            }
+        });
+    });
+
+    function loadTemplates() {
+        var course = $('#gmCourse').val();
+        var disc   = $('#gmDiscipline').val();
+        var $t = $('#gmTemplate');
+        if (!course || !disc) {
+            $t.html('<option value="">Select Discipline first</option>');
+            gmTemplateMap = {};
+            updateTemplatePreview();
+            return;
+        }
+        $t.html('<option value="">Loading templates...</option>');
+        $.get(routeTemplates, { course_id: course, discipline_master_pk: disc }).done(function (res) {
+            $t.empty();
+            gmTemplateMap = {};
+            if (Array.isArray(res) && res.length) {
+                res.forEach(function (t) {
+                    var label = t.title + (t.discipline_master_pk ? '' : ' (course default)');
+                    $t.append($('<option>').val(t.pk).text(label));
+                    gmTemplateMap[String(t.pk)] = t;
+                });
+                // Discipline-specific template is ordered first — preselect it.
+                $t.val(String(res[0].pk));
+            } else {
+                $t.append('<option value="">No template configured</option>');
+            }
+            updateTemplatePreview();
+        }).fail(function () {
+            $t.html('<option value="">Failed to load templates</option>');
+            updateTemplatePreview();
+        });
+    }
+
+    $('#gmTemplate').on('change', function () {
+        updateTemplatePreview();
+    });
+
+    $('#gmDiscipline').on('change', function () {
+        var disc = $(this).val();
+        var course = $('#gmCourse').val();
+        if (disc && course) {
+            $.get(routeMark, { discipline_master_pk: disc, course_id: course }).done(function (res) {
+                $('#gmMarks').val(typeof res === 'number' ? res : (res || ''));
+                updatePreview();
+            });
+            loadTemplates();
+        } else {
+            $('#gmMarks').val('');
+            $('#gmTemplate').html('<option value="">Select Discipline first</option>');
+            updatePreview();
+        }
+    });
+    $('#gmMarks, #gmDate').on('input change', updatePreview);
+
+    $('#genMemoModal').on('show.bs.modal', function () {
+        if (!$('#gmDate').val()) $('#gmDate').val(todayStr);
+        updatePreview();
+    });
+
+    // ── Student picker ──
+    function pickerItem(pk, name) {
+        return $('<label class="an-item">')
+            .attr('data-pk', pk)
+            .attr('data-search', name.toLowerCase())
+            .append($('<input type="checkbox" class="form-check-input an-check">'))
+            .append($('<span>').text(name));
+    }
+    function renderPicker() {
+        var $av = $('#spAvailable').empty();
+        var $sel = $('#spSelected').empty();
+        gmDefaulters.forEach(function (d) {
+            (gmSelected.indexOf(d.pk) > -1 ? $sel : $av).append(pickerItem(d.pk, d.name));
+        });
+        if (!$av.children('.an-item').length) $av.append('<div class="an-empty text-muted">No students.</div>');
+        if (!$sel.children('.an-item').length) $sel.append('<div class="an-empty text-muted">No students selected.</div>');
+        $('.student-picker-modal .an-select-all').prop('checked', false);
+        $('.student-picker-modal .an-filter').val('');
+    }
+    $('#studentPickerModal').on('show.bs.modal', renderPicker);
+
+    function refreshPickerEmpties() {
+        $('#spAvailable, #spSelected').each(function () {
+            var $l = $(this);
+            $l.children('.an-empty').remove();
+            if (!$l.children('.an-item').length) {
+                $l.append($('<div class="an-empty text-muted">').text(this.id === 'spSelected' ? 'No students selected.' : 'No students.'));
+            }
+        });
+    }
+    function moveItems(from, to, all) {
+        var $items = $(from).children('.an-item');
+        if (!all) $items = $items.filter(function () { return $(this).find('.an-check').prop('checked'); });
+        $items.each(function () { $(this).find('.an-check').prop('checked', false); $(this).show(); $(to).append(this); });
+        $('.student-picker-modal .an-select-all').prop('checked', false);
+        refreshPickerEmpties();
+    }
+    $('#studentPickerModal').on('click', '.an-move-btn', function () {
+        var m = $(this).data('move');
+        if (m === 'all-right') moveItems('#spAvailable', '#spSelected', true);
+        else if (m === 'right') moveItems('#spAvailable', '#spSelected', false);
+        else if (m === 'left') moveItems('#spSelected', '#spAvailable', false);
+        else if (m === 'all-left') moveItems('#spSelected', '#spAvailable', true);
+    });
+    $('#studentPickerModal').on('change', '.an-select-all', function () {
+        $('#' + $(this).data('panel')).children('.an-item:visible').find('.an-check').prop('checked', this.checked);
+    });
+    $('#studentPickerModal').on('input', '.an-filter', function () {
+        var q = this.value.toLowerCase();
+        $('#' + $(this).data('target')).children('.an-item').each(function () {
+            $(this).toggle(($(this).attr('data-search') || '').indexOf(q) > -1);
+        });
+    });
+
+    // Save → commit picker's Selected panel, then return to the Generate modal
+    $('#spSaveBtn').on('click', function () {
+        gmSelected = $('#spSelected').children('.an-item').map(function () { return String($(this).data('pk')); }).get();
+        syncSelection();
+        updatePreview();
+        pickerModal.hide(); // 'hidden.bs.modal' re-opens the Generate modal
+    });
+
+    // Guard submit
+    $('#genMemoForm').on('submit', function (e) {
+        if (!gmSelected.length) {
+            e.preventDefault();
+            alert('Please select at least one student.');
+        }
+    });
+
+    /* ── Delete a discipline memo (admins only) ── */
+    $(document).on('click', '.discipline-delete-record', function () {
+        if ($(this).hasClass('disabled')) { return; } // closed memo — delete not allowed
+        var id = $(this).data('id');
+        if (!id) { return; }
+
+        Swal.fire({
+            title: 'Delete this discipline memo?',
+            text: 'This will permanently remove the memo and its conversation. This cannot be undone.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it',
+            cancelButtonText: 'Cancel',
+        }).then(function (result) {
+            if (!result.isConfirmed) { return; }
+
+            var url = "{{ route('memo.discipline.destroy', ['id' => '__ID__']) }}".replace('__ID__', id);
+
+            $.ajax({
+                url: url,
+                type: 'DELETE',
+                data: { _token: "{{ csrf_token() }}" },
+                success: function (res) {
+                    toastr.success(res.message || 'Deleted successfully.');
+                    setTimeout(function () { window.location.reload(); }, 600);
+                },
+                error: function (xhr) {
+                    toastr.error((xhr.responseJSON && xhr.responseJSON.message) || 'Failed to delete.');
+                }
+            });
+        });
+    });
+});
+</script>
+@endpush
+
+@push('scripts')
+<script>
+$(function () {
+    var editMemoModalEl = document.getElementById('editMemoModal');
+    var editMemoModal   = new bootstrap.Modal(editMemoModalEl);
+    var editRouteBase   = "{{ rtrim(route('memo.discipline.edit', ''), '/') }}/";
+    var updateRouteBase = "{{ rtrim(route('memo.discipline.update', ''), '/') }}/";
+    var markRoute       = "{{ route('memo.discipline.getMarkDeduction') }}";
+    var routeTemplates  = "{{ route('memo.discipline.templatesByDiscipline') }}";
+    var csrf            = "{{ csrf_token() }}";
+    var editMemoCourseId = null;
+
+    // Reload the Template list AND the preview for the current course + given discipline.
+    // Mirrors the Generate modal's loadTemplates(): discipline-specific templates
+    // first, course-wide fallback last (see getTemplatesByDiscipline()).
+    function loadEditTemplates(disciplineId, selectedPk) {
+        var $t = $('#editMemoTemplate');
+        emTemplateMap = {};
+        emSelectedTplPk = null;
+        if (!editMemoCourseId || !disciplineId) {
+            $t.html('<option value="">Select Discipline first</option>');
+            updateEditTemplatePreview();
+            return;
+        }
+        $t.html('<option value="">Loading templates...</option>');
+        $('#emPvTemplateContent').addClass('text-muted fst-italic').text('Loading preview…');
+        $.get(routeTemplates, { course_id: editMemoCourseId, discipline_master_pk: disciplineId }).done(function (res) {
+            $t.empty();
+            if (Array.isArray(res) && res.length) {
+                res.forEach(function (t) {
+                    var label = t.title + (t.discipline_master_pk ? '' : ' (course default)');
+                    $t.append($('<option>').val(t.pk).text(label));
+                    emTemplateMap[String(t.pk)] = t;
+                });
+                $t.val(selectedPk && $t.find('option[value="' + selectedPk + '"]').length ? String(selectedPk) : String(res[0].pk));
+                emSelectedTplPk = $t.val();
+            } else {
+                $t.append('<option value="">No template configured</option>');
+            }
+            updateEditTemplatePreview();
+        }).fail(function () {
+            $t.html('<option value="">Failed to load templates</option>');
+            updateEditTemplatePreview();
+        });
+    }
+
+    var emTemplateMap   = {};   // pk → template object (content + director fields)
+    var emSelectedTplPk = null; // discipline template auto-picked for the preview
+    var editCoursePk    = null; // course id of the memo being edited
+
+    // Preview: course / date / (single) student.
+    function updateEditPreview() {
+        $('#emPvCourse').text($('#editMemoCourse').val() || 'Course Name');
+        var d = $('#editMemoDate').val();
+        $('#emPvDate').text(d ? d.split('-').reverse().join('/') : '—');
+        var student = $('#editMemoStudent').val() || '';
+        var $rows = $('#emPvStudents').empty();
+        if (student) {
+            $rows.append($('<tr>').append($('<td>').text('1')).append($('<td>').text(student)));
+        } else {
+            $rows.append('<tr><td colspan="2" class="text-muted">—</td></tr>');
+        }
+    }
+
+    // Preview: template content + director block (mirrors the Generate modal).
+    function updateEditTemplatePreview() {
+        var tpl = emSelectedTplPk ? emTemplateMap[emSelectedTplPk] : null;
+        var $content = $('#emPvTemplateContent');
+        if (tpl && tpl.content) {
+            $content.removeClass('text-muted fst-italic').html(tpl.content);
+        } else {
+            $content.addClass('text-muted fst-italic').text('No template configured for this discipline.');
+        }
+        if (tpl && (tpl.director_name || tpl.director_designation)) {
+            $('#emPvSignature').html(tpl.signature_image
+                ? '<img src="/storage/' + tpl.signature_image + '" style="max-height:50px;display:block;margin-left:auto;margin-bottom:4px;" alt="Signature">'
+                : '');
+            $('#emPvDirectorName').text(tpl.director_name || '');
+            $('#emPvDirectorDesig').text(tpl.director_designation || '');
+            $('#emPvDirectorBlock').show();
+        } else {
+            $('#emPvDirectorBlock').hide();
+        }
+    }
+
+    // ── Open modal: fetch memo data + disciplines ──
+    $(document).on('click', '.btn-edit-memo', function () {
+        var id = $(this).data('id');
+        $('#editMemoForm')[0].reset();
+        $('#editMemoPk').val('');
+        $('#editMemoDiscipline').html('<option value="">Loading…</option>');
+        $('#editMemoTemplate').html('<option value="">Select Discipline first</option>');
+        $('#editMemoSaveBtn').prop('disabled', true);
+        // Reset the preview for the freshly opened memo.
+        emTemplateMap = {}; emSelectedTplPk = null; editCoursePk = null;
+        $('#emPvDirectorBlock').hide();
+        $('#emPvTemplateContent').addClass('text-muted fst-italic').text('Loading preview…');
+        updateEditPreview();
+
+        $.get(editRouteBase + id).done(function (data) {
+            $('#editMemoPk').val(data.pk);
+            $('#editMemoCourse').val(data.course_name);
+            $('#editMemoStudent').val(data.student_name);
+            $('#editMemoDate').val(data.date);
+            $('#editMemoMarks').val(data.mark_deduction_submit);
+            $('#editMemoRemarks').val(data.remarks);
+            editMemoCourseId = data.course_master_pk;
+
+            var $sel = $('#editMemoDiscipline').empty().append('<option value="">Select Discipline</option>');
+            (data.disciplines || []).forEach(function (d) {
+                $sel.append(
+                    $('<option>').val(d.pk).text(d.discipline_name)
+                                 .attr('data-mark', d.mark_deduction)
+                );
+            });
+            $sel.val(data.discipline_master_pk);
+            // Preview mirrors the Generate modal: course/date/student + the
+            // discipline's template content & director signature.
+            editCoursePk = data.course_master_pk || null;
+            updateEditPreview();
+            // Populates the template dropdown AND the template-content preview.
+            loadEditTemplates(data.discipline_master_pk, data.memo_notice_template_pk);
+            $('#editMemoSaveBtn').prop('disabled', false);
+        }).fail(function () {
+            alert('Failed to load memo data.');
+        });
+
+        editMemoModal.show();
+    });
+
+    // ── Discipline changes → auto-fill marks + reload templates for the new discipline ──
+    $('#editMemoDiscipline').on('change', function () {
+        var mark = $('option:selected', this).data('mark');
+        if (mark !== undefined && mark !== '') {
+            $('#editMemoMarks').val(mark);
+        }
+         loadEditTemplates($(this).val(), null);   // refresh dropdown + preview for the new discipline
+        updateEditPreview();
+    });
+
+    // Template selection changes → refresh the preview content.
+    $('#editMemoTemplate').on('change', function () {
+        emSelectedTplPk = $(this).val() || null;
+        updateEditTemplatePreview();
+    });
+
+    // Date change → refresh the preview date.
+    $('#editMemoDate').on('change input', updateEditPreview);
+
+    // ── Submit edit form ──
+    $('#editMemoForm').on('submit', function (e) {
+        e.preventDefault();
+        var id  = $('#editMemoPk').val();
+        var $btn = $('#editMemoSaveBtn').prop('disabled', true).text('Saving…');
+
+        $.ajax({
+            url: updateRouteBase + id,
+            type: 'POST',
+            data: {
+                _token:                    csrf,
+                date:                      $('#editMemoDate').val(),
+                discipline_master_pk:      $('#editMemoDiscipline').val(),
+                mark_deduction_submit:     $('#editMemoMarks').val(),
+                remarks:                   $('#editMemoRemarks').val(),
+                memo_notice_template_pk:   $('#editMemoTemplate').val(),
+            },
+            success: function (res) {
+                if (res.success) {
+                    editMemoModal.hide();
+                    Swal.fire({ icon: 'success', title: 'Updated!', text: res.message, timer: 1500, showConfirmButton: false })
+                        .then(function () { location.reload(); });
+                } else {
+                    alert(res.message || 'Update failed.');
+                    $btn.prop('disabled', false).text('Save Changes');
+                }
+            },
+            error: function (xhr) {
+                var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Something went wrong.';
+                alert(msg);
+                $btn.prop('disabled', false).text('Save Changes');
+            }
+        });
+    });
+});
+</script>
 @endpush
 
 @endsection

@@ -33,7 +33,7 @@
                         <div class="col-md-3">
                             <strong>Major Subject:</strong>
                             <span class="text-primary">
-                                {{ optional($courseGroup->course)->course_name }}
+                                {{ optional($courseGroup->course)->couse_short_name ?: optional($courseGroup->course)->course_name }}
                             </span>
                         </div>
 

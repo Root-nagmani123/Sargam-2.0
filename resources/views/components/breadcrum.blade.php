@@ -183,10 +183,37 @@
         }
     }
 
+    // ── DB-driven trail from the menu's ACTUAL placement (preferred) ──────────
+    // Builds Home / Category / Group / …parent menus / MenuName straight from
+    // sidebar_categories → menu_groups → menus. Skipped when the caller passes
+    // an explicit $items array or $section (those keep full manual control).
+    $trailSource = $defaultTrail;
+    if ((! is_array($items) || ! count($items)) && is_null($section)) {
+        try {
+            $dbTrail = app(\App\Services\SidebarMenu\SidebarNavResolver::class)->breadcrumb();
+        } catch (\Throwable $e) {
+            $dbTrail = [];
+        }
+
+        // Trust the DB trail only when it resolved past Home; otherwise fall back
+        // to the legacy section-based trail for pages not yet in the menu tree.
+        if (is_array($dbTrail) && count($dbTrail) > 1) {
+            $lastLabel = trim((string) ($dbTrail[array_key_last($dbTrail)]['label'] ?? ''));
+
+            // Append the page title as the active crumb when it differs from the
+            // resolved menu name (e.g. Create/Edit sub-pages under a list menu).
+            if ($normalizedTitle !== '' && strcasecmp($lastLabel, $normalizedTitle) !== 0) {
+                $dbTrail[] = ['label' => $normalizedTitle, 'url' => null];
+            }
+
+            $trailSource = $dbTrail;
+        }
+    }
+
     $breadcrumbItems = collect(
         is_array($items) && count($items)
             ? array_values(array_filter($items, fn ($item) => filled($item)))
-            : $defaultTrail
+            : $trailSource
     )
         ->map(function ($item) {
             if (is_array($item)) {
