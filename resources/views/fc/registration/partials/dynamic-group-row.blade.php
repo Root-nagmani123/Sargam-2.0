@@ -5,6 +5,12 @@
         ? $group->activeGroupFields
         : $group->groupFields;
     $isReadonly = $readonly ?? false;
+
+    // Fields shown only when another field in the same row holds a given value.
+    // (Spouse Name dropdown appears only when "Is your spouse also registering?" = Yes.)
+    $conditionalOn = [
+        'spouse_name' => ['field' => 'spouse_in_cse', 'value' => 'Yes'],
+    ];
 @endphp
 
 @php $hideRemoveRow = ($group->max_rows <= 1 && $group->min_rows >= 1) || $isReadonly; @endphp
@@ -34,7 +40,11 @@
                     && $gf->lookup_table
                     && str_contains(strtolower((string) $gf->lookup_table), 'state');
             @endphp
-            <div class="{{ $gf->css_class }}">
+            <div class="{{ $gf->css_class }}"
+                @if(isset($conditionalOn[$gf->field_name]))
+                    data-fc-cond-name="{{ $groupName }}[{{ $i }}][{{ $conditionalOn[$gf->field_name]['field'] }}]"
+                    data-fc-cond-value="{{ $conditionalOn[$gf->field_name]['value'] }}"
+                @endif>
                 <label class="form-label small fw-semibold">
                     {{ $gf->label }}
                     @if($gf->is_required)<span class="text-danger">*</span>@endif
@@ -85,6 +95,7 @@
                             <option value="">-- Select --</option>
                             @if(count($lookupItems) > 0)
                                 @foreach($lookupItems as $item)
+                                    @if(trim((string) ($item->{$lblCol} ?? '')) === '') @continue @endif
                                     <option value="{{ $item->{$valCol} }}"
                                             @if($isStateLookup && isset($item->country_master_pk))
                                                 data-country-id="{{ $item->country_master_pk }}"
@@ -97,6 +108,21 @@
                                 @endforeach
                             @endif
                         </select>
+                        @break
+                    @case('radio')
+                        <div class="d-flex flex-wrap gap-3 mt-1">
+                            @foreach($options as $ri => $opt)
+                                <div class="form-check">
+                                    <input class="form-check-input @error($errorKey) is-invalid @enderror" type="radio"
+                                           name="{{ $fieldName }}" value="{{ $opt['value'] }}"
+                                           id="fc_grd_{{ $gf->id }}_{{ $i }}_{{ $ri }}"
+                                           @if($gf->is_required) data-required="1" @endif
+                                           {{ (string)$fieldValue === (string)$opt['value'] ? 'checked' : '' }}
+                                           {{ $isReadonly ? 'disabled' : '' }}>
+                                    <label class="form-check-label small" for="fc_grd_{{ $gf->id }}_{{ $i }}_{{ $ri }}">{{ $opt['label'] }}</label>
+                                </div>
+                            @endforeach
+                        </div>
                         @break
                     @case('checkbox')
                         @if(count($options) > 0)

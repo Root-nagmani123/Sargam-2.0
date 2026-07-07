@@ -10,6 +10,8 @@ use App\Models\FC\StudentMaster;
 use App\Services\FC\DynamicFormService;
 use App\Services\FC\FcProgrammeContextService;
 use App\Services\FC\FcRegistrationFlowService;
+use App\Services\FC\FcImportedProfileLockService;
+use App\Services\FC\HindiTransliterationService;
 use App\Services\FC\FcRegistrationIntentService;
 use App\Services\FC\FcRegistrationRegisteredSyncService;
 use App\Services\FC\RegistrationService;
@@ -28,6 +30,8 @@ class GenericFormController extends Controller
         private RegistrationService $registrationService,
         private FcProgrammeContextService $programmeContext,
         private FcRegistrationFlowService $registrationFlow,
+        private FcImportedProfileLockService $importedProfileLock,
+        private HindiTransliterationService $hindiTransliteration,
     ) {}
 
     // ── Form Dashboard — list steps for a form ───────────────────────
@@ -133,6 +137,13 @@ class GenericFormController extends Controller
         $existingData = $this->formService->getExistingData($step->step_slug, $userId);
         $districtOptions = $this->formService->getDistrictMasterOptions();
 
+        // Academy-provided identity fields (from the first Excel upload) are prefilled and locked.
+        $lockedFields = $this->importedProfileLock->lockedValuesForFields($fields, $userId);
+
+        // Suggest a Hindi (Devanagari) full name transliterated from the English name,
+        // but only when the field exists and is still empty — the trainee can edit it.
+        $prefillValues = $this->hindiFullNameSuggestion($fields, $lockedFields, $existingData);
+
         $allSteps  = $form->activeSteps;
         $stepIndex = $allSteps->search(fn($s) => $s->id === $step->id);
         $prevStep  = $stepIndex > 0 ? $allSteps[$stepIndex - 1] : null;
@@ -145,6 +156,8 @@ class GenericFormController extends Controller
             'lookups'         => $lookups,
             'existingData'    => $existingData,
             'districtOptions' => $districtOptions,
+            'lockedFields'    => $lockedFields,
+            'prefillValues'   => $prefillValues,
             'allSteps'        => $allSteps,
             'prevStep'        => $prevStep,
             'nextStep'        => $nextStep,
@@ -214,6 +227,31 @@ class GenericFormController extends Controller
 
             return redirect()->route('fc-reg.forms.dashboard', $form)
                 ->with('success', "{$step->step_name} saved. All steps completed!");
+        }
+
+        // Normalise PAN fields to uppercase before validation. The input only *looks*
+        // uppercase (CSS text-transform); the posted value keeps the typed case, so a
+        // lowercase entry would otherwise fail the uppercase [A-Z] PAN regex.
+        foreach ($fields as $field) {
+            if ($field->field_type === 'file') {
+                continue;
+            }
+            $isPan = strtolower((string) $field->field_name) === 'pan_card'
+                || str_contains(strtolower((string) $field->field_name), 'pan')
+                || str_contains(strtolower((string) $field->label), 'pan');
+            if ($isPan && $request->filled($field->field_name)) {
+                $request->merge([
+                    $field->field_name => strtoupper(trim((string) $request->input($field->field_name))),
+                ]);
+            }
+        }
+
+        // Force academy-provided identity fields to their imported values before
+        // validating/saving, so a locked field can never be overwritten (even if the
+        // read-only input is tampered with or a disabled control is not posted).
+        $lockedFields = $this->importedProfileLock->lockedValuesForFields($fields, $userId);
+        if ($lockedFields !== []) {
+            $request->merge($lockedFields);
         }
 
         $validated = $this->validateFlatStepOrRedirect($request, $form, $step, $fields);
@@ -336,6 +374,45 @@ class GenericFormController extends Controller
     /**
      * @return array<string, mixed>|RedirectResponse
      */
+    /**
+     * Build a one-off Hindi transliteration suggestion for a `full_name_hindi` field,
+     * used to prefill (not lock) the field when it is empty.
+     *
+     * @param  \Illuminate\Support\Collection<int, \App\Models\FC\FcFormField>  $fields
+     * @param  array<string, mixed>  $lockedFields
+     * @return array<string, string>  [field_name => suggested Hindi value]
+     */
+    private function hindiFullNameSuggestion($fields, array $lockedFields, ?object $existingData): array
+    {
+        $hindiField = $fields->firstWhere('target_column', 'full_name_hindi');
+        if (! $hindiField) {
+            return [];
+        }
+
+        // Respect an already-entered/saved Hindi name — never overwrite it.
+        if (filled(data_get($existingData, 'full_name_hindi'))) {
+            return [];
+        }
+
+        // Source the English name from the locked identity values, falling back to any saved values.
+        $parts = [];
+        foreach (['first_name', 'middle_name', 'last_name'] as $col) {
+            $val = $lockedFields[$col] ?? data_get($existingData, $col);
+            if (is_string($val) && trim($val) !== '') {
+                $parts[] = trim($val);
+            }
+        }
+
+        $english = implode(' ', $parts);
+        if ($english === '') {
+            return [];
+        }
+
+        $hindi = $this->hindiTransliteration->toHindi($english);
+
+        return $hindi !== null ? [$hindiField->field_name => $hindi] : [];
+    }
+
     private function validateFlatStepOrRedirect(Request $request, FcForm $form, FcFormStep $step, $fields)
     {
         $userId = Auth::id();

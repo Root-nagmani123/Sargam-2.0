@@ -3,10 +3,28 @@
     $fieldName   = $field->field_name;
     $fieldType   = $field->field_type;
     $value       = old($fieldName, $existingData->{$field->target_column ?? $fieldName} ?? $field->default_value ?? '');
+    // Academy-provided (first Excel upload) identity fields: prefilled + locked.
+    $lockedFields = $lockedFields ?? [];
+    $isLocked     = array_key_exists($fieldName, $lockedFields);
+    if ($isLocked) {
+        // The imported value always wins over old()/existing/default.
+        $value = $lockedFields[$fieldName];
+    }
+    // Editable server suggestion (e.g. transliterated Hindi name): fill only when empty.
+    $prefillValues = $prefillValues ?? [];
+    $isPrefilled   = false;
+    if (! $isLocked && ($value === '' || $value === null) && array_key_exists($fieldName, $prefillValues)) {
+        $value = $prefillValues[$fieldName];
+        $isPrefilled = ($value !== '' && $value !== null);
+    }
     if ($fieldType === 'number' && $value !== '' && $value !== null) {
         $value = fc_numeric_display_value($value);
     }
     $isReadonly  = $readonly ?? false;
+    // Text-like inputs use `readonly` so the value still submits; choice controls
+    // (select/radio/checkbox/file) can't be readonly, so they are `disabled`.
+    $inputLockAttr  = $isLocked ? 'readonly' : ($isReadonly ? 'disabled' : '');
+    $choiceLockAttr = ($isLocked || $isReadonly) ? 'disabled' : '';
     $options     = $field->decoded_options ?? [];
     $lookupItems = $lookups[$fieldName] ?? [];
     $valCol      = $field->lookup_value_column ?? 'id';
@@ -83,7 +101,7 @@
     @case('date')
         <input type="{{ $fieldType === 'number' ? 'text' : $fieldType }}"
                name="{{ $fieldName }}"
-               class="form-control @error($fieldName) is-invalid @enderror"
+               class="form-control @error($fieldName) is-invalid @enderror @if($isLocked) bg-light @endif"
                value="{{ $value }}"
                placeholder="{{ $field->placeholder ?? '' }}"
                inputmode="{{ $textInputMode }}"
@@ -91,9 +109,9 @@
                @if($fieldType === 'date' && in_array(strtolower((string) ($field->target_column ?? $fieldName)), ['date_of_birth', 'dob'], true))
                    max="{{ now()->subYears(15)->format('Y-m-d') }}"
                @endif
-               @if($isPanField) style="text-transform:uppercase" @endif
+               @if($isPanField) style="text-transform:uppercase" oninput="this.value = this.value.toUpperCase()" @endif
                @if($field->is_required) data-fc-required="1" aria-required="true" @endif
-               {{ $isReadonly ? 'disabled' : '' }}>
+               {{ $inputLockAttr }}>
         @if($isPanField)
             <div class="form-text text-muted">{{ $panHelp }}</div>
         @endif
@@ -101,23 +119,27 @@
 
     @case('textarea')
         <textarea name="{{ $fieldName }}"
-                  class="form-control @error($fieldName) is-invalid @enderror"
+                  class="form-control @error($fieldName) is-invalid @enderror @if($isLocked) bg-light @endif"
                   rows="3"
                   placeholder="{{ $field->placeholder ?? '' }}"
                   inputmode="{{ $textInputMode }}"
                   @if($textPattern) pattern="{{ $textPattern }}" @endif
                   @if($field->is_required) data-fc-required="1" aria-required="true" @endif
-                  {{ $isReadonly ? 'disabled' : '' }}>{{ $value }}</textarea>
+                  {{ $inputLockAttr }}>{{ $value }}</textarea>
         @break
 
     @case('select')
-        <select name="{{ $fieldName }}"
-                class="form-select @error($fieldName) is-invalid @enderror
+        @if($isLocked)
+            {{-- A disabled <select> is not submitted; mirror the locked value in a hidden input. --}}
+            <input type="hidden" name="{{ $fieldName }}" value="{{ $value }}">
+        @endif
+        <select @if(! $isLocked) name="{{ $fieldName }}" @endif
+                class="form-select @error($fieldName) is-invalid @enderror @if($isLocked) bg-light @endif
                     @if($isStateLookup) fc-state-select @endif
                     @if($isCountryLookup) fc-country-select @endif"
                 @if($isStateLookup && $pairedCountryField) data-fc-country-field="{{ $pairedCountryField }}" @endif
-                @if($field->is_required) data-fc-required="1" aria-required="true" @endif
-                {{ $isReadonly ? 'disabled' : '' }}>
+                @if($field->is_required && ! $isLocked) data-fc-required="1" aria-required="true" @endif
+                {{ $choiceLockAttr }}>
             <option value="">-- Select --</option>
             @if($field->lookup_table && count($lookupItems) > 0)
                 @foreach($lookupItems as $item)
@@ -253,6 +275,14 @@
 @error($fieldName)
     <div class="invalid-feedback">{{ $message }}</div>
 @enderror
+
+@if($isLocked)
+    <small class="text-muted d-block mt-1"><i class="bi bi-lock-fill"></i> Provided by the academy — not editable.</small>
+@endif
+
+@if($isPrefilled)
+    <small class="text-muted d-block mt-1"><i class="bi bi-translate"></i> Auto-filled from your name — please verify the Hindi spelling.</small>
+@endif
 
 @if($field->help_text && ! $isPanField && $fieldType !== 'file')
     <small class="text-muted d-block mt-1">{{ $field->help_text }}</small>

@@ -44,7 +44,7 @@
 
                             @if (stripos($exemption->Exemption_name, 'completed foundation course') !== false)
                                 <div class="col-md-6">
-                                    <label for="course" class="form-label fw-semibold">Course <span
+                                    <label for="course" class="form-label fw-semibold">Already Completed Foundation Course <span
                                             class="text-danger">*</span></label>
                                     <input type="text" class="form-control rounded-3 @error('course') is-invalid @enderror"
                                         id="course" name="course" placeholder="Enter your course" value="{{ old('course') }}"

@@ -104,6 +104,39 @@ class FcRegistrationIntentService
     }
 
     /**
+     * Best-effort encrypted ?form= query for the shared FC header login/logout links,
+     * so the programme token survives navigation across the public funnel and after login.
+     *
+     * Resolution order (most authoritative first):
+     *   1. Logged-in dynamic form pages (/fc-reg/forms/{form}) already carry the FcForm.
+     *   2. Session intent captured earlier in the funnel.
+     *   3. The encrypted token already present in the current URL.
+     *
+     * @return array{form?: string}
+     */
+    public function formQueryForHeaderLinks(Request $request): array
+    {
+        $routeForm = $request->route('form');
+        if ($routeForm instanceof FcForm && $routeForm->getKey()) {
+            return ['form' => FcEncryptedFormId::encode((int) $routeForm->getKey())];
+        }
+
+        $id = $request->session()->get(self::SESSION_FORM_ID);
+        if (is_numeric($id) && (int) $id > 0) {
+            return ['form' => FcEncryptedFormId::encode((int) $id)];
+        }
+
+        foreach (['form', 'formid'] as $key) {
+            $token = $request->query($key);
+            if (is_string($token) && $token !== '') {
+                return ['form' => $token];
+            }
+        }
+
+        return [];
+    }
+
+    /**
      * After successful Auth::login from FC web credentials form.
      * Callers should read session into local variables before login if session may migrate.
      *

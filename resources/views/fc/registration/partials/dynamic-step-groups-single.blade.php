@@ -12,6 +12,16 @@
         : route('fc-reg.forms.dashboard', $form);
 @endphp
 @include('fc.registration.partials.fc-form-theme')
+
+{{-- Choices.js — searchable dropdowns (e.g. Spouse Name from fc_registration_master). --}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<style>
+    .choices-field .choices { margin-bottom: 0; }
+    .choices-field .choices__inner { min-height: calc(1.5em + .5rem + 2px); padding: .2rem .5rem; font-size: .875rem; border-radius: .375rem; background: #fff; }
+    .choices-field .choices__list--dropdown .choices__item { font-size: .875rem; }
+</style>
+
 <div class="fc-form-page">
 <div class="fc-shell fc-step3-page">
     <div class="fc-band">
@@ -281,6 +291,67 @@ document.querySelectorAll('.fc-file-upload[data-max-kb]').forEach(function (inpu
             alert('Could not save all sections. Please review your entries and try again.');
         }
     });
+})();
+
+// Choices.js searchable dropdowns + conditional show/hide.
+// A field marked with .choices-field becomes a searchable dropdown; a field carrying
+// data-fc-cond-* is shown only when another field in the same row holds a given value
+// (e.g. Spouse Name appears only when "Is your spouse also registering?" = Yes).
+(function () {
+    function initChoices() {
+        if (typeof window.Choices === 'undefined') { return; }
+        document.querySelectorAll('.choices-field select').forEach(function (sel) {
+            if (sel._choices) { return; }
+            try {
+                sel._choices = new window.Choices(sel, {
+                    searchEnabled: true,
+                    shouldSort: false,
+                    itemSelectText: '',
+                    searchPlaceholderValue: 'Type to search…',
+                    placeholderValue: '-- Select --',
+                });
+            } catch (e) {}
+        });
+    }
+
+    function clearField(f) {
+        if (f._choices) {
+            try { f._choices.setChoiceByValue(''); } catch (e) {}
+            f.value = '';
+        } else if (f.tagName === 'SELECT') {
+            f.selectedIndex = 0;
+        } else if (f.type === 'checkbox' || f.type === 'radio') {
+            f.checked = false;
+        } else {
+            f.value = '';
+        }
+        f.classList.remove('is-invalid');
+    }
+
+    function applyConditionalFields() {
+        document.querySelectorAll('[data-fc-cond-name]').forEach(function (el) {
+            var name = el.getAttribute('data-fc-cond-name');
+            var want = el.getAttribute('data-fc-cond-value');
+            var scope = el.closest('.repeatable-row') || document;
+            var checked = scope.querySelector('input[name="' + name + '"]:checked');
+            var show = !!(checked && checked.value === want);
+            el.style.display = show ? '' : 'none';
+            if (!show) {
+                el.querySelectorAll('select, input, textarea').forEach(clearField);
+            }
+        });
+    }
+
+    document.addEventListener('change', function (e) {
+        if (e.target && e.target.matches && e.target.matches('input[type=radio]')) {
+            applyConditionalFields();
+        }
+    });
+
+    function boot() { initChoices(); applyConditionalFields(); }
+    if (window.jQuery) { jQuery(boot); }
+    else if (document.readyState !== 'loading') { boot(); }
+    else { document.addEventListener('DOMContentLoaded', boot); }
 })();
 </script>
 @endpush

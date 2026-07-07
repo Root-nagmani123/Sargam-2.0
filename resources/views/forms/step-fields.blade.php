@@ -124,6 +124,8 @@
                             'lookups'         => $lookups,
                             'districtOptions' => $districtOptions ?? collect(),
                             'readonly'        => false,
+                            'lockedFields'    => $lockedFields ?? [],
+                            'prefillValues'   => $prefillValues ?? [],
                         ])
                     </div>
                 @endforeach
