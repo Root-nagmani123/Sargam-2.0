@@ -332,10 +332,13 @@
                             // load — without this, it would keep pointing at whatever
                             // filters were active on that initial load (e.g. today-only)
                             // even after AJAX-applying different filters, silently
-                            // exporting the wrong/empty dataset.
+                            // exporting the wrong/empty dataset. Reuse this fetch's own
+                            // query string (minus per_page, which the export doesn't use).
                             const downloadLink = document.getElementById('discDownloadLink');
                             if (downloadLink) {
-                                downloadLink.href = "{{ route('memo.discipline.export_csv') }}" + (params ? '?' + params : '');
+                                const listParams = new URLSearchParams(url.split('?')[1] || '');
+                                listParams.delete('per_page');
+                                downloadLink.href = "{{ route('memo.discipline.export_csv') }}" + '?' + listParams.toString();
                             }
                         })
                         .catch(function() {

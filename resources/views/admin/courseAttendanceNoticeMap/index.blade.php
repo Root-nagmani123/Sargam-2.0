@@ -241,7 +241,7 @@
                     'search' => $searchFilter ?? '',
                 ]);
             @endphp
-            <a href="{{ $mnmDownloadUrl }}" class="mnm-download">
+            <a href="{{ $mnmDownloadUrl }}" id="mnmDownloadLink" class="mnm-download">
                 <i class="bi bi-download"></i> Download
             </a>
             @endunless
@@ -1336,6 +1336,15 @@ $(function () {
                 var newList = doc.querySelector('#mnmListContainer');
                 if (newList) { listContainer.innerHTML = newList.innerHTML; }
                 window.history.replaceState({}, '', url);
+
+                // The Download link is a static server-rendered href from page load —
+                // without this, it would keep pointing at whatever filters were active
+                // on that initial load (e.g. today-only) even after AJAX-applying
+                // different filters, silently exporting the wrong/empty dataset.
+                var downloadLink = document.getElementById('mnmDownloadLink');
+                if (downloadLink) {
+                    downloadLink.href = "{{ route('memo.notice.management.export_csv') }}" + (params ? '?' + params : '');
+                }
             })
             .catch(function () { alert('Failed to apply filters'); })
             .finally(function () {
