@@ -1182,16 +1182,55 @@ class UserController extends Controller
             ->map(fn ($m) => $m->house_name ?? null)
             ->filter()->unique()->sort()->values();
 
-        // Server-side filters (Course / ACC / Group / Cadre / House) + Present-Absent attendance tab.
+        // Session (class-session time slot) options for the Session filter dropdown.
+        $sessionOptions = $students
+            ->map(fn ($m) => $m->session_time ?? null)
+            ->filter(fn ($s) => $s !== null && trim((string) $s) !== '')
+            ->unique()->sort()->values();
+
+        // OT / Participant options (each distinct student) for that filter dropdown.
+        $participantOptions = $students
+            ->map(function ($m) {
+                $s = $m->studentMaster;
+                if (! $s) {
+                    return null;
+                }
+                $name = $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''));
+                $code = $s->generated_OT_code ?? '';
+                return (object) [
+                    'pk' => (string) $s->pk,
+                    'label' => trim(($code !== '' ? $code . ' — ' : '') . $name),
+                ];
+            })
+            ->filter()->unique('pk')->sortBy('label')->values();
+
+        // Server-side filters (Course / ACC / Group / Cadre / House / Session / Participant).
         $students = $this->applyDashboardStudentListFilters($students, $request);
 
-        // Split into both tabs so the view can render both panels and switch
-        // between them client-side (no page reload on tab change).
+        // Tab counts (All / Present / Absent) for the initial render; the DataTable
+        // response refreshes them live on every filter change.
         $presentStudents = $students->filter(fn ($m) => ($m->attendance_present ?? true) === true)->values();
         $absentStudents = $students->filter(fn ($m) => ($m->attendance_present ?? true) === false)->values();
 
-        $attendance = $request->input('attendance', 'present');
-        $students = $attendance === 'absent' ? $absentStudents : $presentStudents;
+        $tabCounts = [
+            'all' => $students->count(),
+            'present' => $presentStudents->count(),
+            'absent' => $absentStudents->count(),
+        ];
+
+        $attendance = $request->input('attendance', 'all');
+        $students = $attendance === 'present'
+            ? $presentStudents
+            : ($attendance === 'absent' ? $absentStudents : $students->values());
+
+        // Title bar: the selected course's name, else a generic heading.
+        $listTitle = 'Student List';
+        if ($request->filled('course_id')) {
+            $selected = $availableCourses->firstWhere('pk', $request->input('course_id'));
+            if ($selected) {
+                $listTitle = (is_array($selected) ? ($selected['course_name'] ?? '') : ($selected->course_name ?? '')) ?: $listTitle;
+            }
+        }
 
         $dutyTypes = DB::table('mdo_duty_type_master')
             ->where('active_inactive', 1)
@@ -1206,13 +1245,15 @@ class UserController extends Controller
             'duty_type' => (string) $request->input('duty_type', ''),
             'from_date' => (string) $request->input('from_date', ''),
             'to_date' => (string) $request->input('to_date', ''),
-            'attendance' => (string) $request->input('attendance', 'present'),
+            'attendance' => (string) $request->input('attendance', 'all'),
             'cadre' => (string) $request->input('cadre', ''),
             'house' => (string) $request->input('house', ''),
             'counsellor_faculty' => (string) $request->input('counsellor_faculty', ''),
+            'session' => (string) $request->input('session', ''),
+            'participant' => (string) $request->input('participant', ''),
         ];
 
-        return view('admin.dashboard.student_list', compact('students', 'presentStudents', 'absentStudents', 'availableCourses', 'counsellorTypes', 'counsellorFaculties', 'groupNames', 'dutyTypes', 'filters', 'cadreOptions', 'houseOptions'));
+        return view('admin.dashboard.student_list', compact('students', 'presentStudents', 'absentStudents', 'availableCourses', 'counsellorTypes', 'counsellorFaculties', 'groupNames', 'dutyTypes', 'filters', 'cadreOptions', 'houseOptions', 'sessionOptions', 'participantOptions', 'tabCounts', 'listTitle'));
     }
 
     /**
@@ -1379,10 +1420,62 @@ class UserController extends Controller
                     }
                 }
 
+                // Source 3 — students of sessions the faculty TAUGHT. A faculty is
+                // assigned to a timetable session via faculty_master / internal_faculty
+                // (JSON PK arrays). If they neither coordinate the course (source1) nor
+                // own the class group (source2), those students would otherwise be
+                // invisible — so their own sessions' attendance never shows. Pull them
+                // in here (the session-level scope in expandStudentRowsBySession then
+                // keeps only this faculty's own sessions for such non-coordinated courses).
+                $source3Students = collect([]);
+                if ($facultyPk && ! $isSuperAdmin) {
+                    $taughtRows = DB::table('course_student_attendance as a')
+                        ->join('timetable as t', 'a.timetable_pk', '=', 't.pk')
+                        ->where(function ($q) use ($facultyPk) {
+                            $q->whereRaw('JSON_CONTAINS(t.faculty_master, ?)', [json_encode((string) $facultyPk)])
+                              ->orWhereRaw('FIND_IN_SET(?, t.faculty_master)', [$facultyPk])
+                              ->orWhereRaw('JSON_CONTAINS(t.internal_faculty, ?)', [json_encode((string) $facultyPk)])
+                              ->orWhereRaw('FIND_IN_SET(?, t.internal_faculty)', [$facultyPk]);
+                        })
+                        ->distinct()
+                        ->get(['a.Student_master_pk as student_pk', 'a.course_master_pk as course_pk']);
+
+                    if ($taughtRows->isNotEmpty()) {
+                        $activeTaughtCourseIds = CourseMaster::whereIn('pk', $taughtRows->pluck('course_pk')->unique()->filter())
+                            ->where('active_inactive', 1)
+                            ->where('end_date', '>=', now())
+                            ->pluck('pk');
+                        $activeTaughtSet = $activeTaughtCourseIds->map(fn ($p) => (string) $p)->all();
+
+                        if (! empty($activeTaughtSet)) {
+                            $pairs = $taughtRows->filter(fn ($r) => in_array((string) $r->course_pk, $activeTaughtSet, true));
+                            $taughtStudents = \App\Models\StudentMaster::with('cadre')
+                                ->whereIn('pk', $pairs->pluck('student_pk')->unique()->filter())
+                                ->get()->keyBy(fn ($m) => (string) $m->pk);
+                            $taughtCourses = CourseMaster::whereIn('pk', $activeTaughtCourseIds)
+                                ->get()->keyBy(fn ($c) => (string) $c->pk);
+
+                            foreach ($pairs as $r) {
+                                $student = $taughtStudents->get((string) $r->student_pk);
+                                $course = $taughtCourses->get((string) $r->course_pk);
+                                if ($student && $course) {
+                                    $o = new \stdClass();
+                                    $o->student_master_pk = $r->student_pk;
+                                    $o->course_master_pk = $r->course_pk;
+                                    $o->studentMaster = $student;
+                                    $o->course = $course;
+                                    $o->source = 'session_taught';
+                                    $source3Students->push($o);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 $seenStudentCourseKeys = [];
                 $uniqueStudents = collect([]);
 
-                foreach ($source2Students->concat($source1Students) as $studentMap) {
+                foreach ($source2Students->concat($source1Students)->concat($source3Students) as $studentMap) {
                     $studentPk = $studentMap->student_master_pk;
                     $coursePk = $studentMap->course_master_pk ?? 0;
                     $studentCourseKey = $studentPk . '_' . $coursePk;
@@ -1480,8 +1573,16 @@ class UserController extends Controller
                     $studentMap->house_name = ($uid && isset($houseByUser[$uid])) ? $houseByUser[$uid] : null;
                 }
 
+                // Faculty session scope: a plain session-teacher sees only the
+                // sessions THEY conducted; a CC/ACC sees all sessions of the courses
+                // they coordinate. Super Admin (even with a faculty pk) is unscoped.
+                $sessionFacultyScope = $isSuperAdmin ? null : $facultyPk;
+                $coordinatorCourseIds = $sessionFacultyScope
+                    ? $this->getCoordinatorCourseIds($sessionFacultyScope)->map(fn ($id) => (string) $id)->values()->all()
+                    : [];
+
                 // One row per marked attendance session (student totals repeat per row).
-                $uniqueStudents = $this->expandStudentRowsBySession($uniqueStudents, $attendanceSessions);
+                $uniqueStudents = $this->expandStudentRowsBySession($uniqueStudents, $attendanceSessions, $sessionFacultyScope, $coordinatorCourseIds);
 
                 $students = $uniqueStudents->filter(function ($studentMap) {
                     return ! empty($studentMap->studentMaster);
@@ -1757,6 +1858,8 @@ class UserController extends Controller
                 't.START_DATE as session_date',
                 't.class_session as session_time',
                 't.subject_topic as session_topic',
+                't.faculty_master as session_faculty_master',
+                't.internal_faculty as session_internal_faculty',
             ])
             ->groupBy('spk')
             ->map(function ($sessions) {
@@ -1769,6 +1872,8 @@ class UserController extends Controller
                     'session_date' => $r->session_date ?? null,
                     'session_time' => $r->session_time ?? null,
                     'session_topic' => $r->session_topic ?? null,
+                    'session_faculty_master' => $r->session_faculty_master ?? null,
+                    'session_internal_faculty' => $r->session_internal_faculty ?? null,
                 ])->values()->all();
             })
             ->all();
@@ -1788,7 +1893,7 @@ class UserController extends Controller
      * @param  array<int, array<int, array<string, mixed>>>  $attendanceSessions
      * @return \Illuminate\Support\Collection
      */
-    private function expandStudentRowsBySession(\Illuminate\Support\Collection $uniqueStudents, array $attendanceSessions): \Illuminate\Support\Collection
+    private function expandStudentRowsBySession(\Illuminate\Support\Collection $uniqueStudents, array $attendanceSessions, $facultyScopePk = null, array $coordinatorCourseIds = []): \Illuminate\Support\Collection
     {
         $expanded = collect();
 
@@ -1806,12 +1911,28 @@ class UserController extends Controller
                 }));
             }
 
+            // Faculty session scope: for a course the faculty only TEACHES (not
+            // CC/ACC), keep just the sessions they themselves conducted. For
+            // courses they coordinate (CC/ACC) — and for Super Admin
+            // ($facultyScopePk null) — all sessions stay.
+            if ($facultyScopePk !== null) {
+                $isCoordinatedCourse = $coursePk !== null
+                    && in_array((string) $coursePk, $coordinatorCourseIds, true);
+                if (! $isCoordinatedCourse) {
+                    $sessions = array_values(array_filter($sessions, function ($s) use ($facultyScopePk) {
+                        return $this->sessionHasFaculty($s, $facultyScopePk);
+                    }));
+                }
+            }
+
             if (empty($sessions)) {
                 $studentMap->attendance_present = true;
                 $studentMap->attendance_status = null;
                 $studentMap->session_date = null;
                 $studentMap->session_time = null;
                 $studentMap->session_topic = null;
+                $studentMap->session_faculty_master = null;
+                $studentMap->session_internal_faculty = null;
                 $studentMap->has_session_in_range = false;
                 $expanded->push($studentMap);
                 continue;
@@ -1824,12 +1945,45 @@ class UserController extends Controller
                 $row->session_date = $session['session_date'];
                 $row->session_time = $session['session_time'];
                 $row->session_topic = $session['session_topic'];
+                $row->session_faculty_master = $session['session_faculty_master'] ?? null;
+                $row->session_internal_faculty = $session['session_internal_faculty'] ?? null;
                 $row->has_session_in_range = true;
                 $expanded->push($row);
             }
         }
 
         return $expanded;
+    }
+
+    /**
+     * Does a resolved session belong to the given faculty? Checks the timetable's
+     * faculty_master / internal_faculty JSON PK arrays carried on the session.
+     */
+    private function sessionHasFaculty(array $session, $facultyPk): bool
+    {
+        $pk = (int) $facultyPk;
+        if ($pk === 0) {
+            return false;
+        }
+
+        foreach (['session_faculty_master', 'session_internal_faculty'] as $key) {
+            $raw = $session[$key] ?? null;
+            if ($raw === null || $raw === '') {
+                continue;
+            }
+            $decoded = is_array($raw) ? $raw : json_decode((string) $raw, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                foreach ($decoded as $id) {
+                    if (is_numeric($id) && (int) $id === $pk) {
+                        return true;
+                    }
+                }
+            } elseif (is_numeric($raw) && (int) $raw === $pk) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function applyDashboardStudentListFilters($students, Request $request)
@@ -1840,6 +1994,8 @@ class UserController extends Controller
         $groupPk = $request->input('group_pk');
         $cadre = $request->input('cadre');
         $house = $request->input('house');
+        $session = (string) $request->input('session', '');
+        $participant = (string) $request->input('participant', '');
         $searchInput = $request->input('search', '');
         $searchValue = is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput;
         $search = strtolower(trim((string) $searchValue));
@@ -1849,7 +2005,7 @@ class UserController extends Controller
         // on the chosen day(s), the list ends up empty ("Data not found.").
         $hasSessionDateFilter = $request->filled('from_date') && $request->filled('to_date');
 
-        return $students->filter(function ($studentMap) use ($courseId, $roleFilter, $counsellorFaculty, $groupPk, $cadre, $house, $search, $hasSessionDateFilter) {
+        return $students->filter(function ($studentMap) use ($courseId, $roleFilter, $counsellorFaculty, $groupPk, $cadre, $house, $session, $participant, $search, $hasSessionDateFilter) {
             $student = $studentMap->studentMaster;
             $course = $studentMap->course;
             $counsellorTypePk = (string) ($studentMap->groupMapping->groupTypeMasterCourseMasterMap->type_name ?? '');
@@ -1858,6 +2014,16 @@ class UserController extends Controller
             $rowCourseId = (string) ($course->pk ?? '');
 
             if ($hasSessionDateFilter && ! ($studentMap->has_session_in_range ?? false)) {
+                return false;
+            }
+
+            // Session (class-session time slot) filter.
+            if ($session !== '' && (string) ($studentMap->session_time ?? '') !== $session) {
+                return false;
+            }
+
+            // OT / Participant filter (a specific student).
+            if ($participant !== '' && (string) ($student->pk ?? '') !== $participant) {
                 return false;
             }
 
@@ -1918,64 +2084,60 @@ class UserController extends Controller
      */
     private function dashboardStudentListDataTableResponse(Request $request, $students)
     {
-        $attendance = (string) $request->input('attendance', 'present');
-        $attendanceStudents = $attendance === 'absent'
-            ? $students->filter(fn ($m) => ($m->attendance_present ?? true) === false)->values()
-            : $students->filter(fn ($m) => ($m->attendance_present ?? true) === true)->values();
+        $attendance = (string) $request->input('attendance', 'all');
 
-        $recordsTotal = $attendanceStudents->count();
-        $filteredStudents = $this->applyDashboardStudentListFilters($attendanceStudents, $request)->values();
-        $recordsFiltered = $filteredStudents->count();
+        // Apply the shared filters ONCE to the full set, then split for the tab
+        // counts. The requested tab decides which subset becomes the table rows.
+        $filteredAll = $this->applyDashboardStudentListFilters($students, $request)->values();
+        $presentAll = $filteredAll->filter(fn ($m) => ($m->attendance_present ?? true) === true)->values();
+        $absentAll = $filteredAll->filter(fn ($m) => ($m->attendance_present ?? true) === false)->values();
 
-        $columnMap = $attendance === 'absent'
-            ? [
-                0 => 'serial_no',
-                1 => 'ot_code',
-                2 => 'name',
-                3 => 'email',
-                4 => 'cadre',
-                5 => 'status',
-                6 => 'session',
-                7 => 'topic',
-                8 => 'medical',
-                9 => 'pt',
-                10 => 'stationed',
-            ]
-            : [
-                0 => 'serial_no',
-                1 => 'ot_code',
-                2 => 'name',
-                3 => 'email',
-                4 => 'cadre',
-                5 => 'status',
-                6 => 'session',
-                7 => 'topic',
-                8 => 'house',
-                9 => 'duty',
-                10 => 'medical',
-                11 => 'pt',
-                12 => 'stationed',
-                13 => 'notice',
-                14 => 'memo',
-            ];
+        $counts = [
+            'all' => $filteredAll->count(),
+            'present' => $presentAll->count(),
+            'absent' => $absentAll->count(),
+        ];
+
+        $rows = $attendance === 'present'
+            ? $presentAll
+            : ($attendance === 'absent' ? $absentAll : $filteredAll);
+
+        // recordsTotal = attendance-tab size before the DataTables search box;
+        // recordsFiltered = after all filters (search included above).
+        $recordsTotal = $counts[$attendance] ?? $counts['all'];
+        $recordsFiltered = $rows->count();
+
+        // Unified 12-column layout (same for All / Present / Absent).
+        $columnMap = [
+            0 => 'serial_no',
+            1 => 'ot_code',
+            2 => 'name',
+            3 => 'username',
+            4 => 'cadre',
+            5 => 'session',
+            6 => 'topic',
+            7 => 'faculty',
+            8 => 'status',
+            9 => 'mdo',
+            10 => 'escort',
+            11 => 'other_exempt',
+        ];
 
         $orderCol = (int) $request->input('order.0.column', 0);
         $orderDir = strtolower((string) $request->input('order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
         $sortKey = $columnMap[$orderCol] ?? 'serial_no';
 
         if ($sortKey !== 'serial_no') {
-            $filteredStudents = $filteredStudents->sortBy(function ($studentMap) use ($sortKey) {
+            $rows = $rows->sortBy(function ($studentMap) use ($sortKey) {
                 return $this->dashboardStudentListSortValue($studentMap, $sortKey);
             }, SORT_NATURAL | SORT_FLAG_CASE, $orderDir === 'desc')->values();
         }
 
         $start = max(0, (int) $request->input('start', 0));
         $length = (int) $request->input('length', 10);
-        if ($length < 0) {
-            $pagedStudents = $filteredStudents->slice($start)->values();
-        } else {
-            $pagedStudents = $filteredStudents->slice($start, $length)->values();
-        }
+        $pagedStudents = $length < 0
+            ? $rows->slice($start)->values()
+            : $rows->slice($start, $length)->values();
 
         $data = [];
         foreach ($pagedStudents as $idx => $studentMap) {
@@ -1986,43 +2148,26 @@ class UserController extends Controller
 
             $detailUrl = route('admin.dashboard.students.detail', encrypt($student->pk));
             $displayName = $student->display_name ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
-            $sessionDate = $studentMap->session_date ? Carbon::parse($studentMap->session_date)->format('d-m-Y') : 'N/A';
-            $sessionTime = $studentMap->session_time ?? '';
-            $sessionHtml = '<div class="fw-medium">' . e($sessionDate) . '</div>'
-                . ($sessionTime !== '' ? '<div class="small text-muted">' . e($sessionTime) . '</div>' : '');
+            $statusCode = (int) ($studentMap->attendance_status ?? 0);
 
-            $baseRow = [
+            $data[] = [
                 's_no' => $start + $idx + 1,
                 'ot_code' => $student->generated_OT_code ?? 'N/A',
                 'name' => '<a href="' . e($detailUrl) . '" class="sl-count">' . e($displayName) . '</a>',
-                'email' => $student->email ?? 'N/A',
-                'cadre' => $student->cadre->cadre_name ?? 'N/A',
+                'username' => e($student->email ?? 'N/A'),
+                'cadre' => e($student->cadre->cadre_name ?? 'N/A'),
+                'session' => e($studentMap->session_time ?: 'N/A'),
+                'topic' => e($studentMap->session_topic ?: 'N/A'),
+                'faculty' => e($this->dashboardResolveSessionFaculty(
+                    $studentMap->session_faculty_master ?? null,
+                    $studentMap->session_internal_faculty ?? null
+                )),
                 'status' => '<span class="sl-status-badge '
                     . (($studentMap->attendance_present ?? true) ? 'sl-status-present' : 'sl-status-absent')
-                    . '">' . e($this->dashboardAttendanceStatusLabel($studentMap)) . '</span>',
-                'date_session' => $sessionHtml,
-                'topic' => $studentMap->session_topic ?: 'N/A',
-            ];
-
-            $sectionUrl = fn ($section) => $detailUrl . '?section=' . $section;
-
-            if ($attendance === 'absent') {
-                $data[] = $baseRow + [
-                    'total_medical_exception_count' => '<a href="' . e($sectionUrl('medicalExceptionsSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_medical_exception_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
-                    'total_pt_exemption_count' => '<a href="' . e($sectionUrl('ptExemptionsSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_pt_exemption_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
-                    'total_stationed_leave_count' => '<a href="' . e($sectionUrl('stationedLeavesSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_stationed_leave_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
-                ];
-                continue;
-            }
-
-            $data[] = $baseRow + [
-                'house_name' => $studentMap->house_name ?? 'N/A',
-                'total_duty_count' => '<a href="' . e($sectionUrl('dutiesSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_duty_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
-                'total_medical_exception_count' => '<a href="' . e($sectionUrl('medicalExceptionsSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_medical_exception_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
-                'total_pt_exemption_count' => '<a href="' . e($sectionUrl('ptExemptionsSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_pt_exemption_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
-                'total_stationed_leave_count' => '<a href="' . e($sectionUrl('stationedLeavesSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_stationed_leave_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
-                'total_notice_count' => '<a href="' . e($sectionUrl('noticesSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_notice_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
-                'total_memo_count' => '<a href="' . e($sectionUrl('memosSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_memo_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
+                    . '">' . (($studentMap->attendance_present ?? true) ? 'Present' : 'Absent') . '</span>',
+                'mdo' => $statusCode === 4 ? 'Yes' : '-',
+                'escort' => $statusCode === 5 ? 'Yes' : '-',
+                'other_exempt' => $statusCode === 6 ? 'Medical' : ($statusCode === 7 ? 'Other' : '-'),
             ];
         }
 
@@ -2030,6 +2175,7 @@ class UserController extends Controller
             'draw' => (int) $request->input('draw', 1),
             'recordsTotal' => $recordsTotal,
             'recordsFiltered' => $recordsFiltered,
+            'counts' => $counts,
             'data' => $data,
         ]);
     }
@@ -2060,6 +2206,49 @@ class UserController extends Controller
         };
     }
 
+    /**
+     * Resolve the faculty name(s) for a session row from the timetable's
+     * faculty_master / internal_faculty JSON PK arrays. Cached per PK-set.
+     */
+    private function dashboardResolveSessionFaculty($facultyMasterRaw, $internalFacultyRaw): string
+    {
+        static $cache = [];
+
+        $ids = [];
+        foreach ([$facultyMasterRaw, $internalFacultyRaw] as $raw) {
+            if ($raw === null || $raw === '') {
+                continue;
+            }
+            $decoded = is_array($raw) ? $raw : json_decode((string) $raw, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                foreach ($decoded as $id) {
+                    if (is_numeric($id)) {
+                        $ids[] = (int) $id;
+                    }
+                }
+            } elseif (is_numeric($raw)) {
+                $ids[] = (int) $raw;
+            }
+        }
+
+        $ids = array_values(array_unique(array_filter($ids)));
+        if (empty($ids)) {
+            return 'N/A';
+        }
+        sort($ids);
+        $cacheKey = implode(',', $ids);
+
+        if (! array_key_exists($cacheKey, $cache)) {
+            $names = \App\Models\FacultyMaster::whereIn('pk', $ids)
+                ->pluck('full_name')
+                ->filter(static fn ($n) => $n !== null && trim((string) $n) !== '')
+                ->values();
+            $cache[$cacheKey] = $names->isNotEmpty() ? $names->implode(', ') : 'N/A';
+        }
+
+        return $cache[$cacheKey];
+    }
+
     private function dashboardStudentListSortValue($studentMap, string $sortKey)
     {
         $student = $studentMap->studentMaster;
@@ -2067,11 +2256,15 @@ class UserController extends Controller
         return match ($sortKey) {
             'ot_code' => strtolower((string) ($student->generated_OT_code ?? '')),
             'name' => strtolower(trim((string) (($student->display_name ?? '') ?: trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''))))),
-            'email' => strtolower((string) ($student->email ?? '')),
+            'username', 'email' => strtolower((string) ($student->email ?? '')),
             'cadre' => strtolower((string) ($student->cadre->cadre_name ?? '')),
             'status' => (int) ($studentMap->attendance_present ?? true),
-            'session' => (string) ($studentMap->session_date ?? ''),
+            'session' => (string) ($studentMap->session_time ?? ''),
             'topic' => strtolower((string) ($studentMap->session_topic ?? '')),
+            'faculty' => strtolower((string) $this->dashboardResolveSessionFaculty($studentMap->session_faculty_master ?? null, $studentMap->session_internal_faculty ?? null)),
+            'mdo' => (int) ($studentMap->attendance_status ?? 0) === 4 ? 1 : 0,
+            'escort' => (int) ($studentMap->attendance_status ?? 0) === 5 ? 1 : 0,
+            'other_exempt' => in_array((int) ($studentMap->attendance_status ?? 0), [6, 7], true) ? 1 : 0,
             'house' => strtolower((string) ($studentMap->house_name ?? '')),
             'duty' => (int) ($studentMap->total_duty_count ?? 0),
             'medical' => (int) ($studentMap->total_medical_exception_count ?? 0),
