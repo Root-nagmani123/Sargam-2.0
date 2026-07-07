@@ -25,6 +25,7 @@ class MemoDiscipline extends Model
         'conclusion_type_pk',
         'conclusion_remark',
         'memo_notice_template_pk',
+        'template_snapshot',
         'created_date',
         'modified_date'
     ];
