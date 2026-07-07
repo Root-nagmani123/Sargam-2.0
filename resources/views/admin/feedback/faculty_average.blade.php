@@ -359,18 +359,30 @@
                                         </thead>
                                         <tbody>
                                             @foreach ($feedbackData as $data)
+                                                @php
+                                                    // Remark-only session: no numeric rating was collected, so ratings show N/A instead of 0%.
+                                                    $hasRatings = (array_sum($data['content_counts'] ?? []) + array_sum($data['presentation_counts'] ?? [])) > 0;
+                                                @endphp
                                                 <tr>
                                                     <td class="faculty-name">{{ $data['faculty_name'] }}</td>
                                                     <td>{{ $data['topic_name'] }}</td>
                                                     <td class="text-center">
+                                                        @if ($hasRatings)
                                                         <span class="pct-badge {{ $data['content_percentage'] >= 90 ? 'percentage-good' : ($data['content_percentage'] >= 70 ? 'percentage-average' : 'percentage-low') }}">
                                                             {{ number_format($data['content_percentage'], 2) }}
                                                         </span>
+                                                        @else
+                                                        <span class="text-muted" title="Remark-only feedback — no rating collected">N/A</span>
+                                                        @endif
                                                     </td>
                                                     <td class="text-center">
+                                                        @if ($hasRatings)
                                                         <span class="pct-badge {{ $data['presentation_percentage'] >= 90 ? 'percentage-good' : ($data['presentation_percentage'] >= 70 ? 'percentage-average' : 'percentage-low') }}">
                                                             {{ number_format($data['presentation_percentage'], 2) }}
                                                         </span>
+                                                        @else
+                                                        <span class="text-muted" title="Remark-only feedback — no rating collected">N/A</span>
+                                                        @endif
                                                     </td>
                                                     <td class="text-center">
                                                         <span class="badge bg-body-secondary text-body rounded-pill">{{ $data['participants'] }}</span>
