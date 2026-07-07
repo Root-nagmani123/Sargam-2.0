@@ -1740,101 +1740,13 @@ public function memo_notice_conversation(Request $request)
                 ]);
         }
 
-        // Send notifications to students using services
-        try {
-            $notificationService = app(NotificationService::class);
-            $receiverService = app(NotificationReceiverService::class);
-            
-            // Get the memo/notice record to retrieve student information
-            // For memos, we may need to join with student_notice_status to get course/subject/topic info
-            if ($type === 'memo') {
-                $memoNotice = DB::table('student_memo_status as sms')
-                    ->leftJoin('student_notice_status as sns', 'sms.student_notice_status_pk', '=', 'sns.pk')
-                    ->where('sms.pk', $validated['memo_notice_id'])
-                    ->select(
-                        'sms.student_pk',
-                        'sms.course_master_pk',
-                        'sms.subject_master_pk',
-                        'sms.subject_topic',
-                        'sms.date_',
-                        'sns.course_master_pk as notice_course_master_pk',
-                        'sns.subject_master_pk as notice_subject_master_pk',
-                        'sns.subject_topic as notice_subject_topic',
-                        'sns.date_ as notice_date_'
-                    )
-                    ->first();
-                
-                // Use notice fields if memo fields are not available
-                if ($memoNotice) {
-                    $memoNotice->course_master_pk = $memoNotice->course_master_pk ?? $memoNotice->notice_course_master_pk ?? null;
-                    $memoNotice->subject_master_pk = $memoNotice->subject_master_pk ?? $memoNotice->notice_subject_master_pk ?? null;
-                    $memoNotice->subject_topic = $memoNotice->subject_topic ?? $memoNotice->notice_subject_topic ?? null;
-                    $memoNotice->date_ = $memoNotice->date_ ?? $memoNotice->notice_date_ ?? null;
-                }
-            } else {
-                $memoNotice = DB::table($statusTable)
-                    ->where('pk', $validated['memo_notice_id'])
-                    ->first();
-            }
-            
-            if ($memoNotice && isset($memoNotice->student_pk)) {
-                // Get student user ID using NotificationReceiverService
-                $receiverUserId = $receiverService->getStudentUserId((int)$memoNotice->student_pk);
-                
-                if ($receiverUserId) {
-                    // Get course and subject information for notification message
-                    $course = null;
-                    $subject = null;
-                    $topicName = 'Topic';
-                    
-                    if (isset($memoNotice->course_master_pk)) {
-                        $course = CourseMaster::find($memoNotice->course_master_pk);
-                    }
-                    if (isset($memoNotice->subject_master_pk)) {
-                        $subject = SubjectMaster::find($memoNotice->subject_master_pk);
-                    }
-                    if (isset($memoNotice->subject_topic)) {
-                        $topicName = DB::table('timetable')->where('pk', $memoNotice->subject_topic)->value('subject_topic') ?? 'Topic';
-                    }
-                    
-                    $courseName = $course ? $course->course_name : 'Course';
-                    $subjectName = $subject ? $subject->subject_name : 'Subject';
-                    $memoNoticeType = ucfirst($type);
-                    $date = isset($memoNotice->date_) ? date('d M Y', strtotime($memoNotice->date_)) : date('d M Y');
-                    
-                    // Build notification message based on what was updated
-                    $updateDetails = [];
-                    if ($validated['status'] == 2) {
-                        $updateDetails[] = "status has been updated to Closed";
-                    }
-                    if (isset($validated['conclusion_type'])) {
-                        $updateDetails[] = "conclusion has been updated";
-                    }
-                    if (!empty($validated['message'])) {
-                        $updateDetails[] = "a new message has been added";
-                    }
-                    
-                    $updateText = !empty($updateDetails) ? implode(' and ', $updateDetails) : 'has been updated';
-                    
-                    $message = "Your {$memoNoticeType} for {$courseName} - {$subjectName} ({$topicName}) on {$date} {$updateText}.";
-                    if (!empty($validated['message']) && strlen($validated['message']) <= 100) {
-                        $message .= " Message: {$validated['message']}";
-                    }
-                    
-                    $notificationService->create(
-                        (int)$receiverUserId,
-                        'memo_notice',
-                        'Memo/Notice',
-                        $validated['memo_notice_id'],
-                        "{$memoNoticeType} Updated",
-                        $message
-                    );
-                }
-            }
-        } catch (\Exception $e) {
-            // Log error but don't fail the request
-            \Log::error('Failed to send memo/notice update notifications: ' . $e->getMessage());
-        }
+        // Notify the other party about the new chat message.
+        $this->sendMemoNoticeChatNotification(
+            (int) $validated['memo_notice_id'],
+            $type,
+            'f',
+            $validated['message'] ?? null
+        );
 
         return redirect()->back()->with('success', ucfirst($type) . ' message created successfully.');
     }
@@ -2295,22 +2207,12 @@ public function memo_notice_conversation_student(Request $request)
 
     // Notify the admin/incharge who issued this notice/memo that the OT has replied.
     if ($inserted) {
-        try {
-            $memoTypeLabel = ucfirst($type); // 'Notice' or 'Memo' (also used as notification module name)
-            $receiverIds = $this->resolveMemoNoticeReceiverIds($validated['memo_notice_id'], $type);
-            if (!empty($receiverIds)) {
-                app(NotificationService::class)->createMultiple(
-                    $receiverIds,
-                    'memo_notice',
-                    $memoTypeLabel,
-                    $validated['memo_notice_id'],
-                    "OT Replied to {$memoTypeLabel}",
-                    "A participant has replied to the {$memoTypeLabel}. Please review."
-                );
-            }
-        } catch (\Exception $e) {
-            \Log::error('OT reply notification failed: ' . $e->getMessage());
-        }
+        $this->sendMemoNoticeChatNotification(
+            (int) $validated['memo_notice_id'],
+            $type,
+            's',
+            $validated['message'] ?? null
+        );
 
         return redirect()->back()->with('success', ucfirst($type) . ' message created successfully.');
     }
@@ -2452,6 +2354,90 @@ private function sendIssuedMemoNotification(
     } catch (\Exception $e) {
         \Log::error('Failed to send memo notification: ' . $e->getMessage());
     }
+}
+
+/**
+ * Notify the other party when a new notice/memo chat message is posted.
+ * Admin/faculty (role f) → OT student; OT (role s) → incharge/admin faculty.
+ */
+private function sendMemoNoticeChatNotification(
+    int $memoNoticeId,
+    string $type,
+    string $roleType,
+    ?string $messagePreview = null
+): void {
+    try {
+        $type = $type === 'memo' ? 'memo' : 'notice';
+        $moduleLabel = $type === 'memo' ? 'Memo' : 'Notice';
+        $preview = $messagePreview !== null && $messagePreview !== ''
+            ? mb_substr($messagePreview, 0, 100)
+            : '';
+
+        if ($roleType === 's') {
+            $receiverIds = $this->resolveMemoNoticeReceiverIds($memoNoticeId, $type);
+            if ($receiverIds === []) {
+                return;
+            }
+
+            $message = "A participant has replied to the {$moduleLabel}. Please review.";
+            if ($preview !== '') {
+                $message .= " Message: {$preview}";
+            }
+
+            app(NotificationService::class)->createMultiple(
+                $receiverIds,
+                'memo_notice',
+                $moduleLabel,
+                $memoNoticeId,
+                "OT Replied to {$moduleLabel}",
+                $message
+            );
+
+            return;
+        }
+
+        $studentPk = $this->resolveMemoNoticeStudentPk($memoNoticeId, $type);
+        if (!$studentPk) {
+            return;
+        }
+
+        $receiverUserId = app(NotificationReceiverService::class)->getStudentUserId($studentPk);
+        if (!$receiverUserId) {
+            return;
+        }
+
+        $message = "The incharge has sent a new message on your {$moduleLabel}.";
+        if ($preview !== '') {
+            $message .= " Message: {$preview}";
+        }
+
+        app(NotificationService::class)->create(
+            (int) $receiverUserId,
+            'memo_notice',
+            $moduleLabel,
+            $memoNoticeId,
+            "New Message on Your {$moduleLabel}",
+            $message
+        );
+    } catch (\Exception $e) {
+        \Log::error('Failed to send memo/notice chat notification: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Resolve the student_pk for a notice or memo conversation thread.
+ */
+private function resolveMemoNoticeStudentPk(int $id, string $type): ?int
+{
+    if ($type === 'memo') {
+        $pk = DB::table('student_memo_status')->where('pk', $id)->value('student_pk');
+
+        return $pk !== null ? (int) $pk : null;
+    }
+
+    $pk = DB::table('student_notice_status')->where('pk', $id)->value('student_pk');
+
+    return $pk !== null ? (int) $pk : null;
 }
 
 /**
@@ -2708,6 +2694,8 @@ public function memo_notice_conversation_model(Request $request){
     }
 
     $messageText = $validated['student_decip_incharge_msg'] ?? '';
+    $chatType = in_array($request->type, ['memo', 'notice'], true) ? $request->type : 'notice';
+    $roleType = $request->role_type === 's' ? 's' : 'f';
 
     if ($request->type == 'memo') {
         $data = DB::table('memo_message_student_decip_incharge')->insert([
@@ -2719,6 +2707,13 @@ public function memo_notice_conversation_model(Request $request){
             'created_date' => now('UTC'),
         ]);
         if ($data) {
+            $this->sendMemoNoticeChatNotification(
+                (int) $validated['memo_notice_id'],
+                $chatType,
+                $roleType,
+                $messageText !== '' ? $messageText : null
+            );
+
             if ($isAjax) {
                 return response()->json(['success' => true, 'message' => 'Memo msg created successfully.']);
             }
@@ -2740,6 +2735,13 @@ public function memo_notice_conversation_model(Request $request){
             'created_date' => now('UTC'),
         ]);
         if ($data) {
+            $this->sendMemoNoticeChatNotification(
+                (int) $validated['memo_notice_id'],
+                $chatType,
+                $roleType,
+                $messageText !== '' ? $messageText : null
+            );
+
             if ($isAjax) {
                 return response()->json(['success' => true, 'message' => 'Notice msg created successfully.']);
             }
