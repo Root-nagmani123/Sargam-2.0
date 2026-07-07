@@ -65,6 +65,13 @@ class MemoDisciplineController extends Controller
         ->orderBy('discipline_name')
         ->get();
 
+    // Page size (design-system footer "Showing [N] of M items" dropdown).
+    $allowedPerPage = [10, 25, 50, 100, 200];
+    $perPage = (int) $request->get('per_page', 10);
+    if (!in_array($perPage, $allowedPerPage, true)) {
+        $perPage = 10;
+    }
+
     $memos = MemoDiscipline::with([
             'course:pk,course_name',
             'discipline:pk,discipline_name,active_inactive',
@@ -116,8 +123,19 @@ class MemoDisciplineController extends Controller
             $q->where('active_inactive', 1);
         })
         ->orderBy('pk', 'desc')
-        ->paginate(10)
-        ->appends($request->all());
+        ->paginate($perPage)
+        // Append the RESOLVED filter values (not just $request->all()) so every
+        // pagination link reproduces the exact filtered view on a full reload —
+        // otherwise the server-defaulted date filter is dropped and filters "reset".
+        ->appends([
+            'program_name'         => $programNameFilter ?? '',
+            'discipline_master_pk' => $disciplineFilter ?? '',
+            'status'               => $statusFilter ?? '',
+            'search'               => $searchFilter ?? '',
+            'from_date'            => $fromDateFilter ?? '',
+            'to_date'              => $toDateFilter ?? '',
+            'per_page'             => $perPage,
+        ]);
 
     // Optional Session/Venue selects shown in the Generate Discipline Memo modal.
     $sessions = \App\Models\ClassSessionMaster::all();
@@ -169,6 +187,13 @@ public function otIndex(Request $request)
         ->orderBy('discipline_name')
         ->get();
 
+    // Page size (design-system footer "Showing [N] of M items" dropdown).
+    $allowedPerPage = [10, 25, 50, 100, 200];
+    $perPage = (int) $request->get('per_page', 10);
+    if (!in_array($perPage, $allowedPerPage, true)) {
+        $perPage = 10;
+    }
+
     $memos = MemoDiscipline::with([
             'course:pk,course_name',
             'discipline:pk,discipline_name,active_inactive',
@@ -204,8 +229,19 @@ public function otIndex(Request $request)
             $q->where('active_inactive', 1);
         })
         ->orderBy('pk', 'desc')
-        ->paginate(10)
-        ->appends($request->all());
+        ->paginate($perPage)
+        // Append the RESOLVED filter values (not just $request->all()) so every
+        // pagination link reproduces the exact filtered view on a full reload —
+        // otherwise the server-defaulted date filter is dropped and filters "reset".
+        ->appends([
+            'program_name'         => $programNameFilter ?? '',
+            'discipline_master_pk' => $disciplineFilter ?? '',
+            'status'               => $statusFilter ?? '',
+            'search'               => $searchFilter ?? '',
+            'from_date'            => $fromDateFilter ?? '',
+            'to_date'              => $toDateFilter ?? '',
+            'per_page'             => $perPage,
+        ]);
 
     return view('admin.memo_discipline.ot_index', compact(
         'memos',
