@@ -73,6 +73,7 @@
     $filters = $filters ?? [];
     $tabCounts = $tabCounts ?? ['present' => 0, 'absent' => 0];
     $activeAtt = ($filters['attendance'] ?? 'present') === 'absent' ? 'absent' : 'present';
+    $activeStatus = ($filters['status'] ?? 'active') === 'archive' ? 'archive' : 'active';
     $pad = fn ($n) => str_pad((string) (int) $n, 2, '0', STR_PAD_LEFT);
 @endphp
 <div class="container-fluid ot-list-page">
@@ -86,18 +87,18 @@
 
     {{-- Present / Absent tabs + Print --}}
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white" role="group" aria-label="Attendance status">
+        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white" role="group" aria-label="Course status">
             <li class="nav-item" role="presentation">
-                <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $activeAtt === 'present' ? 'active' : '' }}"
-                    data-attendance="present">Present: <span class="sl-tab-count" data-count="present">{{ $pad($tabCounts['present']) }}</span></button>
+                <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $activeStatus === 'active' ? 'active' : '' }}"
+                    data-status="active">Active</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $activeAtt === 'absent' ? 'active' : '' }}"
-                    data-attendance="absent">Absent: <span class="sl-tab-count" data-count="absent">{{ $pad($tabCounts['absent']) }}</span></button>
+                <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $activeStatus === 'archive' ? 'active' : '' }}"
+                    data-status="archive">Archived</button>
             </li>
         </ul>
         <div class="d-flex flex-wrap align-items-center gap-2">
-            <button type="button" class="btn sl-toolbar-btn" id="otListPrintBtn">
+            <button type="button" class="btn sl-toolbar-btn border-0" id="otListPrintBtn" >
                 <i class="bi bi-printer" aria-hidden="true"></i>
                 <span>Print</span>
             </button>
@@ -111,6 +112,17 @@
                 <div class="d-flex flex-wrap align-items-center gap-3">
                     <span class="programme-dt-filters-label">Filters</span>
 
+                    @if(($courseOptions ?? collect())->isNotEmpty())
+                    <div class="sl-filter-item">
+                        <select id="courseFilter" class="form-select sl-filter-select" aria-label="Filter by course">
+                            <option value="">Course Name</option>
+                            @foreach($courseOptions as $course)
+                                <option value="{{ $course->pk }}" {{ (string)($filters['course_id'] ?? '') === (string)$course->pk ? 'selected' : '' }}>{{ $course->course_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
+
                     <div class="sl-filter-item">
                         <div class="sl-daterange-wrap">
                             <span class="sl-daterange-label">Time Period</span>
@@ -118,15 +130,6 @@
                                 placeholder="Select dates" autocomplete="off" readonly aria-label="Filter by time period"
                                 value="{{ (!empty($filters['from_date']) && !empty($filters['to_date'])) ? \Carbon\Carbon::parse($filters['from_date'])->format('d/m/Y').' - '.\Carbon\Carbon::parse($filters['to_date'])->format('d/m/Y') : '' }}">
                         </div>
-                    </div>
-
-                    <div class="sl-filter-item">
-                        <select id="sessionFilter" class="form-select sl-filter-select" aria-label="Filter by session">
-                            <option value="">Session</option>
-                            @foreach(($sessionOptions ?? []) as $sess)
-                                <option value="{{ $sess }}" {{ (string)($filters['session'] ?? '') === (string)$sess ? 'selected' : '' }}>{{ $sess }}</option>
-                            @endforeach
-                        </select>
                     </div>
 
                     <div class="sl-filter-item">
@@ -169,7 +172,6 @@
                                     <th>Email</th>
                                     <th>Cadre</th>
                                     <th>House Name</th>
-                                    <th>Topic Name</th>
                                     <th>Total Duty (Count)</th>
                                     <th>Duty Type</th>
                                     <th>Total Medical Exemption Count</th>
@@ -239,6 +241,7 @@
         }
         let dt = null;
         let currentAttendance = (filters.attendance === 'absent') ? 'absent' : 'present';
+        let currentStatus = (filters.status === 'archive') ? 'archive' : 'active';
         let loadingRequests = 0;
 
         function setTableLoading(show) {
@@ -251,6 +254,8 @@
 
         function getFilterState() {
             return {
+                status: currentStatus,
+                course_id: $('#courseFilter').val() || '',
                 session: $('#sessionFilter').val() || '',
                 participant: $('#participantFilter').val() || '',
                 from_date: (filters.from_date || '').toString(),
@@ -346,8 +351,18 @@
           .on('error.dt', function() { setTableLoading(false); })
           .on('draw.dt column-visibility.dt', function() { relayoutPinnedColumns(); });
 
+        /* ── Active / Archived tabs (full reload — course options + data are status-specific) ── */
+        $('.programme-status-tabs .programme-status-pill[data-status]').on('click', function() {
+            const st = $(this).data('status');
+            if (st === currentStatus) { return; }
+            const p = new URLSearchParams(window.location.search);
+            p.set('status', st);
+            p.delete('course_id'); // the course list differs per status
+            window.location.href = baseUrl + (p.toString() ? '?' + p.toString() : '');
+        });
+
         /* ── Present / Absent tabs ── */
-        $('.programme-status-tabs .programme-status-pill').on('click', function() {
+        $('.programme-status-tabs .programme-status-pill[data-attendance]').on('click', function() {
             const att = $(this).data('attendance');
             if (att === currentAttendance) { return; }
             currentAttendance = att;
@@ -359,6 +374,7 @@
         });
 
         /* ── Filters ── */
+        $('#courseFilter').on('change', function() { applyFilter({ course_id: this.value }); });
         $('#sessionFilter').on('change', function() { applyFilter({ session: this.value }); });
         $('#participantFilter').on('change', function() { applyFilter({ participant: this.value }); });
         $('#resetFilters').on('click', function() { window.location.href = baseUrl; });

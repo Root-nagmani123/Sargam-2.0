@@ -271,7 +271,14 @@
     {{-- Summary cards — TODAY's actual marked attendance (distinct students),
          resolved server-side in the controller ($cardCounts). These are a
          fixed daily snapshot and intentionally do NOT follow the table filters. --}}
-    @php $cardCounts = $cardCounts ?? ['total' => 0, 'present_today' => 0, 'absent_today' => 0]; @endphp
+    @php
+        $cardCounts = $cardCounts ?? ['total' => 0, 'present_today' => 0, 'absent_today' => 0];
+        $snapshotDate = $snapshotDate ?? null;
+        $snapshotIso = $snapshotDate ? \Carbon\Carbon::parse($snapshotDate)->toDateString() : \Carbon\Carbon::today()->toDateString();
+        $snapshotLabel = $snapshotDate
+            ? (\Carbon\Carbon::parse($snapshotDate)->isToday() ? 'Today' : \Carbon\Carbon::parse($snapshotDate)->format('d M Y'))
+            : 'Today';
+    @endphp
     <div class="row row-cols-1 row-cols-sm-3 g-3 mb-3 sl-summary-cards">
         <div class="col">
             <a href="{{ route('admin.dashboard.ot-participants') }}" class="text-decoration-none d-block h-100">
@@ -288,16 +295,15 @@
                 </div>
             </a>
         </div>
-        @php $todayIso = \Carbon\Carbon::today()->toDateString(); @endphp
         <div class="col">
-            <a href="{{ route('admin.dashboard.students', ['attendance' => 'present', 'from_date' => $todayIso, 'to_date' => $todayIso]) }}" class="text-decoration-none d-block h-100">
+            <a href="{{ route('admin.dashboard.students', ['attendance' => 'present', 'from_date' => $snapshotIso, 'to_date' => $snapshotIso]) }}" class="text-decoration-none d-block h-100">
                 <div class="card stat-card h-100 p-3">
                     <div class="d-flex align-items-center gap-3">
                         <div class="stat-icon-wrapper stat-icon-green">
                             <i class="material-symbols-rounded" aria-hidden="true">groups</i>
                         </div>
                         <div class="flex-grow-1 min-w-0">
-                            <p class="stat-title">Present Today</p>
+                            <p class="stat-title">Present {{ $snapshotLabel }}</p>
                             <p class="stat-value">{{ $pad($cardCounts['present_today']) }}</p>
                         </div>
                     </div>
@@ -305,14 +311,14 @@
             </a>
         </div>
         <div class="col">
-            <a href="{{ route('admin.dashboard.students', ['attendance' => 'absent', 'from_date' => $todayIso, 'to_date' => $todayIso]) }}" class="text-decoration-none d-block h-100">
+            <a href="{{ route('admin.dashboard.students', ['attendance' => 'absent', 'from_date' => $snapshotIso, 'to_date' => $snapshotIso]) }}" class="text-decoration-none d-block h-100">
                 <div class="card stat-card h-100 p-3">
                     <div class="d-flex align-items-center gap-3">
                         <div class="stat-icon-wrapper stat-icon-rose">
                             <i class="material-symbols-rounded" aria-hidden="true">badge</i>
                         </div>
                         <div class="flex-grow-1 min-w-0">
-                            <p class="stat-title">Absent Today</p>
+                            <p class="stat-title">Absent {{ $snapshotLabel }}</p>
                             <p class="stat-value">{{ $pad($cardCounts['absent_today']) }}</p>
                         </div>
                     </div>
