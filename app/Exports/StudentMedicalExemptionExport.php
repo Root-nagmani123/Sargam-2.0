@@ -107,49 +107,62 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
 
         $studentName = optional($record->student)->display_name ?? 'N/A';
         $studentOt = optional($record->student)->generated_OT_code;
+        $officerTrainee = ($studentOt && $studentName !== 'N/A')
+            ? "{$studentName} - {$studentOt}"
+            : $studentName;
 
+        $doctorName = 'N/A';
+        if ($record->employee && $record->employee->first_name) {
+            $doctorName = trim($record->employee->first_name . ' ' . ($record->employee->last_name ?? ''));
+        }
+
+        $duration = ($from ? $from->format('d/m/Y H:i') : 'N/A')
+            . ' - '
+            . ($to ? $to->format('d/m/Y H:i') : 'N/A');
+
+        $document = 'NA';
+        if (! empty($record->Doc_upload)) {
+            $document = asset('storage/' . ltrim($record->Doc_upload, '/'));
+        }
+
+        // Same order / names as the on-screen table (Action excluded from exports).
         return [
-            'student_name' => ($studentOt && $studentName !== 'N/A')
-                ? "{$studentName} ({$studentOt})"
-                : $studentName,
-            'ot_code' => optional($record->student)->generated_OT_code ?? 'N/A',
+            'date' => $from ? $from->format('d/m/Y') : 'N/A',
+            'officer_trainee' => $officerTrainee,
             'course' => optional($record->course)->course_name ?? 'N/A',
-            'faculty' => ($record->employee && $record->employee->first_name && $record->employee->last_name) ? trim($record->employee->first_name . ' ' . $record->employee->last_name) : 'N/A',
-            'category' => optional($record->category)->exemp_category_name ?? 'N/A',
+            'doctor_name' => $doctorName,
             'medical_speciality' => optional($record->speciality)->speciality_name ?? 'N/A',
-            'opd_category' => $record->opd_category ?? 'N/A',
-            'arrival_date' => $from ? $from->format('d-m-Y') : 'N/A',
-            'arrival_time' => $from ? $from->format('h:i A') : 'N/A',
-            'departure_date' => $to ? $to->format('d-m-Y') : 'N/A',
-            'departure_time' => $to ? $to->format('h:i A') : 'N/A',
+            'duration' => $duration,
             'days' => $record->days ?? 'N/A',
-            'description' => $record->Description ?? 'N/A',
-            'pt_outdoor_advise' => $record->pt_outdoor_advise ?? 'N/A',
+            'category' => optional($record->category)->exemp_category_name ?? 'N/A',
+            'opd_category' => $record->opd_category ?? 'N/A',
+            'pt_outdoor_advise' => $record->pt_outdoor_advise ?: '-',
+            'description' => $record->Description ?: '-',
+            'document' => $document,
         ];
     }
 
     /**
      * The flat list of data-column headings (used by the PDF/Print layouts).
+     * Must match the listing table headers (except Action).
      *
      * @return array<int, string>
      */
     public function columnHeadings(): array
     {
         return [
-            'Student Name',
-            'OT Code',
+            'Date',
+            'Officer Trainee',
             'Course',
-            'Faculty',
-            'Category',
+            'Doctor Name',
             'Medical Speciality',
-            'OPD Category',
-            'Arrival Date',
-            'Arrival Time',
-            'Departure Date',
-            'Departure Time',
+            'Duration',
             'Days',
+            'Category',
+            'IPD/OPD/After OPD/Referral',
+            'PT/ Outdoor Advise',
             'Provisional Diagnosis/ Remarks',
-            'PT/Outdoor Advise',
+            'Document',
         ];
     }
 
