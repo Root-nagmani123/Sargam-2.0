@@ -26,115 +26,195 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
 
     public function collection()
     {
+        return $this->recordsQuery()->map(fn ($record) => $this->mapRecord($record));
+    }
+
+    public function pdfRows(): Collection
+    {
+        return $this->recordsQuery()->map(fn ($record) => $this->mapRecord($record));
+    }
+
+    private function recordsQuery()
+    {
         $query = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course', 'employee']);
-        
+
         // Filter by course status (Active/Archive)
         $currentDate = now()->format('Y-m-d');
-        
+
         if ($this->filter === 'active') {
-            // Active Courses: end_date > current date
-            $query->whereHas('course', function($q) use ($currentDate) {
+            $query->whereHas('course', function ($q) use ($currentDate) {
                 $q->where('end_date', '>', $currentDate);
             });
         } elseif ($this->filter === 'archive') {
-            // Archive Courses: end_date < current date
-            $query->whereHas('course', function($q) use ($currentDate) {
+            $query->whereHas('course', function ($q) use ($currentDate) {
                 $q->where('end_date', '<', $currentDate);
             });
         }
-        
-        // Filter by specific course if selected
+
         if ($this->courseFilter) {
             $query->where('course_master_pk', $this->courseFilter);
         }
-        
-        // Filter by date range
+
         if ($this->fromDateFilter || $this->toDateFilter) {
             if ($this->fromDateFilter && $this->toDateFilter) {
-                // Both dates provided: exemption period overlaps if (to_date >= from_date_filter OR to_date IS NULL) AND from_date <= to_date_filter
-                $query->where(function($q) {
+                $query->where(function ($q) {
                     $q->where('to_date', '>=', $this->fromDateFilter)
                       ->orWhereNull('to_date');
                 })
                 ->where('from_date', '<=', $this->toDateFilter);
             } elseif ($this->fromDateFilter) {
-                // Only from_date provided: show records where to_date >= from_date_filter OR to_date IS NULL
-                $query->where(function($q) {
+                $query->where(function ($q) {
                     $q->where('to_date', '>=', $this->fromDateFilter)
                       ->orWhereNull('to_date');
                 });
             } elseif ($this->toDateFilter) {
-                // Only to_date provided: show records where from_date <= to_date_filter
                 $query->where('from_date', '<=', $this->toDateFilter);
             }
         }
-        
-        // Search functionality
+
         if ($this->search && $this->search != '') {
-            $query->where(function($q) {
-                // Search in student name
-                $q->whereHas('student', function($studentQuery) {
+            $query->where(function ($q) {
+                $q->whereHas('student', function ($studentQuery) {
                     $studentQuery->where('display_name', 'like', '%' . $this->search . '%')
                                  ->orWhere('generated_OT_code', 'like', '%' . $this->search . '%');
                 })
-                // Search in course name
-                ->orWhereHas('course', function($courseQuery) {
+                ->orWhereHas('course', function ($courseQuery) {
                     $courseQuery->where('course_name', 'like', '%' . $this->search . '%');
                 })
-                // Search in employee name
-                ->orWhereHas('employee', function($employeeQuery) {
+                ->orWhereHas('employee', function ($employeeQuery) {
                     $employeeQuery->where('first_name', 'like', '%' . $this->search . '%')
                                   ->orWhere('last_name', 'like', '%' . $this->search . '%');
                 })
-                // Search in category name
-                ->orWhereHas('category', function($categoryQuery) {
+                ->orWhereHas('category', function ($categoryQuery) {
                     $categoryQuery->where('exemp_category_name', 'like', '%' . $this->search . '%');
                 })
-                // Search in speciality name
-                ->orWhereHas('speciality', function($specialityQuery) {
+                ->orWhereHas('speciality', function ($specialityQuery) {
                     $specialityQuery->where('speciality_name', 'like', '%' . $this->search . '%');
                 })
-                // Search in OPD category
-                ->orWhere('opd_category', 'like', '%' . $this->search . '%');
+                ->orWhere('opd_category', 'like', '%' . $this->search . '%')
+                ->orWhere('Description', 'like', '%' . $this->search . '%')
+                ->orWhere('pt_outdoor_advise', 'like', '%' . $this->search . '%');
             });
         }
-        
-        $data = $query->orderBy('pk', 'desc')->get();
 
-        return $data->map(function ($record) {
-            return [
-                'student_name' => optional($record->student)->display_name ?? 'N/A',
-                'ot_code' => optional($record->student)->generated_OT_code ?? 'N/A',
-                'course' => optional($record->course)->course_name ?? 'N/A',
-                'faculty' => ($record->employee && $record->employee->first_name && $record->employee->last_name) ? trim($record->employee->first_name . ' ' . $record->employee->last_name) : 'N/A',
-                'category' => optional($record->category)->exemp_category_name ?? 'N/A',
-                'medical_speciality' => optional($record->speciality)->speciality_name ?? 'N/A',
-                'from_date' => $record->from_date ? Carbon::parse($record->from_date)->format('d-m-Y') : 'N/A',
-                'to_date' => $record->to_date ? Carbon::parse($record->to_date)->format('d-m-Y') : 'N/A',
-                'opd_category' => $record->opd_category ?? 'N/A',
-                'document' => $record->Doc_upload ? asset('storage/' . $record->Doc_upload) : 'N/A',
-                'description' => $record->Description ?? 'N/A',
-                'status' => $record->active_inactive == 1 ? 'Active' : 'Inactive',
-            ];
-        });
+        return $query->orderBy('pk', 'desc')->get();
     }
 
-    public function headings(): array
+    private function mapRecord($record): array
+    {
+        $from = $record->from_date ? Carbon::parse($record->from_date) : null;
+        $to = $record->to_date ? Carbon::parse($record->to_date) : null;
+
+        $studentName = optional($record->student)->display_name ?? 'N/A';
+        $studentOt = optional($record->student)->generated_OT_code;
+        $officerTrainee = ($studentOt && $studentName !== 'N/A')
+            ? "{$studentName} - {$studentOt}"
+            : $studentName;
+
+        $doctorName = 'N/A';
+        if ($record->employee && $record->employee->first_name) {
+            $doctorName = trim($record->employee->first_name . ' ' . ($record->employee->last_name ?? ''));
+        }
+
+        $duration = ($from ? $from->format('d/m/Y H:i') : 'N/A')
+            . ' - '
+            . ($to ? $to->format('d/m/Y H:i') : 'N/A');
+
+        $document = 'NA';
+        if (! empty($record->Doc_upload)) {
+            $document = asset('storage/' . ltrim($record->Doc_upload, '/'));
+        }
+
+        // Same order / names as the on-screen table (Action excluded from exports).
+        return [
+            'date' => $from ? $from->format('d/m/Y') : 'N/A',
+            'officer_trainee' => $officerTrainee,
+            'course' => optional($record->course)->course_name ?? 'N/A',
+            'doctor_name' => $doctorName,
+            'medical_speciality' => optional($record->speciality)->speciality_name ?? 'N/A',
+            'duration' => $duration,
+            'days' => $record->days ?? 'N/A',
+            'category' => optional($record->category)->exemp_category_name ?? 'N/A',
+            'opd_category' => $record->opd_category ?? 'N/A',
+            'pt_outdoor_advise' => $record->pt_outdoor_advise ?: '-',
+            'description' => $record->Description ?: '-',
+            'document' => $document,
+        ];
+    }
+
+    /**
+     * The flat list of data-column headings (used by the PDF/Print layouts).
+     * Must match the listing table headers (except Action).
+     *
+     * @return array<int, string>
+     */
+    public function columnHeadings(): array
     {
         return [
-            'Student Name',
-            'OT Code',
+            'Date',
+            'Officer Trainee',
             'Course',
-            'Faculty',
-            'Category',
+            'Doctor Name',
             'Medical Speciality',
-            'From Date',
-            'To Date',
-            'OPD Category',
+            'Duration',
+            'Days',
+            'Category',
+            'IPD/OPD/After OPD/Referral',
+            'PT/ Outdoor Advise',
+            'Provisional Diagnosis/ Remarks',
             'Document',
-            'Description',
-            'Status'
         ];
+    }
+
+    /**
+     * CSV headings: branded identity rows (institution / report title / course /
+     * generated on) followed by the column heading row — mirrors the Print & PDF
+     * layout so all three exports carry the same header.
+     */
+    public function headings(): array
+    {
+        $meta = [
+            ['Lal Bahadur Shastri National Academy of Administration, Mussoorie'],
+            ['Student Medical Exemption'],
+        ];
+
+        $courseLine = $this->exportCourseLine();
+        if ($courseLine !== '') {
+            $meta[] = [$courseLine];
+        }
+
+        $meta[] = ['Generated on: ' . now()->format('d-m-Y H:i')];
+        $meta[] = []; // blank spacer row
+
+        $meta[] = $this->columnHeadings();
+
+        return $meta;
+    }
+
+    /**
+     * "Course Name (start to end)" for the selected course filter, or ''.
+     */
+    private function exportCourseLine(): string
+    {
+        if (empty($this->courseFilter)) {
+            return '';
+        }
+
+        $course = \App\Models\CourseMaster::find($this->courseFilter);
+        if (! $course) {
+            return '';
+        }
+
+        $line = (string) ($course->course_name ?? '');
+        $start = ! empty($course->start_date ?? $course->start_year ?? null)
+            ? Carbon::parse($course->start_date ?? $course->start_year)->format('j F Y') : '';
+        $end = ! empty($course->end_date)
+            ? Carbon::parse($course->end_date)->format('j F Y') : '';
+        if ($start && $end) {
+            $line = trim($line . ' (' . $start . ' to ' . $end . ')');
+        }
+
+        return $line;
     }
 }
 
