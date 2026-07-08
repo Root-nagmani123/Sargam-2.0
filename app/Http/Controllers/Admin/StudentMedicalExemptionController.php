@@ -38,7 +38,10 @@ class StudentMedicalExemptionController extends Controller
             /* ===============================
              | 1. Build Cache Key
              =============================== */
-            $cacheKey = 'student_medical_exemption_ids_' . md5(json_encode([
+            // Version prefix so any create/update/delete instantly invalidates
+            // every cached ID list (see flushListCache()).
+            $cacheVersion = Cache::get('student_medical_exemption_cache_version', 1);
+            $cacheKey = 'student_medical_exemption_ids_v' . $cacheVersion . '_' . md5(json_encode([
                 'custom_search' => $request->custom_search,
                 'course_id'     => $request->course_id,
                 'from_date'     => $request->from_date,
@@ -268,7 +271,6 @@ class StudentMedicalExemptionController extends Controller
 
                     $editUrl = route('student.medical.exemption.edit', encrypt($row->pk));
                     $deleteUrl = route('student.medical.exemption.delete', encrypt($row->pk));
-                    $disabled = $row->active_inactive == 1 ? 'disabled' : '';
 
                     return '
                         <div class="sme-row-actions">
@@ -277,7 +279,7 @@ class StudentMedicalExemptionController extends Controller
                             </a>
 
                             <a href="javascript:void(0)"
-                               class="delete-btn sme-act sme-act-delete ' . $disabled . '"
+                               class="delete-btn sme-act sme-act-delete"
                                data-url="' . $deleteUrl . '" title="Delete" aria-label="Delete">
                                 <i class="material-icons material-symbols-rounded">delete</i>
                             </a>
@@ -297,8 +299,16 @@ class StudentMedicalExemptionController extends Controller
         /* =========================================================
          | NORMAL PAGE LOAD
          ========================================================= */
+        // Active tab = courses still running; Archive tab = ended courses
+        // (mirrors Course Master's active/archived split). The course filter
+        // dropdown swaps between these two lists as the tab changes.
         $courses = CourseMaster::where('active_inactive', '1')
             ->where('end_date', '>', now())
+            ->orderBy('course_name', 'asc')
+            ->get();
+
+        $archivedCourses = CourseMaster::where('active_inactive', '1')
+            ->where('end_date', '<', now())
             ->orderBy('course_name', 'asc')
             ->get();
 
@@ -306,7 +316,7 @@ class StudentMedicalExemptionController extends Controller
 
         return view(
             'admin.student_medical_exemption.index',
-            compact('courses', 'search')
+            compact('courses', 'archivedCourses', 'search')
         );
     }
 
@@ -439,6 +449,18 @@ class StudentMedicalExemptionController extends Controller
         return null;
     }
 
+    /**
+     * Invalidate every cached DataTable ID list by bumping the version prefix.
+     * Called after any create / update / delete so new rows appear immediately.
+     */
+    private function flushListCache(): void
+    {
+        Cache::forever(
+            'student_medical_exemption_cache_version',
+            (int) Cache::get('student_medical_exemption_cache_version', 1) + 1
+        );
+    }
+
     public function store(Request $request)
     {
         // Catch PHP-level upload errors (e.g. file exceeded upload_max_filesize in php.ini)
@@ -527,6 +549,9 @@ class StudentMedicalExemptionController extends Controller
         }
 
         $medicalExemption = StudentMedicalExemption::create($validated);
+
+        // New row must appear immediately — drop the cached DataTable ID lists.
+        $this->flushListCache();
 
         // Send notifications to relevant users
         try {
@@ -723,6 +748,9 @@ class StudentMedicalExemptionController extends Controller
 
         $record->update($validated);
 
+        // Reflect the edit immediately in the DataTable.
+        $this->flushListCache();
+
         // Send notifications to relevant users
         try {
             $notificationService = app(NotificationService::class);
@@ -769,6 +797,10 @@ class StudentMedicalExemptionController extends Controller
     public function delete($id)
     {
         StudentMedicalExemption::destroy(decrypt($id));
+
+        // Removed row must disappear from the DataTable right away.
+        $this->flushListCache();
+
          return response()->json([
         'message' => 'Medical exemption deleted successfully'
         ]);
