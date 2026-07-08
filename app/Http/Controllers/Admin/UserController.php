@@ -1323,8 +1323,7 @@ class UserController extends Controller
         $availableCourses = $payload['availableCourses'];
 
         // Apply the shared filters to the session rows, then collapse to one row
-        // per participant. A participant counts as Absent when they have at least
-        // one Absent (status 3) session in scope; otherwise Present.
+        // per participant — every student of the selected course is listed.
         $sessionRows = $this->applyDashboardStudentListFilters($payload['students'], $request);
 
         $byStudent = [];
@@ -1340,11 +1339,7 @@ class UserController extends Controller
                     'house_name' => $m->house_name ?? null,
                     'topic' => null,
                     'topic_date' => null,
-                    'is_absent' => false,
                 ];
-            }
-            if (($m->attendance_present ?? true) === false) {
-                $byStudent[$spk]->is_absent = true;
             }
             if (empty($byStudent[$spk]->house_name) && ! empty($m->house_name)) {
                 $byStudent[$spk]->house_name = $m->house_name;
@@ -1361,23 +1356,16 @@ class UserController extends Controller
         }
         $participants = collect(array_values($byStudent));
 
-        $presentParticipants = $participants->reject(fn ($p) => $p->is_absent)->values();
-        $absentParticipants = $participants->filter(fn ($p) => $p->is_absent)->values();
-
-        $tabCounts = [
-            'present' => $presentParticipants->count(),
-            'absent' => $absentParticipants->count(),
-        ];
-
-        $attendance = $request->input('attendance', 'present') === 'absent' ? 'absent' : 'present';
-        $rows = $attendance === 'absent' ? $absentParticipants : $presentParticipants;
+        // Show every student of the selected course — no Present/Absent split.
+        $rows = $participants;
+        $totalParticipants = $participants->count();
 
         $rowMeta = $this->otParticipantsRowMeta(
             $participants->pluck('student_master_pk')->all()
         );
 
         if ($request->ajax() && $request->has('draw')) {
-            return $this->otParticipantsDataTableResponse($request, $rows, $rowMeta, $tabCounts, $attendance);
+            return $this->otParticipantsDataTableResponse($request, $rows, $rowMeta, $totalParticipants);
         }
 
         // Filter option lists (mirrors the student list page).
@@ -1412,7 +1400,6 @@ class UserController extends Controller
         $filters = [
             'from_date' => (string) $request->input('from_date', ''),
             'to_date' => (string) $request->input('to_date', ''),
-            'attendance' => $attendance,
             'session' => (string) $request->input('session', ''),
             'participant' => (string) $request->input('participant', ''),
             'course_id' => (string) $request->input('course_id', ''),
@@ -1442,7 +1429,7 @@ class UserController extends Controller
 
         return view('admin.dashboard.ot_participants_list', compact(
             'availableCourses', 'courseOptions', 'filters', 'cadreOptions', 'houseOptions',
-            'sessionOptions', 'participantOptions', 'tabCounts'
+            'sessionOptions', 'participantOptions'
         ));
     }
 
@@ -1549,24 +1536,43 @@ class UserController extends Controller
     /**
      * Server-side JSON for the OT / Participants List DataTable.
      */
-    private function otParticipantsDataTableResponse(Request $request, $rows, array $rowMeta, array $tabCounts, string $attendance)
+    private function otParticipantsDataTableResponse(Request $request, $rows, array $rowMeta, int $totalParticipants)
     {
         $searchInput = $request->input('search');
         $search = strtolower(trim((string) (is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput)));
         if ($search !== '') {
-            $rows = $rows->filter(function ($p) use ($search) {
+            $rows = $rows->filter(function ($p) use ($search, $rowMeta) {
                 $s = $p->studentMaster;
                 if (! $s) {
                     return false;
                 }
-                $name = strtolower((string) ($s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''))));
-                $code = strtolower((string) ($s->generated_OT_code ?? ''));
-                $email = strtolower((string) ($s->email ?? ''));
-                return str_contains($name, $search) || str_contains($code, $search) || str_contains($email, $search);
+                $meta = $rowMeta[$p->student_master_pk] ?? [];
+                // Zero-padded count strings so "02" and "2" both match, alongside
+                // the raw numbers.
+                $pad = fn ($n) => str_pad((string) (int) $n, 2, '0', STR_PAD_LEFT);
+                $countFields = ['duty_count', 'medical', 'pt', 'stationed', 'notice_memo', 'discipline_memo'];
+                $counts = [];
+                foreach ($countFields as $f) {
+                    $n = (int) ($meta[$f] ?? 0);
+                    $counts[] = (string) $n;
+                    $counts[] = $pad($n);
+                }
+                // A single haystack of every column's displayed value.
+                $haystack = strtolower(implode(' ', array_filter([
+                    $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? '')),
+                    $s->generated_OT_code ?? '',
+                    $s->email ?? '',
+                    $s->cadre->cadre_name ?? '',
+                    $p->house_name ?? '',
+                    $p->topic ?? '',
+                    $meta['duty_type'] ?? '',
+                    implode(' ', $counts),
+                ], fn ($v) => trim((string) $v) !== '')));
+                return str_contains($haystack, $search);
             })->values();
         }
 
-        $recordsTotal = $tabCounts[$attendance] ?? 0;
+        $recordsTotal = $totalParticipants;
         $recordsFiltered = $rows->count();
 
         // Sorting (S.No / OT Code / Name / Email / Cadre / House).
@@ -1627,7 +1633,6 @@ class UserController extends Controller
             'draw' => (int) $request->input('draw', 1),
             'recordsTotal' => $recordsTotal,
             'recordsFiltered' => $recordsFiltered,
-            'counts' => $tabCounts,
             'data' => $data,
         ]);
     }

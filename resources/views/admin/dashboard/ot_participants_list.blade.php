@@ -71,10 +71,7 @@
 @section('content')
 @php
     $filters = $filters ?? [];
-    $tabCounts = $tabCounts ?? ['present' => 0, 'absent' => 0];
-    $activeAtt = ($filters['attendance'] ?? 'present') === 'absent' ? 'absent' : 'present';
     $activeStatus = ($filters['status'] ?? 'active') === 'archive' ? 'archive' : 'active';
-    $pad = fn ($n) => str_pad((string) (int) $n, 2, '0', STR_PAD_LEFT);
 @endphp
 <div class="container-fluid ot-list-page">
     <x-breadcrum title="OT/ Participants List" :showBack="true" :items="[
@@ -85,7 +82,7 @@
     ]" />
     <x-session_message />
 
-    {{-- Present / Absent tabs + Print --}}
+    {{-- Active / Archived tabs + Print --}}
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
         <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white" role="group" aria-label="Course status">
             <li class="nav-item" role="presentation">
@@ -130,15 +127,6 @@
                                 placeholder="Select dates" autocomplete="off" readonly aria-label="Filter by time period"
                                 value="{{ (!empty($filters['from_date']) && !empty($filters['to_date'])) ? \Carbon\Carbon::parse($filters['from_date'])->format('d/m/Y').' - '.\Carbon\Carbon::parse($filters['to_date'])->format('d/m/Y') : '' }}">
                         </div>
-                    </div>
-
-                    <div class="sl-filter-item">
-                        <select id="participantFilter" class="form-select sl-filter-select" aria-label="Filter by OT / participant">
-                            <option value="">OT / Participant</option>
-                            @foreach(($participantOptions ?? []) as $p)
-                                <option value="{{ $p->pk }}" {{ (string)($filters['participant'] ?? '') === (string)$p->pk ? 'selected' : '' }}>{{ $p->label }}</option>
-                            @endforeach
-                        </select>
                     </div>
                     <button type="button" class="btn programme-dt-btn-reset" id="resetFilters">Reset Filters</button>
                 </div>
@@ -218,29 +206,7 @@
         const filters = @json($filters ?? []);
         const baseUrl = "{{ route('admin.dashboard.ot-participants') }}";
         const LOCKED_COLUMNS = [0, 1, 2]; // S.No, OT Code, Name — frozen & always visible
-        // Columns shown only on the Present tab (the Absent view is a shorter layout):
-        // Topic Name, Total Duty (Count), Duty Type, Total Notice/Memo, Total Discipline Memo.
-        const PRESENT_ONLY_COLS = [6, 7, 8, 12, 13];
-        function isPresentOnly(idx) { return PRESENT_ONLY_COLS.indexOf(idx) !== -1; }
-
-        // The shared exemption columns are labelled differently per tab:
-        // Present shows the "Total … Count" summary wording; Absent uses the short
-        // design labels (no "Total"/"Count").
-        const HEADER_BY_TAB = {
-            9:  { present: 'Total Medical Exemption Count', absent: 'Medical Exemption' },
-            10: { present: 'Total PT Exemption Count',      absent: 'PT Exception' },
-            11: { present: 'Total Stationed Leave Count',   absent: 'Stationed Leave' },
-        };
-        function applyTabHeaders() {
-            if (!dt) { return; }
-            const tab = currentAttendance === 'absent' ? 'absent' : 'present';
-            Object.keys(HEADER_BY_TAB).forEach(function(idx) {
-                const th = dt.column(parseInt(idx, 10)).header();
-                if (th) { $(th).text(HEADER_BY_TAB[idx][tab]); }
-            });
-        }
         let dt = null;
-        let currentAttendance = (filters.attendance === 'absent') ? 'absent' : 'present';
         let currentStatus = (filters.status === 'archive') ? 'archive' : 'active';
         let loadingRequests = 0;
 
@@ -269,7 +235,6 @@
             Object.entries(state).forEach(([k, v]) => {
                 if (v === '' || v === null || v === undefined) { p.delete(k); } else { p.set(k, v); }
             });
-            if (currentAttendance && currentAttendance !== 'present') { p.set('attendance', currentAttendance); } else { p.delete('attendance'); }
             const qs = p.toString();
             window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
         }
@@ -280,14 +245,6 @@
             });
             syncUrl();
             if (dt) { dt.ajax.reload(null, true); }
-        }
-
-        function padCount(n) { n = parseInt(n, 10) || 0; return (n < 10 ? '0' : '') + n; }
-        function updateTabCounts(counts) {
-            if (!counts) { return; }
-            ['present', 'absent'].forEach(function(k) {
-                if (counts[k] !== undefined) { $('.sl-tab-count[data-count="' + k + '"]').text(padCount(counts[k])); }
-            });
         }
 
         function relayoutPinnedColumns() {
@@ -322,7 +279,6 @@
                 type: 'GET',
                 data: function(d) {
                     Object.assign(d, getFilterState());
-                    d.attendance = currentAttendance;
                 }
             },
             columns: [
@@ -344,10 +300,7 @@
         });
 
         dt.on('preXhr.dt', function() { setTableLoading(true); })
-          .on('xhr.dt', function(e, settings, json) {
-              setTableLoading(false);
-              if (json && json.counts) { updateTabCounts(json.counts); }
-          })
+          .on('xhr.dt', function() { setTableLoading(false); })
           .on('error.dt', function() { setTableLoading(false); })
           .on('draw.dt column-visibility.dt', function() { relayoutPinnedColumns(); });
 
@@ -359,18 +312,6 @@
             p.set('status', st);
             p.delete('course_id'); // the course list differs per status
             window.location.href = baseUrl + (p.toString() ? '?' + p.toString() : '');
-        });
-
-        /* ── Present / Absent tabs ── */
-        $('.programme-status-tabs .programme-status-pill[data-attendance]').on('click', function() {
-            const att = $(this).data('attendance');
-            if (att === currentAttendance) { return; }
-            currentAttendance = att;
-            $('.programme-status-tabs .programme-status-pill').removeClass('active');
-            $(this).addClass('active');
-            setupOtColumns(); // Present ↔ Absent use different column layouts
-            syncUrl();
-            if (dt) { dt.ajax.reload(null, true); }
         });
 
         /* ── Filters ── */
@@ -409,16 +350,11 @@
         function otPersistHiddenCols(arr) { try { localStorage.setItem(otColStorageKey, JSON.stringify(arr)); } catch (e) {} }
         function setupOtColumns() {
             if (!dt) { return; }
-            applyTabHeaders(); // set the per-tab header labels before (re)building the modal
-            const onAbsent = currentAttendance === 'absent';
             const hidden = otGetHiddenCols().filter(idx => LOCKED_COLUMNS.indexOf(idx) === -1);
             otPersistHiddenCols(hidden);
             dt.columns().every(function() {
                 const idx = this.index();
                 if (LOCKED_COLUMNS.indexOf(idx) !== -1) { this.visible(true, false); return; }
-                // Present-only columns are hidden entirely on the Absent tab; on the
-                // Present tab they follow the user's own show/hide preference.
-                if (isPresentOnly(idx)) { this.visible(!onAbsent && hidden.indexOf(idx) === -1, false); return; }
                 this.visible(hidden.indexOf(idx) === -1, false);
             });
             dt.columns.adjust();
@@ -428,7 +364,6 @@
             $grid.empty();
             dt.columns().every(function() {
                 const idx = this.index();
-                if (onAbsent && isPresentOnly(idx)) { return; } // not applicable on the Absent tab
                 const title = $(this.header()).text().replace(/\s+/g, ' ').trim();
                 if (!title) { return; }
                 const isLocked = LOCKED_COLUMNS.indexOf(idx) !== -1;
