@@ -116,6 +116,21 @@ select.sme-filter-control {
     padding-right: 2.25rem;      /* room for the native chevron */
     text-overflow: ellipsis;
 }
+
+/* Searchable course filter (Choices.js) — match the filter-control footprint */
+.sme-filterbar .choices { margin-bottom: 0; min-width: 180px; max-width: 240px; }
+.sme-filterbar .choices__inner {
+    min-height: 42px;
+    padding: 0.35rem 2rem 0.35rem 0.85rem;
+    background: #fff;
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-1);
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+}
+.sme-filterbar .choices.is-focused .choices__inner { border-color: #c4ccd6; }
+.sme-filterbar .choices__list--single { padding: 0; }
 .sme-filter-control:hover {
     border-color: #c4ccd6;
 }
@@ -449,7 +464,6 @@ select.sme-filter-control {
 .sme-act-edit:hover { background: rgba(0, 74, 147, 0.12); }
 .sme-act-delete {
     color: #af2910;
-    border: 1px solid #af2910;
 }
 .sme-act-delete:hover { background: rgba(175, 41, 16, 0.12); }
 .sme-act-delete.disabled { opacity: 0.4; pointer-events: none; }
@@ -634,10 +648,6 @@ select.sme-filter-control {
 .datatables #medicalExemptionTable .sme-act-edit i { color: #004a93 !important; }
 .datatables #medicalExemptionTable .sme-act-delete,
 .datatables #medicalExemptionTable .sme-act-delete i { color: #af2910 !important; }
-.datatables #medicalExemptionTable .sme-act-delete {
-    border: 1px solid #af2910;
-    border-radius: var(--ds-radius-1);
-}
 .datatables #medicalExemptionTable .sme-act i { font-size: 20px !important; line-height: 1; }
 .datatables #medicalExemptionTable .sme-act-switch { padding-left: 0 !important; margin: 0 !important; min-height: 0 !important; }
 .datatables #medicalExemptionTable .sme-act-switch .form-check-input { margin: 0 !important; float: none !important; }
@@ -862,6 +872,42 @@ $(document).ready(function() {
     // ✅ IMPORTANT: global variable (DataTable से पहले)
     let courseStatus = 'active';
 
+    // Course filter options per tab: Active = running courses, Archive = ended
+    // courses (like Course Master). The dropdown swaps when the tab changes.
+    const smeCourseLists = {
+        active: @json($courses->map(fn ($c) => ['pk' => $c->pk, 'name' => $c->course_name])->values()),
+        archive: @json(($archivedCourses ?? collect())->map(fn ($c) => ['pk' => $c->pk, 'name' => $c->course_name])->values()),
+    };
+
+    // Searchable course filter (Choices.js). All filter dropdowns get a search box.
+    let courseFilterChoices = null;
+    if (window.Choices && document.getElementById('course_filter')) {
+        courseFilterChoices = new Choices('#course_filter', {
+            searchEnabled: true,
+            searchPlaceholderValue: 'Search course...',
+            searchResultLimit: 50,
+            itemSelectText: '',
+            shouldSort: false,
+            allowHTML: false,
+        });
+    }
+
+    function populateCourseFilter(status) {
+        const list = smeCourseLists[status] || [];
+        const choiceRows = [{ value: '', label: 'Course Name', selected: true }]
+            .concat(list.map(function (c) { return { value: String(c.pk), label: c.name }; }));
+        if (courseFilterChoices) {
+            // Rebuild the Choices list (a course from the other tab won't exist here).
+            courseFilterChoices.setChoices(choiceRows, 'value', 'label', true);
+            return;
+        }
+        const $sel = $('#course_filter');
+        if (!$sel.length) { return; }
+        $sel.empty();
+        choiceRows.forEach(function (c) { $sel.append($('<option>').val(c.value).text(c.label)); });
+        $sel.val('');
+    }
+
     let table = $('#medicalExemptionTable').DataTable({
         processing: true,
         serverSide: true,
@@ -1008,7 +1054,11 @@ $(document).ready(function() {
     // 🔄 Reset filters
     $('#resetFilters').on('click', function() {
         $('#search').val('');
-        $('#course_filter').val('').trigger('change');
+        if (courseFilterChoices) {
+            courseFilterChoices.setChoiceByValue('');
+        } else {
+            $('#course_filter').val('').trigger('change');
+        }
         $('#from_date_filter').val('');
         $('#to_date_filter').val('');
 
@@ -1173,7 +1223,7 @@ $(document).ready(function() {
             formEl.querySelectorAll('select').forEach(function(sel){
                 sel.classList.remove('select2');
                 var inst = new Choices(sel, {
-                    searchEnabled: sel.options.length > 5,
+                    searchEnabled: true,
                     searchPlaceholderValue: 'Search...',
                     itemSelectText: '',
                     shouldSort: false,
@@ -1444,6 +1494,7 @@ $(document).ready(function() {
     $('#filterActive').on('click', function() {
 
         courseStatus = 'active';
+        populateCourseFilter('active');
 
         $(this).addClass('active').attr('aria-pressed', 'true');
         $('#filterArchive').removeClass('active').attr('aria-pressed', 'false');
@@ -1455,6 +1506,7 @@ $(document).ready(function() {
     $('#filterArchive').on('click', function() {
 
         courseStatus = 'archive';
+        populateCourseFilter('archive');
 
         $(this).addClass('active').attr('aria-pressed', 'true');
         $('#filterActive').removeClass('active').attr('aria-pressed', 'false');
