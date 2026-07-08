@@ -43,7 +43,7 @@
     .ot-list-page .programme-dt-table tbody td span.sl-count {
         color: #004a93; font-weight: 600; text-decoration: none; white-space: wrap;
     }
-    .ot-list-page .programme-dt-table tbody td a.sl-count:hover,
+    .ot-list-page .programme-dt-table tbody td a.sl-count:hover { text-decoration: underline; cursor: pointer; }
     .ot-list-page .programme-dt-table tbody td span.sl-count:hover { text-decoration: underline; cursor: default; }
 
     .ot-list-page .programme-dt-table { width: 100% !important; }
@@ -115,6 +115,17 @@
                             <option value="">Course Name</option>
                             @foreach($courseOptions as $course)
                                 <option value="{{ $course->pk }}" {{ (string)($filters['course_id'] ?? '') === (string)$course->pk ? 'selected' : '' }}>{{ $course->course_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
+
+                    @if(($cadreOptions ?? collect())->isNotEmpty())
+                    <div class="sl-filter-item">
+                        <select id="cadreFilter" class="form-select sl-filter-select" aria-label="Filter by cadre">
+                            <option value="">Cadre</option>
+                            @foreach($cadreOptions as $cadre)
+                                <option value="{{ $cadre }}" {{ (string)($filters['cadre'] ?? '') === (string)$cadre ? 'selected' : '' }}>{{ $cadre }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -222,6 +233,7 @@
             return {
                 status: currentStatus,
                 course_id: $('#courseFilter').val() || '',
+                cadre: $('#cadreFilter').val() || '',
                 session: $('#sessionFilter').val() || '',
                 participant: $('#participantFilter').val() || '',
                 from_date: (filters.from_date || '').toString(),
@@ -288,7 +300,6 @@
                 { data: 'email', name: 'email' },
                 { data: 'cadre', name: 'cadre' },
                 { data: 'house', name: 'house' },
-                { data: 'topic', name: 'topic', orderable: false, searchable: false },
                 { data: 'duty_count', name: 'duty_count', orderable: false, searchable: false },
                 { data: 'duty_type', name: 'duty_type', orderable: false, searchable: false },
                 { data: 'medical', name: 'medical', orderable: false, searchable: false },
@@ -316,6 +327,7 @@
 
         /* ── Filters ── */
         $('#courseFilter').on('change', function() { applyFilter({ course_id: this.value }); });
+        $('#cadreFilter').on('change', function() { applyFilter({ cadre: this.value }); });
         $('#sessionFilter').on('change', function() { applyFilter({ session: this.value }); });
         $('#participantFilter').on('change', function() { applyFilter({ participant: this.value }); });
         $('#resetFilters').on('click', function() { window.location.href = baseUrl; });

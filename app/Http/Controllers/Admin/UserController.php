@@ -1323,8 +1323,10 @@ class UserController extends Controller
         $availableCourses = $payload['availableCourses'];
 
         // Apply the shared filters to the session rows, then collapse to one row
-        // per participant — every student of the selected course is listed.
-        $sessionRows = $this->applyDashboardStudentListFilters($payload['students'], $request);
+        // per participant — every student of the selected course is listed. The
+        // Time Period filter here only scopes the count columns (see $rowMeta
+        // below), so pass false to keep all students visible regardless of dates.
+        $sessionRows = $this->applyDashboardStudentListFilters($payload['students'], $request, false);
 
         $byStudent = [];
         foreach ($sessionRows as $m) {
@@ -1337,21 +1339,10 @@ class UserController extends Controller
                     'student_master_pk' => $spk,
                     'studentMaster' => $m->studentMaster,
                     'house_name' => $m->house_name ?? null,
-                    'topic' => null,
-                    'topic_date' => null,
                 ];
             }
             if (empty($byStudent[$spk]->house_name) && ! empty($m->house_name)) {
                 $byStudent[$spk]->house_name = $m->house_name;
-            }
-            // Keep the most recent session's topic as this participant's Topic Name.
-            $topic = trim((string) ($m->session_topic ?? ''));
-            if ($topic !== '') {
-                $d = $m->session_date ?? null;
-                if ($byStudent[$spk]->topic === null || ($d && (string) $d > (string) $byStudent[$spk]->topic_date)) {
-                    $byStudent[$spk]->topic = $topic;
-                    $byStudent[$spk]->topic_date = $d;
-                }
             }
         }
         $participants = collect(array_values($byStudent));
@@ -1360,8 +1351,11 @@ class UserController extends Controller
         $rows = $participants;
         $totalParticipants = $participants->count();
 
+        // Time Period scopes the count columns only (all students stay visible).
         $rowMeta = $this->otParticipantsRowMeta(
-            $participants->pluck('student_master_pk')->all()
+            $participants->pluck('student_master_pk')->all(),
+            $request->input('from_date') ?: null,
+            $request->input('to_date') ?: null
         );
 
         if ($request->ajax() && $request->has('draw')) {
@@ -1403,6 +1397,7 @@ class UserController extends Controller
             'session' => (string) $request->input('session', ''),
             'participant' => (string) $request->input('participant', ''),
             'course_id' => (string) $request->input('course_id', ''),
+            'cadre' => (string) $request->input('cadre', ''),
             'status' => $status,
         ];
 
@@ -1442,10 +1437,14 @@ class UserController extends Controller
      *   notice_memo     → student_memo_status memo_count (OT-portal memos)
      *   discipline_memo → discipline_memo_status rows
      *
+     * When a Time Period ($fromDate/$toDate, Y-m-d) is supplied, every count is
+     * scoped to rows whose own date column falls inside that range:
+     *   medical/pt/stationed → from_date, duty → mdo_date, memos → date.
+     *
      * @param  array<int, int>  $studentPks
      * @return array<int, array{medical:int,pt:int,stationed:int,duty_count:int,duty_type:string,notice_memo:int,discipline_memo:int}>
      */
-    private function otParticipantsRowMeta(array $studentPks): array
+    private function otParticipantsRowMeta(array $studentPks, ?string $fromDate = null, ?string $toDate = null): array
     {
         $out = [];
         if (empty($studentPks)) {
@@ -1462,6 +1461,8 @@ class UserController extends Controller
         $medical = DB::table('student_medical_exemption')
             ->whereIn('student_master_pk', $studentPks)
             ->where('active_inactive', 1)
+            ->when($fromDate, fn ($q) => $q->whereDate('from_date', '>=', $fromDate))
+            ->when($toDate, fn ($q) => $q->whereDate('from_date', '<=', $toDate))
             ->selectRaw('student_master_pk, COUNT(*) c')
             ->groupBy('student_master_pk')
             ->pluck('c', 'student_master_pk');
@@ -1474,6 +1475,8 @@ class UserController extends Controller
         $leaves = DB::table('leave_application')
             ->whereIn('student_master_pk', $studentPks)
             ->where('active_inactive', 1)
+            ->when($fromDate, fn ($q) => $q->whereDate('from_date', '>=', $fromDate))
+            ->when($toDate, fn ($q) => $q->whereDate('from_date', '<=', $toDate))
             ->selectRaw('student_master_pk, leave_type, COUNT(*) c')
             ->groupBy('student_master_pk', 'leave_type')
             ->get();
@@ -1490,25 +1493,37 @@ class UserController extends Controller
         }
 
         // Duty count + type. selected_student_list carries the assigned OT pk;
-        // count all duties for a student and surface the first duty type seen.
+        // count all duties for a student and list every DISTINCT duty type they
+        // hold (a student with multiple duties can span multiple types).
         $duties = DB::table('mdo_escot_duty_map as d')
             ->leftJoin('mdo_duty_type_master as m', 'd.mdo_duty_type_master_pk', '=', 'm.pk')
             ->whereIn('d.selected_student_list', $studentPks)
+            ->when($fromDate, fn ($q) => $q->whereDate('d.mdo_date', '>=', $fromDate))
+            ->when($toDate, fn ($q) => $q->whereDate('d.mdo_date', '<=', $toDate))
             ->get(['d.selected_student_list as spk', 'm.mdo_duty_type_name as type']);
+        $dutyTypes = []; // pk => [distinct type names, in first-seen order]
         foreach ($duties as $r) {
             $pk = (int) $r->spk;
             if (! isset($out[$pk])) {
                 continue;
             }
             $out[$pk]['duty_count']++;
-            if ($out[$pk]['duty_type'] === '-' && ! empty($r->type)) {
-                $out[$pk]['duty_type'] = $r->type;
+            $type = trim((string) ($r->type ?? ''));
+            if ($type !== '' && ! in_array($type, $dutyTypes[$pk] ?? [], true)) {
+                $dutyTypes[$pk][] = $type;
+            }
+        }
+        foreach ($dutyTypes as $pk => $types) {
+            if (isset($out[$pk]) && ! empty($types)) {
+                $out[$pk]['duty_type'] = implode(', ', $types);
             }
         }
 
         // Notice / Memo (OT-portal): sum of memo_count per student.
         $memo = DB::table('student_memo_status')
             ->whereIn('student_pk', $studentPks)
+            ->when($fromDate, fn ($q) => $q->whereDate('date', '>=', $fromDate))
+            ->when($toDate, fn ($q) => $q->whereDate('date', '<=', $toDate))
             ->selectRaw('student_pk, COALESCE(SUM(memo_count), COUNT(*)) c')
             ->groupBy('student_pk')
             ->pluck('c', 'student_pk');
@@ -1521,6 +1536,8 @@ class UserController extends Controller
         // Discipline memos.
         $disc = DB::table('discipline_memo_status')
             ->whereIn('student_master_pk', $studentPks)
+            ->when($fromDate, fn ($q) => $q->whereDate('date', '>=', $fromDate))
+            ->when($toDate, fn ($q) => $q->whereDate('date', '<=', $toDate))
             ->selectRaw('student_master_pk, COUNT(*) c')
             ->groupBy('student_master_pk')
             ->pluck('c', 'student_master_pk');
@@ -1618,14 +1635,13 @@ class UserController extends Controller
                 'email' => e($s->email ?? 'N/A'),
                 'cadre' => e($s->cadre->cadre_name ?? 'N/A'),
                 'house' => e($p->house_name ?: 'N/A'),
-                'topic' => e($p->topic ?: 'N/A'),
-                'duty_count' => $this->otCountCell($meta['duty_count']),
+                'duty_count' => $this->otCountCell($meta['duty_count'], $detailUrl . '#dutiesSection'),
                 'duty_type' => e($meta['duty_type'] ?: '-'),
-                'medical' => $this->otCountCell($meta['medical']),
-                'pt' => $this->otCountCell($meta['pt']),
-                'stationed' => $this->otCountCell($meta['stationed']),
-                'notice_memo' => $this->otCountCell($meta['notice_memo']),
-                'discipline_memo' => $this->otCountCell($meta['discipline_memo']),
+                'medical' => $this->otCountCell($meta['medical'], $detailUrl . '#medicalExceptionsSection'),
+                'pt' => $this->otCountCell($meta['pt'], $detailUrl . '#ptExemptionsSection'),
+                'stationed' => $this->otCountCell($meta['stationed'], $detailUrl . '#stationedLeavesSection'),
+                'notice_memo' => $this->otCountCell($meta['notice_memo'], $detailUrl . '#noticesSection'),
+                'discipline_memo' => $this->otCountCell($meta['discipline_memo'], $detailUrl . '#memosSection'),
             ];
         }
 
@@ -1639,15 +1655,22 @@ class UserController extends Controller
 
     /**
      * A zero-padded count cell for the OT participants list. Blank counts render
-     * as a muted dash; non-zero counts render as a blue badge-style number.
+     * as a muted dash; non-zero counts render as a blue badge-style number that,
+     * when $url is given, links to the relevant section of the student detail page.
      */
-    private function otCountCell(int $n): string
+    private function otCountCell(int $n, ?string $url = null): string
     {
         if ($n <= 0) {
             return '<span class="text-muted">-</span>';
         }
 
-        return '<span class="sl-count">' . str_pad((string) $n, 2, '0', STR_PAD_LEFT) . '</span>';
+        $label = str_pad((string) $n, 2, '0', STR_PAD_LEFT);
+
+        if ($url) {
+            return '<a href="' . e($url) . '" class="sl-count">' . $label . '</a>';
+        }
+
+        return '<span class="sl-count">' . $label . '</span>';
     }
 
     /**
@@ -2415,7 +2438,7 @@ class UserController extends Controller
         return false;
     }
 
-    private function applyDashboardStudentListFilters($students, Request $request)
+    private function applyDashboardStudentListFilters($students, Request $request, bool $applySessionDateFilter = true)
     {
         $courseId = $request->input('course_id');
         $roleFilter = $request->input('role_filter');
@@ -2432,7 +2455,10 @@ class UserController extends Controller
         // Time Period (event date) filter: when a range is selected, only students who
         // have a timetable session/event within that range are kept. If no event exists
         // on the chosen day(s), the list ends up empty ("Data not found.").
-        $hasSessionDateFilter = $request->filled('from_date') && $request->filled('to_date');
+        // Callers that only want the Time Period to scope count columns (not drop
+        // students) pass $applySessionDateFilter = false.
+        $hasSessionDateFilter = $applySessionDateFilter
+            && $request->filled('from_date') && $request->filled('to_date');
 
         return $students->filter(function ($studentMap) use ($courseId, $roleFilter, $counsellorFaculty, $groupPk, $cadre, $house, $session, $participant, $search, $hasSessionDateFilter) {
             $student = $studentMap->studentMaster;
