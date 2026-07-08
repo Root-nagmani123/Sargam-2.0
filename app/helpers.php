@@ -616,7 +616,8 @@ function is_faculty_portal_user(): bool
         return true;
     }
 
-    return hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Faculty');
+    return hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Faculty')
+        || hasRole('CC') || hasRole('ACC');
 }
 
 /**
@@ -829,6 +830,60 @@ if (!function_exists('get_timetable_faculty_names')) {
     }
 }
 
+if (!function_exists('resolve_chat_sender_identity')) {
+    /**
+     * Resolve a memo/notice chat message's sender name + role.
+     *
+     * role_type 's' → created_by is student_master.pk.
+     * role_type 'f' (or anything else) → created_by is user_credentials.user_id,
+     * which maps to employee_master.pk (see App\Models\User doc comment). Multiple
+     * distinct admins/faculty can post in the same conversation, so callers must not
+     * collapse all of them to a generic "Admin" label — resolve the real name + role.
+     *
+     * @return array{display_name: string, role_name: ?string}
+     */
+    function resolve_chat_sender_identity($createdBy, ?string $roleType, string $fallback = 'Unknown'): array
+    {
+        if ($roleType === 's') {
+            $name = \Illuminate\Support\Facades\DB::table('student_master')->where('pk', $createdBy)->value('display_name');
+            return ['display_name' => $name ?: 'Student', 'role_name' => 'Officer Trainee'];
+        }
+
+        $uc = \Illuminate\Support\Facades\DB::table('user_credentials')
+            ->where('user_id', $createdBy)
+            ->where('user_category', '!=', 'S')
+            ->first();
+
+        // Fallback for legacy rows saved with user_credentials.pk instead of .user_id.
+        if (!$uc) {
+            $uc = \Illuminate\Support\Facades\DB::table('user_credentials')
+                ->where('pk', $createdBy)
+                ->where('user_category', '!=', 'S')
+                ->first();
+        }
+
+        if (!$uc) {
+            return ['display_name' => $fallback, 'role_name' => null];
+        }
+
+        $employeeName = \Illuminate\Support\Facades\DB::table('employee_master')
+            ->where('pk', $uc->user_id)
+            ->selectRaw("TRIM(CONCAT(COALESCE(first_name,''),' ',COALESCE(middle_name,''),' ',COALESCE(last_name,''))) as full_name")
+            ->value('full_name');
+
+        $roleName = \Illuminate\Support\Facades\DB::table('model_has_roles')
+            ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+            ->where('model_has_roles.model_id', $uc->pk)
+            ->where('model_has_roles.model_type', \App\Models\User::class)
+            ->value('roles.name');
+
+        return [
+            'display_name' => $employeeName ?: ($uc->user_name ?: $fallback),
+            'role_name' => $roleName,
+        ];
+    }
+}
+
 if (!function_exists('expected_feedback_count_sql')) {
     /**
      * SQL expression for the number of feedbacks EXPECTED for a timetable session.
@@ -1032,15 +1087,11 @@ function get_Role_by_course()
         return [-1];
     }
 
-    $epoch = Cache::get('role_by_course_epoch', 1);
-    $cacheKey = 'role_by_course_v2_' . $user->pk . '_' . md5(implode(',', $userRoleIds)) . '_e' . $epoch;
-    $role_course = Cache::remember($cacheKey, 600, function () use ($userRoleIds) {
-        return DB::table('course_master as cm')
-            ->join('roles as r', 'cm.user_role_master_pk', '=', 'r.id')
-            ->whereIn('r.id', $userRoleIds)
-            ->pluck('cm.pk')
-            ->toArray();
-    });
+    $role_course = DB::table('course_master as cm')
+        ->join('roles as r', 'cm.user_role_master_pk', '=', 'r.id')
+        ->whereIn('r.id', $userRoleIds)
+        ->pluck('cm.pk')
+        ->toArray();
     if (empty($role_course)) {
         // Non-admin user with roles but no mapped courses should see no data.
         return [-1];

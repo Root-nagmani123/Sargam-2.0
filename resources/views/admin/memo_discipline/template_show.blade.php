@@ -15,65 +15,62 @@
     <div class="card" >
         <div class="card-body">
             <div class="gap-2 text-end">
-                    <a href="{{ route('memo.discipline.index') }}" class="btn btn-outline-secondary">Back</a>
+                    {{-- Go back to the exact page the user came from (preserves the
+                         filtered/searched list state); fall back to the plain index
+                         when opened directly / in a new tab. --}}
+                    <a href="{{ route('memo.discipline.index') }}"
+                       onclick="if(history.length>1){history.back();return false;}"
+                       class="btn btn-outline-secondary">Back</a>
                 </div>
             <h5 class="text-center fw-bold mb-3">{{ $memo->course->course_name ?? 'Course Name' }}</h5>
             <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
             <hr>
 
-            <p class="mb-1">SHOW CAUSE Memo</p>
-            <p><strong>Date:</strong> {{ \Carbon\Carbon::parse($memo->date)->format('d/m/Y') }}</p>
-
-            <p>It has been brought to the notice of the undersigned that you were absent without prior authorization
-                from
-                following session(s)...</p>
-
-           {{-- <div class="table-responsive mb-3">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>No. of Session(s)</th>
-                            <th>Topics</th>
-                            <th>
-                                Venue
-                            </th>
-                            <th>Session(s)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>{{ \Carbon\Carbon::now()->format('d/m/Y') }}</td>
-                            <td>1</td>
-                            <td>{{ $memo->subject_topic ?? 'Topic Name' }}</td>
-                            <td>{{ $memo->venue_name ?? 'Venue' }}</td>
-                            <td>{{ $memo->session_time ?? '06:00-07:00' }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div> --}}
-
-            <div class="mb-4">
-                <p class="fw-bold">You are advised to do the following:</p>
-                <ul>
-                    <li>Reply to this Memo online through this <a href="#">conversation</a></li>
-                    <li>Appear <a href="#">in person before the undersigned at 1800 hrs on next working day</a></li>
-                </ul>
-                <p>{!! $memo->template->content ?? '' !!}</p>
-            </div>
-
-            <p><strong>{{ $memo->student->display_name ?? 'Student Name' }}, {{ $memo->student->generated_OT_code ?? 'OT Code' }}</strong><br>
-                Remarks: Show Cause Memo for {{ \Carbon\Carbon::parse($memo->date)->format('d/m/Y') }}</p>
-
-            <div class="text-end">
-                @if(!empty($memo->template->signature_image))
-                    <img src="{{ Storage::url($memo->template->signature_image) }}" alt="Signature" style="max-height:60px;display:block;margin-left:auto;margin-bottom:4px;">
+            <div class="row g-2 mb-3">
+                <div class="col-md-4">
+                    <span class="text-muted small">Date</span>
+                    <div class="fw-semibold">{{ \Carbon\Carbon::parse($memo->date)->format('d/m/Y') }}</div>
+                </div>
+                <div class="col-md-4">
+                    <span class="text-muted small">Discipline</span>
+                    <div class="fw-semibold">{{ $memo->discipline->discipline_name ?? '—' }}</div>
+                </div>
+                <div class="col-md-4">
+                    <span class="text-muted small">Participant</span>
+                    <div class="fw-semibold">{{ $memo->student->display_name ?? '—' }}{{ $memo->student->generated_OT_code ? ' (' . $memo->student->generated_OT_code . ')' : '' }}</div>
+                </div>
+                @if(!empty($memo->remarks))
+                <div class="col-12">
+                    <span class="text-muted small">Remarks</span>
+                    <div class="fw-semibold">{{ $memo->remarks }}</div>
+                </div>
                 @endif
-                <strong>{{ $memo->template->director_name ?? 'Director Name' }}</strong><br>{{ $memo->template->director_designation ?? 'Director Designation' }}
             </div>
 
-            <!-- Exemption Table -->
-           
+            <!-- Memo Template Content -->
+            <h6 class="fw-bold">Memo Content</h6>
+            @if($template)
+            <div class="border rounded p-3 mb-4 bg-light">
+                <h5 class="text-center fw-bold mb-2">{{ $memo->course->course_name ?? '' }}</h5>
+                <p class="text-center mb-0 small">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+                <hr>
+                <p class="mb-1">DISCIPLINE MEMO</p>
+                <p class="mb-1"><strong>Date:</strong> {{ \Carbon\Carbon::parse($memo->date)->format('d/m/Y') }}</p>
+                <div class="mb-3">{!! $template->content !!}</div>
+                @if($template->signature_image)
+                <div class="text-end">
+                    <img src="{{ asset('storage/' . $template->signature_image) }}" alt="Signature" style="max-height:60px;">
+                </div>
+                @endif
+                <p class="text-end mb-0">
+                    <strong>{{ $template->director_name }}</strong><br>
+                    <span>{{ $template->director_designation }}</span>
+                </p>
+            </div>
+            @else
+            <div class="alert alert-info mb-4">No active Discipline Memo template found for this course.</div>
+            @endif
+
             <!-- Conversation Section -->
             <h6 class="fw-bold">Conversation</h6>
             <div class="table-responsive mb-4">
@@ -90,7 +87,7 @@
                     <tbody id="disciplineConvBody">
                        @forelse ($memo->messages as $row)
                             <tr data-pk="{{ $row->pk }}">
-                                <td>{{ $row->student->display_name ?? 'Admin' }}</td>
+                                <td>{{ $row->display_name }}{{ $row->role_name ? ' (' . $row->role_name . ')' : '' }}</td>
                                 <td>{{ $row->student_decip_incharge_msg }}</td>
                                 <td>{{ \Carbon\Carbon::parse($row->created_date)->format('d-m-Y h:i A') }}</td>
                                 <td>
@@ -119,7 +116,7 @@
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <input type="hidden" name="role_type" value="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin')) ? 'f' : 'OT' }}">
+                            <input type="hidden" name="role_type" value="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction')) ? 'f' : 'OT' }}">
                             <input type="hidden" name="created_by" value="{{ auth()->user()->user_id }}">
                             <input type="hidden" name="memo_discipline_id" value="{{ $memo->pk }}">
                             <label class="form-label">Select Date</label>
@@ -147,7 +144,7 @@
 
                             </div>
                         </div>
-                        @if(hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Internal Faculty') || hasRole('Guest Faculty'))
+                        @if(hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction') || hasRole('Internal Faculty') || hasRole('Guest Faculty'))
                         <div class="col-6">
                             <div class="mb-3">
                                 <label class="form-label">Status</label>
@@ -200,7 +197,9 @@
                     <hr>
                     <div class="gap-2 text-end">
                         <button type="submit" class="btn btn-primary">Send</button>
-                        <a href="{{route('memo.discipline.index')}}" class="btn btn-outline-secondary">Back</a>
+                        <a href="{{ route('memo.discipline.index') }}"
+                           onclick="if(history.length>1){history.back();return false;}"
+                           class="btn btn-outline-secondary">Back</a>
                     </div>
                 </form>
                 @endif
@@ -313,8 +312,10 @@
                 ? '<a href="/storage/' + escHtml(msg.doc_upload) + '" target="_blank">View</a>'
                 : '---';
 
+            var nameCell = escHtml(msg.display_name || 'N/A') + (msg.role_name ? ' (' + escHtml(msg.role_name) + ')' : '');
+
             tr.innerHTML =
-                '<td>' + escHtml(msg.display_name || 'N/A') + '</td>' +
+                '<td>' + nameCell + '</td>' +
                 '<td>' + escHtml(msg.student_decip_incharge_msg || '') + '</td>' +
                 '<td>' + escHtml(msg.formatted_date || '') + '</td>' +
                 '<td>' + docCell + '</td>';
