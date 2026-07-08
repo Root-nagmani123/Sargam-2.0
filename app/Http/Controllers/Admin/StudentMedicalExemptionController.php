@@ -17,6 +17,8 @@ use App\Services\NotificationService;
 use App\Services\NotificationReceiverService;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Excel as ExcelFormat;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Yajra\DataTables\Facades\DataTables;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -80,7 +82,9 @@ class StudentMedicalExemptionController extends Controller
                             $qs->where('speciality_name', 'like', "{$search}%");
                         })
 
-                        ->orWhere('opd_category', 'like', "{$search}%");
+                        ->orWhere('opd_category', 'like', "{$search}%")
+                        ->orWhere('Description', 'like', "%{$search}%")
+                        ->orWhere('pt_outdoor_advise', 'like', "%{$search}%");
                     });
                 }
 
@@ -147,9 +151,18 @@ class StudentMedicalExemptionController extends Controller
 
                 ->addIndexColumn()
 
-                ->addColumn('student', fn($row) =>
-                    $row->student->display_name ?? 'N/A'
+                ->addColumn('date', fn($row) =>
+                    $row->from_date
+                        ? Carbon::parse($row->from_date)->format('d/m/Y')
+                        : 'N/A'
                 )
+
+                ->addColumn('student', function ($row) {
+                    $name = $row->student->display_name ?? 'N/A';
+                    $ot = $row->student->generated_OT_code ?? null;
+
+                    return $ot ? "{$name} - {$ot}" : $name;
+                })
 
                 ->addColumn('ot_code', fn($row) =>
                     $row->student->generated_OT_code ?? 'N/A'
@@ -166,32 +179,89 @@ class StudentMedicalExemptionController extends Controller
                     return 'N/A';
                 })
 
-                ->addColumn('category', fn($row) =>
-                    $row->category->exemp_category_name ?? 'N/A'
-                )
-
                 ->addColumn('speciality', fn($row) =>
                     $row->speciality->speciality_name ?? 'N/A'
                 )
 
-                ->addColumn('from_to', fn($row) =>
-                    Carbon::parse($row->from_date)->format('d-m-Y') .
-                    ' to ' .
-                    Carbon::parse($row->to_date)->format('d-m-Y')
+                ->addColumn('duration', function ($row) {
+                    $from = $row->from_date
+                        ? Carbon::parse($row->from_date)->format('d/m/Y H:i')
+                        : 'N/A';
+                    $to = $row->to_date
+                        ? Carbon::parse($row->to_date)->format('d/m/Y H:i')
+                        : 'N/A';
+
+                    return $from . ' - ' . $to;
+                })
+
+                ->addColumn('days', fn($row) =>
+                    $row->days ?? 'N/A'
+                )
+
+                ->addColumn('category', fn($row) =>
+                    $row->category->exemp_category_name ?? 'N/A'
                 )
 
                 ->addColumn('opd_type', fn($row) =>
                     $row->opd_category ?? 'N/A'
                 )
 
+                ->addColumn('pt_advise', fn($row) =>
+                    $row->pt_outdoor_advise ?: '-'
+                )
+
+                ->addColumn('description', fn($row) =>
+                    $row->Description ?: '-'
+                )
+
+                // Legacy combined fields — keeps older cached DataTable configs working.
+                ->addColumn('arrival_date', fn($row) =>
+                    $row->from_date
+                        ? Carbon::parse($row->from_date)->format('d-m-Y')
+                        : 'N/A'
+                )
+
+                ->addColumn('arrival_time', fn($row) =>
+                    $row->from_date
+                        ? Carbon::parse($row->from_date)->format('h:i A')
+                        : 'N/A'
+                )
+
+                ->addColumn('departure_date', fn($row) =>
+                    $row->to_date
+                        ? Carbon::parse($row->to_date)->format('d-m-Y')
+                        : 'N/A'
+                )
+
+                ->addColumn('departure_time', fn($row) =>
+                    $row->to_date
+                        ? Carbon::parse($row->to_date)->format('h:i A')
+                        : 'N/A'
+                )
+
+                ->addColumn('arrival', fn($row) =>
+                    $row->from_date
+                        ? Carbon::parse($row->from_date)->format('d-m-Y H:i')
+                        : 'N/A'
+                )
+
+                ->addColumn('departure', fn($row) =>
+                    $row->to_date
+                        ? Carbon::parse($row->to_date)->format('d-m-Y H:i')
+                        : 'N/A'
+                )
+
+                ->addColumn('from_to', fn($row) =>
+                    ($row->from_date ? Carbon::parse($row->from_date)->format('d-m-Y') : 'N/A')
+                    . ' to '
+                    . ($row->to_date ? Carbon::parse($row->to_date)->format('d-m-Y') : 'N/A')
+                )
+
                 ->addColumn('document', function ($row) {
                     if ($row->Doc_upload) {
-                        return '<a href="' . asset('storage/' . $row->Doc_upload) . '" target="_blank"
-                                class="btn btn-sm btn-info">
-                                <i class="material-icons material-symbols-rounded">description</i>
-                            </a>';
+                        return '<a href="' . asset('storage/' . $row->Doc_upload) . '" target="_blank" rel="noopener noreferrer" class="sme-doc-view">View</a>';
                     }
-                    return '<span class="text-muted">N/A</span>';
+                    return 'NA';
                 })
 
                 ->addColumn('action', function ($row) {
@@ -199,22 +269,12 @@ class StudentMedicalExemptionController extends Controller
                     $editUrl = route('student.medical.exemption.edit', encrypt($row->pk));
                     $deleteUrl = route('student.medical.exemption.delete', encrypt($row->pk));
                     $disabled = $row->active_inactive == 1 ? 'disabled' : '';
-                    $checked  = $row->active_inactive == 1 ? 'checked' : '';
 
                     return '
                         <div class="sme-row-actions">
                             <a href="' . $editUrl . '" class="sme-act sme-act-edit sme-edit-btn" title="Edit" aria-label="Edit">
                                 <i class="material-icons material-symbols-rounded">edit</i>
                             </a>
-
-                            <div class="form-check form-switch sme-act-switch">
-                                <input class="form-check-input status-toggle"
-                                    type="checkbox"
-                                    role="switch"
-                                    data-table="student_medical_exemption"
-                                    data-column="active_inactive"
-                                    data-id="' . $row->pk . '" ' . $checked . '>
-                            </div>
 
                             <a href="javascript:void(0)"
                                class="delete-btn sme-act sme-act-delete ' . $disabled . '"
@@ -510,12 +570,54 @@ class StudentMedicalExemptionController extends Controller
         return redirect()->route('student.medical.exemption.index')->with('success', 'Record created successfully.');
     }
 
+    public function show($id)
+    {
+        $record = StudentMedicalExemption::with([
+            'student',
+            'category',
+            'speciality',
+            'course',
+            'employee',
+        ])->findOrFail(decrypt($id));
+
+        $from = $record->from_date ? Carbon::parse($record->from_date) : null;
+        $to = $record->to_date ? Carbon::parse($record->to_date) : null;
+
+        $doctorName = 'N/A';
+        if ($record->employee) {
+            $doctorName = trim(($record->employee->first_name ?? '') . ' ' . ($record->employee->last_name ?? ''));
+            if ($doctorName === '') {
+                $doctorName = 'N/A';
+            }
+        }
+
+        return response()->json([
+            'course_name' => $record->course->course_name ?? 'N/A',
+            'student_name' => $record->student->display_name ?? 'N/A',
+            'ot_code' => $record->student->generated_OT_code ?? 'N/A',
+            'doctor_name' => $doctorName,
+            'category' => $record->category->exemp_category_name ?? 'N/A',
+            'opd_category' => $record->opd_category ?? 'N/A',
+            'arrival_date' => $from ? $from->format('d-m-Y') : 'N/A',
+            'arrival_time' => $from ? $from->format('h:i A') : 'N/A',
+            'departure_date' => $to ? $to->format('d-m-Y') : 'N/A',
+            'departure_time' => $to ? $to->format('h:i A') : 'N/A',
+            'speciality' => $record->speciality->speciality_name ?? 'N/A',
+            'days' => $record->days ?? 'N/A',
+            'description' => $record->Description ?: '—',
+            'pt_outdoor_advise' => $record->pt_outdoor_advise ?: '—',
+            'document_url' => $record->Doc_upload ? asset('storage/' . $record->Doc_upload) : null,
+            'status' => $record->active_inactive == 1 ? 'Active' : 'Inactive',
+            'created_date' => $record->created_date
+                ? Carbon::parse($record->created_date)->format('d-m-Y H:i')
+                : null,
+        ]);
+    }
+
 
     public function edit($id)
     {
         $record = StudentMedicalExemption::findOrFail(decrypt($id));
-
-        // All active (non-expired) courses — not role-scoped (matches the Add form).
         $courses = CourseMaster::where('active_inactive', '1')
             ->where('end_date', '>', now())
             ->orderBy('course_name')
@@ -698,12 +800,59 @@ class StudentMedicalExemptionController extends Controller
         $fromDateFilter = $request->get('from_date_filter');
         $toDateFilter = $request->get('to_date_filter');
         $search = $request->get('search');
+        $format = strtolower((string) $request->get('format', 'csv'));
 
-        $fileName = 'medical-exemption-export-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+        if (! in_array($format, ['csv', 'pdf'], true)) {
+            $format = 'csv';
+        }
 
-        return Excel::download(
-            new StudentMedicalExemptionExport($filter, $courseFilter, $search, $fromDateFilter, $toDateFilter),
-            $fileName
-        );
+        $export = new StudentMedicalExemptionExport($filter, $courseFilter, $search, $fromDateFilter, $toDateFilter);
+        $fileName = 'medical-exemption-export-' . now()->format('Y-m-d_H-i-s');
+
+        if ($format === 'pdf') {
+            @ini_set('memory_limit', '256M');
+            @set_time_limit(120);
+
+            $pdf = Pdf::loadView('admin.student_medical_exemption.export_pdf', [
+                'headings' => $export->headings(),
+                'rows' => $export->pdfRows(),
+                'filterLine' => $this->buildExportFilterLine($request),
+                'printedOn' => now()->format('d-m-Y H:i'),
+            ])
+                ->setPaper('a4', 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'dpi' => 96,
+                ]);
+
+            return $pdf->download($fileName . '.pdf');
+        }
+
+        return Excel::download($export, $fileName . '.csv', ExcelFormat::CSV);
+    }
+
+    private function buildExportFilterLine(Request $request): string
+    {
+        $parts = [];
+
+        $status = $request->get('filter', 'active');
+        $parts[] = 'Status: ' . ($status === 'archive' ? 'Archived' : 'Active');
+
+        if ($request->filled('course_filter')) {
+            $course = CourseMaster::find($request->course_filter);
+            $parts[] = 'Course: ' . ($course->course_name ?? $request->course_filter);
+        }
+
+        if ($request->filled('search')) {
+            $parts[] = 'Search: ' . $request->search;
+        }
+
+        if ($request->filled('from_date_filter') || $request->filled('to_date_filter')) {
+            $parts[] = 'Period: ' . ($request->from_date_filter ?: '…') . ' to ' . ($request->to_date_filter ?: '…');
+        }
+
+        return implode(' | ', $parts);
     }
 }
