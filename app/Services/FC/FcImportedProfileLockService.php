@@ -80,6 +80,32 @@ class FcImportedProfileLockService
     }
 
     /**
+     * The trainee's full English name from the academy roster, assembled as
+     * "First Middle Last" (blank parts skipped), or null if there is no roster
+     * row / no name on file. Used to pre-fill the officer's own name on the
+     * joining-document forms.
+     */
+    public function fullName(int $userId): ?string
+    {
+        $row = $this->rosterRow($userId);
+        if (! $row) {
+            return null;
+        }
+
+        $parts = [];
+        foreach (['first_name', 'middle_name', 'last_name'] as $col) {
+            $value = $row->{$col} ?? null;
+            if (is_string($value) && trim($value) !== '') {
+                $parts[] = trim($value);
+            }
+        }
+
+        $name = implode(' ', $parts);
+
+        return $name !== '' ? $name : null;
+    }
+
+    /**
      * The trainee's imported fc_registration_master row, resolved from the auth id.
      *
      * Mirrors fc_user_val(): staged /fc/login users have a negative auth id equal to

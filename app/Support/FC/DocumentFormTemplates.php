@@ -114,6 +114,11 @@ class DocumentFormTemplates
             }
         }
 
+        // Optional Hindi hand-entries for bilingual copies (see normalize()).
+        // The candidate may type the Hindi rendering of any slot; keyed free text.
+        $rules['hi']   = 'nullable|array';
+        $rules['hi.*'] = 'nullable|string';
+
         return $rules;
     }
 
@@ -162,6 +167,19 @@ class DocumentFormTemplates
             $tables[$tbl['key']] = $rows;
         }
         $out['_tables'] = $tables;
+
+        // Optional Hindi hand-entries: free-text the candidate types into the Hindi
+        // copy of a bilingual form, keyed by slot (e.g. hi[pname]). Stored under _hi
+        // and rendered verbatim in the Hindi section of the on-screen form + PDF.
+        $out['_hi'] = [];
+        if (is_array($data['hi'] ?? null)) {
+            foreach ($data['hi'] as $k => $v) {
+                if ($v !== null && ! is_scalar($v)) {
+                    continue;
+                }
+                $out['_hi'][$k] = trim((string) $v);
+            }
+        }
 
         return $out;
     }

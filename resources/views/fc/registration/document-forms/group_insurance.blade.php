@@ -144,7 +144,7 @@
                 Central Government under the Central Government Employees Group Insurance Scheme, 1980, in the event of my
                 death while in service or which, having become payable on my attaining the age of superannuation, may
                 remain unpaid at my death.
-                <br><span style="font-size:.92rem;">मैं, <span class="mirror-out" data-mirror-out="name">&nbsp;</span> जिसका <strong>कोई परिवार नहीं है / परिवार है</strong>, एतद्द्वारा नीचे उल्लिखित व्यक्ति/व्यक्तियों को नामांकित करता/करती हूँ तथा उन्हें केंद्रीय सरकार कर्मचारी समूह बीमा योजना, 1980 के अंतर्गत मेरी सेवाकाल में मृत्यु की स्थिति में स्वीकृत होने वाली राशि नीचे दर्शाई गई सीमा तक प्राप्त करने का अधिकार प्रदान करता/करती हूँ।</span>
+                <br><span style="font-size:.92rem;">मैं, <input type="text" name="hi[name]" class="blank blank--name" value="{{ $data['_hi']['name'] ?? '' }}" placeholder="हिन्दी में नाम (वैकल्पिक)" autocomplete="off"> जिसका <strong>कोई परिवार नहीं है / परिवार है</strong>, एतद्द्वारा नीचे उल्लिखित व्यक्ति/व्यक्तियों को नामांकित करता/करती हूँ तथा उन्हें केंद्रीय सरकार कर्मचारी समूह बीमा योजना, 1980 के अंतर्गत मेरी सेवाकाल में मृत्यु की स्थिति में स्वीकृत होने वाली राशि नीचे दर्शाई गई सीमा तक प्राप्त करने का अधिकार प्रदान करता/करती हूँ।</span>
             </p>
 
             <div class="d-flex justify-content-end mb-1">
