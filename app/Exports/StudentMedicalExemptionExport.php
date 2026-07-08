@@ -26,12 +26,12 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
 
     public function collection()
     {
-        return $this->recordsQuery()->map(fn ($record) => $this->mapRecord($record, false));
+        return $this->recordsQuery()->map(fn ($record) => $this->mapRecord($record));
     }
 
     public function pdfRows(): Collection
     {
-        return $this->recordsQuery()->map(fn ($record) => $this->mapRecord($record, true));
+        return $this->recordsQuery()->map(fn ($record) => $this->mapRecord($record));
     }
 
     private function recordsQuery()
@@ -100,7 +100,7 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
         return $query->orderBy('pk', 'desc')->get();
     }
 
-    private function mapRecord($record, bool $forPdf): array
+    private function mapRecord($record): array
     {
         $from = $record->from_date ? Carbon::parse($record->from_date) : null;
         $to = $record->to_date ? Carbon::parse($record->to_date) : null;
@@ -125,33 +125,15 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
             'days' => $record->days ?? 'N/A',
             'description' => $record->Description ?? 'N/A',
             'pt_outdoor_advise' => $record->pt_outdoor_advise ?? 'N/A',
-            'document' => $forPdf
-                ? ($this->documentUrl($record) ?? 'N/A')
-                : $this->documentExportValue($record),
-            'status' => $record->active_inactive == 1 ? 'Active' : 'Inactive',
         ];
     }
 
-    private function documentExportValue($record): string
-    {
-        if (! $record->Doc_upload) {
-            return 'N/A';
-        }
-
-        $url = asset('storage/' . $record->Doc_upload);
-
-        // Excel opens CSV formulas as clickable hyperlinks.
-        return '=HYPERLINK("' . str_replace('"', '""', $url) . '","View Document")';
-    }
-
-    public function documentUrl($record): ?string
-    {
-        return $record->Doc_upload
-            ? asset('storage/' . $record->Doc_upload)
-            : null;
-    }
-
-    public function headings(): array
+    /**
+     * The flat list of data-column headings (used by the PDF/Print layouts).
+     *
+     * @return array<int, string>
+     */
+    public function columnHeadings(): array
     {
         return [
             'Student Name',
@@ -168,9 +150,58 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
             'Days',
             'Provisional Diagnosis/ Remarks',
             'PT/Outdoor Advise',
-            'Document',
-            'Status',
         ];
+    }
+
+    /**
+     * CSV headings: branded identity rows (institution / report title / course /
+     * generated on) followed by the column heading row — mirrors the Print & PDF
+     * layout so all three exports carry the same header.
+     */
+    public function headings(): array
+    {
+        $meta = [
+            ['Lal Bahadur Shastri National Academy of Administration, Mussoorie'],
+            ['Student Medical Exemption'],
+        ];
+
+        $courseLine = $this->exportCourseLine();
+        if ($courseLine !== '') {
+            $meta[] = [$courseLine];
+        }
+
+        $meta[] = ['Generated on: ' . now()->format('d-m-Y H:i')];
+        $meta[] = []; // blank spacer row
+
+        $meta[] = $this->columnHeadings();
+
+        return $meta;
+    }
+
+    /**
+     * "Course Name (start to end)" for the selected course filter, or ''.
+     */
+    private function exportCourseLine(): string
+    {
+        if (empty($this->courseFilter)) {
+            return '';
+        }
+
+        $course = \App\Models\CourseMaster::find($this->courseFilter);
+        if (! $course) {
+            return '';
+        }
+
+        $line = (string) ($course->course_name ?? '');
+        $start = ! empty($course->start_date ?? $course->start_year ?? null)
+            ? Carbon::parse($course->start_date ?? $course->start_year)->format('j F Y') : '';
+        $end = ! empty($course->end_date)
+            ? Carbon::parse($course->end_date)->format('j F Y') : '';
+        if ($start && $end) {
+            $line = trim($line . ' (' . $start . ' to ' . $end . ')');
+        }
+
+        return $line;
     }
 }
 

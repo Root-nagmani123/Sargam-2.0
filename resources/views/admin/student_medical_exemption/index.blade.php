@@ -786,7 +786,7 @@ select.sme-filter-control {
                                 <th class="col">IPD/OPD/After OPD/Referral</th>
                                 <th class="col text-wrap">PT/ Outdoor Advise</th>
                                 <th class="col text-wrap">Provisional Diagnosis/ Remarks</th>
-                                <th class="col">Document</th>
+                                <th class="col sme-col-no-print">Document</th>
                                 <th class="col sme-col-no-print">Action</th>
                             </tr>
                         </thead>
@@ -975,7 +975,8 @@ $(document).ready(function() {
             {
                 data: 'document',
                 orderable: false,
-                searchable: false
+                searchable: false,
+                className: 'sme-col-no-print'
             },
             {
                 data: 'action',
@@ -1538,12 +1539,17 @@ function getFilterInfo() {
 
 // Print function - defined globally so it can be called from onclick
 function printTable() {
-    // Create a new window for printing
-    var printWindow = window.open('', '_blank');
     var table = document.getElementById('medicalExemptionTable');
 
     if (!table) {
         alert('Table not found!');
+        return;
+    }
+
+    // Create a new window for printing
+    var printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        alert('Please allow pop-ups for this site to print the report.');
         return;
     }
 
@@ -1567,62 +1573,88 @@ function printTable() {
         year: 'numeric'
     });
 
+    // Branded LBSNAA header assets (same layout as the official report PDF).
+    var logoLeft   = @json(asset('admin_assets/images/logos/logo_new.png'));
+    var logoRight  = @json(file_exists(public_path('admin_assets/images/logos/constitution-75.png'))
+        ? asset('admin_assets/images/logos/constitution-75.png')
+        : asset('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png'));
+    var titleHindi = @json(asset('admin_assets/images/logos/lbsnaa-title-hi.png'));
+
+    // Selected course line (skip the placeholder "Course Name" option).
+    var courseName = '';
+    var selCourse = $('#course_filter option:selected');
+    if (selCourse.val()) { courseName = (selCourse.text() || '').trim(); }
+
     // Build print content
     var printContent = `
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Medical Exemption Form - Print</title>
+            <title>Student Medical Exemption - Print</title>
             <style>
                 body {
                     font-family: Arial, sans-serif;
-                    margin: 20px;
+                    margin: 16px;
+                    color: #1f2937;
                 }
-                .print-header {
+                .pdf-hdr {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 4px;
+                }
+                .pdf-hdr td { vertical-align: middle; }
+                .pdf-hdr .logo { width: 90px; text-align: center; }
+                .pdf-hdr .logo img { max-height: 64px; max-width: 84px; }
+                .pdf-hdr .center { text-align: center; padding: 0 8px; }
+                .pdf-hdr .inst-hi-img { height: 18px; width: auto; margin-bottom: 2px; }
+                .pdf-hdr .inst-en {
+                    font-size: 16px; font-weight: bold; color: #102a43; line-height: 1.25;
+                }
+                .pdf-hdr .course-line {
+                    font-size: 12px; font-weight: bold; color: #243b53; margin-top: 4px;
+                }
+                .report-title {
                     text-align: center;
-                    margin-bottom: 20px;
-                    border-bottom: 2px solid #333;
-                    padding-bottom: 10px;
-                }
-                .print-header h2 {
-                    margin: 0;
+                    font-size: 20px;
+                    font-weight: bold;
                     color: #004a93;
-                }
-                .print-header p {
-                    margin: 5px 0;
-                    color: #666;
+                    margin: 8px 0 6px;
+                    padding-bottom: 8px;
+                    border-bottom: 2px solid #004a93;
                 }
                 .print-info {
-                    margin-bottom: 15px;
-                    font-size: 12px;
+                    margin-bottom: 12px;
+                    font-size: 11px;
                     color: #666;
+                    text-align: center;
                 }
                 table {
                     width: 100%;
                     border-collapse: collapse;
                     margin-top: 10px;
                 }
-                table thead {
-                    background-color: #af2910 !important;
-                    color: white !important;
-                }
                 table th,
                 table td {
-                    border: 1px solid #000;
-                    padding: 8px;
+                    border: 1px solid #8fa3bd;
+                    padding: 6px 8px;
                     text-align: left;
                     font-size: 11px;
                 }
-                table th {
+                table thead th {
                     font-weight: bold;
-                    background-color: #af2910;
-                    color: white;
+                    background-color: #004a93 !important;
+                    color: #fff !important;
+                    text-align: center;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
                 }
                 table tbody tr:nth-child(even) {
-                    background-color: #f9f9f9;
+                    background-color: #eef2f8;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
                 }
                 .print-footer {
-                    margin-top: 20px;
+                    margin-top: 18px;
                     text-align: center;
                     font-size: 10px;
                     color: #666;
@@ -1630,23 +1662,27 @@ function printTable() {
                     padding-top: 10px;
                 }
                 @media print {
-                    @page {
-                        margin: 1cm;
-                    }
-                    body {
-                        margin: 0;
-                    }
+                    @page { size: A4 landscape; margin: 10mm; }
+                    body { margin: 0; }
                 }
             </style>
         </head>
-        <body>
-            <div class="print-header">
-                <h2>Medical Exemption Form</h2>
-                <p>Lal Bahadur Shastri National Academy of Administration</p>
-                <p>Print Date: ${dateStr}</p>
-            </div>
+        <body onload="window.focus(); window.print();">
+            <table class="pdf-hdr">
+                <tr>
+                    <td class="logo"><img src="${logoLeft}" alt=""></td>
+                    <td class="center">
+                        <img class="inst-hi-img" src="${titleHindi}" alt="">
+                        <div class="inst-en">Lal Bahadur Shastri National Academy of Administration, Mussoorie</div>
+                        ${courseName ? '<div class="course-line">' + courseName + '</div>' : ''}
+                    </td>
+                    <td class="logo"><img src="${logoRight}" alt=""></td>
+                </tr>
+            </table>
+            <div class="report-title">Student Medical Exemption</div>
             <div class="print-info">
                 ${getFilterInfo()}
+                <div>Print Date: ${dateStr}</div>
             </div>
             ${tableHTML}
             <div class="print-footer">
@@ -1656,14 +1692,11 @@ function printTable() {
         </html>
     `;
 
+    printWindow.document.open();
     printWindow.document.write(printContent);
     printWindow.document.close();
-
-    // Wait for content to load, then print
-    printWindow.onload = function() {
-        printWindow.print();
-        printWindow.close();
-    };
+    // Printing is triggered by the written document's own <body onload> so it
+    // fires only after the header logos have finished loading.
 }
 </script>
 

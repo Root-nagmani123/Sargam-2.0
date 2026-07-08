@@ -813,17 +813,21 @@ class StudentMedicalExemptionController extends Controller
             @ini_set('memory_limit', '256M');
             @set_time_limit(120);
 
-            $pdf = Pdf::loadView('admin.student_medical_exemption.export_pdf', [
-                'headings' => $export->headings(),
+            $header = $this->buildExportHeaderData($courseFilter);
+
+            $pdf = Pdf::loadView('admin.student_medical_exemption.export_pdf', array_merge([
+                'headings' => $export->columnHeadings(),
                 'rows' => $export->pdfRows(),
                 'filterLine' => $this->buildExportFilterLine($request),
                 'printedOn' => now()->format('d-m-Y H:i'),
-            ])
+                'reportTitle' => 'Student Medical Exemption',
+            ], $header))
                 ->setPaper('a4', 'landscape')
                 ->setOptions([
                     'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
                     'isRemoteEnabled' => true,
+                    'isPhpEnabled' => true,
                     'dpi' => 96,
                 ]);
 
@@ -831,6 +835,56 @@ class StudentMedicalExemptionController extends Controller
         }
 
         return Excel::download($export, $fileName . '.csv', ExcelFormat::CSV);
+    }
+
+    /**
+     * Branded LBSNAA header assets for the PDF export — the same emblem / Hindi
+     * title / 75-years logo and course line used by the official report layout.
+     *
+     * @return array{logoLeft:?string,logoRight:?string,titleHindi:?string,courseName:string,courseDuration:string}
+     */
+    private function buildExportHeaderData($courseFilter): array
+    {
+        $toDataUri = static function (string $path): ?string {
+            if (! is_file($path) || ! is_readable($path)) {
+                return null;
+            }
+            $raw = @file_get_contents($path);
+            if ($raw === false) {
+                return null;
+            }
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = match ($ext) {
+                'svg' => 'image/svg+xml',
+                'jpg', 'jpeg' => 'image/jpeg',
+                default => 'image/png',
+            };
+
+            return 'data:' . $mime . ';base64,' . base64_encode($raw);
+        };
+
+        $courseName = '';
+        $courseDuration = '';
+        if (! empty($courseFilter)) {
+            $course = CourseMaster::find($courseFilter);
+            if ($course) {
+                $courseName = (string) ($course->course_name ?? '');
+                $start = ! empty($course->start_date ?? $course->start_year ?? null)
+                    ? Carbon::parse($course->start_date ?? $course->start_year)->format('j F Y') : '';
+                $end = ! empty($course->end_date)
+                    ? Carbon::parse($course->end_date)->format('j F Y') : '';
+                $courseDuration = ($start && $end) ? $start . ' to ' . $end : '';
+            }
+        }
+
+        return [
+            'logoLeft' => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
+            'logoRight' => $toDataUri(public_path('admin_assets/images/logos/constitution-75.png'))
+                ?: $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
+            'titleHindi' => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
+            'courseName' => $courseName,
+            'courseDuration' => $courseDuration,
+        ];
     }
 
     private function buildExportFilterLine(Request $request): string
