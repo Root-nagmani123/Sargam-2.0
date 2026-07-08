@@ -584,10 +584,19 @@ class NotificationService
         }
 
         // Discipline memo show route expects an encrypted memo pk.
+        // Deleted-memo alerts (or already-removed records) open the OT list instead of a 404.
         if ($type === 'memo' && $moduleName === 'memodiscipline') {
             $memoPk = (int) ($notification->reference_pk ?? 0);
-            if ($memoPk > 0) {
+            $isDeletedAlert = stripos((string) ($notification->title ?? ''), 'Deleted') !== false;
+            $memoExists = $memoPk > 0 && DB::table('discipline_memo_status')->where('pk', $memoPk)->exists();
+            if ($memoPk > 0 && $memoExists && ! $isDeletedAlert) {
                 return route('memo.discipline.memo.show', encrypt($memoPk));
+            }
+            if (Route::has('memo.discipline.ot_index')) {
+                return route('memo.discipline.ot_index');
+            }
+            if (Route::has('memo.discipline.index')) {
+                return route('memo.discipline.index');
             }
         }
 

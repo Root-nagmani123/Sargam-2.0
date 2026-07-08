@@ -224,6 +224,68 @@ class NotificationReceiverService
     }
 
     /**
+     * Admin/faculty user_ids who should be notified when an OT replies on a discipline memo.
+     * Prefers admins already on the thread, then Super Admin / Training Induction roles,
+     * then course coordinator (if configured).
+     *
+     * @return int[]
+     */
+    public function getDisciplineMemoAdminReceivers(int $memoPk, ?int $coursePk = null): array
+    {
+        $userIds = [];
+
+        // 1. Admins/faculty who already messaged on this memo
+        $threadAdminIds = DB::table('discipline_message_student_decip_incharge')
+            ->where('discipline_memo_status_pk', $memoPk)
+            ->where('role_type', 'f')
+            ->whereNotNull('created_by')
+            ->pluck('created_by')
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->all();
+        $userIds = array_merge($userIds, $threadAdminIds);
+
+        // 2. Roles that manage Send Discipline Memo (same set as destroy authorization)
+        $roleNames = [
+            'Super Admin',
+            'Training Induction Admin',
+            'Training-Induction',
+        ];
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('model_has_roles')) {
+            $spatieIds = DB::table('model_has_roles as mhr')
+                ->join('roles as r', 'r.id', '=', 'mhr.role_id')
+                ->join('user_credentials as uc', 'uc.pk', '=', 'mhr.model_id')
+                ->where('mhr.model_type', User::class)
+                ->whereIn('r.name', $roleNames)
+                ->pluck('uc.user_id')
+                ->all();
+            $userIds = array_merge($userIds, $spatieIds);
+        }
+
+        $rolePks = UserRoleMaster::whereIn('user_role_name', $roleNames)->pluck('pk');
+        if ($rolePks->isNotEmpty()) {
+            $legacyIds = EmployeeRoleMapping::query()
+                ->whereIn('user_role_master_pk', $rolePks)
+                ->join('user_credentials as uc', 'uc.pk', '=', 'employee_role_mapping.user_credentials_pk')
+                ->pluck('uc.user_id')
+                ->all();
+            $userIds = array_merge($userIds, $legacyIds);
+        }
+
+        // 3. Course coordinator(s) for the memo's programme
+        if ($coursePk) {
+            $coordinatorId = $this->getCourseCoordinatorUserId($coursePk);
+            if ($coordinatorId) {
+                $userIds[] = $coordinatorId;
+            }
+            $userIds = array_merge($userIds, $this->getAssistantCoordinatorUserIds($coursePk));
+        }
+
+        return array_values(array_unique(array_filter(array_map('intval', $userIds))));
+    }
+
+    /**
      * User IDs for estate workflow alerts (new request): Super Admin and Estate Admin only.
      *
      * @return int[]
