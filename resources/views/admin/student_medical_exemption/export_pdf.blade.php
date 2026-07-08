@@ -45,7 +45,7 @@
 
         .meta { font-size: 7px; color: #444; margin: 0 0 6px; text-align: center; }
 
-        table.data-table { width: 100%; border-collapse: collapse; }
+        table.data-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         table.data-table th,
         table.data-table td {
             border: 0.8px solid #8fa3bd;
@@ -53,6 +53,7 @@
             text-align: left;
             vertical-align: top;
             word-break: break-word;
+            overflow-wrap: break-word;
         }
         table.data-table thead th {
             background: #004a93;
@@ -63,7 +64,23 @@
             border-color: #004a93;
         }
         table.data-table tbody tr:nth-child(even) { background: #eef2f8; }
-        a.doc-link { color: #004a93; text-decoration: underline; word-break: break-all; }
+        a.doc-link { color: #004a93; text-decoration: underline; }
+
+        /* Give long-text columns more room; keep compact fields narrow. */
+        .col-sno { width: 3%; }
+        .col-date { width: 5%; }
+        .col-ot { width: 9%; }
+        .col-course { width: 8%; }
+        .col-doctor { width: 6%; }
+        .col-speciality { width: 6%; }
+        .col-duration { width: 9%; }
+        .col-days { width: 3%; }
+        .col-category { width: 7%; }
+        .col-opd { width: 6%; }
+        .col-pt-advise { width: 14%; }
+        .col-remarks { width: 16%; }
+        .col-document { width: 5%; text-align: center; }
+        .cell-wide { font-size: 6.5px; line-height: 1.35; }
 
         .footer { margin-top: 8px; text-align: center; font-size: 7px; color: #666; }
     </style>
@@ -106,12 +123,32 @@
         <div>Generated on: {{ $printedOn }} &nbsp;|&nbsp; Total records: {{ $rows->count() }}</div>
     </div>
 
+    @php
+        $headingClassMap = [
+            'Date' => 'col-date',
+            'Officer Trainee' => 'col-ot',
+            'Course' => 'col-course',
+            'Doctor Name' => 'col-doctor',
+            'Medical Speciality' => 'col-speciality',
+            'Duration' => 'col-duration',
+            'Days' => 'col-days',
+            'Category' => 'col-category',
+            'IPD/OPD/After OPD/Referral' => 'col-opd',
+            'PT/ Outdoor Advise' => 'col-pt-advise',
+            'Provisional Diagnosis/ Remarks' => 'col-remarks',
+            'Document' => 'col-document',
+        ];
+        $wideHeadings = [
+            'PT/ Outdoor Advise',
+            'Provisional Diagnosis/ Remarks',
+        ];
+    @endphp
     <table class="data-table">
         <thead>
             <tr>
-                <th>S.No.</th>
+                <th class="col-sno">S.No.</th>
                 @foreach($headings as $heading)
-                    <th>{{ $heading }}</th>
+                    <th class="{{ $headingClassMap[$heading] ?? '' }}">{{ $heading }}</th>
                 @endforeach
             </tr>
         </thead>
@@ -119,9 +156,25 @@
             @forelse($rows as $index => $row)
                 @php $cells = array_values((array) $row); @endphp
                 <tr>
-                    <td style="text-align:center;">{{ $index + 1 }}</td>
-                    @foreach($cells as $value)
-                        <td>{{ $value }}</td>
+                    <td class="col-sno" style="text-align:center;">{{ $index + 1 }}</td>
+                    @foreach($cells as $ci => $value)
+                        @php
+                            $heading = $headings[$ci] ?? '';
+                            $colClass = $headingClassMap[$heading] ?? '';
+                            $isWide = in_array($heading, $wideHeadings, true);
+                            $isDocUrl = $heading === 'Document'
+                                && is_string($value)
+                                && $value !== 'NA'
+                                && $value !== ''
+                                && (str_starts_with($value, 'http://') || str_starts_with($value, 'https://') || str_starts_with($value, '/'));
+                        @endphp
+                        <td class="{{ $colClass }}{{ $isWide ? ' cell-wide' : '' }}">
+                            @if($isDocUrl)
+                                <a class="doc-link" href="{{ $value }}" target="_blank" rel="noopener noreferrer">View</a>
+                            @else
+                                {{ $value }}
+                            @endif
+                        </td>
                     @endforeach
                 </tr>
             @empty
