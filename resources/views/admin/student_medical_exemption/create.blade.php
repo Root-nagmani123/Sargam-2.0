@@ -3,8 +3,8 @@
 @section('title', 'Student Medical Exemption')
 
 @section('setup_content')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css">
-<link rel="stylesheet" href="{{ asset('css/choices-theme.css') }}?v={{ filemtime(public_path('css/choices-theme.css')) }}">
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}?v={{ filemtime(public_path('css/select2-theme.css')) }}">
 <style>
 /* =====================================================================
    Add Student Medical Exemption — page-scoped polish.
@@ -67,7 +67,7 @@
 
                 {{-- ============ Basic Information ============ --}}
                 <h6 class="sme-section-title">Basic Information</h6>
-<hr class="my-3">
+                <hr class="my-3">
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Course Name <span class="text-danger">*</span></label>
@@ -75,7 +75,7 @@
                             <option value="">Select Course Name</option>
                             @foreach($courses as $course)
                             <option value="{{ $course->pk }}" {{ old('course_master_pk') == $course->pk ? 'selected' : '' }}>
-                                {{ $course->course_name }}
+                                {{ $course->couse_short_name ?: $course->course_name }}
                             </option>
                             @endforeach
                         </select>
@@ -115,7 +115,7 @@
 
                 {{-- ============ Exemption and Other Information ============ --}}
                 <h6 class="sme-section-title mt-4">Exemption and Other Information</h6>
-<hr class="my-3">
+                <hr class="my-3">
                 <div class="row g-3">
                     <div class="col-md-4">
                         <label class="form-label">IPD/OPD/After OPD/Referral <span class="text-danger">*</span></label>
@@ -129,28 +129,27 @@
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">Arrival Date <span class="text-danger">*</span></label>
+                        <label class="form-label">Start Date <span class="text-danger">*</span></label>
                         <input type="date" name="arrival_date" id="arrivalDate" class="form-control sme-arr" required value="{{ old('arrival_date') }}">
                         @error('arrival_date')<small class="text-danger">{{ $message }}</small>@enderror
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">Arrival Time <span class="text-danger">*</span></label>
+                        <label class="form-label">Start Time <span class="text-danger">*</span></label>
                         <input type="time" name="arrival_time" id="arrivalTime" class="form-control" required value="{{ old('arrival_time') }}">
                         @error('arrival_time')<small class="text-danger">{{ $message }}</small>@enderror
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">Departure Date <span class="text-danger">*</span></label>
+                        <label class="form-label">End Date <span class="text-danger">*</span></label>
                         <input type="date" name="departure_date" id="departureDate" class="form-control sme-dep" required value="{{ old('departure_date') }}">
                         @error('departure_date')<small class="text-danger">{{ $message }}</small>@enderror
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">Departure Time <span class="text-danger">*</span></label>
+                        <label class="form-label">End Time <span class="text-danger">*</span></label>
                         <input type="time" name="departure_time" id="departureTime" class="form-control" required value="{{ old('departure_time') }}">
                         @error('departure_time')<small class="text-danger">{{ $message }}</small>@enderror
-                        @error('to_date')<small class="text-danger">{{ $message }}</small>@enderror
                     </div>
 
                     <div class="col-md-4">
@@ -174,8 +173,8 @@
                     <div class="col-12">
                         <div class="row g-3 sme-remarks-row">
                             <div class="col-md-6">
-                                <label class="form-label">Provisional Diagnosis/ Remarks</label>
-                                <textarea name="Description" class="form-control" rows="3" placeholder="eg. Lorem ipsum dolor">{{ old('Description') }}</textarea>
+                                <label class="form-label">Diagnosis / Remarks</label>
+                                <textarea name="Description" class="form-control" rows="3" placeholder="eg. Enter remarks...">{{ old('Description') }}</textarea>
                                 @error('Description')<small class="text-danger">{{ $message }}</small>@enderror
                             </div>
 
@@ -212,31 +211,26 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
+{{-- Select2 (select2.full.min.js) is already loaded globally in the admin footer. --}}
 <script>
 $(document).ready(function() {
     // Standalone page init (the modal path has its own initialiser in the index view).
-    var choicesMap = {};
-    document.querySelectorAll('.sme-form select').forEach(function(sel) {
-        choicesMap[sel.id || sel.name] = new Choices(sel, {
-            searchEnabled: sel.options.length > 5,
-            searchPlaceholderValue: 'Search...',
-            itemSelectText: '',
-            shouldSort: false,
-            allowHTML: false
-        });
+    // Turn every select into a Select2 dropdown styled (via CSS) like .form-select.
+    $('.sme-form select').each(function(){
+        $(this).select2({ width: '100%', allowClear: false });
     });
 
     // Course -> Officer Trainee cascade.
-    var studentChoices = choicesMap['studentDropdown'];
     function setStudents(list, placeholder, loading) {
-        if (!studentChoices) return;
-        var choices = [{ value: '', label: placeholder || 'Select Officer Trainee', selected: true, disabled: !!loading }];
+        var $sel = $('#studentDropdown');
+        if (!$sel.length) return;
+        var $opts = $('<div>').append($('<option>').val('').text(placeholder || 'Select Officer Trainee'));
         (list || []).forEach(function(s) {
-            choices.push({ value: String(s.pk), label: s.display_name + (s.generated_OT_code ? ' (' + s.generated_OT_code + ')' : '') });
+            var label = s.display_name + (s.generated_OT_code ? ' (' + s.generated_OT_code + ')' : '');
+            $opts.append($('<option>').val(String(s.pk)).text(label));
         });
-        studentChoices.clearStore();
-        studentChoices.setChoices(choices, 'value', 'label', true);
+        $sel.html($opts.html()).val('');
+        if ($sel.hasClass('select2-hidden-accessible')) { $sel.trigger('change.select2'); }
     }
     $('#courseDropdown').on('change', function() {
         var courseId = $(this).val();
