@@ -243,6 +243,45 @@ select.sme-filter-control {
 #smeFormBody .is-invalid { border-color: var(--bs-danger); }
 #smeFormBody .form-control,
 #smeFormBody .form-select { min-height: 44px; border-radius: var(--ds-radius-2); }
+/* Keep every Choices-wrapped dropdown (Course / Category / Speciality …) a
+   uniform height. A long selected value — e.g. a full course name — used to
+   wrap onto two lines, making that box taller than its neighbours and
+   breaking the row's alignment. Force the selected value onto one line with
+   an ellipsis and vertically centre it, matching the course filter above. */
+#smeFormBody .choices { margin-bottom: 0; }
+#smeFormBody .choices__inner {
+    min-height: 44px;
+    height: 44px;
+    border-radius: var(--ds-radius-2);
+    display: flex;
+    align-items: center;          /* vertically centre the selected value */
+    flex-wrap: nowrap;
+    /* Zero the theme's 0.5rem top/bottom padding — with a fixed height it
+       throws the single line off-centre. Flex centring handles it instead. */
+    padding-top: 0;
+    padding-bottom: 0;
+    line-height: normal;
+}
+#smeFormBody .choices__list--single {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#smeFormBody .choices__list--single .choices__item {
+    display: block;
+    margin: 0;
+    line-height: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* Field-level invalid state for a Choices-wrapped <select>. */
+#smeFormBody .choices.is-invalid .choices__inner,
+#smeFormBody .choices__inner.is-invalid { border-color: var(--bs-danger); }
 #smeFormBody textarea.form-control {
     min-height: 88px;
     resize: vertical;
@@ -782,20 +821,20 @@ select.sme-filter-control {
                 {{-- Table --}}
                 <div class="table-responsive">
                     <table class="table align-middle" id="medicalExemptionTable">
-                        <thead>
+                        <thead style="position:relative; z-index: 0;">
                             <tr>
                                 <th class="col">S. No.</th>
                                 <th class="col">Date</th>
-                                <th class="col text-wrap">Officer Trainee</th>
-                                <th class="col text-wrap">Course</th>
+                                <th class="col">Officer Trainee</th>
+                                <th class="col" style="white-space: normal;width: 12%;">Course</th>
                                 <th class="col">Doctor Name</th>
                                 <th class="col">Medical Speciality</th>
-                                <th class="col text-wrap">Duration</th>
+                                <th class="col">Duration</th>
                                 <th class="col">Days</th>
                                 <th class="col">Category</th>
                                 <th class="col">IPD/OPD/After OPD/Referral</th>
-                                <th class="col text-wrap">PT/ Outdoor Advise</th>
-                                <th class="col text-wrap">Provisional Diagnosis/ Remarks</th>
+                                <th class="col">PT/ Outdoor Advise</th>
+                                <th class="col">Diagnosis / Remarks</th>
                                 <th class="col sme-col-no-print">Document</th>
                                 <th class="col sme-col-no-print">Action</th>
                             </tr>
@@ -1259,7 +1298,17 @@ $(document).ready(function() {
             }
         });
 
-        // Days = inclusive span between the Arrival and Departure dates (read-only field).
+        // Clear a field's validation error as soon as the user edits it, so a
+        // message never lingers until the next submit attempt.
+        $form.on('input change', '.form-control, .form-select, select', function(){
+            var $f = $(this);
+            $f.removeClass('is-invalid');
+            $f.closest('.choices').removeClass('is-invalid');
+            var $col = $f.closest('[class*="col-"]').first();
+            ($col.length ? $col : $f.parent()).find('.sme-err').remove();
+        });
+
+        // Days = inclusive span between the Start and End dates (read-only field).
         $form.on('change', '#arrivalDate, #departureDate', function(){
             var a = document.getElementById('arrivalDate');
             var d = document.getElementById('departureDate');
@@ -1310,27 +1359,43 @@ $(document).ready(function() {
         }).fail(function(xhr){
             $btn.prop('disabled', false);
             if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors){
+                var errors = xhr.responseJSON.errors;
                 var first = null;
+
+                // The backend validates combined datetimes (from_date/to_date) while the
+                // form has split Start/End date+time inputs. Fold each derived error onto
+                // its split field, and skip it when that split field already errored —
+                // otherwise the same message stacks twice under one control.
+                var placement = { from_date: 'arrival_date', to_date: 'departure_date' };
+
+                // Collect one de-duplicated message list per visible field.
+                var byField = {};
+                $.each(errors, function(field, msgs){
+                    var target = placement[field] || field;
+                    if (placement[field] && errors[target]) return; // split field owns it
+                    var list = byField[target] || (byField[target] = []);
+                    if (msgs[0] && list.indexOf(msgs[0]) === -1) list.push(msgs[0]);
+                });
+
                 var shown = false;
-                $.each(xhr.responseJSON.errors, function(field, msgs){
-                    // Backend validates combined datetime fields (from_date/to_date) while
-                    // the form has split fields (arrival/departure date+time).
-                    var nameMap = {
-                        from_date: ['arrival_date', 'arrival_time'],
-                        to_date: ['departure_date', 'departure_time']
-                    };
-                    var names = nameMap[field] || [field];
-                    var $targets = $();
-                    names.forEach(function(n){
-                        $targets = $targets.add($('#smeAjaxForm [name="' + n + '"]'));
+                $.each(byField, function(name, msgs){
+                    var $field = $('#smeAjaxForm [name="' + name + '"]');
+                    if (!$field.length) return;
+                    shown = true;
+
+                    // Mark the control (plain input, or a Choices-wrapped <select>).
+                    $field.addClass('is-invalid');
+                    $field.closest('.choices').addClass('is-invalid');
+
+                    // Place the message at the bottom of the field's own column so it
+                    // reads directly under the control it belongs to.
+                    var $col = $field.closest('[class*="col-"]').first();
+                    var $anchor = $col.length ? $col : $field.parent();
+                    msgs.forEach(function(m){
+                        $anchor.append('<small class="text-danger sme-err d-block mt-1">' + m + '</small>');
                     });
 
-                    if ($targets.length) {
-                        shown = true;
-                        $targets.addClass('is-invalid');
-                        $targets.last().after('<small class="text-danger sme-err d-block mt-1">' + msgs[0] + '</small>');
-                        if (!first) first = $targets.first();
-                    }
+                    if (!first) first = $field.first();
                 });
 
                 if (!shown) {
@@ -1438,10 +1503,10 @@ $(document).ready(function() {
             '<h6 class="sme-view-section-title">Exemption and Other Information</h6>' +
             '<div class="row g-3">' +
                 smeViewField('IPD/OPD/After OPD/Referral', data.opd_category) +
-                smeViewField('Arrival Date', data.arrival_date) +
-                smeViewField('Arrival Time', data.arrival_time) +
-                smeViewField('Departure Date', data.departure_date) +
-                smeViewField('Departure Time', data.departure_time) +
+                smeViewField('Start Date', data.arrival_date) +
+                smeViewField('Start Time', data.arrival_time) +
+                smeViewField('End Date', data.departure_date) +
+                smeViewField('End Time', data.departure_time) +
                 smeViewField('Medical Speciality', data.speciality) +
                 smeViewField('Days', data.days) +
                 '<div class="col-md-6"><div class="sme-view-field"><span class="sme-view-label">Status</span>' +
@@ -1449,7 +1514,7 @@ $(document).ready(function() {
                 (data.created_date ? smeViewField('Created On', data.created_date) : '') +
             '</div>' +
             '<div class="row g-3 mt-1">' +
-                '<div class="col-md-6"><div class="sme-view-field"><span class="sme-view-label">Provisional Diagnosis/ Remarks</span>' +
+                '<div class="col-md-6"><div class="sme-view-field"><span class="sme-view-label">Diagnosis / Remarks</span>' +
                     '<div class="sme-view-text">' + smeEsc(data.description) + '</div></div></div>' +
                 '<div class="col-md-6"><div class="sme-view-field"><span class="sme-view-label">PT/Outdoor Advise</span>' +
                     '<div class="sme-view-text">' + smeEsc(data.pt_outdoor_advise) + '</div></div></div>' +

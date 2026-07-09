@@ -67,7 +67,6 @@
 
                 {{-- ============ Basic Information ============ --}}
                 <h6 class="sme-section-title">Basic Information</h6>
-<hr class="my-3">
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Course Name <span class="text-danger">*</span></label>
@@ -115,7 +114,6 @@
 
                 {{-- ============ Exemption and Other Information ============ --}}
                 <h6 class="sme-section-title mt-4">Exemption and Other Information</h6>
-<hr class="my-3">
                 <div class="row g-3">
                     <div class="col-md-4">
                         <label class="form-label">IPD/OPD/After OPD/Referral <span class="text-danger">*</span></label>
@@ -129,28 +127,27 @@
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">Arrival Date <span class="text-danger">*</span></label>
+                        <label class="form-label">Start Date <span class="text-danger">*</span></label>
                         <input type="date" name="arrival_date" id="arrivalDate" class="form-control sme-arr" required value="{{ old('arrival_date') }}">
                         @error('arrival_date')<small class="text-danger">{{ $message }}</small>@enderror
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">Arrival Time <span class="text-danger">*</span></label>
+                        <label class="form-label">Start Time <span class="text-danger">*</span></label>
                         <input type="time" name="arrival_time" id="arrivalTime" class="form-control" required value="{{ old('arrival_time') }}">
                         @error('arrival_time')<small class="text-danger">{{ $message }}</small>@enderror
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">Departure Date <span class="text-danger">*</span></label>
+                        <label class="form-label">End Date <span class="text-danger">*</span></label>
                         <input type="date" name="departure_date" id="departureDate" class="form-control sme-dep" required value="{{ old('departure_date') }}">
                         @error('departure_date')<small class="text-danger">{{ $message }}</small>@enderror
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">Departure Time <span class="text-danger">*</span></label>
+                        <label class="form-label">End Time <span class="text-danger">*</span></label>
                         <input type="time" name="departure_time" id="departureTime" class="form-control" required value="{{ old('departure_time') }}">
                         @error('departure_time')<small class="text-danger">{{ $message }}</small>@enderror
-                        @error('to_date')<small class="text-danger">{{ $message }}</small>@enderror
                     </div>
 
                     <div class="col-md-4">
@@ -174,7 +171,7 @@
                     <div class="col-12">
                         <div class="row g-3 sme-remarks-row">
                             <div class="col-md-6">
-                                <label class="form-label">Provisional Diagnosis/ Remarks</label>
+                                <label class="form-label">Diagnosis / Remarks</label>
                                 <textarea name="Description" class="form-control" rows="3" placeholder="eg. Lorem ipsum dolor">{{ old('Description') }}</textarea>
                                 @error('Description')<small class="text-danger">{{ $message }}</small>@enderror
                             </div>
