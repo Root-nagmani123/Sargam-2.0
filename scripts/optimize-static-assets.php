@@ -24,6 +24,16 @@
 
 $publicDir = dirname(__DIR__) . '/public';
 
+// Colour count for the logo.svg embedded wordmark. It is a flat 3-4 colour mark
+// (red / grey / blue on white), so 16 colours is visually identical (verified)
+// and cuts the embedded PNG ~4x further than palette-256.
+const SVG_LOGO_COLORS = 16;
+
+// Right-sized web variant width for logo.png. The login header shows it at
+// ~180px; 400px covers 2x (retina) displays with room to spare, versus the
+// shipped 1193px original that every page currently downloads.
+const LOGO_WEB_WIDTH = 400;
+
 /* ─────────────────────────── 1. logo.svg ─────────────────────────── */
 function optimizeLogoSvg(string $publicDir): void
 {
@@ -53,7 +63,7 @@ function optimizeLogoSvg(string $publicDir): void
     imagealphablending($pal, false);
     imagesavealpha($pal, true);
     imagecopy($pal, $img, 0, 0, 0, 0, $w, $h);
-    imagetruecolortopalette($pal, true, 256);
+    imagetruecolortopalette($pal, true, SVG_LOGO_COLORS);
     imagesavealpha($pal, true);
 
     $tmp = tempnam(sys_get_temp_dir(), 'svgpng');
@@ -161,6 +171,48 @@ function optimizeCss(string $publicDir): void
     );
 }
 
+/* ─────────────────── 3. logo.png web variants ─────────────────────── */
+/**
+ * The shared logo.png (1193x284, transparent emblem) must stay untouched — many
+ * PDF/print exports embed it and its alpha can't be palette-reduced safely. But
+ * on-screen it renders at ~180px, so we emit right-sized web variants the login
+ * header can use via <picture>: a WebP (with PNG fallback for old browsers).
+ */
+function buildLogoPngWebVariants(string $publicDir): void
+{
+    $src = $publicDir . '/admin_assets/images/logos/logo.png';
+    if (! is_file($src)) { fwrite(STDERR, "SKIP logo.png variants: not found\n"); return; }
+    if (! function_exists('imagecreatefrompng')) { fwrite(STDERR, "SKIP logo.png variants: GD unavailable\n"); return; }
+
+    $img = imagecreatefrompng($src);
+    if ($img === false) { fwrite(STDERR, "SKIP logo.png variants: undecodable\n"); return; }
+
+    $w = imagesx($img); $h = imagesy($img);
+    $tw = min(LOGO_WEB_WIDTH, $w);
+    $th = (int) round($h * ($tw / $w));
+
+    $resized = imagecreatetruecolor($tw, $th);
+    imagealphablending($resized, false);
+    imagesavealpha($resized, true);
+    imagefill($resized, 0, 0, imagecolorallocatealpha($resized, 0, 0, 0, 127));
+    imagecopyresampled($resized, $img, 0, 0, 0, 0, $tw, $th, $w, $h);
+    imagesavealpha($resized, true);
+
+    $webpPath = $publicDir . '/admin_assets/images/logos/logo-web.webp';
+    $pngPath  = $publicDir . '/admin_assets/images/logos/logo-web.png';
+    imagewebp($resized, $webpPath, 88);
+    imagepng($resized, $pngPath, 9);
+    clearstatcache();
+
+    printf(
+        "logo-web.webp/png   generated %dx%d  (webp %s B, png %s B)  [source logo.png %s B untouched]\n",
+        $tw, $th,
+        number_format(filesize($webpPath)), number_format(filesize($pngPath)),
+        number_format(filesize($src))
+    );
+}
+
 optimizeLogoSvg($publicDir);
 optimizeCss($publicDir);
+buildLogoPngWebVariants($publicDir);
 echo "Backups kept in …/original/ next to each file.\n";
