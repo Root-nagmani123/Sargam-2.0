@@ -114,7 +114,15 @@
                         <select id="courseFilter" class="form-select sl-filter-select" aria-label="Filter by course">
                             <option value="">Course Name</option>
                             @foreach($courseOptions as $course)
-                                <option value="{{ $course->pk }}" {{ (string)($filters['course_id'] ?? '') === (string)$course->pk ? 'selected' : '' }}>{{ $course->course_name }}</option>
+                                @php
+                                    $cStart = !empty($course->start_year) ? \Carbon\Carbon::parse($course->start_year)->format('j F Y') : '';
+                                    $cEnd = !empty($course->end_date) ? \Carbon\Carbon::parse($course->end_date)->format('j F Y') : '';
+                                    $cDuration = ($cStart && $cEnd) ? $cStart . ' to ' . $cEnd : '';
+                                @endphp
+                                <option value="{{ $course->pk }}"
+                                    data-shortname="{{ $course->couse_short_name ?? '' }}"
+                                    data-duration="{{ $cDuration }}"
+                                    {{ (string)($filters['course_id'] ?? '') === (string)$course->pk ? 'selected' : '' }}>{{ $course->course_name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -174,8 +182,8 @@
                                     <th>Total Duty (Count)</th>
                                     <th>Duty Type</th>
                                     <th>Total Medical Exemption Count</th>
-                                    <th>Total PT Exemption Count</th>
-                                    <th>Total Stationed Leave Count</th>
+                                    <th>Total PT Exemption (Days)</th>
+                                    <th>Total Stationed Leave (Days)</th>
                                     <th>Total Notice/Memo</th>
                                     <th>Total Discipline Memo</th>
                                 </tr>
@@ -210,10 +218,32 @@
 </div>
 
 @push('scripts')
+@php
+    // Official letterhead logos embedded as base64 so the print window (a blank
+    // about:blank document) can render them without extra network requests.
+    $__printAsset = function (array $candidates): string {
+        foreach ($candidates as $rel) {
+            $path = public_path($rel);
+            if (! is_file($path) || ! is_readable($path)) { continue; }
+            $raw = @file_get_contents($path);
+            if ($raw === false) { continue; }
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = $ext === 'svg' ? 'image/svg+xml' : (in_array($ext, ['jpg', 'jpeg']) ? 'image/jpeg' : 'image/png');
+            return 'data:' . $mime . ';base64,' . base64_encode($raw);
+        }
+        return '';
+    };
+    $printLogoLeft  = $__printAsset(['admin_assets/images/logos/logo_new.png', 'images/lbsnaa_logo.jpg']);
+    $printLogoRight = $__printAsset(['admin_assets/images/logos/constitution-75.png', 'admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png', 'images/azadi.png']);
+@endphp
 <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 <script>
     $(document).ready(function() {
+        const PRINT_LOGO_LEFT = @json($printLogoLeft);
+        const PRINT_LOGO_RIGHT = @json($printLogoRight);
+        const ACADEMY_HI = 'लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी, मसूरी';
+        const ACADEMY_EN = 'Lal Bahadur Shastri National Academy of Administration, Mussoorie';
         const filters = @json($filters ?? []);
         const baseUrl = "{{ route('admin.dashboard.ot-participants') }}";
         const LOCKED_COLUMNS = [0, 1, 2]; // S.No, OT Code, Name — frozen & always visible
@@ -350,8 +380,164 @@
         });
         $period.on('cancel.daterangepicker', function() { $period.val(''); applyFilter({ from_date: '', to_date: '' }); });
 
-        /* ── Print ── */
-        $('#otListPrintBtn').on('click', function() { window.print(); });
+        /* ── Print (table data only, all filtered rows, clean header) ── */
+        // Column titles + data keys, in table order. Only currently-visible columns
+        // are printed so the printout matches what's on screen.
+        // `w` = relative width weight used to size columns in the fixed-layout print
+        // table so text columns get room and numeric columns stay compact.
+        const PRINT_COLUMNS = [
+            { title: 'S. No.', data: 's_no', w: 3 },
+            { title: 'OT Code', data: 'ot_code', w: 6 },
+            { title: 'Name', data: 'name', w: 12 },
+            { title: 'Email', data: 'email', w: 14 },
+            { title: 'Cadre', data: 'cadre', w: 8 },
+            { title: 'House Name', data: 'house', w: 8 },
+            { title: 'Total Duty (Count)', data: 'duty_count', w: 6 },
+            { title: 'Duty Type', data: 'duty_type', w: 8 },
+            { title: 'Total Medical Exemption Count', data: 'medical', w: 7 },
+            { title: 'Total PT Exemption (Days)', data: 'pt', w: 7 },
+            { title: 'Total Stationed Leave (Days)', data: 'stationed', w: 7 },
+            { title: 'Total Notice/Memo', data: 'notice_memo', w: 6 },
+            { title: 'Total Discipline Memo', data: 'discipline_memo', w: 6 },
+        ];
+
+        function stripHtml(html) {
+            const tmp = document.createElement('div');
+            tmp.innerHTML = html == null ? '' : String(html);
+            return (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text == null ? '' : String(text);
+            return div.innerHTML;
+        }
+
+        function buildLetterheadHtml() {
+            const $sel = $('#courseFilter option:selected');
+            const hasCourse = !!$('#courseFilter').val();
+            const courseName = hasCourse ? $sel.text().trim() : '';
+            const shortName = hasCourse ? ($sel.attr('data-shortname') || '') : '';
+            const duration = hasCourse ? ($sel.attr('data-duration') || '') : '';
+            const courseTitle = courseName + (shortName ? ' (' + shortName + ')' : '');
+
+            const leftImg = PRINT_LOGO_LEFT ? '<img class="lh-logo" src="' + PRINT_LOGO_LEFT + '" alt="">' : '';
+            const rightImg = PRINT_LOGO_RIGHT ? '<img class="lh-logo" src="' + PRINT_LOGO_RIGHT + '" alt="">' : '';
+
+            return '' +
+                '<table class="lh"><tr>' +
+                '<td class="lh-side">' + leftImg + '</td>' +
+                '<td class="lh-center">' +
+                    '<div class="lh-hi">' + escapeHtml(ACADEMY_HI) + '</div>' +
+                    '<div class="lh-en">' + escapeHtml(ACADEMY_EN) + '</div>' +
+                    (courseTitle ? '<div class="lh-course">' + escapeHtml(courseTitle) + '</div>' : '') +
+                    (duration ? '<div class="lh-dates">(' + escapeHtml(duration) + ')</div>' : '') +
+                '</td>' +
+                '<td class="lh-side">' + rightImg + '</td>' +
+                '</tr></table>' +
+                '<hr class="lh-rule">' +
+                '<h2 class="doc-title">OT / Participants List</h2>';
+        }
+
+        function buildFilterSummary() {
+            const parts = [];
+            const course = $('#courseFilter option:selected').text().trim();
+            if ($('#courseFilter').val()) { parts.push('Course: ' + course); }
+            const cadre = $('#cadreFilter').val();
+            if (cadre) { parts.push('Cadre: ' + cadre); }
+            const period = $('#timePeriodFilter').val().trim();
+            if (period) { parts.push('Time Period: ' + period); }
+            parts.push('Status: ' + (currentStatus === 'archive' ? 'Archived' : 'Active'));
+            return parts.join(' &nbsp;|&nbsp; ');
+        }
+
+        function renderPrint(win, rows) {
+            if (!win) { return; }
+
+            // Respect on-screen column visibility.
+            const visibleCols = PRINT_COLUMNS.filter(function(col, idx) {
+                try { return dt.column(idx).visible(); } catch (e) { return true; }
+            });
+
+            const totalWeight = visibleCols.reduce(function(sum, c) { return sum + (c.w || 6); }, 0) || 1;
+            const colGroupHtml = '<colgroup>' + visibleCols.map(function(c) {
+                const pct = ((c.w || 6) / totalWeight * 100).toFixed(2);
+                return '<col style="width:' + pct + '%">';
+            }).join('') + '</colgroup>';
+
+            const headHtml = visibleCols.map(function(c) { return '<th>' + escapeHtml(c.title) + '</th>'; }).join('');
+
+            let bodyHtml = '';
+            if (!rows.length) {
+                bodyHtml = '<tr><td colspan="' + visibleCols.length + '" style="text-align:center">No data found.</td></tr>';
+            } else {
+                bodyHtml = rows.map(function(row) {
+                    const cells = visibleCols.map(function(c) {
+                        return '<td>' + escapeHtml(stripHtml(row[c.data])) + '</td>';
+                    }).join('');
+                    return '<tr>' + cells + '</tr>';
+                }).join('');
+            }
+
+            const html =
+                '<html><head><title>OT / Participants List</title><style>' +
+                '@page{size:A4 landscape;margin:1cm;}' +
+                'body{font-family:Arial,sans-serif;margin:20px;color:#101828;}' +
+                '*{box-sizing:border-box;}' +
+                // ── Official letterhead ──
+                '.lh{width:100%;border-collapse:collapse;margin-bottom:4px;}' +
+                '.lh td{vertical-align:middle;}' +
+                '.lh-side{width:90px;text-align:center;}' +
+                '.lh-logo{max-height:72px;max-width:88px;}' +
+                '.lh-center{text-align:center;padding:0 8px;}' +
+                '.lh-hi{font-size:15px;font-weight:bold;color:#1a1a1a;line-height:1.3;}' +
+                '.lh-en{font-size:13px;font-weight:bold;color:#102a43;margin-top:2px;line-height:1.3;}' +
+                '.lh-course{font-size:12px;font-weight:bold;color:#243b53;margin-top:5px;}' +
+                '.lh-dates{font-size:11px;color:#486581;margin-top:1px;}' +
+                '.lh-rule{border:0;border-top:2px solid #004a93;margin:6px 0 2px;}' +
+                '.doc-title{text-align:center;color:#004a93;margin:8px 0 4px;font-size:20px;}' +
+                '.meta{font-size:12px;color:#475467;margin:0 0 14px;text-align:center;}' +
+                'table.data-tbl{width:100%;border-collapse:collapse;margin-top:8px;font-size:9px;table-layout:fixed;}' +
+                'table.data-tbl th,table.data-tbl td{border:1px solid #ddd;padding:4px 5px;text-align:left;vertical-align:top;word-break:break-word;overflow-wrap:anywhere;white-space:normal;}' +
+                'table.data-tbl th{background-color:#004a93;color:#fff;font-weight:bold;}' +
+                'table.data-tbl tbody tr:nth-child(even){background-color:#f7f7f7;}' +
+                'table.data-tbl tr{page-break-inside:avoid;}' +
+                'table.data-tbl thead{display:table-header-group;}' +
+                '@media print{body{margin:0;}}' +
+                '</style></head><body>' +
+                buildLetterheadHtml() +
+                '<p class="meta">' + buildFilterSummary() + '<br>Total Records: ' + rows.length +
+                ' &nbsp;|&nbsp; Print Date: ' + escapeHtml(new Date().toLocaleString()) + '</p>' +
+                '<table class="data-tbl">' + colGroupHtml + '<thead><tr>' + headHtml + '</tr></thead><tbody>' + bodyHtml + '</tbody></table>' +
+                '</body></html>';
+
+            win.document.open();
+            win.document.write(html);
+            win.document.close();
+            win.focus();
+            setTimeout(function() { win.print(); }, 300);
+        }
+
+        $('#otListPrintBtn').on('click', function() {
+            // Open the window synchronously (inside the click) so pop-up blockers allow it.
+            const win = window.open('', '_blank');
+            if (win) {
+                win.document.write('<p style="font-family:Arial;padding:20px">Preparing print&hellip;</p>');
+            }
+            // Pull ALL filtered rows (length = -1), not just the current page.
+            const params = Object.assign({}, getFilterState(), { start: 0, length: -1, draw: 1 });
+            setTableLoading(true);
+            $.ajax({ url: baseUrl, type: 'GET', data: params })
+                .done(function(res) {
+                    setTableLoading(false);
+                    renderPrint(win, (res && res.data) ? res.data : []);
+                })
+                .fail(function() {
+                    setTableLoading(false);
+                    if (win) { win.close(); }
+                    alert('Unable to load data for printing. Please try again.');
+                });
+        });
 
         /* ── Dynamic columns: show / hide ── */
         const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v1';

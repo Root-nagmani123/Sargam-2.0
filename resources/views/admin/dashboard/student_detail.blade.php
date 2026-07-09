@@ -74,9 +74,22 @@
         }
     @endphp
 
+    @php
+        $focusFrom = request('from_date');
+        $focusTo = request('to_date');
+        $focusRangeLabel = ($focusFrom && $focusTo)
+            ? \Carbon\Carbon::parse($focusFrom)->format('d/m/Y') . ' – ' . \Carbon\Carbon::parse($focusTo)->format('d/m/Y')
+            : ($focusFrom ? 'from ' . \Carbon\Carbon::parse($focusFrom)->format('d/m/Y')
+                : ($focusTo ? 'up to ' . \Carbon\Carbon::parse($focusTo)->format('d/m/Y') : null));
+    @endphp
     @if($focusSection)
         <div class="alert alert-light border d-flex align-items-center justify-content-between rounded-3 mb-4">
-            <span class="text-secondary"><i class="bi bi-funnel me-2"></i>Showing a single section only.</span>
+            <span class="text-secondary">
+                <i class="bi bi-funnel me-2"></i>Showing a single section only.
+                @if($focusRangeLabel)
+                    <span class="ms-1">&middot; Period: <strong>{{ $focusRangeLabel }}</strong></span>
+                @endif
+            </span>
             <a href="{{ route('admin.dashboard.students.detail', request()->route('id')) }}" class="btn btn-sm btn-outline-primary rounded-2">
                 <i class="bi bi-grid me-1"></i>View full details
             </a>
@@ -107,7 +120,7 @@
         </div>
     </div>
 
-    @if($fcRegUsername !== '')
+ {{--   @if($fcRegUsername !== '')
         <div class="card mb-4" id="fcJoiningDocumentsSection">
             <div class="card-header bg-white border-bottom py-2 d-flex justify-content-between align-items-center">
                 <h6 class="mb-0 fw-semibold text-primary">
@@ -175,7 +188,7 @@
                 </div>
             </div>
         </div>
-    @endif
+    @endif --}}
 
     <!-- Summary Cards -->
     @unless($focusSection)

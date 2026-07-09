@@ -1319,7 +1319,9 @@ class UserController extends Controller
      */
     public function otParticipantsList(Request $request)
     {
-        $payload = $this->resolveDashboardStudentListPayload($request);
+        // Skip the payload's per-student total_* / notice-memo N+1 loop — this page
+        // computes its counts separately via otParticipantsRowMeta (batched).
+        $payload = $this->resolveDashboardStudentListPayload($request, false);
         $availableCourses = $payload['availableCourses'];
 
         // Apply the shared filters to the session rows, then collapse to one row
@@ -1409,12 +1411,15 @@ class UserController extends Controller
             $courseOptions = CourseMaster::where('active_inactive', '1')
                 ->where('end_date', $courseDateOp, now())
                 ->orderBy('course_name')
-                ->get(['pk', 'course_name']);
+                ->get(['pk', 'course_name', 'couse_short_name', 'start_year', 'end_date']);
         } else {
             $courseOptions = collect($availableCourses)
                 ->map(fn ($c) => (object) [
                     'pk' => is_array($c) ? ($c['pk'] ?? null) : ($c->pk ?? null),
                     'course_name' => is_array($c) ? ($c['course_name'] ?? '') : ($c->course_name ?? ''),
+                    'couse_short_name' => is_array($c) ? ($c['couse_short_name'] ?? null) : ($c->couse_short_name ?? null),
+                    'start_year' => is_array($c) ? ($c['start_year'] ?? null) : ($c->start_year ?? null),
+                    'end_date' => is_array($c) ? ($c['end_date'] ?? null) : ($c->end_date ?? null),
                 ])
                 ->filter(fn ($c) => ! empty($c->pk))
                 ->unique('pk')
@@ -1472,23 +1477,72 @@ class UserController extends Controller
             }
         }
 
-        $leaves = DB::table('leave_application')
+        // PT / Stationed leaves are reported as the NUMBER OF DAYS. When a Time
+        // Period is selected, only the days that fall inside that window count —
+        // e.g. a 13–18 leave filtered to 13 counts as 1 day. So we pull any leave
+        // that OVERLAPS the window, then clip each range to it before counting.
+        $leaveRows = DB::table('leave_application')
             ->whereIn('student_master_pk', $studentPks)
             ->where('active_inactive', 1)
-            ->when($fromDate, fn ($q) => $q->whereDate('from_date', '>=', $fromDate))
+            ->whereIn('leave_type', ['PT_EXEMPTION', 'STATIONED_LEAVE'])
+            // Overlap: leave ends on/after the window start AND starts on/before its end.
+            ->when($fromDate, fn ($q) => $q->whereRaw('DATE(COALESCE(to_date, from_date)) >= ?', [$fromDate]))
             ->when($toDate, fn ($q) => $q->whereDate('from_date', '<=', $toDate))
-            ->selectRaw('student_master_pk, leave_type, COUNT(*) c')
-            ->groupBy('student_master_pk', 'leave_type')
-            ->get();
-        foreach ($leaves as $r) {
-            $pk = $r->student_master_pk;
-            if (! isset($out[$pk])) {
+            ->orderBy('from_date')
+            ->get(['student_master_pk', 'leave_type', 'from_date', 'to_date']);
+
+        $rangesByKey = []; // "studentPk|leaveType" => [[fromYmd, toYmd], ...]
+        foreach ($leaveRows as $r) {
+            if (! isset($out[$r->student_master_pk]) || empty($r->from_date)) {
                 continue;
             }
-            if ($r->leave_type === 'PT_EXEMPTION') {
-                $out[$pk]['pt'] = (int) $r->c;
-            } elseif ($r->leave_type === 'STATIONED_LEAVE') {
-                $out[$pk]['stationed'] = (int) $r->c;
+            $from = substr((string) $r->from_date, 0, 10);
+            $to = ! empty($r->to_date) ? substr((string) $r->to_date, 0, 10) : $from;
+            if ($to < $from) {
+                $to = $from;
+            }
+            // Clip the leave to the selected Time Period so only in-window days count.
+            if ($fromDate && $from < $fromDate) {
+                $from = $fromDate;
+            }
+            if ($toDate && $to > $toDate) {
+                $to = $toDate;
+            }
+            if ($to < $from) {
+                continue; // no overlap with the filter window
+            }
+            $rangesByKey[$r->student_master_pk . '|' . $r->leave_type][] = [$from, $to];
+        }
+
+        foreach ($rangesByKey as $key => $ranges) {
+            usort($ranges, fn ($a, $b) => strcmp($a[0], $b[0]));
+            // totalDays = distinct calendar days covered. Both PT Exemption and
+            // Stationed Leave show the number of days (contiguous/overlapping day
+            // rows of one request are merged first, so days are never double-counted).
+            $totalDays = 0;
+            $currentStart = null;
+            $currentEnd = null;
+            foreach ($ranges as [$from, $to]) {
+                // Merge into the running span while ranges stay contiguous/overlapping;
+                // a real gap (>1 day) closes the current span and opens a new one.
+                if ($currentEnd === null || $from > Carbon::parse($currentEnd)->addDay()->toDateString()) {
+                    if ($currentStart !== null) {
+                        $totalDays += Carbon::parse($currentStart)->diffInDays(Carbon::parse($currentEnd)) + 1;
+                    }
+                    $currentStart = $from;
+                    $currentEnd = $to;
+                } elseif ($to > $currentEnd) {
+                    $currentEnd = $to;
+                }
+            }
+            if ($currentStart !== null) {
+                $totalDays += Carbon::parse($currentStart)->diffInDays(Carbon::parse($currentEnd)) + 1;
+            }
+            [$pk, $leaveType] = explode('|', $key, 2);
+            if ($leaveType === 'PT_EXEMPTION') {
+                $out[$pk]['pt'] = $totalDays;
+            } elseif ($leaveType === 'STATIONED_LEAVE') {
+                $out[$pk]['stationed'] = $totalDays;
             }
         }
 
@@ -1615,6 +1669,18 @@ class UserController extends Controller
         $length = (int) $request->input('length', 10);
         $paged = $length < 0 ? $rows->slice($start)->values() : $rows->slice($start, $length)->values();
 
+        // Carry the Time Period filter into the detail-page count links so the
+        // opened section shows the same date-scoped data.
+        $linkDateQs = '';
+        $fdParam = (string) $request->input('from_date', '');
+        $tdParam = (string) $request->input('to_date', '');
+        if ($fdParam !== '') {
+            $linkDateQs .= '&from_date=' . urlencode($fdParam);
+        }
+        if ($tdParam !== '') {
+            $linkDateQs .= '&to_date=' . urlencode($tdParam);
+        }
+
         $data = [];
         foreach ($paged as $idx => $p) {
             $s = $p->studentMaster;
@@ -1635,13 +1701,13 @@ class UserController extends Controller
                 'email' => e($s->email ?? 'N/A'),
                 'cadre' => e($s->cadre->cadre_name ?? 'N/A'),
                 'house' => e($p->house_name ?: 'N/A'),
-                'duty_count' => $this->otCountCell($meta['duty_count'], $detailUrl . '#dutiesSection'),
+                'duty_count' => $this->otCountCell($meta['duty_count'], $detailUrl . '?section=dutiesSection' . $linkDateQs),
                 'duty_type' => e($meta['duty_type'] ?: '-'),
-                'medical' => $this->otCountCell($meta['medical'], $detailUrl . '#medicalExceptionsSection'),
-                'pt' => $this->otCountCell($meta['pt'], $detailUrl . '#ptExemptionsSection'),
-                'stationed' => $this->otCountCell($meta['stationed'], $detailUrl . '#stationedLeavesSection'),
-                'notice_memo' => $this->otCountCell($meta['notice_memo'], $detailUrl . '#noticesSection'),
-                'discipline_memo' => $this->otCountCell($meta['discipline_memo'], $detailUrl . '#memosSection'),
+                'medical' => $this->otCountCell($meta['medical'], $detailUrl . '?section=medicalExceptionsSection' . $linkDateQs),
+                'pt' => $this->otCountCell($meta['pt'], $detailUrl . '?section=ptExemptionsSection' . $linkDateQs),
+                'stationed' => $this->otCountCell($meta['stationed'], $detailUrl . '?section=stationedLeavesSection' . $linkDateQs),
+                'notice_memo' => $this->otCountCell($meta['notice_memo'], $detailUrl . '?section=noticesSection' . $linkDateQs),
+                'discipline_memo' => $this->otCountCell($meta['discipline_memo'], $detailUrl . '?section=memosSection' . $linkDateQs),
             ];
         }
 
@@ -1727,7 +1793,7 @@ class UserController extends Controller
     /**
      * @return array{students: \Illuminate\Support\Collection, availableCourses: \Illuminate\Support\Collection, facultyPk: int|null}
      */
-    private function resolveDashboardStudentListPayload(?Request $request = null): array
+    private function resolveDashboardStudentListPayload(?Request $request = null, bool $withTotals = true): array
     {
         $students = collect([]);
         $availableCourses = collect([]);
@@ -1909,7 +1975,11 @@ class UserController extends Controller
                     }
                 }
 
-                $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
+                // The per-student total_* counts + notice/memo lookups below are an
+                // N+1 that only the student-list page needs; callers that compute
+                // their own counts (e.g. the OT participants page via
+                // otParticipantsRowMeta) pass $withTotals = false to skip it.
+                $noticeMemoService = $withTotals ? app(\App\Services\OTNoticeMemoService::class) : null;
 
                 // Time Period + Duty Type filters scope the count columns.
                 $fromDate = $request?->input('from_date') ?: null;
@@ -1919,8 +1989,11 @@ class UserController extends Controller
                 // Include students who have discipline memos but were dropped from the
                 // active-course list (their course has expired or their enrolment is
                 // inactive), so their memo history still surfaces here. Scoped to what
-                // the current viewer is allowed to see.
-                $this->appendStudentsWithMemos($uniqueStudents, $seenStudentCourseKeys, $isSuperAdmin, $facultyPk);
+                // the current viewer is allowed to see. This is a student-list concern
+                // (and an N+1); skip it for callers that only want the course roster.
+                if ($withTotals) {
+                    $this->appendStudentsWithMemos($uniqueStudents, $seenStudentCourseKeys, $isSuperAdmin, $facultyPk);
+                }
 
                 // Batch-load House Name (hostel room, keyed by student_master.user_id == hostel user_name)
                 // and the latest attendance status per student (for Present/Absent).
@@ -1944,6 +2017,14 @@ class UserController extends Controller
                 foreach ($uniqueStudents as $studentMap) {
                     $studentPk = $studentMap->student_master_pk;
                     $coursePk = $studentMap->course_master_pk ?? null;
+
+                    // House Name is cheap (batched above) and always needed.
+                    $uid = $studentMap->studentMaster->user_id ?? null;
+                    $studentMap->house_name = ($uid && isset($houseByUser[$uid])) ? $houseByUser[$uid] : null;
+
+                    if (! $withTotals) {
+                        continue; // caller computes its own counts / doesn't need group mapping
+                    }
 
                     if (! isset($studentMap->groupMapping) && $coursePk) {
                         $groupMap = StudentCourseGroupMap::with([
@@ -1991,9 +2072,6 @@ class UserController extends Controller
                     $memos = $noticeMemoService->getDisciplineMemos($studentPk);
                     $studentMap->total_notice_count = $notices->count();
                     $studentMap->total_memo_count = $memos->count();
-
-                    $uid = $studentMap->studentMaster->user_id ?? null;
-                    $studentMap->house_name = ($uid && isset($houseByUser[$uid])) ? $houseByUser[$uid] : null;
                 }
 
                 // Faculty session scope: a plain session-teacher sees only the
@@ -3088,10 +3166,18 @@ class UserController extends Controller
             }
         }
 
+        // Time Period filter carried over from the OT/Participants list, so a
+        // clicked section shows only the data within that window. Leaves /
+        // exemptions are matched by date-range OVERLAP; duties by their mdo_date.
+        $fromDate = request('from_date') ?: null;
+        $toDate = request('to_date') ?: null;
+
         // Get medical exceptions
         $medicalExemptions = StudentMedicalExemption::with(['course', 'category', 'speciality', 'employee'])
             ->where('student_master_pk', $studentPk)
             ->where('active_inactive', 1)
+            ->when($fromDate, fn ($q) => $q->whereRaw('DATE(COALESCE(to_date, from_date)) >= ?', [$fromDate]))
+            ->when($toDate, fn ($q) => $q->whereDate('from_date', '<=', $toDate))
             ->orderBy('from_date', 'desc')
             ->get();
 
@@ -3100,6 +3186,8 @@ class UserController extends Controller
             ->where('leave_type', LeaveApplication::TYPE_PT_EXEMPTION)
             ->where('active_inactive', 1)
             ->where('status', LeaveApplication::STATUS_APPROVED)
+            ->when($fromDate, fn ($q) => $q->whereRaw('DATE(COALESCE(to_date, from_date)) >= ?', [$fromDate]))
+            ->when($toDate, fn ($q) => $q->whereDate('from_date', '<=', $toDate))
             ->orderBy('from_date', 'desc')
             ->get();
 
@@ -3111,12 +3199,45 @@ class UserController extends Controller
                 LeaveApplication::STATUS_APPROVED,
                 LeaveApplication::STATUS_PENDING,
             ])
+            ->when($fromDate, fn ($q) => $q->whereRaw('DATE(COALESCE(to_date, from_date)) >= ?', [$fromDate]))
+            ->when($toDate, fn ($q) => $q->whereDate('from_date', '<=', $toDate))
             ->orderBy('from_date', 'desc')
             ->get();
+
+        // When a Time Period is active, the list column counts only the DAYS that
+        // fall INSIDE the window (a 9–12 Jul leave filtered to 8–10 Jul counts as
+        // 2 days, not its full 4). Clip each PT/Stationed leave's total_days to the
+        // same window so the detail page's "Total Days" and section totals match the
+        // list. The real From/To dates are still displayed unchanged.
+        if ($fromDate || $toDate) {
+            $clipTotalDaysToWindow = function ($row) use ($fromDate, $toDate) {
+                if (empty($row->from_date)) {
+                    return;
+                }
+                $from = substr((string) $row->from_date, 0, 10);
+                $to = ! empty($row->to_date) ? substr((string) $row->to_date, 0, 10) : $from;
+                if ($to < $from) {
+                    $to = $from;
+                }
+                if ($fromDate && $from < $fromDate) {
+                    $from = $fromDate;
+                }
+                if ($toDate && $to > $toDate) {
+                    $to = $toDate;
+                }
+                $row->total_days = ($to < $from)
+                    ? 0
+                    : Carbon::parse($from)->diffInDays(Carbon::parse($to)) + 1;
+            };
+            $ptExemptions->each($clipTotalDaysToWindow);
+            $stationedLeaves->each($clipTotalDaysToWindow);
+        }
 
         // Get MDO/Escort duties
         $duties = MDOEscotDutyMap::with(['courseMaster', 'mdoDutyTypeMaster', 'facultyMaster'])
             ->where('selected_student_list', $studentPk)
+            ->when($fromDate, fn ($q) => $q->whereDate('mdo_date', '>=', $fromDate))
+            ->when($toDate, fn ($q) => $q->whereDate('mdo_date', '<=', $toDate))
             ->orderBy('mdo_date', 'desc')
             ->get();
 
@@ -3126,6 +3247,26 @@ class UserController extends Controller
         $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
         $notices = $noticeMemoService->getNotices($studentPk);
         $memos = $noticeMemoService->getDisciplineMemos($studentPk);
+
+        // Scope notices/memos to the same Time Period window (by their session date).
+        if ($fromDate || $toDate) {
+            $inDateWindow = function ($item) use ($fromDate, $toDate) {
+                $d = $item->session_date ?? null;
+                if (! $d) {
+                    return false;
+                }
+                $d = substr((string) $d, 0, 10);
+                if ($fromDate && $d < $fromDate) {
+                    return false;
+                }
+                if ($toDate && $d > $toDate) {
+                    return false;
+                }
+                return true;
+            };
+            $notices = $notices->filter($inDateWindow)->values();
+            $memos = $memos->filter($inDateWindow)->values();
+        }
 
         // Get enrolled courses
         $enrolledCourses = StudentMasterCourseMap::with('course')
@@ -3160,10 +3301,19 @@ class UserController extends Controller
 
         $totalExpectedSessions = 0;
         if (!empty($studentGroupPks)) {
-            $result = CourseGroupTimetableMapping::whereIn('group_pk', $studentGroupPks)
-                ->selectRaw('COUNT(DISTINCT timetable_pk) as count')
+            // Count only timetables that actually EXIST and are active. The mapping
+            // table keeps rows for timetables that were later deleted (orphans) and
+            // for cancelled/inactive sessions; counting those inflated Total Sessions
+            // and Not Marked. Future-dated sessions are excluded too — a class that
+            // hasn't happened yet cannot be "not marked".
+            $result = DB::table('course_group_timetable_mapping as m')
+                ->join('timetable as t', 't.pk', '=', 'm.timetable_pk')
+                ->whereIn('m.group_pk', $studentGroupPks)
+                ->where('t.active_inactive', 1)
+                ->whereDate('t.START_DATE', '<=', now()->toDateString())
+                ->selectRaw('COUNT(DISTINCT m.timetable_pk) as count')
                 ->first();
-            $totalExpectedSessions = $result ? (int)$result->count : 0;
+            $totalExpectedSessions = $result ? (int) $result->count : 0;
         }
 
         // Calculate not marked count: sessions without attendance records or with status 0/NULL.
