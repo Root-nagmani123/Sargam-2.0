@@ -1264,6 +1264,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                                 <thead class="voucher-brand-head">
                                     <tr>
                                         <th>Item Name</th>
+                                        <th id="viewItemStoreHeader" class="d-none">Store</th>
                                         <th>Unit</th>
                                         <th>Issue Qty</th>
                                         <th>Return Qty</th>
@@ -1328,6 +1329,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                                     <thead class="voucher-brand-head">
                                         <tr>
                                             <th>Item Name</th>
+                                            <th id="returnItemStoreHeader" class="d-none">Store</th>
                                             <th>Issued Quantity</th>
                                             <th>Item Unit</th>
                                             <th>Item Issue Date</th>
@@ -1377,6 +1379,7 @@ $selectedClientType = (string) request()->input('client_type', '');
             <form id="editReportForm" method="POST" action="" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
+                <input type="hidden" name="buyer_scoped" id="editBuyerScopedFlag" value="0">
                 <input type="hidden" name="client_id" id="editDrClientId" value="">
                 <div class="modal-header border-bottom">
                     <h5 class="modal-title fw-semibold" id="editReportModalLabel">Edit Selling Voucher</h5>
@@ -1563,6 +1566,23 @@ $selectedClientType = (string) request()->input('client_type', '');
     let editRowIndex = 0;
     let currentStoreId = null;
     let editCurrentStoreId = null;
+
+    function getListingFilterQueryString() {
+        const form = document.getElementById('sellingVoucherFilterForm');
+        if (!form) return '';
+        const params = new URLSearchParams();
+        new FormData(form).forEach(function(value, key) {
+            if (value === null || String(value).trim() === '') return;
+            params.append(key, value);
+        });
+        return params.toString();
+    }
+
+    function appendListingFilters(url) {
+        const qs = getListingFilterQueryString();
+        if (!qs) return url;
+        return url + (url.indexOf('?') >= 0 ? '&' : '?') + qs;
+    }
 
     function safeFocus(el) {
         if (!el || typeof el.focus !== 'function') return;
@@ -3904,8 +3924,37 @@ $selectedClientType = (string) request()->input('client_type', '');
     });
 
     // Edit modal row helpers
-    function getEditRowHtml(index, item) {
+    function getEditRowHtml(index, item, buyerScoped) {
         item = item || {};
+        buyerScoped = !!buyerScoped;
+        if (buyerScoped && item.id) {
+            const qty = item.quantity != null ? item.quantity : '';
+            const rate = item.rate != null ? item.rate : '';
+            const issueDate = item.issue_date || '';
+            const total = (qty && rate) ? (parseFloat(qty) * parseFloat(rate)).toFixed(2) : '';
+            const avail = item.available_quantity != null ? item.available_quantity : '';
+            const left = (avail !== '' && qty !== '') ? Math.max(0, parseFloat(avail) - parseFloat(qty)).toFixed(2) : '';
+            const displayName = (item.item_name || '—') + (item.store_name ? (' — ' + item.store_name) : '');
+            const originalQtyAttr = (item.quantity != null && item.quantity !== '') ? (' data-original-qty="' + (
+                parseFloat(item.quantity) || 0) + '"') : '';
+            return '<tr class="edit-dr-item-row"' + originalQtyAttr + ' data-scoped-line="1">' +
+                '<td><span class="fw-semibold text-wrap text-break">' + displayName.replace(/</g, '&lt;').replace(/"/g, '&quot;') +
+                '</span><input type="hidden" name="items[' + index + '][id]" value="' + item.id + '">' +
+                '<input type="hidden" name="items[' + index + '][item_subcategory_id]" value="' + (item.item_subcategory_id || '') + '"></td>' +
+                '<td><input type="text" name="items[' + index + '][unit]" class="form-control  edit-dr-unit" readonly placeholder="—" value="' + (item.unit || '')
+                .replace(/"/g, '&quot;') + '"></td>' +
+                '<td><input type="text" name="items[' + index + '][available_quantity]" class="form-control  edit-dr-avail bg-light" value="' + avail +
+                '" readonly></td>' +
+                '<td><input type="text" name="items[' + index + '][quantity]" class="form-control  edit-dr-qty" required value="' + qty +
+                '"><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
+                '<td><input type="text" class="form-control  edit-dr-left bg-light" readonly value="' + left + '"></td>' +
+                '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control  edit-dr-issue-date" value="' + issueDate + '"></td>' +
+                '<td><input type="text" name="items[' + index + '][rate]" class="form-control  edit-dr-rate" required value="' + rate + '"></td>' +
+                '<td><input type="text" class="form-control  edit-dr-total bg-light" readonly value="' + total + '"></td>' +
+                '<td><button type="button" class="btn btn-sm btn-outline-secondary voucher-icon-btn" title="Locked in date-range view" disabled>×</button></td>' +
+                '</tr>';
+        }
+
         const sourceItems = Array.isArray(filteredItems) && filteredItems.length > 0 ? filteredItems :
             itemSubcategories;
         const options = sourceItems.map(s => {
@@ -4170,7 +4219,7 @@ $selectedClientType = (string) request()->input('client_type', '');
         e.preventDefault();
         e.stopPropagation();
         const reportId = btn.getAttribute('data-report-id');
-        fetch(baseUrl + '/' + reportId, {
+        fetch(appendListingFilters(baseUrl + '/' + reportId), {
                 headers: {
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
@@ -4203,12 +4252,19 @@ $selectedClientType = (string) request()->input('client_type', '');
                     document.getElementById('viewRemarksWrap').style.display = 'none';
                 }
                 // Bill display removed; keep view logic resilient if elements are absent
+                const viewStoreHeader = document.getElementById('viewItemStoreHeader');
+                if (viewStoreHeader) {
+                    viewStoreHeader.classList.toggle('d-none', !data.buyer_scoped);
+                }
                 const tbody = document.getElementById('viewReportItemsBody');
                 tbody.innerHTML = '';
                 if (data.has_items && data.items && data.items.length > 0) {
                     data.items.forEach(function(item) {
+                        const storeCell = data.buyer_scoped
+                            ? '<td>' + (item.store_name || '—').replace(/</g, '&lt;') + '</td>'
+                            : '';
                         tbody.insertAdjacentHTML('beforeend', '<tr><td>' + (item.item_name ||
-                                '—') + '</td><td>' + (item.unit || '—') + '</td><td>' + item
+                                '—') + '</td>' + storeCell + '<td>' + (item.unit || '—') + '</td><td>' + item
                             .quantity + '</td><td>' + (item.return_quantity || 0) +
                             '</td><td>₹' + item.rate + '</td><td>₹' + item.amount +
                             '</td><td>' + (item.issue_date || '—') + '</td></tr>');
@@ -4241,7 +4297,7 @@ $selectedClientType = (string) request()->input('client_type', '');
         e.preventDefault();
         e.stopPropagation();
         const reportId = btn.getAttribute('data-report-id');
-        fetch(baseUrl + '/' + reportId + '/return', {
+        fetch(appendListingFilters(baseUrl + '/' + reportId + '/return'), {
                 headers: {
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
@@ -4254,6 +4310,10 @@ $selectedClientType = (string) request()->input('client_type', '');
                     clientEl.textContent = data.client_name || '—';
                 }
                 document.getElementById('returnTransferFromStore').textContent = data.store_name || '—';
+                const returnStoreHeader = document.getElementById('returnItemStoreHeader');
+                if (returnStoreHeader) {
+                    returnStoreHeader.classList.toggle('d-none', !data.buyer_scoped);
+                }
                 const issueDate = data.issue_date || '';
                 const todayYmd = new Date().toISOString().slice(0, 10);
                 const tbody = document.getElementById('returnItemModalBody');
@@ -4275,9 +4335,12 @@ $selectedClientType = (string) request()->input('client_type', '');
                     const issuedQty = parseFloat(qty) || 0;
                     const rowIssueYmd = (item.issue_date || issueDate || '').trim();
                     const issueDisp = ymdToDmY(rowIssueYmd);
+                    const storeCell = data.buyer_scoped
+                        ? '<td>' + (item.store_name || '—').replace(/</g, '&lt;') + '</td>'
+                        : '';
                     tbody.insertAdjacentHTML('beforeend',
                         '<tr><td>' + name + '<input type="hidden" name="items[' + i +
-                        '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit +
+                        '][id]" value="' + id + '"></td>' + storeCell + '<td>' + qty + '</td><td>' + unit +
                         '</td><td class="text-nowrap">' + issueDisp + '</td>' +
                         '<td><input type="number" name="items[' + i +
                         '][return_quantity]" class="form-control  dr-return-qty" step="0.01" min="0" max="' +
@@ -4291,7 +4354,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                         '"><div class="invalid-feedback">Return date must be between issue date and today.</div></td></tr>'
                     );
                 });
-                document.getElementById('returnItemForm').action = baseUrl + '/' + reportId + '/return';
+                document.getElementById('returnItemForm').action = appendListingFilters(baseUrl + '/' + reportId + '/return');
                 new bootstrap.Modal(document.getElementById('returnItemModal')).show();
             })
             .catch(err => {
@@ -4438,17 +4501,18 @@ $selectedClientType = (string) request()->input('client_type', '');
         }, true);
     }
 
-    function buildEditItemsTable(items) {
+    function buildEditItemsTable(items, buyerScoped) {
         const tbody = document.getElementById('editModalItemsBody');
         if (!tbody) return;
         tbody.innerHTML = '';
         editRowIndex = 0;
+        buyerScoped = !!buyerScoped;
         (items || []).forEach(function(item) {
-            tbody.insertAdjacentHTML('beforeend', getEditRowHtml(editRowIndex, item));
+            tbody.insertAdjacentHTML('beforeend', getEditRowHtml(editRowIndex, item, buyerScoped));
             editRowIndex++;
         });
-        if (tbody.querySelectorAll('.edit-dr-item-row').length === 0) {
-            tbody.insertAdjacentHTML('beforeend', getEditRowHtml(editRowIndex, {}));
+        if (!buyerScoped && tbody.querySelectorAll('.edit-dr-item-row').length === 0) {
+            tbody.insertAdjacentHTML('beforeend', getEditRowHtml(editRowIndex, {}, false));
             editRowIndex++;
         }
         tbody.querySelectorAll('.edit-dr-item-row').forEach(function(row) {
@@ -4464,25 +4528,33 @@ $selectedClientType = (string) request()->input('client_type', '');
                 updateEditRowTotal(row);
                 updateEditGrandTotal();
             });
-            row.querySelector('.edit-dr-item-select').addEventListener('change', function() {
-                const o = getSelectSelectedOption(this);
-                row.querySelector('.edit-dr-unit').value = (o && o.dataset.unit) ? o.dataset.unit :
-                    '—';
-                const rateInp = row.querySelector('.edit-dr-rate');
-                if (rateInp && o && o.dataset.rate) rateInp.value = o.dataset.rate;
-                const availInp = row.querySelector('.edit-dr-avail');
-                if (availInp && o && o.dataset.available) availInp.value = o.dataset.available;
-                refreshEditAllAvailable();
-                updateEditRowTotal(row);
-                updateEditGrandTotal();
-            });
-            row.querySelector('.edit-dr-remove-row').addEventListener('click', function() {
-                row.remove();
-                refreshEditAllAvailable();
-                updateEditGrandTotal();
-            });
+            const itemSelect = row.querySelector('.edit-dr-item-select');
+            if (itemSelect) {
+                itemSelect.addEventListener('change', function() {
+                    const o = getSelectSelectedOption(this);
+                    row.querySelector('.edit-dr-unit').value = (o && o.dataset.unit) ? o.dataset.unit :
+                        '—';
+                    const rateInp = row.querySelector('.edit-dr-rate');
+                    if (rateInp && o && o.dataset.rate) rateInp.value = o.dataset.rate;
+                    const availInp = row.querySelector('.edit-dr-avail');
+                    if (availInp && o && o.dataset.available) availInp.value = o.dataset.available;
+                    refreshEditAllAvailable();
+                    updateEditRowTotal(row);
+                    updateEditGrandTotal();
+                });
+            }
+            const removeBtn = row.querySelector('.edit-dr-remove-row');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function() {
+                    row.remove();
+                    refreshEditAllAvailable();
+                    updateEditGrandTotal();
+                });
+            }
         });
-        refreshEditAllAvailable();
+        if (!buyerScoped) {
+            refreshEditAllAvailable();
+        }
         updateEditGrandTotal();
     }
 
@@ -4494,7 +4566,7 @@ $selectedClientType = (string) request()->input('client_type', '');
         e.stopPropagation();
         const reportId = btn.getAttribute('data-report-id');
         document.getElementById('editReportForm').action = baseUrl + '/' + reportId;
-        fetch(baseUrl + '/' + reportId + '/edit', {
+        fetch(appendListingFilters(baseUrl + '/' + reportId + '/edit'), {
                 headers: {
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
@@ -4514,9 +4586,16 @@ $selectedClientType = (string) request()->input('client_type', '');
                 }
                 destroyEditModalTomSelects();
                 const v = data.voucher;
+                const buyerScoped = !!(data.buyer_scoped || (v && v.buyer_scoped));
+                const buyerScopedFlag = document.getElementById('editBuyerScopedFlag');
+                if (buyerScopedFlag) buyerScopedFlag.value = buyerScoped ? '1' : '0';
+                const editAddItemBtn = document.getElementById('editModalAddItemRow');
+                if (editAddItemBtn) editAddItemBtn.style.display = buyerScoped ? 'none' : '';
                 document.getElementById('editReportModalLabel').textContent = 'Edit Selling Voucher #' +
                     (v.id || reportId);
                 document.querySelector('.edit-store-id').value = v.store_id || v.inve_store_master_pk || '';
+                const editStoreField = document.querySelector('#editReportModal select[name="inve_store_master_pk"]');
+                if (editStoreField) editStoreField.disabled = buyerScoped;
                 document.querySelector('.edit-remarks').value = v.remarks || '';
                 const editRefNumEl = document.querySelector('.edit-reference-number');
                 if (editRefNumEl) editRefNumEl.value = v.reference_number || '';
@@ -4680,10 +4759,12 @@ $selectedClientType = (string) request()->input('client_type', '');
                 editCurrentStoreId = v.store_id || v.inve_store_master_pk || '';
                 const items = data.items || [];
                 const openEditModalWithItems = function() {
-                    buildEditItemsTable(items);
+                    buildEditItemsTable(items, buyerScoped);
                     new bootstrap.Modal(document.getElementById('editReportModal')).show();
                 };
-                if (editCurrentStoreId) {
+                if (buyerScoped) {
+                    openEditModalWithItems();
+                } else if (editCurrentStoreId) {
                     fetchStoreItems(editCurrentStoreId, function() {
                         updateEditItemDropdowns();
                         openEditModalWithItems();

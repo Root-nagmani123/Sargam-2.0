@@ -22,6 +22,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -743,16 +744,25 @@ class SellingVoucherDateRangeController extends Controller
 
     public function show(Request $request, $id)
     {
-        $report = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'course', 'items.itemSubcategory'])->findOrFail($id);
+        $report = SellingVoucherDateRangeReport::with(['store', 'subStore', 'clientTypeCategory', 'course', 'items.itemSubcategory'])->findOrFail($id);
 
         if ($request->wantsJson()) {
+            $buyerScoped = $this->shouldUseBuyerScopedModalItems($request);
+            $scopedItems = $buyerScoped ? $this->loadBuyerScopedItemsForModal($report, $request) : $report->items;
             $issueDateFormatted = $report->issue_date ? $report->issue_date->format('d/m/Y') : '—';
+            $storeNames = $buyerScoped
+                ? $this->resolvedStoreNamesFromScopedItems($scopedItems, $report)
+                : collect([$report->resolved_store_name]);
             $voucher = [
                 'id' => $report->id,
                 'request_date' => $report->date_from ? $report->date_from->format('d/m/Y') : '—',
-                'date_from' => $report->date_from ? $report->date_from->format('d/m/Y') : '—',
-                'date_to' => $report->date_to ? $report->date_to->format('d/m/Y') : '—',
-                'store_name' => $report->resolved_store_name,
+                'date_from' => $request->filled('start_date')
+                    ? Carbon::parse($request->start_date)->format('d/m/Y')
+                    : ($report->date_from ? $report->date_from->format('d/m/Y') : '—'),
+                'date_to' => $request->filled('end_date')
+                    ? Carbon::parse($request->end_date)->format('d/m/Y')
+                    : ($report->date_to ? $report->date_to->format('d/m/Y') : '—'),
+                'store_name' => $storeNames->filter()->unique()->implode(', ') ?: ($report->resolved_store_name ?? '—'),
                 'report_title' => $report->report_title ?? '—',
                 'status' => $report->status,
                 'status_label' => SellingVoucherDateRangeReport::statusLabels()[$report->status] ?? '—',
@@ -769,35 +779,21 @@ class SellingVoucherDateRangeController extends Controller
                 'bill_path' => $report->bill_path,
                 'bill_url' => $report->bill_path ? asset('storage/' . $report->bill_path) : null,
             ];
-            $items = $report->items->map(function ($item) use ($issueDateFormatted) {
-                $qty = (float) $item->quantity;
-                $retQty = (float) ($item->return_quantity ?? 0);
-                $rate = (float) $item->rate;
-                $amount = max(0, $qty - $retQty) * $rate;
-                $itemIssueDate = $item->issue_date
-                    ? (Carbon::parse($item->issue_date)->format('d/m/Y'))
-                    : $issueDateFormatted;
-                return [
-                    'item_name' => $item->item_name ?: ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
-                    'unit' => $item->unit ?? '—',
-                    'quantity' => $qty,
-                    'available_quantity' => (float) ($item->available_quantity ?? 0),
-                    'return_quantity' => $retQty,
-                    'issue_date' => $itemIssueDate,
-                    'rate' => number_format($item->rate, 2),
-                    'amount' => number_format($amount, 2),
-                ];
+            $items = $scopedItems->map(function ($item) use ($issueDateFormatted, $buyerScoped) {
+                return $this->mapModalViewItemRow($item, $issueDateFormatted, $buyerScoped);
             })->values()->toArray();
-            $grand_total = $report->items->sum(function ($item) {
+            $grand_total = $scopedItems->sum(function ($item) {
                 $qty = (float) $item->quantity;
                 $retQty = (float) ($item->return_quantity ?? 0);
+
                 return max(0, $qty - $retQty) * (float) $item->rate;
             });
             return response()->json([
                 'voucher' => $voucher,
                 'items' => $items,
                 'grand_total' => number_format($grand_total, 2),
-                'has_items' => $report->items->isNotEmpty(),
+                'has_items' => $scopedItems->isNotEmpty(),
+                'buyer_scoped' => $buyerScoped,
             ]);
         }
 
@@ -806,7 +802,7 @@ class SellingVoucherDateRangeController extends Controller
 
     public function edit(Request $request, $id)
     {
-        $report = SellingVoucherDateRangeReport::with(['items.itemSubcategory', 'course', 'clientTypeCategory'])->findOrFail($id);
+        $report = SellingVoucherDateRangeReport::with(['items.itemSubcategory', 'course', 'clientTypeCategory', 'store', 'subStore'])->findOrFail($id);
 
         if ($report->status == SellingVoucherDateRangeReport::STATUS_APPROVED) {
             if ($request->wantsJson()) {
@@ -816,9 +812,17 @@ class SellingVoucherDateRangeController extends Controller
         }
 
         if ($request->wantsJson()) {
-            $storeType = $report->store_type ?? 'store';
-            $storeId = (int) $report->store_id;
-            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
+            $buyerScoped = $this->shouldUseBuyerScopedModalItems($request);
+            $scopedItems = $buyerScoped ? $this->loadBuyerScopedItemsForModal($report, $request) : $report->items;
+            $scopedReportIds = $buyerScoped ? $this->buyerScopedReportIds($report, $request) : [(int) $report->id];
+            $availableMapsByStore = $buyerScoped
+                ? $this->availableMapsForScopedItems($scopedItems)
+                : [
+                    (($report->store_type ?? 'store').':'.(int) $report->store_id) => AvailableQuantityService::availableQuantitiesForStore(
+                        $report->store_type ?? 'store',
+                        (int) $report->store_id
+                    ),
+                ];
 
             // Always use persisted slug. client_type_pk is mess_client_types.id for employee/section/other
             // but course_master.pk for ot/course — do not infer slug from clientTypeCategory for ot/course.
@@ -827,7 +831,12 @@ class SellingVoucherDateRangeController extends Controller
                 $clientTypeSlug = 'employee';
             }
 
+            $storeType = $report->store_type ?? 'store';
+            $storeId = (int) $report->store_id;
             $storeIdentifier = $storeType === 'sub_store' ? 'sub_' . $storeId : (string) $storeId;
+            $storeNames = $buyerScoped
+                ? $this->resolvedStoreNamesFromScopedItems($scopedItems, $report)
+                : collect([$report->resolved_store_name]);
 
             $voucher = [
                 'id' => $report->id,
@@ -835,6 +844,7 @@ class SellingVoucherDateRangeController extends Controller
                 'date_to' => $report->date_to ? $report->date_to->format('Y-m-d') : '',
                 'store_id' => $storeIdentifier,
                 'inve_store_master_pk' => $storeIdentifier,
+                'store_name' => $storeNames->filter()->unique()->implode(', ') ?: ($report->resolved_store_name ?? '—'),
                 'report_title' => $report->report_title,
                 'status' => (int) $report->status,
                 'remarks' => $report->remarks,
@@ -848,11 +858,24 @@ class SellingVoucherDateRangeController extends Controller
                 'issue_date' => $report->issue_date ? $report->issue_date->format('Y-m-d') : '',
                 'bill_path' => $report->bill_path,
                 'bill_url' => $report->bill_path ? asset('storage/' . $report->bill_path) : null,
+                'buyer_scoped' => $buyerScoped,
+                'aggregated_scope' => $buyerScoped && count($scopedReportIds) > 1,
             ];
-            $items = $report->items->map(function ($item) use ($availableMap) {
+            $items = $scopedItems->map(function ($item) use ($availableMapsByStore, $buyerScoped, $report) {
+                $itemReport = ($buyerScoped && $item->relationLoaded('report') && $item->report)
+                    ? $item->report
+                    : $report;
+                $storeType = $itemReport->store_type ?? 'store';
+                $storeId = (int) ($itemReport->store_id ?? 0);
+                $mapKey = $storeType . ':' . $storeId;
+                $availableMap = $availableMapsByStore[$mapKey] ?? [];
                 $itemId = (int) ($item->item_subcategory_id ?? 0);
                 $currentAvailable = $itemId > 0 ? (float) ($availableMap[$itemId] ?? 0) : (float) ($item->available_quantity ?? 0);
+
                 return [
+                    'id' => $item->id,
+                    'report_id' => $item->sv_date_range_report_id,
+                    'store_name' => $itemReport ? $itemReport->resolved_store_name : '—',
                     'item_subcategory_id' => $item->item_subcategory_id,
                     'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
                     'unit' => $item->unit ?? '',
@@ -862,9 +885,11 @@ class SellingVoucherDateRangeController extends Controller
                     'rate' => (float) $item->rate,
                     'amount' => (float) $item->amount,
                     'issue_date' => $item->issue_date ? $item->issue_date->format('Y-m-d') : '',
+                    'readonly_line' => $buyerScoped,
                 ];
             })->values()->toArray();
-            return response()->json(['voucher' => $voucher, 'items' => $items]);
+
+            return response()->json(['voucher' => $voucher, 'items' => $items, 'buyer_scoped' => $buyerScoped]);
         }
 
         return redirect()->route('admin.mess.selling-voucher-date-range.index');
@@ -876,6 +901,10 @@ class SellingVoucherDateRangeController extends Controller
 
         if ($report->status == SellingVoucherDateRangeReport::STATUS_APPROVED) {
             return redirect()->route('admin.mess.selling-voucher-date-range.index')->with('error', 'Edit is disabled for approved voucher.');
+        }
+
+        if ($request->boolean('buyer_scoped')) {
+            return $this->updateBuyerScopedLineItems($request, $report);
         }
 
         $request->validate([
@@ -1061,14 +1090,20 @@ class SellingVoucherDateRangeController extends Controller
      */
     public function returnData(Request $request, $id)
     {
-        $report = SellingVoucherDateRangeReport::with(['store', 'items.itemSubcategory'])->findOrFail($id);
+        $report = SellingVoucherDateRangeReport::with(['store', 'subStore', 'items.itemSubcategory'])->findOrFail($id);
 
         if (!$request->wantsJson()) {
             return redirect()->route('admin.mess.selling-voucher-date-range.index');
         }
 
-        $items = $report->items->map(function ($item) {
-            return [
+        $buyerScoped = $this->shouldUseBuyerScopedModalItems($request);
+        $scopedItems = $buyerScoped ? $this->loadBuyerScopedItemsForModal($report, $request) : $report->items;
+        $storeNames = $buyerScoped
+            ? $this->resolvedStoreNamesFromScopedItems($scopedItems, $report)
+            : collect([$report->resolved_store_name]);
+
+        $items = $scopedItems->map(function ($item) use ($buyerScoped) {
+            $row = [
                 'id' => $item->id,
                 'item_name' => $item->item_name ?: ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
                 'quantity' => (float) $item->quantity,
@@ -1077,14 +1112,20 @@ class SellingVoucherDateRangeController extends Controller
                 'return_quantity' => (float) ($item->return_quantity ?? 0),
                 'return_date' => $item->return_date ? $item->return_date->format('Y-m-d') : '',
             ];
+            if ($buyerScoped && $item->relationLoaded('report') && $item->report) {
+                $row['store_name'] = $item->report->resolved_store_name;
+            }
+
+            return $row;
         })->values()->toArray();
 
         return response()->json([
-            'store_name' => $report->resolved_store_name,
+            'store_name' => $storeNames->filter()->unique()->implode(', ') ?: ($report->resolved_store_name ?? '—'),
             'client_name' => trim((string) ($report->client_name ?? '')),
             'client_type_slug' => (string) ($report->client_type_slug ?? ''),
             'issue_date' => $report->issue_date ? $report->issue_date->format('Y-m-d') : '',
             'items' => $items,
+            'buyer_scoped' => $buyerScoped,
         ]);
     }
 
@@ -1102,19 +1143,28 @@ class SellingVoucherDateRangeController extends Controller
             'items.*.return_date' => 'nullable|date|before_or_equal:today',
         ]);
 
-        $itemIds = $report->items->pluck('id')->toArray();
+        $buyerScoped = $this->shouldUseBuyerScopedModalItems($request);
+        $allowedReportIds = $buyerScoped
+            ? $this->buyerScopedReportIds($report, $request)
+            : [(int) $report->id];
+        $allowedItemIds = SellingVoucherDateRangeReportItem::query()
+            ->whereIn('sv_date_range_report_id', $allowedReportIds)
+            ->pluck('id')
+            ->map(fn ($itemId) => (int) $itemId)
+            ->all();
 
         try {
             DB::beginTransaction();
             foreach ($request->items as $row) {
                 $itemId = (int) $row['id'];
-                if (!in_array($itemId, $itemIds, true)) {
+                if (!in_array($itemId, $allowedItemIds, true)) {
                     continue;
                 }
-                $item = SellingVoucherDateRangeReportItem::find($itemId);
-                if (!$item || $item->sv_date_range_report_id != $report->id) {
+                $item = SellingVoucherDateRangeReportItem::with('report')->find($itemId);
+                if (!$item || !in_array((int) $item->sv_date_range_report_id, $allowedReportIds, true)) {
                     continue;
                 }
+                $itemReport = $item->report ?: $report;
                 $returnQty = (float) ($row['return_quantity'] ?? 0);
                 $returnDate = !empty($row['return_date']) ? $row['return_date'] : null;
                 $issuedQty = (float) ($item->quantity ?? 0);
@@ -1129,7 +1179,7 @@ class SellingVoucherDateRangeController extends Controller
                             DB::rollBack();
                             return back()->withInput()->with('error', 'Return date cannot be in the future.');
                         }
-                        $effectiveIssue = $item->issue_date ?: $report->issue_date;
+                        $effectiveIssue = $item->issue_date ?: $itemReport->issue_date;
                         if ($effectiveIssue) {
                             $iss = Carbon::parse($effectiveIssue)->startOfDay();
                             if ($ret->lt($iss)) {
@@ -1192,8 +1242,10 @@ class SellingVoucherDateRangeController extends Controller
         $orderCol = DataTableSearchHelper::orderColumnIndex($request, 9);
         $orderDir = DataTableSearchHelper::orderDirection($request, 'desc');
 
+        $effectiveItemIssueDate = DB::raw('COALESCE(sri.issue_date, sv.issue_date, sv.date_from)');
+
         $sortMap = [
-            0 => 'sv.date_from',
+            0 => $effectiveItemIssueDate,
             1 => 'sri.item_name',
             2 => 'sri.quantity',
             3 => 'sri.return_quantity',
@@ -1207,7 +1259,7 @@ class SellingVoucherDateRangeController extends Controller
                 ELSE COALESCE(mct.client_name, '') END)"),
             7 => 'sv.client_name',
             8 => 'sv.payment_type',
-            9 => 'sv.date_from',
+            9 => $effectiveItemIssueDate,
             10 => 'sv.status',
             11 => 'sri.return_quantity',
         ];
@@ -1215,7 +1267,7 @@ class SellingVoucherDateRangeController extends Controller
         if (isset($sortMap[$orderCol])) {
             $query->orderBy($sortMap[$orderCol], $orderDir);
         } else {
-            $query->orderByDesc('sv.date_from');
+            $query->orderByDesc($effectiveItemIssueDate);
         }
 
         $query->orderByDesc('sv.id')->orderByDesc('sri.id');
@@ -1256,6 +1308,8 @@ class SellingVoucherDateRangeController extends Controller
                 'sv.payment_type',
                 'sv.status',
                 'sv.date_from',
+                'sri.issue_date',
+                'sv.issue_date as report_issue_date',
                 'sv.client_type_slug',
                 'mct.client_type as category_client_type',
                 'mct.client_name as category_client_name',
@@ -1326,14 +1380,7 @@ class SellingVoucherDateRangeController extends Controller
             }
         }
         $this->applySellingVoucherDateRangeBuyerNameFilter($q, $request);
-
-        if ($request->filled('start_date') && $request->filled('end_date')) {
-            $q->whereBetween('sv.date_from', [$request->start_date, $request->end_date]);
-        } elseif ($request->filled('start_date')) {
-            $q->whereDate('sv.date_from', '>=', $request->start_date);
-        } elseif ($request->filled('end_date')) {
-            $q->whereDate('sv.date_from', '<=', $request->end_date);
-        }
+        $this->applySellingVoucherDateRangeItemIssueDateFilter($q, $request);
 
         $returnStatus = strtolower(trim((string) $request->input('return_status', '')));
         if ($returnStatus === 'returned') {
@@ -1345,6 +1392,288 @@ class SellingVoucherDateRangeController extends Controller
         }
 
         return $q;
+    }
+
+    /**
+     * Filter listing rows by line-item request date (issue_date), matching Process Mess Bills / Sale Voucher Report.
+     */
+    private function applySellingVoucherDateRangeItemIssueDateFilter(Builder $q, Request $request): void
+    {
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $q->whereBetween('sri.issue_date', [$request->start_date, $request->end_date]);
+
+            return;
+        }
+
+        if ($request->filled('start_date')) {
+            $q->whereDate('sri.issue_date', '>=', $request->start_date);
+
+            return;
+        }
+
+        if ($request->filled('end_date')) {
+            $q->whereDate('sri.issue_date', '<=', $request->end_date);
+        }
+    }
+
+    private function shouldUseBuyerScopedModalItems(Request $request): bool
+    {
+        return $request->filled('start_date') || $request->filled('end_date');
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Builder<SellingVoucherDateRangeReport>
+     */
+    private function buyerScopedReportsQuery(SellingVoucherDateRangeReport $anchor)
+    {
+        $query = SellingVoucherDateRangeReport::query()
+            ->whereIn('status', [
+                SellingVoucherDateRangeReport::STATUS_DRAFT,
+                SellingVoucherDateRangeReport::STATUS_FINAL,
+                SellingVoucherDateRangeReport::STATUS_APPROVED,
+            ])
+            ->where('client_type_slug', $anchor->client_type_slug);
+
+        if ($anchor->client_type_pk) {
+            $query->where('client_type_pk', $anchor->client_type_pk);
+        }
+
+        if ($anchor->client_id && (int) $anchor->client_id > 0) {
+            $query->where('client_id', (int) $anchor->client_id);
+        } elseif (filled($anchor->client_name)) {
+            $this->applyBuyerNamePatternOnReports($query, trim((string) $anchor->client_name));
+        }
+
+        return $query;
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<SellingVoucherDateRangeReport>  $query
+     */
+    private function applyBuyerNamePatternOnReports($query, string $buyerName): void
+    {
+        $query->where(function ($nameQuery) use ($buyerName) {
+            $nameQuery->where('client_name', $buyerName)
+                ->orWhere('client_name', 'LIKE', $buyerName.' (%');
+        });
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function buyerScopedReportIds(SellingVoucherDateRangeReport $anchor, Request $request): array
+    {
+        $query = $this->buyerScopedReportsQuery($anchor);
+
+        if ($this->shouldUseBuyerScopedModalItems($request)) {
+            $query->whereHas('items', function ($itemQuery) use ($request) {
+                $this->applyItemIssueDateConstraintOnItemsQuery($itemQuery, $request);
+            });
+        }
+
+        return $query->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $itemQuery
+     */
+    private function applyItemIssueDateConstraintOnItemsQuery($itemQuery, Request $request): void
+    {
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $itemQuery->whereBetween('issue_date', [$request->start_date, $request->end_date]);
+
+            return;
+        }
+
+        if ($request->filled('start_date')) {
+            $itemQuery->whereDate('issue_date', '>=', $request->start_date);
+
+            return;
+        }
+
+        if ($request->filled('end_date')) {
+            $itemQuery->whereDate('issue_date', '<=', $request->end_date);
+        }
+    }
+
+    private function loadBuyerScopedItemsForModal(SellingVoucherDateRangeReport $anchor, Request $request): Collection
+    {
+        $reportIds = $this->buyerScopedReportIds($anchor, $request);
+        if ($reportIds === []) {
+            return collect();
+        }
+
+        $itemsQuery = SellingVoucherDateRangeReportItem::query()
+            ->whereIn('sv_date_range_report_id', $reportIds)
+            ->with(['itemSubcategory', 'report.store', 'report.subStore']);
+
+        $this->applyItemIssueDateConstraintOnItemsQuery($itemsQuery, $request);
+
+        return $itemsQuery
+            ->orderBy('issue_date')
+            ->orderBy('id')
+            ->get();
+    }
+
+    /**
+     * @param  Collection<int, SellingVoucherDateRangeReportItem>  $scopedItems
+     */
+    private function resolvedStoreNamesFromScopedItems(Collection $scopedItems, SellingVoucherDateRangeReport $fallbackReport): Collection
+    {
+        return $scopedItems
+            ->map(function ($item) {
+                if ($item->relationLoaded('report') && $item->report) {
+                    return $item->report->resolved_store_name;
+                }
+
+                return null;
+            })
+            ->filter()
+            ->whenEmpty(fn () => collect([$fallbackReport->resolved_store_name]));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function mapModalViewItemRow(SellingVoucherDateRangeReportItem $item, string $issueDateFormatted, bool $buyerScoped): array
+    {
+        $qty = (float) $item->quantity;
+        $retQty = (float) ($item->return_quantity ?? 0);
+        $amount = max(0, $qty - $retQty) * (float) $item->rate;
+        $itemIssueDate = $item->issue_date
+            ? Carbon::parse($item->issue_date)->format('d/m/Y')
+            : $issueDateFormatted;
+        $row = [
+            'item_name' => $item->item_name ?: ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
+            'unit' => $item->unit ?? '—',
+            'quantity' => $qty,
+            'available_quantity' => (float) ($item->available_quantity ?? 0),
+            'return_quantity' => $retQty,
+            'issue_date' => $itemIssueDate,
+            'rate' => number_format($item->rate, 2),
+            'amount' => number_format($amount, 2),
+        ];
+
+        if ($buyerScoped && $item->relationLoaded('report') && $item->report) {
+            $row['store_name'] = $item->report->resolved_store_name;
+        }
+
+        return $row;
+    }
+
+    /**
+     * @param  Collection<int, SellingVoucherDateRangeReportItem>  $scopedItems
+     * @return array<string, array<int, float>>
+     */
+    private function availableMapsForScopedItems(Collection $scopedItems): array
+    {
+        $maps = [];
+        foreach ($scopedItems as $item) {
+            $itemReport = $item->relationLoaded('report') ? $item->report : null;
+            if (!$itemReport) {
+                continue;
+            }
+            $storeType = $itemReport->store_type ?? 'store';
+            $storeId = (int) ($itemReport->store_id ?? 0);
+            $mapKey = $storeType.':'.$storeId;
+            if (!isset($maps[$mapKey])) {
+                $maps[$mapKey] = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
+            }
+        }
+
+        return $maps;
+    }
+
+    private function updateBuyerScopedLineItems(Request $request, SellingVoucherDateRangeReport $anchor)
+    {
+        $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.id' => 'required|exists:sv_date_range_report_items,id',
+            'items.*.item_subcategory_id' => 'required|exists:mess_item_subcategories,id',
+            'items.*.quantity' => 'required|numeric|min:0.01',
+            'items.*.rate' => 'required|numeric|min:0',
+            'items.*.issue_date' => 'nullable|date',
+        ]);
+
+        $allowedReportIds = $this->buyerScopedReportIds($anchor, $request);
+        $affectedReportIds = [];
+
+        try {
+            DB::beginTransaction();
+
+            foreach ((array) $request->items as $row) {
+                $itemId = (int) ($row['id'] ?? 0);
+                if ($itemId <= 0) {
+                    continue;
+                }
+
+                $item = SellingVoucherDateRangeReportItem::with('report')->find($itemId);
+                if (!$item || !in_array((int) $item->sv_date_range_report_id, $allowedReportIds, true)) {
+                    continue;
+                }
+
+                $itemReport = $item->report;
+                if (!$itemReport || (int) $itemReport->status === SellingVoucherDateRangeReport::STATUS_APPROVED) {
+                    continue;
+                }
+
+                $storeType = $itemReport->store_type ?? 'store';
+                $storeId = (int) ($itemReport->store_id ?? 0);
+                $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
+                $itemSubcategoryId = (int) ($row['item_subcategory_id'] ?? 0);
+                $newQty = (float) ($row['quantity'] ?? 0);
+                $existingQty = (float) ($item->quantity ?? 0);
+                $currentStock = (float) ($availableMap[$itemSubcategoryId] ?? 0);
+                $effectiveAvailable = $currentStock + $existingQty;
+
+                if ($newQty > $effectiveAvailable) {
+                    DB::rollBack();
+
+                    return redirect()->route('admin.mess.selling-voucher-date-range.index')
+                        ->withInput()
+                        ->with('error', 'Issue quantity cannot exceed available quantity for one or more items.');
+                }
+
+                $rate = (float) ($row['rate'] ?? 0);
+                $issueDate = !empty($row['issue_date'])
+                    ? $row['issue_date']
+                    : ($item->issue_date ? $item->issue_date->format('Y-m-d') : now()->toDateString());
+
+                $item->update([
+                    'quantity' => $newQty,
+                    'rate' => $rate,
+                    'amount' => $newQty * $rate,
+                    'issue_date' => $issueDate,
+                ]);
+
+                $affectedReportIds[(int) $item->sv_date_range_report_id] = true;
+            }
+
+            foreach (array_keys($affectedReportIds) as $reportId) {
+                $report = SellingVoucherDateRangeReport::with('items')->find($reportId);
+                if (!$report) {
+                    continue;
+                }
+                $grandTotal = $report->items->sum(function ($line) {
+                    return (float) ($line->quantity ?? 0) * (float) ($line->rate ?? 0);
+                });
+                $report->update([
+                    'total_amount' => $grandTotal,
+                    'updated_by' => Auth::id(),
+                ]);
+            }
+
+            DB::commit();
+            self::bumpSellingVoucherDateRangeListingCacheEpoch();
+
+            return redirect()->route('admin.mess.selling-voucher-date-range.index')
+                ->with('success', 'Date Range Report updated successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return redirect()->route('admin.mess.selling-voucher-date-range.index')
+                ->with('error', 'Failed to update report: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -1695,9 +2024,10 @@ class SellingVoucherDateRangeController extends Controller
         }
 
         $requestDate = '—';
-        if (!empty($row->date_from)) {
+        $requestDateRaw = $row->issue_date ?? $row->report_issue_date ?? $row->date_from ?? null;
+        if (!empty($requestDateRaw)) {
             try {
-                $requestDate = Carbon::parse($row->date_from)->format('d/m/Y');
+                $requestDate = Carbon::parse($requestDateRaw)->format('d/m/Y');
             } catch (\Exception $e) {
                 $requestDate = '—';
             }
