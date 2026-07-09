@@ -286,6 +286,161 @@ class NotificationReceiverService
     }
 
     /**
+     * Resolve admin/faculty user_ids who should receive OT chat replies on a notice/memo.
+     * Prefers incharge faculty on the notice, admins already on the thread, then management roles.
+     *
+     * @return int[]
+     */
+    public function getMemoNoticeAdminReceivers(int $memoNoticeId, string $type): array
+    {
+        $type = $type === 'memo' ? 'memo' : 'notice';
+        $userIds = [];
+
+        $userIds = array_merge($userIds, $this->resolveMemoNoticeFacultyUserIds($memoNoticeId, $type));
+
+        $messageTable = $type === 'memo'
+            ? 'memo_message_student_decip_incharge'
+            : 'notice_message_student_decip_incharge';
+        $foreignKey = $type === 'memo' ? 'student_memo_status_pk' : 'student_notice_status_pk';
+
+        $threadAdminIds = DB::table($messageTable)
+            ->where($foreignKey, $memoNoticeId)
+            ->where('role_type', 'f')
+            ->whereNotNull('created_by')
+            ->pluck('created_by')
+            ->map(fn ($id) => $this->normalizeStaffReceiverUserId((int) $id))
+            ->filter()
+            ->all();
+        $userIds = array_merge($userIds, $threadAdminIds);
+
+        $userIds = array_merge($userIds, $this->getMemoNoticeManagementRoleUserIds());
+
+        $coursePk = $this->getMemoNoticeCoursePk($memoNoticeId, $type);
+        if ($coursePk) {
+            $coordinatorId = $this->getCourseCoordinatorUserId($coursePk);
+            if ($coordinatorId) {
+                $userIds[] = $coordinatorId;
+            }
+            $userIds = array_merge($userIds, $this->getAssistantCoordinatorUserIds($coursePk));
+        }
+
+        return array_values(array_unique(array_filter(array_map('intval', $userIds))));
+    }
+
+    /**
+     * Map faculty_master_pk on a notice/memo to bell receiver user_ids.
+     *
+     * @return int[]
+     */
+    private function resolveMemoNoticeFacultyUserIds(int $memoNoticeId, string $type): array
+    {
+        if ($type === 'memo') {
+            $facultyRaw = DB::table('student_memo_status as sms')
+                ->leftJoin('student_notice_status as sns', 'sms.student_notice_status_pk', '=', 'sns.pk')
+                ->where('sms.pk', $memoNoticeId)
+                ->value('sns.faculty_master_pk');
+        } else {
+            $facultyRaw = DB::table('student_notice_status')
+                ->where('pk', $memoNoticeId)
+                ->value('faculty_master_pk');
+        }
+
+        if ($facultyRaw === null || $facultyRaw === '') {
+            return [];
+        }
+
+        $trimmed = trim((string) $facultyRaw);
+        if (str_starts_with($trimmed, '[')) {
+            $decoded = json_decode($trimmed, true);
+            $facultyIds = is_array($decoded) ? $decoded : [];
+        } else {
+            $facultyIds = [$facultyRaw];
+        }
+
+        $facultyIds = array_values(array_filter(array_map('intval', $facultyIds)));
+        if ($facultyIds === []) {
+            return [];
+        }
+
+        return FacultyMaster::query()
+            ->whereIn('pk', $facultyIds)
+            ->whereNotNull('employee_master_pk')
+            ->pluck('employee_master_pk')
+            ->map(fn ($v) => (int) $v)
+            ->filter()
+            ->all();
+    }
+
+    private function getMemoNoticeCoursePk(int $memoNoticeId, string $type): ?int
+    {
+        if ($type === 'memo') {
+            $coursePk = DB::table('student_memo_status')->where('pk', $memoNoticeId)->value('course_master_pk');
+        } else {
+            $coursePk = DB::table('student_notice_status')->where('pk', $memoNoticeId)->value('course_master_pk');
+        }
+
+        return $coursePk ? (int) $coursePk : null;
+    }
+
+    /**
+     * Normalize chat created_by to user_credentials.user_id for bell notifications.
+     */
+    private function normalizeStaffReceiverUserId(int $createdBy): ?int
+    {
+        $credential = UserCredential::query()
+            ->where('user_id', $createdBy)
+            ->where('user_category', '!=', 'S')
+            ->first();
+
+        if (!$credential) {
+            $credential = UserCredential::query()
+                ->where('pk', $createdBy)
+                ->where('user_category', '!=', 'S')
+                ->first();
+        }
+
+        return $credential ? (int) $credential->user_id : null;
+    }
+
+    /**
+     * Roles that manage Send Memo / Notice.
+     *
+     * @return int[]
+     */
+    private function getMemoNoticeManagementRoleUserIds(): array
+    {
+        $roleNames = [
+            'Super Admin',
+            'Training Induction Admin',
+            'Training-Induction',
+        ];
+        $userIds = [];
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('model_has_roles')) {
+            $spatieIds = DB::table('model_has_roles as mhr')
+                ->join('roles as r', 'r.id', '=', 'mhr.role_id')
+                ->join('user_credentials as uc', 'uc.pk', '=', 'mhr.model_id')
+                ->where('mhr.model_type', User::class)
+                ->whereIn('r.name', $roleNames)
+                ->pluck('uc.user_id')
+                ->all();
+            $userIds = array_merge($userIds, $spatieIds);
+        }
+
+        $rolePks = UserRoleMaster::whereIn('user_role_name', $roleNames)->pluck('pk');
+        if ($rolePks->isNotEmpty()) {
+            $legacyIds = EmployeeRoleMapping::query()
+                ->whereIn('user_role_master_pk', $rolePks)
+                ->join('user_credentials as uc', 'uc.pk', '=', 'employee_role_mapping.user_credentials_pk')
+                ->pluck('uc.user_id')
+                ->all();
+            $userIds = array_merge($userIds, $legacyIds);
+        }
+
+        return array_values(array_unique(array_filter(array_map('intval', $userIds))));
+    }
+
+    /**
      * User IDs for estate workflow alerts (new request): Super Admin and Estate Admin only.
      *
      * @return int[]
