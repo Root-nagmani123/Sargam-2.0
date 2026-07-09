@@ -1048,6 +1048,15 @@ class UserController extends Controller
      */
     public function studentList(Request $request)
     {
+        // Default the Time Period filter to TODAY on a fresh load (no date params at
+        // all) so the list opens scoped to the current date. A present-but-empty
+        // param means the user deliberately cleared the filter, so it's left alone;
+        // the Present/Absent cards and manual picker pass explicit dates as usual.
+        if (! $request->has('from_date') && ! $request->has('to_date')) {
+            $today = now()->toDateString();
+            $request->merge(['from_date' => $today, 'to_date' => $today]);
+        }
+
         $payload = $this->resolveDashboardStudentListPayload($request);
         $students = $payload['students'];
         $availableCourses = $payload['availableCourses'];
@@ -1069,47 +1078,42 @@ class UserController extends Controller
             'present_today' => 0,
             'absent_today' => 0,
         ];
-        // The day the Present/Absent snapshot refers to: today when a session was
-        // marked today, otherwise the most recent past day that has marked
-        // attendance (sessions don't run every day, so a strict "today" would read
-        // 0 on off days). Surfaced to the view so the cards can show the date.
-        $snapshotDate = null;
+        // The Present/Absent cards reflect the CURRENT date (the list opens scoped
+        // to today). On an off-day with no marked session the counts simply read 0.
+        $snapshotDate = $todayStr;
         if (! empty($scopePks)) {
-            $snapshotDate = DB::table('course_student_attendance as a')
+            $dayAttendance = DB::table('course_student_attendance as a')
                 ->join('timetable as t', 'a.timetable_pk', '=', 't.pk')
                 ->whereIn('a.Student_master_pk', $scopePks)
-                ->where('a.status', '!=', 0)
-                ->whereDate('t.START_DATE', '<=', $todayStr)
-                ->max(DB::raw('DATE(t.START_DATE)'));
+                ->whereDate('t.START_DATE', $snapshotDate)
+                ->get(['a.Student_master_pk as spk', 'a.status']);
 
-            if ($snapshotDate) {
-                $dayAttendance = DB::table('course_student_attendance as a')
-                    ->join('timetable as t', 'a.timetable_pk', '=', 't.pk')
-                    ->whereIn('a.Student_master_pk', $scopePks)
-                    ->whereDate('t.START_DATE', $snapshotDate)
-                    ->get(['a.Student_master_pk as spk', 'a.status']);
-
-                // Resolve ONE bucket per distinct student so the two counts never
-                // double-count the same OT (a student can have several sessions that
-                // day). Only genuinely MARKED sessions count (status 0 = not marked
-                // is ignored). Present = attended any non-absent session, else Absent
-                // (every marked session that day was Absent = status 3).
-                $present = 0;
-                $absent = 0;
-                foreach ($dayAttendance->groupBy('spk') as $rows) {
-                    $marked = $rows->filter(fn ($r) => (int) $r->status !== 0);
-                    if ($marked->isEmpty()) {
-                        continue;
-                    }
-                    if ($marked->contains(fn ($r) => (int) $r->status !== 3)) {
-                        $present++;
-                    } else {
-                        $absent++;
-                    }
+            // Count per distinct student (a student can have several sessions that
+            // day). Only genuinely MARKED sessions count (status 0 = not marked is
+            // ignored). Present = attended any non-absent session; Absent = had any
+            // Absent (status 3) session. A student with both counts in BOTH — mirrors
+            // the Present/Absent tabs (see collapseDateScopedAttendance()).
+            $presentSpks = [];
+            $absentSpks = [];
+            foreach ($dayAttendance->groupBy('spk') as $spk => $rows) {
+                $marked = $rows->filter(fn ($r) => (int) $r->status !== 0);
+                if ($marked->isEmpty()) {
+                    continue;
                 }
-                $cardCounts['present_today'] = $present;
-                $cardCounts['absent_today'] = $absent;
+                if ($marked->contains(fn ($r) => (int) $r->status !== 3)) {
+                    $presentSpks[$spk] = true;
+                }
+                if ($marked->contains(fn ($r) => (int) $r->status === 3)) {
+                    $absentSpks[$spk] = true;
+                }
             }
+            // Students on PT Exemption / Stationed Leave today are absent-with-reason
+            // even without an attendance record — mirror the Absent list.
+            foreach ($this->leaveBasedAbsentees($scopePks, $snapshotDate, $snapshotDate) as $spk => $d) {
+                $absentSpks[$spk] = true;
+            }
+            $cardCounts['present_today'] = count($presentSpks);
+            $cardCounts['absent_today'] = count($absentSpks);
         }
 
         // Get counsellor type names and courses from group_type_master_course_master_map
@@ -1263,9 +1267,16 @@ class UserController extends Controller
         $students = $this->applyDashboardStudentListFilters($students, $request);
 
         // Tab counts (All / Present / Absent) for the initial render; the DataTable
-        // response refreshes them live on every filter change.
-        $presentStudents = $students->filter(fn ($m) => ($m->attendance_present ?? true) === true)->values();
-        $absentStudents = $students->filter(fn ($m) => ($m->attendance_present ?? true) === false)->values();
+        // response refreshes them live on every filter change. A date range
+        // (Present/Absent Today cards, or Time Period filter) switches Present/Absent
+        // to one-row-per-student, marked-only buckets matching the dashboard cards.
+        if ($request->filled('from_date') || $request->filled('to_date')) {
+            [$presentStudents, $absentStudents] = $this->collapseDateScopedAttendance($students);
+        } else {
+            // Present/Absent details require a date; without one these tabs are empty.
+            $presentStudents = collect();
+            $absentStudents = collect();
+        }
 
         $tabCounts = [
             'all' => $students->count(),
@@ -1752,9 +1763,15 @@ class UserController extends Controller
             abort(403, 'You are not authorized to export the student list.');
         }
 
+        // Match the on-screen table exactly: same filters, same attendance tab, and
+        // the same date-scoped Present/Absent split (incl. PT/Stationed-leave absentees).
         $payload = $this->resolveDashboardStudentListPayload($request);
-        $students = $this->applyDashboardStudentListFilters($payload['students'], $request);
-        $exportData = $this->dashboardStudentListExportData($students);
+        [$filteredAll, $presentAll, $absentAll] = $this->dashboardStudentListTabSets($request, $payload['students']);
+        $attendance = (string) $request->input('attendance', 'all');
+        $students = $attendance === 'present'
+            ? $presentAll
+            : ($attendance === 'absent' ? $absentAll : $filteredAll);
+        $exportData = $this->dashboardStudentListExportData($students, $attendance);
 
         $timestamp = now()->format('Ymd_His');
         $fileBase = "student_list_{$timestamp}";
@@ -2613,17 +2630,130 @@ class UserController extends Controller
     }
 
     /**
+     * Collapse the per-session rows into ONE ROW PER STUDENT (per tab) for a
+     * date-scoped attendance view (the Present/Absent Today cards, or any Time
+     * Period filter). Only students GENUINELY MARKED (status != 0) within range are
+     * counted; no-session default rows are dropped (not treated as "Present").
+     *   - Present = attended any NON-absent marked session in range
+     *   - Absent  = had ANY absent (status 3) marked session in range
+     * A student can therefore appear in BOTH tabs (present in some sessions, absent
+     * in others). The absent row carries its absent session's date so the Absent
+     * Reason resolves against that day.
+     *
+     * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection} [present, absent]
+     */
+    private function collapseDateScopedAttendance($rows): array
+    {
+        $present = collect();
+        $absent = collect();
+
+        foreach ($rows->groupBy('student_master_pk') as $spk => $group) {
+            if (empty($spk)) {
+                continue;
+            }
+            // Genuinely marked sessions in range for this student (status 0 = not
+            // marked, and no-session default rows, are excluded).
+            $marked = $group->filter(function ($m) {
+                return ($m->has_session_in_range ?? false) === true
+                    && $m->attendance_status !== null
+                    && (int) $m->attendance_status !== 0;
+            });
+            if ($marked->isEmpty()) {
+                continue;
+            }
+
+            // Present bucket: any non-absent marked session.
+            $presentRow = $marked->first(fn ($m) => (int) $m->attendance_status !== 3);
+            if ($presentRow) {
+                $presentRow->attendance_present = true;
+                $present->push($presentRow);
+            }
+
+            // Absent bucket: any absent (status 3) marked session. Use that session
+            // as the row so its date drives the Absent Reason lookup.
+            $absentRow = $marked->first(fn ($m) => (int) $m->attendance_status === 3);
+            if ($absentRow) {
+                $absentRow->attendance_present = false;
+                $absent->push($absentRow);
+            }
+        }
+
+        return [$present->values(), $absent->values()];
+    }
+
+    /**
+     * Resolve the three attendance tab sets (All / Present / Absent) for the current
+     * filters, applying the date-scoped one-row-per-student collapse and appending
+     * PT/Stationed-leave absentees — the single source of truth shared by the live
+     * DataTable and the export/report so both stay in sync with the on-screen view.
+     *
+     * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection, 2: \Illuminate\Support\Collection} [all, present, absent]
+     */
+    private function dashboardStudentListTabSets(Request $request, $students): array
+    {
+        // Apply the shared filters ONCE to the full set, then split for the tabs.
+        $filteredAll = $this->applyDashboardStudentListFilters($students, $request)->values();
+
+        // A date range (Present/Absent Today cards, or Time Period filter) switches
+        // the Present/Absent tabs to one-row-per-student, marked-only buckets that
+        // match the dashboard cards. Without dates the tabs stay empty (a date is
+        // required for Present/Absent details).
+        $dateScoped = $request->filled('from_date') || $request->filled('to_date');
+        if (! $dateScoped) {
+            return [$filteredAll, collect(), collect()];
+        }
+
+        [$presentAll, $absentAll] = $this->collapseDateScopedAttendance($filteredAll);
+
+        // Students on PT Exemption / Stationed Leave during the window are absent
+        // WITH a reason even when no attendance session was marked for them — add
+        // them to the Absent list so the leave surfaces (one row per student).
+        // Source them from the roster WITHOUT the session-date drop (but with all
+        // other filters), since a leave student has no session in range.
+        $rosterAll = $this->applyDashboardStudentListFilters($students, $request, false);
+        $byStudent = [];
+        foreach ($rosterAll as $m) {
+            $spk = (int) ($m->student_master_pk ?? 0);
+            if ($spk && ! isset($byStudent[$spk])) {
+                $byStudent[$spk] = $m;
+            }
+        }
+        $alreadyAbsent = [];
+        foreach ($absentAll as $m) {
+            $alreadyAbsent[(int) ($m->student_master_pk ?? 0)] = true;
+        }
+        $leaveAbsentees = $this->leaveBasedAbsentees(
+            array_keys($byStudent),
+            $request->input('from_date') ?: null,
+            $request->input('to_date') ?: null
+        );
+        foreach ($leaveAbsentees as $spk => $coverDate) {
+            if (isset($alreadyAbsent[$spk]) || ! isset($byStudent[$spk])) {
+                continue;
+            }
+            $row = clone $byStudent[$spk];
+            $row->attendance_present = false;
+            $row->attendance_status = 3; // display as Absent
+            $row->session_date = $coverDate;
+            $row->session_time = null;
+            $row->session_topic = null;
+            $row->session_faculty_master = null;
+            $row->session_internal_faculty = null;
+            $row->has_session_in_range = true;
+            $absentAll->push($row);
+        }
+
+        return [$filteredAll, $presentAll->values(), $absentAll->values()];
+    }
+
+    /**
      * Server-side JSON for dashboard student list DataTables.
      */
     private function dashboardStudentListDataTableResponse(Request $request, $students)
     {
         $attendance = (string) $request->input('attendance', 'all');
 
-        // Apply the shared filters ONCE to the full set, then split for the tab
-        // counts. The requested tab decides which subset becomes the table rows.
-        $filteredAll = $this->applyDashboardStudentListFilters($students, $request)->values();
-        $presentAll = $filteredAll->filter(fn ($m) => ($m->attendance_present ?? true) === true)->values();
-        $absentAll = $filteredAll->filter(fn ($m) => ($m->attendance_present ?? true) === false)->values();
+        [$filteredAll, $presentAll, $absentAll] = $this->dashboardStudentListTabSets($request, $students);
 
         $counts = [
             'all' => $filteredAll->count(),
@@ -2640,22 +2770,22 @@ class UserController extends Controller
         $recordsTotal = $counts[$attendance] ?? $counts['all'];
         $recordsFiltered = $rows->count();
 
-        // Column layout. The "Absent Reason" column (index 8) is only shown on the
-        // Absent tab client-side, but the data key is always emitted.
+        // Column layout (DataTable column index → sort key).
         $columnMap = [
             0 => 'serial_no',
             1 => 'ot_code',
             2 => 'name',
             3 => 'username',
             4 => 'cadre',
-            5 => 'session',
-            6 => 'topic',
-            7 => 'faculty',
-            // 8 => absent_reason (not sortable)
-            9 => 'status',
-            10 => 'mdo',
-            11 => 'escort',
-            12 => 'other_exempt',
+            5 => 'date',
+            6 => 'session',
+            7 => 'topic',
+            8 => 'faculty',
+            // 9 => absent_reason (not sortable)
+            10 => 'status',
+            11 => 'mdo',
+            12 => 'escort',
+            13 => 'other_exempt',
         ];
 
         $orderCol = (int) $request->input('order.0.column', 0);
@@ -2697,16 +2827,26 @@ class UserController extends Controller
                 'name' => '<a href="' . e($detailUrl) . '" class="sl-count">' . e($displayName) . '</a>',
                 'username' => e($student->email ?? 'N/A'),
                 'cadre' => e($student->cadre->cadre_name ?? 'N/A'),
+                'date' => e($studentMap->session_date ? \Illuminate\Support\Carbon::parse($studentMap->session_date)->format('d M Y') : 'N/A'),
                 'session' => e($studentMap->session_time ?: 'N/A'),
                 'topic' => e($studentMap->session_topic ?: 'N/A'),
                 'faculty' => e($this->dashboardResolveSessionFaculty(
                     $studentMap->session_faculty_master ?? null,
                     $studentMap->session_internal_faculty ?? null
                 )),
-                'absent_reason' => $isAbsent ? e($absentReasons[$idx] ?? '-') : '-',
-                'status' => '<span class="sl-status-badge '
-                    . (($studentMap->attendance_present ?? true) ? 'sl-status-present' : 'sl-status-absent')
-                    . '">' . (($studentMap->attendance_present ?? true) ? 'Present' : 'Absent') . '</span>',
+                // Attendance status; for an absent student the reason (Stationed
+                // Leave / PT Exemption / Medical Exemption, when one covers the day)
+                // is shown right below the "Absent" badge so it's visible in the list.
+                'status' => (function () use ($studentMap, $isAbsent, $absentReasons, $idx) {
+                    $present = ($studentMap->attendance_present ?? true);
+                    $html = '<span class="sl-status-badge ' . ($present ? 'sl-status-present' : 'sl-status-absent')
+                        . '">' . ($present ? 'Present' : 'Absent') . '</span>';
+                    $reason = $isAbsent ? ($absentReasons[$idx] ?? '-') : '-';
+                    if ($isAbsent && $reason !== '-') {
+                        $html .= '<div class="text-muted small mt-1">' . e($reason) . '</div>';
+                    }
+                    return $html;
+                })(),
                 'mdo' => $statusCode === 4 ? 'Yes' : '-',
                 'escort' => $statusCode === 5 ? 'Yes' : '-',
                 'other_exempt' => $statusCode === 6 ? 'Medical' : ($statusCode === 7 ? 'Other' : '-'),
@@ -2732,6 +2872,50 @@ class UserController extends Controller
      * @param  \Illuminate\Support\Collection  $pagedStudents
      * @return array<int, string>
      */
+    /**
+     * Roster students who are on a PT Exemption / Stationed Leave that overlaps the
+     * given window. Such a student is "absent with reason" for that day even when no
+     * attendance session was marked for them, so they must still surface on the
+     * Absent list. Returns [studentPk => a covered date (Y-m-d) inside the window],
+     * which the Absent Reason lookup then resolves to "PT Exemption" / "Stationed Leave".
+     *
+     * @param  array<int, int>  $studentPks
+     * @return array<int, string>
+     */
+    private function leaveBasedAbsentees(array $studentPks, ?string $fromDate, ?string $toDate): array
+    {
+        if (empty($studentPks) || (! $fromDate && ! $toDate)) {
+            return [];
+        }
+        $from = $fromDate ?: $toDate;
+        $to = $toDate ?: $fromDate;
+
+        $rows = DB::table('leave_application')
+            ->whereIn('student_master_pk', $studentPks)
+            ->where('active_inactive', 1)
+            ->whereIn('leave_type', ['PT_EXEMPTION', 'STATIONED_LEAVE'])
+            // Overlap: leave starts on/before the window end AND ends on/after its start.
+            ->whereDate('from_date', '<=', $to)
+            ->where(function ($q) use ($from) {
+                $q->whereNull('to_date')->orWhereDate('to_date', '>=', $from);
+            })
+            ->orderBy('from_date')
+            ->get(['student_master_pk', 'from_date']);
+
+        $out = [];
+        foreach ($rows as $r) {
+            $spk = (int) $r->student_master_pk;
+            if (isset($out[$spk])) {
+                continue;
+            }
+            $leaveFrom = substr((string) $r->from_date, 0, 10);
+            // A date inside the window that the leave covers (for the reason lookup).
+            $out[$spk] = $leaveFrom >= $from ? $leaveFrom : $from;
+        }
+
+        return $out;
+    }
+
     private function dashboardAbsentReasons(\Illuminate\Support\Collection $pagedStudents): array
     {
         $reasons = [];
@@ -2884,6 +3068,7 @@ class UserController extends Controller
             'username', 'email' => strtolower((string) ($student->email ?? '')),
             'cadre' => strtolower((string) ($student->cadre->cadre_name ?? '')),
             'status' => (int) ($studentMap->attendance_present ?? true),
+            'date' => (string) ($studentMap->session_date ?? ''),
             'session' => (string) ($studentMap->session_time ?? ''),
             'topic' => strtolower((string) ($studentMap->session_topic ?? '')),
             'faculty' => strtolower((string) $this->dashboardResolveSessionFaculty($studentMap->session_faculty_master ?? null, $studentMap->session_internal_faculty ?? null)),
@@ -2904,24 +3089,27 @@ class UserController extends Controller
     /**
      * @return array{headings: array<int, string>, rows: array<int, array<int, mixed>>}
      */
-    private function dashboardStudentListExportData($students): array
+    private function dashboardStudentListExportData($students, string $attendance = 'all'): array
     {
-        $headings = [
-            'Sl. No.',
-            'Student Name',
-            'OT Code',
-            'Email',
-            'Cadre',
-            'Course',
-            'Session Date',
-            'Status',
+        $students = ($students instanceof \Illuminate\Support\Collection ? $students : collect($students))->values();
+
+        // On the Absent tab include the reason column (Stationed Leave / PT Exemption
+        // / Medical Exemption) so the report matches the on-screen Absent list.
+        $isAbsentTab = $attendance === 'absent';
+        $absentReasons = $isAbsentTab ? $this->dashboardAbsentReasons($students) : [];
+
+        $headings = ['Sl. No.', 'Student Name', 'OT Code', 'Email', 'Cadre', 'Course', 'Session Date', 'Status'];
+        if ($isAbsentTab) {
+            $headings[] = 'Absent Reason';
+        }
+        $headings = array_merge($headings, [
             'Total Duty (Count)',
             'Total Medical Exception (Count)',
             'Total PT Exemption (Count)',
             'Total Station Leave (Count)',
             'Total Memo',
             'Notice (Count)',
-        ];
+        ]);
 
         $rows = [];
         foreach ($students as $index => $studentMap) {
@@ -2930,7 +3118,7 @@ class UserController extends Controller
             $groupName = $studentMap->groupMapping->groupTypeMasterCourseMasterMap->group_name ?? null;
             $displayName = $groupName ?: ($student->cadre->cadre_name ?? 'N/A');
 
-            $rows[] = [
+            $row = [
                 $index + 1,
                 $student->display_name ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')),
                 $student->generated_OT_code ?? 'N/A',
@@ -2939,13 +3127,18 @@ class UserController extends Controller
                 $course->course_name ?? 'N/A',
                 $studentMap->session_date ? Carbon::parse($studentMap->session_date)->format('d-m-Y') : 'N/A',
                 $this->dashboardAttendanceStatusLabel($studentMap),
+            ];
+            if ($isAbsentTab) {
+                $row[] = $absentReasons[$index] ?? '-';
+            }
+            $rows[] = array_merge($row, [
                 $studentMap->total_duty_count ?? 0,
                 $studentMap->total_medical_exception_count ?? 0,
                 $studentMap->total_pt_exemption_count ?? 0,
                 $studentMap->total_stationed_leave_count ?? 0,
                 $studentMap->total_memo_count ?? 0,
                 $studentMap->total_notice_count ?? 0,
-            ];
+            ]);
         }
 
         return compact('headings', 'rows');
@@ -3204,13 +3397,13 @@ class UserController extends Controller
             ->orderBy('from_date', 'desc')
             ->get();
 
-        // When a Time Period is active, the list column counts only the DAYS that
-        // fall INSIDE the window (a 9–12 Jul leave filtered to 8–10 Jul counts as
-        // 2 days, not its full 4). Clip each PT/Stationed leave's total_days to the
-        // same window so the detail page's "Total Days" and section totals match the
-        // list. The real From/To dates are still displayed unchanged.
+        // When a Time Period is active, show only the portion of each leave/exemption
+        // that falls INSIDE the window ("date wise"), not the whole record. The
+        // displayed From/To dates are clipped to the window and total_days recomputed
+        // for that clipped span, so the detail page matches the list's day counts
+        // (a 13–17 Jul PT Exemption filtered to 13–15 shows 13–15 = 3 days).
         if ($fromDate || $toDate) {
-            $clipTotalDaysToWindow = function ($row) use ($fromDate, $toDate) {
+            $clipToWindow = function ($row, bool $clipDays) use ($fromDate, $toDate) {
                 if (empty($row->from_date)) {
                     return;
                 }
@@ -3225,12 +3418,22 @@ class UserController extends Controller
                 if ($toDate && $to > $toDate) {
                     $to = $toDate;
                 }
-                $row->total_days = ($to < $from)
-                    ? 0
-                    : Carbon::parse($from)->diffInDays(Carbon::parse($to)) + 1;
+                if ($to < $from) {
+                    if ($clipDays) {
+                        $row->total_days = 0;
+                    }
+                    return;
+                }
+                // Clip the displayed dates to the window.
+                $row->from_date = Carbon::parse($from);
+                $row->to_date = Carbon::parse($to);
+                if ($clipDays) {
+                    $row->total_days = Carbon::parse($from)->diffInDays(Carbon::parse($to)) + 1;
+                }
             };
-            $ptExemptions->each($clipTotalDaysToWindow);
-            $stationedLeaves->each($clipTotalDaysToWindow);
+            $medicalExemptions->each(fn ($r) => $clipToWindow($r, false));
+            $ptExemptions->each(fn ($r) => $clipToWindow($r, true));
+            $stationedLeaves->each(fn ($r) => $clipToWindow($r, true));
         }
 
         // Get MDO/Escort duties

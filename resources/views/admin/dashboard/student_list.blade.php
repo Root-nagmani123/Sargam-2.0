@@ -344,12 +344,12 @@
             </li>
         </ul>
         <div class="d-flex flex-wrap align-items-center gap-2">
-            <button type="button" class="btn sl-toolbar-btn" id="studentListPrintBtn">
+            <button type="button" class="btn sl-toolbar-btn border-0" id="studentListPrintBtn">
                 <i class="bi bi-printer" aria-hidden="true"></i>
                 <span>Print</span>
             </button>
             <div class="dropdown">
-                <button type="button" class="btn sl-toolbar-btn dropdown-toggle" id="studentListDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                <button type="button" class="btn sl-toolbar-btn dropdown-toggle border-0" id="studentListDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="bi bi-download" aria-hidden="true"></i>
                     <span>Download</span>
                 </button>
@@ -431,10 +431,10 @@
                                     <th>Name</th>
                                     <th>User name</th>
                                     <th>Cadre</th>
+                                    <th>Date</th>
                                     <th>Session</th>
                                     <th>Topic</th>
                                     <th>Faculty</th>
-                                    <th>Absent Reason</th>
                                     <th>Attendance Status</th>
                                     <th>MDO</th>
                                     <th>Escort/Moderator Duty</th>
@@ -478,7 +478,6 @@
         const filters = @json($filters ?? []);
         const baseUrl = "{{ route('admin.dashboard.students') }}";
         const LOCKED_COLUMNS = [0, 1, 2];
-        const ABSENT_REASON_COL = 8; // "Absent Reason" — shown only on the Absent tab
         let dt = null;
         let currentAttendance = (filters.attendance === 'present' || filters.attendance === 'absent') ? filters.attendance : 'all';
         let loadingRequests = 0;
@@ -535,13 +534,6 @@
             });
         }
 
-        function applyAbsentReasonVisibility() {
-            if (!dt) { return; }
-            dt.column(ABSENT_REASON_COL).visible(currentAttendance === 'absent', false);
-            dt.columns.adjust();
-            relayoutPinnedColumns();
-        }
-
         function relayoutPinnedColumns() {
             if (!dt) { return; }
             const tableNode = dt.table().node();
@@ -576,6 +568,15 @@
                     const state = getFilterState();
                     Object.assign(d, state);
                     d.attendance = currentAttendance;
+                    // Present/Absent details require a date — show a hint instead of
+                    // the generic "Data not found." when the date filter is empty.
+                    try {
+                        const dateRequired = (currentAttendance === 'present' || currentAttendance === 'absent')
+                            && !(state.from_date || state.to_date);
+                        dt.settings()[0].oLanguage.sEmptyTable = dateRequired
+                            ? 'Please select a date to view Present / Absent details.'
+                            : 'Data not found.';
+                    } catch (e) {}
                 }
             },
             columns: [
@@ -584,10 +585,10 @@
                 { data: 'name', name: 'name', orderable: true, searchable: true },
                 { data: 'username', name: 'username' },
                 { data: 'cadre', name: 'cadre' },
+                { data: 'date', name: 'date', searchable: false },
                 { data: 'session', name: 'session', searchable: false },
                 { data: 'topic', name: 'topic' },
                 { data: 'faculty', name: 'faculty', searchable: false },
-                { data: 'absent_reason', name: 'absent_reason', orderable: false, searchable: false },
                 { data: 'status', name: 'status', searchable: false },
                 { data: 'mdo', name: 'mdo', searchable: false },
                 { data: 'escort', name: 'escort', searchable: false },
@@ -610,7 +611,6 @@
             currentAttendance = att;
             $('.programme-status-tabs .programme-status-pill').removeClass('active');
             $(this).addClass('active');
-            applyAbsentReasonVisibility();
             syncUrl();
             if (dt) { dt.ajax.reload(null, true); }
         });
@@ -648,9 +648,15 @@
 
         /* ── Time Period date-range ── */
         const $period = $('#timePeriodFilter');
+        // Open the calendar on the currently-applied date (snapshot from a card,
+        // else today's default) instead of always jumping to today.
+        const pickerStart = filters.from_date ? moment(filters.from_date, 'YYYY-MM-DD') : moment();
+        const pickerEnd = filters.to_date ? moment(filters.to_date, 'YYYY-MM-DD') : moment();
         $period.daterangepicker({
             autoUpdateInput: false,
             opens: 'left',
+            startDate: pickerStart,
+            endDate: pickerEnd,
             locale: { format: 'DD-MM-YYYY', cancelLabel: 'Clear', applyLabel: 'Apply' },
             ranges: {
                 'Today': [moment(), moment()],
@@ -672,7 +678,9 @@
         $('#studentListPrintBtn').on('click', function() { window.open(buildExportUrl('print'), '_blank'); });
         function buildExportUrl(format) {
             const params = new URLSearchParams(window.location.search);
-            params.delete('attendance');
+            // Report follows the on-screen view: keep the current filters AND the
+            // active Present/Absent tab so the export matches exactly.
+            if (currentAttendance && currentAttendance !== 'all') { params.set('attendance', currentAttendance); } else { params.delete('attendance'); }
             const search = dt ? dt.search() : '';
             if (search) params.set('search', search);
             const base = format === 'csv'
@@ -687,7 +695,7 @@
         $('#studentListDownloadPdf').on('click', function(e) { e.preventDefault(); window.open(buildExportUrl('pdf'), '_blank'); });
 
         /* ── Column show / hide ── */
-        const studentColStorageKey = 'studentListGrid:hiddenColumns:v2:studentListTable';
+        const studentColStorageKey = 'studentListGrid:hiddenColumns:v5:studentListTable';
         function studentGetHiddenCols() {
             try { const raw = localStorage.getItem(studentColStorageKey); const arr = raw ? JSON.parse(raw) : []; return Array.isArray(arr) ? arr : []; }
             catch (e) { return []; }
@@ -699,7 +707,6 @@
             studentPersistHiddenCols(hidden);
             dt.columns().every(function() {
                 const idx = this.index();
-                if (idx === ABSENT_REASON_COL) { this.visible(currentAttendance === 'absent', false); return; }
                 if (LOCKED_COLUMNS.indexOf(idx) !== -1) { this.visible(true, false); return; }
                 this.visible(hidden.indexOf(idx) === -1, false);
             });
@@ -710,7 +717,6 @@
             $grid.empty();
             dt.columns().every(function() {
                 const idx = this.index();
-                if (idx === ABSENT_REASON_COL) { return; } // driven by the Present/Absent tab, not user-toggleable
                 const title = $(this.header()).text().replace(/\s+/g, ' ').trim();
                 if (!title) { return; }
                 const isLocked = LOCKED_COLUMNS.indexOf(idx) !== -1;
