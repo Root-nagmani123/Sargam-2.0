@@ -380,7 +380,7 @@ public function exportCsv(Request $request)
         ? (($fromDateFilter ? Carbon::parse($fromDateFilter)->format('d-m-Y') : '—') . ' to ' . ($toDateFilter ? Carbon::parse($toDateFilter)->format('d-m-Y') : '—'))
         : 'All Dates';
 
-    $headers = ['Name', 'OT/Participant Code', 'Cadre', 'Infraction', 'Date of Infraction', 'Remarks'];
+    $headers = ['Name', 'OT/Participant Code', 'Cadre', 'Infraction', 'Date of Infraction', 'Submitted Marks', 'Final Marks', 'Remarks'];
 
     $rows = [];
     foreach ($memos as $memo) {
@@ -390,6 +390,8 @@ public function exportCsv(Request $request)
             $memo->student->cadre->cadre_name ?? 'N/A',
             $memo->discipline->discipline_name ?? 'N/A',
             $memo->date ? Carbon::parse($memo->date)->format('d M Y') : 'N/A',
+            $memo->mark_deduction_submit ?? '',
+            $memo->final_mark_deduction ?? '',
             $memo->remarks ?? '',
         ];
     }
