@@ -630,50 +630,98 @@ $selectedClientType = (string) request()->input('client_type', '');
     word-break: break-word;
 }
 
-/* Column widths tuned so all td are visible in one go */
-#addReportItemsTable th:nth-child(1),
-#editReportItemsTable th:nth-child(1) {
+/* Column widths tuned so all td are visible in one go (Add modal: 9 columns) */
+#addReportItemsTable th:nth-child(1) {
     width: 28%;
 }
 
-#addReportItemsTable th:nth-child(2),
-#editReportItemsTable th:nth-child(2) {
+#addReportItemsTable th:nth-child(2) {
     width: 8%;
 }
 
-#addReportItemsTable th:nth-child(3),
-#editReportItemsTable th:nth-child(3) {
+#addReportItemsTable th:nth-child(3) {
     width: 11%;
 }
 
-#addReportItemsTable th:nth-child(4),
-#editReportItemsTable th:nth-child(4) {
+#addReportItemsTable th:nth-child(4) {
     width: 11%;
 }
 
-#addReportItemsTable th:nth-child(5),
-#editReportItemsTable th:nth-child(5) {
+#addReportItemsTable th:nth-child(5) {
     width: 10%;
 }
 
-#addReportItemsTable th:nth-child(6),
-#editReportItemsTable th:nth-child(6) {
+#addReportItemsTable th:nth-child(6) {
     width: 14%;
 }
 
-#addReportItemsTable th:nth-child(7),
-#editReportItemsTable th:nth-child(7) {
+#addReportItemsTable th:nth-child(7) {
     width: 9%;
 }
 
-#addReportItemsTable th:nth-child(8),
-#editReportItemsTable th:nth-child(8) {
+#addReportItemsTable th:nth-child(8) {
     width: 11%;
 }
 
-#addReportItemsTable th:nth-child(9),
-#editReportItemsTable th:nth-child(9) {
+#addReportItemsTable th:nth-child(9) {
     width: 5%;
+}
+
+/* Edit modal: 10 columns (Store + items + remove) */
+#editReportItemsTable th:nth-child(1),
+#editReportItemsTable td:nth-child(1) {
+    width: 15%;
+}
+
+#editReportItemsTable th:nth-child(2),
+#editReportItemsTable td:nth-child(2) {
+    width: 16%;
+}
+
+#editReportItemsTable th:nth-child(3),
+#editReportItemsTable td:nth-child(3) {
+    width: 6%;
+}
+
+#editReportItemsTable th:nth-child(4),
+#editReportItemsTable td:nth-child(4) {
+    width: 8%;
+}
+
+#editReportItemsTable th:nth-child(5),
+#editReportItemsTable td:nth-child(5) {
+    width: 8%;
+}
+
+#editReportItemsTable th:nth-child(6),
+#editReportItemsTable td:nth-child(6) {
+    width: 8%;
+}
+
+#editReportItemsTable th:nth-child(7),
+#editReportItemsTable td:nth-child(7) {
+    width: 10%;
+}
+
+#editReportItemsTable th:nth-child(8),
+#editReportItemsTable td:nth-child(8) {
+    width: 7%;
+}
+
+#editReportItemsTable th:nth-child(9),
+#editReportItemsTable td:nth-child(9) {
+    width: 8%;
+}
+
+#editReportItemsTable th:nth-child(10),
+#editReportItemsTable td:nth-child(10) {
+    width: 2.75rem;
+    min-width: 2.75rem;
+    max-width: 2.75rem;
+    padding: .25rem;
+    text-align: center;
+    vertical-align: middle;
+    overflow: visible;
 }
 
 @media (max-width: 991.98px) {
@@ -684,9 +732,13 @@ $selectedClientType = (string) request()->input('client_type', '');
         -webkit-overflow-scrolling: touch;
     }
 
-    #addReportModal .dr-item-details-table-wrap .table,
-    #editReportModal .dr-item-details-table-wrap .table {
+    #addReportModal .dr-item-details-table-wrap .table {
         min-width: 980px;
+        table-layout: auto;
+    }
+
+    #editReportModal .dr-item-details-table-wrap .table {
+        min-width: 1100px;
         table-layout: auto;
     }
 
@@ -1380,6 +1432,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                 @csrf
                 @method('PUT')
                 <input type="hidden" name="buyer_scoped" id="editBuyerScopedFlag" value="0">
+                <input type="hidden" name="inve_store_master_pk" id="editHeaderStorePk" value="">
                 <input type="hidden" name="client_id" id="editDrClientId" value="">
                 <div class="modal-header border-bottom">
                     <h5 class="modal-title fw-semibold" id="editReportModalLabel">Edit Selling Voucher</h5>
@@ -1487,16 +1540,6 @@ $selectedClientType = (string) request()->input('client_type', '');
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label voucher-label">Transfer From Store <span
-                                            class="text-danger">*</span></label>
-                                    <select name="inve_store_master_pk" class="form-select  edit-store-id" required>
-                                        <option value="">Select Store</option>
-                                        @foreach($stores as $store)
-                                        <option value="{{ $store['id'] }}">{{ $store['store_name'] }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
                                     <label class="form-label voucher-label">Remarks / Reference Number / Order
                                         By</label>
                                     <input type="text" name="remarks" class="form-control  edit-remarks"
@@ -1522,6 +1565,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                                     id="editReportItemsTable">
                                     <thead class="voucher-brand-head">
                                         <tr>
+                                            <th>Store <span class="text-white">*</span></th>
                                             <th>Item Name <span class="text-white">*</span></th>
                                             <th>Unit</th>
                                             <th>Available Qty</th>
@@ -1561,11 +1605,13 @@ $selectedClientType = (string) request()->input('client_type', '');
 (function() {
     let itemSubcategories = @json($itemSubcategories);
     let filteredItems = itemSubcategories;
+    const editStoreOptions = @json($stores);
     const baseUrl = "{{ url('admin/mess/selling-voucher-date-range') }}";
     let addRowIndex = 1;
     let editRowIndex = 0;
     let currentStoreId = null;
     let editCurrentStoreId = null;
+    let editStoreItemsCache = {};
 
     function getListingFilterQueryString() {
         const form = document.getElementById('sellingVoucherFilterForm');
@@ -2039,11 +2085,6 @@ $selectedClientType = (string) request()->input('client_type', '');
         if (paySel && paySel.tomselect) {
             try { paySel.tomselect.setValue(String(v.payment_type ?? 1)); } catch (e) {}
         }
-        var storeSel = document.querySelector('#editReportModal select.edit-store-id');
-        var sid = v.store_id || v.inve_store_master_pk || '';
-        if (storeSel && storeSel.tomselect && sid !== '') {
-            try { storeSel.tomselect.setValue(String(sid)); } catch (e) {}
-        }
         var ecs = document.getElementById('editDrClientNameSelect');
         if (ecs && ecs.tomselect && slug !== 'ot' && slug !== 'course' && v.client_type_pk != null && String(v.client_type_pk) !== '') {
             try { ecs.tomselect.setValue(String(v.client_type_pk)); } catch (e) {}
@@ -2096,8 +2137,7 @@ $selectedClientType = (string) request()->input('client_type', '');
     };
     var editModalTomSelectInstances = {
         payment: null,
-        client: null,
-        store: null
+        client: null
     };
 
     function destroyAddModalTomSelects() {
@@ -2140,12 +2180,6 @@ $selectedClientType = (string) request()->input('client_type', '');
                 editModalTomSelectInstances.client.destroy();
             } catch (e) {}
             editModalTomSelectInstances.client = null;
-        }
-        if (editModalTomSelectInstances.store) {
-            try {
-                editModalTomSelectInstances.store.destroy();
-            } catch (e) {}
-            editModalTomSelectInstances.store = null;
         }
         document.querySelectorAll('#editReportModal select').forEach(function(el) {
             if (el.tomselect) {
@@ -2406,13 +2440,6 @@ $selectedClientType = (string) request()->input('client_type', '');
                 clearOnOpen: true
             }));
         }
-        var storeSel = document.querySelector('#editReportModal select.edit-store-id');
-        if (storeSel && !storeSel.tomselect) {
-            editModalTomSelectInstances.store = createChoicesInstance(storeSel, createBlankSearchConfig({
-                placeholder: 'Select Store',
-                clearOnOpen: true
-            }));
-        }
         var editNameInpForInit = document.getElementById('editDrClientNameInput');
         var nameValForInit = (editNameInpForInit && editNameInpForInit.value) ? String(editNameInpForInit.value)
             .trim() : '';
@@ -2598,12 +2625,218 @@ $selectedClientType = (string) request()->input('client_type', '');
         }
     }
 
-    function getBaseAvailableForItem(itemId) {
+    function getBaseAvailableForItem(itemId, storeId) {
         if (!itemId) return 0;
-        const item = filteredItems.find(function(i) {
+        const sourceItems = (storeId && editStoreItemsCache[storeId])
+            ? editStoreItemsCache[storeId]
+            : filteredItems;
+        const item = sourceItems.find(function(i) {
             return String(i.id) === String(itemId);
         });
         return item ? (parseFloat(item.available_quantity) || 0) : 0;
+    }
+
+    function fetchEditStoreItems(storeId, callback) {
+        if (!storeId) {
+            if (callback) callback();
+            return;
+        }
+        if (editStoreItemsCache[storeId]) {
+            if (callback) callback();
+            return;
+        }
+        const url = baseUrl + '/store/' + encodeURIComponent(storeId) + '/items';
+        fetch(url, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(function(r) {
+                if (!r.ok) {
+                    throw new Error('Server returned ' + r.status);
+                }
+                return r.json();
+            })
+            .then(function(data) {
+                editStoreItemsCache[storeId] = Array.isArray(data) ? data : [];
+                if (callback) callback();
+            })
+            .catch(function(err) {
+                console.error('Edit store items fetch failed:', err);
+                editStoreItemsCache[storeId] = [];
+                if (callback) callback();
+            });
+    }
+
+    function prefetchEditStoreItemsForRows(items, callback) {
+        const storeIds = [];
+        (items || []).forEach(function(item) {
+            const sid = item.store_identifier || item.store_id || '';
+            if (sid && storeIds.indexOf(String(sid)) === -1) {
+                storeIds.push(String(sid));
+            }
+        });
+        if (!storeIds.length) {
+            if (callback) callback();
+            return;
+        }
+        let pending = storeIds.length;
+        storeIds.forEach(function(storeId) {
+            fetchEditStoreItems(storeId, function() {
+                pending--;
+                if (pending <= 0 && callback) callback();
+            });
+        });
+    }
+
+    function getEditRowStoreId(row) {
+        if (!row) return '';
+        const select = row.querySelector('.edit-dr-store-select');
+        if (select) {
+            const value = getSelectValue(select);
+            if (value) return value;
+        }
+        const hidden = row.querySelector('input[name*="[inve_store_master_pk]"]');
+        return hidden ? hidden.value : '';
+    }
+
+    function getEditRowItemId(row) {
+        if (!row) return '';
+        const select = row.querySelector('.edit-dr-item-select');
+        if (select) {
+            const value = getSelectValue(select);
+            if (value) return value;
+        }
+        const hidden = row.querySelector('input[name*="[item_subcategory_id]"]');
+        return hidden ? hidden.value : '';
+    }
+
+    function buildEditItemOptionsHtml(item, storeId) {
+        const sourceItems = (storeId && editStoreItemsCache[storeId])
+            ? editStoreItemsCache[storeId]
+            : (Array.isArray(filteredItems) && filteredItems.length > 0 ? filteredItems : itemSubcategories);
+        return sourceItems.map(function(s) {
+            let attrs = 'data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') +
+                '" data-rate="' + (s.standard_cost || 0) + '" data-available="' + (s.available_quantity || 0) + '"';
+            if (s.price_tiers && s.price_tiers.length > 0) {
+                attrs += ' data-price-tiers="' + (JSON.stringify(s.price_tiers) || '').replace(/"/g, '&quot;') + '"';
+            }
+            return '<option value="' + s.id + '" ' + attrs + (item.item_subcategory_id == s.id ? ' selected' : '') + '>' +
+                (s.item_name || '—').replace(/</g, '&lt;') + '</option>';
+        }).join('');
+    }
+
+    function buildEditStoreSelectHtml(index, selectedStoreId, storeDisabled) {
+        selectedStoreId = selectedStoreId || '';
+        let options = '<option value="">Select Store</option>';
+        editStoreOptions.forEach(function(store) {
+            const selected = String(store.id) === String(selectedStoreId) ? ' selected' : '';
+            options += '<option value="' + String(store.id).replace(/"/g, '&quot;') + '"' + selected + '>' +
+                String(store.store_name || '').replace(/</g, '&lt;') + '</option>';
+        });
+        const disabledAttr = storeDisabled ? ' disabled' : '';
+        const hidden = storeDisabled && selectedStoreId
+            ? '<input type="hidden" name="items[' + index + '][inve_store_master_pk]" value="' +
+            String(selectedStoreId).replace(/"/g, '&quot;') + '">'
+            : '';
+        return '<td class="edit-dr-store-cell"><select name="items[' + index +
+            '][inve_store_master_pk]" class="form-select edit-dr-store-select" required' + disabledAttr + '>' +
+            options + '</select>' + hidden + '</td>';
+    }
+
+    function refreshEditRowItemOptions(row, storeId) {
+        if (!row) return;
+        const select = row.querySelector('.edit-dr-item-select');
+        if (!select) return;
+        const currentValue = getSelectValue(select);
+        if (select.tomselect) {
+            try {
+                select.tomselect.destroy();
+            } catch (e) {}
+        }
+        select.innerHTML = '<option value="">Select Item</option>' + buildEditItemOptionsHtml({
+            item_subcategory_id: currentValue
+        }, storeId);
+        if (typeof Choices !== 'undefined') {
+            createChoicesInstance(select, createItemSelectConfig());
+        }
+        if (currentValue) {
+            setSelectValue(select, currentValue);
+        }
+        const option = getSelectSelectedOption(select);
+        const unitInp = row.querySelector('.edit-dr-unit');
+        const rateInp = row.querySelector('.edit-dr-rate');
+        if (unitInp) unitInp.value = (option && option.dataset.unit) ? option.dataset.unit : '—';
+        if (rateInp && option && option.dataset.rate) rateInp.value = option.dataset.rate;
+    }
+
+    function syncEditHeaderStorePk() {
+        const firstRow = document.querySelector('#editModalItemsBody .edit-dr-item-row');
+        const hiddenHeader = document.getElementById('editHeaderStorePk');
+        if (!firstRow || !hiddenHeader) return;
+        hiddenHeader.value = getEditRowStoreId(firstRow) || '';
+    }
+
+    function wireEditRowEvents(row) {
+        if (!row) return;
+        const availInp = row.querySelector('.edit-dr-avail');
+        const qtyInp = row.querySelector('.edit-dr-qty');
+        const rateInp = row.querySelector('.edit-dr-rate');
+        const storeSelect = row.querySelector('.edit-dr-store-select');
+        const itemSelect = row.querySelector('.edit-dr-item-select');
+        const removeBtn = row.querySelector('.edit-dr-remove-row');
+
+        if (availInp) {
+            availInp.addEventListener('input', function() {
+                updateEditRowLeft(row);
+            });
+        }
+        if (qtyInp) {
+            qtyInp.addEventListener('input', function() {
+                refreshEditAllAvailable();
+                updateEditRowTotal(row);
+                updateEditGrandTotal();
+            });
+        }
+        if (rateInp) {
+            rateInp.addEventListener('input', function() {
+                updateEditRowTotal(row);
+                updateEditGrandTotal();
+            });
+        }
+        if (storeSelect) {
+            storeSelect.addEventListener('change', function() {
+                const storeId = getSelectValue(storeSelect);
+                fetchEditStoreItems(storeId, function() {
+                    if (itemSelect) {
+                        refreshEditRowItemOptions(row, storeId);
+                    }
+                    refreshEditAllAvailable();
+                    syncEditHeaderStorePk();
+                });
+            });
+        }
+        if (itemSelect) {
+            itemSelect.addEventListener('change', function() {
+                const option = getSelectSelectedOption(this);
+                const unitInp = row.querySelector('.edit-dr-unit');
+                const rowRateInp = row.querySelector('.edit-dr-rate');
+                if (unitInp) unitInp.value = (option && option.dataset.unit) ? option.dataset.unit : '—';
+                if (rowRateInp && option && option.dataset.rate) rowRateInp.value = option.dataset.rate;
+                refreshEditAllAvailable();
+                updateEditRowTotal(row);
+                updateEditGrandTotal();
+            });
+        }
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function() {
+                row.remove();
+                refreshEditAllAvailable();
+                updateEditGrandTotal();
+                syncEditHeaderStorePk();
+            });
+        }
     }
 
     function refreshAllAvailable() {
@@ -3927,78 +4160,55 @@ $selectedClientType = (string) request()->input('client_type', '');
     function getEditRowHtml(index, item, buyerScoped) {
         item = item || {};
         buyerScoped = !!buyerScoped;
-        if (buyerScoped && item.id) {
-            const qty = item.quantity != null ? item.quantity : '';
-            const rate = item.rate != null ? item.rate : '';
-            const issueDate = item.issue_date || '';
-            const total = (qty && rate) ? (parseFloat(qty) * parseFloat(rate)).toFixed(2) : '';
-            const avail = item.available_quantity != null ? item.available_quantity : '';
-            const left = (avail !== '' && qty !== '') ? Math.max(0, parseFloat(avail) - parseFloat(qty)).toFixed(2) : '';
-            const displayName = (item.item_name || '—') + (item.store_name ? (' — ' + item.store_name) : '');
-            const originalQtyAttr = (item.quantity != null && item.quantity !== '') ? (' data-original-qty="' + (
-                parseFloat(item.quantity) || 0) + '"') : '';
-            return '<tr class="edit-dr-item-row"' + originalQtyAttr + ' data-scoped-line="1">' +
-                '<td><span class="fw-semibold text-wrap text-break">' + displayName.replace(/</g, '&lt;').replace(/"/g, '&quot;') +
-                '</span><input type="hidden" name="items[' + index + '][id]" value="' + item.id + '">' +
-                '<input type="hidden" name="items[' + index + '][item_subcategory_id]" value="' + (item.item_subcategory_id || '') + '"></td>' +
-                '<td><input type="text" name="items[' + index + '][unit]" class="form-control  edit-dr-unit" readonly placeholder="—" value="' + (item.unit || '')
-                .replace(/"/g, '&quot;') + '"></td>' +
-                '<td><input type="text" name="items[' + index + '][available_quantity]" class="form-control  edit-dr-avail bg-light" value="' + avail +
-                '" readonly></td>' +
-                '<td><input type="text" name="items[' + index + '][quantity]" class="form-control  edit-dr-qty" required value="' + qty +
-                '"><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
-                '<td><input type="text" class="form-control  edit-dr-left bg-light" readonly value="' + left + '"></td>' +
-                '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control  edit-dr-issue-date" value="' + issueDate + '"></td>' +
-                '<td><input type="text" name="items[' + index + '][rate]" class="form-control  edit-dr-rate" required value="' + rate + '"></td>' +
-                '<td><input type="text" class="form-control  edit-dr-total bg-light" readonly value="' + total + '"></td>' +
-                '<td><button type="button" class="btn btn-sm btn-outline-secondary voucher-icon-btn" title="Locked in date-range view" disabled>×</button></td>' +
-                '</tr>';
-        }
-
-        const sourceItems = Array.isArray(filteredItems) && filteredItems.length > 0 ? filteredItems :
-            itemSubcategories;
-        const options = sourceItems.map(s => {
-            let attrs = 'data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') +
-                '" data-rate="' + (s.standard_cost || 0) + '" data-available="' + (s.available_quantity ||
-                    0) + '"';
-            if (s.price_tiers && s.price_tiers.length > 0) {
-                attrs += ' data-price-tiers="' + (JSON.stringify(s.price_tiers) || '').replace(/"/g,
-                    '&quot;') + '"';
-            }
-            return '<option value="' + s.id + '" ' + attrs + (item.item_subcategory_id == s.id ?
-                ' selected' : '') + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>';
-        }).join('');
-        const avail = item.available_quantity != null ? item.available_quantity : '';
+        const storeId = item.store_identifier || item.store_id || editCurrentStoreId || '';
+        const storeDisabled = !!(buyerScoped && item.id);
+        const itemIsLocked = !!(buyerScoped && item.id);
         const qty = item.quantity != null ? item.quantity : '';
         const rate = item.rate != null ? item.rate : '';
         const issueDate = item.issue_date || '';
         const total = (qty && rate) ? (parseFloat(qty) * parseFloat(rate)).toFixed(2) : '';
-        const left = (avail !== '' && qty !== '') ? Math.max(0, parseFloat(avail) - parseFloat(qty)).toFixed(2) :
-            '';
+        const avail = item.available_quantity != null ? item.available_quantity : '';
+        const left = (avail !== '' && qty !== '') ? Math.max(0, parseFloat(avail) - parseFloat(qty)).toFixed(2) : '';
         const originalQtyAttr = (item.quantity != null && item.quantity !== '') ? (' data-original-qty="' + (
             parseFloat(item.quantity) || 0) + '"') : '';
-        return '<tr class="edit-dr-item-row"' + originalQtyAttr + '>' +
-            '<td><select name="items[' + index +
-            '][item_subcategory_id]" class="form-select  edit-dr-item-select" required><option value="">Select Item</option>' +
-            options + '</select></td>' +
+        const storeCell = buildEditStoreSelectHtml(index, storeId, storeDisabled);
+        let itemCell = '';
+
+        if (itemIsLocked) {
+            const displayName = (item.item_name || '—').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+            itemCell = '<td><span class="fw-semibold text-wrap text-break">' + displayName +
+                '</span><input type="hidden" name="items[' + index + '][id]" value="' + item.id + '">' +
+                '<input type="hidden" name="items[' + index + '][item_subcategory_id]" value="' +
+                (item.item_subcategory_id || '') + '"></td>';
+        } else {
+            itemCell = '<td><select name="items[' + index +
+                '][item_subcategory_id]" class="form-select edit-dr-item-select" required><option value="">Select Item</option>' +
+                buildEditItemOptionsHtml(item, storeId) + '</select></td>';
+        }
+
+        const removeBtn = itemIsLocked
+            ? '<button type="button" class="btn btn-sm btn-outline-secondary voucher-icon-btn" title="Locked in date-range view" disabled><i class="material-symbols-rounded" style="font-size:1rem;">lock</i></button>'
+            : '<button type="button" class="btn btn-sm btn-outline-danger edit-dr-remove-row voucher-icon-btn" title="Remove"><i class="material-symbols-rounded" style="font-size:1rem;">delete</i></button>';
+
+        return '<tr class="edit-dr-item-row"' + originalQtyAttr + (itemIsLocked ? ' data-scoped-line="1"' : '') + '>' +
+            storeCell +
+            itemCell +
             '<td><input type="text" name="items[' + index +
-            '][unit]" class="form-control  edit-dr-unit" readonly placeholder="—" value="' + (item.unit || '')
+            '][unit]" class="form-control edit-dr-unit" readonly placeholder="—" value="' + (item.unit || '')
             .replace(/"/g, '&quot;') + '"></td>' +
             '<td><input type="text" name="items[' + index +
-            '][available_quantity]" class="form-control  edit-dr-avail bg-light" value="' + avail +
+            '][available_quantity]" class="form-control edit-dr-avail bg-light" value="' + avail +
             '" readonly></td>' +
             '<td><input type="text" name="items[' + index +
-            '][quantity]" class="form-control  edit-dr-qty" required value="' + qty +
+            '][quantity]" class="form-control edit-dr-qty" required value="' + qty +
             '"><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
-            '<td><input type="text" class="form-control  edit-dr-left bg-light" readonly value="' + left +
-            '"></td>' +
+            '<td><input type="text" class="form-control edit-dr-left bg-light" readonly value="' + left + '"></td>' +
             '<td><input type="date" name="items[' + index +
-            '][issue_date]" class="form-control  edit-dr-issue-date" value="' + issueDate + '"></td>' +
+            '][issue_date]" class="form-control edit-dr-issue-date" value="' + issueDate + '"></td>' +
             '<td><input type="text" name="items[' + index +
-            '][rate]" class="form-control  edit-dr-rate" required value="' + rate + '"></td>' +
-            '<td><input type="text" class="form-control  edit-dr-total bg-light" readonly value="' + total +
-            '"></td>' +
-            '<td><button type="button" class="btn btn-sm btn-outline-danger edit-dr-remove-row voucher-icon-btn" title="Remove">×</button></td>' +
+            '][rate]" class="form-control edit-dr-rate" required value="' + rate + '"></td>' +
+            '<td><input type="text" class="form-control edit-dr-total bg-light" readonly value="' + total + '"></td>' +
+            '<td>' + removeBtn + '</td>' +
             '</tr>';
     }
 
@@ -4020,27 +4230,30 @@ $selectedClientType = (string) request()->input('client_type', '');
 
         const effectiveBaseByItem = {};
         rows.forEach(function(row) {
-            const select = row.querySelector('.edit-dr-item-select');
-            const itemId = select ? getSelectValue(select) : '';
-            if (!itemId) return;
+            const itemId = getEditRowItemId(row);
+            const storeId = getEditRowStoreId(row);
+            if (!itemId || !storeId) return;
+            const key = storeId + ':' + itemId;
             const originalQty = parseFloat(row.getAttribute('data-original-qty')) || 0;
-            if (!effectiveBaseByItem.hasOwnProperty(itemId)) {
-                effectiveBaseByItem[itemId] = getBaseAvailableForItem(itemId);
+            if (!Object.prototype.hasOwnProperty.call(effectiveBaseByItem, key)) {
+                effectiveBaseByItem[key] = getBaseAvailableForItem(itemId, storeId);
             }
-            effectiveBaseByItem[itemId] += originalQty;
+            effectiveBaseByItem[key] += originalQty;
         });
 
         const usedByItem = {};
         rows.forEach(function(row) {
-            const select = row.querySelector('.edit-dr-item-select');
-            const itemId = select ? getSelectValue(select) : '';
+            const itemId = getEditRowItemId(row);
+            const storeId = getEditRowStoreId(row);
             const availInp = row.querySelector('.edit-dr-avail');
             const leftInp = row.querySelector('.edit-dr-left');
-            if (!itemId || !availInp) return;
+            if (!itemId || !storeId || !availInp) return;
 
-            const effectiveBase = effectiveBaseByItem[itemId] != null ? effectiveBaseByItem[itemId] :
-                getBaseAvailableForItem(itemId);
-            const alreadyUsed = usedByItem[itemId] || 0;
+            const key = storeId + ':' + itemId;
+            const effectiveBase = Object.prototype.hasOwnProperty.call(effectiveBaseByItem, key)
+                ? effectiveBaseByItem[key]
+                : getBaseAvailableForItem(itemId, storeId);
+            const alreadyUsed = usedByItem[key] || 0;
             const availableForRow = Math.max(0, effectiveBase - alreadyUsed);
 
             availInp.value = availableForRow.toFixed(2);
@@ -4050,7 +4263,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                 leftInp.value = Math.max(0, availableForRow - qty).toFixed(2);
             }
 
-            usedByItem[itemId] = alreadyUsed + qty;
+            usedByItem[key] = alreadyUsed + qty;
             enforceQtyWithinAvailable(row, '.edit-dr-avail', '.edit-dr-qty');
         });
     }
@@ -4074,63 +4287,39 @@ $selectedClientType = (string) request()->input('client_type', '');
     }
 
     document.getElementById('editModalAddItemRow').addEventListener('click', function() {
+        const buyerScopedFlag = document.getElementById('editBuyerScopedFlag');
+        const buyerScoped = buyerScopedFlag && buyerScopedFlag.value === '1';
         const tbody = document.getElementById('editModalItemsBody');
-        const trContent = getEditRowHtml(editRowIndex, {});
+        const trContent = getEditRowHtml(editRowIndex, {}, buyerScoped);
         const div = document.createElement('div');
         div.innerHTML = '<table><tbody>' + trContent + '</tbody></table>';
         const newTr = div.querySelector('tr');
         tbody.appendChild(newTr);
         editRowIndex++;
         const sel = newTr.querySelector('.edit-dr-item-select');
+        const storeSel = newTr.querySelector('.edit-dr-store-select');
         if (sel && typeof Choices !== 'undefined') createChoicesInstance(sel, createItemSelectConfig());
-        const opt = getSelectSelectedOption(sel);
-        newTr.querySelector('.edit-dr-unit').value = (opt && opt.dataset.unit) ? opt.dataset.unit : '—';
-        const initAvailInp = newTr.querySelector('.edit-dr-avail');
-        if (initAvailInp && opt && opt.dataset.available) {
-            initAvailInp.value = opt.dataset.available;
+        if (storeSel && typeof Choices !== 'undefined') {
+            createChoicesInstance(storeSel, createBlankSearchConfig({
+                placeholder: 'Select Store',
+                clearOnOpen: true
+            }));
         }
+        wireEditRowEvents(newTr);
         refreshEditAllAvailable();
-        newTr.querySelector('.edit-dr-avail').addEventListener('input', function() {
-            updateEditRowLeft(newTr);
-        });
-        newTr.querySelector('.edit-dr-qty').addEventListener('input', function() {
-            refreshEditAllAvailable();
-            updateEditRowTotal(newTr);
-            updateEditGrandTotal();
-        });
-        newTr.querySelector('.edit-dr-rate').addEventListener('input', function() {
-            updateEditRowTotal(newTr);
-            updateEditGrandTotal();
-        });
-        newTr.querySelector('.edit-dr-item-select').addEventListener('change', function() {
-            const o = getSelectSelectedOption(this);
-            newTr.querySelector('.edit-dr-unit').value = (o && o.dataset.unit) ? o.dataset.unit :
-                '—';
-            const rateInp = newTr.querySelector('.edit-dr-rate');
-            if (rateInp && o && o.dataset.rate) rateInp.value = o.dataset.rate;
-            const availInp = newTr.querySelector('.edit-dr-avail');
-            if (availInp && o && o.dataset.available) {
-                availInp.value = o.dataset.available;
-            }
-            refreshEditAllAvailable();
-            updateEditRowTotal(newTr);
-            updateEditGrandTotal();
-        });
-        newTr.querySelector('.edit-dr-remove-row').addEventListener('click', function() {
-            newTr.remove();
-            refreshEditAllAvailable();
-            updateEditGrandTotal();
-        });
+        updateEditGrandTotal();
+        syncEditHeaderStorePk();
     });
 
     document.getElementById('editModalItemsBody').addEventListener('click', function(e) {
-        if (e.target.classList.contains('edit-dr-remove-row')) {
-            const row = e.target.closest('tr');
-            if (row) {
-                row.remove();
-                refreshEditAllAvailable();
-                updateEditGrandTotal();
-            }
+        const removeBtn = e.target.closest('.edit-dr-remove-row');
+        if (!removeBtn || removeBtn.disabled) return;
+        const row = removeBtn.closest('tr');
+        if (row) {
+            row.remove();
+            refreshEditAllAvailable();
+            updateEditGrandTotal();
+            syncEditHeaderStorePk();
         }
     });
 
@@ -4516,46 +4705,11 @@ $selectedClientType = (string) request()->input('client_type', '');
             editRowIndex++;
         }
         tbody.querySelectorAll('.edit-dr-item-row').forEach(function(row) {
-            row.querySelector('.edit-dr-avail').addEventListener('input', function() {
-                updateEditRowLeft(row);
-            });
-            row.querySelector('.edit-dr-qty').addEventListener('input', function() {
-                refreshEditAllAvailable();
-                updateEditRowTotal(row);
-                updateEditGrandTotal();
-            });
-            row.querySelector('.edit-dr-rate').addEventListener('input', function() {
-                updateEditRowTotal(row);
-                updateEditGrandTotal();
-            });
-            const itemSelect = row.querySelector('.edit-dr-item-select');
-            if (itemSelect) {
-                itemSelect.addEventListener('change', function() {
-                    const o = getSelectSelectedOption(this);
-                    row.querySelector('.edit-dr-unit').value = (o && o.dataset.unit) ? o.dataset.unit :
-                        '—';
-                    const rateInp = row.querySelector('.edit-dr-rate');
-                    if (rateInp && o && o.dataset.rate) rateInp.value = o.dataset.rate;
-                    const availInp = row.querySelector('.edit-dr-avail');
-                    if (availInp && o && o.dataset.available) availInp.value = o.dataset.available;
-                    refreshEditAllAvailable();
-                    updateEditRowTotal(row);
-                    updateEditGrandTotal();
-                });
-            }
-            const removeBtn = row.querySelector('.edit-dr-remove-row');
-            if (removeBtn) {
-                removeBtn.addEventListener('click', function() {
-                    row.remove();
-                    refreshEditAllAvailable();
-                    updateEditGrandTotal();
-                });
-            }
+            wireEditRowEvents(row);
         });
-        if (!buyerScoped) {
-            refreshEditAllAvailable();
-        }
+        refreshEditAllAvailable();
         updateEditGrandTotal();
+        syncEditHeaderStorePk();
     }
 
     // Edit report (mousedown ensures single-tap works with DataTables)
@@ -4589,13 +4743,8 @@ $selectedClientType = (string) request()->input('client_type', '');
                 const buyerScoped = !!(data.buyer_scoped || (v && v.buyer_scoped));
                 const buyerScopedFlag = document.getElementById('editBuyerScopedFlag');
                 if (buyerScopedFlag) buyerScopedFlag.value = buyerScoped ? '1' : '0';
-                const editAddItemBtn = document.getElementById('editModalAddItemRow');
-                if (editAddItemBtn) editAddItemBtn.style.display = buyerScoped ? 'none' : '';
                 document.getElementById('editReportModalLabel').textContent = 'Edit Selling Voucher #' +
                     (v.id || reportId);
-                document.querySelector('.edit-store-id').value = v.store_id || v.inve_store_master_pk || '';
-                const editStoreField = document.querySelector('#editReportModal select[name="inve_store_master_pk"]');
-                if (editStoreField) editStoreField.disabled = buyerScoped;
                 document.querySelector('.edit-remarks').value = v.remarks || '';
                 const editRefNumEl = document.querySelector('.edit-reference-number');
                 if (editRefNumEl) editRefNumEl.value = v.reference_number || '';
@@ -4758,44 +4907,27 @@ $selectedClientType = (string) request()->input('client_type', '');
                 syncEditDrChoicesFromVoucher(v, slug);
                 editCurrentStoreId = v.store_id || v.inve_store_master_pk || '';
                 const items = data.items || [];
+                editStoreItemsCache = {};
                 const openEditModalWithItems = function() {
                     buildEditItemsTable(items, buyerScoped);
+                    initEditModalTomSelects();
+                    document.querySelectorAll('#editModalItemsBody .edit-dr-store-select').forEach(function(storeSelect) {
+                        if (storeSelect.tomselect || storeSelect.disabled) return;
+                        createChoicesInstance(storeSelect, createBlankSearchConfig({
+                            placeholder: 'Select Store',
+                            clearOnOpen: true
+                        }));
+                    });
+                    syncEditHeaderStorePk();
                     new bootstrap.Modal(document.getElementById('editReportModal')).show();
                 };
-                if (buyerScoped) {
-                    openEditModalWithItems();
-                } else if (editCurrentStoreId) {
-                    fetchStoreItems(editCurrentStoreId, function() {
-                        updateEditItemDropdowns();
-                        openEditModalWithItems();
-                    });
-                } else {
-                    filteredItems = itemSubcategories;
-                    openEditModalWithItems();
-                }
+                prefetchEditStoreItemsForRows(items, openEditModalWithItems);
             })
             .catch(err => {
                 console.error(err);
                 alert('Failed to load report for edit.');
             });
     }, true);
-
-    // Store selection change in EDIT modal
-    const editStoreSelect = document.querySelector('#editReportModal select[name="inve_store_master_pk"]');
-    if (editStoreSelect) {
-        editStoreSelect.addEventListener('change', function() {
-            const storeId = getSelectValue(this);
-            editCurrentStoreId = storeId;
-            if (!storeId) {
-                filteredItems = itemSubcategories;
-                updateEditItemDropdowns();
-                return;
-            }
-            fetchStoreItems(storeId, function() {
-                updateEditItemDropdowns();
-            });
-        });
-    }
 
     const editReportModal = document.getElementById('editReportModal');
     if (editReportModal) {
@@ -5181,6 +5313,7 @@ $selectedClientType = (string) request()->input('client_type', '');
     var editReportFormEl = document.getElementById('editReportForm');
     if (editReportFormEl) {
         editReportFormEl.addEventListener('submit', function(e) {
+            syncEditHeaderStorePk();
             document.querySelectorAll('#editModalItemsBody .edit-dr-item-row').forEach(function(row) {
                 enforceQtyWithinAvailable(row, '.edit-dr-avail', '.edit-dr-qty');
             });

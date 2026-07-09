@@ -875,6 +875,7 @@ class SellingVoucherDateRangeController extends Controller
                 return [
                     'id' => $item->id,
                     'report_id' => $item->sv_date_range_report_id,
+                    'store_identifier' => $storeType === 'sub_store' ? 'sub_'.$storeId : (string) $storeId,
                     'store_name' => $itemReport ? $itemReport->resolved_store_name : '—',
                     'item_subcategory_id' => $item->item_subcategory_id,
                     'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
