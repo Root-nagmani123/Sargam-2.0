@@ -288,7 +288,7 @@
                             <i class="material-symbols-rounded" aria-hidden="true">campaign</i>
                         </div>
                         <div class="flex-grow-1 min-w-0">
-                            <p class="stat-title">OT/ Participants Attendance</p>
+                            <p class="stat-title">OT/ Participants Details</p>
                             <p class="stat-value">{{ $pad($cardCounts['total']) }}</p>
                         </div>
                     </div>

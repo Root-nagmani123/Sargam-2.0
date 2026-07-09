@@ -247,7 +247,16 @@
         const filters = @json($filters ?? []);
         const baseUrl = "{{ route('admin.dashboard.ot-participants') }}";
         const LOCKED_COLUMNS = [0, 1, 2]; // S.No, OT Code, Name — frozen & always visible
+        const DUTY_TYPE_COL = 7; // "Duty Type" — only meaningful for a single-day filter
         let dt = null;
+
+        // Duty Type is per-day, so it only makes sense when the Time Period is a single
+        // day (from == to). For a multi-day range (or no date), it is hidden.
+        function isSingleDayFilter() {
+            const f = (filters.from_date || '').toString();
+            const t = (filters.to_date || '').toString();
+            return f !== '' && f === t;
+        }
         let currentStatus = (filters.status === 'archive') ? 'archive' : 'active';
         let loadingRequests = 0;
 
@@ -377,8 +386,9 @@
         $period.on('apply.daterangepicker', function(ev, picker) {
             $period.val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
             applyFilter({ from_date: picker.startDate.format('YYYY-MM-DD'), to_date: picker.endDate.format('YYYY-MM-DD') });
+            setupOtColumns(); // re-evaluate Duty Type column availability for the new range
         });
-        $period.on('cancel.daterangepicker', function() { $period.val(''); applyFilter({ from_date: '', to_date: '' }); });
+        $period.on('cancel.daterangepicker', function() { $period.val(''); applyFilter({ from_date: '', to_date: '' }); setupOtColumns(); });
 
         /* ── Print (table data only, all filtered rows, clean header) ── */
         // Column titles + data keys, in table order. Only currently-visible columns
@@ -548,11 +558,14 @@
         function otPersistHiddenCols(arr) { try { localStorage.setItem(otColStorageKey, JSON.stringify(arr)); } catch (e) {} }
         function setupOtColumns() {
             if (!dt) { return; }
+            const singleDay = isSingleDayFilter();
             const hidden = otGetHiddenCols().filter(idx => LOCKED_COLUMNS.indexOf(idx) === -1);
             otPersistHiddenCols(hidden);
             dt.columns().every(function() {
                 const idx = this.index();
                 if (LOCKED_COLUMNS.indexOf(idx) !== -1) { this.visible(true, false); return; }
+                // Duty Type is forced hidden unless a single day is filtered.
+                if (idx === DUTY_TYPE_COL) { this.visible(singleDay && hidden.indexOf(idx) === -1, false); return; }
                 this.visible(hidden.indexOf(idx) === -1, false);
             });
             dt.columns.adjust();
@@ -565,15 +578,18 @@
                 const title = $(this.header()).text().replace(/\s+/g, ' ').trim();
                 if (!title) { return; }
                 const isLocked = LOCKED_COLUMNS.indexOf(idx) !== -1;
+                // Duty Type toggle is disabled (and unchecked) unless a single day is filtered.
+                const dutyLocked = (idx === DUTY_TYPE_COL) && !singleDay;
                 const inputId = 'otcolvis_' + idx;
                 const $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
                 const $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>').attr('for', inputId);
+                if (dutyLocked) { $label.attr('title', 'Available only when a single day is selected in Time Period'); }
                 const $cb = $('<input type="checkbox" class="form-check-input m-0">')
                     .attr('id', inputId)
-                    .prop('checked', isLocked || hidden.indexOf(idx) === -1)
-                    .prop('disabled', isLocked);
+                    .prop('checked', isLocked || (!dutyLocked && hidden.indexOf(idx) === -1))
+                    .prop('disabled', isLocked || dutyLocked);
                 $cb.on('change', function() {
-                    if (isLocked) { return; }
+                    if (isLocked || dutyLocked) { return; }
                     const h = otGetHiddenCols();
                     const pos = h.indexOf(idx);
                     if (this.checked) { if (pos !== -1) h.splice(pos, 1); } else { if (pos === -1) h.push(idx); }

@@ -256,65 +256,25 @@ class UserController extends Controller
                  // Check if faculty is CC or ACC
                  $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
 
-                 // ========== SOURCE 1: CC/ACC Courses Students ==========
-                 $source1StudentPks = collect([]);
+                 // Flag CC/ACC so the "Total Students" / "Student Details" cards
+                 // become visible for them (card visibility is unchanged).
                  if ($coordinatorCourses->isNotEmpty()) {
                      $isCCorACC = true;
-                     // Get active courses where faculty is CC/ACC
-                    $activeCourseIds = CourseMaster::whereIn('pk', $coordinatorCourses)
-                        ->where('active_inactive', 1)
-                        ->where('end_date', '>=', now())
-                        ->pluck('pk');
-
-                     // Count total students enrolled in these courses (Source 1)
-                     if ($activeCourseIds->isNotEmpty()) {
-                         $source1StudentPks = StudentMasterCourseMap::whereIn('course_master_pk', $activeCourseIds)
-                             ->where('active_inactive', 1)
-                             ->pluck('student_master_pk')
-                             ->unique();
-                     }
                  }
 
-                 // ========== SOURCE 2: Group Mappings Students ==========
-                 $source2StudentPks = collect([]);
-
-                 // Step 1: Find group mappings where faculty is assigned
-                 $groupMappings = DB::table('group_type_master_course_master_map')
-                     ->where('facility_id', $facultyPk)
+                 // "Total Students" is scoped to the viewer's COURSE ACCESS —
+                 // get_Role_by_course() maps the user's role(s) to
+                 // course_master.user_role_master_pk, the same access basis the
+                 // "My Course Participant" card uses. Empty result = no restriction
+                 // (Admin / Super Admin / PA see all); [-1] = no access → zero.
+                 // Counted as DISTINCT active enrolments so a student in several
+                 // accessible courses is not double-counted.
+                 $roleCourseIds = get_Role_by_course();
+                 $totalStudents = StudentMasterCourseMap::query()
                      ->where('active_inactive', 1)
-                     ->get();
-
-                 if ($groupMappings->isNotEmpty()) {
-                     // Step 2: Get course_name (course_pk) from group mappings
-                     $groupMapCourseIds = $groupMappings->pluck('course_name')->unique();
-
-                     // Step 3: Check in course_master if these courses are active
-                     $activeCourseIds = CourseMaster::whereIn('pk', $groupMapCourseIds)
-                         ->where('active_inactive', 1)
-                         ->where('end_date', '>=', now())
-                         ->pluck('pk');
-
-                     if ($activeCourseIds->isNotEmpty()) {
-                         // Step 4: Get group_type_master_course_master_map.pk for active courses
-                         $activeGroupMappingPks = $groupMappings
-                             ->whereIn('course_name', $activeCourseIds)
-                             ->pluck('pk')
-                             ->unique();
-
-                         // Step 5: Get students from student_course_group_map (Source 2)
-                         if ($activeGroupMappingPks->isNotEmpty()) {
-                             $source2StudentPks = StudentCourseGroupMap::whereIn('group_type_master_course_master_map_pk', $activeGroupMappingPks)
-                                 ->where('active_inactive', 1)
-                                 ->pluck('student_master_pk')
-                                 ->unique();
-                         }
-                     }
-                 }
-
-                 // ========== MERGE BOTH SOURCES ==========
-                 // Combine Source 1 and Source 2 student PKs and get unique count
-                 $allStudentPks = $source1StudentPks->merge($source2StudentPks)->unique();
-                 $totalStudents = $allStudentPks->count();
+                     ->when(! empty($roleCourseIds), fn ($q) => $q->whereIn('course_master_pk', $roleCourseIds))
+                     ->distinct('student_master_pk')
+                     ->count('student_master_pk');
              } else {
                  $totalSessions = 0;
              }
