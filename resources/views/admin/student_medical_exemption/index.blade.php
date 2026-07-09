@@ -71,6 +71,13 @@
     border-color: var(--bs-primary);
     box-shadow: var(--ds-shadow-sm);
 }
+.sme-util-btn.dropdown-toggle::after {
+    margin-left: 0.35rem;
+}
+.sme-download-menu {
+    min-width: 11rem;
+    border-radius: var(--ds-radius-1);
+}
 
 /* --- Inline filter toolbar (matches reference) ------------------- */
 .sme-filterbar {
@@ -109,6 +116,21 @@ select.sme-filter-control {
     padding-right: 2.25rem;      /* room for the native chevron */
     text-overflow: ellipsis;
 }
+
+/* Searchable course filter (Choices.js) — match the filter-control footprint */
+.sme-filterbar .choices { margin-bottom: 0; min-width: 180px; max-width: 240px; }
+.sme-filterbar .choices__inner {
+    min-height: 42px;
+    padding: 0.35rem 2rem 0.35rem 0.85rem;
+    background: #fff;
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-1);
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+}
+.sme-filterbar .choices.is-focused .choices__inner { border-color: #c4ccd6; }
+.sme-filterbar .choices__list--single { padding: 0; }
 .sme-filter-control:hover {
     border-color: #c4ccd6;
 }
@@ -221,6 +243,64 @@ select.sme-filter-control {
 #smeFormBody .is-invalid { border-color: var(--bs-danger); }
 #smeFormBody .form-control,
 #smeFormBody .form-select { min-height: 44px; border-radius: var(--ds-radius-2); }
+#smeFormBody textarea.form-control {
+    min-height: 88px;
+    resize: vertical;
+    line-height: 1.5;
+}
+#smeFormBody .sme-remarks-row {
+    margin-top: var(--ds-space-1);
+    padding-top: var(--ds-space-3);
+    border-top: 1px dashed var(--ds-line);
+}
+
+/* --- View details modal ------------------------------------------ */
+.sme-view-section-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ds-ink);
+    margin: 0 0 var(--ds-space-3);
+    padding-bottom: var(--ds-space-2);
+    border-bottom: 1px solid var(--ds-line);
+}
+.sme-view-section-title:not(:first-child) { margin-top: var(--ds-space-4); }
+.sme-view-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-height: 100%;
+}
+.sme-view-label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--ds-ink-muted);
+}
+.sme-view-value {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--ds-ink);
+    word-break: break-word;
+}
+.sme-view-text {
+    min-height: 72px;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-2);
+    background: var(--ds-surface-2, #f8f9fa);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.sme-view-status {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 50rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+.sme-view-status.is-active { color: #0f7b3e; background: #e3f5ea; }
+.sme-view-status.is-inactive { color: #c0392b; background: #fde6e4; }
 
 /* Column Visibility modal — grid of bordered checkbox chips */
 .sme-col-grid {
@@ -380,10 +460,12 @@ select.sme-filter-control {
     transition: background-color .15s ease;
 }
 .sme-act i { font-size: 20px; line-height: 1; }
-.sme-act-edit { color: #4f46e5; }
-.sme-act-edit:hover { background: rgba(79, 70, 229, 0.12); }
-.sme-act-delete { color: var(--bs-danger); }
-.sme-act-delete:hover { background: rgba(var(--bs-danger-rgb), 0.12); }
+.sme-act-edit { color: #004a93; }
+.sme-act-edit:hover { background: rgba(0, 74, 147, 0.12); }
+.sme-act-delete {
+    color: #af2910;
+}
+.sme-act-delete:hover { background: rgba(175, 41, 16, 0.12); }
 .sme-act-delete.disabled { opacity: 0.4; pointer-events: none; }
 
 /* Amber switch, vertically centred with the icons */
@@ -482,6 +564,19 @@ select.sme-filter-control {
     z-index: 2;
 }
 
+.datatables #medicalExemptionTable .sme-col-text {
+    white-space: normal;
+    min-width: 140px;
+    max-width: 220px;
+    word-break: break-word;
+}
+
+.datatables #medicalExemptionTable .sme-doc-view {
+    color: #0d6efd;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
 /* --- Print Styles ------------------------------------------------- */
 @media print {
     body * {
@@ -519,10 +614,8 @@ select.sme-filter-control {
     }
 
     /* Hide action and status columns in print */
-    .table th:nth-child(11),
-    .table td:nth-child(11),
-    .table th:nth-child(12),
-    .table td:nth-child(12) {
+    .table th.sme-col-no-print,
+    .table td.sme-col-no-print {
         display: none;
     }
 
@@ -552,9 +645,9 @@ select.sme-filter-control {
 .datatables #medicalExemptionTable .sme-row-actions { display: inline-flex !important; flex-wrap: nowrap; }
 .datatables #medicalExemptionTable .sme-act { width: 34px; height: 34px; flex: 0 0 auto; }
 .datatables #medicalExemptionTable .sme-act-edit,
-.datatables #medicalExemptionTable .sme-act-edit i { color: #4f46e5 !important; }
+.datatables #medicalExemptionTable .sme-act-edit i { color: #004a93 !important; }
 .datatables #medicalExemptionTable .sme-act-delete,
-.datatables #medicalExemptionTable .sme-act-delete i { color: var(--bs-danger) !important; }
+.datatables #medicalExemptionTable .sme-act-delete i { color: #af2910 !important; }
 .datatables #medicalExemptionTable .sme-act i { font-size: 20px !important; line-height: 1; }
 .datatables #medicalExemptionTable .sme-act-switch { padding-left: 0 !important; margin: 0 !important; min-height: 0 !important; }
 .datatables #medicalExemptionTable .sme-act-switch .form-check-input { margin: 0 !important; float: none !important; }
@@ -588,11 +681,27 @@ select.sme-filter-control {
                 <span class="d-none d-sm-inline">Print</span>
             </button>
 
-            <a href="{{ route('student.medical.exemption.export') }}" class="sme-util-btn">
-                <i class="material-icons material-symbols-rounded" style="font-size:20px;"
-                    aria-hidden="true">download</i>
-                <span class="d-none d-sm-inline">Download</span>
-            </a>
+            <div class="dropdown">
+                <button type="button" class="sme-util-btn dropdown-toggle" id="smeDownloadBtn"
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="material-icons material-symbols-rounded" style="font-size:20px;" aria-hidden="true">download</i>
+                    <span class="d-none d-sm-inline">Download</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm sme-download-menu py-2" aria-labelledby="smeDownloadBtn">
+                    <li>
+                        <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="smeExportPdf">
+                            <i class="material-icons material-symbols-rounded text-danger" style="font-size:18px;" aria-hidden="true">picture_as_pdf</i>
+                            <span>Download PDF</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="smeExportCsv">
+                            <i class="material-icons material-symbols-rounded text-success" style="font-size:18px;" aria-hidden="true">table_chart</i>
+                            <span>Download CSV</span>
+                        </button>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
     <div class="datatables">
@@ -672,21 +781,23 @@ select.sme-filter-control {
 
                 {{-- Table --}}
                 <div class="table-responsive">
-                    <table class="table align-middle text-nowrap" id="medicalExemptionTable">
+                    <table class="table align-middle" id="medicalExemptionTable">
                         <thead>
                             <tr>
-                                <th class="col">S.No.</th>
-                                <th class="col">OT Code</th>
-                                <th class="col">Student Name</th>
+                                <th class="col">S. No.</th>
+                                <th class="col">Date</th>
+                                <th class="col text-wrap">Officer Trainee</th>
                                 <th class="col text-wrap">Course</th>
-                                <th class="col">Assigned by</th>
-                                <th class="col">Category</th>
+                                <th class="col">Doctor Name</th>
                                 <th class="col">Medical Speciality</th>
-                                <th class="col">Duration</th>
-                                <th class="col">OPD Type</th>
-                                <th class="col">Document</th>
-                                <th class="col">Status</th>
-                                <th class="col">Action</th>
+                                <th class="col text-wrap">Duration</th>
+                                <th class="col">Days</th>
+                                <th class="col">Category</th>
+                                <th class="col">IPD/OPD/After OPD/Referral</th>
+                                <th class="col text-wrap">PT/ Outdoor Advise</th>
+                                <th class="col text-wrap">Provisional Diagnosis/ Remarks</th>
+                                <th class="col sme-col-no-print">Document</th>
+                                <th class="col sme-col-no-print">Action</th>
                             </tr>
                         </thead>
                     </table>
@@ -708,7 +819,7 @@ select.sme-filter-control {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary px-4" id="smeFormSubmit" disabled>Submit</button>
+                    <button type="button" class="btn btn-primary px-4" id="smeFormSubmit" disabled>Add Student Medical Exemption</button>
                 </div>
             </div>
         </div>
@@ -731,6 +842,24 @@ select.sme-filter-control {
             </div>
         </div>
     </div>
+
+    {{-- View details modal --}}
+    <div class="modal fade" id="smeViewModal" tabindex="-1" aria-labelledby="smeViewModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-semibold" id="smeViewModalLabel">Student Medical Exemption Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="smeViewBody">
+                    <div class="text-center py-4 text-muted">Loading...</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 @endsection
@@ -742,6 +871,42 @@ $(document).ready(function() {
 
     // ✅ IMPORTANT: global variable (DataTable से पहले)
     let courseStatus = 'active';
+
+    // Course filter options per tab: Active = running courses, Archive = ended
+    // courses (like Course Master). The dropdown swaps when the tab changes.
+    const smeCourseLists = {
+        active: @json($courses->map(fn ($c) => ['pk' => $c->pk, 'name' => $c->course_name])->values()),
+        archive: @json(($archivedCourses ?? collect())->map(fn ($c) => ['pk' => $c->pk, 'name' => $c->course_name])->values()),
+    };
+
+    // Searchable course filter (Choices.js). All filter dropdowns get a search box.
+    let courseFilterChoices = null;
+    if (window.Choices && document.getElementById('course_filter')) {
+        courseFilterChoices = new Choices('#course_filter', {
+            searchEnabled: true,
+            searchPlaceholderValue: 'Search course...',
+            searchResultLimit: 50,
+            itemSelectText: '',
+            shouldSort: false,
+            allowHTML: false,
+        });
+    }
+
+    function populateCourseFilter(status) {
+        const list = smeCourseLists[status] || [];
+        const choiceRows = [{ value: '', label: 'Course Name', selected: true }]
+            .concat(list.map(function (c) { return { value: String(c.pk), label: c.name }; }));
+        if (courseFilterChoices) {
+            // Rebuild the Choices list (a course from the other tab won't exist here).
+            courseFilterChoices.setChoices(choiceRows, 'value', 'label', true);
+            return;
+        }
+        const $sel = $('#course_filter');
+        if (!$sel.length) { return; }
+        $sel.empty();
+        choiceRows.forEach(function (c) { $sel.append($('<option>').val(c.value).text(c.label)); });
+        $sel.val('');
+    }
 
     let table = $('#medicalExemptionTable').DataTable({
         processing: true,
@@ -792,57 +957,78 @@ $(document).ready(function() {
             }
         },
 
+        columnDefs: [{
+            defaultContent: '—',
+            targets: '_all'
+        }],
+
         columns: [{
                 data: 'DT_RowIndex',
                 orderable: false,
                 searchable: false
             },
-             {
-                data: 'ot_code',
-                name: 'student.generated_OT_code'
+            {
+                data: 'date',
+                orderable: false
             },
             {
                 data: 'student',
-                name: 'student.display_name'
+                name: 'student.display_name',
+                className: 'text-wrap'
             },
             {
                 data: 'course',
-                name: 'course.course_name'
+                name: 'course.course_name',
+                className: 'text-wrap'
             },
             {
                 data: 'assigned_by',
                 name: 'employee.first_name'
             },
             {
-                data: 'category',
-                name: 'category.exemp_category_name'
-            },
-            {
                 data: 'speciality',
                 name: 'speciality.speciality_name'
             },
             {
-                data: 'from_to',
+                data: 'duration',
+                className: 'text-wrap',
                 orderable: false
+            },
+            {
+                data: 'days',
+                name: 'days'
+            },
+            {
+                data: 'category',
+                name: 'category.exemp_category_name'
             },
             {
                 data: 'opd_type',
                 name: 'opd_category'
             },
             {
-                data: 'document',
-                orderable: false,
-                searchable: false
+                data: 'pt_advise',
+                name: 'pt_outdoor_advise',
+                className: 'sme-col-text text-wrap',
+                orderable: false
             },
             {
-                data: 'status',
+                data: 'description',
+                name: 'Description',
+                className: 'sme-col-text text-wrap',
+                orderable: false
+            },
+            {
+                data: 'document',
                 orderable: false,
-                searchable: false
+                searchable: false,
+                className: 'sme-col-no-print'
             },
             {
                 data: 'action',
                 orderable: false,
-                searchable: false
+                searchable: false,
+                className: 'sme-col-no-print'
             }
         ]
     });
@@ -868,7 +1054,11 @@ $(document).ready(function() {
     // 🔄 Reset filters
     $('#resetFilters').on('click', function() {
         $('#search').val('');
-        $('#course_filter').val('').trigger('change');
+        if (courseFilterChoices) {
+            courseFilterChoices.setChoiceByValue('');
+        } else {
+            $('#course_filter').val('').trigger('change');
+        }
         $('#from_date_filter').val('');
         $('#to_date_filter').val('');
 
@@ -977,7 +1167,8 @@ $(document).ready(function() {
 
     function loadModalForm(url, title){
         $('#smeFormModalLabel').text(title);
-        $('#smeFormSubmit').prop('disabled', true);
+        // Submit button mirrors the context: "Add ..." on add, "Edit ..." on edit.
+        $('#smeFormSubmit').text(title).prop('disabled', true);
         $('#smeFormBody').html('<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>');
         smeFormModal.show();
 
@@ -1007,7 +1198,8 @@ $(document).ready(function() {
         var choices = [{ value: '', label: placeholder || 'Search Student', selected: true, disabled: !!loading }];
         (list || []).forEach(function(s){
             modalOtMap[String(s.pk)] = s.generated_OT_code || '';
-            choices.push({ value: String(s.pk), label: s.display_name });
+            var label = s.display_name + (s.generated_OT_code ? ' (' + s.generated_OT_code + ')' : '');
+            choices.push({ value: String(s.pk), label: label });
         });
         modalStudentChoices.clearStore();
         modalStudentChoices.setChoices(choices, 'value', 'label', true);
@@ -1031,7 +1223,7 @@ $(document).ready(function() {
             formEl.querySelectorAll('select').forEach(function(sel){
                 sel.classList.remove('select2');
                 var inst = new Choices(sel, {
-                    searchEnabled: sel.options.length > 5,
+                    searchEnabled: true,
                     searchPlaceholderValue: 'Search...',
                     itemSelectText: '',
                     shouldSort: false,
@@ -1067,7 +1259,22 @@ $(document).ready(function() {
             }
         });
 
-        // Course -> students (the Add form carries #courseDropdown)
+        // Days = inclusive span between the Arrival and Departure dates (read-only field).
+        $form.on('change', '#arrivalDate, #departureDate', function(){
+            var a = document.getElementById('arrivalDate');
+            var d = document.getElementById('departureDate');
+            var out = document.getElementById('daysField');
+            if (!a || !d || !out) return;
+            if (a.value && d.value) {
+                var diff = Math.floor((new Date(d.value) - new Date(a.value)) / 86400000);
+                out.value = (diff >= 0) ? (diff + 1) : '';
+            } else {
+                out.value = '';
+            }
+        });
+
+        // Course -> students (legacy Add/Edit form carried #courseDropdown; harmless no-op
+        // for the current single officer-trainee dropdown which has no #courseDropdown)
         $form.on('change', '#courseDropdown', function(){
             var courseId = $(this).val();
             if (!courseId){ rebuildModalStudents([], 'Select Course First'); return; }
@@ -1104,12 +1311,33 @@ $(document).ready(function() {
             $btn.prop('disabled', false);
             if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors){
                 var first = null;
+                var shown = false;
                 $.each(xhr.responseJSON.errors, function(field, msgs){
-                    var $f = $('#smeAjaxForm [name="' + field + '"]');
-                    $f.addClass('is-invalid');
-                    $f.last().after('<small class="text-danger sme-err d-block mt-1">' + msgs[0] + '</small>');
-                    if (!first) first = $f.first();
+                    // Backend validates combined datetime fields (from_date/to_date) while
+                    // the form has split fields (arrival/departure date+time).
+                    var nameMap = {
+                        from_date: ['arrival_date', 'arrival_time'],
+                        to_date: ['departure_date', 'departure_time']
+                    };
+                    var names = nameMap[field] || [field];
+                    var $targets = $();
+                    names.forEach(function(n){
+                        $targets = $targets.add($('#smeAjaxForm [name="' + n + '"]'));
+                    });
+
+                    if ($targets.length) {
+                        shown = true;
+                        $targets.addClass('is-invalid');
+                        $targets.last().after('<small class="text-danger sme-err d-block mt-1">' + msgs[0] + '</small>');
+                        if (!first) first = $targets.first();
+                    }
                 });
+
+                if (!shown) {
+                    var topMsg = (xhr.responseJSON.message || 'Please review the highlighted fields.');
+                    $('#smeAjaxForm').prepend('<div class="alert alert-danger sme-err mb-3">' + topMsg + '</div>');
+                }
+
                 if (first && first.length) first[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
             } else if (typeof Swal !== 'undefined') {
                 var errMsg = (xhr.responseJSON && xhr.responseJSON.message)
@@ -1138,10 +1366,109 @@ $(document).ready(function() {
         loadModalForm($(this).attr('href'), 'Add Student Medical Exemption');
     });
 
+    var smeExportBase = @json(route('student.medical.exemption.export'));
+
+    function smeExportUrl(format) {
+        var params = new URLSearchParams();
+        params.set('format', format);
+        params.set('filter', courseStatus);
+
+        var course = $('#course_filter').val();
+        var search = $('#search').val();
+        var from = $('#from_date_filter').val();
+        var to = $('#to_date_filter').val();
+
+        if (course) params.set('course_filter', course);
+        if (search) params.set('search', search);
+        if (from) params.set('from_date_filter', from);
+        if (to) params.set('to_date_filter', to);
+
+        return smeExportBase + '?' + params.toString();
+    }
+
+    $('#smeExportPdf').on('click', function(e) {
+        e.preventDefault();
+        window.location.href = smeExportUrl('pdf');
+    });
+
+    $('#smeExportCsv').on('click', function(e) {
+        e.preventDefault();
+        window.location.href = smeExportUrl('csv');
+    });
+
     $(document).on('click', '.sme-edit-btn', function(e){
         if (!smeFormModal) return;
         e.preventDefault();
         loadModalForm($(this).attr('href'), 'Edit Student Medical Exemption');
+    });
+
+    var smeViewModalEl = document.getElementById('smeViewModal');
+    var smeViewModal = (window.bootstrap && smeViewModalEl) ? new bootstrap.Modal(smeViewModalEl) : null;
+
+    function smeEsc(text) {
+        return $('<div>').text(text == null || text === '' ? '—' : text).html();
+    }
+
+    function smeViewField(label, value, colClass) {
+        return '<div class="' + (colClass || 'col-md-6') + '">' +
+            '<div class="sme-view-field">' +
+                '<span class="sme-view-label">' + smeEsc(label) + '</span>' +
+                '<span class="sme-view-value">' + smeEsc(value) + '</span>' +
+            '</div>' +
+        '</div>';
+    }
+
+    function renderSmeViewDetail(data) {
+        var statusClass = data.status === 'Active' ? 'is-active' : 'is-inactive';
+        var docHtml = data.document_url
+            ? '<a href="' + data.document_url + '" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1">' +
+                '<i class="material-icons material-symbols-rounded" style="font-size:16px;">description</i> View Attachment' +
+              '</a>'
+            : '<span class="text-muted">No attachment</span>';
+
+        return '' +
+            '<h6 class="sme-view-section-title">Basic Information</h6>' +
+            '<div class="row g-3">' +
+                smeViewField('Course Name', data.course_name, 'col-12') +
+                smeViewField('Name of Officer Trainee', data.student_name) +
+                smeViewField('OT Code', data.ot_code) +
+                smeViewField('Treating Doctor Name', data.doctor_name) +
+                smeViewField('Exemption Category', data.category) +
+            '</div>' +
+            '<h6 class="sme-view-section-title">Exemption and Other Information</h6>' +
+            '<div class="row g-3">' +
+                smeViewField('IPD/OPD/After OPD/Referral', data.opd_category) +
+                smeViewField('Arrival Date', data.arrival_date) +
+                smeViewField('Arrival Time', data.arrival_time) +
+                smeViewField('Departure Date', data.departure_date) +
+                smeViewField('Departure Time', data.departure_time) +
+                smeViewField('Medical Speciality', data.speciality) +
+                smeViewField('Days', data.days) +
+                '<div class="col-md-6"><div class="sme-view-field"><span class="sme-view-label">Status</span>' +
+                    '<span class="sme-view-status ' + statusClass + '">' + smeEsc(data.status) + '</span></div></div>' +
+                (data.created_date ? smeViewField('Created On', data.created_date) : '') +
+            '</div>' +
+            '<div class="row g-3 mt-1">' +
+                '<div class="col-md-6"><div class="sme-view-field"><span class="sme-view-label">Provisional Diagnosis/ Remarks</span>' +
+                    '<div class="sme-view-text">' + smeEsc(data.description) + '</div></div></div>' +
+                '<div class="col-md-6"><div class="sme-view-field"><span class="sme-view-label">PT/Outdoor Advise</span>' +
+                    '<div class="sme-view-text">' + smeEsc(data.pt_outdoor_advise) + '</div></div></div>' +
+            '</div>' +
+            '<h6 class="sme-view-section-title">Attachment</h6>' +
+            '<div>' + docHtml + '</div>';
+    }
+
+    $(document).on('click', '.sme-view-btn', function(e) {
+        e.preventDefault();
+        if (!smeViewModal) return;
+        var url = $(this).data('url');
+        $('#smeViewBody').html('<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>');
+        smeViewModal.show();
+        $.get(url).done(function(data) {
+            $('#smeViewBody').html(renderSmeViewDetail(data));
+        }).fail(function() {
+            $('#smeViewBody').html('<div class="alert alert-danger m-0">Failed to load record details. Please try again.</div>');
+        });
     });
 
     // 🧱 Column Visibility modal (chips built from the live DataTable)
@@ -1167,6 +1494,7 @@ $(document).ready(function() {
     $('#filterActive').on('click', function() {
 
         courseStatus = 'active';
+        populateCourseFilter('active');
 
         $(this).addClass('active').attr('aria-pressed', 'true');
         $('#filterArchive').removeClass('active').attr('aria-pressed', 'false');
@@ -1178,6 +1506,7 @@ $(document).ready(function() {
     $('#filterArchive').on('click', function() {
 
         courseStatus = 'archive';
+        populateCourseFilter('archive');
 
         $(this).addClass('active').attr('aria-pressed', 'true');
         $('#filterActive').removeClass('active').attr('aria-pressed', 'false');
@@ -1262,8 +1591,6 @@ function getFilterInfo() {
 
 // Print function - defined globally so it can be called from onclick
 function printTable() {
-    // Create a new window for printing
-    var printWindow = window.open('', '_blank');
     var table = document.getElementById('medicalExemptionTable');
 
     if (!table) {
@@ -1271,18 +1598,21 @@ function printTable() {
         return;
     }
 
+    // Create a new window for printing
+    var printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        alert('Please allow pop-ups for this site to print the report.');
+        return;
+    }
+
     // Clone the table to avoid modifying the original
     var tableClone = table.cloneNode(true);
 
-    // Remove Action and Status columns (11th and 12th columns)
-    var rows = tableClone.querySelectorAll('tr');
-    rows.forEach(function(row) {
-        var cells = row.querySelectorAll('th, td');
-        if (cells.length >= 12) {
-            // Remove Action column (11th) and Status column (12th)
-            if (cells[10]) cells[10].remove(); // Action
-            if (cells[10]) cells[10].remove(); // Status (now at index 10 after first removal)
-        }
+    // Remove Action and Status columns for print
+    tableClone.querySelectorAll('tr').forEach(function(row) {
+        row.querySelectorAll('.sme-col-no-print').forEach(function(cell) {
+            cell.remove();
+        });
     });
 
     var tableHTML = tableClone.outerHTML;
@@ -1295,62 +1625,88 @@ function printTable() {
         year: 'numeric'
     });
 
+    // Branded LBSNAA header assets (same layout as the official report PDF).
+    var logoLeft   = @json(asset('admin_assets/images/logos/logo_new.png'));
+    var logoRight  = @json(file_exists(public_path('admin_assets/images/logos/constitution-75.png'))
+        ? asset('admin_assets/images/logos/constitution-75.png')
+        : asset('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png'));
+    var titleHindi = @json(asset('admin_assets/images/logos/lbsnaa-title-hi.png'));
+
+    // Selected course line (skip the placeholder "Course Name" option).
+    var courseName = '';
+    var selCourse = $('#course_filter option:selected');
+    if (selCourse.val()) { courseName = (selCourse.text() || '').trim(); }
+
     // Build print content
     var printContent = `
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Medical Exemption Form - Print</title>
+            <title>Student Medical Exemption - Print</title>
             <style>
                 body {
                     font-family: Arial, sans-serif;
-                    margin: 20px;
+                    margin: 16px;
+                    color: #1f2937;
                 }
-                .print-header {
+                .pdf-hdr {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 4px;
+                }
+                .pdf-hdr td { vertical-align: middle; }
+                .pdf-hdr .logo { width: 90px; text-align: center; }
+                .pdf-hdr .logo img { max-height: 64px; max-width: 84px; }
+                .pdf-hdr .center { text-align: center; padding: 0 8px; }
+                .pdf-hdr .inst-hi-img { height: 18px; width: auto; margin-bottom: 2px; }
+                .pdf-hdr .inst-en {
+                    font-size: 16px; font-weight: bold; color: #102a43; line-height: 1.25;
+                }
+                .pdf-hdr .course-line {
+                    font-size: 12px; font-weight: bold; color: #243b53; margin-top: 4px;
+                }
+                .report-title {
                     text-align: center;
-                    margin-bottom: 20px;
-                    border-bottom: 2px solid #333;
-                    padding-bottom: 10px;
-                }
-                .print-header h2 {
-                    margin: 0;
+                    font-size: 20px;
+                    font-weight: bold;
                     color: #004a93;
-                }
-                .print-header p {
-                    margin: 5px 0;
-                    color: #666;
+                    margin: 8px 0 6px;
+                    padding-bottom: 8px;
+                    border-bottom: 2px solid #004a93;
                 }
                 .print-info {
-                    margin-bottom: 15px;
-                    font-size: 12px;
+                    margin-bottom: 12px;
+                    font-size: 11px;
                     color: #666;
+                    text-align: center;
                 }
                 table {
                     width: 100%;
                     border-collapse: collapse;
                     margin-top: 10px;
                 }
-                table thead {
-                    background-color: #af2910 !important;
-                    color: white !important;
-                }
                 table th,
                 table td {
-                    border: 1px solid #000;
-                    padding: 8px;
+                    border: 1px solid #8fa3bd;
+                    padding: 6px 8px;
                     text-align: left;
                     font-size: 11px;
                 }
-                table th {
+                table thead th {
                     font-weight: bold;
-                    background-color: #af2910;
-                    color: white;
+                    background-color: #004a93 !important;
+                    color: #fff !important;
+                    text-align: center;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
                 }
                 table tbody tr:nth-child(even) {
-                    background-color: #f9f9f9;
+                    background-color: #eef2f8;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
                 }
                 .print-footer {
-                    margin-top: 20px;
+                    margin-top: 18px;
                     text-align: center;
                     font-size: 10px;
                     color: #666;
@@ -1358,23 +1714,27 @@ function printTable() {
                     padding-top: 10px;
                 }
                 @media print {
-                    @page {
-                        margin: 1cm;
-                    }
-                    body {
-                        margin: 0;
-                    }
+                    @page { size: A4 landscape; margin: 10mm; }
+                    body { margin: 0; }
                 }
             </style>
         </head>
-        <body>
-            <div class="print-header">
-                <h2>Medical Exemption Form</h2>
-                <p>Lal Bahadur Shastri National Academy of Administration</p>
-                <p>Print Date: ${dateStr}</p>
-            </div>
+        <body onload="window.focus(); window.print();">
+            <table class="pdf-hdr">
+                <tr>
+                    <td class="logo"><img src="${logoLeft}" alt=""></td>
+                    <td class="center">
+                        <img class="inst-hi-img" src="${titleHindi}" alt="">
+                        <div class="inst-en">Lal Bahadur Shastri National Academy of Administration, Mussoorie</div>
+                        ${courseName ? '<div class="course-line">' + courseName + '</div>' : ''}
+                    </td>
+                    <td class="logo"><img src="${logoRight}" alt=""></td>
+                </tr>
+            </table>
+            <div class="report-title">Student Medical Exemption</div>
             <div class="print-info">
                 ${getFilterInfo()}
+                <div>Print Date: ${dateStr}</div>
             </div>
             ${tableHTML}
             <div class="print-footer">
@@ -1384,14 +1744,11 @@ function printTable() {
         </html>
     `;
 
+    printWindow.document.open();
     printWindow.document.write(printContent);
     printWindow.document.close();
-
-    // Wait for content to load, then print
-    printWindow.onload = function() {
-        printWindow.print();
-        printWindow.close();
-    };
+    // Printing is triggered by the written document's own <body onload> so it
+    // fires only after the header logos have finished loading.
 }
 </script>
 
