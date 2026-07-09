@@ -161,7 +161,7 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
             'Category',
             'IPD/OPD/After OPD/Referral',
             'PT/ Outdoor Advise',
-            'Provisional Diagnosis/ Remarks',
+            'Diagnosis / Remarks',
             'Document',
         ];
     }
