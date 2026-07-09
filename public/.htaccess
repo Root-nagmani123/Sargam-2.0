@@ -20,3 +20,46 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# ─────────────────────────────────────────────────────────────────────
+# Static asset performance: gzip compression + browser caching.
+# All blocks are guarded by <IfModule> so a host without the module
+# simply skips them (no 500). Added for login/landing page HAR tuning.
+# ─────────────────────────────────────────────────────────────────────
+
+# Gzip text-based responses (CSS/JS/SVG/JSON/HTML/fonts). Already-compressed
+# binaries (png/jpg/webp/woff2) are intentionally left alone.
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain text/html text/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE text/javascript application/javascript application/x-javascript
+    AddOutputFilterByType DEFLATE application/json application/xml application/rss+xml
+    AddOutputFilterByType DEFLATE image/svg+xml
+    AddOutputFilterByType DEFLATE font/ttf font/otf application/vnd.ms-fontobject
+</IfModule>
+
+# Browser caching. Durations are tiered because this app serves un-versioned
+# asset filenames: fonts never change (1 year); images rarely (30 days);
+# CSS/JS may change on deploy, so keep them short (7 days) to avoid stale UI.
+# mod_expires emits both Expires and Cache-Control: max-age.
+<IfModule mod_expires.c>
+    ExpiresActive On
+
+    ExpiresByType font/woff              "access plus 1 year"
+    ExpiresByType font/woff2             "access plus 1 year"
+    ExpiresByType font/ttf               "access plus 1 year"
+    ExpiresByType font/otf               "access plus 1 year"
+    ExpiresByType application/vnd.ms-fontobject "access plus 1 year"
+
+    ExpiresByType image/png              "access plus 1 month"
+    ExpiresByType image/jpeg             "access plus 1 month"
+    ExpiresByType image/gif              "access plus 1 month"
+    ExpiresByType image/webp             "access plus 1 month"
+    ExpiresByType image/svg+xml          "access plus 1 month"
+    ExpiresByType image/x-icon           "access plus 1 month"
+    ExpiresByType image/vnd.microsoft.icon "access plus 1 month"
+
+    ExpiresByType text/css               "access plus 7 days"
+    ExpiresByType text/javascript        "access plus 7 days"
+    ExpiresByType application/javascript "access plus 7 days"
+</IfModule>
