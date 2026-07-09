@@ -63,29 +63,31 @@ class StudentMedicalExemptionController extends Controller
 
                     $query->where(function ($q) use ($search) {
 
+                        // Consistent "contains" match across every searchable field so a
+                        // term is found no matter where it sits in the value.
                         $q->whereHas('student', function ($qs) use ($search) {
-                            $qs->where('display_name', 'like', "{$search}%")
+                            $qs->where('display_name', 'like', "%{$search}%")
                                ->orWhere('generated_OT_code', 'like', "%{$search}%");
                         })
 
                         ->orWhereHas('course', function ($qs) use ($search) {
-                            $qs->where('course_name', 'like', "{$search}%");
+                            $qs->where('course_name', 'like', "%{$search}%");
                         })
 
                         ->orWhereHas('employee', function ($qs) use ($search) {
-                            $qs->where('first_name', 'like', "{$search}%")
-                               ->orWhere('last_name', 'like', "{$search}%");
+                            $qs->where('first_name', 'like', "%{$search}%")
+                               ->orWhere('last_name', 'like', "%{$search}%");
                         })
 
                         ->orWhereHas('category', function ($qs) use ($search) {
-                            $qs->where('exemp_category_name', 'like', "{$search}%");
+                            $qs->where('exemp_category_name', 'like', "%{$search}%");
                         })
 
                         ->orWhereHas('speciality', function ($qs) use ($search) {
-                            $qs->where('speciality_name', 'like', "{$search}%");
+                            $qs->where('speciality_name', 'like', "%{$search}%");
                         })
 
-                        ->orWhere('opd_category', 'like', "{$search}%")
+                        ->orWhere('opd_category', 'like', "%{$search}%")
                         ->orWhere('Description', 'like', "%{$search}%")
                         ->orWhere('pt_outdoor_advise', 'like', "%{$search}%");
                     });
@@ -498,18 +500,23 @@ class StudentMedicalExemptionController extends Controller
             'active_inactive' => 'nullable|boolean',
             'Doc_upload' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:5120',
         ], [
-            'course_master_pk.required' => 'Please select an officer trainee.',
+            'course_master_pk.required' => 'Please select a course.',
             'student_master_pk.required' => 'Please select an officer trainee.',
+            'employee_master_pk.required' => 'The treating doctor is required.',
+            'exemption_category_master_pk.required' => 'Please select an exemption category.',
+            'exemption_medical_speciality_pk.required' => 'Please select a medical speciality.',
             'opd_category.required' => 'Please select IPD/OPD/After OPD/Referral.',
-            'departure_date.required' => 'The departure date is required.',
-            'departure_time.required' => 'The departure time is required.',
-            'to_date.after_or_equal' => 'The departure date/time must be after the arrival date/time.',
+            'arrival_date.required' => 'The start date is required.',
+            'arrival_time.required' => 'The start time is required.',
+            'departure_date.required' => 'The end date is required.',
+            'departure_time.required' => 'The end time is required.',
+            'to_date.after_or_equal' => 'The end date/time must be after the start date/time.',
             'Doc_upload.file'  => 'The attachment must be a valid file.',
             'Doc_upload.mimes' => 'Only PDF, JPG, JPEG, PNG, DOC, or DOCX files are allowed.',
             'Doc_upload.max'   => 'The attachment file must not exceed 5 MB (5120 KB).',
         ]);
 
-        // Days = inclusive span between arrival and departure dates.
+        // Days = inclusive span between start and end dates.
         $validated['days'] = $this->computeDays($validated['from_date'], $validated['to_date']);
         // Strip the split-input helpers (not table columns).
         unset($validated['arrival_date'], $validated['arrival_time'], $validated['departure_date'], $validated['departure_time']);
@@ -702,12 +709,16 @@ class StudentMedicalExemptionController extends Controller
             'active_inactive' => 'required|boolean',
             'Doc_upload' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:5120',
         ], [
-            'course_master_pk.required' => 'Please select an officer trainee.',
+            'course_master_pk.required' => 'Please select a course.',
             'student_master_pk.required' => 'Please select an officer trainee.',
+            'exemption_category_master_pk.required' => 'Please select an exemption category.',
+            'exemption_medical_speciality_pk.required' => 'Please select a medical speciality.',
             'opd_category.required' => 'Please select IPD/OPD/After OPD/Referral.',
-            'departure_date.required' => 'The departure date is required.',
-            'departure_time.required' => 'The departure time is required.',
-            'to_date.after_or_equal' => 'The departure date/time must be after the arrival date/time.',
+            'arrival_date.required' => 'The start date is required.',
+            'arrival_time.required' => 'The start time is required.',
+            'departure_date.required' => 'The end date is required.',
+            'departure_time.required' => 'The end time is required.',
+            'to_date.after_or_equal' => 'The end date/time must be after the start date/time.',
             'Doc_upload.file'  => 'The attachment must be a valid file.',
             'Doc_upload.mimes' => 'Only PDF, JPG, JPEG, PNG, DOC, or DOCX files are allowed.',
             'Doc_upload.max'   => 'The attachment file must not exceed 5 MB (5120 KB).',

@@ -135,12 +135,12 @@
             'Category' => 'col-category',
             'IPD/OPD/After OPD/Referral' => 'col-opd',
             'PT/ Outdoor Advise' => 'col-pt-advise',
-            'Provisional Diagnosis/ Remarks' => 'col-remarks',
+            'Diagnosis / Remarks' => 'col-remarks',
             'Document' => 'col-document',
         ];
         $wideHeadings = [
             'PT/ Outdoor Advise',
-            'Provisional Diagnosis/ Remarks',
+            'Diagnosis / Remarks',
         ];
     @endphp
     <table class="data-table">
