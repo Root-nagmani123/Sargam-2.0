@@ -42,6 +42,12 @@
     <!-- Preload the LCP hero carousel image so it downloads before the carousel HTML/CSS is parsed -->
     <link rel="preload" as="image" href="{{ asset('images/carasoul/1.webp') }}" fetchpriority="high">
 
+    @php
+        // Cache-busting versioned asset URL: appends the file's mtime so long-term
+        // (1-year, immutable) caching is safe — the URL changes whenever the file does.
+        $assetV = fn (string $p) => asset($p) . '?v=' . (@filemtime(public_path($p)) ?: 1);
+    @endphp
+
     <!-- Bootstrap 5.3.6 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
@@ -51,7 +57,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <link href="{{asset('admin_assets/css/accesibility-style_v1.css')}}" rel="stylesheet">
+    <link href="{{ $assetV('admin_assets/css/accesibility-style_v1.css') }}" rel="stylesheet">
 
     <title>Login - Sargam | LBSNAA</title>
 
@@ -1134,8 +1140,13 @@
                                 <span class="d-none d-sm-inline">| Government of India</span>
                             </div>
                             <a href="{{ url('/') }}" class="d-none d-lg-inline-flex align-items-center text-decoration-none" aria-label="LBSNAA Home">
-                                <img src="{{ asset('admin_assets/images/logos/logo.png') }}"
-                                    alt="LBSNAA - Lal Bahadur Shastri National Academy of Administration" loading="eager" onerror="this.style.display='none'" class="header-lbsnaa" style="width: 180px; height: auto;">
+                                {{-- Right-sized web variants (400px) instead of the 1193px shared logo.png,
+                                     which stays in place for PDF/print exports. WebP with PNG fallback. --}}
+                                <picture>
+                                    <source srcset="{{ $assetV('admin_assets/images/logos/logo-web.webp') }}" type="image/webp">
+                                    <img src="{{ $assetV('admin_assets/images/logos/logo-web.png') }}"
+                                        alt="LBSNAA - Lal Bahadur Shastri National Academy of Administration" loading="eager" onerror="this.style.display='none'" class="header-lbsnaa" style="width: 180px; height: auto;">
+                                </picture>
                             </a>
                         </div>
                         <div class="d-none d-lg-flex align-items-center">
@@ -1154,7 +1165,7 @@
             <div class="login-card">
                 <!-- Logo & Title -->
                 <div class="login-logo">
-                    <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" 
+                    <img src="{{ $assetV('admin_assets/images/logos/logo.svg') }}"
                         alt="Sargam - LBSNAA Portal"
                         loading="eager"
                         class="d-block mx-auto">

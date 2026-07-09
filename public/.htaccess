@@ -38,9 +38,10 @@
     AddOutputFilterByType DEFLATE font/ttf font/otf application/vnd.ms-fontobject
 </IfModule>
 
-# Browser caching. Durations are tiered because this app serves un-versioned
-# asset filenames: fonts never change (1 year); images rarely (30 days);
-# CSS/JS may change on deploy, so keep them short (7 days) to avoid stale UI.
+# Long-term browser caching. Fonts and images get 1 year (they rarely change;
+# the login page appends ?v=<mtime> to its critical assets so a new file always
+# gets a new URL). CSS/JS get 1 month because most are served with un-versioned
+# names and change on deploy — long enough to help, short enough to avoid stale UI.
 # mod_expires emits both Expires and Cache-Control: max-age.
 <IfModule mod_expires.c>
     ExpiresActive On
@@ -51,15 +52,23 @@
     ExpiresByType font/otf               "access plus 1 year"
     ExpiresByType application/vnd.ms-fontobject "access plus 1 year"
 
-    ExpiresByType image/png              "access plus 1 month"
-    ExpiresByType image/jpeg             "access plus 1 month"
-    ExpiresByType image/gif              "access plus 1 month"
-    ExpiresByType image/webp             "access plus 1 month"
-    ExpiresByType image/svg+xml          "access plus 1 month"
-    ExpiresByType image/x-icon           "access plus 1 month"
-    ExpiresByType image/vnd.microsoft.icon "access plus 1 month"
+    ExpiresByType image/png              "access plus 1 year"
+    ExpiresByType image/jpeg             "access plus 1 year"
+    ExpiresByType image/gif              "access plus 1 year"
+    ExpiresByType image/webp             "access plus 1 year"
+    ExpiresByType image/svg+xml          "access plus 1 year"
+    ExpiresByType image/x-icon           "access plus 1 year"
+    ExpiresByType image/vnd.microsoft.icon "access plus 1 year"
 
-    ExpiresByType text/css               "access plus 7 days"
-    ExpiresByType text/javascript        "access plus 7 days"
-    ExpiresByType application/javascript "access plus 7 days"
+    ExpiresByType text/css               "access plus 1 month"
+    ExpiresByType text/javascript        "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+</IfModule>
+
+# Mark long-lived, stable/versioned assets (images + fonts) as immutable so
+# browsers never revalidate them within the cache window.
+<IfModule mod_headers.c>
+    <FilesMatch "\.(png|jpe?g|gif|webp|svg|ico|woff2?|ttf|otf|eot)$">
+        Header append Cache-Control "immutable"
+    </FilesMatch>
 </IfModule>
