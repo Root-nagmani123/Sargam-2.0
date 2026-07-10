@@ -19,9 +19,31 @@
     font-size: 0.875rem;
     color: var(--ds-ink);
     margin-bottom: var(--ds-space-1);
+    line-height: 1.35;
+    display: block;
 }
 .sme-form .form-control,
-.sme-form .form-select { min-height: 44px; border-radius: var(--ds-radius-2); }
+.sme-form .form-select {
+    min-height: 44px;
+    border-radius: var(--ds-radius-2);
+    width: 100%;
+}
+.sme-form .select2-container {
+    width: 100% !important;
+    height: 44px !important;
+}
+.sme-form select.select2-hidden-accessible {
+    min-height: 0 !important;
+    height: 1px !important;
+}
+.sme-form .sme-field {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+.sme-form .row > [class*="col-"] {
+    position: relative;
+}
 .sme-form input[readonly].sme-days { background: var(--bs-secondary-bg, #eef1f4); color: var(--ds-ink); }
 .sme-form textarea.form-control {
     min-height: 88px;
@@ -120,73 +142,89 @@
                 <h6 class="sme-section-title mt-4">Exemption and Other Information</h6>
                 <hr class="my-3">
                 <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">IPD/OPD/After OPD/Referral/PT Exemption <span class="text-danger">*</span></label>
-                        <select name="opd_category" class="form-select" required>
-                            <option value="">Select Category</option>
-                            @foreach($opdOptions as $opt)
-                            <option value="{{ $opt }}" {{ $record->opd_category == $opt ? 'selected' : '' }}>{{ $opt }}</option>
-                            @endforeach
-                        </select>
-                        @error('opd_category')<small class="text-danger">{{ $message }}</small>@enderror
+                    <div class="col-md-6">
+                        <div class="sme-field">
+                            <label class="form-label">IPD/OPD/After OPD/Referral/PT Exemption <span class="text-danger">*</span></label>
+                            <select name="opd_category" class="form-select" required>
+                                <option value="">Select Category</option>
+                                @foreach($opdOptions as $opt)
+                                <option value="{{ $opt }}" {{ $record->opd_category == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                                @endforeach
+                            </select>
+                            @error('opd_category')<small class="text-danger">{{ $message }}</small>@enderror
+                        </div>
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">Start Date <span class="text-danger">*</span></label>
-                        <input type="date" name="arrival_date" id="arrivalDate" class="form-control" required value="{{ $arrDate }}">
-                        @error('arrival_date')<small class="text-danger">{{ $message }}</small>@enderror
+                    <div class="col-md-6">
+                        <div class="sme-field">
+                            <label class="form-label">Medical Speciality <span class="text-danger">*</span></label>
+                            <select name="exemption_medical_speciality_pk" class="form-select" required>
+                                <option value="">Select Speciality</option>
+                                @foreach($specialities as $spec)
+                                <option value="{{ $spec->pk }}" {{ $record->exemption_medical_speciality_pk == $spec->pk ? 'selected' : '' }}>
+                                    {{ $spec->speciality_name }}
+                                </option>
+                                @endforeach
+                            </select>
+                            @error('exemption_medical_speciality_pk')<small class="text-danger">{{ $message }}</small>@enderror
+                        </div>
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">Start Time <span class="text-danger">*</span></label>
-                        <input type="time" name="arrival_time" id="arrivalTime" class="form-control" required value="{{ $arrTime }}">
-                        @error('arrival_time')<small class="text-danger">{{ $message }}</small>@enderror
+                    <div class="col-md-3 col-6">
+                        <div class="sme-field">
+                            <label class="form-label">Start Date <span class="text-danger">*</span></label>
+                            <input type="date" name="arrival_date" id="arrivalDate" class="form-control" required value="{{ $arrDate }}">
+                            @error('arrival_date')<small class="text-danger">{{ $message }}</small>@enderror
+                        </div>
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">End Date <span class="text-danger">*</span></label>
-                        <input type="date" name="departure_date" id="departureDate" class="form-control" required value="{{ $depDate }}">
-                        @error('departure_date')<small class="text-danger">{{ $message }}</small>@enderror
+                    <div class="col-md-3 col-6">
+                        <div class="sme-field">
+                            <label class="form-label">Start Time <span class="text-danger">*</span></label>
+                            <input type="time" name="arrival_time" id="arrivalTime" class="form-control" required value="{{ $arrTime }}">
+                            @error('arrival_time')<small class="text-danger">{{ $message }}</small>@enderror
+                        </div>
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">End Time <span class="text-danger">*</span></label>
-                        <input type="time" name="departure_time" id="departureTime" class="form-control" required value="{{ $depTime }}">
-                        @error('departure_time')<small class="text-danger">{{ $message }}</small>@enderror
+                    <div class="col-md-3 col-6">
+                        <div class="sme-field">
+                            <label class="form-label">End Date <span class="text-danger">*</span></label>
+                            <input type="date" name="departure_date" id="departureDate" class="form-control" required value="{{ $depDate }}">
+                            @error('departure_date')<small class="text-danger">{{ $message }}</small>@enderror
+                        </div>
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">Medical Speciality <span class="text-danger">*</span></label>
-                        <select name="exemption_medical_speciality_pk" class="form-select" required>
-                            <option value="">Select Speciality</option>
-                            @foreach($specialities as $spec)
-                            <option value="{{ $spec->pk }}" {{ $record->exemption_medical_speciality_pk == $spec->pk ? 'selected' : '' }}>
-                                {{ $spec->speciality_name }}
-                            </option>
-                            @endforeach
-                        </select>
-                        @error('exemption_medical_speciality_pk')<small class="text-danger">{{ $message }}</small>@enderror
+                    <div class="col-md-3 col-6">
+                        <div class="sme-field">
+                            <label class="form-label">End Time <span class="text-danger">*</span></label>
+                            <input type="time" name="departure_time" id="departureTime" class="form-control" required value="{{ $depTime }}">
+                            @error('departure_time')<small class="text-danger">{{ $message }}</small>@enderror
+                        </div>
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">Days</label>
-                        <input type="number" name="days" id="daysField" class="form-control sme-days" placeholder="eg. 6" readonly value="{{ $record->days }}">
+                    <div class="col-md-3 col-6">
+                        <div class="sme-field">
+                            <label class="form-label">Days</label>
+                            <input type="number" name="days" id="daysField" class="form-control sme-days" placeholder="eg. 6" readonly value="{{ $record->days }}">
+                        </div>
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">Status <span class="text-danger">*</span></label>
-                        <select name="active_inactive" class="form-select" required>
-                            <option value="1" {{ $record->active_inactive == 1 ? 'selected' : '' }}>Active</option>
-                            <option value="0" {{ $record->active_inactive == 0 ? 'selected' : '' }}>Inactive</option>
-                        </select>
-                        @error('active_inactive')<small class="text-danger">{{ $message }}</small>@enderror
+                    <div class="col-md-3 col-6">
+                        <div class="sme-field">
+                            <label class="form-label">Status <span class="text-danger">*</span></label>
+                            <select name="active_inactive" class="form-select" required>
+                                <option value="1" {{ $record->active_inactive == 1 ? 'selected' : '' }}>Active</option>
+                                <option value="0" {{ $record->active_inactive == 0 ? 'selected' : '' }}>Inactive</option>
+                            </select>
+                            @error('active_inactive')<small class="text-danger">{{ $message }}</small>@enderror
+                        </div>
                     </div>
 
                     <div class="col-12">
                         <div class="row g-3 sme-remarks-row">
                             <div class="col-md-6">
                                 <label class="form-label">Diagnosis / Remarks</label>
-                                <textarea name="Description" class="form-control" rows="3" placeholder="eg. EEnter remarks...">{{ $record->Description }}</textarea>
+                                <textarea name="Description" class="form-control" rows="3" placeholder="eg. Enter remarks...">{{ $record->Description }}</textarea>
                                 @error('Description')<small class="text-danger">{{ $message }}</small>@enderror
                             </div>
 
@@ -227,7 +265,10 @@
 $(document).ready(function() {
     // Turn every select into a Select2 dropdown styled (via CSS) like .form-select.
     $('.sme-form select').each(function(){
-        $(this).select2({ width: '100%', allowClear: false });
+        var $sel = $(this);
+        var $parent = $sel.closest('.sme-field');
+        if (!$parent.length) { $parent = $sel.parent(); }
+        $sel.select2({ width: '100%', dropdownParent: $parent, allowClear: false });
     });
 
     // Course -> Officer Trainee cascade (reloads the OT list when the course changes).

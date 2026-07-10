@@ -230,6 +230,17 @@ select.sme-filter-control {
 #smeFormBody .is-invalid { border-color: var(--bs-danger); }
 #smeFormBody .form-control,
 #smeFormBody .form-select { min-height: 44px; border-radius: var(--ds-radius-2); }
+/* Let Select2 panels escape the modal body instead of being clipped or offset. */
+#smeFormModal .modal-content,
+#smeFormModal .modal-body { overflow: visible; }
+#smeFormBody .sme-field {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+#smeFormBody .row > [class*="col-"] {
+    position: relative;
+}
 /* Select2 dropdowns in the Add / Edit modal are themed in css/select2-theme.css
    (Bootstrap .form-select look, chevron caret, matching panel). */
 #smeFormBody textarea.form-control {
@@ -1196,14 +1207,16 @@ $(document).ready(function() {
         });
 
         // Turn EVERY <select> in the injected form into a Select2 dropdown, styled
-        // (via CSS) to match Bootstrap's .form-select. dropdownParent keeps the
-        // panel inside the modal so it isn't clipped and its search box is focusable.
+        // (via CSS) to match Bootstrap's .form-select. Attach the panel to the field
+        // wrapper (not the modal root) so it sits flush under the control with no gap.
         if ($form.length && $.fn.select2){
             $form.find('select').each(function(){
                 var $sel = $(this).removeClass('select2');
+                var $parent = $sel.closest('.sme-field');
+                if (!$parent.length) { $parent = $sel.parent(); }
                 $sel.select2({
                     width: '100%',
-                    dropdownParent: $('#smeFormModal'),
+                    dropdownParent: $parent,
                     allowClear: false
                 });
             });
