@@ -782,7 +782,7 @@ select.sme-filter-control {
                                 <th class="col">Duration</th>
                                 <th class="col">Days</th>
                                 <th class="col">Category</th>
-                                <th class="col">IPD/OPD/After OPD/Referral</th>
+                                <th class="col">IPD/OPD/After OPD/Referral/PT Exemption</th>
                                 <th class="col">PT/ Outdoor Advise</th>
                                 <th class="col">Diagnosis / Remarks</th>
                                 <th class="col sme-col-no-print">Document</th>
@@ -1438,7 +1438,7 @@ $(document).ready(function() {
             '</div>' +
             '<h6 class="sme-view-section-title">Exemption and Other Information</h6>' +
             '<div class="row g-3">' +
-                smeViewField('IPD/OPD/After OPD/Referral', data.opd_category) +
+                smeViewField('IPD/OPD/After OPD/Referral/PT Exemption', data.opd_category) +
                 smeViewField('Start Date', data.arrival_date) +
                 smeViewField('Start Time', data.arrival_time) +
                 smeViewField('End Date', data.departure_date) +

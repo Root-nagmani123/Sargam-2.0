@@ -52,7 +52,7 @@
 
 @php
     $doctorName = Auth::user() ? trim((Auth::user()->first_name ?? '') . ' ' . (Auth::user()->last_name ?? '')) : '';
-    $opdOptions = ['IPD', 'OPD', 'After OPD', 'Referral'];
+    $opdOptions = ['IPD', 'OPD', 'After OPD', 'Referral', 'PT Exemption'];
 @endphp
 
 <div class="container-fluid">
@@ -118,7 +118,7 @@
                 <hr class="my-3">
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label">IPD/OPD/After OPD/Referral <span class="text-danger">*</span></label>
+                        <label class="form-label">IPD/OPD/After OPD/Referral/PT Exemption <span class="text-danger">*</span></label>
                         <select name="opd_category" class="form-select" required>
                             <option value="">Select Category</option>
                             @foreach($opdOptions as $opt)

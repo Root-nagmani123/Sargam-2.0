@@ -133,7 +133,7 @@
             'Duration' => 'col-duration',
             'Days' => 'col-days',
             'Category' => 'col-category',
-            'IPD/OPD/After OPD/Referral' => 'col-opd',
+            'IPD/OPD/After OPD/Referral/PT Exemption' => 'col-opd',
             'PT/ Outdoor Advise' => 'col-pt-advise',
             'Diagnosis / Remarks' => 'col-remarks',
             'Document' => 'col-document',

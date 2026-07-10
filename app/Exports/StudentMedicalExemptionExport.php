@@ -159,7 +159,7 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
             'Duration',
             'Days',
             'Category',
-            'IPD/OPD/After OPD/Referral',
+            'IPD/OPD/After OPD/Referral/PT Exemption',
             'PT/ Outdoor Advise',
             'Diagnosis / Remarks',
             'Document',

@@ -46,7 +46,7 @@
     $arrTime = $record->from_date ? \Carbon\Carbon::parse($record->from_date)->format('H:i') : '';
     $depDate = $record->to_date ? \Carbon\Carbon::parse($record->to_date)->format('Y-m-d') : '';
     $depTime = $record->to_date ? \Carbon\Carbon::parse($record->to_date)->format('H:i') : '';
-    $opdOptions = ['IPD', 'OPD', 'After OPD', 'Referral'];
+    $opdOptions = ['IPD', 'OPD', 'After OPD', 'Referral', 'PT Exemption'];
     if ($record->opd_category && !in_array($record->opd_category, $opdOptions, true)) {
         array_unshift($opdOptions, $record->opd_category);
     }
@@ -121,7 +121,7 @@
                 <hr class="my-3">
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label">IPD/OPD/After OPD/Referral <span class="text-danger">*</span></label>
+                        <label class="form-label">IPD/OPD/After OPD/Referral/PT Exemption <span class="text-danger">*</span></label>
                         <select name="opd_category" class="form-select" required>
                             <option value="">Select Category</option>
                             @foreach($opdOptions as $opt)
