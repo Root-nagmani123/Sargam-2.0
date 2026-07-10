@@ -119,8 +119,8 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label">Exemption Category <span class="text-danger">*</span></label>
-                        <select name="exemption_category_master_pk" class="form-select" required>
+                        <label class="form-label">Exemption Category</label>
+                        <select name="exemption_category_master_pk" class="form-select">
                             <option value="">Select Category</option>
                             @foreach($categories as $cat)
                             <option value="{{ $cat->pk }}" {{ old('exemption_category_master_pk') == $cat->pk ? 'selected' : '' }}>
@@ -182,16 +182,16 @@
 
                     <div class="col-md-3 col-6">
                         <div class="sme-field">
-                            <label class="form-label">End Date <span class="text-danger">*</span></label>
-                            <input type="date" name="departure_date" id="departureDate" class="form-control sme-dep" required value="{{ old('departure_date') }}">
+                            <label class="form-label">End Date</label>
+                            <input type="date" name="departure_date" id="departureDate" class="form-control sme-dep" value="{{ old('departure_date') }}">
                             @error('departure_date')<small class="text-danger">{{ $message }}</small>@enderror
                         </div>
                     </div>
 
                     <div class="col-md-3 col-6">
                         <div class="sme-field">
-                            <label class="form-label">End Time <span class="text-danger">*</span></label>
-                            <input type="time" name="departure_time" id="departureTime" class="form-control" required value="{{ old('departure_time') }}">
+                            <label class="form-label">End Time</label>
+                            <input type="time" name="departure_time" id="departureTime" class="form-control" value="{{ old('departure_time') }}">
                             @error('departure_time')<small class="text-danger">{{ $message }}</small>@enderror
                         </div>
                     </div>
