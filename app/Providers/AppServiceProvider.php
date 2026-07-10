@@ -48,6 +48,19 @@ class AppServiceProvider extends ServiceProvider
             $view->with('sidebarMenus', $menuService->getMenus());
         });
 
+        // Keep the programme (?form=) token on the FC header login/logout links so it
+        // is never dropped as the trainee moves through the public registration funnel.
+        view()->composer('fc.layouts.header', function ($view) {
+            if ($view->offsetExists('fcHeaderFormQuery')) {
+                return;
+            }
+
+            $view->with(
+                'fcHeaderFormQuery',
+                app(\App\Services\FC\FcRegistrationIntentService::class)->formQueryForHeaderLinks(request())
+            );
+        });
+
         view()->composer(['admin.*', 'components.breadcrum'], function ($view) {
             if (! auth()->check()) {
                 return;

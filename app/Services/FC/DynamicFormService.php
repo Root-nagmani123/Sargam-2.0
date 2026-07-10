@@ -1112,8 +1112,76 @@ class DynamicFormService
         $rules = $this->normalizeExistsTableInRules($rules);
         $rules = $this->appendFieldTypeValidationRules($field, $rules);
         $rules = $this->appendDateOfBirthRule($field, $rules);
+        $rules = $this->syncChoiceConstraintToSource($field, $rules);
 
         return $this->cleanValidationRules($rules);
+    }
+
+    /**
+     * Keep a select/radio field's allow-list constraint aligned with whatever choice
+     * source is currently active — because a dynamic form lets admins switch that source
+     * at any time and the stale rule left behind rejects otherwise-valid values:
+     *
+     *  - Now lookup-backed (lookup_table set): values are table keys, so a leftover
+     *    manual `in:…` list (e.g. in:Indian,Other) is stale → drop it. The field's
+     *    `exists:` rule (if any) still enforces the lookup.
+     *  - Now manual options (no lookup_table): a leftover `exists:…` from a former lookup
+     *    config is stale → drop it, and keep the `in:…` list in sync with the current
+     *    options (e.g. Indian,Other → Indian,RBCS).
+     *
+     * Both the renderer and validator treat lookup_table presence as the active source,
+     * so this detection matches the field's behaviour everywhere.
+     *
+     * @param  FcFormField|FcFormGroupField  $field
+     */
+    private function syncChoiceConstraintToSource(FcFormField|FcFormGroupField $field, string $rules): string
+    {
+        if (! in_array($field->field_type, ['select', 'radio'], true)) {
+            return $rules;
+        }
+
+        // Lookup-backed now → strip any leftover manual allow-list.
+        if (filled($field->lookup_table ?? null)) {
+            $rules = preg_replace('/\|?\bin:[^|]*/', '', $rules) ?? $rules;
+
+            // Keep the existence check bound to the CURRENT lookup config, always — the admin
+            // can repoint a field to a different table/value-column at any time and the rule
+            // must follow, never a stale per-field table. Only the table+column are derived;
+            // the rest of the rule (required, etc.) is preserved.
+            if (preg_match('/\bexists:\s*([^,\s|]+)\s*,\s*([^|,\s]+)/', $rules, $m)) {
+                // language_id fields have their key column resolved upstream
+                // (normalizeLanguageMasterExistsInRules) because language_master mixes pk/id —
+                // keep that column; everyone else uses the field's configured value column.
+                $column = ($field->target_column === 'language_id')
+                    ? trim($m[2])
+                    : (filled($field->lookup_value_column ?? null) ? $field->lookup_value_column : trim($m[2]));
+
+                $rules = preg_replace('/\bexists:[^|]*/', 'exists:'.$field->lookup_table.','.$column, $rules) ?? $rules;
+            }
+
+            return $rules;
+        }
+
+        // Manual now → strip any leftover lookup existence check.
+        $rules = preg_replace('/\|?\bexists:[^|]*/', '', $rules) ?? $rules;
+
+        // Only keep an explicit allow-list in sync; if there is none, leave the rule as-is.
+        if (! preg_match('/\bin:[^|]*/', $rules)) {
+            return $rules;
+        }
+
+        $allowed = collect($field->decoded_options ?? [])
+            ->pluck('value')
+            ->map(fn ($v) => (string) $v)
+            ->filter(fn ($v) => $v !== '')
+            ->values();
+
+        if ($allowed->isEmpty()) {
+            // Options were cleared — drop the stale allow-list rather than reject everything.
+            return preg_replace('/\|?\bin:[^|]*/', '', $rules) ?? $rules;
+        }
+
+        return preg_replace('/\bin:[^|]*/', 'in:'.$allowed->implode(','), $rules) ?? $rules;
     }
 
     /**

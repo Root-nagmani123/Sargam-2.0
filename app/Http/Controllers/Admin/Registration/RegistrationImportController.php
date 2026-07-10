@@ -563,6 +563,13 @@ class RegistrationImportController extends Controller
             $courseMasterPk = (int) $courseMasterPk;
         }
 
+        $phValue = $row['ph_value'] ?? null;
+        if ($phValue === '' || $phValue === null || ! is_numeric($phValue)) {
+            $phValue = null;
+        } else {
+            $phValue = (float) $phValue;
+        }
+
         return [
             'contact_no'        => $contactNo,
             'display_name'      => $row['display_name'] ?? null,
@@ -575,6 +582,7 @@ class RegistrationImportController extends Controller
             'service_master_pk' => $serviceMaster,
             'course_master_pk'  => $courseMasterPk,
             'web_auth'          => $row['web_auth'] ?? null,
+            'ph_value'          => $phValue,
         ];
     }
 
@@ -595,6 +603,7 @@ public function downloadFcRegistrationTemplate(): StreamedResponse
         'service_master_pk',
         'course_master_pk',
         'web_auth',
+        'ph_value',
     ];
 
     $spreadsheet = new Spreadsheet();

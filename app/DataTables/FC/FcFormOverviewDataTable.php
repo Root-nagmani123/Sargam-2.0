@@ -195,28 +195,57 @@ class FcFormOverviewDataTable extends DataTable
         $dt->orderColumn('service_code', 'svc.service_short_name $1');
         $dt->orderColumn('allotted_state', 'st.state_name $1');
 
-        // Custom server-side filtering (replaces DataTables' built-in search)
-        $dt->filter(function ($q) use ($t, $userKey) {
-            $req = request();
+        // Custom server-side filtering — mirrors the controller's fcApplyFormOverviewFilters
+        // so COMPLETE / INCOMPLETE are derived from the step columns (not a raw status match).
+        $steps = $this->steps;
+        $dt->filter(function ($q) use ($t, $userKey, $steps) {
+            $req    = request();
+            $hasFrm = Schema::hasTable('fc_registration_master');
 
             if ($req->filled('f_status')) {
-                $q->where("{$t}.status", $req->f_status);
+                if ($req->f_status === 'COMPLETE') {
+                    foreach ($steps as $step) {
+                        $q->where("{$t}.{$step->tracker_column}", 1);
+                    }
+                } elseif ($req->f_status === 'INCOMPLETE') {
+                    $q->where(function ($sub) use ($t, $steps) {
+                        foreach ($steps as $step) {
+                            $sub->orWhere(function ($q2) use ($t, $step) {
+                                $q2->where("{$t}.{$step->tracker_column}", '!=', 1)
+                                   ->orWhereNull("{$t}.{$step->tracker_column}");
+                            });
+                        }
+                    });
+                } else {
+                    $q->where("{$t}.status", $req->f_status);
+                }
             }
+
             if ($req->filled('f_service_id')) {
-                $q->where('s1.service_id', $req->f_service_id);
+                $sid = $req->f_service_id;
+                $q->where(function ($sub) use ($sid, $hasFrm) {
+                    $sub->where('s1.service_id', $sid);
+                    if ($hasFrm) {
+                        $sub->orWhere('frm.service_master_pk', $sid);
+                    }
+                });
             }
-            if ($req->filled('f_search')) {
-                $term = '%' . $req->f_search . '%';
-                $q->where(function ($sub) use ($term, $t, $userKey) {
+
+            // Accept the custom filter-row box (f_search) and the DataTables built-in
+            // search box (search[value]).
+            $search = trim((string) ($req->input('f_search') ?: $req->input('search.value') ?: ''));
+            if ($search !== '') {
+                $term = '%' . $search . '%';
+                $q->where(function ($sub) use ($term, $t, $userKey, $hasFrm) {
                     $sub->where('s1.full_name', 'like', $term)
+                        ->orWhere('s1.first_name', 'like', $term)
+                        ->orWhere('s1.last_name', 'like', $term)
                         ->orWhere('s1.mobile_no', 'like', $term)
-                        ->orWhere('uc.user_name', 'like', $term);
-                    if ($userKey === 'user_id') {
-                        $sub->orWhere("{$t}.user_id", 'like', $term)
-                            ->orWhere('frm.user_id', 'like', $term)
+                        ->orWhere('uc.user_name', 'like', $term)
+                        ->orWhere("{$t}.{$userKey}", 'like', $term);
+                    if ($hasFrm) {
+                        $sub->orWhere('frm.user_id', 'like', $term)
                             ->orWhere('uc_frm.user_name', 'like', $term);
-                    } else {
-                        $sub->orWhere("{$t}.{$userKey}", 'like', $term);
                     }
                 });
             }

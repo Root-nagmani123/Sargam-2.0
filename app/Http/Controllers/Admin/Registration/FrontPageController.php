@@ -345,11 +345,15 @@ class FrontPageController extends Controller
     // session()->invalidate() flushes the staged roster pk, so the user is fully signed out.
     public function logout(Request $request)
     {
+        // Capture the programme (?form=) token before invalidating the session so the
+        // trainee returns to the same login URL they logged out from.
+        $formQuery = $this->fcRegistrationIntent->formQueryForHeaderLinks($request);
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('fc.login');
+        return redirect()->route('fc.login', $formQuery);
     }
 
     /**
@@ -1067,7 +1071,7 @@ class FrontPageController extends Controller
                 'medical_exemption_doc' => $medicalDocPath,
                 'previous_fc_course_name' => !empty($request->course) ? $request->course : null,
                 'fc_date'                 => !empty($request->year) ? $request->year : null,
-                // 'previous_fc_institution_name' => !empty($request->institution_name) ? $request->institution_name : null,
+                'previous_fc_institution_name' => !empty($request->institution_name) ? $request->institution_name : null,
                 'appearing_roll_no'       => !empty($request->roll_number) ? $request->roll_number : null,
 
             ]

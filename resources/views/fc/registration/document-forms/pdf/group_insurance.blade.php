@@ -102,7 +102,7 @@
         him/them the right to receive, to the extent specified below, any amount that may be sanctioned by the Central
         Government under the Central Government Employees Group Insurance Scheme, 1980, in the event of my death while in
         service or which, having become payable on my attaining the age of superannuation, may remain unpaid at my death.
-        <br><span style="font-size:9.2px;">मैं, {!! $blank($name, '200px') !!} {{ $famHi }}, एतद्द्वारा नीचे उल्लिखित व्यक्ति/व्यक्तियों को नामांकित करता/करती हूँ तथा उन्हें उक्त योजना के अंतर्गत मेरी मृत्यु की स्थिति में स्वीकृत राशि प्राप्त करने का अधिकार प्रदान करता/करती हूँ।</span>
+        <br><span style="font-size:9.2px;">मैं, {!! $blank($data['_hi']['name'] ?? '', '200px') !!} {{ $famHi }}, एतद्द्वारा नीचे उल्लिखित व्यक्ति/व्यक्तियों को नामांकित करता/करती हूँ तथा उन्हें उक्त योजना के अंतर्गत मेरी मृत्यु की स्थिति में स्वीकृत राशि प्राप्त करने का अधिकार प्रदान करता/करती हूँ।</span>
     </div>
 
     <table class="gi">

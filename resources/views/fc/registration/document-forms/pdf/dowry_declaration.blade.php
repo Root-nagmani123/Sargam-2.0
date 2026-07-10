@@ -12,6 +12,7 @@
     $place   = $g('place');
     $dated   = $fmt($data['declaration_date'] ?? '');
     $sigSrc  = $data['_signature_src'][0] ?? null;
+    $hi      = $data['_hi'] ?? [];   // candidate-typed Hindi values (blank if none)
     $blank = function ($v, $w = '160px') {
         $val = ($v !== '' && $v !== null) ? e($v) : '&nbsp;';
         return '<span style="display:inline-block; min-width:'.$w.'; border-bottom:1px solid #000; text-align:center; font-weight:bold; padding:0 4px;">'.$val.'</span>';
@@ -47,21 +48,21 @@
     <div class="title" style="letter-spacing:1px;">घोषणा</div>
     <div class="body">मुझे अखिल भारतीय सेवा (आचरण) नियमावली, 1968 के नियम 11-ए तथा केन्द्रीय सिविल सेवा (आचरण) नियमावली, 1964 के नियम 13-ए (इस पृष्ठ में नीचे पुनः उद्धृत) के उपबंधों की विशेष तौर पर जानकारी दी गई है;</div>
     <div class="body">और मैं आज की तारीख में <b>{{ $maritalHi }}</b> हूँ,</div>
-    <div class="body">मैं, {!! $blank($name, '280px') !!} (परिवीक्षाधीन का नाम) {!! $blank($service, '200px') !!} (सेवा का नाम), परिवीक्षाधीन एतद्द्वारा यह वचन देता/देती हूँ कि मैं —</div>
+    <div class="body">मैं, {!! $blank($hi['name'] ?? '', '280px') !!} (परिवीक्षाधीन का नाम) {!! $blank($hi['svc'] ?? '', '200px') !!} (सेवा का नाम), परिवीक्षाधीन एतद्द्वारा यह वचन देता/देती हूँ कि मैं —</div>
     <div class="clause">(क) न दहेज दूँगा/दूँगी, न दहेज लूँगा/लूँगी और न ही दहेज देने अथवा लेने के लिए दुष्प्रेरित करूँगा/करूँगी, अथवा</div>
     <div class="clause">(ख) वधू अथवा वर (जो भी लागू हो) के माता-पिता या अभिभावक से प्रत्यक्ष अथवा अप्रत्यक्ष रूप से दहेज की मांग नहीं करूँगा/करूँगी।</div>
     <div class="nb">टिप्पणी: यहाँ &ldquo;दहेज&rdquo; से वही अर्थ अभिप्रेत है जो दहेज प्रतिषेध अधिनियम, 1961 (1961 का 28) में दिया गया है।</div>
     <div class="body">मैंने यह बात भली-भांति जानते हुए इस घोषणा पर हस्ताक्षर किए हैं कि दहेज से संबंधित नियमों अथवा विधि का उल्लंघन करने पर मेरे विरुद्ध उपयुक्त कार्रवाई की जा सकती है।</div>
     <div class="sign">
         <table style="width:100%;"><tr>
-            <td>स्थान: {!! $blank($place, '160px') !!}</td>
+            <td>स्थान: {!! $blank($hi['place'] ?? '', '160px') !!}</td>
             <td style="text-align:right;">हस्ताक्षर: @if($sigSrc)<img src="{{ $sigSrc }}" class="sig-img">@else {!! $blank('', '180px') !!} @endif</td>
         </tr></table>
-        <div style="margin-top:6px;">तारीख: {!! $blank($dated, '150px') !!} &nbsp;&nbsp; (नाम साफ अक्षरों में): {!! $blank($name, '230px') !!}</div>
+        <div style="margin-top:6px;">तारीख: {!! $blank($hi['ddate'] ?? '', '150px') !!} &nbsp;&nbsp; (नाम साफ अक्षरों में): {!! $blank($hi['name'] ?? '', '230px') !!}</div>
     </div>
     <div class="copy">प्रतिलिपि:
-        <div>(माता-पिता / अभिभावक का नाम): {!! $blank($pgname, '280px') !!}</div>
-        <div>पता: {!! $blank($pgaddr, '360px') !!}</div>
+        <div>(माता-पिता / अभिभावक का नाम): {!! $blank($hi['pgname'] ?? '', '280px') !!}</div>
+        <div>पता: {!! $blank($hi['pgaddr'] ?? '', '360px') !!}</div>
     </div>
 
     <pagebreak />

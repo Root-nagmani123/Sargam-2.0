@@ -7,6 +7,7 @@
     $service = trim((string) ($data['service'] ?? ''));
     $dated   = $fmtDate($data['declaration_date'] ?? '');
     $sigSrc  = $data['_signature_src'][0] ?? null;
+    $hi      = $data['_hi'] ?? [];   // candidate-typed Hindi values (blank if none)
 
     // A ruled fill-in-the-blank: shows the value (or an empty ruled space).
     $blank = function ($value, $minWidth = '180px') {
@@ -81,7 +82,7 @@
     <div class="doc-title">शपथ / पुष्टि प्रपत्र</div>
 
     <div class="doc-body">
-        &ldquo;मैं {!! $blank($name, '250px') !!} (परिवीक्षाधीन का नाम) शपथ लेता/लेती हूँ/सत्यनिष्ठा से
+        &ldquo;मैं {!! $blank($hi['name'] ?? '', '250px') !!} (परिवीक्षाधीन का नाम) शपथ लेता/लेती हूँ/सत्यनिष्ठा से
         प्रतिज्ञा करता/करती हूँ कि मैं भारत, तथा विधि द्वारा यथास्थापित भारत के संविधान के प्रति वफादार
         एवं सत्यनिष्ठ रहूँगा/रहूँगी, मैं भारत की प्रभुसत्ता एवं अखण्डता बनाये रखूँगा/रखूँगी तथा अपने पद के
         कर्तव्यों को निष्ठा, ईमानदारी एवं निष्पक्षता के साथ निभाऊँगा/निभाऊँगी।
@@ -97,16 +98,16 @@
         </tr>
         <tr>
             <td class="lbl">नाम</td>
-            <td style="border-bottom:1px solid #000; text-align:center; font-weight:bold;">{{ $name ?: ' ' }}</td>
+            <td style="border-bottom:1px solid #000; text-align:center; font-weight:bold;">{{ ($hi['name'] ?? '') ?: ' ' }}</td>
         </tr>
         <tr>
             <td class="lbl">सेवा</td>
-            <td style="border-bottom:1px solid #000; text-align:center; font-weight:bold;">{{ $service ?: ' ' }}</td>
+            <td style="border-bottom:1px solid #000; text-align:center; font-weight:bold;">{{ ($hi['service'] ?? '') ?: ' ' }}</td>
         </tr>
     </table>
 
     <div class="doc-place">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी, मसूरी</div>
-    <div style="margin-top:10px;">दिनांक {!! $blank($dated, '170px') !!}</div>
+    <div style="margin-top:10px;">दिनांक {!! $blank($hi['date'] ?? '', '170px') !!}</div>
 
     <div class="doc-note">(शपथ ग्रहण के लिए नैतिक आपत्तिकर्ता उपर्युक्त प्रपत्र में सत्यनिष्ठ बनने हेतु प्रतिज्ञा करें)</div>
     <div class="doc-accepted">स्वीकृत</div>
