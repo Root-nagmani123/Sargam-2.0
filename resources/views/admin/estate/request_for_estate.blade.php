@@ -11,23 +11,26 @@
     }
 @endphp
 @section($estateSelfHomeTab ? 'content' : 'setup_content')
-<div class="container-fluid px-2 px-sm-3 px-md-4">
+<div class="container-fluid px-2 px-sm-3 px-md-4 estate-request-page estate-modernized">
    <x-breadcrum title="Request For Estate" />
    <x-estate-workflow-stepper current="request-for-estate" />
 
     <x-session_message />
 
-    <div class="card shadow-sm border-0 rounded-3">
-        <div class="card-body p-4 p-lg-5">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
+    <div class="ds-card">
+        <div class="ds-card-body p-4 p-lg-4">
+            <div class="im-card-head">
                 <div class="flex-grow-1">
-                    <h1 class="h4 fw-bold text-dark mb-1">Request For Estate</h1>
+                    <h1 class="h5 fw-bold text-dark mb-1">Request For Estate</h1>
                     <p class="text-body-secondary small mb-0">This page displays all list of request details added in the system, and provides options to manage records such as add, edit, delete etc.</p>
                 </div>
                 <div class="flex-shrink-0 d-flex flex-wrap gap-2">
                     <!-- <a href="{{ route('admin.estate.put-in-hac') }}" class="btn btn-outline-primary px-3" title="Put In HAC"><i class="bi bi-building-check me-1"></i> Put In HAC</a>
                     <a href="{{ route('admin.estate.change-request-hac-approved') }}" class="btn btn-outline-primary px-3" title="HAC Approved"><i class="bi bi-check2-square me-1"></i> HAC Approved</a> -->
-                    <button type="button" class="btn btn-primary px-3" id="btn-open-add-request-estate" title="Add Estate Request"><i class="bi bi-plus-lg me-1"></i> Add Estate Request</button>
+                    <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" id="btn-open-add-request-estate" title="Add Estate Request">
+                        <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+                        <span>Add Estate Request</span>
+                    </button>
                 </div>
             </div>
 
@@ -41,8 +44,8 @@
             @endphp
 
             @if($showUserActionHelp)
-            <div class="alert alert-light border request-action-help shadow-sm mb-3" role="note">
-                <div class="fw-semibold text-dark mb-1">Action buttons</div>
+            <div class="request-action-help mb-3" role="note">
+                <div class="fw-semibold text-dark mb-2">Action buttons</div>
                 <div class="small text-body-secondary d-flex flex-wrap gap-3">
                     <span><i class="material-icons material-symbols-rounded align-middle text-primary">visibility</i> View request details</span>
                     <span><i class="material-icons material-symbols-rounded align-middle text-success">add_home</i> Add possession</span>
@@ -53,7 +56,7 @@
             </div>
             @endif
 
-            <div class="row align-items-end mb-3">
+            <div class="im-toolbar row align-items-end mb-3">
                 <div class="col-12 col-md-4 col-lg-3">
                     <label for="estateStatusFilter" class="form-label fw-semibold small mb-1">Status</label>
                     <select id="estateStatusFilter" class="form-select form-select-sm">
@@ -64,7 +67,8 @@
                     </select>
                 </div>
                 <div class="col-auto mt-2 mt-md-0">
-                    <button type="button" id="estateStatusClear" class="btn btn-outline-secondary btn-sm">
+                    <button type="button" id="estateStatusClear" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
+                        <i class="material-icons material-symbols-rounded" style="font-size:16px;" aria-hidden="true">restart_alt</i>
                         Clear
                     </button>
                 </div>
@@ -82,19 +86,25 @@
 </div>
 
 <!-- Add / Edit Request For Estate modal -->
-<div class="modal fade" id="addEditRequestEstateModal" tabindex="-1" aria-labelledby="addEditRequestEstateModalLabel" aria-hidden="true" data-bs-backdrop="static">
+<div class="modal fade estate-modernized" id="addEditRequestEstateModal" tabindex="-1" aria-labelledby="addEditRequestEstateModalLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content rounded-3 shadow">
-            <div class="modal-header border-0 pb-0">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h5 class="modal-title fw-semibold" id="addEditRequestEstateModalLabel">Add Estate Request</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body pt-2">
+            <div class="modal-body">
                 <div id="addEditRequestEstateFormErrors" class="alert alert-danger d-none" role="alert"><span id="addEditRequestEstateFormErrorsText"></span></div>
                 <form id="formAddEditRequestEstate" method="POST" action="{{ route('admin.estate.request-for-estate.store') }}">
                     @csrf
                     <input type="hidden" name="id" id="request_estate_id" value="">
                     <input type="hidden" name="employee_pk" id="request_employee_pk" value="">
+
+                    {{-- ── Request details ──────────────────────────────────── --}}
+                    <h6 class="im-section-title">
+                        <i class="material-icons material-symbols-rounded" aria-hidden="true">assignment</i>
+                        Request Details
+                    </h6>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label for="modal_req_id" class="form-label">Request ID</label>
@@ -113,6 +123,14 @@
                                 <option value="2">Rejected</option>
                             </select>
                         </div>
+                    </div>
+
+                    {{-- ── Employee details ─────────────────────────────────── --}}
+                    <h6 class="im-section-title">
+                        <i class="material-icons material-symbols-rounded" aria-hidden="true">badge</i>
+                        Employee Details
+                    </h6>
+                    <div class="row g-3">
                         <div class="col-md-12">
                             <label for="modal_employee_pk" class="form-label">Employee Name <span class="text-danger">*</span></label>
                             <select class="form-select" id="modal_employee_pk">
@@ -151,6 +169,14 @@
                             <input type="date" class="form-control" id="modal_doj_service" name="doj_service" required readonly>
                             <div class="text-danger small field-error" data-field="doj_service" role="alert"></div>
                         </div>
+                    </div>
+
+                    {{-- ── Eligibility & remarks ─────────────────────────────── --}}
+                    <h6 class="im-section-title">
+                        <i class="material-icons material-symbols-rounded" aria-hidden="true">verified_user</i>
+                        Eligibility &amp; Remarks
+                    </h6>
+                    <div class="row g-3">
                         <div class="col-md-4">
                             <label for="modal_eligibility_type_pk" class="form-label">Eligibility Type <span class="text-danger">*</span></label>
                             <select class="form-select" id="modal_eligibility_type_pk" name="eligibility_type_pk" required>
@@ -161,16 +187,17 @@
                             </select>
                             <input type="hidden" id="modal_eligibility_type_pk_hidden" value="">
                             <div class="text-danger small field-error" data-field="eligibility_type_pk" role="alert"></div>
-                            
+
                         </div>
-                        <div class="col-md-12">
+                        <div class="col-md-8">
                             <label for="modal_remarks" class="form-label">Remarks</label>
                             <textarea class="form-control" id="modal_remarks" name="remarks" rows="2" maxlength="500" placeholder="Optional remarks"></textarea>
                         </div>
                     </div>
-                    <div class="d-flex gap-2 mt-4">
-                        <button type="submit" class="btn btn-success" id="btnSubmitRequestEstate"><i class="bi bi-save me-2"></i>Save</button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle me-2"></i>Cancel</button>
+
+                    <div class="im-form-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle me-2"></i>Cancel</button>
+                        <button type="submit" class="btn btn-primary px-4" id="btnSubmitRequestEstate"><i class="bi bi-save me-2"></i>Save</button>
                     </div>
                 </form>
             </div>
@@ -179,16 +206,16 @@
 </div>
 
 <!-- Delete confirmation modal -->
-<div class="modal fade" id="deleteRequestEstateModal" tabindex="-1" aria-labelledby="deleteRequestEstateModalLabel" aria-hidden="true">
+<div class="modal fade estate-modernized" id="deleteRequestEstateModal" tabindex="-1" aria-labelledby="deleteRequestEstateModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-3 shadow">
-            <div class="modal-header border-0 pb-0">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h5 class="modal-title fw-semibold" id="deleteRequestEstateModalLabel">Confirm Delete</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body pt-2">Are you sure you want to delete this estate request? This action cannot be undone.</div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <div class="modal-body">Are you sure you want to delete this estate request? This action cannot be undone.</div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-danger" id="confirmDeleteRequestEstateBtn">Delete</button>
             </div>
         </div>
@@ -200,86 +227,179 @@
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
 <style>.ts-dropdown { z-index: 1060 !important; }</style>
 <style>
-    /* Responsive table: horizontal scroll */
-    .request-for-estate-table-wrap {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        width: 100%;
-    }
-    .request-for-estate-table-wrap table {
-        min-width: 992px;
-    }
-    /* DataTables controls: Bootstrap 5 form classes */
-    #requestForEstateTable_wrapper .dataTables_length label {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-    }
-    #requestForEstateTable_wrapper .dataTables_length select {
-        width: auto;
-        min-width: 4.5rem;
-        display: inline-block;
-        padding: 0.25rem 2rem 0.25rem 0.5rem;
-        font-size: 0.875rem;
-        border-radius: 0.375rem;
-        border: 1px solid var(--bs-border-color, #dee2e6);
-    }
-    #requestForEstateTable_wrapper .dataTables_filter label {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-    }
-    #requestForEstateTable_wrapper .dataTables_filter input {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
-        border: 1px solid var(--bs-border-color, #dee2e6);
-        border-radius: 0.375rem;
-        margin-left: 0.25rem;
-    }
-    /* Blue header row (Bootstrap 5 table-primary style) */
-    #requestForEstateTable_wrapper thead th {
-        background-color: var(--bs-primary);
-        color: #fff;
-        font-weight: 600;
-        border-color: var(--bs-primary);
-        padding: 0.75rem;
-        white-space: nowrap;
-    }
-    /* Pagination: Bootstrap 5 classes */
-    #requestForEstateTable_wrapper .dataTables_paginate {
-        margin-top: 0.5rem;
-    }
-    #requestForEstateTable_wrapper .dataTables_paginate .paginate_button {
-        padding: 0.25rem 0.5rem;
-        margin: 0 1px;
-        border-radius: 0.375rem;
-        border: 1px solid var(--bs-border-color);
-    }
-    #requestForEstateTable_wrapper .dataTables_paginate .paginate_button.current {
-        background: var(--bs-primary);
-        color: #fff !important;
-        border-color: var(--bs-primary);
-    }
-    #requestForEstateTable_wrapper .dataTables_info {
-        padding-top: 0.5rem;
-        font-size: 0.875rem;
-        color: var(--bs-body-secondary);
-    }
-    .request-action-help {
-        background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
-        border-color: #d8e7ff !important;
-    }
-    .request-action-help .material-icons {
-        font-size: 1rem;
-        vertical-align: text-bottom;
-    }
-    @media (max-width: 767.98px) {
-        #requestForEstateTable_wrapper .col-md-6,
-        #requestForEstateTable_wrapper .col-md-4,
-        #requestForEstateTable_wrapper .col-md-5 { max-width: 100%; }
-    }
+/* =====================================================================
+   Request For Estate — page-scoped polish.
+   Tokens/components come from sargam-app.css (--ds-*, .ds-*).
+   Scoped to .estate-request-page / modal ids so nothing leaks elsewhere.
+   ===================================================================== */
+
+/* Card header row */
+.estate-request-page .im-card-head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-3);
+    margin-bottom: var(--ds-space-4);
+    padding-bottom: var(--ds-space-3);
+    border-bottom: 1px solid var(--ds-line);
+}
+@media (min-width: 768px) {
+    .estate-request-page .im-card-head { flex-direction: row; align-items: center; justify-content: space-between; }
+}
+.estate-request-page .im-card-head h1 { color: var(--ds-ink); }
+.estate-request-page .btn-primary { border-radius: var(--ds-radius-1); font-weight: 600; }
+
+/* Section headings (shared by card + modals) */
+.estate-modernized .im-section-title {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ds-ink);
+    margin: var(--ds-space-5) 0 var(--ds-space-4);
+    padding-bottom: var(--ds-space-2);
+    border-bottom: 1px solid var(--ds-line);
+}
+.estate-modernized .im-section-title:first-of-type { margin-top: 0; }
+.estate-modernized .im-section-title i { font-size: 20px; color: var(--bs-primary); }
+
+/* Labels + controls */
+.estate-modernized .form-label { font-size: 0.8125rem; font-weight: 600; color: var(--ds-ink); margin-bottom: 0.35rem; }
+.estate-modernized .form-control,
+.estate-modernized .form-select { border-radius: var(--ds-radius-1); font-size: 0.9rem; }
+.estate-modernized .form-control:focus,
+.estate-modernized .form-select:focus { border-color: #86b7fe; box-shadow: var(--ds-focus-ring); }
+
+/* Action-help note — soft blue info panel */
+.estate-request-page .request-action-help {
+    border: 1px solid #cfe0f5;
+    border-radius: var(--ds-radius-2);
+    background: #eef5ff;
+    padding: 0.9rem 1.1rem;
+}
+.estate-request-page .request-action-help .material-icons {
+    font-size: 1rem;
+    vertical-align: text-bottom;
+}
+
+/* Modal footer action bar */
+.estate-modernized .im-form-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--ds-space-2);
+    margin-top: var(--ds-space-5);
+    padding-top: var(--ds-space-4);
+    border-top: 1px solid var(--ds-line);
+}
+.estate-modernized .im-form-footer .btn { border-radius: var(--ds-radius-1); font-weight: 600; }
+
+/* Modal shell */
+.estate-modernized .modal-content { border: 0; border-radius: var(--ds-radius-2); box-shadow: 0 10px 40px rgba(16,24,40,.18); }
+.estate-modernized .modal-header { border-bottom: 1px solid var(--ds-line); padding: var(--ds-space-4); }
+.estate-modernized .modal-body { padding: var(--ds-space-4); }
+.estate-modernized .modal-footer { border-top: 1px solid var(--ds-line); padding: var(--ds-space-4); }
+
+/* Responsive table: horizontal scroll */
+.request-for-estate-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-2);
+}
+.request-for-estate-table-wrap table {
+    min-width: 992px;
+}
+
+/* DataTables controls: DS-aligned */
+#requestForEstateTable_wrapper .dataTables_length label,
+#requestForEstateTable_wrapper .dataTables_filter label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    color: var(--ds-ink-muted);
+    font-size: 0.875rem;
+}
+#requestForEstateTable_wrapper .dataTables_length select {
+    width: auto;
+    min-width: 4.5rem;
+    display: inline-block;
+    padding: 0.25rem 2rem 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border-radius: var(--ds-radius-1);
+    border: 1px solid var(--ds-line);
+}
+#requestForEstateTable_wrapper .dataTables_filter input {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.875rem;
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-1);
+    margin-left: 0.25rem;
+}
+#requestForEstateTable_wrapper .dataTables_filter input:focus {
+    border-color: #86b7fe;
+    box-shadow: var(--ds-focus-ring);
+    outline: none;
+}
+
+/* Neutral uppercase header (matches the issue-management tables) */
+#requestForEstateTable_wrapper thead th {
+    background-color: var(--ds-surface-2);
+    color: var(--ds-ink-muted);
+    font-weight: 600;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    border-bottom: 1px solid var(--ds-line);
+    padding: 0.75rem;
+    white-space: nowrap;
+}
+#requestForEstateTable_wrapper tbody td {
+    padding: 0.7rem 0.75rem;
+    font-size: 0.9rem;
+    color: var(--ds-ink);
+    vertical-align: middle;
+}
+
+/* Pagination pills */
+#requestForEstateTable_wrapper .dataTables_paginate { margin-top: 0.75rem; }
+#requestForEstateTable_wrapper .dataTables_paginate .paginate_button {
+    padding: 0.3rem 0.6rem;
+    margin: 0 2px;
+    border-radius: var(--ds-radius-1);
+    border: 1px solid var(--ds-line);
+    color: var(--ds-ink) !important;
+    background: #fff;
+}
+#requestForEstateTable_wrapper .dataTables_paginate .paginate_button:hover {
+    background: var(--ds-surface-2) !important;
+    border-color: #c4ccd6;
+    color: var(--ds-ink) !important;
+}
+#requestForEstateTable_wrapper .dataTables_paginate .paginate_button.current,
+#requestForEstateTable_wrapper .dataTables_paginate .paginate_button.current:hover {
+    background: var(--bs-primary) !important;
+    color: #fff !important;
+    border-color: var(--bs-primary);
+}
+#requestForEstateTable_wrapper .dataTables_paginate .paginate_button.disabled {
+    color: var(--ds-ink-muted) !important;
+    background: var(--ds-surface-2);
+    opacity: 0.6;
+}
+#requestForEstateTable_wrapper .dataTables_info {
+    padding-top: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--ds-ink-muted);
+}
+
+@media (max-width: 767.98px) {
+    #requestForEstateTable_wrapper .col-md-6,
+    #requestForEstateTable_wrapper .col-md-4,
+    #requestForEstateTable_wrapper .col-md-5 { max-width: 100%; }
+}
 </style>
 @endpush
 

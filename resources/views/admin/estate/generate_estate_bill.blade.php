@@ -15,20 +15,17 @@
 @section('title', $estateBillPageLabel . ' - Sargam')
 
 @section($estateSelfHomeTab ? 'content' : 'setup_content')
-<div class="container-fluid py-4">
+<div class="container-fluid estate-bill-page">
     <x-breadcrum title="{{ $estateBillPageLabel }}"></x-breadcrum>
     <x-session_message />
 
-
-
     <!-- Filters -->
-    <div class="card shadow-sm border-0 rounded-3 mb-4">
-
-        <div class="card-body p-4">
-            <div class="d-flex flex-column flex-md-row flex-wrap align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+    <div class="ds-card mb-4">
+        <div class="ds-card-body p-4">
+            <div class="im-card-head">
                 <div>
-                    <h1 class="h4 fw-semibold mb-1">{{ $estateBillPageLabel }}</h1>
-                    <p class="text-muted small mb-0">
+                    <h1 class="h5 fw-bold mb-1">{{ $estateBillPageLabel }}</h1>
+                    <p class="text-body-secondary small mb-0">
                         @if($estateBillIsPersonalView)
                         View your estate bill summary. Select bill month and (where available) unit sub type to review bills.
                         @else
@@ -37,19 +34,18 @@
                     </p>
                 </div>
             </div>
-            <hr class="my-2">
             <form method="get" action="{{ route('admin.estate.generate-estate-bill') }}" class="row g-3 g-md-4 align-items-end">
                 @if(request('scope') === 'self')
                 <input type="hidden" name="scope" value="self">
                 @endif
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                    <label for="bill_month" class="form-label fw-medium">Bill Month <span class="text-danger">*</span></label>
+                    <label for="bill_month" class="form-label">Bill Month <span class="text-danger">*</span></label>
                     <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ old('bill_month', $billMonth) }}" max="{{ date('Y-m') }}" data-max-date="{{ date('Y-m-d') }}" required aria-describedby="bill_month_help">
                     <div id="bill_month_help" class="form-text small">Select the month for billing</div>
                 </div>
                 @if($showUnitSubTypeFilter)
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                    <label for="unit_sub_type_pk" class="form-label fw-medium">Unit Sub Type </label>
+                    <label for="unit_sub_type_pk" class="form-label">Unit Sub Type </label>
                     <select class="form-select" id="unit_sub_type_pk" name="unit_sub_type_pk" aria-label="Select Unit Sub Type" aria-describedby="unit_sub_type_help">
                         <option value="">— Select Unit Sub Type —</option>
                         @foreach($unitSubTypes as $ust)
@@ -61,14 +57,14 @@
                 @endif
                 @if($showGenerateEstateBillSearch)
                 <div class="col-12 col-sm-6 col-md-6 {{ $showUnitSubTypeFilter ? 'col-lg-3' : 'col-lg-5' }}">
-                    <label for="search" class="form-label fw-medium">Search</label>
+                    <label for="search" class="form-label">Search</label>
                     <input type="search" class="form-control" id="search" name="search" value="{{ old('search', $search ?? '') }}" placeholder="House, bill no., name…" autocomplete="off" aria-describedby="search_help" title="Also: month/year, designation, employee type, unit e.g. Type-(12)">
-                    <div id="search_help" class="form-text small text-muted mb-0">Bill, house, name, designation, type.</div>
+                    <div id="search_help" class="form-text small mb-0">Bill, house, name, designation, type.</div>
                 </div>
                 @endif
                 <div class="col-12 col-sm-6 col-md-6 {{ $genBillActionsCol }}">
                     {{-- Match Search column: label + field + form-text so align-items-end lines up with the input row, not the hint --}}
-                    <div class="form-label fw-medium invisible user-select-none" aria-hidden="true">&nbsp;</div>
+                    <div class="form-label invisible user-select-none" aria-hidden="true">&nbsp;</div>
                     <div class="d-flex flex-wrap align-items-center gap-3">
                         <div class="form-check mb-0">
                             <input class="form-check-input" type="checkbox" id="check_all" name="check_all" aria-describedby="check_all_help">
@@ -80,7 +76,7 @@
                             Show
                         </button>
                     </div>
-                    <div class="form-text small text-muted mb-0 invisible user-select-none" aria-hidden="true">&nbsp;</div>
+                    <div class="form-text small mb-0 invisible user-select-none" aria-hidden="true">&nbsp;</div>
                 </div>
                 <div class="col-12 mt-2 pt-3 border-top">
                     <div class="d-flex gap-2 flex-wrap justify-content-sm-end align-items-center">
@@ -101,8 +97,8 @@
 
     @if($billMonth)
     <!-- Section title and print actions -->
-    <div class="d-flex flex-column flex-sm-row flex-wrap align-items-center justify-content-center justify-content-sm-between gap-3 mb-4">
-        <p class="lead fw-semibold text-body mb-0 py-2 px-3 bg-body-secondary rounded-3 d-inline-block">LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION, MUSSOORIE — ESTATE BILL</p>
+    <div class="im-bill-banner">
+        <p class="im-bill-banner-title mb-0">LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION, MUSSOORIE — ESTATE BILL</p>
         <div class="d-flex gap-2 flex-wrap justify-content-center">
             <a href="{{ route('admin.estate.reports.bill-report-print-all', array_filter(['bill_month' => $billMonth, 'unit_sub_type_pk' => $unitSubTypePk, 'scope' => request('scope') === 'self' ? 'self' : null], static fn ($v) => $v !== null && $v !== '')) }}" target="_blank" rel="noopener" id="btn_print_all" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" title="View all bills in one page — print or download as PDF at once">
                 <i class="material-symbols-rounded" style="font-size: 1rem;">print</i>
@@ -112,15 +108,15 @@
     </div>
 
     <!-- Scrollable bill cards area -->
-    <div class="bill-cards-wrapper border border-2 rounded-3 bg-body-secondary overflow-auto" style="max-height: 65vh;">
+    <div class="bill-cards-wrapper">
         <div class="p-3 p-md-4">
             @forelse($bills as $bill)
-            <div class="card shadow-sm border-0 rounded-3 mb-3 bill-card" data-bill-no="{{ $bill->bill_no ?? '' }}" data-bill-month="{{ $bill->bill_month ?? '' }}" data-bill-year="{{ $bill->bill_year ?? '' }}">
-                <div class="card-body p-4 position-relative">
+            <div class="im-bill-card bill-card" data-bill-no="{{ $bill->bill_no ?? '' }}" data-bill-month="{{ $bill->bill_month ?? '' }}" data-bill-year="{{ $bill->bill_year ?? '' }}">
+                <div class="p-4 position-relative">
                     <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3 pb-2 border-bottom">
                         <div class="form-check form-check-lg mb-0">
                             <input class="form-check-input bill-checkbox" type="checkbox" value="{{ $bill->pk }}" id="bill_{{ $bill->pk }}" data-bill-pk="{{ $bill->pk }}">
-                            <label class="form-check-label text-muted small" for="bill_{{ $bill->pk }}">Select this bill</label>
+                            <label class="form-check-label text-body-secondary small" for="bill_{{ $bill->pk }}">Select this bill</label>
                         </div>
                         <a href="{{ route('admin.estate.reports.bill-report-print') }}?bill_no={{ $bill->bill_no }}&month={{ $bill->bill_month }}&year={{ $bill->bill_year }}" target="_blank" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" title="Print this bill">
                             <i class="material-symbols-rounded" style="font-size: 1rem;">print</i>
@@ -130,44 +126,44 @@
 
                     <div class="row g-3 g-md-4 mb-3">
                         <div class="col-12 col-md-6">
-                            <table class="table table-borderless table-sm mb-0">
+                            <table class="table table-borderless table-sm mb-0 im-bill-kv">
                                 <tbody>
                                     <tr>
-                                        <td class="text-muted pe-3 text-nowrap" style="width: 42%;">Bill No.</td>
+                                        <td class="im-kv-label" style="width: 42%;">Bill No.</td>
                                         <td class="fw-semibold">{{ $bill->bill_no ?? '—' }}</td>
                                     </tr>
                                     <tr>
-                                        <td class="text-muted">Month</td>
+                                        <td class="im-kv-label">Month</td>
                                         <td>{{ $bill->bill_month ?? '' }} {{ $bill->bill_year ?? '' }}</td>
                                     </tr>
                                     <tr>
-                                        <td class="text-muted">Emp Name</td>
+                                        <td class="im-kv-label">Emp Name</td>
                                         <td><span class="text-primary fw-medium">{{ $bill->emp_name ?? '—' }}</span></td>
                                     </tr>
                                     <tr>
-                                        <td class="text-muted">Designation</td>
+                                        <td class="im-kv-label">Designation</td>
                                         <td>{{ $bill->emp_designation ?? '—' }}</td>
                                     </tr>
                                     <tr>
-                                        <td class="text-muted">Employee Type</td>
+                                        <td class="im-kv-label">Employee Type</td>
                                         <td><span class="badge text-bg-secondary">REGULAR</span></td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
                         <div class="col-12 col-md-6">
-                            <table class="table table-borderless table-sm mb-0">
+                            <table class="table table-borderless table-sm mb-0 im-bill-kv">
                                 <tbody>
                                     <tr>
-                                        <td class="text-muted pe-3 text-nowrap" style="width: 42%;">House No.</td>
+                                        <td class="im-kv-label" style="width: 42%;">House No.</td>
                                         <td><span class="text-primary fw-medium">{{ $bill->house_display ?? '—' }}</span></td>
                                     </tr>
                                     <tr>
-                                        <td class="text-muted">From Date</td>
+                                        <td class="im-kv-label">From Date</td>
                                         <td>{{ $bill->from_date_formatted ?? '—' }}</td>
                                     </tr>
                                     <tr>
-                                        <td class="text-muted">To Date</td>
+                                        <td class="im-kv-label">To Date</td>
                                         <td>{{ $bill->to_date_formatted ?? '—' }}</td>
                                     </tr>
                                 </tbody>
@@ -175,14 +171,14 @@
                         </div>
                     </div>
 
-                    <div class="border-top pt-3 mt-2">
-                        <h6 class="text-secondary small text-uppercase fw-semibold mb-2 opacity-75">Meter One</h6>
+                    <div class="im-meter">
+                        <h6 class="im-meter-title">Meter One</h6>
                         <div class="row row-cols-2 row-cols-md-5 g-2 g-md-3">
-                            <div class="col"><span class="text-muted small d-block">Meter No.</span><span class="fw-medium">{{ $bill->meter_one ?? '—' }}</span></div>
-                            <div class="col"><span class="text-muted small d-block">Previous Reading</span><span>{{ $bill->last_month_elec_red ?? '—' }}</span></div>
-                            <div class="col"><span class="text-muted small d-block">Current Reading</span><span>{{ $bill->curr_month_elec_red ?? '—' }}</span></div>
-                            <div class="col"><span class="text-muted small d-block">Consumed Unit</span><span>{{ $bill->meter_one_consume_unit ?? '—' }}</span></div>
-                            <div class="col"><span class="text-muted small d-block">Electricity Bill</span><span>₹ {{ number_format((float)($bill->meter_one_elec_charge ?? 0), 2) }}</span></div>
+                            <div class="col"><span class="im-meter-label">Meter No.</span><span class="fw-medium">{{ $bill->meter_one ?? '—' }}</span></div>
+                            <div class="col"><span class="im-meter-label">Previous Reading</span><span>{{ $bill->last_month_elec_red ?? '—' }}</span></div>
+                            <div class="col"><span class="im-meter-label">Current Reading</span><span>{{ $bill->curr_month_elec_red ?? '—' }}</span></div>
+                            <div class="col"><span class="im-meter-label">Consumed Unit</span><span>{{ $bill->meter_one_consume_unit ?? '—' }}</span></div>
+                            <div class="col"><span class="im-meter-label">Electricity Bill</span><span>₹ {{ number_format((float)($bill->meter_one_elec_charge ?? 0), 2) }}</span></div>
                         </div>
                     </div>
 
@@ -191,41 +187,41 @@
                     $hasMeterTwoUnits = isset($bill->meter_two_consume_unit) && (int)$bill->meter_two_consume_unit > 0;
                     @endphp
                     @if($hasMeterTwo || $hasMeterTwoUnits)
-                    <div class="border-top pt-3 mt-3">
-                        <h6 class="text-secondary small text-uppercase fw-semibold mb-2 opacity-75">Meter Two</h6>
+                    <div class="im-meter">
+                        <h6 class="im-meter-title">Meter Two</h6>
                         <div class="row row-cols-2 row-cols-md-5 g-2 g-md-3">
-                            <div class="col"><span class="text-muted small d-block">Meter No.</span><span class="fw-medium">{{ $bill->meter_two ?? '—' }}</span></div>
-                            <div class="col"><span class="text-muted small d-block">Previous Reading</span><span>{{ $bill->last_month_elec_red2 ?? '—' }}</span></div>
-                            <div class="col"><span class="text-muted small d-block">Current Reading</span><span>{{ $bill->curr_month_elec_red2 ?? '—' }}</span></div>
-                            <div class="col"><span class="text-muted small d-block">Consumed Unit</span><span>{{ $bill->meter_two_consume_unit ?? '—' }}</span></div>
-                            <div class="col"><span class="text-muted small d-block">Electricity Bill</span><span>₹ {{ number_format((float)($bill->meter_two_elec_charge ?? 0), 2) }}</span></div>
+                            <div class="col"><span class="im-meter-label">Meter No.</span><span class="fw-medium">{{ $bill->meter_two ?? '—' }}</span></div>
+                            <div class="col"><span class="im-meter-label">Previous Reading</span><span>{{ $bill->last_month_elec_red2 ?? '—' }}</span></div>
+                            <div class="col"><span class="im-meter-label">Current Reading</span><span>{{ $bill->curr_month_elec_red2 ?? '—' }}</span></div>
+                            <div class="col"><span class="im-meter-label">Consumed Unit</span><span>{{ $bill->meter_two_consume_unit ?? '—' }}</span></div>
+                            <div class="col"><span class="im-meter-label">Electricity Bill</span><span>₹ {{ number_format((float)($bill->meter_two_elec_charge ?? 0), 2) }}</span></div>
                         </div>
                     </div>
                     @endif
 
-                    <div class="border-top pt-3 mt-3">
+                    <div class="im-bill-totals">
                         <div class="row g-2 g-md-3 align-items-center flex-wrap">
                             <div class="col-12 col-md-auto">
-                                <span class="text-muted small">Total Consumed Unit</span>
+                                <span class="im-total-label">Total Consumed Unit</span>
                                 <strong class="d-inline-block ms-1">{{ $bill->total_consumed_unit ?? $bill->meter_one_consume_unit ?? 0 }}</strong>
                             </div>
-                            <div class="col-12 col-md-auto"><span class="text-muted small">Total Electricity</span> <strong class="d-inline-block ms-1">₹ {{ number_format((float)($bill->electricty_charges ?? 0), 2) }}</strong></div>
-                            <div class="col-12 col-md-auto"><span class="text-muted small">Licence Fee</span> <strong class="d-inline-block ms-1">₹ {{ number_format((float)($bill->licence_fees ?? 0), 2) }}</strong> <small class="text-muted">(not Outside Recovery)</small></div>
-                            <div class="col-12 col-md-auto"><span class="text-muted small">Water Charge</span> <strong class="d-inline-block ms-1">₹ {{ number_format((float)($bill->water_charges ?? 0), 2) }}</strong></div>
-                            <div class="col-12 col-md-auto"><span class="text-muted small">Grand Total</span> <strong class="text-primary fs-6 d-inline-block ms-1">₹ {{ number_format($bill->grand_total ?? 0, 2) }}</strong></div>
+                            <div class="col-12 col-md-auto"><span class="im-total-label">Total Electricity</span> <strong class="d-inline-block ms-1">₹ {{ number_format((float)($bill->electricty_charges ?? 0), 2) }}</strong></div>
+                            <div class="col-12 col-md-auto"><span class="im-total-label">Licence Fee</span> <strong class="d-inline-block ms-1">₹ {{ number_format((float)($bill->licence_fees ?? 0), 2) }}</strong> <small class="text-body-secondary">(not Outside Recovery)</small></div>
+                            <div class="col-12 col-md-auto"><span class="im-total-label">Water Charge</span> <strong class="d-inline-block ms-1">₹ {{ number_format((float)($bill->water_charges ?? 0), 2) }}</strong></div>
+                            <div class="col-12 col-md-auto ms-md-auto"><span class="im-total-label">Grand Total</span> <strong class="im-grand-total ms-1">₹ {{ number_format($bill->grand_total ?? 0, 2) }}</strong></div>
                         </div>
                     </div>
 
                     <div class="text-end mt-3">
-                        <small class="text-muted fst-italic">(ESTATE SECTION)</small>
+                        <small class="text-body-secondary fst-italic">(ESTATE SECTION)</small>
                     </div>
                 </div>
             </div>
             @empty
-            <div class="text-center py-5 px-3">
-                <i class="material-symbols-rounded text-body-secondary mb-2" style="font-size: 3rem;">receipt_long</i>
-                <p class="lead text-muted mb-1">No bills found</p>
-                <p class="text-muted small mb-0">No bills are available for the selected month and unit sub type. Try changing the filters.</p>
+            <div class="im-empty">
+                <i class="material-symbols-rounded" aria-hidden="true">receipt_long</i>
+                <p class="mb-1 fw-semibold text-body-emphasis">No bills found</p>
+                <p class="text-body-secondary small mb-0">No bills are available for the selected month and unit sub type. Try changing the filters.</p>
             </div>
             @endforelse
         </div>
@@ -236,9 +232,114 @@
 @push('styles')
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
 <style>
-    .ts-dropdown {
-        z-index: 1060 !important;
-    }
+/* =====================================================================
+   Generate Estate Bill — page-scoped polish.
+   Tokens/components come from sargam-app.css (--ds-*, .ds-*).
+   Scoped to .estate-bill-page so nothing leaks to other pages.
+   ===================================================================== */
+.ts-dropdown { z-index: 1060 !important; }
+
+/* Filter card header */
+.estate-bill-page .im-card-head {
+    margin-bottom: var(--ds-space-4);
+    padding-bottom: var(--ds-space-3);
+    border-bottom: 1px solid var(--ds-line);
+}
+.estate-bill-page .im-card-head h1 { color: var(--ds-ink); }
+
+/* Labels + controls */
+.estate-bill-page .form-label { font-size: 0.8125rem; font-weight: 600; color: var(--ds-ink); margin-bottom: 0.35rem; }
+.estate-bill-page .form-text { font-size: 0.8125rem; color: var(--ds-ink-muted); }
+.estate-bill-page .form-control,
+.estate-bill-page .form-select { border-radius: var(--ds-radius-1); font-size: 0.9rem; }
+.estate-bill-page .form-control:focus,
+.estate-bill-page .form-select:focus { border-color: #86b7fe; box-shadow: var(--ds-focus-ring); }
+.estate-bill-page .btn-primary { border-radius: var(--ds-radius-1); font-weight: 600; }
+
+/* Bill banner */
+.estate-bill-page .im-bill-banner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ds-space-3);
+    margin-bottom: var(--ds-space-4);
+}
+@media (min-width: 576px) { .estate-bill-page .im-bill-banner { flex-direction: row; } }
+.estate-bill-page .im-bill-banner-title {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: var(--ds-ink);
+    padding: 0.6rem 1rem;
+    background: var(--ds-surface-2);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-2);
+}
+
+/* Scroll area holding bill cards */
+.estate-bill-page .bill-cards-wrapper {
+    max-height: 65vh;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    background: var(--ds-surface-2);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-2);
+}
+
+/* Individual bill card */
+.estate-bill-page .im-bill-card {
+    background: #fff;
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-2);
+    box-shadow: var(--ds-shadow-sm);
+    margin-bottom: var(--ds-space-3);
+}
+.estate-bill-page .im-bill-card:last-child { margin-bottom: 0; }
+.estate-bill-page .im-bill-card.border-primary { box-shadow: 0 0 0 2px var(--bs-primary); }
+
+/* Key/value info tables */
+.estate-bill-page .im-bill-kv td { padding: 0.28rem 0.5rem 0.28rem 0; font-size: 0.9rem; color: var(--ds-ink); }
+.estate-bill-page .im-kv-label { color: var(--ds-ink-muted); padding-right: 1rem !important; white-space: nowrap; }
+
+/* Meter sections */
+.estate-bill-page .im-meter {
+    border-top: 1px solid var(--ds-line);
+    padding-top: var(--ds-space-3);
+    margin-top: var(--ds-space-3);
+}
+.estate-bill-page .im-meter-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ds-ink-muted);
+    margin-bottom: var(--ds-space-2);
+}
+.estate-bill-page .im-meter-label { display: block; font-size: 0.75rem; color: var(--ds-ink-muted); }
+.estate-bill-page .im-meter .col span:last-child { font-size: 0.9rem; color: var(--ds-ink); }
+
+/* Totals strip */
+.estate-bill-page .im-bill-totals {
+    margin-top: var(--ds-space-3);
+    padding: var(--ds-space-3);
+    background: var(--ds-surface-2);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-1);
+}
+.estate-bill-page .im-total-label { font-size: 0.8125rem; color: var(--ds-ink-muted); }
+.estate-bill-page .im-bill-totals strong { color: var(--ds-ink); font-size: 0.9rem; }
+.estate-bill-page .im-grand-total { color: var(--bs-primary) !important; font-size: 1.05rem; font-weight: 700; }
+
+/* Empty state (matches issue-management index) */
+.estate-bill-page .im-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 3rem 1rem;
+}
+.estate-bill-page .im-empty i { font-size: 56px; color: #98a2b3; margin-bottom: 0.75rem; }
 </style>
 @endpush
 

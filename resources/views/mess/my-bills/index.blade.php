@@ -12,7 +12,7 @@
         $dateToDisplay = $effectiveDateTo ?? '';
     }
 @endphp
-<div class="container-fluid py-3 py-md-4 process-mess-bills-employee-report mess-my-bills-page">
+<div class="container-fluid process-mess-bills-employee-report mess-my-bills-page">
     <x-breadcrum title="My Mess Bills"></x-breadcrum>
 
     <div class="report-header text-center mb-4">
@@ -21,98 +21,90 @@
         <p class="text-muted mb-0 small">Generated on: {{ now()->format('d-m-Y H:i:s') }}</p>
     </div>
 
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 no-print p-4 rounded-3 shadow-sm" style="background: #004a93; color: white;">
-        <div>
-            <h4 class="mb-2 fw-bold d-flex align-items-center gap-2">
-                <i class="material-symbols-rounded" style="font-size: 2rem;">receipt_long</i>
-                My Mess Bills
-            </h4>
-            <p class="mb-0 small opacity-90 text-white">View your mess bill totals and line items (with dates) for the selected period. Use the same date range as Process Mess Bills.</p>
-        </div>
-    </div>
-
     <div class="no-print">
         @php $stats = $stats ?? ['total_bills' => 0, 'paid_count' => 0, 'unpaid_count' => 0, 'total_amount' => 0]; @endphp
         <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 mb-4">
             <div class="col">
-                <div class="card border-0 shadow h-100">
-                    <div class="card-body d-flex align-items-center gap-3">
-                        <div class="rounded-3 bg-primary bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                            <i class="material-symbols-rounded text-primary" style="font-size: 2rem;">description</i>
-                        </div>
-                        <div>
-                            <div class="text-muted small text-uppercase fw-semibold mb-1">Total Bills</div>
-                            <div class="fs-3 fw-bold text-dark">{{ number_format($stats['total_bills']) }}</div>
-                        </div>
+                <div class="im-stat">
+                    <div class="im-stat-icon im-stat-icon--primary">
+                        <i class="material-symbols-rounded" aria-hidden="true">description</i>
+                    </div>
+                    <div>
+                        <div class="im-stat-label">Total Bills</div>
+                        <div class="im-stat-value">{{ number_format($stats['total_bills']) }}</div>
                     </div>
                 </div>
             </div>
             <div class="col">
-                <div class="card border-0 shadow h-100">
-                    <div class="card-body d-flex align-items-center gap-3">
-                        <div class="rounded-3 bg-warning bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                            <i class="material-symbols-rounded text-warning" style="font-size: 2rem;">schedule</i>
-                        </div>
-                        <div>
-                            <div class="text-muted small text-uppercase fw-semibold mb-1">Unpaid</div>
-                            <div class="fs-3 fw-bold text-dark">{{ number_format($stats['unpaid_count']) }}</div>
-                        </div>
+                <div class="im-stat">
+                    <div class="im-stat-icon im-stat-icon--warning">
+                        <i class="material-symbols-rounded" aria-hidden="true">schedule</i>
+                    </div>
+                    <div>
+                        <div class="im-stat-label">Unpaid</div>
+                        <div class="im-stat-value">{{ number_format($stats['unpaid_count']) }}</div>
                     </div>
                 </div>
             </div>
             <div class="col">
-                <div class="card border-0 shadow h-100">
-                    <div class="card-body d-flex align-items-center gap-3">
-                        <div class="rounded-3 bg-success bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                            <i class="material-symbols-rounded text-success" style="font-size: 2rem;">check_circle</i>
-                        </div>
-                        <div>
-                            <div class="text-muted small text-uppercase fw-semibold mb-1">Paid</div>
-                            <div class="fs-3 fw-bold text-dark">{{ number_format($stats['paid_count']) }}</div>
-                        </div>
+                <div class="im-stat">
+                    <div class="im-stat-icon im-stat-icon--success">
+                        <i class="material-symbols-rounded" aria-hidden="true">check_circle</i>
+                    </div>
+                    <div>
+                        <div class="im-stat-label">Paid</div>
+                        <div class="im-stat-value">{{ number_format($stats['paid_count']) }}</div>
                     </div>
                 </div>
             </div>
             <div class="col">
-                <div class="card border-0 shadow h-100">
-                    <div class="card-body d-flex align-items-center gap-3">
-                        <div class="rounded-3 bg-info bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                            <i class="material-symbols-rounded text-info" style="font-size: 2rem;">payments</i>
-                        </div>
-                        <div>
-                            <div class="text-muted small text-uppercase fw-semibold mb-1">Total Amount</div>
-                            <div class="fs-3 fw-bold text-dark">₹ {{ number_format($stats['total_amount'], 2) }}</div>
-                        </div>
+                <div class="im-stat">
+                    <div class="im-stat-icon im-stat-icon--info">
+                        <i class="material-symbols-rounded" aria-hidden="true">payments</i>
+                    </div>
+                    <div>
+                        <div class="im-stat-label">Total Amount</div>
+                        <div class="im-stat-value">₹ {{ number_format($stats['total_amount'], 2) }}</div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card border-0 shadow mb-4 no-print" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-        <div class="card-body p-3 p-lg-4">
+    <div class="ds-card mb-4 no-print">
+        <div class="ds-card-body p-3 p-lg-4">
             <form method="GET" action="{{ route('admin.mess.my-bills.index') }}" id="myBillsFilterForm">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-3">
-                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">event</i>Date From <span class="text-danger">*</span></label>
-                        <input type="text" name="date_from" id="date_from" class="form-select"
-                               value="{{ $effectiveDateFrom ?? request('date_from', now()->startOfMonth()->format('d-m-Y')) }}"
-                               data-default-ymd="{{ $effectiveDateFromYmd ?? now()->startOfMonth()->format('Y-m-d') }}"
-                               placeholder="dd-mm-yyyy" autocomplete="off">
+                        <label class="form-label"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">event</i>Date From <span class="text-danger">*</span></label>
+                        <div class="input-group im-datepicker" id="date_from_wrap">
+                            <input type="text" name="date_from" id="date_from" class="form-control"
+                                   value="{{ $effectiveDateFrom ?? request('date_from', now()->startOfMonth()->format('d-m-Y')) }}"
+                                   data-default-ymd="{{ $effectiveDateFromYmd ?? now()->startOfMonth()->format('Y-m-d') }}"
+                                   placeholder="dd-mm-yyyy" autocomplete="off" data-input>
+                            <span class="input-group-text im-datepicker-toggle" data-toggle title="Open calendar">
+                                <i class="material-symbols-rounded" style="font-size: 1.1rem;">calendar_month</i>
+                            </span>
+                        </div>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">event</i>Date To <span class="text-danger">*</span></label>
-                        <input type="text" name="date_to" id="date_to" class="form-select"
-                               value="{{ $effectiveDateTo ?? request('date_to', now()->endOfMonth()->format('d-m-Y')) }}"
-                               data-default-ymd="{{ $effectiveDateToYmd ?? now()->endOfMonth()->format('Y-m-d') }}"
-                               placeholder="dd-mm-yyyy" autocomplete="off">
+                        <label class="form-label"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">event</i>Date To <span class="text-danger">*</span></label>
+                        <div class="input-group im-datepicker" id="date_to_wrap">
+                            <input type="text" name="date_to" id="date_to" class="form-control"
+                                   value="{{ $effectiveDateTo ?? request('date_to', now()->endOfMonth()->format('d-m-Y')) }}"
+                                   data-default-ymd="{{ $effectiveDateToYmd ?? now()->endOfMonth()->format('Y-m-d') }}"
+                                   placeholder="dd-mm-yyyy" autocomplete="off" data-input>
+                            <span class="input-group-text im-datepicker-toggle" data-toggle title="Open calendar">
+                                <i class="material-symbols-rounded" style="font-size: 1.1rem;">calendar_month</i>
+                            </span>
+                        </div>
                     </div>
                     <div class="col-md-2 d-flex gap-1">
-                        <button type="submit" class="btn btn-primary flex-grow-1">
+                        <button type="submit" class="btn btn-primary flex-grow-1 d-inline-flex align-items-center justify-content-center gap-1">
                             <i class="material-symbols-rounded align-middle">filter_list</i>
                             Apply
                         </button>
-                        <a href="{{ route('admin.mess.my-bills.index') }}" class="btn btn-outline-secondary shadow-sm" title="Clear filters">
+                        <a href="{{ route('admin.mess.my-bills.index') }}" class="btn btn-outline-secondary" title="Clear filters">
                             <i class="material-symbols-rounded" style="font-size: 1.1rem;">filter_list_off</i>
                         </a>
                     </div>
@@ -121,11 +113,11 @@
         </div>
     </div>
 
-    <div class="card border-0 shadow">
-        <div class="card-body p-3 p-lg-4">
+    <div class="ds-card">
+        <div class="ds-card-body p-3 p-lg-4">
             <div class="table-responsive">
-                <table class="table table-sm table-striped table-hover text-nowrap align-middle mb-0" id="myMessBillsTable">
-                    <thead class="table-light">
+                <table class="table table-sm table-hover text-nowrap align-middle mb-0" id="myMessBillsTable">
+                    <thead>
                         <tr>
                             <th class="py-2">S.No.</th>
                             <th class="py-2">Slip No.</th>
@@ -139,7 +131,7 @@
                     </thead>
                     <tbody>
                         @forelse($combinedBills ?? [] as $index => $cb)
-                            <tr class="{{ ($cb->status ?? 0) == 2 ? '' : 'table-warning table-warning-subtle' }}">
+                            <tr class="{{ ($cb->status ?? 0) == 2 ? '' : 'im-row-unpaid' }}">
                                 <td>{{ $index + 1 }}</td>
                                 <td>{{ $cb->combined_invoice_no ?? '—' }}</td>
                                 <td>{{ $cb->invoice_date_range ?? '—' }}</td>
@@ -148,16 +140,16 @@
                                 <td>{{ $cb->payment_type ?? '—' }}</td>
                                 <td>
                                     @if(($cb->status ?? 0) == 2)
-                                        <span class="badge rounded-pill text-bg-success shadow-sm px-3 py-2">Paid</span>
+                                        <span class="im-pill im-pill--success">Paid</span>
                                     @elseif(($cb->status ?? 0) == 1)
-                                        <span class="badge rounded-pill text-bg-warning text-dark shadow-sm px-3 py-2">Partial</span>
+                                        <span class="im-pill im-pill--warning">Partial</span>
                                     @else
-                                        <span class="badge rounded-pill text-bg-secondary shadow-sm px-3 py-2">Unpaid</span>
+                                        <span class="im-pill im-pill--secondary">Unpaid</span>
                                     @endif
                                 </td>
                                 <td class="text-center no-print">
                                     <button type="button"
-                                            class="btn btn-sm btn-outline-primary shadow-sm my-bills-details-btn"
+                                            class="btn btn-sm btn-outline-primary my-bills-details-btn"
                                             data-bill-id="{{ $cb->combined_id }}"
                                             data-date-from-ymd="{{ $effectiveDateFromYmd ?? '' }}"
                                             data-date-to-ymd="{{ $effectiveDateToYmd ?? '' }}">
@@ -166,7 +158,7 @@
                                     </button>
                                     <a href="{{ route('admin.mess.process-mess-bills-employee.print-receipt', ['id' => $cb->combined_id]) }}?date_from={{ urlencode($effectiveDateFromYmd ?? '') }}&date_to={{ urlencode($effectiveDateToYmd ?? '') }}"
                                        target="_blank"
-                                       class="btn btn-sm btn-outline-secondary shadow-sm d-inline-flex align-items-center gap-1 px-2"
+                                       class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 px-2"
                                        title="Print receipt">
                                         <i class="material-symbols-rounded" style="font-size: 1.1rem;">print</i>
                                     </a>
@@ -174,10 +166,12 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center py-5 text-muted">
-                                    <i class="material-symbols-rounded d-block mb-3 text-primary" style="font-size: 4rem;">inbox</i>
-                                    <div class="fw-semibold fs-5 mb-1">No Generated Mess Bills</div>
-                                    <div class="small">Try another date range, or confirm your mess account is linked to your employee or student record.</div>
+                                <td colspan="8" class="text-center py-5">
+                                    <div class="im-empty">
+                                        <i class="material-symbols-rounded" aria-hidden="true">inbox</i>
+                                        <div class="fw-semibold fs-5 mb-1 text-body-emphasis">No Generated Mess Bills</div>
+                                        <div class="small text-body-secondary">Try another date range, or confirm your mess account is linked to your employee or student record.</div>
+                                    </div>
                                 </td>
                             </tr>
                         @endforelse
@@ -188,10 +182,10 @@
     </div>
 </div>
 
-<div class="modal fade" id="myBillDetailsModal" tabindex="-1" aria-labelledby="myBillDetailsModalLabel" aria-hidden="true">
+<div class="modal fade mess-bills-modal" id="myBillDetailsModal" tabindex="-1" aria-labelledby="myBillDetailsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content bill-receipt-modal-content">
-            <div class="modal-header border-0 py-2 align-items-start">
+            <div class="modal-header align-items-start">
                 <h5 class="modal-title fw-bold" id="myBillDetailsModalLabel">Bill details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -222,10 +216,150 @@
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
+/* =====================================================================
+   My Mess Bills — page-scoped polish.
+   Tokens/components come from sargam-app.css (--ds-*, .ds-*).
+   Scoped to .mess-my-bills-page / modal id so nothing leaks elsewhere.
+   ===================================================================== */
 @media screen { .mess-my-bills-page .report-header { display: none; } }
 @media print {
     .mess-my-bills-page .no-print { display: none !important; }
 }
+
+/* Page intro */
+.mess-my-bills-page .im-intro {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-3);
+}
+.mess-my-bills-page .im-intro h1 { color: var(--ds-ink); }
+.mess-my-bills-page .im-intro-icon {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--ds-radius-2);
+    background: rgba(var(--bs-primary-rgb, 0 74 147), 0.10);
+    color: var(--bs-primary);
+}
+.mess-my-bills-page .im-intro-icon i { font-size: 26px; }
+
+/* Stat cards */
+.mess-my-bills-page .im-stat {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-3);
+    height: 100%;
+    padding: var(--ds-space-4);
+    background: #fff;
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-2);
+    box-shadow: var(--ds-shadow-sm);
+}
+.mess-my-bills-page .im-stat-icon {
+    flex-shrink: 0;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--ds-radius-2);
+}
+.mess-my-bills-page .im-stat-icon i { font-size: 28px; }
+.mess-my-bills-page .im-stat-icon--primary { background: rgba(0, 74, 147, 0.10); color: #004a93; }
+.mess-my-bills-page .im-stat-icon--warning { background: #fff3d6; color: #9a6a00; }
+.mess-my-bills-page .im-stat-icon--success { background: #e3f5ea; color: #0f7b3e; }
+.mess-my-bills-page .im-stat-icon--info    { background: #e6f0fd; color: #0d5bbd; }
+.mess-my-bills-page .im-stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-weight: 600;
+    color: var(--ds-ink-muted);
+    margin-bottom: 0.15rem;
+}
+.mess-my-bills-page .im-stat-value { font-size: 1.5rem; font-weight: 700; color: var(--ds-ink); line-height: 1.1; }
+
+/* Labels + controls */
+.mess-my-bills-page .form-label { font-size: 0.8125rem; font-weight: 600; color: var(--ds-ink); margin-bottom: 0.4rem; }
+.mess-my-bills-page .form-control,
+.mess-my-bills-page .form-select { border-radius: var(--ds-radius-1); font-size: 0.9rem; }
+.mess-my-bills-page .form-control:focus,
+.mess-my-bills-page .form-select:focus { border-color: #86b7fe; box-shadow: var(--ds-focus-ring); }
+.mess-my-bills-page .btn-primary { border-radius: var(--ds-radius-1); font-weight: 600; }
+
+/* Datepicker input-group (flatpickr) */
+.mess-my-bills-page .im-datepicker .form-control {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: 0;
+}
+.mess-my-bills-page .im-datepicker-toggle {
+    background: var(--ds-surface-2);
+    border: 1px solid var(--ds-border, var(--ds-line));
+    border-left: 0;
+    border-top-right-radius: var(--ds-radius-1);
+    border-bottom-right-radius: var(--ds-radius-1);
+    color: var(--ds-ink-muted);
+    cursor: pointer;
+}
+.mess-my-bills-page .im-datepicker:focus-within .form-control,
+.mess-my-bills-page .im-datepicker:focus-within .im-datepicker-toggle {
+    border-color: #86b7fe;
+}
+.mess-my-bills-page .im-datepicker:focus-within { border-radius: var(--ds-radius-1); box-shadow: var(--ds-focus-ring); }
+.mess-my-bills-page .im-datepicker-toggle:hover { color: var(--bs-primary); }
+
+/* Table — neutral uppercase header (matches other modernized pages) */
+.mess-my-bills-page #myMessBillsTable thead th {
+    background: var(--ds-surface-2);
+    color: var(--ds-ink-muted);
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-weight: 600;
+    border-bottom: 1px solid var(--ds-line);
+    white-space: nowrap;
+}
+.mess-my-bills-page #myMessBillsTable tbody td {
+    font-size: 0.9rem;
+    color: var(--ds-ink);
+    vertical-align: middle;
+}
+.mess-my-bills-page #myMessBillsTable tbody tr.im-row-unpaid { background: #fffaf0; }
+
+/* Soft status pills */
+.mess-my-bills-page .im-pill {
+    display: inline-block;
+    padding: 0.3rem 0.75rem;
+    border-radius: 50rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+.mess-my-bills-page .im-pill--success   { color: #0f7b3e; background: #e3f5ea; }
+.mess-my-bills-page .im-pill--warning   { color: #9a6a00; background: #fff3d6; }
+.mess-my-bills-page .im-pill--secondary { color: #475467; background: #eef1f5; }
+
+/* Empty state */
+.mess-my-bills-page .im-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 2rem 1rem;
+}
+.mess-my-bills-page .im-empty i { font-size: 56px; color: #98a2b3; margin-bottom: 0.75rem; }
+
+/* --- Modal shell --- */
+.mess-bills-modal .modal-content { border: 0; border-radius: var(--ds-radius-2); box-shadow: 0 10px 40px rgba(16,24,40,.18); }
+.mess-bills-modal .modal-header { border-bottom: 1px solid var(--ds-line); padding: var(--ds-space-4); }
+.mess-bills-modal .modal-body { padding: var(--ds-space-4); }
+
+/* --- Receipt content (unchanged look, kept for the printable receipt) --- */
 .bill-receipt-content .receipt-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
 .bill-receipt-content .receipt-logo { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; color: #0a3d6b; }
 .bill-receipt-content .receipt-center { text-align: center; margin: 0.75rem 0; }
@@ -245,9 +379,10 @@
 .bill-receipt-content .receipt-bottom { display: flex; justify-content: flex-end; margin-top: 1rem; }
 .bill-receipt-content .payment-summary { text-align: right; min-width: 200px; }
 .bill-receipt-content .payment-summary .summary-row { display: flex; justify-content: flex-end; gap: 0.5rem; margin-bottom: 0.2rem; }
-.bill-receipt-actions { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #dee2e6; display: flex; gap: 0.75rem; flex-wrap: wrap; }
-.bill-receipt-actions .btn-receipt-print { background: linear-gradient(180deg, #0a6bb5 0%, #0a3d6b 100%); color: #fff; border: none; padding: 0.5rem 1.25rem; font-weight: 600; border-radius: 6px; }
-.bill-receipt-actions .btn-receipt-cancel { background: #c00; color: #fff; border: none; padding: 0.5rem 1.25rem; border-radius: 6px; font-weight: 600; }
+.bill-receipt-actions { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--ds-line); display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.bill-receipt-actions .btn-receipt-print { background: var(--bs-primary); color: #fff; border: none; padding: 0.5rem 1.25rem; font-weight: 600; border-radius: var(--ds-radius-1); }
+.bill-receipt-actions .btn-receipt-cancel { background: #fff; color: var(--ds-ink); border: 1px solid var(--ds-line); padding: 0.5rem 1.25rem; border-radius: var(--ds-radius-1); font-weight: 600; }
+.bill-receipt-actions .btn-receipt-cancel:hover { background: var(--ds-surface-2); }
 </style>
 @endpush
 
@@ -397,8 +532,8 @@
         if (typeof flatpickr !== 'undefined') {
             var defaultFrom = (df && df.getAttribute('data-default-ymd')) ? ymdToDate(df.getAttribute('data-default-ymd')) : (df && df.value ? dmyToDate(df.value) : null);
             var defaultTo = (dt && dt.getAttribute('data-default-ymd')) ? ymdToDate(dt.getAttribute('data-default-ymd')) : (dt && dt.value ? dmyToDate(dt.value) : null);
-            flatpickr('#date_from', { dateFormat: 'd-m-Y', allowInput: true, defaultDate: defaultFrom });
-            flatpickr('#date_to', { dateFormat: 'd-m-Y', allowInput: true, defaultDate: defaultTo });
+            flatpickr('#date_from_wrap', { wrap: true, dateFormat: 'd-m-Y', allowInput: true, defaultDate: defaultFrom });
+            flatpickr('#date_to_wrap', { wrap: true, dateFormat: 'd-m-Y', allowInput: true, defaultDate: defaultTo });
         }
         function toYmd(val) {
             if (!val || !String(val).match(/^\d{1,2}-\d{1,2}-\d{4}$/)) return val;
