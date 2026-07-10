@@ -631,48 +631,79 @@ $selectedClientType = (string) request()->input('client_type', '');
 }
 
 /* Column widths tuned so all td are visible in one go */
-#addReportItemsTable th:nth-child(1),
-#editReportItemsTable th:nth-child(1) {
+#addReportItemsTable th:nth-child(1) {
     width: 28%;
 }
 
-#addReportItemsTable th:nth-child(2),
-#editReportItemsTable th:nth-child(2) {
+#addReportItemsTable th:nth-child(2) {
     width: 8%;
 }
 
-#addReportItemsTable th:nth-child(3),
-#editReportItemsTable th:nth-child(3) {
+#addReportItemsTable th:nth-child(3) {
     width: 11%;
 }
 
-#addReportItemsTable th:nth-child(4),
-#editReportItemsTable th:nth-child(4) {
+#addReportItemsTable th:nth-child(4) {
     width: 11%;
 }
 
-#addReportItemsTable th:nth-child(5),
-#editReportItemsTable th:nth-child(5) {
+#addReportItemsTable th:nth-child(5) {
     width: 10%;
 }
 
-#addReportItemsTable th:nth-child(6),
-#editReportItemsTable th:nth-child(6) {
+#addReportItemsTable th:nth-child(6) {
     width: 14%;
 }
 
-#addReportItemsTable th:nth-child(7),
-#editReportItemsTable th:nth-child(7) {
+#addReportItemsTable th:nth-child(7) {
     width: 9%;
 }
 
-#addReportItemsTable th:nth-child(8),
-#editReportItemsTable th:nth-child(8) {
+#addReportItemsTable th:nth-child(8) {
     width: 11%;
 }
 
-#addReportItemsTable th:nth-child(9),
+#editReportItemsTable th:nth-child(1) {
+    width: 16%;
+}
+
+#editReportItemsTable th:nth-child(2) {
+    width: 20%;
+}
+
+#editReportItemsTable th:nth-child(3) {
+    width: 7%;
+}
+
+#editReportItemsTable th:nth-child(4) {
+    width: 9%;
+}
+
+#editReportItemsTable th:nth-child(5) {
+    width: 9%;
+}
+
+#editReportItemsTable th:nth-child(6) {
+    width: 8%;
+}
+
+#editReportItemsTable th:nth-child(7) {
+    width: 11%;
+}
+
+#editReportItemsTable th:nth-child(8) {
+    width: 8%;
+}
+
 #editReportItemsTable th:nth-child(9) {
+    width: 9%;
+}
+
+#editReportItemsTable th:nth-child(10) {
+    width: 5%;
+}
+
+#addReportItemsTable th:nth-child(9) {
     width: 5%;
 }
 
@@ -1484,20 +1515,17 @@ $selectedClientType = (string) request()->input('client_type', '');
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label voucher-label">Transfer From Store <span
-                                            class="text-danger">*</span></label>
-                                    <select name="inve_store_master_pk" class="form-select  edit-store-id" required>
+                                    <label class="form-label voucher-label">Remarks / Reference Number / Order
+                                        By</label>
+                                    <input type="text" name="remarks" class="form-control  edit-remarks"
+                                        placeholder="Remarks / Reference Number / Order By (optional)">
+                                    <select name="inve_store_master_pk" class="form-select edit-store-id d-none" tabindex="-1" aria-hidden="true">
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
                                         <option value="{{ $store['id'] }}">{{ $store['store_name'] }}</option>
                                         @endforeach
                                     </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label voucher-label">Remarks / Reference Number / Order
-                                        By</label>
-                                    <input type="text" name="remarks" class="form-control  edit-remarks"
-                                        placeholder="Remarks / Reference Number / Order By (optional)">
+                                    <input type="hidden" name="multi_store" id="editMultiStoreFlag" value="0">
                                 </div>
                             </div>
                         </div>
@@ -1519,6 +1547,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                                     id="editReportItemsTable">
                                     <thead class="voucher-brand-head">
                                         <tr>
+                                            <th>Store</th>
                                             <th>Item Name <span class="text-white">*</span></th>
                                             <th>Unit</th>
                                             <th>Available Qty</th>
@@ -1563,6 +1592,7 @@ $selectedClientType = (string) request()->input('client_type', '');
     let editRowIndex = 0;
     let currentStoreId = null;
     let editCurrentStoreId = null;
+    let editCurrentStoreName = '';
 
     function safeFocus(el) {
         if (!el || typeof el.focus !== 'function') return;
@@ -2020,9 +2050,10 @@ $selectedClientType = (string) request()->input('client_type', '');
             try { paySel.tomselect.setValue(String(v.payment_type ?? 1)); } catch (e) {}
         }
         var storeSel = document.querySelector('#editReportModal select.edit-store-id');
-        var sid = v.store_id || v.inve_store_master_pk || '';
-        if (storeSel && storeSel.tomselect && sid !== '') {
-            try { storeSel.tomselect.setValue(String(sid)); } catch (e) {}
+        if (v && v.filtered_view) {
+            applyEditFilteredStoreDisplay(v);
+        } else if (storeSel) {
+            applyEditFilteredStoreDisplay(v || {});
         }
         var ecs = document.getElementById('editDrClientNameSelect');
         if (ecs && ecs.tomselect && slug !== 'ot' && slug !== 'course' && v.client_type_pk != null && String(v.client_type_pk) !== '') {
@@ -2387,11 +2418,9 @@ $selectedClientType = (string) request()->input('client_type', '');
             }));
         }
         var storeSel = document.querySelector('#editReportModal select.edit-store-id');
-        if (storeSel && !storeSel.tomselect) {
-            editModalTomSelectInstances.store = createChoicesInstance(storeSel, createBlankSearchConfig({
-                placeholder: 'Select Store',
-                clearOnOpen: true
-            }));
+        // Store field is hidden in Edit modal; keep native select value only (no Choices/TomSelect).
+        if (storeSel && storeSel.tomselect) {
+            try { storeSel.tomselect.destroy(); } catch (e) {}
         }
         var editNameInpForInit = document.getElementById('editDrClientNameInput');
         var nameValForInit = (editNameInpForInit && editNameInpForInit.value) ? String(editNameInpForInit.value)
@@ -3903,12 +3932,119 @@ $selectedClientType = (string) request()->input('client_type', '');
         if (clientIdInput && selectedOpt) clientIdInput.value = selectedOpt.dataset.pk || '';
     });
 
+    function applyEditFilteredStoreDisplay(v) {
+        const editStoreSelect = document.querySelector('#editReportModal select.edit-store-id');
+        const editMultiStoreFlag = document.getElementById('editMultiStoreFlag');
+        const sid = v ? (v.store_id || v.inve_store_master_pk || '') : '';
+
+        if (editMultiStoreFlag) {
+            editMultiStoreFlag.value = (v && v.multi_store) ? '1' : '0';
+        }
+
+        editCurrentStoreName = (v && (v.store_name_display || v.store_name))
+            ? String(v.store_name_display || v.store_name)
+            : '';
+
+        if (editStoreSelect) {
+            editStoreSelect.classList.add('d-none');
+            editStoreSelect.removeAttribute('required');
+            if (sid !== '') {
+                editStoreSelect.value = String(sid);
+            }
+        }
+    }
+
+    function getEditStoreOptionsHtml(selectedStoreId) {
+        const storeSelect = document.querySelector('#editReportModal select.edit-store-id');
+        let html = '<option value="">Select Store</option>';
+        if (!storeSelect) {
+            return html;
+        }
+        Array.from(storeSelect.options).forEach(function(opt) {
+            if (!opt.value) {
+                return;
+            }
+            const selected = String(selectedStoreId || '') === String(opt.value) ? ' selected' : '';
+            html += '<option value="' + String(opt.value).replace(/"/g, '&quot;') + '"' + selected + '>' +
+                String(opt.textContent || '').replace(/</g, '&lt;') + '</option>';
+        });
+        return html;
+    }
+
+    function fillEditRowItemOptions(row, items, selectedItemId) {
+        const select = row ? row.querySelector('.edit-dr-item-select') : null;
+        if (!select) {
+            return;
+        }
+        const currentValue = selectedItemId != null ? String(selectedItemId) : getSelectValue(select);
+        if (select.tomselect) {
+            try {
+                select.tomselect.destroy();
+            } catch (e) {}
+        }
+        select.innerHTML = '<option value="">Select Item</option>';
+        (items || []).forEach(function(item) {
+            const option = document.createElement('option');
+            option.value = item.id;
+            option.textContent = item.item_name || '—';
+            option.setAttribute('data-unit', item.unit_measurement || '');
+            option.setAttribute('data-rate', item.standard_cost || 0);
+            option.setAttribute('data-available', item.available_quantity || 0);
+            if (item.price_tiers && item.price_tiers.length > 0) {
+                option.setAttribute('data-price-tiers', JSON.stringify(item.price_tiers));
+            }
+            if (String(item.id) === String(currentValue)) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+        if (typeof Choices !== 'undefined') {
+            createChoicesInstance(select, createItemSelectConfig());
+        }
+    }
+
+    function bindEditRowStoreSelect(row) {
+        const storeSel = row ? row.querySelector('.edit-dr-store-select') : null;
+        if (!storeSel || storeSel.dataset.bound === '1') {
+            return;
+        }
+        storeSel.dataset.bound = '1';
+        storeSel.addEventListener('change', function() {
+            const storeId = getSelectValue(this);
+            const itemSelect = row.querySelector('.edit-dr-item-select');
+            const unitInp = row.querySelector('.edit-dr-unit');
+            const availInp = row.querySelector('.edit-dr-avail');
+            const rateInp = row.querySelector('.edit-dr-rate');
+            const qtyInp = row.querySelector('.edit-dr-qty');
+            if (itemSelect) {
+                setSelectValue(itemSelect, '');
+            }
+            if (unitInp) unitInp.value = '—';
+            if (availInp) availInp.value = '';
+            if (rateInp) rateInp.value = '';
+            if (qtyInp) qtyInp.value = '';
+            updateEditRowTotal(row);
+            updateEditGrandTotal();
+            if (!storeId) {
+                fillEditRowItemOptions(row, [], '');
+                refreshEditAllAvailable();
+                return;
+            }
+            fetchStoreItems(storeId, function() {
+                fillEditRowItemOptions(row, filteredItems, '');
+                refreshEditAllAvailable();
+            });
+        });
+    }
+
     // Edit modal row helpers
     function getEditRowHtml(index, item) {
         item = item || {};
-        const sourceItems = Array.isArray(filteredItems) && filteredItems.length > 0 ? filteredItems :
-            itemSubcategories;
-        const options = sourceItems.map(s => {
+        const isExistingLine = !!(item.id);
+        const sourceItems = (!isExistingLine && !(item.store_id || editCurrentStoreId))
+            ? []
+            : (Array.isArray(filteredItems) && filteredItems.length > 0 ? filteredItems : itemSubcategories);
+        let options = sourceItems.map(s => {
             let attrs = 'data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') +
                 '" data-rate="' + (s.standard_cost || 0) + '" data-available="' + (s.available_quantity ||
                     0) + '"';
@@ -3918,7 +4054,17 @@ $selectedClientType = (string) request()->input('client_type', '');
             }
             return '<option value="' + s.id + '" ' + attrs + (item.item_subcategory_id == s.id ?
                 ' selected' : '') + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>';
-        }).join('');
+        });
+        if (item.item_subcategory_id && !sourceItems.some(function(s) {
+                return String(s.id) === String(item.item_subcategory_id);
+            })) {
+            options.unshift('<option value="' + item.item_subcategory_id + '" selected data-unit="' + (item
+                    .unit || '').replace(/"/g, '&quot;') + '" data-rate="' + (item.rate != null ? item
+                    .rate : 0) + '" data-available="' + (item.available_quantity != null ? item
+                    .available_quantity : 0) + '">' + (item.item_name || '—').replace(/</g, '&lt;') +
+                '</option>');
+        }
+        const optionsHtml = options.join('');
         const avail = item.available_quantity != null ? item.available_quantity : '';
         const qty = item.quantity != null ? item.quantity : '';
         const rate = item.rate != null ? item.rate : '';
@@ -3928,10 +4074,26 @@ $selectedClientType = (string) request()->input('client_type', '');
             '';
         const originalQtyAttr = (item.quantity != null && item.quantity !== '') ? (' data-original-qty="' + (
             parseFloat(item.quantity) || 0) + '"') : '';
+        const lineIdField = item.id ? ('<input type="hidden" name="items[' + index + '][line_id]" value="' +
+            item.id + '">') : '';
+        const storeId = item.store_id || (!isExistingLine ? '' : (editCurrentStoreId || ''));
+        const storeName = String(item.store_name || (!isExistingLine ? '' : editCurrentStoreName) || '—')
+            .replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        let storeCell = '';
+        if (isExistingLine) {
+            storeCell = '<td class="text-wrap text-break small">' +
+                '<input type="hidden" name="items[' + index + '][store_id]" value="' +
+                String(storeId || '').replace(/"/g, '&quot;') + '">' + storeName + '</td>';
+        } else {
+            storeCell = '<td><select name="items[' + index +
+                '][store_id]" class="form-select edit-dr-store-select" required>' +
+                getEditStoreOptionsHtml(storeId) + '</select></td>';
+        }
         return '<tr class="edit-dr-item-row"' + originalQtyAttr + '>' +
-            '<td><select name="items[' + index +
+            storeCell +
+            '<td>' + lineIdField + '<select name="items[' + index +
             '][item_subcategory_id]" class="form-select  edit-dr-item-select" required><option value="">Select Item</option>' +
-            options + '</select></td>' +
+            optionsHtml + '</select></td>' +
             '<td><input type="text" name="items[' + index +
             '][unit]" class="form-control  edit-dr-unit" readonly placeholder="—" value="' + (item.unit || '')
             .replace(/"/g, '&quot;') + '"></td>' +
@@ -4032,6 +4194,14 @@ $selectedClientType = (string) request()->input('client_type', '');
         const newTr = div.querySelector('tr');
         tbody.appendChild(newTr);
         editRowIndex++;
+        bindEditRowStoreSelect(newTr);
+        const storeSel = newTr.querySelector('.edit-dr-store-select');
+        if (storeSel && typeof Choices !== 'undefined') {
+            createChoicesInstance(storeSel, createBlankSearchConfig({
+                placeholder: 'Select Store',
+                clearOnOpen: true
+            }));
+        }
         const sel = newTr.querySelector('.edit-dr-item-select');
         if (sel && typeof Choices !== 'undefined') createChoicesInstance(sel, createItemSelectConfig());
         const opt = getSelectSelectedOption(sel);
@@ -4141,7 +4311,8 @@ $selectedClientType = (string) request()->input('client_type', '');
                     setTimeout(function() {
                         const lastRow = editModalItemsBodyEl.querySelector('.edit-dr-item-row:last-child');
                         if (lastRow) {
-                            const firstSelect = lastRow.querySelector('.edit-dr-item-select');
+                            const storeSelect = lastRow.querySelector('.edit-dr-store-select');
+                            const firstSelect = storeSelect || lastRow.querySelector('.edit-dr-item-select');
                             if (firstSelect && firstSelect.tomselect && firstSelect.tomselect.wrapper) {
                                 var inner = firstSelect.tomselect.wrapper.querySelector('.choices__inner');
                                 if (inner) inner.click();
@@ -4170,7 +4341,8 @@ $selectedClientType = (string) request()->input('client_type', '');
         e.preventDefault();
         e.stopPropagation();
         const reportId = btn.getAttribute('data-report-id');
-        fetch(baseUrl + '/' + reportId, {
+        const viewQuery = window.location.search || '';
+        fetch(baseUrl + '/' + reportId + viewQuery, {
                 headers: {
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
@@ -4241,7 +4413,8 @@ $selectedClientType = (string) request()->input('client_type', '');
         e.preventDefault();
         e.stopPropagation();
         const reportId = btn.getAttribute('data-report-id');
-        fetch(baseUrl + '/' + reportId + '/return', {
+        const returnQuery = window.location.search || '';
+        fetch(baseUrl + '/' + reportId + '/return' + returnQuery, {
                 headers: {
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
@@ -4291,7 +4464,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                         '"><div class="invalid-feedback">Return date must be between issue date and today.</div></td></tr>'
                     );
                 });
-                document.getElementById('returnItemForm').action = baseUrl + '/' + reportId + '/return';
+                document.getElementById('returnItemForm').action = baseUrl + '/' + reportId + '/return' + returnQuery;
                 new bootstrap.Modal(document.getElementById('returnItemModal')).show();
             })
             .catch(err => {
@@ -4452,6 +4625,14 @@ $selectedClientType = (string) request()->input('client_type', '');
             editRowIndex++;
         }
         tbody.querySelectorAll('.edit-dr-item-row').forEach(function(row) {
+            bindEditRowStoreSelect(row);
+            const storeSel = row.querySelector('.edit-dr-store-select');
+            if (storeSel && typeof Choices !== 'undefined' && !storeSel.tomselect) {
+                createChoicesInstance(storeSel, createBlankSearchConfig({
+                    placeholder: 'Select Store',
+                    clearOnOpen: true
+                }));
+            }
             row.querySelector('.edit-dr-avail').addEventListener('input', function() {
                 updateEditRowLeft(row);
             });
@@ -4493,8 +4674,9 @@ $selectedClientType = (string) request()->input('client_type', '');
         e.preventDefault();
         e.stopPropagation();
         const reportId = btn.getAttribute('data-report-id');
-        document.getElementById('editReportForm').action = baseUrl + '/' + reportId;
-        fetch(baseUrl + '/' + reportId + '/edit', {
+        const editQuery = window.location.search || '';
+        document.getElementById('editReportForm').action = baseUrl + '/' + reportId + editQuery;
+        fetch(baseUrl + '/' + reportId + '/edit' + editQuery, {
                 headers: {
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
@@ -4516,7 +4698,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                 const v = data.voucher;
                 document.getElementById('editReportModalLabel').textContent = 'Edit Selling Voucher #' +
                     (v.id || reportId);
-                document.querySelector('.edit-store-id').value = v.store_id || v.inve_store_master_pk || '';
+                applyEditFilteredStoreDisplay(v);
                 document.querySelector('.edit-remarks').value = v.remarks || '';
                 const editRefNumEl = document.querySelector('.edit-reference-number');
                 if (editRefNumEl) editRefNumEl.value = v.reference_number || '';
@@ -4678,12 +4860,22 @@ $selectedClientType = (string) request()->input('client_type', '');
                 initEditModalTomSelects();
                 syncEditDrChoicesFromVoucher(v, slug);
                 editCurrentStoreId = v.store_id || v.inve_store_master_pk || '';
+                if (!editCurrentStoreName) {
+                    var storeOpt = document.querySelector(
+                        '#editReportModal select.edit-store-id option[value="' +
+                        String(editCurrentStoreId).replace(/"/g, '\\"') + '"]'
+                    );
+                    editCurrentStoreName = storeOpt ? String(storeOpt.textContent || '').trim() : '';
+                }
                 const items = data.items || [];
                 const openEditModalWithItems = function() {
                     buildEditItemsTable(items);
                     new bootstrap.Modal(document.getElementById('editReportModal')).show();
                 };
-                if (editCurrentStoreId) {
+                if (v.filtered_view) {
+                    filteredItems = Array.isArray(itemSubcategories) ? itemSubcategories.slice() : [];
+                    openEditModalWithItems();
+                } else if (editCurrentStoreId) {
                     fetchStoreItems(editCurrentStoreId, function() {
                         updateEditItemDropdowns();
                         openEditModalWithItems();
