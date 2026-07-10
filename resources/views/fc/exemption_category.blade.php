@@ -38,13 +38,13 @@
                                 'circle' => 'bg-success-subtle',
                                 'icon' => 'text-success',
                                 'btn' => 'btn-success',
-                                'bi' => 'bi-file-earmark-text-fill',
+                                'bi' => 'bi-heart-pulse',
                             ],
                             [
                                 'circle' => 'bg-danger-subtle',
                                 'icon' => 'text-danger',
                                 'btn' => 'btn-danger',
-                                'bi' => 'bi-heart-pulse',
+                                'bi' => 'bi-file-earmark-text-fill',
                             ],
                             [
                                 'circle' => 'bg-warning-subtle',

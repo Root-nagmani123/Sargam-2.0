@@ -6,6 +6,7 @@
 <div class="fc-form-page">
 <div class="fc-shell">
     @php
+        $gatedStepMeta = $gatedStepMeta ?? [];
         $totalSteps = $steps->count();
         $doneSteps  = $steps->filter(fn ($s) => ($stepStatus[$s->id] ?? false))->count();
         $pct        = $totalSteps > 0 ? (int) round($doneSteps / $totalSteps * 100) : 0;
@@ -43,7 +44,9 @@
                     } else {
                         $prevAllDone = true;
                         for ($pi = 0; $pi < $si; $pi++) {
-                            if (!($stepStatus[$steps[$pi]->id] ?? false)) {
+                            $prevId = $steps[$pi]->id;
+                            // A gated-off Special Assistant step is optional → it never blocks later steps.
+                            if (!($stepStatus[$prevId] ?? false) && !isset($gatedStepMeta[$prevId])) {
                                 $prevAllDone = false;
                                 break;
                             }
@@ -53,6 +56,13 @@
                         $isDone = $rawDone && ($si === 0 || $prevAllDone);
                         $isAccessible = $si === 0 || $prevAllDone;
                         $blockedMsg = $isAccessible ? null : 'Complete the previous step first';
+                    }
+
+                    // Special Assistant with no ph_value on the roster: disabled + not applicable.
+                    if (isset($gatedStepMeta[$step->id])) {
+                        $isAccessible = false;
+                        $isDone = false;
+                        $blockedMsg = $gatedStepMeta[$step->id];
                     }
                 @endphp
                 <div class="col-md-6 col-lg-4">

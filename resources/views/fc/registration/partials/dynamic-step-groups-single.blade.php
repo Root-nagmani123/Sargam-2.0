@@ -109,6 +109,7 @@
                                             @include('fc.registration.partials.dynamic-group-row', [
                                                 'group' => $group, 'i' => $i, 'row' => $row, 'groupLookups' => $gLookups,
                                                 'districtOptions' => $districtOptions ?? collect(),
+                                                'disabledFields' => (($disabledGroupFields ?? [])[$group->group_name] ?? []),
                                             ])
                                         @endforeach
                                     @else
@@ -117,6 +118,7 @@
                                             @include('fc.registration.partials.dynamic-group-row', [
                                                 'group' => $group, 'i' => $i, 'row' => (object)[], 'groupLookups' => $gLookups,
                                                 'districtOptions' => $districtOptions ?? collect(),
+                                                'disabledFields' => (($disabledGroupFields ?? [])[$group->group_name] ?? []),
                                             ])
                                         @endfor
                                     @endif
@@ -181,6 +183,11 @@ function addGroupRow(groupName, groupId, maxRows) {
     const newIndex = currentRows.length;
     const lastRow = currentRows[currentRows.length - 1];
     if (!lastRow) return;
+    // Tear down Choices on the source row first so we clone plain <select>s (a cloned
+    // Choices widget would be a detached, non-functional copy).
+    lastRow.querySelectorAll('.choices-field select').forEach(function (sel) {
+        if (sel._choices) { try { sel._choices.destroy(); } catch (e) {} sel._choices = null; }
+    });
     const clone = lastRow.cloneNode(true);
     clone.dataset.index = newIndex;
     clone.querySelectorAll('input, select, textarea').forEach(function (el) {
@@ -198,6 +205,8 @@ function addGroupRow(groupName, groupId, maxRows) {
         $(this).next('.select2-container').remove();
         $(this).select2({ theme: 'bootstrap-5', width: '100%', placeholder: '-- Select --', allowClear: true });
     });
+    // Re-init Choices on both the restored source row and the fresh clone.
+    if (typeof window.fcInitChoices === 'function') { window.fcInitChoices(); }
 }
 
 $(document).ready(function () {
@@ -347,6 +356,9 @@ document.querySelectorAll('.fc-file-upload[data-max-kb]').forEach(function (inpu
             applyConditionalFields();
         }
     });
+
+    // Exposed so the "Add Row" clone logic can (re)initialise Choices on new rows.
+    window.fcInitChoices = initChoices;
 
     function boot() { initChoices(); applyConditionalFields(); }
     if (window.jQuery) { jQuery(boot); }

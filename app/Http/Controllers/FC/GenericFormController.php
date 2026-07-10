@@ -44,6 +44,16 @@ class GenericFormController extends Controller
         $steps    = $form->activeSteps()->withCount(['fields', 'fieldGroups'])->get();
         $stepStatus = $this->registrationFlow->buildStepCompletionByStepId($form, $steps, $userId);
 
+        // Special Assistant is available only when the academy has set a ph_value on the
+        // trainee's roster row. When absent, the step is shown disabled and — because it is
+        // optional — is treated as non-blocking so later steps stay accessible.
+        $gatedStepMeta = [];
+        foreach ($steps as $s) {
+            if ($this->specialAssistantGatedOff($s, (int) $userId)) {
+                $gatedStepMeta[$s->id] = 'Not applicable for you';
+            }
+        }
+
         $registrationProgress = null;
         $fcRegistrationMeta = null;
         if ($form->form_slug === 'fc-registration') {
@@ -70,6 +80,7 @@ class GenericFormController extends Controller
             'form',
             'steps',
             'stepStatus',
+            'gatedStepMeta',
             'registrationProgress',
             'fcRegistrationMeta',
             'travelDone'
@@ -103,6 +114,8 @@ class GenericFormController extends Controller
             $existingRows   = [];
             $groupLookups   = [];
             $completedGroups = [];
+            $disabledGroupFields = [];
+            $optionalSubjects = app(\App\Services\FC\FcOptionalSubjectService::class);
 
             foreach ($groups as $group) {
                 $rows = $this->formService->getExistingGroupRows($group, $userId);
@@ -112,6 +125,13 @@ class GenericFormController extends Controller
                     ? $group->activeGroupFields
                     : $group->groupFields;
                 $groupLookups[$group->group_name] = $this->formService->getGroupLookupData($fieldsForLookups);
+
+                // IFoS trainees get both optional subjects (IFoS list); others get the CSE
+                // list on the first only, with the second dropdown disabled.
+                $disabledGroupFields[$group->group_name] = $optionalSubjects->applyGroupOverrides(
+                    $groupLookups[$group->group_name],
+                    (int) $userId
+                );
             }
 
             $allSteps = $form->activeSteps;
@@ -126,6 +146,7 @@ class GenericFormController extends Controller
                 'existingRows',
                 'groupLookups',
                 'completedGroups',
+                'disabledGroupFields',
                 'allSteps',
                 'prevStep',
                 'nextStep'
@@ -483,6 +504,13 @@ class GenericFormController extends Controller
         $stepStatus = $this->registrationFlow->buildStepCompletionByStepId($form, $steps, $userId);
         $isDone = $stepStatus[$step->id] ?? false;
 
+        // Special Assistant may only be opened when the trainee has a ph_value; otherwise
+        // it is not applicable and cannot be viewed or saved (matches the disabled card).
+        if ($this->specialAssistantGatedOff($step, (int) $userId)) {
+            return redirect()->route('fc-reg.forms.dashboard', $form)
+                ->with('error', 'Special Assistant is not applicable for you.');
+        }
+
         if ($form->form_slug === 'fc-registration') {
             if ($isDone) {
                 return null;
@@ -502,12 +530,34 @@ class GenericFormController extends Controller
                 ->with('error', 'Invalid step.');
         }
         for ($i = 0; $i < $idx; $i++) {
-            if (! ($stepStatus[$steps[$i]->id] ?? false)) {
+            // A Special Assistant step that is gated off (no ph_value) is optional, so it
+            // never blocks the steps that follow it.
+            if (! ($stepStatus[$steps[$i]->id] ?? false)
+                && ! $this->specialAssistantGatedOff($steps[$i], (int) $userId)) {
                 return redirect()->route('fc-reg.forms.dashboard', $form)
                     ->with('error', 'Please complete the previous steps first.');
             }
         }
 
         return null;
+    }
+
+    /**
+     * A step is the "Special Assistant" step when its name is Special Assistant /
+     * Special Assistance (spelling varies across FC form templates).
+     */
+    private function isSpecialAssistantStep(FcFormStep $step): bool
+    {
+        return str_starts_with(strtolower(trim((string) $step->step_name)), 'special assist');
+    }
+
+    /**
+     * The Special Assistant step is "gated off" (disabled and skippable) for a trainee
+     * who has no ph_value on their fc_registration_master roster row.
+     */
+    private function specialAssistantGatedOff(FcFormStep $step, int $userId): bool
+    {
+        return $this->isSpecialAssistantStep($step)
+            && ! $this->importedProfileLock->hasPhValue($userId);
     }
 }

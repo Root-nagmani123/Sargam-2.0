@@ -55,6 +55,9 @@
     $panHelp = 'Format: ABCDE1234F (5 uppercase letters, 4 digits, 1 uppercase letter)';
     $isPanField = $fieldName === 'pan_card'
         || str_contains(strtolower((string) $field->label), 'pan');
+    $isPassportField = $fieldName === 'passport_no'
+        || str_contains(strtolower((string) $field->label), 'passport');
+    $passportHelp = 'Passport number must be 8–9 characters.';
     $textInputMode = match ($fieldType) {
         'number' => 'decimal',
         'email' => 'email',
@@ -110,10 +113,14 @@
                    max="{{ now()->subYears(15)->format('Y-m-d') }}"
                @endif
                @if($isPanField) style="text-transform:uppercase" oninput="this.value = this.value.toUpperCase()" @endif
+               @if($isPassportField) minlength="8" maxlength="9" @endif
                @if($field->is_required) data-fc-required="1" aria-required="true" @endif
                {{ $inputLockAttr }}>
         @if($isPanField)
             <div class="form-text text-muted">{{ $panHelp }}</div>
+        @endif
+        @if($isPassportField)
+            <div class="form-text text-muted">{{ $passportHelp }}</div>
         @endif
         @break
 

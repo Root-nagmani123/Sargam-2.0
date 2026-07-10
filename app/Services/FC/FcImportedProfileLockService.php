@@ -106,6 +106,43 @@ class FcImportedProfileLockService
     }
 
     /**
+     * The academy-provided pH reading (fc_registration_master.ph_value) for the
+     * trainee, or null when the roster row is missing or the value is not set.
+     */
+    public function phValue(int $userId): ?string
+    {
+        $row = $this->rosterRow($userId);
+        $value = $row->ph_value ?? null;
+
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return (string) $value;
+    }
+
+    /**
+     * Whether the trainee has a ph_value on their roster row. Drives the
+     * Special Assistant step gate (enabled only when a ph_value is present).
+     */
+    public function hasPhValue(int $userId): bool
+    {
+        return $this->phValue($userId) !== null;
+    }
+
+    /**
+     * The academy-assigned service (fc_registration_master.service_master_pk) for the
+     * trainee, or null when the roster row is missing / the service is unset (0).
+     */
+    public function serviceMasterPk(int $userId): ?int
+    {
+        $row = $this->rosterRow($userId);
+        $pk  = $row->service_master_pk ?? null;
+
+        return ($pk !== null && (int) $pk > 0) ? (int) $pk : null;
+    }
+
+    /**
      * The trainee's imported fc_registration_master row, resolved from the auth id.
      *
      * Mirrors fc_user_val(): staged /fc/login users have a negative auth id equal to

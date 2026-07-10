@@ -100,6 +100,7 @@
                                             'row' => $row,
                                             'groupLookups' => $gLookups,
                                             'districtOptions' => $districtOptions ?? collect(),
+                                            'disabledFields' => ($disabledGroupFields[$group->group_name] ?? []),
                                         ])
                                     @endforeach
                                 @else
@@ -111,6 +112,7 @@
                                             'row' => (object)[],
                                             'groupLookups' => $gLookups,
                                             'districtOptions' => $districtOptions ?? collect(),
+                                            'disabledFields' => ($disabledGroupFields[$group->group_name] ?? []),
                                         ])
                                     @endfor
                                 @endif
