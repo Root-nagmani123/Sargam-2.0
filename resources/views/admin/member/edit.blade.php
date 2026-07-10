@@ -58,7 +58,10 @@
 
     @push('scripts')
         <script>
-            let employeePK = null;
+            // Seeded server-side — the only source of the PK for this edit session.
+            // Per-step validation no longer returns a pk (nothing is saved until Finish),
+            // so onFinished() below relies on this to tell the server which record to update.
+            let employeePK = {{ $member->pk ?? 'null' }};
 
             $(document).ready(function () {
                 const form = $("#member-form");
@@ -78,33 +81,18 @@
 
                         const currentStep = $(`#wizard-p-${currentIndex}`);
                         let stepData = currentStep.find(':input').serialize();
-
-                        if (employeePK) {
-                            stepData += `&emp_id=${employeePK}`;
-                        }
+                        stepData += `&emp_id=${employeePK}`;
 
                         let canProceed = false;
 
+                        // Validates this step's fields only — nothing is written to the
+                        // database yet. The record is updated in one shot from onFinished().
                         $.ajax({
-                            url: `/member/update-validate-step/${currentIndex + 1}/${employeePK || $('#emp_id').val()}`,
+                            url: `/member/update-validate-step/${currentIndex + 1}/${employeePK}`,
                             method: "POST",
                             data: stepData + '&_token={{ csrf_token() }}',
                             async: false,
                             success: function (success) {
-                                if (success.pk) {
-                                    employeePK = success.pk;
-
-                                    // Inject employeePK to all already loaded steps
-                                    $(".wizard section").each(function () {
-                                        const section = $(this);
-                                        if (!section.find('#employeePK').length) {
-                                            section.append(`<input type="hidden" id="employeePK" name="emp_id" value="${employeePK}">`);
-                                        } else {
-                                            section.find('#employeePK').val(employeePK); // Update value if exists
-                                        }
-                                    });
-                                }
-
                                 clearErrors(currentStep);
                                 canProceed = true;
                             },
@@ -135,10 +123,11 @@
                     },
 
                     onFinished: function () {
+                        // All 5 steps' inputs are still in the DOM (jQuery Steps never
+                        // removes them), so this FormData already carries every field from
+                        // every step — this is the single point where the record is saved.
                         const formData = new FormData(form[0]);
-                        if (employeePK) {
-                            formData.append('emp_id', employeePK);
-                        }
+                        formData.append('emp_id', employeePK);
 
                         $.ajax({
                             url: "{{ route('member.update') }}",
@@ -171,16 +160,10 @@
                     const stepSection = $(`#wizard-p-${stepNumber - 1}`);
 
                     $.ajax({
-                        url: `/member/edit-step/${stepNumber}/${employeePK || $('#emp_id').val()}`,
+                        url: `/member/edit-step/${stepNumber}/${employeePK}`,
                         method: "GET",
                         success: function (html) {
                             stepSection.html(html);
-
-                            // Inject employeePK if available and not yet injected
-                            if (employeePK && !stepSection.find('#employeePK').length) {
-                                stepSection.append(`<input type="hidden" id="employeePK" name="emp_id" value="${employeePK}">`);
-                            }
-
                             loadedSteps[stepNumber] = true;
                         },
                         error: function (xhr) {
