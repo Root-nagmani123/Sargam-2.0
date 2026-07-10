@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Faculty MDO/Escort Exception View - Sargam | Lal Bahadur')
+@section('title', 'Faculty MDO/Escort Exception View')
 
 @section('setup_content')
 <style>
@@ -23,18 +23,18 @@
     
     /* Summary Card Enhancement */
     .exception-summary-card {
-        background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-light) 100%);
-        border-radius: 12px;
+        background: #ffffff;
+        border: 1px solid var(--ds-line, #e5e7eb);
+        border-radius: var(--ds-radius-2, 8px);
         padding: 24px;
-        color: white;
-        box-shadow: 0 4px 12px rgba(0, 74, 147, 0.15);
+        color: var(--ds-ink, #1f2937);
+        box-shadow: var(--ds-shadow-sm, 0 1px 2px rgba(16, 24, 40, 0.05));
         margin-bottom: 32px;
         transition: var(--transition);
     }
-    
+
     .exception-summary-card:hover {
-        box-shadow: 0 8px 24px rgba(0, 74, 147, 0.25);
-        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(16, 24, 40, 0.08);
     }
     
     .summary-stat {
@@ -44,31 +44,32 @@
     }
     
     .summary-stat-label {
-        font-size: 13px;
-        font-weight: 500;
-        opacity: 0.9;
-        letter-spacing: 0.5px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--ds-ink-muted, #667085);
+        letter-spacing: 0.3px;
         text-transform: uppercase;
     }
-    
+
     .summary-stat-value {
         font-size: 32px;
         font-weight: 700;
         letter-spacing: -1px;
+        color: var(--primary-blue);
     }
     
     /* Table Header Enhancement */
     .table-header {
-        background: var(--very-light);
-        border-bottom: 2px solid var(--primary-blue);
-        padding: 16px;
+        background: var(--ds-surface-2, #f8fafc);
+        border-bottom: 1px solid var(--ds-line, #e5e7eb);
+        padding: 14px 16px;
         border-radius: 8px 8px 0 0;
         margin-bottom: 0;
     }
-    
+
     .table-header h6 {
         margin: 0;
-        color: var(--primary-blue);
+        color: var(--ds-ink-muted, #667085);
         font-weight: 600;
         font-size: 14px;
         text-transform: uppercase;
@@ -96,15 +97,15 @@
     }
     
     .exception-table thead th {
-        background: var(--very-light);
-        color: var(--primary-blue);
+        background: var(--ds-surface-2, #f8fafc);
+        color: var(--ds-ink-muted, #667085);
         font-weight: 600;
-        font-size: 13px;
-        padding: 14px 16px;
+        font-size: 12px;
+        padding: 12px 14px;
         text-align: left;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        border-bottom: 2px solid var(--primary-blue);
+        letter-spacing: 0.4px;
+        border-bottom: 1px solid var(--ds-line, #e5e7eb);
         white-space: nowrap;
     }
     
@@ -130,39 +131,43 @@
     /* Faculty/Course Section Container */
     .section-container {
         background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border: 1px solid var(--ds-line, #e5e7eb);
+        border-top: 3px solid var(--primary-blue);
+        border-radius: var(--ds-radius-2, 8px);
+        box-shadow: var(--ds-shadow-sm, 0 1px 2px rgba(16, 24, 40, 0.05));
         margin-bottom: 24px;
         overflow: hidden;
-        border-top: 4px solid var(--primary-blue);
         transition: var(--transition);
     }
-    
+
     .section-container:hover {
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        box-shadow: 0 4px 12px rgba(16, 24, 40, 0.08);
     }
     
     /* Faculty Header */
     .faculty-header {
-        background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-light) 100%);
-        color: white;
-        padding: 18px 24px;
+        background: #eef5ff;
+        color: var(--ds-ink, #1f2937);
+        padding: 16px 24px;
         display: flex;
         align-items: center;
         gap: 12px;
+        border-bottom: 1px solid #cfe0f5;
     }
-    
+
     .faculty-header h5 {
         margin: 0;
         font-weight: 600;
         font-size: 16px;
+        color: var(--ds-ink, #1f2937) !important;
         display: flex;
         align-items: center;
         gap: 10px;
     }
-    
+
     .faculty-header .material-icons {
         font-size: 22px;
+        color: var(--primary-blue);
     }
     
     /* Course Section Header */
@@ -200,16 +205,16 @@
     
     /* Badge Enhancement */
     .exception-badge {
-        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
-        color: white;
-        font-weight: 700;
-        padding: 8px 16px;
-        border-radius: 20px;
+        background: #fff3d6;
+        color: #9a6a00;
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 50rem;
         font-size: 13px;
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+        box-shadow: none;
     }
     
     .exception-badge .material-icons {
@@ -234,8 +239,9 @@
     .empty-state {
         text-align: center;
         padding: 48px 24px;
-        background: var(--very-light);
-        border-radius: 8px;
+        background: var(--ds-surface-2, #f8fafc);
+        border: 1px solid var(--ds-line, #e5e7eb);
+        border-radius: var(--ds-radius-2, 8px);
     }
     
     .empty-state .material-icons {
@@ -260,9 +266,10 @@
     .filter-section {
         background: white;
         padding: 20px 24px;
-        border-radius: 8px;
+        border: 1px solid var(--ds-line, #e5e7eb);
+        border-radius: var(--ds-radius-2, 8px);
         margin-bottom: 24px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        box-shadow: var(--ds-shadow-sm, 0 1px 2px rgba(16, 24, 40, 0.05));
     }
     
     .filter-section .form-label {
@@ -431,27 +438,20 @@
 
 <div class="container-fluid">
     <x-breadcrum title="Faculty MDO/Escort Exception View"></x-breadcrum>
-    <div class="card" style="border-left: 4px solid var(--primary-blue); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);">
-        <div class="card-body p-4">
-            <div class="row mb-4 align-items-center">
+     <div class="row mb-4 align-items-center">
                 <div class="col-6">
-                    <h4 style="color: var(--text-primary); font-weight: 600;">
-                        <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 28px; vertical-align: middle; margin-right: 8px; color: var(--primary-blue);">assignment_ind</i>
-                        Faculty MDO/Escort Exception View
-                    </h4>
                 </div>
                 <div class="col-6">
                     <div class="d-flex justify-content-end align-items-center gap-2">
-                        <button type="button" class="btn btn-primary d-flex align-items-center gap-2" onclick="printContent()" style="background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-light) 100%); border: none; border-radius: 6px; padding: 10px 16px; transition: var(--transition);">
+                        <button type="button" class="btn btn-outlined-primary d-inline-flex align-items-center gap-2 border-0 bg-white text-primary" onclick="printContent()">
                             <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 20px;">print</i>
                             Print
                         </button>
                     </div>
                 </div>
             </div>
-            
-            <hr style="border-color: var(--divider);">
-            
+    <div class="ds-card">
+        <div class="card-body p-4">
             @php
                 // Check if this is a faculty login view
                 $isFacultyView = isset($isFacultyView) && $isFacultyView === true;
