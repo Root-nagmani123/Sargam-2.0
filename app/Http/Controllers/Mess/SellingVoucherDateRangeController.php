@@ -901,7 +901,25 @@ class SellingVoucherDateRangeController extends Controller
      */
     private function sellingVoucherDateRangeFilteredBuyerItemRows(SellingVoucherDateRangeReport $report, Request $request)
     {
-        $query = $this->sellingVoucherDateRangeItemRowsBaseQuery($request);
+        // Use listing date/store/status filters, but buyer identity comes from the opened voucher.
+        // Do not reuse listing client_type_pk/buyer_name — same person can have legacy category pks.
+        $filterRequest = Request::create(
+            $request->url(),
+            'GET',
+            array_filter(
+                [
+                    'start_date' => $request->input('start_date'),
+                    'end_date' => $request->input('end_date'),
+                    'store' => $request->input('store'),
+                    'status' => $request->input('status'),
+                    'return_status' => $request->input('return_status'),
+                    'client_type' => $request->input('client_type'),
+                ],
+                fn ($value) => $value !== null && $value !== '' && $value !== []
+            )
+        );
+
+        $query = $this->sellingVoucherDateRangeItemRowsBaseQuery($filterRequest);
         $this->applySellingVoucherDateRangeAnchorBuyerScope($query, $report);
         $query->addSelect([
             'sri.rate',
@@ -1117,21 +1135,54 @@ class SellingVoucherDateRangeController extends Controller
         }
 
         $clientTypePk = (int) ($report->client_type_pk ?? 0);
+        $clientId = ($report->client_id !== null && (int) $report->client_id > 0)
+            ? (int) $report->client_id
+            : null;
+        $clientName = trim((string) ($report->client_name ?? ''));
+
+        // Same buyer can have vouchers under re-seeded/legacy client_type_pk values.
+        // Listing matches by buyer name; View/Edit/Return must do the same or items disappear.
         if ($clientTypePk > 0) {
             if ($slug === ClientType::TYPE_EMPLOYEE) {
                 $pkValues = $this->employeeClientTypePkFilterValues($clientTypePk);
                 if ($pkValues !== []) {
                     $q->whereIn('sv.client_type_pk', $pkValues);
                 }
+            } elseif ($clientName !== '' || $clientId !== null) {
+                $relatedPkQuery = SellingVoucherDateRangeReport::query()
+                    ->whereNotNull('client_type_pk')
+                    ->where('client_type_pk', '>', 0);
+                if ($slug !== '') {
+                    $relatedPkQuery->where('client_type_slug', $slug);
+                }
+                if ($clientId !== null) {
+                    $relatedPkQuery->where(function ($bq) use ($clientId, $clientName) {
+                        $bq->where('client_id', $clientId);
+                        if ($clientName !== '') {
+                            $bq->orWhere('client_name', $clientName)
+                                ->orWhere('client_name', 'LIKE', $clientName.' (%');
+                        }
+                    });
+                } else {
+                    $relatedPkQuery->where(function ($bq) use ($clientName) {
+                        $bq->where('client_name', $clientName)
+                            ->orWhere('client_name', 'LIKE', $clientName.' (%');
+                    });
+                }
+                $relatedPks = $relatedPkQuery
+                    ->distinct()
+                    ->pluck('client_type_pk')
+                    ->map(fn ($pk) => (int) $pk)
+                    ->filter(fn ($pk) => $pk > 0)
+                    ->push($clientTypePk)
+                    ->unique()
+                    ->values()
+                    ->all();
+                $q->whereIn('sv.client_type_pk', $relatedPks !== [] ? $relatedPks : [$clientTypePk]);
             } else {
                 $q->where('sv.client_type_pk', $clientTypePk);
             }
         }
-
-        $clientId = ($report->client_id !== null && (int) $report->client_id > 0)
-            ? (int) $report->client_id
-            : null;
-        $clientName = trim((string) ($report->client_name ?? ''));
 
         if ($clientId !== null) {
             $nameVariants = $clientName !== ''
@@ -1247,6 +1298,12 @@ class SellingVoucherDateRangeController extends Controller
             return redirect()->route('admin.mess.selling-voucher-date-range.index')->with('error', 'Edit is disabled for approved voucher.');
         }
 
+        // Multi-store / filtered edit must run before strict single-report validation
+        // (legacy client_type_pk values may no longer exist in mess_client_types).
+        if ($this->shouldUseFilteredSellingVoucherDateRangeUpdate($request)) {
+            return $this->updateFilteredSellingVoucherDateRange($request, $report);
+        }
+
         $request->validate([
             'inve_store_master_pk' => ['required', function ($attribute, $value, $fail) {
                 if (str_starts_with($value, 'sub_')) {
@@ -1287,10 +1344,6 @@ class SellingVoucherDateRangeController extends Controller
             'bill_file.mimes' => 'Bill must be PDF or image (jpg, jpeg, png, webp).',
             'bill_file.max' => 'Bill size must not exceed 5 MB.',
         ]);
-
-        if ($this->sellingVoucherDateRangeListingFiltersActive($request)) {
-            return $this->updateFilteredSellingVoucherDateRange($request, $report);
-        }
 
         try {
             DB::beginTransaction();
@@ -1418,6 +1471,33 @@ class SellingVoucherDateRangeController extends Controller
         }
     }
 
+    private function shouldUseFilteredSellingVoucherDateRangeUpdate(Request $request): bool
+    {
+        if ($this->sellingVoucherDateRangeListingFiltersActive($request)) {
+            return true;
+        }
+
+        if ((string) $request->input('multi_store', '0') === '1') {
+            return true;
+        }
+
+        if ((string) $request->input('filtered_edit', '0') === '1') {
+            return true;
+        }
+
+        foreach ((array) $request->input('items', []) as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            // Filtered edit payloads include line_id for existing rows.
+            if ((int) ($row['line_id'] ?? 0) > 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function updateFilteredSellingVoucherDateRange(Request $request, SellingVoucherDateRangeReport $anchorReport)
     {
         $request->validate([
@@ -1435,7 +1515,11 @@ class SellingVoucherDateRangeController extends Controller
             }],
             'payment_type' => 'required|integer|in:0,1,2,5',
             'client_type_slug' => 'required|string|in:employee,ot,course,section,other',
-            'client_type_pk' => ['required', 'integer', 'min:1', function ($attribute, $value, $fail) use ($request) {
+            'client_type_pk' => ['required', 'integer', 'min:1', function ($attribute, $value, $fail) use ($request, $anchorReport) {
+                // Allow legacy pk still stored on the voucher even if category row was removed/re-seeded.
+                if ((int) $value === (int) ($anchorReport->client_type_pk ?? 0)) {
+                    return;
+                }
                 $slug = $request->client_type_slug ?? '';
                 if (in_array($slug, ['employee', 'section', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
                     $fail('The selected client is invalid.');
@@ -1451,12 +1535,30 @@ class SellingVoucherDateRangeController extends Controller
             'order_by' => 'nullable|string|max:100',
             'items' => 'required|array|min:1',
             'items.*.line_id' => 'nullable|integer|exists:sv_date_range_report_items,id',
-            'items.*.item_subcategory_id' => 'required|exists:mess_item_subcategories,id',
+            'items.*.store_id' => 'nullable|string',
+            'items.*.item_subcategory_id' => ['required', 'integer', function ($attribute, $value, $fail) use ($request) {
+                $value = (int) $value;
+                if ($value > 0 && ItemSubcategory::where('id', $value)->exists()) {
+                    return;
+                }
+                // Allow legacy subcategory ids still stored on existing lines.
+                if (preg_match('/^items\.(\d+)\.item_subcategory_id$/', (string) $attribute, $m)) {
+                    $lineId = (int) data_get($request->input('items'), ((int) $m[1]).'.line_id');
+                    if ($lineId > 0) {
+                        $existingSubId = (int) SellingVoucherDateRangeReportItem::where('id', $lineId)->value('item_subcategory_id');
+                        if ($existingSubId > 0 && $existingSubId === $value) {
+                            return;
+                        }
+                    }
+                }
+                $fail('The selected item is invalid.');
+            }],
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.rate' => 'required|numeric|min:0',
             'items.*.available_quantity' => 'nullable|numeric|min:0',
             'items.*.issue_date' => 'nullable|date',
             'multi_store' => 'nullable|string|in:0,1',
+            'filtered_edit' => 'nullable|string|in:0,1',
             'bill_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
             'remove_bill' => 'nullable|string|in:0,1',
         ], [
@@ -1468,6 +1570,7 @@ class SellingVoucherDateRangeController extends Controller
             ->keyBy('item_pk');
         $availabilityCache = [];
         $multiStore = $request->input('multi_store') === '1';
+        $targetReportCache = [];
 
         try {
             DB::beginTransaction();
@@ -1489,7 +1592,7 @@ class SellingVoucherDateRangeController extends Controller
             if (!$multiStore) {
                 $storeIdRaw = $request->inve_store_master_pk;
                 $storeType = 'store';
-                if (str_starts_with($storeIdRaw, 'sub_')) {
+                if (str_starts_with((string) $storeIdRaw, 'sub_')) {
                     $storeIdRaw = str_replace('sub_', '', $storeIdRaw);
                     $storeType = 'sub_store';
                 }
@@ -1518,7 +1621,91 @@ class SellingVoucherDateRangeController extends Controller
 
             foreach ((array) $request->items as $row) {
                 $lineId = (int) ($row['line_id'] ?? 0);
-                if ($lineId <= 0 || !$allowedRows->has($lineId)) {
+                $itemSubId = (int) ($row['item_subcategory_id'] ?? 0);
+                $qty = (float) ($row['quantity'] ?? 0);
+                $rate = (float) ($row['rate'] ?? 0);
+                $avail = (float) ($row['available_quantity'] ?? 0);
+                $sub = $subcategories->get($itemSubId);
+
+                // New item row (no line_id): create on selected store's buyer report.
+                if ($lineId <= 0) {
+                    $storeIdentifier = trim((string) ($row['store_id'] ?? ''));
+                    if ($storeIdentifier === '') {
+                        DB::rollBack();
+
+                        return redirect()->route('admin.mess.selling-voucher-date-range.index')
+                            ->withInput()
+                            ->with('error', 'Store is required for newly added items.');
+                    }
+
+                    $parsedStore = $this->parseStoreIdentifier($storeIdentifier);
+                    if ($parsedStore['store_id'] <= 0) {
+                        DB::rollBack();
+
+                        return redirect()->route('admin.mess.selling-voucher-date-range.index')
+                            ->withInput()
+                            ->with('error', 'The selected store is invalid.');
+                    }
+
+                    $rowStoreType = $parsedStore['store_type'];
+                    $rowStoreId = $parsedStore['store_id'];
+                    $cacheKey = $rowStoreType.'_'.$rowStoreId;
+                    if (!isset($availabilityCache[$cacheKey])) {
+                        $availabilityCache[$cacheKey] = AvailableQuantityService::availableQuantitiesForStore($rowStoreType, $rowStoreId);
+                    }
+
+                    $currentStock = (float) ($availabilityCache[$cacheKey][$itemSubId] ?? 0);
+                    if ($qty > $currentStock) {
+                        $name = $sub ? ($sub->item_name ?? $sub->name ?? ('Item #'.$itemSubId)) : ('Item #'.$itemSubId);
+                        DB::rollBack();
+
+                        return redirect()->route('admin.mess.selling-voucher-date-range.index')
+                            ->withInput()
+                            ->with('error', "{$name}: issue {$qty} cannot exceed available {$currentStock}.");
+                    }
+
+                    $itemIssueDate = trim((string) ($row['issue_date'] ?? ''));
+                    if ($itemIssueDate === '') {
+                        if ($request->filled('end_date')) {
+                            $itemIssueDate = (string) $request->input('end_date');
+                        } elseif ($request->filled('start_date')) {
+                            $itemIssueDate = (string) $request->input('start_date');
+                        } elseif ($anchorReport->issue_date) {
+                            $itemIssueDate = $anchorReport->issue_date->format('Y-m-d');
+                        } elseif ($anchorReport->date_from) {
+                            $itemIssueDate = $anchorReport->date_from->format('Y-m-d');
+                        } else {
+                            $itemIssueDate = now()->toDateString();
+                        }
+                    }
+                    $targetReport = $this->findOrCreateBuyerStoreReport(
+                        $anchorReport,
+                        $request,
+                        $rowStoreType,
+                        $rowStoreId,
+                        $itemIssueDate,
+                        $targetReportCache
+                    );
+
+                    $amount = $qty * $rate;
+                    SellingVoucherDateRangeReportItem::create([
+                        'sv_date_range_report_id' => $targetReport->id,
+                        'item_subcategory_id' => $itemSubId,
+                        'item_name' => $sub ? ($sub->item_name ?? $sub->name ?? '') : '',
+                        'quantity' => $qty,
+                        'available_quantity' => $avail,
+                        'return_quantity' => 0,
+                        'rate' => $rate,
+                        'amount' => $amount,
+                        'unit' => $sub->unit_measurement ?? '',
+                        'issue_date' => $itemIssueDate,
+                    ]);
+
+                    $updatedReportIds[$targetReport->id] = true;
+                    continue;
+                }
+
+                if (!$allowedRows->has($lineId)) {
                     continue;
                 }
 
@@ -1532,10 +1719,6 @@ class SellingVoucherDateRangeController extends Controller
                     continue;
                 }
 
-                $itemSubId = (int) ($row['item_subcategory_id'] ?? 0);
-                $qty = (float) ($row['quantity'] ?? 0);
-                $rate = (float) ($row['rate'] ?? 0);
-                $avail = (float) ($row['available_quantity'] ?? 0);
                 $itemIssueDate = $row['issue_date'] ?? ($item->issue_date ? $item->issue_date->format('Y-m-d') : null);
 
                 $rowStoreType = (string) ($itemReport->store_type ?? 'store');
@@ -1549,7 +1732,6 @@ class SellingVoucherDateRangeController extends Controller
                 $existingQty = (float) ($item->quantity ?? 0);
                 $effectiveAvailable = $currentStock + $existingQty;
                 if ($qty > $effectiveAvailable) {
-                    $sub = $subcategories->get($itemSubId);
                     $name = $sub ? ($sub->item_name ?? $sub->name ?? ('Item #'.$itemSubId)) : ('Item #'.$itemSubId);
                     DB::rollBack();
 
@@ -1558,7 +1740,6 @@ class SellingVoucherDateRangeController extends Controller
                         ->with('error', "{$name}: issue {$qty} cannot exceed available {$effectiveAvailable}.");
                 }
 
-                $sub = $subcategories->get($itemSubId);
                 $amount = $qty * $rate;
                 $item->update([
                     'item_subcategory_id' => $itemSubId,
@@ -1591,7 +1772,12 @@ class SellingVoucherDateRangeController extends Controller
             DB::commit();
             self::bumpSellingVoucherDateRangeListingCacheEpoch();
 
-            return redirect()->route('admin.mess.selling-voucher-date-range.index')
+            $redirectParams = array_filter(
+                $request->only(['status', 'store', 'client_type', 'client_type_pk', 'buyer_name', 'start_date', 'end_date', 'return_status']),
+                fn ($value) => $value !== null && $value !== '' && $value !== []
+            );
+
+            return redirect()->route('admin.mess.selling-voucher-date-range.index', $redirectParams)
                 ->with('success', 'Date Range Report updated successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1599,6 +1785,118 @@ class SellingVoucherDateRangeController extends Controller
             return redirect()->route('admin.mess.selling-voucher-date-range.index')
                 ->with('error', 'Failed to update report: '.$e->getMessage());
         }
+    }
+
+    /**
+     * @return array{store_type: string, store_id: int}
+     */
+    private function parseStoreIdentifier(string $value): array
+    {
+        $value = trim($value);
+        if (str_starts_with($value, 'sub_')) {
+            return [
+                'store_type' => 'sub_store',
+                'store_id' => (int) str_replace('sub_', '', $value),
+            ];
+        }
+
+        return [
+            'store_type' => 'store',
+            'store_id' => (int) $value,
+        ];
+    }
+
+    /**
+     * Reuse unpaid buyer+store report (same as Add Voucher), or create one.
+     *
+     * @param  array<string, SellingVoucherDateRangeReport>  $cache
+     */
+    private function findOrCreateBuyerStoreReport(
+        SellingVoucherDateRangeReport $anchorReport,
+        Request $request,
+        string $storeType,
+        int $storeId,
+        string $itemIssueDate,
+        array &$cache
+    ): SellingVoucherDateRangeReport {
+        $cacheKey = $storeType.'_'.$storeId;
+        if (isset($cache[$cacheKey])) {
+            return $cache[$cacheKey];
+        }
+
+        $clientTypeSlug = (string) $request->input('client_type_slug', $anchorReport->client_type_slug);
+        $clientTypePk = $request->filled('client_type_pk')
+            ? (int) $request->client_type_pk
+            : (($anchorReport->client_type_pk !== null) ? (int) $anchorReport->client_type_pk : null);
+        $clientId = (in_array($clientTypeSlug, ['employee', 'ot'], true) && $request->filled('client_id'))
+            ? (int) $request->client_id
+            : (($anchorReport->client_id !== null && (int) $anchorReport->client_id > 0) ? (int) $anchorReport->client_id : null);
+        $clientName = trim((string) ($request->input('client_name', $anchorReport->client_name) ?? '')) ?: null;
+
+        $report = SellingVoucherDateRangeReport::query()
+            ->where('store_id', $storeId)
+            ->where('store_type', $storeType)
+            ->where('client_type_slug', $clientTypeSlug)
+            ->where('status', '!=', SellingVoucherDateRangeReport::STATUS_APPROVED)
+            ->where(function ($q) use ($clientTypePk, $clientId, $clientName) {
+                if ($clientTypePk !== null) {
+                    $q->where('client_type_pk', $clientTypePk);
+                } else {
+                    $q->whereNull('client_type_pk');
+                }
+
+                if ($clientId !== null) {
+                    $q->where('client_id', $clientId);
+                } else {
+                    $q->whereNull('client_id');
+                }
+
+                if ($clientName !== null) {
+                    $q->where('client_name', $clientName);
+                } else {
+                    $q->whereNull('client_name');
+                }
+            })
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$report) {
+            $report = SellingVoucherDateRangeReport::create([
+                'date_from' => $itemIssueDate,
+                'date_to' => $itemIssueDate,
+                'store_id' => $storeId,
+                'store_type' => $storeType,
+                'report_title' => null,
+                'status' => SellingVoucherDateRangeReport::STATUS_DRAFT,
+                'total_amount' => 0,
+                'remarks' => $request->remarks ?? $anchorReport->remarks,
+                'reference_number' => $request->reference_number ?? $anchorReport->reference_number,
+                'order_by' => $request->order_by ?? $anchorReport->order_by,
+                'client_type_slug' => $clientTypeSlug,
+                'client_type_pk' => $clientTypePk,
+                'client_id' => $clientId,
+                'client_name' => $clientName,
+                'payment_type' => (int) $request->input('payment_type', $anchorReport->payment_type ?? 1),
+                'issue_date' => $itemIssueDate,
+                'created_by' => Auth::id(),
+                'updated_by' => Auth::id(),
+            ]);
+        } else {
+            $newDate = Carbon::parse($itemIssueDate);
+            $updates = ['updated_by' => Auth::id()];
+            if (!$report->date_to || $report->date_to->lt($newDate)) {
+                $updates['date_to'] = $newDate;
+                $updates['issue_date'] = $newDate;
+            }
+            if (!$report->date_from || $report->date_from->gt($newDate)) {
+                $updates['date_from'] = $newDate;
+            }
+            $report->update($updates);
+        }
+
+        $cache[$cacheKey] = $report;
+
+        return $report;
     }
 
     public function destroy($id)

@@ -1526,6 +1526,8 @@ $selectedClientType = (string) request()->input('client_type', '');
                                         @endforeach
                                     </select>
                                     <input type="hidden" name="multi_store" id="editMultiStoreFlag" value="0">
+                                    <input type="hidden" name="filtered_edit" id="editFilteredEditFlag" value="0">
+                                    <div id="editListingFilterHiddens"></div>
                                 </div>
                             </div>
                         </div>
@@ -3932,13 +3934,146 @@ $selectedClientType = (string) request()->input('client_type', '');
         if (clientIdInput && selectedOpt) clientIdInput.value = selectedOpt.dataset.pk || '';
     });
 
+    function ensureEditClientTypePkOption(selectEl, clientTypePk, label) {
+        if (!selectEl || clientTypePk === null || typeof clientTypePk === 'undefined' || String(clientTypePk) === '') {
+            return;
+        }
+        const pk = String(clientTypePk);
+        const exists = Array.from(selectEl.options || []).some(function(opt) {
+            return String(opt.value) === pk;
+        });
+        if (exists) {
+            return;
+        }
+        const opt = document.createElement('option');
+        opt.value = pk;
+        opt.textContent = (label && String(label).trim()) ? String(label).trim() : ('Category #' + pk);
+        selectEl.appendChild(opt);
+    }
+
+    function syncEditListingFilterHiddens() {
+        const wrap = document.getElementById('editListingFilterHiddens');
+        if (!wrap) return;
+        wrap.innerHTML = '';
+        const params = new URLSearchParams(window.location.search || '');
+        // NOTE: do NOT sync client_type_pk — it collides with edit form field name
+        // and overwrites the voucher client category on submit.
+        const keys = ['start_date', 'end_date', 'client_type', 'buyer_name', 'return_status'];
+        keys.forEach(function(key) {
+            const values = params.getAll(key);
+            if (!values.length) return;
+            values.forEach(function(val) {
+                if (val === null || val === '') return;
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = val;
+                wrap.appendChild(input);
+            });
+        });
+        params.getAll('store[]').concat(params.getAll('store')).forEach(function(val) {
+            if (val === null || val === '') return;
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'store[]';
+            input.value = val;
+            wrap.appendChild(input);
+        });
+        params.getAll('status[]').concat(params.getAll('status')).forEach(function(val) {
+            if (val === null || val === '') return;
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'status[]';
+            input.value = val;
+            wrap.appendChild(input);
+        });
+    }
+
+    function prepareEditFormForSubmit(formEl) {
+        if (!formEl) return;
+        syncEditListingFilterHiddens();
+
+        // Ensure Choices-backed selects keep a submittable native value.
+        formEl.querySelectorAll('select').forEach(function(sel) {
+            if (sel.disabled) {
+                sel.disabled = false;
+            }
+            if (sel.tomselect && typeof sel.tomselect.getValue === 'function') {
+                try {
+                    const v = sel.tomselect.getValue();
+                    const normalized = Array.isArray(v) ? (v[0] || '') : (v || '');
+                    if (normalized !== '') {
+                        sel.value = String(normalized);
+                    }
+                } catch (e) {}
+            }
+        });
+
+        // Guarantee new-row store_id is posted even if Choices UI desyncs.
+        formEl.querySelectorAll('#editModalItemsBody .edit-dr-item-row').forEach(function(row) {
+            const storeSel = row.querySelector('.edit-dr-store-select');
+            if (!storeSel) return;
+            let storeVal = '';
+            if (storeSel.tomselect && typeof storeSel.tomselect.getValue === 'function') {
+                try {
+                    const v = storeSel.tomselect.getValue();
+                    storeVal = Array.isArray(v) ? (v[0] || '') : (v || '');
+                } catch (e) {
+                    storeVal = storeSel.value || '';
+                }
+            } else {
+                storeVal = storeSel.value || '';
+            }
+            storeSel.disabled = false;
+            storeSel.value = storeVal;
+            // Keep a single source of truth hidden input for store_id.
+            let backup = row.querySelector('input.edit-dr-store-id-backup');
+            if (!backup) {
+                backup = document.createElement('input');
+                backup.type = 'hidden';
+                backup.className = 'edit-dr-store-id-backup';
+                storeSel.insertAdjacentElement('afterend', backup);
+            }
+            backup.name = storeSel.getAttribute('name') || '';
+            backup.value = storeVal;
+            storeSel.removeAttribute('name');
+        });
+
+        // Ensure legacy client_type_pk is posted even if dropdown options were re-seeded.
+        if (formEl.dataset && formEl.dataset.clientTypePk) {
+            let pkInput = formEl.querySelector('select[name="client_type_pk"], input[name="client_type_pk"]');
+            const legacyPk = String(formEl.dataset.clientTypePk);
+            if (pkInput) {
+                if (!pkInput.value || String(pkInput.value) === '') {
+                    if (pkInput.tagName === 'SELECT') {
+                        ensureEditClientTypePkOption(pkInput, legacyPk, formEl.dataset.clientName || '');
+                    }
+                    pkInput.value = legacyPk;
+                    if (pkInput.tomselect && typeof pkInput.tomselect.setValue === 'function') {
+                        try { pkInput.tomselect.setValue(legacyPk); } catch (e) {}
+                    }
+                }
+            } else {
+                const hiddenPk = document.createElement('input');
+                hiddenPk.type = 'hidden';
+                hiddenPk.name = 'client_type_pk';
+                hiddenPk.value = legacyPk;
+                formEl.appendChild(hiddenPk);
+            }
+        }
+    }
+
     function applyEditFilteredStoreDisplay(v) {
         const editStoreSelect = document.querySelector('#editReportModal select.edit-store-id');
         const editMultiStoreFlag = document.getElementById('editMultiStoreFlag');
+        const editFilteredEditFlag = document.getElementById('editFilteredEditFlag');
         const sid = v ? (v.store_id || v.inve_store_master_pk || '') : '';
 
         if (editMultiStoreFlag) {
             editMultiStoreFlag.value = (v && v.multi_store) ? '1' : '0';
+        }
+        if (editFilteredEditFlag) {
+            editFilteredEditFlag.value = (v && v.filtered_view) ? '1' : '0';
         }
 
         editCurrentStoreName = (v && (v.store_name_display || v.store_name))
@@ -3952,6 +4087,8 @@ $selectedClientType = (string) request()->input('client_type', '');
                 editStoreSelect.value = String(sid);
             }
         }
+
+        syncEditListingFilterHiddens();
     }
 
     function getEditStoreOptionsHtml(selectedStoreId) {
@@ -4106,7 +4243,8 @@ $selectedClientType = (string) request()->input('client_type', '');
             '<td><input type="text" class="form-control  edit-dr-left bg-light" readonly value="' + left +
             '"></td>' +
             '<td><input type="date" name="items[' + index +
-            '][issue_date]" class="form-control  edit-dr-issue-date" value="' + issueDate + '"></td>' +
+            '][issue_date]" class="form-control  edit-dr-issue-date"' + (isExistingLine ? '' :
+                ' required') + ' value="' + issueDate + '"></td>' +
             '<td><input type="text" name="items[' + index +
             '][rate]" class="form-control  edit-dr-rate" required value="' + rate + '"></td>' +
             '<td><input type="text" class="form-control  edit-dr-total bg-light" readonly value="' + total +
@@ -4195,13 +4333,7 @@ $selectedClientType = (string) request()->input('client_type', '');
         tbody.appendChild(newTr);
         editRowIndex++;
         bindEditRowStoreSelect(newTr);
-        const storeSel = newTr.querySelector('.edit-dr-store-select');
-        if (storeSel && typeof Choices !== 'undefined') {
-            createChoicesInstance(storeSel, createBlankSearchConfig({
-                placeholder: 'Select Store',
-                clearOnOpen: true
-            }));
-        }
+        // Use native store select (no Choices) so store_id always submits reliably.
         const sel = newTr.querySelector('.edit-dr-item-select');
         if (sel && typeof Choices !== 'undefined') createChoicesInstance(sel, createItemSelectConfig());
         const opt = getSelectSelectedOption(sel);
@@ -4626,13 +4758,7 @@ $selectedClientType = (string) request()->input('client_type', '');
         }
         tbody.querySelectorAll('.edit-dr-item-row').forEach(function(row) {
             bindEditRowStoreSelect(row);
-            const storeSel = row.querySelector('.edit-dr-store-select');
-            if (storeSel && typeof Choices !== 'undefined' && !storeSel.tomselect) {
-                createChoicesInstance(storeSel, createBlankSearchConfig({
-                    placeholder: 'Select Store',
-                    clearOnOpen: true
-                }));
-            }
+            // Native store select only — avoid Choices submit issues for store_id.
             row.querySelector('.edit-dr-avail').addEventListener('input', function() {
                 updateEditRowLeft(row);
             });
@@ -4675,7 +4801,9 @@ $selectedClientType = (string) request()->input('client_type', '');
         e.stopPropagation();
         const reportId = btn.getAttribute('data-report-id');
         const editQuery = window.location.search || '';
-        document.getElementById('editReportForm').action = baseUrl + '/' + reportId + editQuery;
+        // Keep update URL clean; listing filters go as hidden fields to avoid
+        // colliding with voucher fields (e.g. client_type_pk).
+        document.getElementById('editReportForm').action = baseUrl + '/' + reportId;
         fetch(baseUrl + '/' + reportId + '/edit' + editQuery, {
                 headers: {
                     'Accept': 'application/json',
@@ -4699,6 +4827,11 @@ $selectedClientType = (string) request()->input('client_type', '');
                 document.getElementById('editReportModalLabel').textContent = 'Edit Selling Voucher #' +
                     (v.id || reportId);
                 applyEditFilteredStoreDisplay(v);
+                const editFormEl = document.getElementById('editReportForm');
+                if (editFormEl) {
+                    editFormEl.dataset.clientTypePk = (v.client_type_pk != null ? String(v.client_type_pk) : '');
+                    editFormEl.dataset.clientName = (v.client_name != null ? String(v.client_name) : '');
+                }
                 document.querySelector('.edit-remarks').value = v.remarks || '';
                 const editRefNumEl = document.querySelector('.edit-reference-number');
                 if (editRefNumEl) editRefNumEl.value = v.reference_number || '';
@@ -4829,6 +4962,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                             rebuildEditClientNameSelect(slug);
                         }
                         editClientSelect = document.getElementById('editDrClientNameSelect');
+                        ensureEditClientTypePkOption(editClientSelect, v.client_type_pk, v.client_name);
                         setSelectValue(editClientSelect, v.client_type_pk || '');
                     }
                     if (editOtSelect) {
@@ -5292,10 +5426,26 @@ $selectedClientType = (string) request()->input('client_type', '');
     var editReportFormEl = document.getElementById('editReportForm');
     if (editReportFormEl) {
         editReportFormEl.addEventListener('submit', function(e) {
+            prepareEditFormForSubmit(this);
             document.querySelectorAll('#editModalItemsBody .edit-dr-item-row').forEach(function(row) {
                 enforceQtyWithinAvailable(row, '.edit-dr-avail', '.edit-dr-qty');
             });
-            if (!this.checkValidity()) {
+            // Re-validate after preparing store_id hidden fields.
+            const newStoreRows = this.querySelectorAll('#editModalItemsBody .edit-dr-store-select');
+            let storeMissing = false;
+            newStoreRows.forEach(function(sel) {
+                const backup = sel.parentElement
+                    ? sel.parentElement.querySelector('input.edit-dr-store-id-backup')
+                    : null;
+                const val = (backup && backup.value) ? backup.value : (sel.value || '');
+                if (!val) {
+                    storeMissing = true;
+                    sel.setCustomValidity('Please select a store.');
+                } else {
+                    sel.setCustomValidity('');
+                }
+            });
+            if (storeMissing || !this.checkValidity()) {
                 e.preventDefault();
                 e.stopPropagation();
                 this.classList.add('was-validated');
