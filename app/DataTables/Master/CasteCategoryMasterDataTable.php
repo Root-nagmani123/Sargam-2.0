@@ -46,6 +46,7 @@ class CasteCategoryMasterDataTable extends DataTable
             ->filterColumn('Seat_name_hindi', function ($query, $keyword) {
                 $query->where('Seat_name_hindi', 'like', "%{$keyword}%");
             })
+            ->orderColumn('Seat_name', 'Seat_name $1')
             ->rawColumns(['Seat_name', 'Seat_name_hindi', 'action', 'status']);
     }
 
@@ -78,6 +79,11 @@ class CasteCategoryMasterDataTable extends DataTable
                 'responsive' => true,
                 'scrollX' => false,
                 'autoWidth' => false,
+                'ordering' => true,
+                // Keep native (server-side) ordering so a header click re-queries
+                // and sorts the WHOLE dataset (the global enhancer otherwise forces
+                // ordering off on server-side tables).
+                'sargamServerOrder' => true,
                 'order' => [],
             ])
             ->buttons([
@@ -99,7 +105,7 @@ class CasteCategoryMasterDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::make('Seat_name')->title('Category/Caste name')->orderable(false)->addClass('text-center'),
+            Column::make('Seat_name')->title('Category/Caste name')->orderable(true)->addClass('text-center'),
             Column::make('Seat_name_hindi')->title('Category/Caste name (Hindi)')->orderable(false)->addClass('text-center'),
             Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center'),
             Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center')

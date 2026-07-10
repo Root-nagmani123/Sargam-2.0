@@ -22,7 +22,15 @@
     <div class="card egm-dt-card shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3 p-md-4">
             <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-end gap-3 mb-4">
-                <div id="egmDtSearch" class="programme-dt-search ms-lg-auto" data-dt-search-for="employeegroupmaster-table"></div>
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="btnEgmColumns"
+                        data-bs-toggle="modal" data-bs-target="#egmColumnVisibilityModal"
+                        title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div id="egmDtSearch" class="programme-dt-search" data-dt-search-for="employeegroupmaster-table"></div>
+                </div>
             </div>
 
             <div class="programme-dt-panel egm-dt-panel">
@@ -67,6 +75,25 @@
             <div class="modal-footer gap-2 justify-content-end">
                 <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary rounded-3 px-4" id="egmFormSubmit">Create Employee Group</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="egmColumnVisibilityModal" tabindex="-1" aria-labelledby="egmColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="egmColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="egmColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -228,17 +255,22 @@
                 return;
             }
 
-            var $cells = $row.find('td');
-            if ($cells.length < 4) {
+            // Locate cells by content (not fixed position) so the decoration
+            // survives column-visibility toggles that change the cell count.
+            var $toggle = $row.find('.status-toggle').first();
+            var $toggleWrap = $toggle.closest('.form-check');
+            var $editLink = $row.find('td:last-child a').first();
+            if (!$editLink.length) {
+                $editLink = $row.find('a[href*="edit"]').first();
+            }
+            var $statusCell = $toggleWrap.closest('td');
+            var $actionCell = $editLink.closest('td');
+
+            if (!$toggle.length && !$editLink.length) {
                 return;
             }
 
-            var $statusCell = $cells.eq(2);
-            var $actionCell = $cells.eq(3);
-            var $toggleWrap = $statusCell.find('.form-check').first();
-            var $toggle = $toggleWrap.find('.status-toggle').first();
-
-            if ($toggle.length) {
+            if ($toggle.length && $toggleWrap.length && $statusCell.length) {
                 var isActive = $toggle.is(':checked');
                 var badgeClass = isActive ? 'programme-status-badge--active' : 'programme-status-badge--inactive';
                 var label = isActive ? 'Active' : 'Inactive';
@@ -417,5 +449,179 @@
         initEgmPage();
     }
 })();
+</script>
+
+<script>
+/* ---- Per-page relocation of search / pagination / "Showing N of M" ----
+   DataTables renders these inside a hidden default-dom row; this moves them out
+   of the table wrapper into the visible #egmDtSearch / #egmDtFooter slots (the
+   page CSS only reveals them once relocated). Poll-based so it runs regardless
+   of init.dt handler timing. */
+(function () {
+    function updateEgmDtCount() {
+        var $ = window.jQuery;
+        if (!$ || !$.fn.DataTable || !$.fn.DataTable.isDataTable('#employeegroupmaster-table')) {
+            return;
+        }
+        var info = $('#employeegroupmaster-table').DataTable().page.info();
+        var $info = $('#egmDtFooter .dataTables_info');
+        if ($info.length && info && info.recordsDisplay !== undefined) {
+            $info.text('of ' + info.recordsDisplay.toLocaleString() + ' items');
+        }
+    }
+
+    function enhanceEgmDtControls() {
+        var $ = window.jQuery;
+        var $wrapper = $('#employeegroupmaster-table_wrapper');
+        if (!$wrapper.length) {
+            return;
+        }
+
+        var $searchSlot = $('#egmDtSearch');
+        var $footer = $('#egmDtFooter');
+
+        if ($searchSlot.length && !$searchSlot.find('.dataTables_filter').length) {
+            var $filter = $wrapper.find('.dataTables_filter').first();
+            if ($filter.length) {
+                $filter.find('input')
+                    .addClass('form-control shadow-none')
+                    .attr('placeholder', 'Search')
+                    .attr('aria-label', 'Search employee groups');
+                $filter.find('label').contents().filter(function () {
+                    return this.nodeType === 3;
+                }).remove();
+                $searchSlot.append($filter);
+            }
+        }
+
+        if (!$footer.length) {
+            return;
+        }
+        if ($footer.find('.dataTables_paginate').length || $footer.data('dtReady')) {
+            updateEgmDtCount();
+            return;
+        }
+
+        var $paginate = $wrapper.find('.dataTables_paginate').first();
+        var $length = $wrapper.find('.dataTables_length').first();
+        var $info = $wrapper.find('.dataTables_info').first();
+
+        var $pagCol = $('<div class="programme-dt-pagination"></div>');
+        var $countCol = $('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>');
+
+        if ($paginate.length) {
+            $paginate.find('.pagination').addClass('mb-0');
+            $pagCol.append($paginate);
+        }
+        if ($length.length) {
+            var $select = $length.find('select').addClass('form-select form-select-sm').detach();
+            $length.find('label')
+                .empty()
+                .append(document.createTextNode('Showing '))
+                .append($select)
+                .append(document.createTextNode(' '));
+            $countCol.append($length);
+        }
+        if ($info.length) {
+            $info.addClass('mb-0');
+            $countCol.append($info);
+        }
+
+        $footer.append($pagCol).append($countCol);
+        $footer.data('dtReady', true);
+        updateEgmDtCount();
+    }
+
+    (function whenReady(tries) {
+        var $ = window.jQuery;
+        tries = tries || 0;
+        if ($ && $.fn.DataTable && $.fn.DataTable.isDataTable('#employeegroupmaster-table')) {
+            enhanceEgmDtControls();
+            $('#employeegroupmaster-table').on('draw.dt', function () {
+                if (!$('#egmDtFooter .dataTables_paginate').length) {
+                    $('#egmDtFooter').data('dtReady', false);
+                }
+                enhanceEgmDtControls();
+            });
+        } else if (tries < 100) {
+            setTimeout(function () { whenReady(tries + 1); }, 100);
+        }
+    })(0);
+})();
+</script>
+
+<script>
+/* ---- Column Visibility (drives the live Yajra DataTable via its API) ----
+   A Bootstrap modal of checkboxes built from the live table headers, persisted
+   to localStorage. We never touch the table's dom/init. */
+$(function () {
+    var egmColStorageKey = 'employeeGroupMaster:hiddenColumns:v1';
+
+    function egmGetHiddenCols() {
+        try {
+            var raw = localStorage.getItem(egmColStorageKey);
+            var arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) { return []; }
+    }
+    function egmPersistHiddenCols(arr) {
+        try { localStorage.setItem(egmColStorageKey, JSON.stringify(arr)); } catch (e) {}
+    }
+
+    function setupEgmColumns(dt) {
+        if (!dt) { return; }
+        var hidden = egmGetHiddenCols();
+
+        dt.columns().every(function () {
+            var idx = this.index();
+            this.visible(hidden.indexOf(idx) === -1, false);
+        });
+        dt.columns.adjust();
+
+        var $grid = $('#egmColumnToggleGrid');
+        if (!$grid.length) { return; }
+        $grid.empty();
+
+        dt.columns().every(function () {
+            var idx = this.index();
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (!title) { return; }
+
+            var inputId = 'egmcolvis_' + idx;
+            var $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
+            var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                .attr('for', inputId);
+            var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .prop('checked', hidden.indexOf(idx) === -1);
+
+            $cb.on('change', function () {
+                var h = egmGetHiddenCols();
+                var pos = h.indexOf(idx);
+                if (this.checked) {
+                    if (pos !== -1) h.splice(pos, 1);
+                } else {
+                    if (pos === -1) h.push(idx);
+                }
+                egmPersistHiddenCols(h);
+                dt.column(idx).visible(this.checked, false);
+                dt.columns.adjust();
+            });
+
+            $label.append($cb).append($('<span></span>').text(title));
+            $cell.append($label);
+            $grid.append($cell);
+        });
+    }
+
+    (function whenReady(tries) {
+        tries = tries || 0;
+        if ($.fn.DataTable && $.fn.DataTable.isDataTable('#employeegroupmaster-table')) {
+            setupEgmColumns($('#employeegroupmaster-table').DataTable());
+        } else if (tries < 100) {
+            setTimeout(function () { whenReady(tries + 1); }, 100);
+        }
+    })();
+});
 </script>
 @endpush

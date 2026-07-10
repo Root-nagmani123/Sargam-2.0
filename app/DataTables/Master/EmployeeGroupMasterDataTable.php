@@ -42,6 +42,7 @@ class EmployeeGroupMasterDataTable extends DataTable
             ->filterColumn('emp_group_name', function ($query, $keyword) {
                 $query->where('emp_group_name', 'like', "%{$keyword}%");
             })
+            ->orderColumn('emp_group_name', 'emp_group_name $1')
             ->rawColumns(['emp_group_name', 'action', 'status']);
     }
 
@@ -74,6 +75,11 @@ class EmployeeGroupMasterDataTable extends DataTable
                 'responsive' => true,
                 'scrollX' => false,
                 'autoWidth' => false,
+                'ordering' => true,
+                // Keep native (server-side) ordering so a header click re-queries
+                // and sorts the WHOLE dataset (the global enhancer otherwise forces
+                // ordering off on server-side tables).
+                'sargamServerOrder' => true,
                 'order' => [],
             ])
             ->buttons([
@@ -95,7 +101,7 @@ class EmployeeGroupMasterDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false),
-            Column::make('emp_group_name')->title('Employee Group Name')->orderable(false),
+            Column::make('emp_group_name')->title('Employee Group Name')->orderable(true),
             Column::make('action')->title('Action')->searchable(false)->orderable(false),
             Column::computed('status')->title('Status')->searchable(false)->orderable(false)
         ];

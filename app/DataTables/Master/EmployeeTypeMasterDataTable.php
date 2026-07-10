@@ -69,6 +69,7 @@ class EmployeeTypeMasterDataTable extends DataTable
             ->filterColumn('category_type_name', function ($query, $keyword) {
                 $query->where('category_type_name', 'like', "%{$keyword}%");
             })
+            ->orderColumn('category_type_name', 'category_type_name $1')
             ->rawColumns(['category_type_name', 'action', 'status']);
     }
 
@@ -101,6 +102,11 @@ class EmployeeTypeMasterDataTable extends DataTable
                 'responsive' => true,
                 'scrollX' => false,
                 'autoWidth' => false,
+                'ordering' => true,
+                // Keep native (server-side) ordering so a header click re-queries
+                // and sorts the WHOLE dataset (the global enhancer otherwise forces
+                // ordering off on server-side tables).
+                'sargamServerOrder' => true,
                 'order' => [],
             ])
             ->buttons([
@@ -122,7 +128,7 @@ class EmployeeTypeMasterDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::make('category_type_name')->title('Category Type Name')->orderable(false)->addClass('text-center'),
+            Column::make('category_type_name')->title('Category Type Name')->orderable(true)->addClass('text-center'),
             Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center'),
             Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center')
         ];

@@ -42,6 +42,7 @@ class DesignationMasterDataTable extends DataTable
             ->filterColumn('designation_name', function ($query, $keyword) {
                 $query->where('designation_name', 'like', "%{$keyword}%");
             })
+            ->orderColumn('designation_name', 'designation_name $1')
             ->rawColumns(['designation_name', 'action', 'status']);
     }
 
@@ -74,6 +75,11 @@ class DesignationMasterDataTable extends DataTable
                 'responsive' => true,
                 'scrollX' => false,
                 'autoWidth' => false,
+                'ordering' => true,
+                // Keep native (server-side) ordering so a header click re-queries
+                // and sorts the WHOLE dataset (the global enhancer otherwise forces
+                // ordering off on server-side tables).
+                'sargamServerOrder' => true,
                 'order' => [],
             ])
             ->buttons([
@@ -95,7 +101,7 @@ class DesignationMasterDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::make('designation_name')->title('Designation Name')->orderable(false)->addClass('text-center'),
+            Column::make('designation_name')->title('Designation Name')->orderable(true)->addClass('text-center'),
             Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center'),
             Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center')
         ];

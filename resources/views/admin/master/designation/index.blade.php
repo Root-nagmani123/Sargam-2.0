@@ -22,7 +22,15 @@
     <div class="card dsn-dt-card shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3 p-md-4">
             <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-end gap-3 mb-4">
-                <div id="dsnDtSearch" class="programme-dt-search ms-lg-auto" data-dt-search-for="departmentmaster-table"></div>
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="btnDsnColumns"
+                        data-bs-toggle="modal" data-bs-target="#dsnColumnVisibilityModal"
+                        title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div id="dsnDtSearch" class="programme-dt-search" data-dt-search-for="departmentmaster-table"></div>
+                </div>
             </div>
 
             <div class="programme-dt-panel dsn-dt-panel">
@@ -67,6 +75,25 @@
             <div class="modal-footer gap-2 justify-content-end">
                 <button type="button" class="btn btn-outline-primary rounded-2 px-4" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary rounded-2 px-4" id="dsnFormSubmit">Create Designation</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="dsnColumnVisibilityModal" tabindex="-1" aria-labelledby="dsnColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="dsnColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="dsnColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -226,17 +253,22 @@
                 return;
             }
 
-            var $cells = $row.find('td');
-            if ($cells.length < 4) {
+            // Locate cells by content (not fixed position) so the decoration
+            // survives column-visibility toggles that change the cell count.
+            var $toggle = $row.find('.status-toggle').first();
+            var $toggleWrap = $toggle.closest('.form-check');
+            var $editLink = $row.find('a[href*="designation/edit"]').first();
+            if (!$editLink.length) {
+                $editLink = $row.find('td:last-child a').first();
+            }
+            var $statusCell = $toggleWrap.closest('td');
+            var $actionCell = $editLink.closest('td');
+
+            if (!$toggle.length && !$editLink.length) {
                 return;
             }
 
-            var $statusCell = $cells.eq(2);
-            var $actionCell = $cells.eq(3);
-            var $toggleWrap = $statusCell.find('.form-check').first();
-            var $toggle = $toggleWrap.find('.status-toggle').first();
-
-            if ($toggle.length) {
+            if ($toggle.length && $toggleWrap.length && $statusCell.length) {
                 var isActive = $toggle.is(':checked');
                 var badgeClass = isActive ? 'programme-status-badge--active' : 'programme-status-badge--inactive';
                 var label = isActive ? 'Active' : 'Inactive';
@@ -439,5 +471,180 @@
         initDsnPage();
     }
 })();
+</script>
+
+<script>
+/* ---- Per-page relocation of search / pagination / "Showing N of M" ----
+   The table id is 'departmentmaster-table' on this page (shared with the
+   Designation DataTable's setTableId). DataTables renders the controls inside a
+   hidden default-dom row; this moves them into the visible #dsnDtSearch /
+   #dsnDtFooter slots (the page CSS only reveals them once relocated). */
+(function () {
+    var TABLE = '#departmentmaster-table';
+
+    function updateDsnDtCount() {
+        var $ = window.jQuery;
+        if (!$ || !$.fn.DataTable || !$.fn.DataTable.isDataTable(TABLE)) {
+            return;
+        }
+        var info = $(TABLE).DataTable().page.info();
+        var $info = $('#dsnDtFooter .dataTables_info');
+        if ($info.length && info && info.recordsDisplay !== undefined) {
+            $info.text('of ' + info.recordsDisplay.toLocaleString() + ' items');
+        }
+    }
+
+    function enhanceDsnDtControls() {
+        var $ = window.jQuery;
+        var $wrapper = $('#departmentmaster-table_wrapper');
+        if (!$wrapper.length) {
+            return;
+        }
+
+        var $searchSlot = $('#dsnDtSearch');
+        var $footer = $('#dsnDtFooter');
+
+        if ($searchSlot.length && !$searchSlot.find('.dataTables_filter').length) {
+            var $filter = $wrapper.find('.dataTables_filter').first();
+            if ($filter.length) {
+                $filter.find('input')
+                    .addClass('form-control shadow-none')
+                    .attr('placeholder', 'Search')
+                    .attr('aria-label', 'Search designations');
+                $filter.find('label').contents().filter(function () {
+                    return this.nodeType === 3;
+                }).remove();
+                $searchSlot.append($filter);
+            }
+        }
+
+        if (!$footer.length) {
+            return;
+        }
+        if ($footer.find('.dataTables_paginate').length || $footer.data('dtReady')) {
+            updateDsnDtCount();
+            return;
+        }
+
+        var $paginate = $wrapper.find('.dataTables_paginate').first();
+        var $length = $wrapper.find('.dataTables_length').first();
+        var $info = $wrapper.find('.dataTables_info').first();
+
+        var $pagCol = $('<div class="programme-dt-pagination"></div>');
+        var $countCol = $('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>');
+
+        if ($paginate.length) {
+            $paginate.find('.pagination').addClass('mb-0');
+            $pagCol.append($paginate);
+        }
+        if ($length.length) {
+            var $select = $length.find('select').addClass('form-select form-select-sm').detach();
+            $length.find('label')
+                .empty()
+                .append(document.createTextNode('Showing '))
+                .append($select)
+                .append(document.createTextNode(' '));
+            $countCol.append($length);
+        }
+        if ($info.length) {
+            $info.addClass('mb-0');
+            $countCol.append($info);
+        }
+
+        $footer.append($pagCol).append($countCol);
+        $footer.data('dtReady', true);
+        updateDsnDtCount();
+    }
+
+    (function whenReady(tries) {
+        var $ = window.jQuery;
+        tries = tries || 0;
+        if ($ && $.fn.DataTable && $.fn.DataTable.isDataTable(TABLE)) {
+            enhanceDsnDtControls();
+            $(TABLE).on('draw.dt', function () {
+                if (!$('#dsnDtFooter .dataTables_paginate').length) {
+                    $('#dsnDtFooter').data('dtReady', false);
+                }
+                enhanceDsnDtControls();
+            });
+        } else if (tries < 100) {
+            setTimeout(function () { whenReady(tries + 1); }, 100);
+        }
+    })(0);
+})();
+</script>
+
+<script>
+/* ---- Column Visibility (drives the live Yajra DataTable via its API) ---- */
+$(function () {
+    var TABLE = '#departmentmaster-table';
+    var dsnColStorageKey = 'designationMaster:hiddenColumns:v1';
+
+    function dsnGetHiddenCols() {
+        try {
+            var raw = localStorage.getItem(dsnColStorageKey);
+            var arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) { return []; }
+    }
+    function dsnPersistHiddenCols(arr) {
+        try { localStorage.setItem(dsnColStorageKey, JSON.stringify(arr)); } catch (e) {}
+    }
+
+    function setupDsnColumns(dt) {
+        if (!dt) { return; }
+        var hidden = dsnGetHiddenCols();
+
+        dt.columns().every(function () {
+            var idx = this.index();
+            this.visible(hidden.indexOf(idx) === -1, false);
+        });
+        dt.columns.adjust();
+
+        var $grid = $('#dsnColumnToggleGrid');
+        if (!$grid.length) { return; }
+        $grid.empty();
+
+        dt.columns().every(function () {
+            var idx = this.index();
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (!title) { return; }
+
+            var inputId = 'dsncolvis_' + idx;
+            var $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
+            var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                .attr('for', inputId);
+            var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .prop('checked', hidden.indexOf(idx) === -1);
+
+            $cb.on('change', function () {
+                var h = dsnGetHiddenCols();
+                var pos = h.indexOf(idx);
+                if (this.checked) {
+                    if (pos !== -1) h.splice(pos, 1);
+                } else {
+                    if (pos === -1) h.push(idx);
+                }
+                dsnPersistHiddenCols(h);
+                dt.column(idx).visible(this.checked, false);
+                dt.columns.adjust();
+            });
+
+            $label.append($cb).append($('<span></span>').text(title));
+            $cell.append($label);
+            $grid.append($cell);
+        });
+    }
+
+    (function whenReady(tries) {
+        tries = tries || 0;
+        if ($.fn.DataTable && $.fn.DataTable.isDataTable(TABLE)) {
+            setupDsnColumns($(TABLE).DataTable());
+        } else if (tries < 100) {
+            setTimeout(function () { whenReady(tries + 1); }, 100);
+        }
+    })();
+});
 </script>
 @endpush

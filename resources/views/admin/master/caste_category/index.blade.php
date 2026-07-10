@@ -22,7 +22,15 @@
     <div class="card ccm-dt-card shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3 p-md-4">
             <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-end gap-3 mb-4">
-                <div id="ccmDtSearch" class="programme-dt-search ms-lg-auto" data-dt-search-for="castecategorymaster-table"></div>
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="btnCcmColumns"
+                        data-bs-toggle="modal" data-bs-target="#ccmColumnVisibilityModal"
+                        title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div id="ccmDtSearch" class="programme-dt-search" data-dt-search-for="castecategorymaster-table"></div>
+                </div>
             </div>
 
             <div class="programme-dt-panel ccm-dt-panel">
@@ -80,6 +88,25 @@
             <div class="modal-footer gap-2 justify-content-end">
                 <button type="button" class="btn btn-outline-primary rounded-2 px-4" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary rounded-2 px-4" id="ccmFormSubmit">Create Caste</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="ccmColumnVisibilityModal" tabindex="-1" aria-labelledby="ccmColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="ccmColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="ccmColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -521,5 +548,183 @@
         initCcmPage();
     }
 })();
+</script>
+
+<script>
+/* ---- Per-page relocation of search / pagination / "Showing N of M" ----
+   DataTables renders these inside a hidden default-dom row; this moves them into
+   the visible #ccmDtSearch / #ccmDtFooter slots (the page CSS only reveals them
+   once relocated). Poll-based so it runs regardless of init.dt timing. */
+(function () {
+    function updateCcmDtCount() {
+        var $ = window.jQuery;
+        if (!$ || !$.fn.DataTable || !$.fn.DataTable.isDataTable('#castecategorymaster-table')) {
+            return;
+        }
+        var info = $('#castecategorymaster-table').DataTable().page.info();
+        var $info = $('#ccmDtFooter .dataTables_info');
+        if ($info.length && info && info.recordsDisplay !== undefined) {
+            $info.text('of ' + info.recordsDisplay.toLocaleString() + ' items');
+        }
+    }
+
+    function enhanceCcmDtControls() {
+        var $ = window.jQuery;
+        var $wrapper = $('#castecategorymaster-table_wrapper');
+        if (!$wrapper.length) {
+            return;
+        }
+
+        var $searchSlot = $('#ccmDtSearch');
+        var $footer = $('#ccmDtFooter');
+
+        if ($searchSlot.length && !$searchSlot.find('.dataTables_filter').length) {
+            var $filter = $wrapper.find('.dataTables_filter').first();
+            if ($filter.length) {
+                $filter.find('input')
+                    .addClass('form-control shadow-none')
+                    .attr('placeholder', 'Search')
+                    .attr('aria-label', 'Search caste categories');
+                $filter.find('label').contents().filter(function () {
+                    return this.nodeType === 3;
+                }).remove();
+                $searchSlot.append($filter);
+            }
+        }
+
+        if (!$footer.length) {
+            return;
+        }
+        if ($footer.find('.dataTables_paginate').length || $footer.data('dtReady')) {
+            updateCcmDtCount();
+            return;
+        }
+
+        var $paginate = $wrapper.find('.dataTables_paginate').first();
+        var $length = $wrapper.find('.dataTables_length').first();
+        var $info = $wrapper.find('.dataTables_info').first();
+
+        var $pagCol = $('<div class="programme-dt-pagination"></div>');
+        var $countCol = $('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>');
+
+        if ($paginate.length) {
+            $paginate.find('.pagination').addClass('mb-0');
+            $pagCol.append($paginate);
+        }
+        if ($length.length) {
+            var $select = $length.find('select').addClass('form-select form-select-sm').detach();
+            $length.find('label')
+                .empty()
+                .append(document.createTextNode('Showing '))
+                .append($select)
+                .append(document.createTextNode(' '));
+            $countCol.append($length);
+        }
+        if ($info.length) {
+            $info.addClass('mb-0');
+            $countCol.append($info);
+        }
+
+        $footer.append($pagCol).append($countCol);
+        $footer.data('dtReady', true);
+        updateCcmDtCount();
+    }
+
+    (function whenReady(tries) {
+        var $ = window.jQuery;
+        tries = tries || 0;
+        if ($ && $.fn.DataTable && $.fn.DataTable.isDataTable('#castecategorymaster-table')) {
+            enhanceCcmDtControls();
+            $('#castecategorymaster-table').on('draw.dt', function () {
+                if (!$('#ccmDtFooter .dataTables_paginate').length) {
+                    $('#ccmDtFooter').data('dtReady', false);
+                }
+                enhanceCcmDtControls();
+            });
+        } else if (tries < 100) {
+            setTimeout(function () { whenReady(tries + 1); }, 100);
+        }
+    })(0);
+})();
+</script>
+
+<script>
+/* ---- Column Visibility (CSS-based) ----
+   This page's row decoration MERGES the English + Hindi name columns into one
+   and REMOVES a column, so DataTables' 5-column model no longer matches the 4
+   visible cells — the usual .column().visible() API would hide the wrong column.
+   Instead we toggle the stable *visual* columns (post-decoration nth-child) via
+   an injected <style> rule, which is decoupled from DataTables' model and auto-
+   applies to redrawn rows. Persisted to localStorage. */
+$(function () {
+    var TABLE = '#castecategorymaster-table';
+    var storageKey = 'casteCategoryMaster:hiddenColumns:v1';
+    // Visual columns after decoration (1-based nth-child position + label).
+    var COLS = [
+        { n: 1, title: 'S. No.' },
+        { n: 2, title: 'Caste Name' },
+        { n: 3, title: 'Status' },
+        { n: 4, title: 'Action' }
+    ];
+    var styleEl = null;
+
+    function getHidden() {
+        try {
+            var raw = localStorage.getItem(storageKey);
+            var arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) { return []; }
+    }
+    function persist(arr) {
+        try { localStorage.setItem(storageKey, JSON.stringify(arr)); } catch (e) {}
+    }
+
+    function applyHidden(hidden) {
+        if (!styleEl) {
+            styleEl = document.createElement('style');
+            document.head.appendChild(styleEl);
+        }
+        styleEl.textContent = hidden.map(function (n) {
+            return TABLE + ' thead th:nth-child(' + n + '),' +
+                   TABLE + ' tbody td:nth-child(' + n + '){display:none !important;}';
+        }).join('');
+    }
+
+    function buildGrid() {
+        var $grid = $('#ccmColumnToggleGrid');
+        if (!$grid.length) { return; }
+        var hidden = getHidden();
+        $grid.empty();
+
+        COLS.forEach(function (col) {
+            var inputId = 'ccmcolvis_' + col.n;
+            var $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
+            var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                .attr('for', inputId);
+            var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .prop('checked', hidden.indexOf(col.n) === -1);
+
+            $cb.on('change', function () {
+                var h = getHidden();
+                var pos = h.indexOf(col.n);
+                if (this.checked) {
+                    if (pos !== -1) h.splice(pos, 1);
+                } else {
+                    if (pos === -1) h.push(col.n);
+                }
+                persist(h);
+                applyHidden(h);
+            });
+
+            $label.append($cb).append($('<span></span>').text(col.title));
+            $cell.append($label);
+            $grid.append($cell);
+        });
+    }
+
+    applyHidden(getHidden());
+    buildGrid();
+});
 </script>
 @endpush
