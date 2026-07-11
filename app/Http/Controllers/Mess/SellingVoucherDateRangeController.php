@@ -314,7 +314,7 @@ class SellingVoucherDateRangeController extends Controller
     {
         return DataTableRedisCache::serveCachedAjax(
             $request,
-            'sv_date_range_dt:v1:',
+            'sv_date_range_dt:v2:',
             self::SV_DATE_RANGE_DT_LIST_EPOCH,
             [
                 'enabled' => 'SELLING_VOUCHER_DATE_RANGE_DATATABLE_CACHE_ENABLED',
@@ -1298,6 +1298,9 @@ class SellingVoucherDateRangeController extends Controller
             return redirect()->route('admin.mess.selling-voucher-date-range.index')->with('error', 'Edit is disabled for approved voucher.');
         }
 
+        // Client identity is frozen on edit — always keep the voucher's stored values.
+        $this->mergeLockedSellingVoucherClientIdentity($request, $report);
+
         // Multi-store / filtered edit must run before strict single-report validation
         // (legacy client_type_pk values may no longer exist in mess_client_types).
         if ($this->shouldUseFilteredSellingVoucherDateRangeUpdate($request)) {
@@ -1319,7 +1322,10 @@ class SellingVoucherDateRangeController extends Controller
             }],
             'payment_type' => 'required|integer|in:0,1,2,5',
             'client_type_slug' => 'required|string|in:employee,ot,course,section,other',
-            'client_type_pk' => ['required', 'integer', 'min:1', function ($attribute, $value, $fail) use ($request) {
+            'client_type_pk' => ['required', 'integer', 'min:1', function ($attribute, $value, $fail) use ($request, $report) {
+                if ((int) $value === (int) ($report->client_type_pk ?? 0)) {
+                    return;
+                }
                 $slug = $request->client_type_slug ?? '';
                 if (in_array($slug, ['employee', 'section', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
                     $fail('The selected client is invalid.');
@@ -1498,8 +1504,24 @@ class SellingVoucherDateRangeController extends Controller
         return false;
     }
 
+    /**
+     * Edit must not change client type / client name / person identity.
+     */
+    private function mergeLockedSellingVoucherClientIdentity(Request $request, SellingVoucherDateRangeReport $report): void
+    {
+        $request->merge([
+            'client_type_slug' => (string) ($report->client_type_slug ?? ''),
+            'client_type_pk' => $report->client_type_pk,
+            'client_id' => $report->client_id,
+            'client_name' => $report->client_name,
+        ]);
+    }
+
     private function updateFilteredSellingVoucherDateRange(Request $request, SellingVoucherDateRangeReport $anchorReport)
     {
+        // Client identity is frozen on edit — always keep the voucher's stored values.
+        $this->mergeLockedSellingVoucherClientIdentity($request, $anchorReport);
+
         $request->validate([
             'inve_store_master_pk' => ['required', function ($attribute, $value, $fail) {
                 if (str_starts_with($value, 'sub_')) {
@@ -2135,7 +2157,6 @@ class SellingVoucherDateRangeController extends Controller
                     WHEN sv.store_type = 'sub_store' AND mss.sub_store_name IS NOT NULL THEN CONCAT(mss.sub_store_name, ' (Sub-Store)')
                     WHEN sv.store_type = 'store' AND ms.store_name IS NOT NULL THEN ms.store_name
                     ELSE 'N/A' END) as resolved_store_name"),
-                DB::raw('(SELECT MIN(i2.id) FROM sv_date_range_report_items i2 WHERE i2.sv_date_range_report_id = sv.id) as first_item_pk'),
             ]);
 
         $storeFilters = collect((array) $request->input('store', []))
@@ -2524,9 +2545,6 @@ class SellingVoucherDateRangeController extends Controller
     private function buildSellingVoucherDateRangeDatatableRow(\stdClass $row, int $serial, bool $canDeleteSellingVoucherDateRange): array
     {
         $reportId = (int) $row->report_id;
-        $itemPk = (int) $row->item_pk;
-        $firstItemPk = (int) ($row->first_item_pk ?? 0);
-        $isFirstItem = $itemPk > 0 && $firstItemPk > 0 && $itemPk === $firstItemPk;
         $rq = isset($row->return_quantity) ? (float) $row->return_quantity : 0.0;
         $status = isset($row->status) ? (int) $row->status : -1;
         $paymentType = isset($row->payment_type) ? (int) $row->payment_type : -1;
@@ -2575,36 +2593,33 @@ class SellingVoucherDateRangeController extends Controller
             }
         }
 
+        // View / Edit / Return / Delete are voucher-level (report_id). Show on every item
+        // row so actions stay visible regardless of sort order or which line is MIN(id).
         $returnHtml = '<div class="d-flex flex-wrap align-items-center gap-1">';
         if ($rq > 0) {
             $returnHtml .= '<span class="badge rounded-1 text-bg-info">Returned</span>';
         }
-        if ($isFirstItem) {
-            $returnHtml .= '<button type="button" class="btn btn-sm btn-outline-secondary btn-return-report d-inline-flex align-items-center gap-1 rounded-2 px-2" data-report-id="'.e((string) $reportId).'" title="Return"><i class="material-symbols-rounded" style="font-size: 1rem;">assignment_return</i><span>Return</span></button>';
-        }
+        $returnHtml .= '<button type="button" class="btn btn-sm btn-outline-secondary btn-return-report d-inline-flex align-items-center gap-1 rounded-2 px-2" data-report-id="'.e((string) $reportId).'" title="Return"><i class="material-symbols-rounded" style="font-size: 1rem;">assignment_return</i><span>Return</span></button>';
         $returnHtml .= '</div>';
 
-        $actionHtml = '';
-        if ($isFirstItem) {
-            $editDisabled = $status === SellingVoucherDateRangeReport::STATUS_APPROVED ? ' disabled' : '';
-            $editTitle = $status === SellingVoucherDateRangeReport::STATUS_APPROVED
-                ? e('Edit is disabled for approved voucher')
-                : 'Edit';
+        $editDisabled = $status === SellingVoucherDateRangeReport::STATUS_APPROVED ? ' disabled' : '';
+        $editTitle = $status === SellingVoucherDateRangeReport::STATUS_APPROVED
+            ? e('Edit is disabled for approved voucher')
+            : 'Edit';
 
-            $actionHtml = '<div class="d-inline-flex flex-wrap align-items-center justify-content-end gap-1">'
-                .'<button type="button" class="btn btn-sm btn-outline-primary btn-view-report voucher-icon-btn rounded-2" data-report-id="'.e((string) $reportId).'" title="View"><i class="material-symbols-rounded">visibility</i></button>'
-                .'<button type="button" class="btn btn-sm btn-outline-warning btn-edit-report voucher-icon-btn rounded-2" data-report-id="'.e((string) $reportId).'" title="'.$editTitle.'"'.$editDisabled.'><i class="material-symbols-rounded">edit</i></button>';
+        $actionHtml = '<div class="d-inline-flex flex-wrap align-items-center justify-content-end gap-1">'
+            .'<button type="button" class="btn btn-sm btn-outline-primary btn-view-report voucher-icon-btn rounded-2" data-report-id="'.e((string) $reportId).'" title="View"><i class="material-symbols-rounded">visibility</i></button>'
+            .'<button type="button" class="btn btn-sm btn-outline-warning btn-edit-report voucher-icon-btn rounded-2" data-report-id="'.e((string) $reportId).'" title="'.$editTitle.'"'.$editDisabled.'><i class="material-symbols-rounded">edit</i></button>';
 
-            if ($canDeleteSellingVoucherDateRange) {
-                $destroyUrl = route('admin.mess.selling-voucher-date-range.destroy', $reportId);
-                $actionHtml .= '<form action="'.e($destroyUrl).'" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this report?\');">'
-                    .csrf_field()
-                    .method_field('DELETE')
-                    .'<button type="submit" class="btn btn-sm btn-outline-danger voucher-icon-btn rounded-2" title="Delete"><i class="material-symbols-rounded">delete</i></button></form>';
-            }
-
-            $actionHtml .= '</div>';
+        if ($canDeleteSellingVoucherDateRange) {
+            $destroyUrl = route('admin.mess.selling-voucher-date-range.destroy', $reportId);
+            $actionHtml .= '<form action="'.e($destroyUrl).'" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this report?\');">'
+                .csrf_field()
+                .method_field('DELETE')
+                .'<button type="submit" class="btn btn-sm btn-outline-danger voucher-icon-btn rounded-2" title="Delete"><i class="material-symbols-rounded">delete</i></button></form>';
         }
+
+        $actionHtml .= '</div>';
 
         return [
             '<span class="text-body-secondary">'.e((string) $serial).'</span>',

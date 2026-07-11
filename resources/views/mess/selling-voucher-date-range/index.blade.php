@@ -1401,6 +1401,22 @@ $selectedClientType = (string) request()->input('client_type', '');
     overflow-y: auto;
     max-height: calc(100dvh - 10rem);
 }
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked,
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .choices,
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .ts-wrapper,
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .form-check-input {
+    pointer-events: none !important;
+}
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .form-control,
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .form-select,
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .choices__inner {
+    background-color: var(--bs-secondary-bg, #e9ecef) !important;
+    cursor: not-allowed;
+}
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .form-check-label {
+    cursor: not-allowed;
+    opacity: 0.85;
+}
 </style>
 <div class="modal fade" id="editReportModal" tabindex="-1" aria-labelledby="editReportModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
@@ -1421,7 +1437,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                         </div>
                         <div class="card-body">
                             <div class="row g-3">
-                                <div class="col-md-12">
+                                <div class="col-md-12 edit-client-identity-locked">
                                     <label class="form-label voucher-label">Client Type <span
                                             class="text-danger">*</span></label>
                                     <div class="d-flex flex-wrap gap-3 pt-1">
@@ -1445,7 +1461,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                                         <option value="2">UPI</option>
                                     </select>
                                 </div>
-                                <div class="col-md-4" id="editDrClientNameWrap" style="display:none;">
+                                <div class="col-md-4 edit-client-identity-locked" id="editDrClientNameWrap" style="display:none;">
                                     <label class="form-label voucher-label">Client Name <span
                                             class="text-danger">*</span></label>
                                     <select name="client_type_pk" class="form-select  edit-client-type-pk"
@@ -1476,11 +1492,11 @@ $selectedClientType = (string) request()->input('client_type', '');
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-md-4" id="editDrNameFieldWrap" style="display:none;">
+                                <div class="col-md-4 edit-client-identity-locked" id="editDrNameFieldWrap" style="display:none;">
                                     <label class="form-label voucher-label">Name <span
                                             class="text-danger">*</span></label>
-                                    <input type="text" name="client_name" class="form-control  edit-client-name"
-                                        id="editDrClientNameInput" placeholder="Client / section / role name" required>
+                                    <input type="text" name="client_name" class="form-control  edit-client-name bg-light"
+                                        id="editDrClientNameInput" placeholder="Client / section / role name" required readonly>
                                     <datalist id="editDrCourseBuyerNames"></datalist>
                                     <datalist id="editDrGenericBuyerNames"></datalist>
                                     <select id="editDrFacultySelect" class="form-select " style="display:none;">
@@ -3501,6 +3517,37 @@ $selectedClientType = (string) request()->input('client_type', '');
     loadAddDrBuyerNames();
 
     // Edit modal: same Faculty / Academy Staff / Mess Staff dropdown logic
+    function isEditClientIdentityFrozen() {
+        var modal = document.getElementById('editReportModal');
+        return !!(modal && modal.classList.contains('edit-client-identity-frozen'));
+    }
+
+    function freezeEditClientIdentityFields(v) {
+        var modal = document.getElementById('editReportModal');
+        if (!modal) return;
+        modal.classList.add('edit-client-identity-frozen');
+
+        var nameInput = document.getElementById('editDrClientNameInput');
+        if (nameInput) {
+            nameInput.readOnly = true;
+            nameInput.classList.add('bg-light');
+            nameInput.removeAttribute('list');
+            if (v && v.client_name != null) {
+                nameInput.value = String(v.client_name || '');
+            }
+        }
+
+        var clientIdInput = document.getElementById('editDrClientId');
+        if (clientIdInput && v && v.client_id != null && String(v.client_id) !== '') {
+            clientIdInput.value = String(v.client_id);
+        }
+    }
+
+    function unfreezeEditClientIdentityFields() {
+        var modal = document.getElementById('editReportModal');
+        if (modal) modal.classList.remove('edit-client-identity-frozen');
+    }
+
     function updateEditDrNameField() {
         const clientTypeRadio = document.querySelector('#editReportModal .edit-dr-client-type-radio:checked');
         const clientNameSelect = document.getElementById('editDrClientNameSelect');
@@ -3563,7 +3610,11 @@ $selectedClientType = (string) request()->input('client_type', '');
             nameInput.style.display = 'block';
             nameInput.placeholder = 'Name';
             nameInput.setAttribute('required', 'required');
-            nameInput.setAttribute('list', 'editDrCourseBuyerNames');
+            if (!isEditClientIdentityFrozen()) {
+                nameInput.setAttribute('list', 'editDrCourseBuyerNames');
+            } else {
+                nameInput.removeAttribute('list');
+            }
             [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                 if (sel) {
                     setSelectVisible(sel, false);
@@ -3582,7 +3633,11 @@ $selectedClientType = (string) request()->input('client_type', '');
         } else {
             nameInput.style.display = showAny ? 'none' : 'block';
             nameInput.removeAttribute('required');
-            nameInput.setAttribute('list', 'editDrGenericBuyerNames');
+            if (!isEditClientIdentityFrozen()) {
+                nameInput.setAttribute('list', 'editDrGenericBuyerNames');
+            } else {
+                nameInput.removeAttribute('list');
+            }
             [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                 if (!sel) return;
                 const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ?
@@ -3617,6 +3672,11 @@ $selectedClientType = (string) request()->input('client_type', '');
             }
             if (!showAny) nameInput.setAttribute('required', 'required');
         }
+
+        // Always keep Name non-editable on Edit.
+        nameInput.readOnly = true;
+        nameInput.classList.add('bg-light');
+        nameInput.removeAttribute('list');
     }
 
     function loadEditDrBuyerNames() {
@@ -3674,6 +3734,7 @@ $selectedClientType = (string) request()->input('client_type', '');
     }
     document.querySelectorAll('#editReportModal .edit-dr-client-type-radio').forEach(function(radio) {
         radio.addEventListener('change', function() {
+            if (isEditClientIdentityFrozen()) return;
             var editClientNameWrap = document.getElementById('editDrClientNameWrap');
             var editNameFieldWrap = document.getElementById('editDrNameFieldWrap');
             var clientIdInput = document.getElementById('editDrClientId');
@@ -4832,6 +4893,10 @@ $selectedClientType = (string) request()->input('client_type', '');
                     editFormEl.dataset.clientTypePk = (v.client_type_pk != null ? String(v.client_type_pk) : '');
                     editFormEl.dataset.clientName = (v.client_name != null ? String(v.client_name) : '');
                 }
+                var editClientIdEl = document.getElementById('editDrClientId');
+                if (editClientIdEl) {
+                    editClientIdEl.value = (v.client_id != null && String(v.client_id) !== '') ? String(v.client_id) : '';
+                }
                 document.querySelector('.edit-remarks').value = v.remarks || '';
                 const editRefNumEl = document.querySelector('.edit-reference-number');
                 if (editRefNumEl) editRefNumEl.value = v.reference_number || '';
@@ -4949,7 +5014,8 @@ $selectedClientType = (string) request()->input('client_type', '');
                     }
                     if (editNameInp) {
                         editNameInp.style.display = 'block';
-                        editNameInp.value = v.client_name || '';
+                        editNameInp.readOnly = true;
+                        editNameInp.classList.add('bg-light');
                         editNameInp.placeholder = 'Course name';
                         editNameInp.setAttribute('required', 'required');
                     }
@@ -4984,7 +5050,8 @@ $selectedClientType = (string) request()->input('client_type', '');
                     }
                     if (editNameInp) {
                         editNameInp.style.display = 'block';
-                        editNameInp.readOnly = false;
+                        editNameInp.readOnly = true;
+                        editNameInp.classList.add('bg-light');
                         editNameInp.placeholder = 'Client / section / role name';
                         editNameInp.setAttribute('required', 'required');
                     }
@@ -4993,6 +5060,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                 // Ensure TomSelect instances exist for the final state (and preserve selected values)
                 initEditModalTomSelects();
                 syncEditDrChoicesFromVoucher(v, slug);
+                freezeEditClientIdentityFields(v);
                 editCurrentStoreId = v.store_id || v.inve_store_master_pk || '';
                 if (!editCurrentStoreName) {
                     var storeOpt = document.querySelector(
@@ -5046,9 +5114,15 @@ $selectedClientType = (string) request()->input('client_type', '');
     if (editReportModal) {
         editReportModal.addEventListener('shown.bs.modal', function() {
             initEditModalTomSelects();
+            var editFormEl = document.getElementById('editReportForm');
+            freezeEditClientIdentityFields({
+                client_name: editFormEl ? editFormEl.dataset.clientName : '',
+                client_id: (document.getElementById('editDrClientId') || {}).value || ''
+            });
         });
         editReportModal.addEventListener('hidden.bs.modal', function() {
             destroyEditModalTomSelects();
+            unfreezeEditClientIdentityFields();
         });
     }
 
