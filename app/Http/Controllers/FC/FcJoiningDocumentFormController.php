@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\FC\FcForm;
 use App\Models\FC\FcFormStep;
 use App\Models\FC\FcJoiningDocumentForm;
+use App\Services\FC\FcImportedProfileLockService;
 use App\Support\FC\DocumentFormTemplates;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,6 +26,10 @@ use Illuminate\View\View;
  */
 class FcJoiningDocumentFormController extends Controller
 {
+    public function __construct(private FcImportedProfileLockService $profileLock)
+    {
+    }
+
     /** Show the fillable form (blank or pre-filled with previously saved data). */
     public function show(FcForm $form, FcFormStep $step, string $field): View|RedirectResponse
     {
@@ -35,12 +40,28 @@ class FcJoiningDocumentFormController extends Controller
             ->where('field_name', $formField->field_name)
             ->first();
 
+        $data = $saved?->form_data ?? [];
+
+        // Pre-fill the officer's own identity for whichever of these fields the
+        // template uses: name from the academy roster, designation defaulting to
+        // "Officer Trainee". A value the candidate has already saved is kept.
+        $fieldNames = array_keys(DocumentFormTemplates::rules($template['key']));
+        if (in_array('officer_name', $fieldNames, true) && empty($data['officer_name'])) {
+            $fullName = $this->profileLock->fullName($userId);
+            if ($fullName !== null) {
+                $data['officer_name'] = $fullName;
+            }
+        }
+        if (in_array('designation', $fieldNames, true) && empty($data['designation'])) {
+            $data['designation'] = 'Officer Trainee';
+        }
+
         return view(DocumentFormTemplates::formView($template), [
             'form'      => $form,
             'step'      => $step,
             'field'     => $formField,
             'template'  => $template,
-            'data'      => $saved?->form_data ?? [],
+            'data'      => $data,
         ]);
     }
 

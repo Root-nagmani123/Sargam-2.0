@@ -34,7 +34,8 @@
     .blank--sm{ min-width:110px; }
     textarea.blank{ border:1px solid #cbd5e1; border-radius:6px; vertical-align:middle; min-width:340px; }
     select.blank{ border-bottom:1px dotted #64748b; }
-    .mirror-out{ color:#0b3d91; font-weight:600; border-bottom:1px dotted #94a3b8; padding:0 .3rem; display:inline-block; min-width:80px; }
+    .mirror-out{ border-bottom:1px dotted #94a3b8; padding:0 .3rem; display:inline-block; min-width:80px; }
+    .sb-handfill{ font-size:.72rem; color:#64748b; font-style:italic; margin:.15rem 0 .5rem; }
 </style>
 @endpush
 
@@ -134,17 +135,18 @@
                 </p>
             </div>
 
-            {{-- ─────────────── HINDI (mirrors the same values) ─────────────── --}}
+            {{-- ─────────────── HINDI (candidate types their own Hindi; blank by default) ─────────────── --}}
             <div class="sb-doc" lang="hi">
                 <span class="lang-tag">हिन्दी</span>
+                <div class="sb-handfill">हिन्दी विवरण यहाँ भरें (वैकल्पिक) — या रिक्त छोड़कर मुद्रित बंधपत्र पर हाथ से भरें। / Enter the Hindi details here (optional), or leave blank to hand-fill on the printed bond.</div>
                 <div class="sb-docno">दस्तावेज़-7-ए</div>
                 <div class="sb-title">अखिल भारतीय सेवाओं (आई.ए.एस. / आई.पी.एस. / आई.एफ़.ओ.एस.) के परिवीक्षाधीन अधिकारियों द्वारा भरा जाना है</div>
 
                 <div class="sb-to">सेवा में,<br>&emsp;&emsp;भारत के राष्ट्रपति,</div>
 
                 <p class="sb-body">
-                    मैं, <span class="mirror-out" data-mirror-out="pname">&nbsp;</span> (परिवीक्षाधीन का नाम और पता),
-                    <span class="mirror-out" data-mirror-out="svc">&nbsp;</span> सेवा में परिवीक्षाधीन व्यक्ति (जिसे इसमें आगे
+                    मैं, <textarea name="hi[pname]" rows="2" class="blank" placeholder="परिवीक्षाधीन का नाम और पता">{{ $data['_hi']['pname'] ?? '' }}</textarea> (परिवीक्षाधीन का नाम और पता),
+                    <input type="text" name="hi[svc]" class="blank blank--mid" value="{{ $data['_hi']['svc'] ?? '' }}" autocomplete="off"> सेवा में परिवीक्षाधीन व्यक्ति (जिसे इसमें आगे
                     &lsquo;परिवीक्षाधीन&rsquo; कहा गया है), राष्ट्रपति (जिन्हें इसमें आगे &lsquo;केन्द्र सरकार&rsquo; कहा गया है) अथवा जिस राज्य
                     में मुझे नियुक्त किया जाए, उस राज्य सरकार से प्रशिक्षण की अवधि के लिए (भारतीय प्रशासनिक सेवा (परिवीक्षा) नियमावली,
                     1954 अथवा भारतीय पुलिस सेवा (परिवीक्षा) नियमावली, 1954 अथवा भारतीय वन सेवा (परिवीक्षा) नियमावली, 1968 के
@@ -152,8 +154,8 @@
                 </p>
 
                 <p class="sb-body">
-                    अब, परिवीक्षाधीन और मैं, <span class="mirror-out" data-mirror-out="sname">&nbsp;</span> निवासी
-                    <span class="mirror-out" data-mirror-out="saddr">&nbsp;</span>, <span class="mirror-out" data-mirror-out="socc">&nbsp;</span>
+                    अब, परिवीक्षाधीन और मैं, <input type="text" name="hi[sname]" class="blank blank--mid" value="{{ $data['_hi']['sname'] ?? '' }}" autocomplete="off"> निवासी
+                    <textarea name="hi[saddr]" rows="2" class="blank" placeholder="प्रतिभू का पता">{{ $data['_hi']['saddr'] ?? '' }}</textarea>, <input type="text" name="hi[socc]" class="blank blank--mid" value="{{ $data['_hi']['socc'] ?? '' }}" autocomplete="off">
                     (प्रतिभू का नाम और पता, जिसे इसमें आगे &lsquo;प्रतिभू&rsquo; कहा गया है), उक्त नियमों के अनुसरण में संयुक्त रूप से और
                     पृथक-पृथक एतद्द्वारा वचन देते हैं और करार करते हैं कि यदि परिवीक्षाधीन व्यक्ति केन्द्र सरकार की संतुष्टि के अनुसार परिवीक्षा
                     की अवधि पूरी नहीं कर पाता है, तो वेतन और नियुक्ति पर जाने के लिए यात्रा व्यय सहित परिवीक्षाधीन व्यक्ति को भुगतान की गई
@@ -167,14 +169,14 @@
                 </p>
 
                 <div class="sb-lines">
-                    दिनांक <span class="mirror-out" data-mirror-out="ddate">&nbsp;</span>
+                    दिनांक <input type="text" name="hi[ddate]" class="blank blank--sm" value="{{ $data['_hi']['ddate'] ?? '' }}" autocomplete="off">
                     <div class="sb-sign mt-3">परिवीक्षाधीन के हस्ताक्षर ______________________</div>
-                    <div>साक्षी की उपस्थिति में परिवीक्षाधीन द्वारा हस्ताक्षरित — साक्षी का नाम: <span class="mirror-out" data-mirror-out="pwname">&nbsp;</span></div>
-                    <div>पता: <span class="mirror-out" data-mirror-out="pwaddr">&nbsp;</span> &nbsp; व्यवसाय: <span class="mirror-out" data-mirror-out="pwocc">&nbsp;</span></div>
+                    <div>साक्षी की उपस्थिति में परिवीक्षाधीन द्वारा हस्ताक्षरित — साक्षी का नाम: <input type="text" name="hi[pwname]" class="blank blank--mid" value="{{ $data['_hi']['pwname'] ?? '' }}" autocomplete="off"></div>
+                    <div>पता: <input type="text" name="hi[pwaddr]" class="blank blank--wide" value="{{ $data['_hi']['pwaddr'] ?? '' }}" autocomplete="off"> &nbsp; व्यवसाय: <input type="text" name="hi[pwocc]" class="blank blank--mid" value="{{ $data['_hi']['pwocc'] ?? '' }}" autocomplete="off"></div>
 
                     <div class="sb-sign mt-3">प्रतिभू के हस्ताक्षर ______________________</div>
-                    <div>साक्षी की उपस्थिति में प्रतिभू द्वारा हस्ताक्षरित — साक्षी का नाम: <span class="mirror-out" data-mirror-out="swname">&nbsp;</span></div>
-                    <div>पता: <span class="mirror-out" data-mirror-out="swaddr">&nbsp;</span> &nbsp; व्यवसाय: <span class="mirror-out" data-mirror-out="swocc">&nbsp;</span></div>
+                    <div>साक्षी की उपस्थिति में प्रतिभू द्वारा हस्ताक्षरित — साक्षी का नाम: <input type="text" name="hi[swname]" class="blank blank--mid" value="{{ $data['_hi']['swname'] ?? '' }}" autocomplete="off"></div>
+                    <div>पता: <input type="text" name="hi[swaddr]" class="blank blank--wide" value="{{ $data['_hi']['swaddr'] ?? '' }}" autocomplete="off"> &nbsp; व्यवसाय: <input type="text" name="hi[swocc]" class="blank blank--mid" value="{{ $data['_hi']['swocc'] ?? '' }}" autocomplete="off"></div>
                 </div>
 
                 <p class="sb-body" style="text-indent:0; margin-top:1.4rem;">
@@ -215,30 +217,6 @@
 </div>
 </div>
 
-@push('scripts')
-<script>
-(function () {
-    function fmtDate(v){ var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(v||''); return m?(m[3]+'-'+m[2]+'-'+m[1]):(v||''); }
-    function sync(el){
-        var key = el.getAttribute('data-mirror');
-        var raw = el.value || '';
-        var text = (el.type === 'date') ? fmtDate(raw) : raw;
-        document.querySelectorAll('[data-mirror-out="' + key + '"]').forEach(function (o){ o.textContent = text || ' '; });
-    }
-    document.querySelectorAll('[data-mirror]').forEach(function (el){
-        el.addEventListener('input', function(){ sync(el); });
-        el.addEventListener('change', function(){ sync(el); });
-        sync(el);
-    });
-    var pairs = [['prob_witness_name','pwname'],['prob_witness_address','pwaddr'],['prob_witness_occupation','pwocc'],
-                 ['surety_witness_name','swname'],['surety_witness_address','swaddr'],['surety_witness_occupation','swocc']];
-    pairs.forEach(function(p){
-        var src = document.querySelector('[name="'+p[0]+'"]');
-        if(!src) return;
-        function s(){ document.querySelectorAll('[data-mirror-out="'+p[1]+'"]').forEach(function(o){ o.textContent = src.value || ' '; }); }
-        src.addEventListener('input', s); src.addEventListener('change', s); s();
-    });
-})();
-</script>
-@endpush
+{{-- Hindi entries are intentionally NOT auto-filled from English. The Hindi copy is
+     filled by hand on the printed bond, so its slots stay blank (dotted lines). --}}
 @endsection

@@ -35,7 +35,19 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <link rel="shortcut icon" type="image/x-icon" href="{{asset('admin_assets/images/logos/favicon.ico')}}">
-    
+
+    <!-- Preconnect to the CDN that serves render-blocking CSS/JS -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+    <!-- Preload the LCP hero carousel image so it downloads before the carousel HTML/CSS is parsed -->
+    <link rel="preload" as="image" href="{{ asset('images/carasoul/1.webp') }}" fetchpriority="high">
+
+    @php
+        // Cache-busting versioned asset URL: appends the file's mtime so long-term
+        // (1-year, immutable) caching is safe — the URL changes whenever the file does.
+        $assetV = fn (string $p) => asset($p) . '?v=' . (@filemtime(public_path($p)) ?: 1);
+    @endphp
+
     <!-- Bootstrap 5.3.6 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
@@ -45,7 +57,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <link href="{{asset('admin_assets/css/accesibility-style_v1.css')}}" rel="stylesheet">
+    <link href="{{ $assetV('admin_assets/css/accesibility-style_v1.css') }}" rel="stylesheet">
 
     <title>Login - Sargam | LBSNAA</title>
 
@@ -1082,9 +1094,16 @@
                 <div class="carousel-inner">
                     @for($i = 1; $i <= 10; $i++)
                     <div class="carousel-item {{ $i === 1 ? 'active' : '' }}">
-                        <img src="{{ asset('images/carasoul/' . $i . '.webp') }}"
-                            alt=""
-                            loading="{{ $i <= 2 ? 'eager' : 'lazy' }}">
+                        {{-- Only the hero (slide 1) loads on first paint; slides 2-10 hold their
+                             URL in data-src and are fetched on demand just before they slide in
+                             (see the carousel init script at the bottom of the page). --}}
+                        @if($i === 1)
+                        <img src="{{ asset('images/carasoul/1.webp') }}"
+                            alt="" loading="eager" fetchpriority="high" decoding="async">
+                        @else
+                        <img data-src="{{ asset('images/carasoul/' . $i . '.webp') }}"
+                            alt="" loading="lazy" decoding="async">
+                        @endif
                     </div>
                     @endfor
                 </div>
@@ -1121,8 +1140,13 @@
                                 <span class="d-none d-sm-inline">| Government of India</span>
                             </div>
                             <a href="{{ url('/') }}" class="d-none d-lg-inline-flex align-items-center text-decoration-none" aria-label="LBSNAA Home">
-                                <img src="{{ asset('admin_assets/images/logos/logo.png') }}"
-                                    alt="LBSNAA - Lal Bahadur Shastri National Academy of Administration" loading="eager" onerror="this.style.display='none'" class="header-lbsnaa" style="width: 180px; height: auto;">
+                                {{-- Right-sized web variants (400px) instead of the 1193px shared logo.png,
+                                     which stays in place for PDF/print exports. WebP with PNG fallback. --}}
+                                <picture>
+                                    <source srcset="{{ $assetV('admin_assets/images/logos/logo-web.webp') }}" type="image/webp">
+                                    <img src="{{ $assetV('admin_assets/images/logos/logo-web.png') }}"
+                                        alt="LBSNAA - Lal Bahadur Shastri National Academy of Administration" loading="eager" onerror="this.style.display='none'" class="header-lbsnaa" style="width: 180px; height: auto;">
+                                </picture>
                             </a>
                         </div>
                         <div class="d-none d-lg-flex align-items-center">
@@ -1141,7 +1165,7 @@
             <div class="login-card">
                 <!-- Logo & Title -->
                 <div class="login-logo">
-                    <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" 
+                    <img src="{{ $assetV('admin_assets/images/logos/logo.svg') }}"
                         alt="Sargam - LBSNAA Portal"
                         loading="eager"
                         class="d-block mx-auto">
@@ -1370,14 +1394,42 @@
             activeCount.textContent = Math.floor(Math.random() * 80) + 40;
         }
 
-        // Initialize Carousel with Ken Burns effect
+        // Initialize Carousel with Ken Burns effect + on-demand (lazy) slide loading.
+        // Only the hero slide ships a real src; slides 2-10 carry their URL in data-src
+        // and are fetched just before they scroll into view, so the initial page load
+        // downloads a single image instead of all ten.
         const carousel = document.getElementById('bgCarousel');
         if (carousel && window.bootstrap) {
+            const items = carousel.querySelectorAll('.carousel-item');
+
+            // Swap a slide's data-src into src exactly once.
+            const loadSlide = (index) => {
+                const item = items[index];
+                if (!item) return;
+                const img = item.querySelector('img[data-src]');
+                if (img) {
+                    img.src = img.dataset.src;
+                    img.removeAttribute('data-src');
+                }
+            };
+
+            // Fetch the incoming slide's image right before Bootstrap transitions to it.
+            carousel.addEventListener('slide.bs.carousel', (e) => loadSlide(e.to));
+
             new bootstrap.Carousel(carousel, {
                 interval: 6000,
                 ride: 'carousel',
                 pause: false
             });
+
+            // After the page settles, quietly prefetch slide 2 so the first
+            // transition is seamless (guarded so it never competes with the hero).
+            const prefetchNext = () => loadSlide(1);
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(prefetchNext, { timeout: 3000 });
+            } else {
+                setTimeout(prefetchNext, 2000);
+            }
         }
 
         // Accessibility announcement

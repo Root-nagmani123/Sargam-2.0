@@ -3,8 +3,8 @@
 @section('title', 'Student Medical Exemption')
 
 @section('setup_content')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css">
-<link rel="stylesheet" href="{{ asset('css/choices-theme.css') }}?v={{ filemtime(public_path('css/choices-theme.css')) }}">
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}?v={{ filemtime(public_path('css/select2-theme.css')) }}">
 <style>
 /* =====================================================================
    Student Medical Exemption — page-scoped polish.
@@ -117,20 +117,7 @@ select.sme-filter-control {
     text-overflow: ellipsis;
 }
 
-/* Searchable course filter (Choices.js) — match the filter-control footprint */
-.sme-filterbar .choices { margin-bottom: 0; min-width: 180px; max-width: 240px; }
-.sme-filterbar .choices__inner {
-    min-height: 42px;
-    padding: 0.35rem 2rem 0.35rem 0.85rem;
-    background: #fff;
-    border: 1px solid var(--ds-line);
-    border-radius: var(--ds-radius-1);
-    font-size: 0.875rem;
-    display: flex;
-    align-items: center;
-}
-.sme-filterbar .choices.is-focused .choices__inner { border-color: #c4ccd6; }
-.sme-filterbar .choices__list--single { padding: 0; }
+/* Searchable course filter (Select2) is themed in css/select2-theme.css. */
 .sme-filter-control:hover {
     border-color: #c4ccd6;
 }
@@ -243,6 +230,8 @@ select.sme-filter-control {
 #smeFormBody .is-invalid { border-color: var(--bs-danger); }
 #smeFormBody .form-control,
 #smeFormBody .form-select { min-height: 44px; border-radius: var(--ds-radius-2); }
+/* Select2 dropdowns in the Add / Edit modal are themed in css/select2-theme.css
+   (Bootstrap .form-select look, chevron caret, matching panel). */
 #smeFormBody textarea.form-control {
     min-height: 88px;
     resize: vertical;
@@ -782,20 +771,20 @@ select.sme-filter-control {
                 {{-- Table --}}
                 <div class="table-responsive">
                     <table class="table align-middle" id="medicalExemptionTable">
-                        <thead>
+                        <thead style="position:relative; z-index: 0;">
                             <tr>
                                 <th class="col">S. No.</th>
                                 <th class="col">Date</th>
-                                <th class="col text-wrap">Officer Trainee</th>
-                                <th class="col text-wrap">Course</th>
+                                <th class="col">Officer Trainee</th>
+                                <th class="col" style="white-space: normal;width: 12%;">Course</th>
                                 <th class="col">Doctor Name</th>
                                 <th class="col">Medical Speciality</th>
-                                <th class="col text-wrap">Duration</th>
+                                <th class="col">Duration</th>
                                 <th class="col">Days</th>
                                 <th class="col">Category</th>
                                 <th class="col">IPD/OPD/After OPD/Referral</th>
-                                <th class="col text-wrap">PT/ Outdoor Advise</th>
-                                <th class="col text-wrap">Provisional Diagnosis/ Remarks</th>
+                                <th class="col">PT/ Outdoor Advise</th>
+                                <th class="col">Diagnosis / Remarks</th>
                                 <th class="col sme-col-no-print">Document</th>
                                 <th class="col sme-col-no-print">Action</th>
                             </tr>
@@ -865,7 +854,7 @@ select.sme-filter-control {
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
+{{-- Select2 (select2.full.min.js) is already loaded globally in the admin footer. --}}
 <script>
 $(document).ready(function() {
 
@@ -879,33 +868,26 @@ $(document).ready(function() {
         archive: @json(($archivedCourses ?? collect())->map(fn ($c) => ['pk' => $c->pk, 'name' => $c->course_name])->values()),
     };
 
-    // Searchable course filter (Choices.js). All filter dropdowns get a search box.
-    let courseFilterChoices = null;
-    if (window.Choices && document.getElementById('course_filter')) {
-        courseFilterChoices = new Choices('#course_filter', {
-            searchEnabled: true,
-            searchPlaceholderValue: 'Search course...',
-            searchResultLimit: 50,
-            itemSelectText: '',
-            shouldSort: false,
-            allowHTML: false,
+    // Searchable course filter (Select2). Every filter dropdown gets a search box.
+    let courseFilterSelect2 = false;
+    if ($.fn.select2 && $('#course_filter').length) {
+        $('#course_filter').select2({
+            width: '210px',
+            placeholder: 'Course Name',
+            allowClear: false,
         });
+        courseFilterSelect2 = true;
     }
 
     function populateCourseFilter(status) {
         const list = smeCourseLists[status] || [];
-        const choiceRows = [{ value: '', label: 'Course Name', selected: true }]
-            .concat(list.map(function (c) { return { value: String(c.pk), label: c.name }; }));
-        if (courseFilterChoices) {
-            // Rebuild the Choices list (a course from the other tab won't exist here).
-            courseFilterChoices.setChoices(choiceRows, 'value', 'label', true);
-            return;
-        }
         const $sel = $('#course_filter');
         if (!$sel.length) { return; }
-        $sel.empty();
-        choiceRows.forEach(function (c) { $sel.append($('<option>').val(c.value).text(c.label)); });
+        // Rebuild the option list (a course from the other tab won't exist here).
+        $sel.empty().append($('<option>').val('').text('Course Name'));
+        list.forEach(function (c) { $sel.append($('<option>').val(String(c.pk)).text(c.name)); });
         $sel.val('');
+        if (courseFilterSelect2) { $sel.trigger('change.select2'); }
     }
 
     let table = $('#medicalExemptionTable').DataTable({
@@ -1054,11 +1036,9 @@ $(document).ready(function() {
     // 🔄 Reset filters
     $('#resetFilters').on('click', function() {
         $('#search').val('');
-        if (courseFilterChoices) {
-            courseFilterChoices.setChoiceByValue('');
-        } else {
-            $('#course_filter').val('').trigger('change');
-        }
+        $('#course_filter').val('');
+        if (courseFilterSelect2) { $('#course_filter').trigger('change.select2'); }
+        else { $('#course_filter').trigger('change'); }
         $('#from_date_filter').val('');
         $('#to_date_filter').val('');
 
@@ -1188,29 +1168,26 @@ $(document).ready(function() {
         });
     }
 
-    var modalChoices = [];          // every Choices instance in the modal (for cleanup)
-    var modalStudentChoices = null;
     var modalOtMap = {};
 
     function rebuildModalStudents(list, placeholder, loading){
-        if (!modalStudentChoices) return;
+        var $sel = $('#smeAjaxForm #studentDropdown');
+        if (!$sel.length) return;
         modalOtMap = {};
-        var choices = [{ value: '', label: placeholder || 'Search Student', selected: true, disabled: !!loading }];
+        // The empty option's text doubles as the Select2 placeholder/hint.
+        var $opts = $('<div>').append($('<option>').val('').text(placeholder || 'Search Student'));
         (list || []).forEach(function(s){
             modalOtMap[String(s.pk)] = s.generated_OT_code || '';
             var label = s.display_name + (s.generated_OT_code ? ' (' + s.generated_OT_code + ')' : '');
-            choices.push({ value: String(s.pk), label: label });
+            $opts.append($('<option>').val(String(s.pk)).text(label));
         });
-        modalStudentChoices.clearStore();
-        modalStudentChoices.setChoices(choices, 'value', 'label', true);
+        $sel.html($opts.html()).val('');
+        if ($sel.hasClass('select2-hidden-accessible')) { $sel.trigger('change.select2'); }
         $('#otCodeField').val('');
     }
 
     function initModalForm(){
         var $form = $('#smeAjaxForm');
-        var formEl = $form[0];
-        modalChoices = [];
-        modalStudentChoices = null;
         modalOtMap = {};
 
         // ot-code lookup from any server-rendered student options (edit form)
@@ -1218,26 +1195,23 @@ $(document).ready(function() {
             if (this.value) modalOtMap[this.value] = String($(this).data('ot_code') || '');
         });
 
-        // Turn EVERY <select> in the injected form into a Choices.js dropdown
-        if (formEl && window.Choices){
-            formEl.querySelectorAll('select').forEach(function(sel){
-                sel.classList.remove('select2');
-                var inst = new Choices(sel, {
-                    searchEnabled: true,
-                    searchPlaceholderValue: 'Search...',
-                    itemSelectText: '',
-                    shouldSort: false,
-                    allowHTML: false
+        // Turn EVERY <select> in the injected form into a Select2 dropdown, styled
+        // (via CSS) to match Bootstrap's .form-select. dropdownParent keeps the
+        // panel inside the modal so it isn't clipped and its search box is focusable.
+        if ($form.length && $.fn.select2){
+            $form.find('select').each(function(){
+                var $sel = $(this).removeClass('select2');
+                $sel.select2({
+                    width: '100%',
+                    dropdownParent: $('#smeFormModal'),
+                    allowClear: false
                 });
-                modalChoices.push(inst);
-                if (sel.id === 'studentDropdown') modalStudentChoices = inst;
             });
 
-            if (modalStudentChoices){
-                document.getElementById('studentDropdown').addEventListener('change', function(){
-                    $('#otCodeField').val(modalOtMap[modalStudentChoices.getValue(true)] || '');
-                });
-            }
+            // Auto-fill the OT code when the officer trainee changes.
+            $form.on('change', '#studentDropdown', function(){
+                $('#otCodeField').val(modalOtMap[$(this).val()] || '');
+            });
         }
 
         // Client-side file validation for Doc_upload
@@ -1259,7 +1233,16 @@ $(document).ready(function() {
             }
         });
 
-        // Days = inclusive span between the Arrival and Departure dates (read-only field).
+        // Clear a field's validation error as soon as the user edits it, so a
+        // message never lingers until the next submit attempt.
+        $form.on('input change', '.form-control, .form-select, select', function(){
+            var $f = $(this);
+            $f.removeClass('is-invalid');   // Select2 border clears via the adjacent-sibling CSS
+            var $col = $f.closest('[class*="col-"]').first();
+            ($col.length ? $col : $f.parent()).find('.sme-err').remove();
+        });
+
+        // Days = inclusive span between the Start and End dates (read-only field).
         $form.on('change', '#arrivalDate, #departureDate', function(){
             var a = document.getElementById('arrivalDate');
             var d = document.getElementById('departureDate');
@@ -1310,27 +1293,43 @@ $(document).ready(function() {
         }).fail(function(xhr){
             $btn.prop('disabled', false);
             if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors){
+                var errors = xhr.responseJSON.errors;
                 var first = null;
+
+                // The backend validates combined datetimes (from_date/to_date) while the
+                // form has split Start/End date+time inputs. Fold each derived error onto
+                // its split field, and skip it when that split field already errored —
+                // otherwise the same message stacks twice under one control.
+                var placement = { from_date: 'arrival_date', to_date: 'departure_date' };
+
+                // Collect one de-duplicated message list per visible field.
+                var byField = {};
+                $.each(errors, function(field, msgs){
+                    var target = placement[field] || field;
+                    if (placement[field] && errors[target]) return; // split field owns it
+                    var list = byField[target] || (byField[target] = []);
+                    if (msgs[0] && list.indexOf(msgs[0]) === -1) list.push(msgs[0]);
+                });
+
                 var shown = false;
-                $.each(xhr.responseJSON.errors, function(field, msgs){
-                    // Backend validates combined datetime fields (from_date/to_date) while
-                    // the form has split fields (arrival/departure date+time).
-                    var nameMap = {
-                        from_date: ['arrival_date', 'arrival_time'],
-                        to_date: ['departure_date', 'departure_time']
-                    };
-                    var names = nameMap[field] || [field];
-                    var $targets = $();
-                    names.forEach(function(n){
-                        $targets = $targets.add($('#smeAjaxForm [name="' + n + '"]'));
+                $.each(byField, function(name, msgs){
+                    var $field = $('#smeAjaxForm [name="' + name + '"]');
+                    if (!$field.length) return;
+                    shown = true;
+
+                    // Mark the control (plain input, or a Select2-wrapped <select>,
+                    // which colours via the adjacent-sibling CSS rule).
+                    $field.addClass('is-invalid');
+
+                    // Place the message at the bottom of the field's own column so it
+                    // reads directly under the control it belongs to.
+                    var $col = $field.closest('[class*="col-"]').first();
+                    var $anchor = $col.length ? $col : $field.parent();
+                    msgs.forEach(function(m){
+                        $anchor.append('<small class="text-danger sme-err d-block mt-1">' + m + '</small>');
                     });
 
-                    if ($targets.length) {
-                        shown = true;
-                        $targets.addClass('is-invalid');
-                        $targets.last().after('<small class="text-danger sme-err d-block mt-1">' + msgs[0] + '</small>');
-                        if (!first) first = $targets.first();
-                    }
+                    if (!first) first = $field.first();
                 });
 
                 if (!shown) {
@@ -1351,11 +1350,13 @@ $(document).ready(function() {
     $('#smeFormSubmit').on('click', submitModalForm);
     $(document).on('submit', '#smeAjaxForm', function(e){ e.preventDefault(); submitModalForm(); });
 
-    // Reset the modal on close so reopening never stacks Choices widgets
+    // Reset the modal on close so reopening never stacks Select2 widgets
     $('#smeFormModal').on('hidden.bs.modal', function(){
-        modalChoices.forEach(function(c){ try { c.destroy(); } catch(e){} });
-        modalChoices = [];
-        modalStudentChoices = null;
+        $('#smeFormBody select').each(function(){
+            if ($(this).hasClass('select2-hidden-accessible')) {
+                try { $(this).select2('destroy'); } catch(e){}
+            }
+        });
         $('#smeFormBody').empty();
         $('#smeFormSubmit').prop('disabled', true);
     });
@@ -1438,10 +1439,10 @@ $(document).ready(function() {
             '<h6 class="sme-view-section-title">Exemption and Other Information</h6>' +
             '<div class="row g-3">' +
                 smeViewField('IPD/OPD/After OPD/Referral', data.opd_category) +
-                smeViewField('Arrival Date', data.arrival_date) +
-                smeViewField('Arrival Time', data.arrival_time) +
-                smeViewField('Departure Date', data.departure_date) +
-                smeViewField('Departure Time', data.departure_time) +
+                smeViewField('Start Date', data.arrival_date) +
+                smeViewField('Start Time', data.arrival_time) +
+                smeViewField('End Date', data.departure_date) +
+                smeViewField('End Time', data.departure_time) +
                 smeViewField('Medical Speciality', data.speciality) +
                 smeViewField('Days', data.days) +
                 '<div class="col-md-6"><div class="sme-view-field"><span class="sme-view-label">Status</span>' +
@@ -1449,7 +1450,7 @@ $(document).ready(function() {
                 (data.created_date ? smeViewField('Created On', data.created_date) : '') +
             '</div>' +
             '<div class="row g-3 mt-1">' +
-                '<div class="col-md-6"><div class="sme-view-field"><span class="sme-view-label">Provisional Diagnosis/ Remarks</span>' +
+                '<div class="col-md-6"><div class="sme-view-field"><span class="sme-view-label">Diagnosis / Remarks</span>' +
                     '<div class="sme-view-text">' + smeEsc(data.description) + '</div></div></div>' +
                 '<div class="col-md-6"><div class="sme-view-field"><span class="sme-view-label">PT/Outdoor Advise</span>' +
                     '<div class="sme-view-text">' + smeEsc(data.pt_outdoor_advise) + '</div></div></div>' +
