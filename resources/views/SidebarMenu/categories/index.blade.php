@@ -82,13 +82,41 @@
     .sidebar-categories-page #sidebar-category-table {
         --bs-table-striped-bg: rgba(0, 74, 147, 0.04);
     }
+
+    /* Design-system polish */
+    .sidebar-categories-page .btn-primary { border-radius: var(--ds-radius-1); font-weight: 600; }
+    .sidebar-categories-page #sidebar-category-table thead th {
+        background: var(--ds-surface-2) !important;
+        color: var(--ds-ink-muted) !important;
+        font-size: 0.8125rem;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        font-weight: 600;
+        border-bottom: 1px solid var(--ds-line);
+        white-space: nowrap;
+    }
+    .sidebar-categories-page #sidebar-category-table tbody td {
+        font-size: 0.9rem;
+        color: var(--ds-ink);
+        vertical-align: middle;
+    }
+    #CategoryModal .modal-content,
+    #sidebarCatColumnVisibilityModal .modal-content {
+        border: 0;
+        border-radius: var(--ds-radius-2);
+        box-shadow: 0 10px 40px rgba(16, 24, 40, .18);
+    }
+    #CategoryModal .form-control,
+    #CategoryModal .form-select { border-radius: var(--ds-radius-1); }
+    #CategoryModal .form-control:focus,
+    #CategoryModal .form-select:focus { border-color: #86b7fe; box-shadow: var(--ds-focus-ring); }
 </style>
 <div class="container-fluid py-3 sidebar-categories-page">
     <x-breadcrum title="Sidebar Categories" />
     <x-session_message />
     <section class="datatables" aria-labelledby="sidebar-categories-heading">
-        <div class="card shadow-sm border-0 border-start border-4 border-primary rounded-3">
-            <div class="card-body p-3 p-md-4">
+        <div class="ds-card">
+            <div class="ds-card-body p-3 p-md-4">
                 <header class="row align-items-center g-3 mb-3 mb-md-4 pb-3 border-bottom border-light">
                     <div class="col-12 col-md">
                         <h2 id="sidebar-categories-heading" class="h5 mb-0 fw-semibold text-body">
@@ -99,12 +127,22 @@
                         </p>
                     </div>
                     <div class="col-12 col-md-auto">
-                        <button type="button"
-                            class="btn btn-primary btn-gigw-touch d-inline-flex align-items-center justify-content-center gap-2 w-100 w-md-auto"
-                            onclick="CategoryModal()">
-                            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                            <span>Add category</span>
-                        </button>
+                        <div class="d-flex flex-wrap align-items-center gap-2 justify-content-md-end">
+                            <button type="button"
+                                class="btn programme-dt-btn-columns btn-gigw-touch d-inline-flex align-items-center justify-content-center gap-2"
+                                id="btnSidebarCatColumns"
+                                data-bs-toggle="modal" data-bs-target="#sidebarCatColumnVisibilityModal"
+                                title="Show / hide columns">
+                                <span>Columns</span>
+                                <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                            </button>
+                            <button type="button"
+                                class="btn btn-primary btn-gigw-touch d-inline-flex align-items-center justify-content-center gap-2"
+                                onclick="CategoryModal()">
+                                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                                <span>Add category</span>
+                            </button>
+                        </div>
                     </div>
                 </header>
                 <div class="overflow-hidden">
@@ -181,7 +219,7 @@
                         </select>
                     </div>
                     <div class="d-flex flex-column flex-sm-row gap-2 gap-sm-3 mt-4 pt-2 border-top border-light">
-                        <button type="submit" class="btn btn-success btn-gigw-touch order-2 order-sm-1"
+                        <button type="submit" class="btn btn-primary btn-gigw-touch order-2 order-sm-1"
                             id="SubmitCategoryForm">
                             <i class="bi bi-check-lg me-2" aria-hidden="true"></i>Save
                         </button>
@@ -191,6 +229,24 @@
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="sidebarCatColumnVisibilityModal" tabindex="-1" aria-labelledby="sidebarCatColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-bottom border-light py-3">
+                <h2 class="modal-title h5 fw-semibold mb-0" id="sidebarCatColumnVisibilityLabel">Column Visibility</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close dialog"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <div class="row g-3" id="sidebarCatColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary btn-gigw-touch" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -349,5 +405,80 @@
             });
         });
     });
+
+    /* ---- Column Visibility (drives the live DataTable via its API) ----
+       Page-scoped: reads columns from the #sidebar-category-table DataTable the
+       shared data-table component initializes, and toggles them via the
+       .column().visible() API. Persisted to localStorage. */
+    (function () {
+        var TABLE = '#sidebar-category-table';
+        var storageKey = 'sidebarCategories:hiddenColumns:v1';
+
+        function getHidden() {
+            try {
+                var raw = localStorage.getItem(storageKey);
+                var arr = raw ? JSON.parse(raw) : [];
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) { return []; }
+        }
+        function persist(arr) {
+            try { localStorage.setItem(storageKey, JSON.stringify(arr)); } catch (e) {}
+        }
+
+        function setupSidebarCatColumns(dt) {
+            if (!dt) { return; }
+            var hidden = getHidden();
+
+            dt.columns().every(function () {
+                var idx = this.index();
+                this.visible(hidden.indexOf(idx) === -1, false);
+            });
+            dt.columns.adjust();
+
+            var $grid = $('#sidebarCatColumnToggleGrid');
+            if (!$grid.length) { return; }
+            $grid.empty();
+
+            dt.columns().every(function () {
+                var idx = this.index();
+                var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+                if (!title) { return; }
+
+                var inputId = 'sidebarcatcolvis_' + idx;
+                var $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
+                var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                    .attr('for', inputId);
+                var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                    .attr('id', inputId)
+                    .prop('checked', hidden.indexOf(idx) === -1);
+
+                $cb.on('change', function () {
+                    var h = getHidden();
+                    var pos = h.indexOf(idx);
+                    if (this.checked) {
+                        if (pos !== -1) h.splice(pos, 1);
+                    } else {
+                        if (pos === -1) h.push(idx);
+                    }
+                    persist(h);
+                    dt.column(idx).visible(this.checked, false);
+                    dt.columns.adjust();
+                });
+
+                $label.append($cb).append($('<span></span>').text(title));
+                $cell.append($label);
+                $grid.append($cell);
+            });
+        }
+
+        (function whenReady(tries) {
+            tries = tries || 0;
+            if ($.fn.DataTable && $.fn.DataTable.isDataTable(TABLE)) {
+                setupSidebarCatColumns($(TABLE).DataTable());
+            } else if (tries < 100) {
+                setTimeout(function () { whenReady(tries + 1); }, 100);
+            }
+        })(0);
+    })();
 </script>
 @endsection
