@@ -347,6 +347,12 @@ class AttendanceController extends Controller
                         ->where('active_inactive', 1)
                         ->count();
                 })
+                ->addColumn('status', function ($row) {
+                    // Marked once every student in the group+course has a saved row (status != 0).
+                    return $this->isAttendanceMarked($row)
+                        ? '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">Marked</span>'
+                        : '<span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-3 py-1">Not Marked</span>';
+                })
                 ->addColumn('actions', function ($row) use ($currentPath) {
                     // Mark-attendance action = fingerprint icon; turns green once
                     // every student in the group+course has a saved row (status != 0).

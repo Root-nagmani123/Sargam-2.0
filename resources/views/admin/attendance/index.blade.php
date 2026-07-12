@@ -169,7 +169,7 @@
                     id="attFilterArchive" data-att-status="archive" aria-pressed="false">Archived</button>
             </li>
         </ul>
-        <button type="button" id="attendanceDownload" class="btn attendance-download-btn">
+        <button type="button" id="attendanceDownload" class="btn attendance-download-btn border-0">
             <i class="bi bi-download" aria-hidden="true"></i>
             <span>Download</span>
         </button>
