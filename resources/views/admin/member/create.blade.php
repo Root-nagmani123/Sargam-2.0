@@ -61,6 +61,7 @@
 $(document).ready(function() {
     const form = $("#member-form");
     const loadedSteps = {};
+    let formIsDirty = false;
 
     const wizard = $("#wizard").steps({
         headerTag: "h3",
@@ -130,6 +131,7 @@ $(document).ready(function() {
                 contentType: false,
                 processData: false,
                 success: function() {
+                    formIsDirty = false;
                     toastr.success("Member created successfully!");
                     window.location.href = "/member";
                 },
@@ -147,6 +149,48 @@ $(document).ready(function() {
                 }
             });
         }
+    });
+
+    // --- Unsaved changes protection ---
+    // Any edit inside the wizard (including fields loaded later via AJAX,
+    // since this listener is delegated) marks the form dirty.
+    form.on('input change', ':input', function() {
+        formIsDirty = true;
+    });
+
+    // Reload / close tab / browser back-forward: browsers show their own
+    // built-in message and ignore any custom text we set here.
+    window.addEventListener('beforeunload', function(e) {
+        if (formIsDirty) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    // In-app navigation (sidebar/menu links, breadcrumbs, etc.): show a
+    // friendlier confirmation instead of the plain browser dialog.
+    $(document).on('click', 'a[href]:not([href^="#"]):not([href^="javascript:"])', function(e) {
+        if (!formIsDirty) return;
+        if (e.which === 2 || e.ctrlKey || e.metaKey || e.shiftKey || $(this).attr('target') === '_blank') return;
+
+        const link = this;
+        e.preventDefault();
+
+        Swal.fire({
+            title: 'Details not saved yet!',
+            text: "You've filled in some information on this page that hasn't been saved. If you leave now, it will be lost. Do you still want to leave?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, leave without saving',
+            cancelButtonText: 'Stay on this page'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                formIsDirty = false;
+                window.location.href = link.href;
+            }
+        });
     });
 
     function loadStepContent(stepNumber) {
