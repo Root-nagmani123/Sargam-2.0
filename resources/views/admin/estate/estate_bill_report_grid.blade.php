@@ -223,30 +223,63 @@ $(document).ready(function() {
         return html;
     }
 
+    // Branded LBSNAA header assets (same layout as the official report PDF).
+    var printLogoLeft   = @json(asset('admin_assets/images/logos/logo_new.png'));
+    var printLogoRight  = @json(file_exists(public_path('admin_assets/images/logos/constitution-75.png'))
+        ? asset('admin_assets/images/logos/constitution-75.png')
+        : asset('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png'));
+    var printTitleHindi = @json(asset('admin_assets/images/logos/lbsnaa-title-hi.png'));
+
     function openPrintWindow(tableHtml) {
         var billMonth = ($('#bill_month').val() || '').trim();
-        var title = 'Estate Bill Report - Grid View' + (billMonth ? (' (' + billMonth + ')') : '');
         var win = window.open('', '_blank');
         if (!win) {
             window.print();
             return;
         }
 
+        var today = new Date();
+        var dateStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
         win.document.open();
         win.document.write(
             '<!doctype html><html><head><meta charset="utf-8">' +
-            '<title>' + title + '</title>' +
+            '<title>Estate Bill Report - Grid View</title>' +
             '<style>' +
-            '@page{size:A4 landscape;margin:8mm;}' +
-            'body{font-family:Arial, sans-serif;font-size:11px;color:#111;}' +
-            'h2{margin:0 0 8px 0;font-size:14px;}' +
-            'table{width:100%;border-collapse:collapse;}' +
-            'th,td{border:1px solid #333;padding:4px 6px;vertical-align:top;word-break:break-word;white-space:normal;}' +
+            '@page{size:A4 landscape;margin:10mm;}' +
+            'body{font-family:Arial, sans-serif;font-size:11px;color:#1f2937;margin:16px;}' +
+            '.pdf-hdr{width:100%;border-collapse:collapse;margin-bottom:4px;}' +
+            '.pdf-hdr td{vertical-align:middle;}' +
+            '.pdf-hdr .logo{width:90px;text-align:center;}' +
+            '.pdf-hdr .logo img{max-height:64px;max-width:84px;}' +
+            '.pdf-hdr .center{text-align:center;padding:0 8px;}' +
+            '.pdf-hdr .inst-hi-img{height:18px;width:auto;margin-bottom:2px;}' +
+            '.pdf-hdr .inst-en{font-size:16px;font-weight:bold;color:#102a43;line-height:1.25;}' +
+            '.pdf-hdr .course-line{font-size:12px;font-weight:bold;color:#243b53;margin-top:4px;}' +
+            '.report-title{text-align:center;font-size:20px;font-weight:bold;color:#004a93;margin:8px 0 6px;padding-bottom:8px;border-bottom:2px solid #004a93;}' +
+            '.print-info{margin-bottom:12px;font-size:11px;color:#666;text-align:center;}' +
+            'table{width:100%;border-collapse:collapse;margin-top:10px;}' +
+            'th,td{border:1px solid #8fa3bd;padding:6px 8px;text-align:left;font-size:11px;vertical-align:top;word-break:break-word;white-space:normal;}' +
             'thead{display:table-header-group;}' +
+            'thead th{font-weight:bold;background-color:#004a93 !important;color:#fff !important;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+            'tbody tr:nth-child(even){background-color:#eef2f8;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
             'tr{page-break-inside:avoid;}' +
+            '.print-footer{margin-top:18px;text-align:center;font-size:10px;color:#666;border-top:1px solid #ccc;padding-top:10px;}' +
+            '@media print{body{margin:0;}}' +
             '</style></head><body>' +
-            '<h2>' + title + '</h2>' +
+            '<table class="pdf-hdr"><tr>' +
+                '<td class="logo"><img src="' + printLogoLeft + '" alt=""></td>' +
+                '<td class="center">' +
+                    '<img class="inst-hi-img" src="' + printTitleHindi + '" alt="">' +
+                    '<div class="inst-en">Lal Bahadur Shastri National Academy of Administration, Mussoorie</div>' +
+                    (billMonth ? '<div class="course-line">Bill Month: ' + billMonth + '</div>' : '') +
+                '</td>' +
+                '<td class="logo"><img src="' + printLogoRight + '" alt=""></td>' +
+            '</tr></table>' +
+            '<div class="report-title">Estate Bill Report</div>' +
+            '<div class="print-info"><div>Print Date: ' + dateStr + '</div></div>' +
             tableHtml +
+            '<div class="print-footer"><p>Generated on ' + today.toLocaleString() + '</p></div>' +
             '</body></html>'
         );
         win.document.close();
@@ -255,7 +288,7 @@ $(document).ready(function() {
             win.focus();
             win.print();
             win.close();
-        }, 250);
+        }, 400);
     }
 
     function initOrReloadBillReportGrid() {
@@ -285,7 +318,7 @@ $(document).ready(function() {
                     { data: 'house_no' },
                     { data: 'from_date', searchable: false },
                     { data: 'to_date', searchable: false },
-                    { data: 'meter_no', searchable: false, render: function(v){ return (v || '—').toString().replace(/\n/g,'<br>'); } },
+                    { data: 'meter_no', searchable: false, render: function(v){ return (v == null || v === '') ? '—' : v.toString().split(/\n+/).map(function(s){ return s.trim(); }).filter(Boolean).join(', '); } },
                     { data: 'prev_reading', searchable: false, render: function(v){ return (v || '—').toString().replace(/\n/g,'<br>'); } },
                     { data: 'curr_reading', searchable: false, render: function(v){ return (v || '—').toString().replace(/\n/g,'<br>'); } },
                     { data: 'unit_consumed', searchable: false },
