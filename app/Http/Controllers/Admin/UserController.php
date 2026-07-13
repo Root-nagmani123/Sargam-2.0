@@ -1201,11 +1201,11 @@ class UserController extends Controller
             ->map(fn ($m) => $m->house_name ?? null)
             ->filter()->unique()->sort()->values();
 
-        // Session (class-session time slot) options for the Session filter dropdown.
-        $sessionOptions = $students
-            ->map(fn ($m) => $m->session_time ?? null)
-            ->filter(fn ($s) => $s !== null && trim((string) $s) !== '')
-            ->unique()->sort()->values();
+        // Session (time slot) / Topic options for their filter dropdowns. Built
+        // independent of the Time Period filter — see resolveScopedSessionOptions().
+        $scopedStudentPks = $students->pluck('student_master_pk')->filter()->unique()->values()->all();
+        $sessionOptions = $this->resolveScopedSessionOptions($scopedStudentPks);
+        $topicOptions = $this->resolveScopedTopicOptions($scopedStudentPks);
 
         // OT / Participant options (each distinct student) for that filter dropdown.
         $participantOptions = $students
@@ -1276,10 +1276,11 @@ class UserController extends Controller
             'house' => (string) $request->input('house', ''),
             'counsellor_faculty' => (string) $request->input('counsellor_faculty', ''),
             'session' => (string) $request->input('session', ''),
+            'topic' => (string) $request->input('topic', ''),
             'participant' => (string) $request->input('participant', ''),
         ];
 
-        return view('admin.dashboard.student_list', compact('students', 'presentStudents', 'absentStudents', 'availableCourses', 'counsellorTypes', 'counsellorFaculties', 'groupNames', 'dutyTypes', 'filters', 'cadreOptions', 'houseOptions', 'sessionOptions', 'participantOptions', 'tabCounts', 'cardCounts', 'snapshotDate', 'listTitle'));
+        return view('admin.dashboard.student_list', compact('students', 'presentStudents', 'absentStudents', 'availableCourses', 'counsellorTypes', 'counsellorFaculties', 'groupNames', 'dutyTypes', 'filters', 'cadreOptions', 'houseOptions', 'sessionOptions', 'topicOptions', 'participantOptions', 'tabCounts', 'cardCounts', 'snapshotDate', 'listTitle'));
     }
 
     /**
@@ -1343,10 +1344,10 @@ class UserController extends Controller
         $houseOptions = $students
             ->map(fn ($m) => $m->house_name ?? null)
             ->filter()->unique()->sort()->values();
-        $sessionOptions = $students
-            ->map(fn ($m) => $m->session_time ?? null)
-            ->filter(fn ($s) => $s !== null && trim((string) $s) !== '')
-            ->unique()->sort()->values();
+        // Session options are independent of the Time Period — see resolveScopedSessionOptions().
+        $sessionOptions = $this->resolveScopedSessionOptions(
+            $students->pluck('student_master_pk')->filter()->unique()->values()->all()
+        );
         $participantOptions = $students
             ->map(function ($m) {
                 $s = $m->studentMaster;
@@ -2300,6 +2301,62 @@ class UserController extends Controller
     }
 
     /**
+     * Distinct class-session time slots for the given students, across ALL dates.
+     *
+     * The Session filter dropdown must be independent of the Time Period filter.
+     * The dropdown is rendered server-side once at page load, and the DataTable's
+     * AJAX reloads refresh only the table — never the dropdown. Previously the
+     * options were derived from the (date-scoped) student rows, so on any day with
+     * no sessions — a weekend/holiday, or a fresh load which defaults the Time
+     * Period to today — the dropdown came up empty and the filter looked broken.
+     * Sourcing the options straight from the timetable, unscoped by date, keeps the
+     * dropdown populated and usable regardless of the selected period. Row-level
+     * scope (faculty / course / date) is still enforced when a session is applied.
+     *
+     * @param  array<int, int>  $studentPks
+     */
+    private function resolveScopedSessionOptions(array $studentPks): \Illuminate\Support\Collection
+    {
+        return $this->resolveScopedTimetableOptions($studentPks, 'class_session');
+    }
+
+    /**
+     * Distinct session topics for the given students, across ALL dates — the Topic
+     * filter dropdown, built independent of the Time Period for the same reason as
+     * resolveScopedSessionOptions().
+     *
+     * @param  array<int, int>  $studentPks
+     */
+    private function resolveScopedTopicOptions(array $studentPks): \Illuminate\Support\Collection
+    {
+        return $this->resolveScopedTimetableOptions($studentPks, 'subject_topic');
+    }
+
+    /**
+     * Distinct non-empty values of a timetable column for the sessions the given
+     * students have attendance for, across ALL dates. Backs the date-independent
+     * Session / Topic filter dropdowns.
+     *
+     * @param  array<int, int>  $studentPks
+     */
+    private function resolveScopedTimetableOptions(array $studentPks, string $column): \Illuminate\Support\Collection
+    {
+        if (empty($studentPks)) {
+            return collect();
+        }
+
+        return DB::table('course_student_attendance as a')
+            ->join('timetable as t', 'a.timetable_pk', '=', 't.pk')
+            ->whereIn('a.Student_master_pk', $studentPks)
+            ->whereNotNull("t.$column")
+            ->where("t.$column", '<>', '')
+            ->distinct()
+            ->orderBy("t.$column")
+            ->pluck("t.$column")
+            ->values();
+    }
+
+    /**
      * Resolve every marked attendance session per student, newest first.
      *
      * Attendance is recorded per timetable session (course_student_attendance,
@@ -2502,6 +2559,7 @@ class UserController extends Controller
         $cadre = $request->input('cadre');
         $house = $request->input('house');
         $session = (string) $request->input('session', '');
+        $topic = (string) $request->input('topic', '');
         $participant = (string) $request->input('participant', '');
         $searchInput = $request->input('search', '');
         $searchValue = is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput;
@@ -2515,7 +2573,7 @@ class UserController extends Controller
         $hasSessionDateFilter = $applySessionDateFilter
             && $request->filled('from_date') && $request->filled('to_date');
 
-        return $students->filter(function ($studentMap) use ($courseId, $roleFilter, $counsellorFaculty, $groupPk, $cadre, $house, $session, $participant, $search, $hasSessionDateFilter) {
+        return $students->filter(function ($studentMap) use ($courseId, $roleFilter, $counsellorFaculty, $groupPk, $cadre, $house, $session, $topic, $participant, $search, $hasSessionDateFilter) {
             $student = $studentMap->studentMaster;
             $course = $studentMap->course;
             $counsellorTypePk = (string) ($studentMap->groupMapping->groupTypeMasterCourseMasterMap->type_name ?? '');
@@ -2529,6 +2587,11 @@ class UserController extends Controller
 
             // Session (class-session time slot) filter.
             if ($session !== '' && (string) ($studentMap->session_time ?? '') !== $session) {
+                return false;
+            }
+
+            // Topic (session subject/topic) filter.
+            if ($topic !== '' && (string) ($studentMap->session_topic ?? '') !== $topic) {
                 return false;
             }
 

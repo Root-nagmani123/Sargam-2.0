@@ -5,6 +5,8 @@
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}" />
 <link rel="stylesheet" href="{{ asset('css/dashboard-stat-cards.css') }}?v=2" />
 <style>
     /* ── Title bar (programme name) ── */
@@ -71,6 +73,25 @@
         border-color: #004a93;
         box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
     }
+
+    /* ── Searchable filter dropdowns (Select2) — sized to match .sl-filter-select chips ── */
+    .student-list-page .sl-filter-item .select2-container { width: 200px !important; flex: 0 0 auto; }
+    .student-list-page .sl-filter-item .select2-container--default .select2-selection--single {
+        height: 40px;
+        border-radius: 8px;
+        border-color: #d0d5dd;
+    }
+    .student-list-page .sl-filter-item .select2-container--default .select2-selection--single .select2-selection__rendered {
+        font-size: 0.9375rem;
+        color: #344054;
+    }
+    .student-list-page .sl-filter-item .select2-container--default.select2-container--focus .select2-selection--single,
+    .student-list-page .sl-filter-item .select2-container--default.select2-container--open .select2-selection--single {
+        border-color: #004a93;
+        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+    }
+    /* Inside the +N Filters popover the Select2 widgets span the menu width. */
+    .student-list-page .sl-more-menu .sl-filter-item .select2-container { width: 100% !important; }
 
     .student-list-page .sl-daterange-wrap { position: relative; }
 
@@ -378,6 +399,19 @@
                         </div>
                     </div>
 
+                    {{-- Cadre --}}
+                    @if(($cadreOptions ?? collect())->isNotEmpty())
+                    <div class="sl-filter-item" id="slItemCadre">
+                        <span class="sl-filter-label-text">Cadre</span>
+                        <select id="cadreFilter" class="form-select sl-filter-select" aria-label="Filter by cadre">
+                            <option value="">Cadre</option>
+                            @foreach($cadreOptions as $cadre)
+                                <option value="{{ $cadre }}" {{ (string)($filters['cadre'] ?? '') === (string)$cadre ? 'selected' : '' }}>{{ $cadre }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
+
                     {{-- Session --}}
                     <div class="sl-filter-item" id="slItemSession">
                         <span class="sl-filter-label-text">Session</span>
@@ -385,6 +419,28 @@
                             <option value="">Session</option>
                             @foreach(($sessionOptions ?? []) as $sess)
                                 <option value="{{ $sess }}" {{ (string)($filters['session'] ?? '') === (string)$sess ? 'selected' : '' }}>{{ $sess }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Topic --}}
+                    <div class="sl-filter-item" id="slItemTopic">
+                        <span class="sl-filter-label-text">Topic</span>
+                        <select id="topicFilter" class="form-select sl-filter-select" aria-label="Filter by topic">
+                            <option value="">Topic</option>
+                            @foreach(($topicOptions ?? []) as $topic)
+                                <option value="{{ $topic }}" {{ (string)($filters['topic'] ?? '') === (string)$topic ? 'selected' : '' }}>{{ $topic }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Cadre --}}
+                    <div class="sl-filter-item" id="slItemCadre">
+                        <span class="sl-filter-label-text">Cadre</span>
+                        <select id="cadreFilter" class="form-select sl-filter-select" aria-label="Filter by cadre">
+                            <option value="">Cadre</option>
+                            @foreach(($cadreOptions ?? []) as $cadre)
+                                <option value="{{ $cadre }}" {{ (string)($filters['cadre'] ?? '') === (string)$cadre ? 'selected' : '' }}>{{ $cadre }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -499,6 +555,7 @@
                 cadre: $('#cadreFilter').val() || '',
                 house: $('#houseFilter').val() || '',
                 session: $('#sessionFilter').val() || '',
+                topic: $('#topicFilter').val() || '',
                 participant: $('#participantFilter').val() || '',
                 from_date: (filters.from_date || '').toString(),
                 to_date: (filters.to_date || '').toString(),
@@ -631,6 +688,7 @@
 
         /* ── Filters ── */
         $('#sessionFilter').on('change', function() { applyFilter({ session: this.value }); });
+        $('#topicFilter').on('change', function() { applyFilter({ topic: this.value }); });
         $('#participantFilter').on('change', function() { applyFilter({ participant: this.value }); });
         $('#courseFilter').on('change', function() { applyFilter({ course_id: this.value }); });
         $('#dutyTypeFilter').on('change', function() { applyFilter({ duty_type: this.value }); });
@@ -645,6 +703,25 @@
         $('#cadreFilter').on('change', function() { applyFilter({ cadre: this.value }); });
         $('#houseFilter').on('change', function() { applyFilter({ house: this.value }); });
         $('#resetFilters').on('click', function() { window.location.href = baseUrl; });
+
+        /* ── Searchable filter dropdowns (Select2) ── */
+        // Turn every filter <select> into a type-to-search dropdown. Select2 fires the
+        // native `change` event, so the handlers bound above keep working unchanged.
+        function initFilterSelect2() {
+            if (!$.fn.select2) { return; }
+            $('#sessionFilter, #topicFilter, #cadreFilter, #participantFilter').each(function() {
+                const $sel = $(this);
+                if ($sel.data('select2')) { $sel.select2('destroy'); }
+                const placeholder = ($sel.find('option[value=""]').first().text() || 'Select').trim();
+                $sel.select2({
+                    width: '200px',
+                    placeholder: placeholder,
+                    allowClear: true,
+                    dropdownParent: $('body'),
+                });
+            });
+        }
+        initFilterSelect2();
 
         /* ── Time Period date-range ── */
         const $period = $('#timePeriodFilter');
@@ -753,7 +830,7 @@
         const $overflowSlot = $('#slOverflowSlot');
         const $moreWrap = $('#slMoreFiltersWrap');
         const $moreBtn = $('#moreFiltersBtn');
-        const inlineFilterIds = ['#slItemPeriod', '#slItemSession', '#slItemParticipant'];
+        const inlineFilterIds = ['#slItemPeriod', '#slItemSession', '#slItemTopic', '#slItemCadre', '#slItemParticipant'];
         const STATIC_DROPDOWN_COUNT = {{ ($availableCourses->isNotEmpty() ? 1 : 0) + 4 }}; // Course? + Duty, ACC, Cadre, House (CC/ACC faculty is conditional)
 
         function updateMoreFiltersLabel() {
