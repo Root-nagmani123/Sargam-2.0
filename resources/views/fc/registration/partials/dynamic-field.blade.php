@@ -280,7 +280,8 @@
 @endif
 
 @error($fieldName)
-    <div class="invalid-feedback">{{ $message }}</div>
+    {{-- d-block: show the message regardless of Bootstrap's sibling rule (wrapped/select2 fields). --}}
+    <div class="invalid-feedback d-block">{{ $message }}</div>
 @enderror
 
 @if($isLocked)

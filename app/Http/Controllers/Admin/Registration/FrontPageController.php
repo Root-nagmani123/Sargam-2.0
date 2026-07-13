@@ -282,8 +282,9 @@ class FrontPageController extends Controller
             'reg_password' => [
                 'required',
                 'string',
-                'min:6',
-                'regex:/^(?=.*[\W_]).+$/', // at least one special character
+                'min:8',
+                // Strong password policy (CWE-521): upper + lower + number + special char.
+                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/',
             ],
             'reg_confirm_password' => 'required|same:reg_password',
         ], [
@@ -292,8 +293,8 @@ class FrontPageController extends Controller
             'reg_name.unique' => 'The username has already been taken.',
             'reg_mobile.required' => 'Mobile number is required.',
             'reg_mobile.digits' => 'Mobile number must be 10 digits.',
-            'reg_password.min' => 'The password must be at least 6 characters.',
-            'reg_password.regex' => 'The password must contain at least one special character.',
+            'reg_password.min' => 'The password must be at least 8 characters.',
+            'reg_password.regex' => 'Password must include uppercase, lowercase, a number and a special character.',
             'reg_confirm_password.same' => 'The confirm password and password must match.',
         ], [
             // Define custom field labels
@@ -1104,10 +1105,15 @@ class FrontPageController extends Controller
             'new_password' => [
                 'required',
                 'string',
-                'min:6',
-                'regex:/^(?=.*[\W_]).+$/'
+                'min:8',
+                // Strong password policy (CWE-521): upper + lower + number + special char.
+                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/',
             ],
             'confirm_password' => 'required|same:new_password',
+        ], [
+            'new_password.min' => 'The password must be at least 8 characters.',
+            'new_password.regex' => 'Password must include uppercase, lowercase, a number and a special character.',
+            'confirm_password.same' => 'The confirm password and password must match.',
         ]);
 
         // Check user exists by mobile number

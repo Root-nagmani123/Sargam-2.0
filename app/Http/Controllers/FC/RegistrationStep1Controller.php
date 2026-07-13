@@ -82,13 +82,13 @@ class RegistrationStep1Controller extends Controller
     private function saveStep1Legacy(Request $request, int $userId)
     {
         $validated = $request->validate([
-            'full_name'         => 'required|string|max:200',
-            'fathers_name'      => 'required|string|max:200',
-            'mothers_name'      => 'required|string|max:200',
+            'full_name'         => 'required|string|max:200|no_html',
+            'fathers_name'      => 'required|string|max:200|no_html',
+            'mothers_name'      => 'required|string|max:200|no_html',
             'date_of_birth'     => 'required|date|before:today',
             'gender'            => 'required|in:Male,Female,Other',
             'service_id'        => 'required|exists:service_master,pk',
-            'cadre'             => 'required|string|max:100',
+            'cadre'             => 'required|string|max:100|no_html',
             'allotted_state_id' => 'required|exists:state_master,pk',
             'mobile_no'         => 'required|digits:10',
             'email'             => 'required|email|max:150',
