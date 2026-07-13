@@ -1825,11 +1825,18 @@ $(document).on('click', '#resetAttendance', function () {
     $('#normal_session_container').hide();
     $('#manual_session_container').hide();
 
-    // Destroy DataTable if it exists
+    // Destroy DataTable if it exists (restores the original tbody + default message)
     if ($.fn.DataTable.isDataTable('#attendanceTable')) {
         attendanceTable.destroy();
         attendanceTable = null;
     }
+
+    // Drop the global DataTables UI chrome (auto-created search toolbar + footer)
+    // and its per-table state flags, so the NEXT search re-initialises and gets a
+    // freshly wired search box / pagination / "Showing X of Y items" count.
+    $('[data-sargam-dt-search-auto="attendanceTable"]').closest('.sargam-dt-toolbar').remove();
+    $('[data-sargam-dt-footer-auto="attendanceTable"]').remove();
+    $('#attendanceTable').removeData('sargamDtUiEventsBound').removeData('sargamPageSort');
 
     // Restore default message row - show all elements with this ID
     $('#defaultMessageRow').show();
@@ -1844,17 +1851,51 @@ $(document).on('click', '#resetAttendance', function () {
 let attendanceTable; // global variable
 
 function drawAttendanceTable() {
-    if ($.fn.DataTable.isDataTable('#attendanceTable')) {
-        attendanceTable.destroy(); // destroy previous instance
-    }
-
     // Hide default message when table is initialized
     $('#defaultMessageRow').hide();
+
+    // Initialise ONCE, then just re-query on subsequent searches. Destroying and
+    // recreating the table on every search broke the shared DataTables chrome
+    // (search box, pagination and the "Showing X of Y items" count): the global
+    // DataTables UI wires that chrome a single time and guards against re-running,
+    // so a fresh instance never got re-enhanced. The ajax `data` callback below
+    // reads the current filter values on every request, so reload() reflects them.
+    if ($.fn.DataTable.isDataTable('#attendanceTable')) {
+        attendanceTable.ajax.reload();
+        return;
+    }
 
     attendanceTable = $('#attendanceTable').DataTable({
         responsive: false,
         processing: true,
         serverSide: true,
+        // Explicit chrome so the search box (top), pagination + "Showing X of Y
+        // items" count (bottom) always render and are labelled correctly, whether
+        // or not the global DataTables UI enhancer relocates them into its slots.
+        dom: "<'row align-items-center mb-3'<'col-12 d-flex justify-content-end att-search'f>>" +
+             "t" +
+             "<'row align-items-center mt-3'" +
+                 "<'col-12 col-md-auto me-md-auto'p>" +
+                 "<'col-12 col-md-auto d-flex justify-content-md-end align-items-center gap-2 att-count'li>" +
+             ">" +
+             "r",
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+        pagingType: 'full_numbers',
+        language: {
+            search: '',
+            searchPlaceholder: 'Search',
+            lengthMenu: 'Showing _MENU_',
+            info: 'of _TOTAL_ items',
+            infoEmpty: 'of 0 items',
+            infoFiltered: '',
+            zeroRecords: 'No matching records found',
+            emptyTable: 'No attendance sessions found',
+            paginate: {
+                previous: "<span aria-hidden='true'>&lsaquo;</span>",
+                next: "<span aria-hidden='true'>&rsaquo;</span>"
+            }
+        },
         ajax: {
             url: routes.getAttendanceList,
             type: 'POST',
