@@ -223,15 +223,26 @@
                 </table>
             </div>
 
-            {{-- Pagination --}}
-            <div class="d-flex justify-content-between align-items-center mt-3 gap-2 flex-wrap">
-                <div class="text-muted small mb-0">
-                    Showing {{ $templates->firstItem() ?? 0 }}
-                    to {{ $templates->lastItem() ?? 0 }}
-                    of {{ $templates->total() }} items
-                </div>
-                <div class="ms-auto">
+            {{-- Pagination (design-system footer: numbered pills + "Showing [N] of M items") --}}
+            @php
+                $memoPerPage = (int) request('per_page', 10);
+                if (!in_array($memoPerPage, [10, 25, 50, 100, 200], true)) $memoPerPage = 10;
+            @endphp
+            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
+                <div class="programme-dt-pagination">
                     {{ $templates->links('vendor.pagination.custom') }}
+                </div>
+                <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <div class="dataTables_length">
+                        <label class="mb-0">Showing
+                            <select id="memoPerPage" class="form-select form-select-sm" aria-label="Rows per page">
+                                @foreach([10, 25, 50, 100, 200] as $pp)
+                                <option value="{{ $pp }}" {{ $memoPerPage === $pp ? 'selected' : '' }}>{{ $pp }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                    </div>
+                    <div class="dataTables_info">of {{ number_format($templates->total()) }} items</div>
                 </div>
             </div>
 
@@ -324,6 +335,13 @@ $(document).ready(function() {
     var $form = $('#memoFilterForm');
     $('#courseFilter, #statusFilter').on('change', function() {
         $form.trigger('submit');
+    });
+
+    /* ── Per-page → reload page 1 with the new size + current filters ── */
+    $('#memoPerPage').on('change', function() {
+        var params = new URLSearchParams(new FormData($form[0]));
+        params.set('per_page', this.value);
+        window.location.href = "{{ route('admin.memo-notice.index') }}" + '?' + params.toString();
     });
 
     /* ── Search: toggle, debounced live filtering, clear ── */
