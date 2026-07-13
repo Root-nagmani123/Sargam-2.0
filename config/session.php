@@ -31,9 +31,13 @@ return [
     |
     */
 
-    'lifetime' => env('SESSION_LIFETIME', 120),
+    // Idle timeout (minutes). Sessions expire after this much inactivity.
+    // Lowered default from 120 -> 30 to address Improper Session Expiration
+    // (CWE-613). Set SESSION_LIFETIME=30 in the production .env to enforce it.
+    'lifetime' => env('SESSION_LIFETIME', 30),
 
-    'expire_on_close' => false,
+    // End the session when the browser is closed (do not persist across restarts).
+    'expire_on_close' => true,
 
     /*
     |--------------------------------------------------------------------------

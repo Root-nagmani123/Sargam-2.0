@@ -196,7 +196,10 @@
                 @endif
 
                 @error($errorKey)
-                    <div class="invalid-feedback">{{ $message }}</div>
+                    {{-- d-block forces the message to show regardless of the Bootstrap
+                         `.is-invalid ~ .invalid-feedback` sibling rule, which does not
+                         apply for wrapped / select2-enhanced fields. --}}
+                    <div class="invalid-feedback d-block">{{ $message }}</div>
                 @enderror
             </div>
         @endforeach
