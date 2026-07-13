@@ -1077,6 +1077,7 @@ Route::prefix('admin')->group(function () {
     Route::get('/memo-notice/create', [MemoNoticeController::class, 'create'])->name('admin.memo-notice.create');
     Route::post('/memo-notice', [MemoNoticeController::class, 'store'])->name('admin.memo-notice.store');
     Route::get('/memo-notice/preview', [MemoNoticeController::class, 'preview'])->name('admin.memo-notice.preview');
+    Route::get('/memo-notice/{pk}/view', [MemoNoticeController::class, 'show'])->name('admin.memo-notice.show');
     Route::get('/memo-notice/{pk}/edit', [MemoNoticeController::class, 'edit'])->name('admin.memo-notice.edit');
     Route::post('/memo-notice/{pk}', [MemoNoticeController::class, 'update'])->name('admin.memo-notice.update');
     Route::delete('/memo-notice/{pk}', [MemoNoticeController::class, 'destroy'])->name('admin.memo-notice.destroy');

@@ -2119,8 +2119,50 @@ public function noticedeleteMessage($id,$type)
         }
     }
 
+    // ── Filters (applied to the merged collection before pagination) ──
+    $search = trim((string) request('search', ''));
+    if ($search !== '') {
+        $needle = mb_strtolower($search);
+        $memos = $memos->filter(function ($m) use ($needle) {
+            return str_contains(mb_strtolower((string) ($m->student_name ?? '')), $needle)
+                || str_contains(mb_strtolower((string) ($m->topic_name ?? '')), $needle);
+        })->values();
+    }
+
+    $typeFilter = (string) request('type', '');
+    if ($typeFilter !== '') {
+        $memos = $memos->filter(fn ($m) => (string) ($m->type_notice_memo ?? '') === $typeFilter)->values();
+    }
+
+    $statusFilter = (string) request('status', '');
+    if ($statusFilter === '1' || $statusFilter === '0') {
+        $memos = $memos->filter(function ($m) use ($statusFilter) {
+            $isOpen = (int) ($m->status ?? 0) === 1;
+            return $statusFilter === '1' ? $isOpen : ! $isOpen;
+        })->values();
+    }
+
+    // ── Column sorting ──
+    $sort = (string) request('sort', '');
+    $direction = strtolower((string) request('direction', 'asc')) === 'desc' ? 'desc' : 'asc';
+    $sortKeys = [
+        'participant' => fn ($m) => mb_strtolower((string) ($m->student_name ?? '')),
+        'type'        => fn ($m) => mb_strtolower((string) ($m->type_notice_memo ?? '')),
+        'date'        => fn ($m) => (string) ($m->date_ ?? ''),
+        'topic'       => fn ($m) => mb_strtolower((string) ($m->topic_name ?? '')),
+        'status'      => fn ($m) => (int) ($m->status ?? 0),
+    ];
+    if (isset($sortKeys[$sort])) {
+        $memos = ($direction === 'desc'
+            ? $memos->sortByDesc($sortKeys[$sort])
+            : $memos->sortBy($sortKeys[$sort]))->values();
+    }
+
     // Paginate the collection
-    $perPage = 10;
+    $perPage = (int) request('per_page', 10);
+    if (! in_array($perPage, [10, 25, 50, 100, 200], true)) {
+        $perPage = 10;
+    }
     $currentPage = request()->get('page', 1);
     $pagedData = $memos->slice(($currentPage - 1) * $perPage, $perPage)->values();
 

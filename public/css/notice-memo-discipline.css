@@ -302,7 +302,7 @@
 }
 
 /* ── Status pills (Send Memo/Notice) ── */
-.mnm-page .mnm-status { font-size: 0.78rem; font-weight: 600; padding: 0.4rem 0.85rem; border-radius: 999px; white-space: nowrap; display: inline-block; }
+.mnm-page .mnm-status { font-size: 0.78rem; font-weight: 600; padding: 0.4rem 0.85rem; border-radius: 5px; white-space: nowrap; display: inline-block; }
 .mnm-page .mnm-status--notice { background: #eff8ff; color: #175cd3; }
 .mnm-page .mnm-status--memo-open { background: #fef7e6; color: #b54708; }
 .mnm-page .mnm-status--memo-sent { background: #fef3f2; color: #b42318; }

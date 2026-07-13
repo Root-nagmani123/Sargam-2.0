@@ -16,9 +16,8 @@ class MemoNoticeController extends Controller
     public function index(Request $request)
     {
         $data_course_id =  get_Role_by_course();
-        $query = MemoNoticeTemplate::with('course')
-            ->orderBy('created_date', 'desc');
-            
+        $query = MemoNoticeTemplate::with('course');
+
         if(!empty($data_course_id)){
             $query->whereIn('course_master_pk',$data_course_id);
         }
@@ -33,7 +32,50 @@ class MemoNoticeController extends Controller
             $query->where('status', $request->status);
         }
 
-        $templates = $query->paginate(20);
+        // Filter by active/inactive state (matches the Status toggle column).
+        if ($request->filled('active_inactive') && in_array((string) $request->active_inactive, ['0', '1'], true)) {
+            $query->where('active_inactive', (string) $request->active_inactive);
+        }
+
+        // Free-text search on template title / type.
+        if ($request->filled('search')) {
+            $search = trim((string) $request->search);
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('memo_notice_type', 'like', "%{$search}%");
+            });
+        }
+
+        // Column sorting (whitelisted). Program sorts by the related course name via a
+        // correlated subquery so no join is needed (avoids active_inactive ambiguity).
+        $sort = (string) $request->input('sort', '');
+        $direction = strtolower((string) $request->input('direction', 'asc')) === 'desc' ? 'desc' : 'asc';
+        $sortColumns = [
+            'title'  => 'title',
+            'type'   => 'memo_notice_type',
+            'status' => 'active_inactive',
+        ];
+
+        if ($sort === 'program') {
+            $query->orderBy(
+                CourseMaster::select('course_name')
+                    ->whereColumn('course_master.pk', 'memo_notice_templates.course_master_pk'),
+                $direction
+            );
+        } elseif (isset($sortColumns[$sort])) {
+            $query->orderBy($sortColumns[$sort], $direction);
+        } else {
+            $query->orderBy('created_date', 'desc');
+        }
+
+        // Per-page size for the design-system footer selector.
+        $perPage = (int) $request->input('per_page', 10);
+        if (! in_array($perPage, [10, 25, 50, 100, 200], true)) {
+            $perPage = 10;
+        }
+
+        // withQueryString() keeps the active filters + sort on the pagination links.
+        $templates = $query->paginate($perPage)->withQueryString();
 
         // Current date for filtering
         $currentDate = now()->toDateString();
@@ -181,6 +223,26 @@ class MemoNoticeController extends Controller
 
 
     // Show edit form
+    // Read-only template details (JSON) for the View modal.
+    public function show($id)
+    {
+        $template = MemoNoticeTemplate::with('course')->findOrFail($id);
+
+        return response()->json([
+            'success' => true,
+            'template' => [
+                'title' => $template->title,
+                'course_name' => $template->course->course_name ?? 'General',
+                'type' => $template->memo_notice_type,
+                'status' => $template->active_inactive == 1 ? 'Active' : 'Inactive',
+                'director_name' => $template->director_name,
+                'director_designation' => $template->director_designation,
+                'content' => $template->content,
+                'signature_url' => $template->signature_image ? asset('storage/' . $template->signature_image) : null,
+            ],
+        ]);
+    }
+
     public function edit($id)
     {
         $template = MemoNoticeTemplate::findOrFail($id);
