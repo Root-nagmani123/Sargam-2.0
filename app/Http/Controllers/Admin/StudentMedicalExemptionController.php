@@ -345,7 +345,12 @@ class StudentMedicalExemptionController extends Controller
         $search = $request->get('search', '');
 
         $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
-        $opdOptions = ['IPD', 'OPD', 'After OPD', 'Referral', 'PT Exemption'];
+
+        // IPD / OPD / After OPD / Referral / … — driven by the Medical Case Master.
+        $opdOptions = MedicalCaseMaster::where('active_inactive', 1)
+            ->orderBy('pk')
+            ->pluck('case_name')
+            ->toArray();
 
         return view(
             'admin.student_medical_exemption.index',
@@ -376,8 +381,7 @@ class StudentMedicalExemptionController extends Controller
         'courses',
         'categories',
         'specialities',
-        'opdOptions'
-        'specialities',
+        'opdOptions',
         'doctors'
     ));
 }
