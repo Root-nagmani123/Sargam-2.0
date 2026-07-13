@@ -385,7 +385,7 @@ class RegistrationService
      *
      * @return list<array{key:string,title_en:string,title_hi:string,type:string,rows?:list<array{en:string,hi:string,value:mixed}>,columns?:list<string>,head_hi?:list<string>,body?:list<list<string>>}>
      */
-    public function buildPdfSectionsFromFormDefinition(int $userId, ?FcForm $form = null): array
+    public function buildPdfSectionsFromFormDefinition(int $userId, ?FcForm $form = null, ?int $stepLimit = null): array
     {
         $form = $form ?? FcForm::resolveForUserId($userId);
         if (! $form) {
@@ -401,6 +401,12 @@ class RegistrationService
         }
 
         $steps = $stepsQuery->get();
+
+        // Limit to the first N steps (by step_number) for the "Descriptive Roll" report,
+        // which combines only the first two steps of the form.
+        if ($stepLimit !== null && $stepLimit > 0) {
+            $steps = $steps->take($stepLimit);
+        }
 
         $sections = [];
         $tableRows = [];
@@ -487,9 +493,12 @@ class RegistrationService
             }
         }
 
-        $travelSection = $this->buildTravelPlanPdfSection($userId);
-        if ($travelSection !== null) {
-            $sections[] = $travelSection;
+        // Travel plan belongs to the full profile only, not the first-2-steps report.
+        if ($stepLimit === null) {
+            $travelSection = $this->buildTravelPlanPdfSection($userId);
+            if ($travelSection !== null) {
+                $sections[] = $travelSection;
+            }
         }
 
         usort($sections, fn (array $a, array $b) => ((int) ($a['sort_order'] ?? 0)) <=> ((int) ($b['sort_order'] ?? 0)));

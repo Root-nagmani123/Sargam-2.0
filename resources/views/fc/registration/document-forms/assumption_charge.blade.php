@@ -55,26 +55,30 @@
                 <div class="ac-title-hi">कार्यभार-ग्रहण प्रमाणपत्र</div>
                 <div class="ac-title">CERTIFICATE OF ASSUMPTION OF CHARGE</div>
 
-                {{-- Hindi certificate (fillable) --}}
+                {{-- Hindi certificate — candidate types their own Hindi; blank by default --}}
+                <div style="font-size:.72rem; color:#64748b; font-style:italic; margin:.6rem 0 0;">हिन्दी विवरण यहाँ भरें (वैकल्पिक) — या रिक्त छोड़कर मुद्रित प्रति पर हाथ से भरें। / Enter the Hindi details here (optional), or leave blank to hand-fill on the print.</div>
                 <p class="ac-body hi">
                     प्रमाणित किया जाता है कि मैंने आज दिनांक
-                    <input type="date" name="date_of_assumption" class="blank blank--sm" value="{{ $val('date_of_assumption') }}" data-mirror="doa">
-                    <select name="time_of_assumption" class="blank" data-mirror="tm">
-                        <option value="">पूर्वाह्न / अपराह्न</option>
-                        <option value="Forenoon" {{ $tm==='Forenoon'?'selected':'' }}>पूर्वाह्न (Forenoon)</option>
-                        <option value="Afternoon" {{ $tm==='Afternoon'?'selected':'' }}>अपराह्न (Afternoon)</option>
-                    </select>
+                    <input type="text" name="hi[doa]" class="blank blank--sm" value="{{ $data['_hi']['doa'] ?? '' }}" autocomplete="off">
+                    <input type="text" name="hi[tm]" class="blank" value="{{ $data['_hi']['tm'] ?? '' }}" placeholder="पूर्वाह्न / अपराह्न" autocomplete="off">
                     में लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी, मसूरी में (सेवा)
-                    <input type="text" name="service" class="blank blank--mid" value="{{ $val('service') }}" data-mirror="svc" placeholder="सेवा का नाम">
+                    <input type="text" name="hi[svc]" class="blank blank--mid" value="{{ $data['_hi']['svc'] ?? '' }}" placeholder="सेवा का नाम" autocomplete="off">
                     के पद का कार्यभार ग्रहण कर लिया है।
                 </p>
 
-                {{-- English certificate (mirrors the same values) --}}
+                {{-- English certificate (fillable) --}}
                 <p class="ac-body">
-                    Certified that I have on the <span class="mirror-out" data-mirror-out="tm">forenoon / afternoon</span> of this day
-                    <span class="mirror-out" data-mirror-out="doa">&nbsp;</span> assumed the charge of the office of
-                    <span class="mirror-out" data-mirror-out="svc">&nbsp;</span> (Service) in Lal Bahadur Shastri National Academy of
-                    Administration, Mussoorie.
+                    Certified that I have on the
+                    <select name="time_of_assumption" class="blank">
+                        <option value="">forenoon / afternoon</option>
+                        <option value="Forenoon" {{ $tm==='Forenoon'?'selected':'' }}>forenoon</option>
+                        <option value="Afternoon" {{ $tm==='Afternoon'?'selected':'' }}>afternoon</option>
+                    </select>
+                    of this day
+                    <input type="date" name="date_of_assumption" class="blank blank--sm" value="{{ $val('date_of_assumption') }}">
+                    assumed the charge of the office of
+                    <input type="text" name="service" class="blank blank--mid" value="{{ $val('service') }}" placeholder="name of service">
+                    (Service) in Lal Bahadur Shastri National Academy of Administration, Mussoorie.
                 </p>
 
                 <div class="ac-foot">
@@ -121,20 +125,6 @@
 </div>
 </div>
 
-@push('scripts')
-<script>
-(function () {
-    function fmtDate(v){ var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(v||''); return m?(m[3]+'-'+m[2]+'-'+m[1]):(v||''); }
-    function sync(el){
-        var key = el.getAttribute('data-mirror');
-        var v = (el.type === 'date') ? fmtDate(el.value) : (el.value || '');
-        if (key === 'tm' && !v) v = 'forenoon / afternoon';
-        document.querySelectorAll('[data-mirror-out="' + key + '"]').forEach(function (o){ o.textContent = v || ' '; });
-    }
-    document.querySelectorAll('[data-mirror]').forEach(function (el){
-        el.addEventListener('input', function(){ sync(el); }); el.addEventListener('change', function(){ sync(el); }); sync(el);
-    });
-})();
-</script>
-@endpush
+{{-- The Hindi certificate is intentionally left blank (filled by hand on the printed
+     copy); the English certificate carries the typed values. No mirroring needed. --}}
 @endsection

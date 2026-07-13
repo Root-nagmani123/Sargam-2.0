@@ -381,7 +381,7 @@ public function exportCsv(Request $request)
         ? (($fromDateFilter ? Carbon::parse($fromDateFilter)->format('d-m-Y') : '—') . ' to ' . ($toDateFilter ? Carbon::parse($toDateFilter)->format('d-m-Y') : '—'))
         : 'All Dates';
 
-    $headers = ['Name', 'OT/Participant Code', 'Cadre', 'Infraction', 'Date of Infraction', 'Remarks'];
+    $headers = ['Name', 'OT/Participant Code', 'Cadre', 'Infraction', 'Date of Infraction', 'Submitted Marks', 'Final Marks', 'Remarks'];
 
     $rows = [];
     foreach ($memos as $memo) {
@@ -391,6 +391,8 @@ public function exportCsv(Request $request)
             $memo->student->cadre->cadre_name ?? 'N/A',
             $memo->discipline->discipline_name ?? 'N/A',
             $memo->date ? Carbon::parse($memo->date)->format('d M Y') : 'N/A',
+            $memo->mark_deduction_submit ?? '',
+            $memo->final_mark_deduction ?? '',
             $memo->remarks ?? '',
         ];
     }
@@ -576,12 +578,19 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
          ]);
 
          if($validated){
+            // Fall back to the course/discipline's active template when none was picked,
+            // so this send still gets a pinned + frozen template.
+            $templatePk = $request->memo_notice_template_pk
+                ?: resolve_default_discipline_memo_template_pk($request->course_master_pk, $request->discipline_master_pk);
+            $templateSnapshot = build_memo_notice_template_snapshot($templatePk);
+
             foreach($request->selected_student_list as $student_pk){
                 // Insert memo record for each student
                 DB::table('discipline_memo_status')->insert([
                     'course_master_pk' => $request->course_master_pk,
                     'discipline_master_pk' => $request->discipline_master_pk,
-                    'memo_notice_template_pk' => $request->memo_notice_template_pk ?: null,
+                    'memo_notice_template_pk' => $templatePk,
+                    'template_snapshot' => $templateSnapshot,
                     'student_master_pk' => $student_pk,
                     'date' => $request->date_of_memo,
                     'mark_deduction_submit' => $request->discipline_marks,
@@ -929,6 +938,8 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
             'mark_deduction_submit'   => $validated['mark_deduction_submit'],
             'remarks'                 => $validated['remarks'] ?? null,
             'memo_notice_template_pk' => $templatePk,
+            // Re-pinning the template also re-freezes its content as of now.
+            'template_snapshot'       => build_memo_notice_template_snapshot($templatePk),
             'modified_date'           => now(),
         ]);
 
@@ -947,8 +958,19 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
         'chosenTemplate',  // template pinned at send time
     ])->find($decryptedId);
 
-    // Prefer the template chosen at send time; fall back to the course-level one for older memos.
-    $template = $memo ? ($memo->chosenTemplate ?: $memo->template) : null;
+    // Prefer the content frozen at send time, so a later template edit doesn't change
+    // what's shown here. Memos sent before this feature existed have no snapshot yet,
+    // so they fall back to the template pinned/resolved live, as before.
+    $template = null;
+    if ($memo && $memo->template_snapshot) {
+        $snapshot = json_decode($memo->template_snapshot, true);
+        if (is_array($snapshot)) {
+            $template = (object) $snapshot;
+        }
+    }
+    if (!$template && $memo) {
+        $template = $memo->chosenTemplate ?: $memo->template;
+    }
     $memo_conclusion_master = DB::table('memo_conclusion_master')->where('active_inactive', 1)->get();
     $conclusion_type_name = null;
     if ($memo && $memo->conclusion_type_pk) {

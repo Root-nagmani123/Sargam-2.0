@@ -1052,12 +1052,15 @@ $memo_conclusion_master = collect(); // default empty collection
         'mnt.director_name',
         'mnt.director_designation',
         'mnt.signature_image',
+        'sns.template_snapshot',
         'sns.conclusion_type_pk',
         'sns.conclusion_remark',
         'sns.mark_of_deduction',
         'sns.status as notice_current_status'
     )
     ->first();
+    // Content frozen at send time wins over the live-joined (current) template.
+    $template_details = apply_memo_notice_template_snapshot($template_details);
     $memo_conclusion_master = DB::table('memo_conclusion_master')->where('active_inactive', 1)->get();
 
     } elseif ($type == 'memo') {
@@ -1105,13 +1108,15 @@ $memo_conclusion_master = collect(); // default empty collection
         'mnt.director_name',
         'mnt.director_designation',
         'mnt.signature_image',
+        'sms.template_snapshot',
         'sms.memo_conclusion_master_pk as conclusion_type_pk',
         'sms.conclusion_remark',
         'sms.mark_of_deduction',
         'sms.communication_status as notice_current_status'
     )
     ->first();
-
+    // Content frozen at send time wins over the live-joined (current) template.
+    $template_details = apply_memo_notice_template_snapshot($template_details);
 
     }
 
@@ -1322,6 +1327,9 @@ public function store_memo_notice(Request $request)
 
     // Guard: only include memo_notice_template_pk if the column exists (migration may not have run)
     $hasTplCol = \Illuminate\Support\Facades\Schema::hasColumn('student_notice_status', 'memo_notice_template_pk');
+    $hasSnapshotCol = \Illuminate\Support\Facades\Schema::hasColumn('student_notice_status', 'template_snapshot');
+    // Freeze the chosen template's content now, so editing it later doesn't change what's already sent.
+    $templateSnapshot = $hasSnapshotCol ? build_memo_notice_template_snapshot($validated['memo_notice_template_pk'] ?? null) : null;
 
     // ✅ Fetch all required student info in one query
     $students = DB::table('course_student_attendance as a')
@@ -1365,6 +1373,9 @@ public function store_memo_notice(Request $request)
             ];
             if ($hasTplCol) {
                 $row['memo_notice_template_pk'] = $validated['memo_notice_template_pk'] ?? null;
+            }
+            if ($hasSnapshotCol) {
+                $row['template_snapshot'] = $templateSnapshot;
             }
             $data[] = $row;
           
@@ -1629,6 +1640,8 @@ public function updateNoticeTemplate(Request $request, $id)
 
     DB::table('student_notice_status')->where('pk', $id)->update([
         'memo_notice_template_pk' => $validated['memo_notice_template_pk'],
+        // Re-pinning the template also re-freezes its content as of now.
+        'template_snapshot'       => build_memo_notice_template_snapshot($validated['memo_notice_template_pk']),
     ]);
 
     return response()->json(['success' => true, 'message' => 'Notice updated successfully.']);
@@ -2095,12 +2108,15 @@ if (!$id || !is_numeric($id)) {
                 'mnt.director_name',
                 'mnt.director_designation',
                 'mnt.signature_image',
+                'sns.template_snapshot',
                 'sns.conclusion_type_pk',
                 'sns.conclusion_remark',
                 'sns.mark_of_deduction',
                 'sns.status as notice_current_status'
             )
             ->first();
+            // Content frozen at send time wins over the live-joined (current) template.
+            $template_details = apply_memo_notice_template_snapshot($template_details);
 
     } elseif ($type == 'memo') {
 
@@ -2144,13 +2160,16 @@ if (!$id || !is_numeric($id)) {
                 'mnt.director_name',
                 'mnt.director_designation',
                 'mnt.signature_image',
+                'sms.template_snapshot',
                 'sms.memo_conclusion_master_pk as conclusion_type_pk',
                 'sms.conclusion_remark',
                 'sms.mark_of_deduction',
                 'sms.communication_status as notice_current_status'
             )
             ->first();
-            
+            // Content frozen at send time wins over the live-joined (current) template.
+            $template_details = apply_memo_notice_template_snapshot($template_details);
+
     }
 // print_r($memoNotice);die;
     // Multiple distinct admins/faculty can post in the same conversation, so
@@ -2972,6 +2991,8 @@ public function store_memo_status(Request $request)
         'start_time'                      => $validated['meeting_time'],
         'message'                         => $validated['Remark'] ?? null,
         'memo_notice_template_pk'         => $validated['memo_notice_template_pk'] ?? null,
+        // Freeze the chosen template's content now, so editing it later doesn't change what's already sent.
+        'template_snapshot'               => build_memo_notice_template_snapshot($validated['memo_notice_template_pk'] ?? null),
         'created_date'                      => now(),
         'modified_date'                      => now(),
         'status'                      => 1,
@@ -3038,6 +3059,8 @@ public function updateMemoStatus(Request $request, $id)
         'student_pk'              => $validated['student_pk'],
         'memo_type_master_pk'     => $validated['memo_type_master_pk'],
         'memo_notice_template_pk' => $validated['memo_notice_template_pk'] ?? null,
+        // Re-pinning the template also re-freezes its content as of now.
+        'template_snapshot'       => build_memo_notice_template_snapshot($validated['memo_notice_template_pk'] ?? null),
         'venue_master_pk'         => $validated['venue'],
         'date'                    => $validated['date_memo_notice'],
         'start_time'              => $validated['meeting_time'],
@@ -3117,6 +3140,11 @@ public function send_direct_notice_save(Request $request)
             'remark'               => 'nullable|string',
         ]);
 
+        // This flow has no template picker, so pin + freeze whichever active Notice
+        // template applies to the course (same fallback the live viewers use).
+        $templatePk = resolve_default_memo_notice_template_pk($request->course_master_pk, 'Notice');
+        $templateSnapshot = build_memo_notice_template_snapshot($templatePk);
+
         $rows = [];
         foreach ($request->selected_student_list as $studentPk) {
             $rows[] = [
@@ -3129,6 +3157,8 @@ public function send_direct_notice_save(Request $request)
                 'faculty_master_pk'           => '',
                 'course_student_attendance_pk'=> 0,
                 'status'                      => 1,
+                'memo_notice_template_pk'     => $templatePk,
+                'template_snapshot'           => $templateSnapshot,
             ];
         }
 
@@ -3331,7 +3361,11 @@ function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
 
         ]);
 
-
+        // Fall back to the course's active Notice template when none was picked,
+        // so this send still gets a pinned + frozen template like the others do.
+        $templatePk = $validated['memo_notice_template_pk']
+            ?? resolve_default_memo_notice_template_pk($validated['course_master_pk'], 'Notice');
+        $templateSnapshot = build_memo_notice_template_snapshot($templatePk);
 
         foreach ($validated['selected_student_list'] as $studentId) {
             $data[] = [
@@ -3344,7 +3378,8 @@ function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
                 'class_session_master_pk'    => $validated['class_session_master_pk'],
                 'faculty_master_pk'          => $validated['faculty_master_pk'],
                 'course_student_attendance_pk' =>$request->input('attendance_pk_'.$studentId),
-                'memo_notice_template_pk'    => $validated['memo_notice_template_pk'] ?? null,
+                'memo_notice_template_pk'    => $templatePk,
+                'template_snapshot'          => $templateSnapshot,
                 'notice_memo'                => 1,
             ];
 

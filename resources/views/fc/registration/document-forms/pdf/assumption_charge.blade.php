@@ -10,6 +10,7 @@
     $time    = trim((string) ($data['time_of_assumption'] ?? ''));
     $ddate   = $fmt($data['declaration_date'] ?? '');
     $sigSrc  = $data['_signature_src'][0] ?? null;
+    $hi      = $data['_hi'] ?? [];   // candidate-typed Hindi values (blank if none)
 
     // Hindi: पूर्वाह्न (Forenoon) / अपराह्न (Afternoon) — selected option bolded
     $tmHi = $time === 'Forenoon' ? '<b>पूर्वाह्न</b> / अपराह्न'
@@ -50,10 +51,10 @@
         <div class="title-hi">कार्यभार-ग्रहण प्रमाणपत्र</div>
         <div class="title">CERTIFICATE OF ASSUMPTION OF CHARGE</div>
 
-        {{-- ─────────────── HINDI ─────────────── --}}
+        {{-- ─────────────── HINDI (candidate-typed; blank if none) ─────────────── --}}
         <div class="body">
-            प्रमाणित किया जाता है कि मैंने आज दिनांक {!! $blank($adate, '120px') !!} {!! $tmHi !!} में
-            लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी, मसूरी में (सेवा) {!! $blank($service, '190px') !!}
+            प्रमाणित किया जाता है कि मैंने आज दिनांक {!! $blank($hi['doa'] ?? '', '120px') !!} @if(($hi['tm'] ?? '') !== ''){!! $blank($hi['tm'], '110px') !!}@else पूर्वाह्न / अपराह्न @endif में
+            लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी, मसूरी में (सेवा) {!! $blank($hi['svc'] ?? '', '190px') !!}
             के पद का कार्यभार ग्रहण कर लिया है।
         </div>
 

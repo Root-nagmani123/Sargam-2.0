@@ -91,7 +91,7 @@
                                     $categoryTabHash = $category->slug === 'home'
                                         ? '#home'
                                         : '#tab-' . $category->slug;
-                                    $tabId = $category->slug === 'home' ? 'home-tab' : 'tab-' . $category->slug;
+                                    $tabId = $category->slug === 'home' ? 'home-tab' : $category->slug . '-tab';
                                     $isActive = ($activeNavTab ?? '') === $categoryTabHash;
                                 @endphp
                                 <li class="nav-item" role="none">
@@ -1693,7 +1693,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const panes = document.querySelectorAll('#mainNavbarContent .tab-pane');
+    const panes = document.querySelectorAll('#mainNavbarContent > .tab-pane');
 
     function getMainContentPaneId(targetId) {
         const map = {
@@ -1704,6 +1704,11 @@ document.addEventListener('DOMContentLoaded', function() {
             '#tab-material-management': 'tab-material-management'
         };
         return map[targetId] || null;
+    }
+
+    function getMainContentPane(paneId) {
+        if (!paneId) return null;
+        return document.querySelector('#mainNavbarContent > #' + paneId + '.tab-pane');
     }
 
     function paneHasContent(pane) {
@@ -1723,7 +1728,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function isMainContentPaneEmpty(targetId) {
         const pid = getMainContentPaneId(targetId);
         if (!pid) return true;
-        return !paneHasContent(document.getElementById(pid));
+        return !paneHasContent(getMainContentPane(pid));
     }
 
     function showPane(targetId, options) {
@@ -1731,7 +1736,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!targetId || targetId === '#') return;
 
         const targetPaneId = getMainContentPaneId(targetId);
-        const targetPane = targetPaneId ? document.getElementById(targetPaneId) : null;
+        const targetPane = getMainContentPane(targetPaneId);
         const canSwitchBodyPane = paneHasContent(targetPane);
         const keepPageContent = options.keepPageContent === true;
 
