@@ -70,7 +70,6 @@
 </style>
 
 @php
-    $doctorName = Auth::user() ? trim((Auth::user()->first_name ?? '') . ' ' . (Auth::user()->last_name ?? '')) : '';
     $opdOptions = ['IPD', 'OPD', 'After OPD', 'Referral', 'PT Exemption'];
 @endphp
 
@@ -112,10 +111,14 @@
                     <div class="col-md-6">
                         <label class="form-label">Treating Doctor Name <span class="text-danger">*</span></label>
                         <select name="employee_master_pk" class="form-select" required>
-                            @if(Auth::user())
-                            <option value="{{ Auth::user()->user_id }}" selected>{{ $doctorName !== '' ? $doctorName : 'Current Doctor' }}</option>
-                            @endif
+                            <option value="">Select Doctor</option>
+                            @foreach($doctors as $doctor)
+                            <option value="{{ $doctor->pk }}" {{ old('employee_master_pk', Auth::user()->user_id ?? '') == $doctor->pk ? 'selected' : '' }}>
+                                {{ trim($doctor->first_name . ' ' . $doctor->last_name) }}
+                            </option>
+                            @endforeach
                         </select>
+                        @error('employee_master_pk')<small class="text-danger">{{ $message }}</small>@enderror
                     </div>
 
                     <div class="col-md-6">
@@ -138,7 +141,7 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <div class="sme-field">
-                            <label class="form-label">IPD/OPD/After OPD/Referral/PT Exemption <span class="text-danger">*</span></label>
+                            <label class="form-label">Medical Case <span class="text-danger">*</span></label>
                             <select name="opd_category" class="form-select" required>
                                 <option value="">Select Category</option>
                                 @foreach($opdOptions as $opt)
@@ -174,8 +177,8 @@
 
                     <div class="col-md-3 col-6">
                         <div class="sme-field">
-                            <label class="form-label">Start Time <span class="text-danger">*</span></label>
-                            <input type="time" name="arrival_time" id="arrivalTime" class="form-control" required value="{{ old('arrival_time') }}">
+                            <label class="form-label">Start Time</label>
+                            <input type="time" name="arrival_time" id="arrivalTime" class="form-control" value="{{ old('arrival_time') }}">
                             @error('arrival_time')<small class="text-danger">{{ $message }}</small>@enderror
                         </div>
                     </div>

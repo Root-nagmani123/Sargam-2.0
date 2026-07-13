@@ -722,6 +722,24 @@ select.sme-filter-control {
                         @endforeach
                     </select>
 
+                    {{-- Medical Case --}}
+                    <select name="opd_category_filter" id="opd_category_filter" class="form-select sme-filter-control"
+                            aria-label="Medical Case">
+                        <option value="">Medical Case</option>
+                        @foreach($opdOptions as $opt)
+                        <option value="{{ $opt }}">{{ $opt }}</option>
+                        @endforeach
+                    </select>
+
+                    {{-- Exemption Category --}}
+                    <select name="exemption_category_filter" id="exemption_category_filter" class="form-select sme-filter-control"
+                            aria-label="Exemption Category">
+                        <option value="">Exemption Category</option>
+                        @foreach($categories as $cat)
+                        <option value="{{ $cat->pk }}">{{ $cat->exemp_category_name }}</option>
+                        @endforeach
+                    </select>
+
                     {{-- Time Period: dual-month range calendar (writes to the hidden filters) --}}
                     <div class="dropdown">
                         <button type="button" class="sme-filter-control dropdown-toggle" id="timePeriodToggle"
@@ -789,11 +807,13 @@ select.sme-filter-control {
                                 <th class="col">Officer Trainee</th>
                                 <th class="col" style="white-space: normal;width: 12%;">Course</th>
                                 <th class="col">Doctor Name</th>
+                                <th class="col">Created By</th>
+                                <th class="col">Created On</th>
                                 <th class="col">Medical Speciality</th>
                                 <th class="col">Duration</th>
                                 <th class="col">Days</th>
                                 <th class="col">Category</th>
-                                <th class="col">IPD/OPD/After OPD/Referral/PT Exemption</th>
+                                <th class="col">Medical Case</th>
                                 <th class="col">PT/ Outdoor Advise</th>
                                 <th class="col">Diagnosis / Remarks</th>
                                 <th class="col sme-col-no-print">Document</th>
@@ -944,6 +964,8 @@ $(document).ready(function() {
                 d.custom_search = $('#search').val();
                 d.from_date = $('#from_date_filter').val();
                 d.to_date = $('#to_date_filter').val();
+                d.opd_category = $('#opd_category_filter').val();
+                d.exemption_category = $('#exemption_category_filter').val();
 
                 // ✅ status now properly passed
                 d.status = courseStatus;
@@ -977,6 +999,14 @@ $(document).ready(function() {
             {
                 data: 'assigned_by',
                 name: 'employee.first_name'
+            },
+            {
+                data: 'created_by',
+                name: 'creator.first_name'
+            },
+            {
+                data: 'created_on',
+                name: 'created_date'
             },
             {
                 data: 'speciality',
@@ -1031,6 +1061,11 @@ $(document).ready(function() {
         table.ajax.reload(null, false);
     });
 
+    // Reload table when Medical Case / Exemption Category filters change
+    $('#opd_category_filter, #exemption_category_filter').on('change', function() {
+        table.ajax.reload(null, false);
+    });
+
     $('#from_date_filter, #to_date_filter').on('change', function() {
         table.ajax.reload(null, false);
     });
@@ -1050,6 +1085,8 @@ $(document).ready(function() {
         $('#course_filter').val('');
         if (courseFilterSelect2) { $('#course_filter').trigger('change.select2'); }
         else { $('#course_filter').trigger('change'); }
+        $('#opd_category_filter').val('');
+        $('#exemption_category_filter').val('');
         $('#from_date_filter').val('');
         $('#to_date_filter').val('');
 
@@ -1391,11 +1428,15 @@ $(document).ready(function() {
         var search = $('#search').val();
         var from = $('#from_date_filter').val();
         var to = $('#to_date_filter').val();
+        var opdCategory = $('#opd_category_filter').val();
+        var exemptionCategory = $('#exemption_category_filter').val();
 
         if (course) params.set('course_filter', course);
         if (search) params.set('search', search);
         if (from) params.set('from_date_filter', from);
         if (to) params.set('to_date_filter', to);
+        if (opdCategory) params.set('opd_category_filter', opdCategory);
+        if (exemptionCategory) params.set('exemption_category_filter', exemptionCategory);
 
         return smeExportBase + '?' + params.toString();
     }
@@ -1451,7 +1492,7 @@ $(document).ready(function() {
             '</div>' +
             '<h6 class="sme-view-section-title">Exemption and Other Information</h6>' +
             '<div class="row g-3">' +
-                smeViewField('IPD/OPD/After OPD/Referral/PT Exemption', data.opd_category) +
+                smeViewField('Medical Case', data.opd_category) +
                 smeViewField('Start Date', data.arrival_date) +
                 smeViewField('Start Time', data.arrival_time) +
                 smeViewField('End Date', data.departure_date) +
@@ -1589,6 +1630,16 @@ function getFilterInfo() {
     var courseSelect = document.getElementById('course_filter');
     if (courseSelect && courseSelect.value) {
         parts.push('Course: ' + courseSelect.options[courseSelect.selectedIndex].text);
+    }
+
+    var opdSelect = document.getElementById('opd_category_filter');
+    if (opdSelect && opdSelect.value) {
+        parts.push('Medical Case: ' + opdSelect.options[opdSelect.selectedIndex].text);
+    }
+
+    var exemptionCategorySelect = document.getElementById('exemption_category_filter');
+    if (exemptionCategorySelect && exemptionCategorySelect.value) {
+        parts.push('Exemption Category: ' + exemptionCategorySelect.options[exemptionCategorySelect.selectedIndex].text);
     }
 
     var fromDate = (document.getElementById('from_date_filter') || {}).value;

@@ -14,14 +14,18 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
     protected $fromDateFilter;
     protected $toDateFilter;
     protected $search;
+    protected $opdCategoryFilter;
+    protected $exemptionCategoryFilter;
 
-    public function __construct($filter = 'active', $courseFilter = null, $search = null, $fromDateFilter = null, $toDateFilter = null)
+    public function __construct($filter = 'active', $courseFilter = null, $search = null, $fromDateFilter = null, $toDateFilter = null, $opdCategoryFilter = null, $exemptionCategoryFilter = null)
     {
         $this->filter = $filter;
         $this->courseFilter = $courseFilter;
         $this->search = $search;
         $this->fromDateFilter = $fromDateFilter;
         $this->toDateFilter = $toDateFilter;
+        $this->opdCategoryFilter = $opdCategoryFilter;
+        $this->exemptionCategoryFilter = $exemptionCategoryFilter;
     }
 
     public function collection()
@@ -36,7 +40,7 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
 
     private function recordsQuery()
     {
-        $query = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course', 'employee']);
+        $query = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course', 'employee', 'creator']);
 
         // Filter by course status (Active/Archive)
         $currentDate = now()->format('Y-m-d');
@@ -53,6 +57,14 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
 
         if ($this->courseFilter) {
             $query->where('course_master_pk', $this->courseFilter);
+        }
+
+        if ($this->opdCategoryFilter) {
+            $query->where('opd_category', $this->opdCategoryFilter);
+        }
+
+        if ($this->exemptionCategoryFilter) {
+            $query->where('exemption_category_master_pk', $this->exemptionCategoryFilter);
         }
 
         if ($this->fromDateFilter || $this->toDateFilter) {
@@ -116,6 +128,14 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
             $doctorName = trim($record->employee->first_name . ' ' . ($record->employee->last_name ?? ''));
         }
 
+        $createdByName = 'N/A';
+        if ($record->creator) {
+            $name = trim(($record->creator->first_name ?? '') . ' ' . ($record->creator->last_name ?? ''));
+            $createdByName = $name !== '' ? $name : ($record->creator->user_name ?? 'N/A');
+        }
+
+        $createdOn = $record->created_date ? Carbon::parse($record->created_date)->format('d/m/Y h:i A') : 'N/A';
+
         $duration = ($from ? $from->format('d/m/Y H:i') : 'N/A')
             . ' - '
             . ($to ? $to->format('d/m/Y H:i') : 'N/A');
@@ -131,6 +151,8 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
             'officer_trainee' => $officerTrainee,
             'course' => optional($record->course)->course_name ?? 'N/A',
             'doctor_name' => $doctorName,
+            'created_by' => $createdByName,
+            'created_on' => $createdOn,
             'medical_speciality' => optional($record->speciality)->speciality_name ?? 'N/A',
             'duration' => $duration,
             'days' => $record->days ?? 'N/A',
@@ -155,11 +177,13 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
             'Officer Trainee',
             'Course',
             'Doctor Name',
+            'Created By',
+            'Created On',
             'Medical Speciality',
             'Duration',
             'Days',
             'Category',
-            'IPD/OPD/After OPD/Referral/PT Exemption',
+            'Medical Case',
             'PT/ Outdoor Advise',
             'Diagnosis / Remarks',
             'Document',
