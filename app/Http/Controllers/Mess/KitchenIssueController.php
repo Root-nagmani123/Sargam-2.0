@@ -1061,20 +1061,20 @@ class KitchenIssueController extends Controller
 
         $paymentHtml = '<span class="text-muted">—</span>';
         if ($paymentType === KitchenIssueMaster::PAYMENT_CREDIT) {
-            $paymentHtml = '<span class="badge rounded-pill text-bg-warning">Credit</span>';
+            $paymentHtml = '<span class="badge rounded-1 text-bg-warning">Credit</span>';
         } elseif ($paymentType === KitchenIssueMaster::PAYMENT_CASH) {
-            $paymentHtml = '<span class="badge rounded-pill text-bg-secondary">Cash</span>';
+            $paymentHtml = '<span class="badge rounded-1 text-bg-secondary">Cash</span>';
         } elseif ($paymentType === KitchenIssueMaster::PAYMENT_ONLINE) {
-            $paymentHtml = '<span class="badge rounded-pill text-bg-info">UPI</span>';
+            $paymentHtml = '<span class="badge rounded-1 text-bg-info">UPI</span>';
         }
 
-        $statusHtml = '<span class="badge rounded-pill text-bg-secondary">'.e((string) $status).'</span>';
+        $statusHtml = '<span class="badge rounded-1 text-bg-secondary">'.e((string) $status).'</span>';
         if ($status === KitchenIssueMaster::STATUS_PENDING) {
-            $statusHtml = '<span class="badge rounded-pill text-bg-warning">Pending</span>';
+            $statusHtml = '<span class="badge rounded-1 text-bg-warning">Pending</span>';
         } elseif ($status === KitchenIssueMaster::STATUS_APPROVED) {
-            $statusHtml = '<span class="badge rounded-pill text-bg-success">Approved</span>';
+            $statusHtml = '<span class="badge rounded-1 text-bg-success">Approved</span>';
         } elseif ($status === KitchenIssueMaster::STATUS_COMPLETED) {
-            $statusHtml = '<span class="badge rounded-pill text-bg-primary">Completed</span>';
+            $statusHtml = '<span class="badge rounded-1 text-bg-primary">Completed</span>';
         }
 
         $reqDateRaw = $row->issue_date ?? $row->created_at ?? '';
@@ -1089,7 +1089,7 @@ class KitchenIssueController extends Controller
 
         $returnBadge = '';
         if ($rq > 0) {
-            $returnBadge = '<span class="badge rounded-pill text-bg-info">Returned</span>';
+            $returnBadge = '<span class="badge rounded-1 text-bg-info">Returned</span>';
         }
 
         $deleteForm = '';

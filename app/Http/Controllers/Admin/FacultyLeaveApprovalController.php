@@ -166,7 +166,7 @@ class FacultyLeaveApprovalController extends Controller
                 ];
                 [$label, $variant] = $map[(int) $row->status] ?? ['-', 'pending'];
 
-                return '<span class="badge rounded-pill approval-status approval-status--' . $variant . '">' . $label . '</span>';
+                return '<span class="badge rounded-1 approval-status approval-status--' . $variant . '">' . $label . '</span>';
             })
             ->addColumn('action', function ($row) {
                 $viewUrl = route('faculty.leave-approval.show', $row->pk);

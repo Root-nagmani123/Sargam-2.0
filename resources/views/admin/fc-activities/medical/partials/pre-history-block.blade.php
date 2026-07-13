@@ -6,7 +6,7 @@
     <div class="card-header py-2 bg-white border-bottom d-flex align-items-center justify-content-between">
         <span class="small fw-semibold text-uppercase text-muted" style="letter-spacing:.04em;">Previous medical history</span>
         @unless($ph)
-            <span class="badge rounded-pill bg-secondary-subtle text-secondary border">None</span>
+            <span class="badge rounded-1 bg-secondary-subtle text-secondary border">None</span>
         @endunless
     </div>
     <div class="card-body py-3">
