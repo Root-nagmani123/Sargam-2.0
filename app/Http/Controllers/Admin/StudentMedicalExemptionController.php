@@ -843,10 +843,10 @@ class StudentMedicalExemptionController extends Controller
         $fromDateFilter = $request->get('from_date_filter');
         $toDateFilter = $request->get('to_date_filter');
         $search = $request->get('search');
-        $format = strtolower((string) $request->get('format', 'csv'));
+        $format = strtolower((string) $request->get('format', 'excel'));
 
-        if (! in_array($format, ['csv', 'pdf'], true)) {
-            $format = 'csv';
+        if (! in_array($format, ['csv', 'excel', 'xlsx', 'pdf'], true)) {
+            $format = 'excel';
         }
 
         $export = new StudentMedicalExemptionExport($filter, $courseFilter, $search, $fromDateFilter, $toDateFilter);
@@ -877,7 +877,9 @@ class StudentMedicalExemptionController extends Controller
             return $pdf->download($fileName . '.pdf');
         }
 
-        return Excel::download($export, $fileName . '.csv', ExcelFormat::CSV);
+        // Styled workbook (logos, blue header band, bordered zebra rows) so the
+        // download visually matches the Print / PDF layout — a plain CSV can't.
+        return Excel::download($export, $fileName . '.xlsx', ExcelFormat::XLSX);
     }
 
     /**
