@@ -52,7 +52,8 @@
 
 @php
     $doctorName = Auth::user() ? trim((Auth::user()->first_name ?? '') . ' ' . (Auth::user()->last_name ?? '')) : '';
-    $opdOptions = ['IPD', 'OPD', 'After OPD', 'Referral'];
+    // Driven by the Medical Case Master (falls back to the legacy list if none active).
+    $opdOptions = (isset($opdOptions) && count($opdOptions)) ? $opdOptions : ['IPD', 'OPD', 'After OPD', 'Referral'];
 @endphp
 
 <div class="container-fluid">

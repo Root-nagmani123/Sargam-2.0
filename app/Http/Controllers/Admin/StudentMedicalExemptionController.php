@@ -9,6 +9,7 @@ use App\Models\CourseMaster;
 use App\Models\StudentMaster;
 use App\Models\ExemptionCategoryMaster;
 use App\Models\ExemptionMedicalSpecialityMaster;
+use App\Models\MedicalCaseMaster;
 use App\Models\EmployeeMaster;
 use App\Models\StudentCourseGroupMap;
 use App\Models\GroupTypeMasterCourseMasterMap;
@@ -334,10 +335,17 @@ class StudentMedicalExemptionController extends Controller
     $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
     $specialities = ExemptionMedicalSpecialityMaster::where('active_inactive', '1')->get();
 
+    // IPD / OPD / After OPD / Referral / … — driven by the Medical Case Master.
+    $opdOptions = MedicalCaseMaster::where('active_inactive', 1)
+        ->orderBy('pk')
+        ->pluck('case_name')
+        ->toArray();
+
     return view('admin.student_medical_exemption.create', compact(
         'courses',
         'categories',
-        'specialities'
+        'specialities',
+        'opdOptions'
     ));
 }
 
@@ -670,7 +678,13 @@ class StudentMedicalExemptionController extends Controller
         $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
         $specialities = ExemptionMedicalSpecialityMaster::where('active_inactive', '1')->get();
 
-        return view('admin.student_medical_exemption.edit', compact('record', 'courses', 'students', 'categories', 'specialities'));
+        // IPD / OPD / After OPD / Referral / … — driven by the Medical Case Master.
+        $opdOptions = MedicalCaseMaster::where('active_inactive', 1)
+            ->orderBy('pk')
+            ->pluck('case_name')
+            ->toArray();
+
+        return view('admin.student_medical_exemption.edit', compact('record', 'courses', 'students', 'categories', 'specialities', 'opdOptions'));
     }
     public function update(Request $request, $id)
     {
