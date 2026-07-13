@@ -80,7 +80,7 @@
                             title="Passes waiting for your approve or reject action at this stage.">
                         <i class="material-icons material-symbols-rounded d-inline align-middle" style="font-size:18px;">assignment_turned_in</i>
                         <span class="align-middle">Pending — your action</span>
-                        <span class="badge rounded-pill bg-white text-primary ms-1">{{ $newApplications->total() }}</span>
+                        <span class="badge rounded-1 bg-white text-primary ms-1">{{ $newApplications->total() }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -89,7 +89,7 @@
                             title="Only after Level 1 is approved. Waiting for final approval or view-only here.">
                         <i class="material-icons material-symbols-rounded d-inline align-middle" style="font-size:18px;">hourglass_top</i>
                         <span class="align-middle">Pending — other stage</span>
-                        <span class="badge rounded-pill bg-warning text-dark ms-1">{{ $processedApplications->total() }}</span>
+                        <span class="badge rounded-1 bg-warning text-dark ms-1">{{ $processedApplications->total() }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -98,7 +98,7 @@
                             title="Fully approved vehicle passes.">
                         <i class="material-icons material-symbols-rounded d-inline align-middle" style="font-size:18px;">check_circle</i>
                         <span class="align-middle">Approved</span>
-                        <span class="badge rounded-pill bg-success ms-1">{{ $issuedApplications->total() }}</span>
+                        <span class="badge rounded-1 bg-success ms-1">{{ $issuedApplications->total() }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -107,7 +107,7 @@
                             title="Applications rejected at any stage.">
                         <i class="material-icons material-symbols-rounded d-inline align-middle" style="font-size:18px;">cancel</i>
                         <span class="align-middle">Rejected</span>
-                        <span class="badge rounded-pill bg-danger ms-1">{{ $rejectedApplications->total() }}</span>
+                        <span class="badge rounded-1 bg-danger ms-1">{{ $rejectedApplications->total() }}</span>
                     </button>
                 </li>
             </ul>

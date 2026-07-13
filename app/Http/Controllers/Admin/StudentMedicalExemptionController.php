@@ -9,6 +9,7 @@ use App\Models\CourseMaster;
 use App\Models\StudentMaster;
 use App\Models\ExemptionCategoryMaster;
 use App\Models\ExemptionMedicalSpecialityMaster;
+use App\Models\MedicalCaseMaster;
 use App\Models\EmployeeMaster;
 use App\Models\StudentCourseGroupMap;
 use App\Models\GroupTypeMasterCourseMasterMap;
@@ -365,9 +366,17 @@ class StudentMedicalExemptionController extends Controller
     $specialities = ExemptionMedicalSpecialityMaster::where('active_inactive', '1')->get();
     $doctors = $this->getDoctors();
 
+    // IPD / OPD / After OPD / Referral / … — driven by the Medical Case Master.
+    $opdOptions = MedicalCaseMaster::where('active_inactive', 1)
+        ->orderBy('pk')
+        ->pluck('case_name')
+        ->toArray();
+
     return view('admin.student_medical_exemption.create', compact(
         'courses',
         'categories',
+        'specialities',
+        'opdOptions'
         'specialities',
         'doctors'
     ));
@@ -712,6 +721,14 @@ class StudentMedicalExemptionController extends Controller
 
         $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
         $specialities = ExemptionMedicalSpecialityMaster::where('active_inactive', '1')->get();
+
+        // IPD / OPD / After OPD / Referral / … — driven by the Medical Case Master.
+        $opdOptions = MedicalCaseMaster::where('active_inactive', 1)
+            ->orderBy('pk')
+            ->pluck('case_name')
+            ->toArray();
+
+        return view('admin.student_medical_exemption.edit', compact('record', 'courses', 'students', 'categories', 'specialities', 'opdOptions'));
         $doctors = $this->getDoctors();
 
         // Ensure the record's own (possibly inactive) doctor is selectable too.
@@ -894,10 +911,10 @@ class StudentMedicalExemptionController extends Controller
         $search = $request->get('search');
         $opdCategoryFilter = $request->get('opd_category_filter');
         $exemptionCategoryFilter = $request->get('exemption_category_filter');
-        $format = strtolower((string) $request->get('format', 'csv'));
+        $format = strtolower((string) $request->get('format', 'excel'));
 
-        if (! in_array($format, ['csv', 'pdf'], true)) {
-            $format = 'csv';
+        if (! in_array($format, ['csv', 'excel', 'xlsx', 'pdf'], true)) {
+            $format = 'excel';
         }
 
         $export = new StudentMedicalExemptionExport($filter, $courseFilter, $search, $fromDateFilter, $toDateFilter, $opdCategoryFilter, $exemptionCategoryFilter);
@@ -928,7 +945,9 @@ class StudentMedicalExemptionController extends Controller
             return $pdf->download($fileName . '.pdf');
         }
 
-        return Excel::download($export, $fileName . '.csv', ExcelFormat::CSV);
+        // Styled workbook (logos, blue header band, bordered zebra rows) so the
+        // download visually matches the Print / PDF layout — a plain CSV can't.
+        return Excel::download($export, $fileName . '.xlsx', ExcelFormat::XLSX);
     }
 
     /**

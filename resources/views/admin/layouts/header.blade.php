@@ -189,7 +189,7 @@
                 aria-hidden="true">notifications</i>
 
             @if($unreadCount > 0)
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-1 bg-danger notification-badge">
                     {{ $unreadCount > 99 ? '99+' : $unreadCount }}
                 </span>
             @endif
@@ -420,7 +420,7 @@
                             <i class="material-icons material-symbols-rounded header-notification-bell {{ $unreadCountMobile > 0 ? 'header-notification-bell--ring' : '' }}"
                                 aria-hidden="true">notifications_active</i>
                             @if($unreadCountMobile > 0)
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge-mobile" style="font-size: 9px;">
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-1 bg-danger notification-badge-mobile" style="font-size: 9px;">
                                 {{ $unreadCountMobile > 99 ? '99+' : $unreadCountMobile }}
                             </span>
                             @endif
@@ -935,14 +935,14 @@
                 var desktopBtn = document.getElementById('notificationDropdown');
                 if (desktopBtn) {
                     var desktopBadge = document.createElement('span');
-                    desktopBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge';
+                    desktopBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-1 bg-danger notification-badge';
                     desktopBadge.textContent = label;
                     desktopBtn.appendChild(desktopBadge);
                 }
                 var mobileBtn = document.getElementById('notificationBtnMobile');
                 if (mobileBtn) {
                     var mobileBadge = document.createElement('span');
-                    mobileBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge-mobile';
+                    mobileBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-1 bg-danger notification-badge-mobile';
                     mobileBadge.style.fontSize = '9px';
                     mobileBadge.textContent = label;
                     mobileBtn.appendChild(mobileBadge);

@@ -516,7 +516,7 @@
                             </nav>
 
                             <div class="text-center text-body-secondary mt-3">
-                                <small class="badge rounded-pill text-bg-light border fw-normal px-3 py-2">
+                                <small class="badge rounded-1 text-bg-light border fw-normal px-3 py-2">
                                     Showing <strong class="text-body">{{ ($currentPage - 1) * 10 + 1 }}</strong>
                                     – <strong class="text-body">{{ min($currentPage * 10, $totalRecords) }}</strong>
                                     of <strong class="text-body">{{ $totalRecords }}</strong> records
@@ -833,7 +833,7 @@
             </nav>
             
             <div class="text-center text-body-secondary mt-3">
-                <small class="badge rounded-pill text-bg-light border fw-normal px-3 py-2">
+                <small class="badge rounded-1 text-bg-light border fw-normal px-3 py-2">
                     Showing <strong class="text-body">${((currentPage - 1) * 10) + 1}</strong>
                     – <strong class="text-body">${Math.min(currentPage * 10, totalRecords)}</strong>
                     of <strong class="text-body">${totalRecords}</strong> records

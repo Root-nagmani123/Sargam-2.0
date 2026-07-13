@@ -70,7 +70,9 @@
 </style>
 
 @php
-    $opdOptions = ['IPD', 'OPD', 'After OPD', 'Referral', 'PT Exemption'];
+    $doctorName = Auth::user() ? trim((Auth::user()->first_name ?? '') . ' ' . (Auth::user()->last_name ?? '')) : '';
+    // Driven by the Medical Case Master (falls back to the legacy list if none active).
+    $opdOptions = (isset($opdOptions) && count($opdOptions)) ? $opdOptions : ['IPD', 'OPD', 'After OPD', 'Referral'];
 @endphp
 
 <div class="container-fluid">

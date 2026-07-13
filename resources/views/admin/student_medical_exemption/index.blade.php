@@ -697,7 +697,7 @@ select.sme-filter-control {
                     <li>
                         <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="smeExportCsv">
                             <i class="material-icons material-symbols-rounded text-success" style="font-size:18px;" aria-hidden="true">table_chart</i>
-                            <span>Download CSV</span>
+                            <span>Download Excel</span>
                         </button>
                     </li>
                 </ul>
@@ -1448,7 +1448,7 @@ $(document).ready(function() {
 
     $('#smeExportCsv').on('click', function(e) {
         e.preventDefault();
-        window.location.href = smeExportUrl('csv');
+        window.location.href = smeExportUrl('excel');
     });
 
     $(document).on('click', '.sme-edit-btn', function(e){
