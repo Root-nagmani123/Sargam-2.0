@@ -82,6 +82,12 @@ class FcRosterAuthService
 
     public function establishStagedSession(object $roster): User
     {
+        // Prevent session fixation (CWE-384): rotate the session ID on successful
+        // login so a pre-set / attacker-known identifier cannot survive
+        // authentication. Existing session data is carried over to the new ID and
+        // the old session is discarded, so the user stays logged in seamlessly.
+        session()->regenerate(true);
+
         session([self::SESSION_ROSTER_PK => (int) $roster->pk]);
         $user = $this->buildStagedUser($roster);
         Auth::setUser($user);

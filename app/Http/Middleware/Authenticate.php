@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Session;
 
 use App\Models\User;
 use App\Services\FC\FcRosterAuthService;
+use App\Services\FC\FcRegistrationIntentService;
 
 class Authenticate extends Middleware
 {
@@ -113,10 +114,32 @@ class Authenticate extends Middleware
     protected function redirectTo($request)
     {
         if ($request->is('fc-reg', 'fc-reg/*')) {
-            return route('fc.login');
+            // Registration falls back to the FC login, carrying the programme (?form=)
+            // token so the trainee lands on the correct form login and returns to it.
+            return route('fc.login', $this->fcLoginFormQuery($request));
         }
 
         return route('login');
+    }
+
+    /**
+     * Build the ?form= query for the /fc/login fallback.
+     *
+     * This middleware runs before route-model binding, so the {form} route parameter is
+     * still the raw encrypted token from the URL path — reusing it keeps the intent even
+     * when the session has already expired. Falls back to the bound model / session /
+     * existing query token via the intent service.
+     *
+     * @return array{form?: string}
+     */
+    private function fcLoginFormQuery($request): array
+    {
+        $routeToken = $request->route('form');
+        if (is_string($routeToken) && $routeToken !== '') {
+            return ['form' => $routeToken];
+        }
+
+        return app(FcRegistrationIntentService::class)->formQueryForHeaderLinks($request);
     }
 
     /**
@@ -130,12 +153,16 @@ class Authenticate extends Middleware
      */
     protected function unauthenticated($request, array $guards)
     {
+        // Registration (fc-reg/*) falls back to the FC login; every other area
+        // falls back to the main Sargam portal login. redirectTo() encodes that rule.
+        $redirectTo = $this->redirectTo($request);
+
         if ($request->expectsJson()) {
             throw new \Illuminate\Auth\AuthenticationException(
-                'Unauthenticated.', $guards, $this->redirectTo($request)
+                'Unauthenticated.', $guards, $redirectTo
             );
         }
 
-        return redirect()->guest(route('login'));
+        return redirect()->guest($redirectTo);
     }
 }

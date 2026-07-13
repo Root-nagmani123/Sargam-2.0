@@ -69,12 +69,12 @@ class BankDetailsController extends Controller
     private function saveLegacy(Request $request, int $userId)
     {
         $validated = $request->validate([
-            'bank_name'           => 'required|string|max:200',
-            'branch_name'         => 'required|string|max:200',
+            'bank_name'           => 'required|string|max:200|no_html',
+            'branch_name'         => 'required|string|max:200|no_html',
             'ifsc_code'           => ['required', 'string', 'max:20', 'regex:/^[A-Z]{4}0[A-Z0-9]{6}$/'],
-            'account_no'          => 'required|string|max:50',
+            'account_no'          => 'required|string|max:50|no_html',
             'account_no_confirm'  => 'required|same:account_no',
-            'account_holder_name' => 'required|string|max:200',
+            'account_holder_name' => 'required|string|max:200|no_html',
             'account_type'        => 'required|in:Savings,Current',
             'bank_passbook'       => 'nullable|file|mimes:jpeg,jpg,png,pdf|max:2048',
         ]);
