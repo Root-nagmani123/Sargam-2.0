@@ -181,7 +181,7 @@
                                     <div class="small text-body-secondary">Course Coordinator</div>
                                 </div>
                             </div>
-                            <span class="badge rounded-pill bg-white text-dark border programme-show-contact-badge flex-shrink-0">
+                            <span class="badge rounded-1 bg-white text-dark border programme-show-contact-badge flex-shrink-0">
                                 Primary Contact
                             </span>
                         </div>

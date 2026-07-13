@@ -67,11 +67,11 @@
                             <td>{{ $memo->student_name }}</td>
                             <td>
                                 @if ($memo->notice_memo == '1')
-                                <span class="badge rounded-pill bg-primary-subtle text-primary">Notice</span>
+                                <span class="badge rounded-1 bg-primary-subtle text-primary">Notice</span>
                                 @elseif ($memo->notice_memo == '2')
-                                <span class="badge rounded-pill bg-secondary-subtle text-secondary">Memo</span>
+                                <span class="badge rounded-1 bg-secondary-subtle text-secondary">Memo</span>
                                 @else
-                                <span class="badge rounded-pill bg-info-subtle text-info">Other</span>
+                                <span class="badge rounded-1 bg-info-subtle text-info">Other</span>
                                 @endif
                             </td>
                             <td class="date">{{ $memo->date_ }}</td>
@@ -96,7 +96,7 @@
                                         <i class="material-icons menu-icon material-symbols-rounded"
                                             style="font-size: 24px;">reply</i>
                                         @if (($memo->chat_unread ?? 0) > 0)
-                                        <span class="position-absolute translate-middle badge rounded-pill bg-danger chat-unread-badge"
+                                        <span class="position-absolute translate-middle badge rounded-1 bg-danger chat-unread-badge"
                                             style="top: 2px; left: 100%; font-size: 9px;">
                                             {{ $memo->chat_unread > 99 ? '99+' : $memo->chat_unread }}
                                             <span class="visually-hidden">unread messages</span>
@@ -115,11 +115,11 @@
                             </td>
                             <td>
                                 @if ($memo->status == 1)
-                                <span class="badge rounded-pill bg-success-subtle text-success">
+                                <span class="badge rounded-1 bg-success-subtle text-success">
                                     <i class="bi bi-check-circle me-1"></i> Open
                                 </span>
                                 @else
-                                <span class="badge rounded-pill bg-danger-subtle text-danger">
+                                <span class="badge rounded-1 bg-danger-subtle text-danger">
                                     <i class="bi bi-x-circle me-1"></i> Close
                                 </span>
                                 @endif

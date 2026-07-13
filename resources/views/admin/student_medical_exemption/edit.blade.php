@@ -68,7 +68,8 @@
     $arrTime = $record->from_date ? \Carbon\Carbon::parse($record->from_date)->format('H:i') : '';
     $depDate = $record->to_date ? \Carbon\Carbon::parse($record->to_date)->format('Y-m-d') : '';
     $depTime = $record->to_date ? \Carbon\Carbon::parse($record->to_date)->format('H:i') : '';
-    $opdOptions = ['IPD', 'OPD', 'After OPD', 'Referral', 'PT Exemption'];
+    // Driven by the Medical Case Master (falls back to the legacy list if none active).
+    $opdOptions = (isset($opdOptions) && count($opdOptions)) ? $opdOptions : ['IPD', 'OPD', 'After OPD', 'Referral'];
     if ($record->opd_category && !in_array($record->opd_category, $opdOptions, true)) {
         array_unshift($opdOptions, $record->opd_category);
     }

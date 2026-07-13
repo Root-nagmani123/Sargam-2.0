@@ -13,7 +13,7 @@
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <span class="text-body-secondary small">Status</span>
-                    <span class="badge rounded-pill bg-{{ $purchaseOrder->status == 'approved' ? 'success' : ($purchaseOrder->status == 'rejected' ? 'danger' : ($purchaseOrder->status == 'completed' ? 'primary' : 'warning')) }}">
+                    <span class="badge rounded-1 bg-{{ $purchaseOrder->status == 'approved' ? 'success' : ($purchaseOrder->status == 'rejected' ? 'danger' : ($purchaseOrder->status == 'completed' ? 'primary' : 'warning')) }}">
                         {{ ucfirst($purchaseOrder->status) }}
                     </span>
                 </div>

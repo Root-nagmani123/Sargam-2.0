@@ -116,11 +116,11 @@
                     <h4 class="fw-bold text-uppercase mb-0 text-body">Stock Summary Report</h4>
                 </div>
                 <div class="d-flex flex-column flex-sm-row flex-wrap align-items-center justify-content-center gap-2">
-                    <span class="badge rounded-pill bg-white text-body-emphasis fw-normal px-3 py-2 shadow-sm border">
+                    <span class="badge rounded-1 bg-white text-body-emphasis fw-normal px-3 py-2 shadow-sm border">
                         <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">date_range</span>
                         Period: {{ date('d-F-Y', strtotime($fromDate)) }} to {{ date('d-F-Y', strtotime($toDate)) }}
                     </span>
-                    <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-normal px-3 py-2 text-wrap text-start shadow-sm" style="max-width: min(100%, 42rem);">
+                    <span class="badge rounded-1 bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-normal px-3 py-2 text-wrap text-start shadow-sm" style="max-width: min(100%, 42rem);">
                         <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">store</span>
                         <span class="fw-semibold">Store:</span>
                         {{ $selectedStoreName ?? ($storeType == 'main' ? "Officer's Main Mess(Primary)" : 'All Sub Stores') }}
