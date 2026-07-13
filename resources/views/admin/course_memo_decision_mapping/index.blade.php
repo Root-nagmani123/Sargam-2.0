@@ -24,6 +24,32 @@
                         </div>
                     </div>
                     <hr>
+                    <div class="row g-3 align-items-end mb-3">
+                       
+                        <div class="col-md-4">
+                            <label class="form-label">Course</label>
+                            <select id="courseFilter" class="form-select">
+                                <option value="">-- All Courses --</option>
+                                @foreach($CourseMaster as $course)
+                                <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Memo Conclusion</label>
+                            <select id="memoConclusionFilter" class="form-select">
+                                <option value="">-- All Memo Conclusions --</option>
+                                @foreach($MemoConclusionMaster as $memo)
+                                <option value="{{ $memo->pk }}">{{ $memo->discussion_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" id="resetMemoFilters" class="btn btn-outline-secondary">
+                                Reset Filters
+                            </button>
+                        </div>
+                    </div>
                     <div>
                         <table class="table w-100" id="memoDecisionTable">
                             <thead style="background-color: #af2910;">
@@ -187,10 +213,16 @@
     $(function() {
         const tableSelector = '#memoDecisionTable';
         if (!$.fn.DataTable.isDataTable(tableSelector)) {
-            $(tableSelector).DataTable({
+            const memoDecisionTable = $(tableSelector).DataTable({
                 processing: true,
                 serverSide: true,
-                ajax: "{{ route('course.memo.decision.index') }}",
+                ajax: {
+                    url: "{{ route('course.memo.decision.index') }}",
+                    data: function(d) {
+                        d.course_filter = $('#courseFilter').val();
+                        d.memo_conclusion_filter = $('#memoConclusionFilter').val();
+                    }
+                },
                 order: [[0, 'desc']],
                 columns: [{
                         data: 'DT_RowIndex',
@@ -226,6 +258,18 @@
                 order: [
                     [1, 'asc']
                 ]
+            });
+
+            // Reload table when filters change
+            $('#courseFilter, #memoConclusionFilter').on('change', function() {
+                memoDecisionTable.ajax.reload();
+            });
+
+            // Reset filters
+            $('#resetMemoFilters').on('click', function() {
+                $('#courseFilter').val('');
+                $('#memoConclusionFilter').val('');
+                memoDecisionTable.ajax.reload();
             });
         }
     });

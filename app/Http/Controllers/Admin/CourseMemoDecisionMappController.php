@@ -43,6 +43,15 @@ class CourseMemoDecisionMappController extends Controller
                 $query->whereIn('course_master_pk', $data_course_id);
             }
 
+            // Course and Memo Conclusion filters
+            if ($request->filled('course_filter')) {
+                $query->where('course_master_pk', $request->course_filter);
+            }
+
+            if ($request->filled('memo_conclusion_filter')) {
+                $query->where('memo_conclusion_master_pk', $request->memo_conclusion_filter);
+            }
+
             return DataTables::of($query)
 
                 ->addIndexColumn()

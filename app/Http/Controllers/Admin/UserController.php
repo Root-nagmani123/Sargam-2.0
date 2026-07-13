@@ -2769,6 +2769,19 @@ class UserController extends Controller
         // absent session's date. Batched for the current page.
         $absentReasons = $this->dashboardAbsentReasons($pagedStudents);
 
+        // Carry the Time Period filter into the detail-page section links so the
+        // opened section (MDO/Escort duty, Medical exemption) shows the same
+        // date-scoped data as the list row.
+        $linkDateQs = '';
+        $fdParam = (string) $request->input('from_date', '');
+        $tdParam = (string) $request->input('to_date', '');
+        if ($fdParam !== '') {
+            $linkDateQs .= '&from_date=' . urlencode($fdParam);
+        }
+        if ($tdParam !== '') {
+            $linkDateQs .= '&to_date=' . urlencode($tdParam);
+        }
+
         $data = [];
         foreach ($pagedStudents as $idx => $studentMap) {
             $student = $studentMap->studentMaster;
@@ -2807,9 +2820,21 @@ class UserController extends Controller
                     }
                     return $html;
                 })(),
-                'mdo' => $statusCode === 4 ? 'Yes' : '-',
-                'escort' => $statusCode === 5 ? 'Yes' : '-',
-                'other_exempt' => $statusCode === 6 ? 'Medical' : ($statusCode === 7 ? 'Other' : '-'),
+                // MDO / Escort duties and Medical exemptions are clickable and open
+                // the relevant section of the student's detail page (date-scoped).
+                // "Other" (status 7) has no dedicated section, so it links to the
+                // full detail page.
+                'mdo' => $statusCode === 4
+                    ? '<a href="' . e($detailUrl . '?section=dutiesSection' . $linkDateQs) . '" class="sl-count">Yes</a>'
+                    : '-',
+                'escort' => $statusCode === 5
+                    ? '<a href="' . e($detailUrl . '?section=dutiesSection' . $linkDateQs) . '" class="sl-count">Yes</a>'
+                    : '-',
+                'other_exempt' => $statusCode === 6
+                    ? '<a href="' . e($detailUrl . '?section=medicalExceptionsSection' . $linkDateQs) . '" class="sl-count">Medical</a>'
+                    : ($statusCode === 7
+                        ? '<a href="' . e($detailUrl . ($linkDateQs !== '' ? '?' . ltrim($linkDateQs, '&') : '')) . '" class="sl-count">Other</a>'
+                        : '-'),
             ];
         }
 
