@@ -25,6 +25,8 @@ class StudentMedicalExemptionExport implements FromCollection, WithColumnWidths,
     protected $fromDateFilter;
     protected $toDateFilter;
     protected $search;
+    protected $opdCategoryFilter;
+    protected $exemptionCategoryFilter;
 
     /**
      * Indexes (0-based, matching the listing table's data columns 0..11) the user
@@ -39,86 +41,15 @@ class StudentMedicalExemptionExport implements FromCollection, WithColumnWidths,
     /** Data-row count, captured while streaming the collection (for the meta line). */
     protected int $rowCount = 0;
 
-    public function __construct($filter = 'active', $courseFilter = null, $search = null, $fromDateFilter = null, $toDateFilter = null, ?array $visibleColumns = null)
+    public function __construct($filter = 'active', $courseFilter = null, $search = null, $fromDateFilter = null, $toDateFilter = null, $opdCategoryFilter = null, $exemptionCategoryFilter = null)
     {
         $this->filter = $filter;
         $this->courseFilter = $courseFilter;
         $this->search = $search;
         $this->fromDateFilter = $fromDateFilter;
         $this->toDateFilter = $toDateFilter;
-        $this->visibleColumns = ($visibleColumns === null || $visibleColumns === []) ? null : array_values($visibleColumns);
-    }
-
-    /**
-     * Canonical, ordered definition of every exportable column. The array index
-     * (0..11) matches the on-screen DataTable column index, so the `columns=`
-     * request param (built from the live table) can filter this list directly.
-     * `s_no` at index 0 mirrors the table's leading "S. No." column.
-     *
-     * @return array<int,array{key:string,heading:string,width:int,align:?string}>
-     */
-    private function columnDefinitions(): array
-    {
-        return [
-            ['key' => 's_no',              'heading' => 'S.No.',                      'width' => 6,  'align' => 'center'],
-            ['key' => 'date',              'heading' => 'Date',                       'width' => 12, 'align' => null],
-            ['key' => 'officer_trainee',   'heading' => 'Officer Trainee',            'width' => 26, 'align' => null],
-            ['key' => 'course',            'heading' => 'Course',                     'width' => 22, 'align' => null],
-            ['key' => 'doctor_name',       'heading' => 'Doctor Name',                'width' => 18, 'align' => null],
-            ['key' => 'medical_speciality','heading' => 'Medical Speciality',         'width' => 18, 'align' => null],
-            ['key' => 'duration',          'heading' => 'Duration',                   'width' => 28, 'align' => null],
-            ['key' => 'days',              'heading' => 'Days',                       'width' => 6,  'align' => 'center'],
-            ['key' => 'category',          'heading' => 'Category',                   'width' => 16, 'align' => null],
-            ['key' => 'opd_category',      'heading' => 'IPD/OPD/After OPD/Referral', 'width' => 18, 'align' => null],
-            ['key' => 'pt_outdoor_advise', 'heading' => 'PT/ Outdoor Advise',         'width' => 30, 'align' => null],
-            ['key' => 'description',       'heading' => 'Diagnosis / Remarks',        'width' => 34, 'align' => null],
-        ];
-    }
-
-    /**
-     * The subset of {@see columnDefinitions()} the user chose to keep visible,
-     * in the original left-to-right order. Falls back to all columns when the
-     * filter is empty or matches nothing (never export a table with no columns).
-     *
-     * @return array<int,array{key:string,heading:string,width:int,align:?string}>
-     */
-    private function activeColumns(): array
-    {
-        $defs = $this->columnDefinitions();
-        if ($this->visibleColumns === null) {
-            return $defs;
-        }
-
-        $filtered = [];
-        foreach ($defs as $idx => $def) {
-            if (in_array($idx, $this->visibleColumns, true)) {
-                $filtered[] = $def;
-            }
-        }
-
-        return $filtered !== [] ? $filtered : $defs;
-    }
-
-    /** Reduce a full (s_no + mapRecord) associative row to the active columns, in order. */
-    private function pickActive(array $fullRow): array
-    {
-        $out = [];
-        foreach ($this->activeColumns() as $col) {
-            $out[$col['key']] = $fullRow[$col['key']] ?? '';
-        }
-
-        return $out;
-    }
-
-    /**
-     * Ordered headings for whatever columns are active (includes 'S.No.' when the
-     * S.No column is kept). Consumed by the PDF view and the Excel heading band.
-     *
-     * @return array<int,string>
-     */
-    public function activeHeadings(): array
-    {
-        return array_column($this->activeColumns(), 'heading');
+        $this->opdCategoryFilter = $opdCategoryFilter;
+        $this->exemptionCategoryFilter = $exemptionCategoryFilter;
     }
 
     public function collection()
@@ -316,7 +247,7 @@ class StudentMedicalExemptionExport implements FromCollection, WithColumnWidths,
 
     private function recordsQuery()
     {
-        $query = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course', 'employee']);
+        $query = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course', 'employee', 'creator']);
 
         // Filter by course status (Active/Archive)
         $currentDate = now()->format('Y-m-d');
@@ -333,6 +264,14 @@ class StudentMedicalExemptionExport implements FromCollection, WithColumnWidths,
 
         if ($this->courseFilter) {
             $query->where('course_master_pk', $this->courseFilter);
+        }
+
+        if ($this->opdCategoryFilter) {
+            $query->where('opd_category', $this->opdCategoryFilter);
+        }
+
+        if ($this->exemptionCategoryFilter) {
+            $query->where('exemption_category_master_pk', $this->exemptionCategoryFilter);
         }
 
         if ($this->fromDateFilter || $this->toDateFilter) {
@@ -396,6 +335,14 @@ class StudentMedicalExemptionExport implements FromCollection, WithColumnWidths,
             $doctorName = trim($record->employee->first_name . ' ' . ($record->employee->last_name ?? ''));
         }
 
+        $createdByName = 'N/A';
+        if ($record->creator) {
+            $name = trim(($record->creator->first_name ?? '') . ' ' . ($record->creator->last_name ?? ''));
+            $createdByName = $name !== '' ? $name : ($record->creator->user_name ?? 'N/A');
+        }
+
+        $createdOn = $record->created_date ? Carbon::parse($record->created_date)->format('d/m/Y h:i A') : 'N/A';
+
         $duration = ($from ? $from->format('d/m/Y H:i') : 'N/A')
             . ' - '
             . ($to ? $to->format('d/m/Y H:i') : 'N/A');
@@ -408,6 +355,8 @@ class StudentMedicalExemptionExport implements FromCollection, WithColumnWidths,
             'officer_trainee' => $officerTrainee,
             'course' => optional($record->course)->course_name ?? 'N/A',
             'doctor_name' => $doctorName,
+            'created_by' => $createdByName,
+            'created_on' => $createdOn,
             'medical_speciality' => optional($record->speciality)->speciality_name ?? 'N/A',
             'duration' => $duration,
             'days' => $record->days ?? 'N/A',
@@ -415,6 +364,31 @@ class StudentMedicalExemptionExport implements FromCollection, WithColumnWidths,
             'opd_category' => $record->opd_category ?? 'N/A',
             'pt_outdoor_advise' => $record->pt_outdoor_advise ?: '-',
             'description' => $record->Description ?: '-',
+        ];
+    }
+
+    /**
+     * The flat list of data-column headings (used by the PDF/Print layouts and the
+     * Excel column-header band). Must match the listing table headers (minus Action).
+     *
+     * @return array<int, string>
+     */
+    public function columnHeadings(): array
+    {
+        return [
+            'Date',
+            'Officer Trainee',
+            'Course',
+            'Doctor Name',
+            'Created By',
+            'Created On',
+            'Medical Speciality',
+            'Duration',
+            'Days',
+            'Category',
+            'Medical Case',
+            'PT/ Outdoor Advise',
+            'Diagnosis / Remarks',
         ];
     }
 

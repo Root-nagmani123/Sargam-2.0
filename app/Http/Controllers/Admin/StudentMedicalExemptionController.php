@@ -43,11 +43,13 @@ class StudentMedicalExemptionController extends Controller
             // every cached ID list (see flushListCache()).
             $cacheVersion = Cache::get('student_medical_exemption_cache_version', 1);
             $cacheKey = 'student_medical_exemption_ids_v' . $cacheVersion . '_' . md5(json_encode([
-                'custom_search' => $request->custom_search,
-                'course_id'     => $request->course_id,
-                'from_date'     => $request->from_date,
-                'to_date'       => $request->to_date,
-                'status'        => $request->get('status', 'active'),
+                'custom_search'      => $request->custom_search,
+                'course_id'          => $request->course_id,
+                'from_date'          => $request->from_date,
+                'to_date'            => $request->to_date,
+                'status'             => $request->get('status', 'active'),
+                'opd_category'       => $request->opd_category,
+                'exemption_category' => $request->exemption_category,
             ]));
 
             /* ===============================
@@ -99,6 +101,16 @@ class StudentMedicalExemptionController extends Controller
                     $query->where('course_master_pk', $request->course_id);
                 }
 
+                /* 🩺 Medical Case Filter */
+                if ($request->filled('opd_category')) {
+                    $query->where('opd_category', $request->opd_category);
+                }
+
+                /* 📋 Exemption Category Filter */
+                if ($request->filled('exemption_category')) {
+                    $query->where('exemption_category_master_pk', $request->exemption_category);
+                }
+
                 /* 📅 Date Filter */
                 if ($request->filled('from_date') && $request->filled('to_date')) {
                     $query->whereBetween('from_date', [
@@ -138,7 +150,8 @@ class StudentMedicalExemptionController extends Controller
                 'category',
                 'speciality',
                 'course',
-                'employee'
+                'employee',
+                'creator'
             ]);
 
             if (empty($ids)) {
@@ -184,6 +197,20 @@ class StudentMedicalExemptionController extends Controller
                     }
                     return 'N/A';
                 })
+
+                ->addColumn('created_by', function ($row) {
+                    if ($row->creator) {
+                        $name = trim(($row->creator->first_name ?? '') . ' ' . ($row->creator->last_name ?? ''));
+                        return $name !== '' ? $name : ($row->creator->user_name ?? 'N/A');
+                    }
+                    return 'N/A';
+                })
+
+                ->addColumn('created_on', fn($row) =>
+                    $row->created_date
+                        ? Carbon::parse($row->created_date)->format('d/m/Y h:i A')
+                        : 'N/A'
+                )
 
                 ->addColumn('speciality', fn($row) =>
                     $row->speciality->speciality_name ?? 'N/A'
@@ -317,9 +344,17 @@ class StudentMedicalExemptionController extends Controller
 
         $search = $request->get('search', '');
 
+        $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
+
+        // IPD / OPD / After OPD / Referral / … — driven by the Medical Case Master.
+        $opdOptions = MedicalCaseMaster::where('active_inactive', 1)
+            ->orderBy('pk')
+            ->pluck('case_name')
+            ->toArray();
+
         return view(
             'admin.student_medical_exemption.index',
-            compact('courses', 'archivedCourses', 'search')
+            compact('courses', 'archivedCourses', 'search', 'categories', 'opdOptions')
         );
     }
 
@@ -334,6 +369,7 @@ class StudentMedicalExemptionController extends Controller
 
     $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
     $specialities = ExemptionMedicalSpecialityMaster::where('active_inactive', '1')->get();
+    $doctors = $this->getDoctors();
 
     // IPD / OPD / After OPD / Referral / … — driven by the Medical Case Master.
     $opdOptions = MedicalCaseMaster::where('active_inactive', 1)
@@ -345,9 +381,22 @@ class StudentMedicalExemptionController extends Controller
         'courses',
         'categories',
         'specialities',
-        'opdOptions'
+        'opdOptions',
+        'doctors'
     ));
 }
+
+    /**
+     * Active employees holding a medical-officer designation (Medical Officer /
+     * Senior Medical Officer) — the selectable list for Treating Doctor Name.
+     */
+    private function getDoctors()
+    {
+        return EmployeeMaster::whereIn('designation_master_pk', [1347521458, 1986142397])
+            ->where('status', 1)
+            ->orderBy('first_name')
+            ->get();
+    }
 
     /**
      * Students (course-group mapped) for a course — mirrors getStudentsByCourse so the
@@ -494,14 +543,14 @@ class StudentMedicalExemptionController extends Controller
             'course_master_pk' => 'required|numeric',
             'student_master_pk' => 'required|numeric',
             'employee_master_pk' => 'required|numeric',
-            'exemption_category_master_pk' => 'required|numeric',
+            'exemption_category_master_pk' => 'nullable|numeric',
             'opd_category' => 'required|string|max:50',
             'arrival_date' => 'required|date',
-            'arrival_time' => 'required',
-            'departure_date' => 'required|date',
-            'departure_time' => 'required',
+            'arrival_time' => 'nullable',
+            'departure_date' => 'nullable|date',
+            'departure_time' => 'nullable',
             'from_date' => 'required|date',
-            'to_date' => 'required|date|after_or_equal:from_date',
+            'to_date' => 'nullable|date|after_or_equal:from_date',
             'pt_outdoor_advise' => 'nullable|string|max:255',
             'exemption_medical_speciality_pk' => 'required|numeric',
             'Description' => 'nullable|string',
@@ -513,11 +562,8 @@ class StudentMedicalExemptionController extends Controller
             'employee_master_pk.required' => 'The treating doctor is required.',
             'exemption_category_master_pk.required' => 'Please select an exemption category.',
             'exemption_medical_speciality_pk.required' => 'Please select a medical speciality.',
-            'opd_category.required' => 'Please select IPD/OPD/After OPD/Referral.',
+            'opd_category.required' => 'Please select Medical Case.',
             'arrival_date.required' => 'The start date is required.',
-            'arrival_time.required' => 'The start time is required.',
-            'departure_date.required' => 'The end date is required.',
-            'departure_time.required' => 'The end time is required.',
             'to_date.after_or_equal' => 'The end date/time must be after the start date/time.',
             'Doc_upload.file'  => 'The attachment must be a valid file.',
             'Doc_upload.mimes' => 'Only PDF, JPG, JPEG, PNG, DOC, or DOCX files are allowed.',
@@ -554,6 +600,8 @@ class StudentMedicalExemptionController extends Controller
         if (!isset($validated['active_inactive'])) {
             $validated['active_inactive'] = 1;
         }
+
+        $validated['created_by'] = auth()->id();
 
         // Handle file upload if exists
         if ($request->hasFile('Doc_upload')) {
@@ -684,7 +732,17 @@ class StudentMedicalExemptionController extends Controller
             ->pluck('case_name')
             ->toArray();
 
-        return view('admin.student_medical_exemption.edit', compact('record', 'courses', 'students', 'categories', 'specialities', 'opdOptions'));
+        $doctors = $this->getDoctors();
+
+        // Ensure the record's own (possibly inactive) doctor is selectable too.
+        if ($record->employee_master_pk && !$doctors->contains('pk', $record->employee_master_pk)) {
+            $ownDoctor = EmployeeMaster::find($record->employee_master_pk);
+            if ($ownDoctor) {
+                $doctors->push($ownDoctor);
+            }
+        }
+
+        return view('admin.student_medical_exemption.edit', compact('record', 'courses', 'students', 'categories', 'specialities', 'opdOptions', 'doctors'));
     }
     public function update(Request $request, $id)
     {
@@ -709,14 +767,14 @@ class StudentMedicalExemptionController extends Controller
             'course_master_pk' => 'required|numeric',
             'student_master_pk' => 'required|numeric',
             'employee_master_pk' => 'nullable|numeric',
-            'exemption_category_master_pk' => 'required|numeric',
+            'exemption_category_master_pk' => 'nullable|numeric',
             'opd_category' => 'required|string|max:50',
             'arrival_date' => 'required|date',
-            'arrival_time' => 'required',
-            'departure_date' => 'required|date',
-            'departure_time' => 'required',
+            'arrival_time' => 'nullable',
+            'departure_date' => 'nullable|date',
+            'departure_time' => 'nullable',
             'from_date' => 'required|date',
-            'to_date' => 'required|date|after_or_equal:from_date',
+            'to_date' => 'nullable|date|after_or_equal:from_date',
             'pt_outdoor_advise' => 'nullable|string|max:255',
             'exemption_medical_speciality_pk' => 'required|numeric',
             'Description' => 'nullable|string',
@@ -727,11 +785,8 @@ class StudentMedicalExemptionController extends Controller
             'student_master_pk.required' => 'Please select an officer trainee.',
             'exemption_category_master_pk.required' => 'Please select an exemption category.',
             'exemption_medical_speciality_pk.required' => 'Please select a medical speciality.',
-            'opd_category.required' => 'Please select IPD/OPD/After OPD/Referral.',
+            'opd_category.required' => 'Please select Medical Case.',
             'arrival_date.required' => 'The start date is required.',
-            'arrival_time.required' => 'The start time is required.',
-            'departure_date.required' => 'The end date is required.',
-            'departure_time.required' => 'The end time is required.',
             'to_date.after_or_equal' => 'The end date/time must be after the start date/time.',
             'Doc_upload.file'  => 'The attachment must be a valid file.',
             'Doc_upload.mimes' => 'Only PDF, JPG, JPEG, PNG, DOC, or DOCX files are allowed.',
@@ -857,16 +912,15 @@ class StudentMedicalExemptionController extends Controller
         $fromDateFilter = $request->get('from_date_filter');
         $toDateFilter = $request->get('to_date_filter');
         $search = $request->get('search');
+        $opdCategoryFilter = $request->get('opd_category_filter');
+        $exemptionCategoryFilter = $request->get('exemption_category_filter');
         $format = strtolower((string) $request->get('format', 'excel'));
 
         if (! in_array($format, ['csv', 'excel', 'xlsx', 'pdf'], true)) {
             $format = 'excel';
         }
 
-        // Which data columns (0..11) the user left visible in the on-screen table.
-        $visibleColumns = $this->parseVisibleColumns($request->get('columns'));
-
-        $export = new StudentMedicalExemptionExport($filter, $courseFilter, $search, $fromDateFilter, $toDateFilter, $visibleColumns);
+        $export = new StudentMedicalExemptionExport($filter, $courseFilter, $search, $fromDateFilter, $toDateFilter, $opdCategoryFilter, $exemptionCategoryFilter);
         $fileName = 'medical-exemption-export-' . now()->format('Y-m-d_H-i-s');
 
         if ($format === 'pdf') {
@@ -981,6 +1035,15 @@ class StudentMedicalExemptionController extends Controller
         if ($request->filled('course_filter')) {
             $course = CourseMaster::find($request->course_filter);
             $parts[] = 'Course: ' . ($course->course_name ?? $request->course_filter);
+        }
+
+        if ($request->filled('opd_category_filter')) {
+            $parts[] = 'Medical Case: ' . $request->opd_category_filter;
+        }
+
+        if ($request->filled('exemption_category_filter')) {
+            $category = ExemptionCategoryMaster::find($request->exemption_category_filter);
+            $parts[] = 'Exemption Category: ' . ($category->exemp_category_name ?? $request->exemption_category_filter);
         }
 
         if ($request->filled('search')) {
