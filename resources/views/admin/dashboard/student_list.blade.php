@@ -93,6 +93,32 @@
     /* Inside the +N Filters popover the Select2 widgets span the menu width. */
     .student-list-page .sl-more-menu .sl-filter-item .select2-container { width: 100% !important; }
 
+    /* ── Select2 "clear" (×) — Select2's default float:right drops it to the top-right,
+         out of the box's vertical centring and colliding with the caret. Pin it to the
+         vertical middle, just left of the chevron, and leave room in the value text. ── */
+    .student-list-page .sl-filter-item .select2-container--default .select2-selection--single .select2-selection__rendered {
+        padding-right: 3.25rem;
+    }
+    .student-list-page .sl-filter-item .select2-container--default .select2-selection--single .select2-selection__clear {
+        position: absolute;
+        top: 50%;
+        right: 2.55rem;
+        transform: translateY(-50%);
+        float: none;
+        height: auto;
+        width: auto;
+        margin: 0;
+        padding: 0;
+        line-height: 1;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #98a2b3;
+    }
+    .student-list-page .sl-filter-item .select2-container--default .select2-selection--single .select2-selection__clear:hover {
+        color: #475467;
+    }
+    .student-list-page .sl-filter-item .select2-selection__clear > span { line-height: 1; }
+
     .student-list-page .sl-daterange-wrap { position: relative; }
 
     .student-list-page .sl-daterange-input {
@@ -428,7 +454,6 @@
 
                     {{-- Topic --}}
                     <div class="sl-filter-item" id="slItemTopic">
-                        <span class="sl-filter-label-text">Topic</span>
                         <select id="topicFilter" class="form-select sl-filter-select" aria-label="Filter by topic">
                             <option value="">Topic</option>
                             @foreach(($topicOptions ?? []) as $topic)
@@ -439,7 +464,6 @@
 
                     {{-- OT / Participant --}}
                     <div class="sl-filter-item" id="slItemParticipant">
-                        <span class="sl-filter-label-text">OT / Participant</span>
                         <select id="participantFilter" class="form-select sl-filter-select" aria-label="Filter by OT / participant">
                             <option value="">OT / Participant</option>
                             @foreach(($participantOptions ?? []) as $p)
