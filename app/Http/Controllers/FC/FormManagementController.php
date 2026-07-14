@@ -24,6 +24,21 @@ class FormManagementController extends Controller
         return view('admin.forms.index', compact('forms'));
     }
 
+    public function ajaxList(Request $request)
+    {
+        $forms = FcForm::withCount('steps')
+            ->orderByDesc('created_at')
+            ->get();
+
+        $html = view('admin.forms.partials.forms-grid', compact('forms'))->render();
+
+        return response()->json([
+            'success' => true,
+            'html'    => $html,
+            'count'   => $forms->count(),
+        ]);
+    }
+
     // ── Create form ──────────────────────────────────────────────────
     public function create()
     {
