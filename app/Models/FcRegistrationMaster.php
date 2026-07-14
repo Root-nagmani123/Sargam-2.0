@@ -23,6 +23,7 @@ class FcRegistrationMaster extends Model
         'service_master_pk',
         'course_master_pk',
         'web_auth',
+        'ph_value',
         'cadre_master_pk',
         'dob',
         'application_type',

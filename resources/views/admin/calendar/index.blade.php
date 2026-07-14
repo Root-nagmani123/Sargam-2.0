@@ -2381,13 +2381,17 @@ async setInternalFaculty(internalFacultyIds) {
 
         if (this.calendar) {
             const view = this.calendar.view;
+            // Use LOCAL date strings (toYmd). toISOString() converts to UTC, which
+            // for positive-offset timezones (e.g. IST +5:30) rolls local midnight
+            // back to the previous day — shifting the export range a day earlier so
+            // it starts on a Sunday and pulls the adjacent Mon–Sun week into the PDF.
             if (view?.activeStart) {
-                params.append('start', view.activeStart.toISOString().split('T')[0]);
+                params.append('start', this.toYmd(view.activeStart));
             }
             if (view?.activeEnd) {
                 const end = new Date(view.activeEnd);
                 end.setDate(end.getDate() - 1);
-                params.append('end', end.toISOString().split('T')[0]);
+                params.append('end', this.toYmd(end));
             }
         }
 

@@ -97,10 +97,11 @@
                                <a class="nav-link fw-medium" href="https://www.lbsnaa.gov.in/footer_menu/contact-us" target="_blank">Contact</a>
                            </li>
                            <li class="nav-item mt-2 mt-lg-0">
+                               @php($fcHeaderFormQuery = $fcHeaderFormQuery ?? [])
                                @if (auth()->check())
-                                   <a class="btn btn-outline-primary" href="{{ route('fc.logout') }}">Logout</a>
+                                   <a class="btn btn-outline-primary" href="{{ route('fc.logout', $fcHeaderFormQuery) }}">Logout</a>
                                @else
-                                   <a class="btn btn-outline-primary" href="{{ route('fc.login') }}">Login</a>
+                                   <a class="btn btn-outline-primary" href="{{ route('fc.login', $fcHeaderFormQuery) }}">Login</a>
                                @endif
                            </li>
                        </ul>

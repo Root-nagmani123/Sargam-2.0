@@ -1,0 +1,122 @@
+/* =====================================================================
+   Select2 — Bootstrap / Sargam theme override
+   ---------------------------------------------------------------------
+   MUST load AFTER select2.min.css. Makes every Select2 single-select match
+   the Bootstrap .form-select look: white surface, hairline border, 8px
+   radius, chevron caret, focus ring — plus a matching dropdown panel
+   (search box, options, hover/selected states).
+
+   Loaded ONLY on the Student Medical Exemption pages, so the generic
+   .select2-* rules here don't leak into other modules' Select2 widgets.
+   ===================================================================== */
+
+/* --- Closed control -------------------------------------------------- */
+.select2-container--default .select2-selection--single {
+    position: relative;                  /* anchor the caret to THIS box, not the taller outer container */
+    height: 44px;
+    box-sizing: border-box;
+    background-color: #fff;
+    border: 1px solid var(--ds-line, #d0d5dd);
+    border-radius: var(--ds-radius-2, 8px);
+    display: flex;
+    align-items: center;                 /* vertically centre the value */
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.select2-container--default.select2-container--focus .select2-selection--single,
+.select2-container--default.select2-container--open .select2-selection--single {
+    border-color: #86b7fe;
+    box-shadow: var(--ds-focus-ring, 0 0 0 0.2rem rgba(13, 110, 253, 0.18));
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    width: 100%;
+    padding-left: 0.875rem;
+    padding-right: 2rem;                 /* room for the caret */
+    line-height: normal;
+    font-size: 0.95rem;
+    color: var(--ds-ink, #1f2937);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;             /* long course names truncate */
+}
+.select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: #667085;
+}
+
+/* Chevron caret (replaces Select2's default filled triangle) */
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 100%;
+    width: 28px;
+    top: 0;
+    right: 6px;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+    border: solid #667085;
+    border-width: 0 2px 2px 0;
+    width: 8px;
+    height: 8px;
+    margin-top: -6px;
+    margin-left: -5px;
+    transform: rotate(45deg);
+    transition: transform .15s ease, margin-top .15s ease;
+}
+.select2-container--default.select2-container--open .select2-selection--single .select2-selection__arrow b {
+    margin-top: -2px;
+    transform: rotate(-135deg);          /* flip up when open */
+}
+
+/* Invalid state — paired with a .is-invalid <select> */
+select.is-invalid + .select2-container--default .select2-selection--single {
+    border-color: var(--bs-danger, #dc3545);
+}
+
+/* --- Open dropdown panel --------------------------------------------- */
+.select2-container--open { z-index: 1065; }   /* above Bootstrap modals (~1055) */
+.select2-dropdown {
+    border: 1px solid var(--ds-line, #d0d5dd);
+    border-radius: var(--ds-radius-2, 8px);
+    box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12);
+    overflow: hidden;
+}
+.select2-container--default .select2-search--dropdown { padding: 0.5rem; }
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    border: 1px solid var(--ds-line, #d0d5dd);
+    border-radius: 6px;
+    padding: 0.45rem 0.65rem;
+    font-size: 0.9rem;
+    outline: none;
+}
+.select2-container--default .select2-search--dropdown .select2-search__field:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+.select2-container--default .select2-results__options { max-height: 240px; }
+.select2-container--default .select2-results__option {
+    padding: 0.5rem 0.875rem;
+    font-size: 0.9rem;
+    color: var(--ds-ink, #1f2937);
+}
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: rgba(0, 74, 147, 0.08);
+    color: var(--ds-ink, #1f2937);
+}
+.select2-container--default .select2-results__option[aria-selected="true"] {
+    background-color: rgba(0, 74, 147, 0.12);
+    color: var(--ds-ink, #1f2937);
+}
+
+/* --- Width / height per context ------------------------------------- */
+/* Add / Edit form dropdowns fill their grid column. */
+#smeFormBody .select2-container,
+.sme-form .select2-container { width: 100% !important; }
+
+/* Listing course filter matches the 42px filter-chip footprint. */
+.sme-filterbar .select2-container { min-width: 180px; max-width: 240px; }
+.sme-filterbar .select2-container--default .select2-selection--single {
+    height: 42px;
+    border-radius: var(--ds-radius-1, 6px);
+}
+.sme-filterbar .select2-container--default .select2-selection--single .select2-selection__rendered {
+    padding-left: 0.85rem;
+    padding-right: 1.8rem;
+    font-size: 0.875rem;
+}

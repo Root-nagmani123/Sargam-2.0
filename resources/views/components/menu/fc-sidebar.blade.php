@@ -281,10 +281,16 @@
                         <span class="hide-menu small small-sm-normal text-nowrap">Travel Plans (Admin)</span>
                     </a>
                 </li>
-                <li class="sidebar-item {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
-                    <a class="sidebar-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}"
+                <li class="sidebar-item {{ request()->routeIs('admin.reports.*') && !request()->routeIs('admin.reports.descriptive-roll*') ? 'active' : '' }}">
+                    <a class="sidebar-link {{ request()->routeIs('admin.reports.*') && !request()->routeIs('admin.reports.descriptive-roll*') ? 'active' : '' }}"
                         href="{{ route('admin.reports.overview') }}">
                         <span class="hide-menu small small-sm-normal text-nowrap">FC Reports</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {{ request()->routeIs('admin.reports.descriptive-roll*') ? 'active' : '' }}">
+                    <a class="sidebar-link {{ request()->routeIs('admin.reports.descriptive-roll*') ? 'active' : '' }}"
+                        href="{{ route('admin.reports.descriptive-roll') }}">
+                        <span class="hide-menu small small-sm-normal text-nowrap">Descriptive Roll Report</span>
                     </a>
                 </li>
             </ul>

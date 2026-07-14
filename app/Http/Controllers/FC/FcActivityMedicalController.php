@@ -614,7 +614,10 @@ class FcActivityMedicalController extends Controller
 
         if ($request->hasFile('file1') && $request->file('file1')->isValid()) {
             $file = $request->file('file1');
-            $path = $file->storeAs('fc/path_report', $file->getClientOriginalName(), 'public');
+            // Store under a server-generated name (never the client filename) to
+            // avoid double-extension / overwrite issues (CWE-434). Extension is
+            // derived from the validated file content, not the client-supplied name.
+            $path = $file->storeAs('fc/path_report', $ot->user_id.'_'.uniqid('', true).'.'.$file->extension(), 'public');
             $pathreport = 'storage/' . $path;
         }
 
