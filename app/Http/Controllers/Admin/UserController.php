@@ -3399,52 +3399,79 @@ class UserController extends Controller
     {
         $students = ($students instanceof \Illuminate\Support\Collection ? $students : collect($students))->values();
 
-        // On the Absent tab include the reason column (Stationed Leave / PT Exemption
-        // / Medical Exemption) so the report matches the on-screen Absent list.
-        $isAbsentTab = $attendance === 'absent';
-        $absentReasons = $isAbsentTab ? $this->dashboardAbsentReasons($students) : [];
+        // Mirror the on-screen Student List exactly: the export must show the SAME
+        // per-session columns a viewer sees in the table (Date / Session / Topic /
+        // Faculty / Attendance Status and the MDO / Escort / Other-Exemption flags),
+        // not lifetime aggregate counts. These lookups reproduce the table's
+        // dashboardStudentListDataTableResponse() logic, keyed by row position.
+        $absentReasons = $this->dashboardAbsentReasons($students);
+        $dutyExemptionFlags = $this->dashboardDutyExemptionFlags($students);
 
-        $headings = ['Sl. No.', 'Student Name', 'OT Code', 'Email', 'Cadre', 'Course', 'Session Date', 'Status'];
-        if ($isAbsentTab) {
-            $headings[] = 'Absent Reason';
-        }
-        $headings = array_merge($headings, [
-            'Total Duty (Count)',
-            'Total Medical Exception (Count)',
-            'Total PT Exemption (Count)',
-            'Total Station Leave (Count)',
-            'Total Memo',
-            'Notice (Count)',
-        ]);
+        $headings = [
+            'S. No.',
+            'OT Code',
+            'Name',
+            'User Name',
+            'Cadre',
+            'Date',
+            'Session',
+            'Topic',
+            'Faculty',
+            'Attendance Status',
+            'MDO',
+            'Escort/Moderator Duty',
+            'Other Exemptions',
+        ];
 
         $rows = [];
         foreach ($students as $index => $studentMap) {
             $student = $studentMap->studentMaster;
-            $course = $studentMap->course;
-            $groupName = $studentMap->groupMapping->groupTypeMasterCourseMasterMap->group_name ?? null;
-            $displayName = $groupName ?: ($student->cadre->cadre_name ?? 'N/A');
-
-            $row = [
-                $index + 1,
-                $student->display_name ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')),
-                $student->generated_OT_code ?? 'N/A',
-                $student->email ?? 'N/A',
-                $displayName,
-                $course->course_name ?? 'N/A',
-                $studentMap->session_date ? Carbon::parse($studentMap->session_date)->format('d-m-Y') : 'N/A',
-                $this->dashboardAttendanceStatusLabel($studentMap),
-            ];
-            if ($isAbsentTab) {
-                $row[] = $absentReasons[$index] ?? '-';
+            if (! $student) {
+                continue;
             }
-            $rows[] = array_merge($row, [
-                $studentMap->total_duty_count ?? 0,
-                $studentMap->total_medical_exception_count ?? 0,
-                $studentMap->total_pt_exemption_count ?? 0,
-                $studentMap->total_stationed_leave_count ?? 0,
-                $studentMap->total_memo_count ?? 0,
-                $studentMap->total_notice_count ?? 0,
-            ]);
+
+            $displayName = $student->display_name ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
+            $statusCode = (int) ($studentMap->attendance_status ?? 0);
+            $isAbsent = ($studentMap->attendance_present ?? true) === false;
+
+            // Attendance status text: Present / Absent, with the leave-based reason
+            // (PT Exemption / Stationed Leave) appended for an absent row — matching
+            // the reason subtitle shown under the on-screen "Absent" badge.
+            $statusText = $isAbsent ? 'Absent' : 'Present';
+            if ($isAbsent) {
+                $reason = $absentReasons[$index] ?? '-';
+                if ($reason !== '-') {
+                    $statusText .= ' (' . $reason . ')';
+                }
+            }
+
+            // MDO / Escort / Medical / Other: shown when the attendance status code
+            // marks it OR a separately-created duty / medical exemption maps to this
+            // student + session date (same rule as the on-screen columns).
+            $flags = $dutyExemptionFlags[$index] ?? ['mdo' => false, 'escort' => false, 'medical' => false, 'other' => false];
+            $showMdo = $statusCode === 4 || $flags['mdo'];
+            $showEscort = $statusCode === 5 || $flags['escort'];
+            $showMedical = $statusCode === 6 || $flags['medical'];
+            $showOther = $statusCode === 7 || $flags['other'];
+
+            $rows[] = [
+                $index + 1,
+                $student->generated_OT_code ?? 'N/A',
+                $displayName,
+                $student->email ?? 'N/A',
+                $student->cadre->cadre_name ?? 'N/A',
+                $studentMap->session_date ? Carbon::parse($studentMap->session_date)->format('d M Y') : 'N/A',
+                $studentMap->session_time ?: 'N/A',
+                $studentMap->session_topic ?: 'N/A',
+                $this->dashboardResolveSessionFaculty(
+                    $studentMap->session_faculty_master ?? null,
+                    $studentMap->session_internal_faculty ?? null
+                ),
+                $statusText,
+                $showMdo ? 'MDO' : '-',
+                $showEscort ? 'Escort' : '-',
+                $showMedical ? 'Medical' : ($showOther ? 'Other' : '-'),
+            ];
         }
 
         return compact('headings', 'rows');
