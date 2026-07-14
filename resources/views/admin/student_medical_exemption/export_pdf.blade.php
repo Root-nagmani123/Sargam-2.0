@@ -81,6 +81,7 @@
         .col-remarks { width: 16%; }
         .col-document { width: 5%; text-align: center; }
         .cell-wide { font-size: 6.5px; line-height: 1.35; }
+        .cell-center { text-align: center; }
 
         .footer { margin-top: 8px; text-align: center; font-size: 7px; color: #666; }
     </style>
@@ -124,7 +125,10 @@
     </div>
 
     @php
+        // Every column (S.No included) is driven by $headings / $rows now, so hiding
+        // a column on-screen simply drops it from both here.
         $headingClassMap = [
+            'S.No.' => 'col-sno',
             'Date' => 'col-date',
             'Officer Trainee' => 'col-ot',
             'Course' => 'col-course',
@@ -142,33 +146,33 @@
             'PT/ Outdoor Advise',
             'Diagnosis / Remarks',
         ];
+        $centerHeadings = ['S.No.', 'Days'];
     @endphp
     <table class="data-table">
         <thead>
             <tr>
-                <th class="col-sno">S.No.</th>
                 @foreach($headings as $heading)
                     <th class="{{ $headingClassMap[$heading] ?? '' }}">{{ $heading }}</th>
                 @endforeach
             </tr>
         </thead>
         <tbody>
-            @forelse($rows as $index => $row)
+            @forelse($rows as $row)
                 @php $cells = array_values((array) $row); @endphp
                 <tr>
-                    <td class="col-sno" style="text-align:center;">{{ $index + 1 }}</td>
                     @foreach($cells as $ci => $value)
                         @php
                             $heading = $headings[$ci] ?? '';
                             $colClass = $headingClassMap[$heading] ?? '';
                             $isWide = in_array($heading, $wideHeadings, true);
+                            $isCenter = in_array($heading, $centerHeadings, true);
                             $isDocUrl = $heading === 'Document'
                                 && is_string($value)
                                 && $value !== 'NA'
                                 && $value !== ''
                                 && (str_starts_with($value, 'http://') || str_starts_with($value, 'https://') || str_starts_with($value, '/'));
                         @endphp
-                        <td class="{{ $colClass }}{{ $isWide ? ' cell-wide' : '' }}">
+                        <td class="{{ $colClass }}{{ $isWide ? ' cell-wide' : '' }}{{ $isCenter ? ' cell-center' : '' }}">
                             @if($isDocUrl)
                                 <a class="doc-link" href="{{ $value }}" target="_blank" rel="noopener noreferrer">View</a>
                             @else
@@ -179,7 +183,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="{{ count($headings) + 1 }}" style="text-align:center;">No records found.</td>
+                    <td colspan="{{ max(count($headings), 1) }}" style="text-align:center;">No records found.</td>
                 </tr>
             @endforelse
         </tbody>

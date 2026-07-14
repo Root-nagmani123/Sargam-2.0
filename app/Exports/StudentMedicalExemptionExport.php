@@ -26,25 +26,110 @@ class StudentMedicalExemptionExport implements FromCollection, WithColumnWidths,
     protected $toDateFilter;
     protected $search;
 
+    /**
+     * Indexes (0-based, matching the listing table's data columns 0..11) the user
+     * left visible via the Column Visibility modal, or null when every column shows.
+     * Columns 12 (Document) and 13 (Action) are never exported, so callers pass at
+     * most 0..11 here.
+     *
+     * @var array<int,int>|null
+     */
+    protected ?array $visibleColumns;
+
     /** Data-row count, captured while streaming the collection (for the meta line). */
     protected int $rowCount = 0;
 
-    public function __construct($filter = 'active', $courseFilter = null, $search = null, $fromDateFilter = null, $toDateFilter = null)
+    public function __construct($filter = 'active', $courseFilter = null, $search = null, $fromDateFilter = null, $toDateFilter = null, ?array $visibleColumns = null)
     {
         $this->filter = $filter;
         $this->courseFilter = $courseFilter;
         $this->search = $search;
         $this->fromDateFilter = $fromDateFilter;
         $this->toDateFilter = $toDateFilter;
+        $this->visibleColumns = ($visibleColumns === null || $visibleColumns === []) ? null : array_values($visibleColumns);
+    }
+
+    /**
+     * Canonical, ordered definition of every exportable column. The array index
+     * (0..11) matches the on-screen DataTable column index, so the `columns=`
+     * request param (built from the live table) can filter this list directly.
+     * `s_no` at index 0 mirrors the table's leading "S. No." column.
+     *
+     * @return array<int,array{key:string,heading:string,width:int,align:?string}>
+     */
+    private function columnDefinitions(): array
+    {
+        return [
+            ['key' => 's_no',              'heading' => 'S.No.',                      'width' => 6,  'align' => 'center'],
+            ['key' => 'date',              'heading' => 'Date',                       'width' => 12, 'align' => null],
+            ['key' => 'officer_trainee',   'heading' => 'Officer Trainee',            'width' => 26, 'align' => null],
+            ['key' => 'course',            'heading' => 'Course',                     'width' => 22, 'align' => null],
+            ['key' => 'doctor_name',       'heading' => 'Doctor Name',                'width' => 18, 'align' => null],
+            ['key' => 'medical_speciality','heading' => 'Medical Speciality',         'width' => 18, 'align' => null],
+            ['key' => 'duration',          'heading' => 'Duration',                   'width' => 28, 'align' => null],
+            ['key' => 'days',              'heading' => 'Days',                       'width' => 6,  'align' => 'center'],
+            ['key' => 'category',          'heading' => 'Category',                   'width' => 16, 'align' => null],
+            ['key' => 'opd_category',      'heading' => 'IPD/OPD/After OPD/Referral', 'width' => 18, 'align' => null],
+            ['key' => 'pt_outdoor_advise', 'heading' => 'PT/ Outdoor Advise',         'width' => 30, 'align' => null],
+            ['key' => 'description',       'heading' => 'Diagnosis / Remarks',        'width' => 34, 'align' => null],
+        ];
+    }
+
+    /**
+     * The subset of {@see columnDefinitions()} the user chose to keep visible,
+     * in the original left-to-right order. Falls back to all columns when the
+     * filter is empty or matches nothing (never export a table with no columns).
+     *
+     * @return array<int,array{key:string,heading:string,width:int,align:?string}>
+     */
+    private function activeColumns(): array
+    {
+        $defs = $this->columnDefinitions();
+        if ($this->visibleColumns === null) {
+            return $defs;
+        }
+
+        $filtered = [];
+        foreach ($defs as $idx => $def) {
+            if (in_array($idx, $this->visibleColumns, true)) {
+                $filtered[] = $def;
+            }
+        }
+
+        return $filtered !== [] ? $filtered : $defs;
+    }
+
+    /** Reduce a full (s_no + mapRecord) associative row to the active columns, in order. */
+    private function pickActive(array $fullRow): array
+    {
+        $out = [];
+        foreach ($this->activeColumns() as $col) {
+            $out[$col['key']] = $fullRow[$col['key']] ?? '';
+        }
+
+        return $out;
+    }
+
+    /**
+     * Ordered headings for whatever columns are active (includes 'S.No.' when the
+     * S.No column is kept). Consumed by the PDF view and the Excel heading band.
+     *
+     * @return array<int,string>
+     */
+    public function activeHeadings(): array
+    {
+        return array_column($this->activeColumns(), 'heading');
     }
 
     public function collection()
     {
-        // Prepend a running S.No. so the sheet rows line up column-for-column with
-        // the PDF / Print layouts (both of which lead with an "S.No." column).
+        // Prepend a running S.No. so the rows line up with the PDF / Print layouts,
+        // then narrow each row to the columns the user left visible.
         $data = $this->recordsQuery()
             ->values()
-            ->map(fn ($record, $index) => array_merge(['s_no' => $index + 1], $this->mapRecord($record)));
+            ->map(fn ($record, $index) => array_values(
+                $this->pickActive(array_merge(['s_no' => $index + 1], $this->mapRecord($record)))
+            ));
 
         $this->rowCount = $data->count();
 
@@ -53,7 +138,11 @@ class StudentMedicalExemptionExport implements FromCollection, WithColumnWidths,
 
     public function pdfRows(): Collection
     {
-        return $this->recordsQuery()->map(fn ($record) => $this->mapRecord($record));
+        return $this->recordsQuery()
+            ->values()
+            ->map(fn ($record, $index) => array_values(
+                $this->pickActive(array_merge(['s_no' => $index + 1], $this->mapRecord($record)))
+            ));
     }
 
     public function title(): string
@@ -61,23 +150,19 @@ class StudentMedicalExemptionExport implements FromCollection, WithColumnWidths,
         return 'Medical Exemption';
     }
 
-    /** Column widths tuned to the content, roughly matching the print proportions. */
+    /**
+     * Column widths tuned to the content, roughly matching the print proportions.
+     * Only the active columns are written, mapped onto sequential sheet letters so
+     * a hidden column never leaves a gap.
+     */
     public function columnWidths(): array
     {
-        return [
-            'A' => 6,   // S.No.
-            'B' => 12,  // Date
-            'C' => 26,  // Officer Trainee
-            'D' => 22,  // Course
-            'E' => 18,  // Doctor Name
-            'F' => 18,  // Medical Speciality
-            'G' => 28,  // Duration
-            'H' => 6,   // Days
-            'I' => 16,  // Category
-            'J' => 18,  // IPD/OPD/After OPD/Referral
-            'K' => 30,  // PT/ Outdoor Advise
-            'L' => 34,  // Diagnosis / Remarks
-        ];
+        $widths = [];
+        foreach ($this->activeColumns() as $i => $col) {
+            $widths[Coordinate::stringFromColumnIndex($i + 1)] = $col['width'];
+        }
+
+        return $widths;
     }
 
     /**
@@ -89,9 +174,9 @@ class StudentMedicalExemptionExport implements FromCollection, WithColumnWidths,
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
 
-                $columnHeadings = array_merge(['S.No.'], $this->columnHeadings());
-                $colCount = count($columnHeadings);                       // 12
-                $lastCol = Coordinate::stringFromColumnIndex($colCount);   // 'L'
+                $columnHeadings = $this->activeHeadings();
+                $colCount = count($columnHeadings);                       // ≤ 12
+                $lastCol = Coordinate::stringFromColumnIndex($colCount);  // e.g. 'L'
 
                 // --- Meta lines shown above the table (same content as Print/PDF) ---
                 $metaLines = [];
@@ -179,9 +264,15 @@ class StudentMedicalExemptionExport implements FromCollection, WithColumnWidths,
                     $sheet->getStyle($bodyRange)->getAlignment()
                         ->setVertical(Alignment::VERTICAL_TOP)
                         ->setWrapText(true);
-                    // S.No. + Days columns read best centred.
-                    $sheet->getStyle("A{$firstDataRow}:A{$lastDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                    $sheet->getStyle("H{$firstDataRow}:H{$lastDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    // S.No. + Days columns read best centred — locate them among the
+                    // active columns so hiding an earlier column shifts the centring too.
+                    foreach ($this->activeColumns() as $i => $col) {
+                        if (($col['align'] ?? null) === 'center') {
+                            $letter = Coordinate::stringFromColumnIndex($i + 1);
+                            $sheet->getStyle("{$letter}{$firstDataRow}:{$letter}{$lastDataRow}")
+                                ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                        }
+                    }
 
                     for ($r = $firstDataRow; $r <= $lastDataRow; $r++) {
                         if (($r - $firstDataRow) % 2 === 1) {
@@ -324,29 +415,6 @@ class StudentMedicalExemptionExport implements FromCollection, WithColumnWidths,
             'opd_category' => $record->opd_category ?? 'N/A',
             'pt_outdoor_advise' => $record->pt_outdoor_advise ?: '-',
             'description' => $record->Description ?: '-',
-        ];
-    }
-
-    /**
-     * The flat list of data-column headings (used by the PDF/Print layouts and the
-     * Excel column-header band). Must match the listing table headers (minus Action).
-     *
-     * @return array<int, string>
-     */
-    public function columnHeadings(): array
-    {
-        return [
-            'Date',
-            'Officer Trainee',
-            'Course',
-            'Doctor Name',
-            'Medical Speciality',
-            'Duration',
-            'Days',
-            'Category',
-            'IPD/OPD/After OPD/Referral',
-            'PT/ Outdoor Advise',
-            'Diagnosis / Remarks',
         ];
     }
 

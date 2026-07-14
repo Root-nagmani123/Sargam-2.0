@@ -863,7 +863,10 @@ class StudentMedicalExemptionController extends Controller
             $format = 'excel';
         }
 
-        $export = new StudentMedicalExemptionExport($filter, $courseFilter, $search, $fromDateFilter, $toDateFilter);
+        // Which data columns (0..11) the user left visible in the on-screen table.
+        $visibleColumns = $this->parseVisibleColumns($request->get('columns'));
+
+        $export = new StudentMedicalExemptionExport($filter, $courseFilter, $search, $fromDateFilter, $toDateFilter, $visibleColumns);
         $fileName = 'medical-exemption-export-' . now()->format('Y-m-d_H-i-s');
 
         if ($format === 'pdf') {
@@ -873,7 +876,7 @@ class StudentMedicalExemptionController extends Controller
             $header = $this->buildExportHeaderData($courseFilter);
 
             $pdf = Pdf::loadView('admin.student_medical_exemption.export_pdf', array_merge([
-                'headings' => $export->columnHeadings(),
+                'headings' => $export->activeHeadings(),
                 'rows' => $export->pdfRows(),
                 'filterLine' => $this->buildExportFilterLine($request),
                 'printedOn' => now()->format('d-m-Y H:i'),
@@ -894,6 +897,28 @@ class StudentMedicalExemptionController extends Controller
         // Styled workbook (logos, blue header band, bordered zebra rows) so the
         // download visually matches the Print / PDF layout — a plain CSV can't.
         return Excel::download($export, $fileName . '.xlsx', ExcelFormat::XLSX);
+    }
+
+    /**
+     * Turn the `columns=0,1,2,…` request param (built from the live DataTable's
+     * visible columns) into a clean list of exportable data-column indexes.
+     * Only 0..11 are valid — Document (12) and Action (13) are never exported.
+     * Returns null when nothing usable is supplied, so the export shows every column.
+     *
+     * @return array<int,int>|null
+     */
+    private function parseVisibleColumns($raw): ?array
+    {
+        if (! is_string($raw) || trim($raw) === '') {
+            return null;
+        }
+
+        $cols = array_values(array_unique(array_filter(
+            array_map('intval', explode(',', $raw)),
+            static fn ($v) => $v >= 0 && $v <= 11
+        )));
+
+        return $cols !== [] ? $cols : null;
     }
 
     /**

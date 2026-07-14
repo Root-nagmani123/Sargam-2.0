@@ -1384,6 +1384,14 @@ $(document).ready(function() {
         if (from) params.set('from_date_filter', from);
         if (to) params.set('to_date_filter', to);
 
+        // Respect the on-screen Column Visibility toggles. Only the exportable data
+        // columns (0..11) count; Document (12) and Action (13) are never exported.
+        var visibleCols = [];
+        table.columns().every(function (idx) {
+            if (idx <= 11 && this.visible()) visibleCols.push(idx);
+        });
+        params.set('columns', visibleCols.join(','));
+
         return smeExportBase + '?' + params.toString();
     }
 
