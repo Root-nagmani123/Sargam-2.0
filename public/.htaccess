@@ -71,4 +71,10 @@
     <FilesMatch "\.(png|jpe?g|gif|webp|svg|ico|woff2?|ttf|otf|eot)$">
         Header append Cache-Control "immutable"
     </FilesMatch>
+
+    # HSTS server-level fallback (CWE-311 / ASVS V14.1.5).
+    # The Laravel SecurityHeaders middleware also sets this header, but adding it
+    # here ensures it is sent even if PHP is bypassed (static files, early errors).
+    # Only sent over HTTPS so local http:// dev is unaffected.
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" env=HTTPS
 </IfModule>

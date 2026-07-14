@@ -28,7 +28,9 @@
                             @endif
 
                             <form class="row g-3 g-md-4" method="POST" action="{{ route('fc.login.verify') }}" autocomplete="off">
-                                @csrf
+                                {{-- ⚠️ TEMPORARY load-test only — revert with: git checkout resources/views/fc/fc_login.blade.php --}}
+                                {{-- @csrf --}}
+
 
                                 <div class="col-12 text-center">
                                     <h1 class="h4 fw-bold text-primary mb-0">Login to Foundation Course</h1>
