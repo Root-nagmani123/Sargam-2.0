@@ -732,7 +732,6 @@ class StudentMedicalExemptionController extends Controller
             ->pluck('case_name')
             ->toArray();
 
-        return view('admin.student_medical_exemption.edit', compact('record', 'courses', 'students', 'categories', 'specialities', 'opdOptions'));
         $doctors = $this->getDoctors();
 
         // Ensure the record's own (possibly inactive) doctor is selectable too.
@@ -743,7 +742,7 @@ class StudentMedicalExemptionController extends Controller
             }
         }
 
-        return view('admin.student_medical_exemption.edit', compact('record', 'courses', 'students', 'categories', 'specialities', 'doctors'));
+        return view('admin.student_medical_exemption.edit', compact('record', 'courses', 'students', 'categories', 'specialities', 'opdOptions', 'doctors'));
     }
     public function update(Request $request, $id)
     {
