@@ -34,17 +34,14 @@ class CourseMemoDecisionMappController extends Controller
 
             $data_course_id = get_Role_by_course();
 
-            // Active tab = active_inactive 1; Archived = anything else (0 via the
-            // status toggle, 2 via the form) so no row can fall between the tabs.
-            $isArchive = $request->input('status_filter') === 'archive';
+            // Active tab = mappings of active (running/upcoming) courses; Archived
+            // tab = mappings of ended courses. Split is by the COURSE lifecycle
+            // (same rule as Course Master), not the mapping's own active_inactive.
+            $statusFilter = $request->input('status_filter') === 'archive' ? 'archive' : 'active';
 
             $query = CourseMemoDecisionMapp::with(['course', 'memo', 'memoConclusion'])
-                ->when($isArchive, function ($q) {
-                    $q->where('active_inactive', '!=', 1);
-                }, function ($q) {
-                    $q->where('active_inactive', 1);
-                })
                 ->orderBy('course_memo_decision_mapp.created_date', 'desc');
+            $this->applyCourseStatusScope($query, $statusFilter);
 
             if (!empty($data_course_id)) {
                 $query->whereIn('course_master_pk', $data_course_id);
@@ -132,21 +129,15 @@ class CourseMemoDecisionMappController extends Controller
     }
 
     /**
-     * Distinct courses that have mappings of the given status (active|archive),
+     * Distinct courses that have mappings under the given tab (active|archive),
      * respecting role-based course scoping. Returns [pk => course_name].
      */
     private function coursesForStatus($status)
     {
-        $isArchive = $status === 'archive';
-
         $data_course_id = get_Role_by_course();
 
-        $query = CourseMemoDecisionMapp::with('course')
-            ->when($isArchive, function ($q) {
-                $q->where('active_inactive', '!=', 1);
-            }, function ($q) {
-                $q->where('active_inactive', 1);
-            });
+        $query = CourseMemoDecisionMapp::with('course');
+        $this->applyCourseStatusScope($query, $status);
 
         if (!empty($data_course_id)) {
             $query->whereIn('course_master_pk', $data_course_id);
@@ -156,6 +147,34 @@ class CourseMemoDecisionMappController extends Controller
             ->pluck('course.course_name', 'course_master_pk')
             ->filter()
             ->toArray();
+    }
+
+    /**
+     * Scope a CourseMemoDecisionMapp query to its related course's lifecycle:
+     *   active  = course is active_inactive 1 AND running/upcoming (end date null or today+)
+     *   archive = course is active_inactive 1 AND already ended (end date before today)
+     * Mirrors the Active/Archived split used by Course Master.
+     */
+    private function applyCourseStatusScope($query, $status)
+    {
+        $isArchive = $status === 'archive';
+        $today = today();
+
+        $query->whereHas('course', function ($q) use ($isArchive, $today) {
+            $q->where('active_inactive', 1);
+
+            if ($isArchive) {
+                $q->whereNotNull('end_date')
+                    ->whereDate('end_date', '<', $today);
+            } else {
+                $q->where(function ($qq) use ($today) {
+                    $qq->whereNull('end_date')
+                        ->orWhereDate('end_date', '>=', $today);
+                });
+            }
+        });
+
+        return $query;
     }
 
     /**

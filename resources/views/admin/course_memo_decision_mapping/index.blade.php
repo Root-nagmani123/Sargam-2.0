@@ -8,7 +8,7 @@
 
 @section('setup_content')
 <div class="container-fluid cmdm-master-page">
-    <x-breadcrum title="Course Memo Decision Mapping">
+    <x-breadcrum title="Course Memo Decision Mapping" :showBack="false">
         <button type="button"
             id="showConclusionAlert"
             class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-2 fw-semibold shadow-sm"
