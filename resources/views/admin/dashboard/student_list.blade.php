@@ -581,6 +581,43 @@
             if (dt) { dt.ajax.reload(null, true); }
         }
 
+        // ── Cascading Session / Topic dropdowns ──────────────────────────────
+        // The server returns fresh Session/Topic options for the current date range
+        // (and selected Session) on every reload; rebuild both dropdowns here so the
+        // cascade date range → Session → Topic stays in sync. A still-valid selection
+        // is preserved; one that falls outside the new scope is cleared.
+        let rebuildingFilters = false;
+        function rebuildSelectOptions($sel, values, placeholder) {
+            if (!$sel.length) { return { changed: false }; }
+            const prev = ($sel.val() || '').toString();
+            if ($sel.data('select2')) { $sel.select2('destroy'); }
+            $sel.empty().append($('<option>').val('').text(placeholder));
+            let prevValid = false;
+            (values || []).forEach(function(v) {
+                const val = (v === null || v === undefined) ? '' : v.toString();
+                const $o = $('<option>').val(val).text(val);   // .text() escapes DB values
+                if (val !== '' && val === prev) { $o.prop('selected', true); prevValid = true; }
+                $sel.append($o);
+            });
+            if (!prevValid && prev !== '') { $sel.val(''); }
+            return { changed: (!prevValid && prev !== '') };
+        }
+
+        function applyCascadingFilterOptions(opts) {
+            if (!opts || rebuildingFilters) { return; }
+            rebuildingFilters = true;
+            const sessRes = rebuildSelectOptions($('#sessionFilter'), opts.session, 'Session');
+            const topicRes = rebuildSelectOptions($('#topicFilter'), opts.topic, 'Topic');
+            initFilterSelect2();
+            rebuildingFilters = false;
+            // A previously-selected Session/Topic that fell outside the new scope was
+            // cleared above — re-sync the URL and reload once so the table matches.
+            if (sessRes.changed || topicRes.changed) {
+                syncUrl();
+                setTimeout(function() { if (dt) { dt.ajax.reload(null, false); } }, 0);
+            }
+        }
+
         function padCount(n) { n = parseInt(n, 10) || 0; return (n < 10 ? '0' : '') + n; }
         function updateTabCounts(counts) {
             if (!counts) { return; }
@@ -657,6 +694,7 @@
           .on('xhr.dt', function(e, settings, json) {
               setTableLoading(false);
               if (json && json.counts) { updateTabCounts(json.counts); }
+              if (json && json.filterOptions) { applyCascadingFilterOptions(json.filterOptions); }
           })
           .on('error.dt', function() { setTableLoading(false); })
           .on('draw.dt column-visibility.dt', function() { relayoutPinnedColumns(); });

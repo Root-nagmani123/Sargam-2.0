@@ -283,6 +283,20 @@ class UserController extends Controller
              $todayTimetable = $this->getTodayTimetableForFaculty($userId);
         }
 
+        // Super Admin / PA / Admin also see the "Total Students" / "Student Details"
+        // cards, but they are NOT faculty-portal users, so the block above skips them
+        // and $totalStudents stayed 0. Compute it here, scoped by the viewer's course
+        // access — get_Role_by_course(): empty = all (Super Admin/PA), [-1] = none →
+        // whereIn([-1]) yields 0. Same DISTINCT-enrolment basis as the faculty branch.
+        if (! hasRole('Student-OT') && ! is_faculty_portal_user()) {
+            $roleCourseIds = get_Role_by_course();
+            $totalStudents = StudentMasterCourseMap::query()
+                ->where('active_inactive', 1)
+                ->when(! empty($roleCourseIds), fn ($q) => $q->whereIn('course_master_pk', $roleCourseIds))
+                ->distinct('student_master_pk')
+                ->count('student_master_pk');
+        }
+
         if ($request->boolean('calendar_only')) {
             $calendarHtml = view('components.calendar', [
                 'year' => $year,
@@ -1201,11 +1215,16 @@ class UserController extends Controller
             ->map(fn ($m) => $m->house_name ?? null)
             ->filter()->unique()->sort()->values();
 
-        // Session (time slot) / Topic options for their filter dropdowns. Built
-        // independent of the Time Period filter — see resolveScopedSessionOptions().
+        // Session / Topic options cascade off the selected Time Period:
+        // date range → Session (scoped to range) → Topic (scoped to range + Session).
+        // See dashboardStudentListFilterOptions(). No date range → both empty.
         $scopedStudentPks = $students->pluck('student_master_pk')->filter()->unique()->values()->all();
-        $sessionOptions = $this->resolveScopedSessionOptions($scopedStudentPks);
-        $topicOptions = $this->resolveScopedTopicOptions($scopedStudentPks);
+        [$sessionOptions, $topicOptions] = $this->dashboardStudentListFilterOptions(
+            $scopedStudentPks,
+            $request->input('from_date') ?: null,
+            $request->input('to_date') ?: null,
+            (string) $request->input('session', '')
+        );
 
         // OT / Participant options (each distinct student) for that filter dropdown.
         $participantOptions = $students
@@ -2301,45 +2320,66 @@ class UserController extends Controller
     }
 
     /**
-     * Distinct class-session time slots for the given students, across ALL dates.
+     * Cascading Session / Topic dropdown options for the student list filter panel.
      *
-     * The Session filter dropdown must be independent of the Time Period filter.
-     * The dropdown is rendered server-side once at page load, and the DataTable's
-     * AJAX reloads refresh only the table — never the dropdown. Previously the
-     * options were derived from the (date-scoped) student rows, so on any day with
-     * no sessions — a weekend/holiday, or a fresh load which defaults the Time
-     * Period to today — the dropdown came up empty and the filter looked broken.
-     * Sourcing the options straight from the timetable, unscoped by date, keeps the
-     * dropdown populated and usable regardless of the selected period. Row-level
-     * scope (faculty / course / date) is still enforced when a session is applied.
+     * The filters cascade off the selected Time Period: first a date range is
+     * picked, then the Session dropdown is scoped to that range, then the Topic
+     * dropdown is scoped to the range AND the chosen Session. With no date range
+     * selected there is nothing to cascade from, so both come back empty. Row-level
+     * scope (faculty / course / date) is still enforced when a filter is applied.
      *
      * @param  array<int, int>  $studentPks
+     * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection}  [sessionOptions, topicOptions]
      */
-    private function resolveScopedSessionOptions(array $studentPks): \Illuminate\Support\Collection
+    private function dashboardStudentListFilterOptions(array $studentPks, ?string $fromDate, ?string $toDate, string $sessionValue = ''): array
     {
-        return $this->resolveScopedTimetableOptions($studentPks, 'class_session');
+        // No date range → nothing to map. Keep both dropdowns empty.
+        if (! $fromDate || ! $toDate) {
+            return [collect(), collect()];
+        }
+
+        $sessionOptions = $this->resolveScopedSessionOptions($studentPks, $fromDate, $toDate);
+        $topicOptions = $this->resolveScopedTopicOptions(
+            $studentPks,
+            $fromDate,
+            $toDate,
+            $sessionValue !== '' ? $sessionValue : null
+        );
+
+        return [$sessionOptions, $topicOptions];
     }
 
     /**
-     * Distinct session topics for the given students, across ALL dates — the Topic
-     * filter dropdown, built independent of the Time Period for the same reason as
-     * resolveScopedSessionOptions().
+     * Distinct class-session time slots for the given students within the selected
+     * Time Period (Session filter dropdown). Scoped to [$fromDate, $toDate].
      *
      * @param  array<int, int>  $studentPks
      */
-    private function resolveScopedTopicOptions(array $studentPks): \Illuminate\Support\Collection
+    private function resolveScopedSessionOptions(array $studentPks, ?string $fromDate = null, ?string $toDate = null): \Illuminate\Support\Collection
     {
-        return $this->resolveScopedTimetableOptions($studentPks, 'subject_topic');
+        return $this->resolveScopedTimetableOptions($studentPks, 'class_session', $fromDate, $toDate);
+    }
+
+    /**
+     * Distinct session topics for the given students within the selected Time
+     * Period, optionally narrowed to a single Session (class_session). Backs the
+     * Topic filter dropdown, which cascades off date range → session.
+     *
+     * @param  array<int, int>  $studentPks
+     */
+    private function resolveScopedTopicOptions(array $studentPks, ?string $fromDate = null, ?string $toDate = null, ?string $sessionValue = null): \Illuminate\Support\Collection
+    {
+        return $this->resolveScopedTimetableOptions($studentPks, 'subject_topic', $fromDate, $toDate, $sessionValue);
     }
 
     /**
      * Distinct non-empty values of a timetable column for the sessions the given
-     * students have attendance for, across ALL dates. Backs the date-independent
-     * Session / Topic filter dropdowns.
+     * students have attendance for, scoped to a date range (and optionally a single
+     * class_session). Backs the cascading Session / Topic filter dropdowns.
      *
      * @param  array<int, int>  $studentPks
      */
-    private function resolveScopedTimetableOptions(array $studentPks, string $column): \Illuminate\Support\Collection
+    private function resolveScopedTimetableOptions(array $studentPks, string $column, ?string $fromDate = null, ?string $toDate = null, ?string $sessionValue = null): \Illuminate\Support\Collection
     {
         if (empty($studentPks)) {
             return collect();
@@ -2350,6 +2390,12 @@ class UserController extends Controller
             ->whereIn('a.Student_master_pk', $studentPks)
             ->whereNotNull("t.$column")
             ->where("t.$column", '<>', '')
+            ->when($fromDate, fn ($q) => $q->whereDate('t.START_DATE', '>=', $fromDate))
+            ->when($toDate, fn ($q) => $q->whereDate('t.START_DATE', '<=', $toDate))
+            ->when(
+                $sessionValue !== null && $sessionValue !== '',
+                fn ($q) => $q->where('t.class_session', $sessionValue)
+            )
             ->distinct()
             ->orderBy("t.$column")
             ->pluck("t.$column")
@@ -2776,6 +2822,17 @@ class UserController extends Controller
     {
         $attendance = (string) $request->input('attendance', 'all');
 
+        // Cascading Session / Topic dropdown options for the CURRENT date range and
+        // selected session, so the front-end can rebuild the dropdowns on every
+        // filter change (the dropdowns are otherwise only rendered at page load).
+        $scopedStudentPks = $students->pluck('student_master_pk')->filter()->unique()->values()->all();
+        [$sessionOptions, $topicOptions] = $this->dashboardStudentListFilterOptions(
+            $scopedStudentPks,
+            $request->input('from_date') ?: null,
+            $request->input('to_date') ?: null,
+            (string) $request->input('session', '')
+        );
+
         [$filteredAll, $presentAll, $absentAll] = $this->dashboardStudentListTabSets($request, $students);
 
         $counts = [
@@ -2832,6 +2889,12 @@ class UserController extends Controller
         // absent session's date. Batched for the current page.
         $absentReasons = $this->dashboardAbsentReasons($pagedStudents);
 
+        // MDO / Escort / Medical / Other flags, mapped from the duty + medical tables
+        // by student + session date. The attendance status code (4/5/6/7) alone does
+        // not reflect a duty/exemption created separately (mdo_escot_duty_map), so we
+        // cross-reference the source tables here. Batched for the current page.
+        $dutyExemptionFlags = $this->dashboardDutyExemptionFlags($pagedStudents);
+
         // Carry the Time Period filter into the detail-page section links so the
         // opened section (MDO/Escort duty, Medical exemption) shows the same
         // date-scoped data as the list row.
@@ -2856,6 +2919,14 @@ class UserController extends Controller
             $displayName = $student->display_name ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
             $statusCode = (int) ($studentMap->attendance_status ?? 0);
             $isAbsent = ($studentMap->attendance_present ?? true) === false;
+
+            // Show the column when EITHER the attendance status code marks it, OR a
+            // matching duty / medical exemption is mapped for this student + date.
+            $flags = $dutyExemptionFlags[$idx] ?? ['mdo' => false, 'escort' => false, 'medical' => false, 'other' => false];
+            $showMdo = $statusCode === 4 || $flags['mdo'];
+            $showEscort = $statusCode === 5 || $flags['escort'];
+            $showMedical = $statusCode === 6 || $flags['medical'];
+            $showOther = $statusCode === 7 || $flags['other'];
 
             $data[] = [
                 's_no' => $start + $idx + 1,
@@ -2887,15 +2958,15 @@ class UserController extends Controller
                 // the relevant section of the student's detail page (date-scoped).
                 // "Other" (status 7) has no dedicated section, so it links to the
                 // full detail page.
-                'mdo' => $statusCode === 4
-                    ? '<a href="' . e($detailUrl . '?section=dutiesSection' . $linkDateQs) . '" class="sl-count">Yes</a>'
+                'mdo' => $showMdo
+                    ? '<a href="' . e($detailUrl . '?section=dutiesSection' . $linkDateQs) . '" class="sl-count">MDO</a>'
                     : '-',
-                'escort' => $statusCode === 5
-                    ? '<a href="' . e($detailUrl . '?section=dutiesSection' . $linkDateQs) . '" class="sl-count">Yes</a>'
+                'escort' => $showEscort
+                    ? '<a href="' . e($detailUrl . '?section=dutiesSection' . $linkDateQs) . '" class="sl-count">Escort</a>'
                     : '-',
-                'other_exempt' => $statusCode === 6
+                'other_exempt' => $showMedical
                     ? '<a href="' . e($detailUrl . '?section=medicalExceptionsSection' . $linkDateQs) . '" class="sl-count">Medical</a>'
-                    : ($statusCode === 7
+                    : ($showOther
                         ? '<a href="' . e($detailUrl . ($linkDateQs !== '' ? '?' . ltrim($linkDateQs, '&') : '')) . '" class="sl-count">Other</a>'
                         : '-'),
             ];
@@ -2906,16 +2977,23 @@ class UserController extends Controller
             'recordsTotal' => $recordsTotal,
             'recordsFiltered' => $recordsFiltered,
             'counts' => $counts,
+            // Fresh cascading dropdown options for the current date range + session.
+            'filterOptions' => [
+                'session' => $sessionOptions->values()->all(),
+                'topic' => $topicOptions->values()->all(),
+            ],
             'data' => $data,
         ]);
     }
 
     /**
      * Derive an "Absent Reason" for each row on the current page. Attendance
-     * itself records no reason, so we look for a leave application or medical
-     * exemption that covers the absent session's own date. Returns a label per
-     * row index ("Medical Exemption" / "PT Exemption" / "Stationed Leave"), or
-     * "-" when nothing overlaps. Only absent rows are considered.
+     * itself records no reason, so we look for a PT Exemption / Stationed Leave
+     * that covers the absent session's own date. Returns a label per row index
+     * ("PT Exemption" / "Stationed Leave"), or "-" when nothing overlaps.
+     * Medical Exemption is deliberately excluded — it has its own "Other
+     * Exemptions" column, so showing it here too was redundant. Only absent rows
+     * are considered.
      *
      * @param  \Illuminate\Support\Collection  $pagedStudents
      * @return array<int, string>
@@ -2985,12 +3063,6 @@ class UserController extends Controller
             ->get(['student_master_pk', 'leave_type', 'from_date', 'to_date'])
             ->groupBy('student_master_pk');
 
-        $medical = DB::table('student_medical_exemption')
-            ->whereIn('student_master_pk', $pks)
-            ->where('active_inactive', 1)
-            ->get(['student_master_pk', 'from_date', 'to_date'])
-            ->groupBy('student_master_pk');
-
         $covers = function ($from, $to, string $date): bool {
             if (empty($from)) {
                 return false;
@@ -3014,19 +3086,15 @@ class UserController extends Controller
             $reason = '-';
 
             if ($spk && $date) {
-                foreach ($medical[$spk] ?? [] as $r) {
+                // Medical Exemption is intentionally NOT surfaced here — it already has
+                // its own "Other Exemptions" column ("Medical"), so repeating it under
+                // the Absent badge was redundant. Only leave-based reasons (PT Exemption
+                // / Stationed Leave), which have no dedicated column, get a subtitle.
+                foreach ($leaves[$spk] ?? [] as $r) {
                     if ($covers($r->from_date, $r->to_date, $date)) {
-                        $reason = 'Medical Exemption';
+                        $reason = $r->leave_type === 'PT_EXEMPTION' ? 'PT Exemption'
+                            : ($r->leave_type === 'STATIONED_LEAVE' ? 'Stationed Leave' : 'Leave');
                         break;
-                    }
-                }
-                if ($reason === '-') {
-                    foreach ($leaves[$spk] ?? [] as $r) {
-                        if ($covers($r->from_date, $r->to_date, $date)) {
-                            $reason = $r->leave_type === 'PT_EXEMPTION' ? 'PT Exemption'
-                                : ($r->leave_type === 'STATIONED_LEAVE' ? 'Stationed Leave' : 'Leave');
-                            break;
-                        }
                     }
                 }
             }
@@ -3035,6 +3103,108 @@ class UserController extends Controller
         }
 
         return $reasons;
+    }
+
+    /**
+     * Per-row MDO / Escort / Medical / Other flags for the current page, mapped from
+     * the duty and medical tables by student + session date.
+     *
+     * The dashboard's attendance status code (4/5/6/7) is only set when attendance
+     * is marked with that status; a duty/exemption created separately via
+     * mdo-escrot-exemption (mdo_escot_duty_map) or a medical exemption
+     * (student_medical_exemption) is NOT reflected in that code. So we cross-reference
+     * both source tables here, keyed by student pk + date, and OR the result into the
+     * columns. Duty type (mdo_duty_type_master.name) decides MDO vs Escort vs Other.
+     *
+     * @param  \Illuminate\Support\Collection  $pagedStudents
+     * @return array<int, array{mdo: bool, escort: bool, medical: bool, other: bool}>
+     */
+    private function dashboardDutyExemptionFlags(\Illuminate\Support\Collection $pagedStudents): array
+    {
+        $flags = [];
+
+        // Students on the current page that have a session date to match against.
+        $pks = [];
+        foreach ($pagedStudents as $m) {
+            if (! empty($m->student_master_pk) && ! empty($m->session_date)) {
+                $pks[] = (int) $m->student_master_pk;
+            }
+        }
+        $pks = array_values(array_unique($pks));
+        if (empty($pks)) {
+            return $flags;
+        }
+
+        // MDO / Escort / Other duties for these students, keyed by "spk|Y-m-d".
+        // selected_student_list carries the assigned OT pk; mdo_date is the duty day.
+        $duties = DB::table('mdo_escot_duty_map as d')
+            ->leftJoin('mdo_duty_type_master as m', 'd.mdo_duty_type_master_pk', '=', 'm.pk')
+            ->whereIn('d.selected_student_list', $pks)
+            ->whereNotNull('d.mdo_date')
+            ->get(['d.selected_student_list as spk', 'd.mdo_date', 'm.mdo_duty_type_name as type']);
+
+        $dutyMap = []; // "spk|date" => ['mdo'=>bool,'escort'=>bool,'other'=>bool]
+        foreach ($duties as $r) {
+            $date = substr((string) $r->mdo_date, 0, 10);
+            $key = ((int) $r->spk) . '|' . $date;
+            if (! isset($dutyMap[$key])) {
+                $dutyMap[$key] = ['mdo' => false, 'escort' => false, 'other' => false];
+            }
+            $type = strtolower(trim((string) ($r->type ?? '')));
+            if ($type === 'mdo') {
+                $dutyMap[$key]['mdo'] = true;
+            } elseif ($type === 'escort') {
+                $dutyMap[$key]['escort'] = true;
+            } else {
+                // "Other" duty type (or any type that isn't MDO/Escort) → Other column.
+                $dutyMap[$key]['other'] = true;
+            }
+        }
+
+        // Medical exemptions (date-range) → Medical in the Other Exemptions column.
+        $medical = DB::table('student_medical_exemption')
+            ->whereIn('student_master_pk', $pks)
+            ->where('active_inactive', 1)
+            ->get(['student_master_pk', 'from_date', 'to_date'])
+            ->groupBy('student_master_pk');
+
+        $covers = function ($from, $to, string $date): bool {
+            if (empty($from)) {
+                return false;
+            }
+            $f = \Illuminate\Support\Carbon::parse($from)->toDateString();
+            if ($f > $date) {
+                return false;
+            }
+            if (empty($to)) {
+                return true; // open-ended
+            }
+            return \Illuminate\Support\Carbon::parse($to)->toDateString() >= $date;
+        };
+
+        foreach ($pagedStudents as $idx => $m) {
+            $spk = (int) ($m->student_master_pk ?? 0);
+            $date = ! empty($m->session_date) ? \Illuminate\Support\Carbon::parse($m->session_date)->toDateString() : null;
+            $entry = ['mdo' => false, 'escort' => false, 'medical' => false, 'other' => false];
+
+            if ($spk && $date) {
+                if ($d = ($dutyMap[$spk . '|' . $date] ?? null)) {
+                    $entry['mdo'] = $d['mdo'];
+                    $entry['escort'] = $d['escort'];
+                    $entry['other'] = $d['other'];
+                }
+                foreach ($medical[$spk] ?? [] as $r) {
+                    if ($covers($r->from_date, $r->to_date, $date)) {
+                        $entry['medical'] = true;
+                        break;
+                    }
+                }
+            }
+
+            $flags[$idx] = $entry;
+        }
+
+        return $flags;
     }
 
     /**
@@ -3483,6 +3653,36 @@ class UserController extends Controller
             $ptExemptions->each(fn ($r) => $clipToWindow($r, true));
             $stationedLeaves->each(fn ($r) => $clipToWindow($r, true));
         }
+
+        // Show PT Exemption / Station Leave DATE-WISE: a multi-day leave is expanded
+        // into one row per day (From = To = that day, Total Days = 1) instead of a
+        // single ranged row. The header still sums total_days, so the overall count is
+        // unchanged (a 2-day leave → 2 rows, header count still 2). Respects the Time
+        // Period window because the dates were already clipped above.
+        $expandLeavesByDay = function (\Illuminate\Support\Collection $leaves): \Illuminate\Support\Collection {
+            $expanded = collect();
+            foreach ($leaves as $leave) {
+                if (empty($leave->from_date)) {
+                    $expanded->push($leave);
+                    continue;
+                }
+                $start = Carbon::parse($leave->from_date)->startOfDay();
+                $end = ! empty($leave->to_date) ? Carbon::parse($leave->to_date)->startOfDay() : $start->copy();
+                if ($end->lt($start)) {
+                    $end = $start->copy();
+                }
+                for ($day = $start->copy(); $day->lte($end); $day->addDay()) {
+                    $row = clone $leave;
+                    $row->from_date = $day->copy();
+                    $row->to_date = $day->copy();
+                    $row->total_days = 1;
+                    $expanded->push($row);
+                }
+            }
+            return $expanded;
+        };
+        $ptExemptions = $expandLeavesByDay($ptExemptions);
+        $stationedLeaves = $expandLeavesByDay($stationedLeaves);
 
         // Get MDO/Escort duties
         $duties = MDOEscotDutyMap::with(['courseMaster', 'mdoDutyTypeMaster', 'facultyMaster'])
