@@ -142,13 +142,29 @@ class CourseRepositoryController extends Controller
             $documents = CourseRepositoryDocument::where('del_type', 1)
                 ->where(function($query) use ($pk) {
                     $query->where('course_repository_master_pk', $pk)
-                        ->orWhereIn('course_repository_details_pk', 
+                        ->orWhereIn('course_repository_details_pk',
                             CourseRepositoryDetail::where('course_repository_master_pk', $pk)->pluck('pk')
                         );
                 })
+                ->with(['detail.course', 'detail.subject', 'detail.topic', 'detail.author', 'detail.sector', 'detail.ministry'])
                 ->orderBy('pk', 'desc')
                 ->get();
-                // print_r($documents); exit;
+
+            // Legacy imported rows store subject/topic/author foreign keys from the
+            // source system rather than local master pks, so the relations above
+            // resolve to null. The keyword column was populated at import time as
+            // "batch,subject,topic,date,author" — fall back to it, and finally to
+            // the raw id, when the relation doesn't resolve.
+            $documents->each(function (CourseRepositoryDocument $doc) {
+                $detail = $doc->detail;
+                if (!$detail) {
+                    return;
+                }
+                $keywordParts = array_map('trim', explode(',', (string) $detail->keyword));
+                $doc->fallback_subject = $detail->subject?->subject_name ?: ($keywordParts[1] ?? null) ?: $detail->subject_pk;
+                $doc->fallback_topic = $detail->topic?->subject_topic ?: ($keywordParts[2] ?? null) ?: $detail->topic_pk;
+                $doc->fallback_author = $detail->author?->full_name ?: ($keywordParts[4] ?? null) ?: $detail->author_name;
+            });
 
             // Build ancestor chain for breadcrumb
             $ancestors = [];
@@ -1169,7 +1185,10 @@ class CourseRepositoryController extends Controller
 
             return view('admin.course-repository.user.index', array_merge(
                 $this->getUserFilterViewData($request),
-                ['repositories' => $repositories]
+                [
+                    'repositories' => $repositories,
+                    'documentCounts' => $this->bulkTotalDocumentCounts($repositories),
+                ]
             ));
         } catch (Exception $e) {
             Log::error('Error in course repository user index: ' . $e->getMessage());
@@ -1475,6 +1494,28 @@ class CourseRepositoryController extends Controller
                 ->orderBy('pk', 'desc')
                 ->get();
 
+            // Resolve each document's actual storage path (handles legacy path-prefix
+            // mismatches between DB and disk) so view/download links work, matching
+            // the resolution already used by the admin panel's downloadDocument().
+            $documents->each(function (CourseRepositoryDocument $doc) {
+                $relativePath = $this->resolveDocumentRelativePath($doc);
+                $doc->resolved_file_url = $relativePath
+                    ? Storage::disk('public')->url($relativePath)
+                    : null;
+
+                // Legacy imported rows store subject/topic/author foreign keys from the
+                // source system rather than local master pks, so the relations below
+                // resolve to null. The keyword column was populated at import time as
+                // "batch,subject,topic,date,author" — fall back to it in that case.
+                $detail = $doc->detail;
+                if ($detail) {
+                    $keywordParts = array_map('trim', explode(',', (string) $detail->keyword));
+                    $doc->fallback_subject = $detail->subject?->subject_name ?: ($keywordParts[1] ?? null);
+                    $doc->fallback_topic = $detail->topic?->subject_topic ?: ($keywordParts[2] ?? null);
+                    $doc->fallback_author = $detail->author?->full_name ?: ($keywordParts[4] ?? null);
+                }
+            });
+
             // Build ancestor chain for breadcrumb
             $ancestors = [];
             $current = $repository;
@@ -1490,6 +1531,7 @@ class CourseRepositoryController extends Controller
                     'documents' => $documents,
                     'ancestors' => $ancestors,
                     'documents_count_array' => $documents_count_array,
+                    'documentCounts' => $this->bulkTotalDocumentCounts($repository->children),
                 ]
             ));
         } catch (Exception $e) {
@@ -1501,6 +1543,60 @@ class CourseRepositoryController extends Controller
     /**
      * Helper method to get filters from request
      */
+    /**
+     * Compute total document counts (including all descendant folders) for a set of
+     * root repositories in a constant number of queries. Avoids the recursive
+     * per-node queries that CourseRepositoryMaster::getTotalDocumentCount() runs,
+     * which is too slow when called once per row across a large repository tree.
+     */
+    private function bulkTotalDocumentCounts($repositories): array
+    {
+        $nodes = CourseRepositoryMaster::where('del_folder_status', 1)
+            ->select('pk', 'parent_type')
+            ->get();
+
+        $childrenMap = [];
+        foreach ($nodes as $node) {
+            if ($node->parent_type) {
+                $childrenMap[$node->parent_type][] = $node->pk;
+            }
+        }
+
+        $directCounts = CourseRepositoryDocument::where('del_type', 1)
+            ->whereNotNull('course_repository_master_pk')
+            ->selectRaw('course_repository_master_pk, count(*) as cnt')
+            ->groupBy('course_repository_master_pk')
+            ->pluck('cnt', 'course_repository_master_pk');
+
+        $viaDetailCounts = CourseRepositoryDocument::query()
+            ->join('course_repository_details', 'course_repository_details.pk', '=', 'course_repository_documents.course_repository_details_pk')
+            ->where('course_repository_documents.del_type', 1)
+            ->selectRaw('course_repository_details.course_repository_master_pk as master_pk, count(*) as cnt')
+            ->groupBy('course_repository_details.course_repository_master_pk')
+            ->pluck('cnt', 'master_pk');
+
+        $ownCounts = [];
+        foreach ($nodes as $node) {
+            $ownCounts[$node->pk] = ($directCounts[$node->pk] ?? 0) + ($viaDetailCounts[$node->pk] ?? 0);
+        }
+
+        $totals = [];
+        foreach ($repositories as $repository) {
+            $total = 0;
+            $queue = [$repository->pk];
+            while ($queue) {
+                $pk = array_shift($queue);
+                $total += $ownCounts[$pk] ?? 0;
+                foreach ($childrenMap[$pk] ?? [] as $childPk) {
+                    $queue[] = $childPk;
+                }
+            }
+            $totals[$repository->pk] = $total;
+        }
+
+        return $totals;
+    }
+
     private function getFilters(Request $request)
     {
         return [
