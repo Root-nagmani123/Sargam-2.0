@@ -915,12 +915,13 @@ class StudentMedicalExemptionController extends Controller
         $opdCategoryFilter = $request->get('opd_category_filter');
         $exemptionCategoryFilter = $request->get('exemption_category_filter');
         $format = strtolower((string) $request->get('format', 'excel'));
+        $visibleColumns = $this->parseVisibleColumns($request->get('columns'));
 
         if (! in_array($format, ['csv', 'excel', 'xlsx', 'pdf'], true)) {
             $format = 'excel';
         }
 
-        $export = new StudentMedicalExemptionExport($filter, $courseFilter, $search, $fromDateFilter, $toDateFilter, $opdCategoryFilter, $exemptionCategoryFilter);
+        $export = new StudentMedicalExemptionExport($filter, $courseFilter, $search, $fromDateFilter, $toDateFilter, $opdCategoryFilter, $exemptionCategoryFilter, $visibleColumns);
         $fileName = 'medical-exemption-export-' . now()->format('Y-m-d_H-i-s');
 
         if ($format === 'pdf') {

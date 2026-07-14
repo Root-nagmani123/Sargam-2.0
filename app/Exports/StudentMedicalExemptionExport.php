@@ -41,7 +41,7 @@ class StudentMedicalExemptionExport implements FromCollection, WithColumnWidths,
     /** Data-row count, captured while streaming the collection (for the meta line). */
     protected int $rowCount = 0;
 
-    public function __construct($filter = 'active', $courseFilter = null, $search = null, $fromDateFilter = null, $toDateFilter = null, $opdCategoryFilter = null, $exemptionCategoryFilter = null)
+    public function __construct($filter = 'active', $courseFilter = null, $search = null, $fromDateFilter = null, $toDateFilter = null, $opdCategoryFilter = null, $exemptionCategoryFilter = null, ?array $visibleColumns = null)
     {
         $this->filter = $filter;
         $this->courseFilter = $courseFilter;
@@ -50,6 +50,82 @@ class StudentMedicalExemptionExport implements FromCollection, WithColumnWidths,
         $this->toDateFilter = $toDateFilter;
         $this->opdCategoryFilter = $opdCategoryFilter;
         $this->exemptionCategoryFilter = $exemptionCategoryFilter;
+        $this->visibleColumns = ($visibleColumns === null || $visibleColumns === []) ? null : array_values($visibleColumns);
+    }
+
+    /**
+     * All exportable data columns, keyed by their on-screen table index (0..11,
+     * matching {@see StudentMedicalExemptionController::parseVisibleColumns()}).
+     * S.No is always index 0 and is never hidden.
+     *
+     * @return array<int,array{key:string,width:int,align:?string}>
+     */
+    private function columnDefinitions(): array
+    {
+        return [
+            0  => ['key' => 's_no',               'width' => 6,  'align' => 'center'],
+            1  => ['key' => 'date',                'width' => 12, 'align' => 'center'],
+            2  => ['key' => 'officer_trainee',     'width' => 26, 'align' => null],
+            3  => ['key' => 'course',               'width' => 22, 'align' => null],
+            4  => ['key' => 'doctor_name',          'width' => 18, 'align' => null],
+            5  => ['key' => 'created_by',           'width' => 18, 'align' => null],
+            6  => ['key' => 'created_on',           'width' => 18, 'align' => null],
+            7  => ['key' => 'medical_speciality',   'width' => 18, 'align' => null],
+            8  => ['key' => 'duration',             'width' => 26, 'align' => null],
+            9  => ['key' => 'days',                 'width' => 8,  'align' => 'center'],
+            10 => ['key' => 'category',             'width' => 20, 'align' => null],
+            11 => ['key' => 'opd_category',         'width' => 18, 'align' => null],
+            12 => ['key' => 'pt_outdoor_advise',    'width' => 30, 'align' => null],
+            13 => ['key' => 'description',          'width' => 34, 'align' => null],
+        ];
+    }
+
+    /**
+     * The visible subset of {@see columnDefinitions()}, in order (all when
+     * unfiltered). S.No (index 0) is always included.
+     *
+     * @return array<int,array{key:string,width:int,align:?string}>
+     */
+    private function activeColumns(): array
+    {
+        $cols = $this->columnDefinitions();
+        if ($this->visibleColumns === null) {
+            return array_values($cols);
+        }
+
+        $keep = array_merge([0], $this->visibleColumns);
+
+        $filtered = [];
+        foreach ($cols as $idx => $col) {
+            if (in_array($idx, $keep, true)) {
+                $filtered[] = $col;
+            }
+        }
+
+        return $filtered !== [] ? $filtered : array_values($cols);
+    }
+
+    /** Headings for the active columns, in the same order as {@see activeColumns()}. */
+    public function activeHeadings(): array
+    {
+        $headings = array_merge(['S.No.'], $this->columnHeadings());
+        $keys = array_column($this->columnDefinitions(), 'key');
+
+        return array_map(
+            fn ($col) => $headings[array_search($col['key'], $keys, true)] ?? '',
+            $this->activeColumns()
+        );
+    }
+
+    /** Narrow an associative row down to the active columns, in order. */
+    private function pickActive(array $row): array
+    {
+        $out = [];
+        foreach ($this->activeColumns() as $col) {
+            $out[$col['key']] = $row[$col['key']] ?? '';
+        }
+
+        return $out;
     }
 
     public function collection()
