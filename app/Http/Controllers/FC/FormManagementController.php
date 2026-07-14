@@ -3,14 +3,20 @@
 namespace App\Http\Controllers\FC;
 
 use App\Http\Controllers\Controller;
+use App\Models\CourseMaster;
 use App\Models\FC\FcForm;
 use App\Models\FC\FcFormStep;
 use App\Models\FC\FcFormFieldGroup;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class FormManagementController extends Controller
 {
@@ -26,7 +32,7 @@ class FormManagementController extends Controller
 
     public function ajaxList(Request $request)
     {
-        $forms = FcForm::withCount('steps')
+        $forms = $this->formsIndexQuery($request)
             ->orderByDesc('created_at')
             ->get();
 
@@ -37,6 +43,83 @@ class FormManagementController extends Controller
             'html'    => $html,
             'count'   => $forms->count(),
         ]);
+    }
+
+    /**
+     * AJAX: course dropdown options for form filter (by active/archive).
+     */
+    public function filterCourses(Request $request): JsonResponse
+    {
+        $status = $request->input('status_filter', 'active');
+        $courses = $this->courseOptionsForFormFilter($status);
+
+        return response()->json([
+            'success' => true,
+            'courses' => $courses,
+        ]);
+    }
+
+    protected function formsIndexQuery(Request $request): Builder
+    {
+        $query = FcForm::query()
+            ->with('courseMaster')
+            ->withCount('steps');
+
+        $statusFilter = $request->input('status_filter', 'active');
+        $currentDate  = Carbon::now()->format('Y-m-d');
+
+        if ($statusFilter === 'archive') {
+            $query->whereHas('courseMaster', function ($q) use ($currentDate) {
+                $q->whereNotNull('end_date')
+                    ->where('end_date', '<', $currentDate);
+            });
+        } else {
+            $query->where(function ($q) use ($currentDate) {
+                $q->whereNull('course_master_pk')
+                    ->orWhereHas('courseMaster', function ($c) use ($currentDate) {
+                        $c->where(function ($e) use ($currentDate) {
+                            $e->whereNull('end_date')
+                                ->orWhere('end_date', '>=', $currentDate);
+                        });
+                    });
+            });
+        }
+
+        if ($request->filled('course_filter')) {
+            $query->where('course_master_pk', (int) $request->input('course_filter'));
+        }
+
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $like = '%'.$search.'%';
+            $query->where(function ($q) use ($like) {
+                $q->where('form_name', 'like', $like)
+                    ->orWhere('form_slug', 'like', $like)
+                    ->orWhere('description', 'like', $like)
+                    ->orWhereHas('courseMaster', fn ($c) => $c->where('course_name', 'like', $like));
+            });
+        }
+
+        return $query;
+    }
+
+    protected function courseOptionsForFormFilter(string $status): array
+    {
+        $formQuery = $this->formsIndexQuery(new Request(['status_filter' => $status]));
+        $coursePks = (clone $formQuery)
+            ->whereNotNull('course_master_pk')
+            ->distinct()
+            ->pluck('course_master_pk');
+
+        if ($coursePks->isEmpty()) {
+            return [];
+        }
+
+        return CourseMaster::query()
+            ->whereIn('pk', $coursePks)
+            ->orderBy('course_name')
+            ->pluck('course_name', 'pk')
+            ->toArray();
     }
 
     // ── Create form ──────────────────────────────────────────────────
