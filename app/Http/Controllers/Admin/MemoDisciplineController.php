@@ -574,8 +574,8 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
                             'memo',
                             'MemoDiscipline',
                             (int) $memoPk,
-                            'Discipline Memo Issued',
-                            "A discipline memo for \"{$disciplineName}\" has been issued for {$courseName} on {$memoDate}. Please review and respond."
+                            'Discipline Memo Recorded',
+                            "A discipline memo for \"{$disciplineName}\" has been recorded for {$courseName} on {$memoDate}. Please review and respond."
                         );
                     }
                 } catch (\Exception $e) {
@@ -759,13 +759,18 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
                     $receiverUserId = app(NotificationReceiverService::class)
                         ->getStudentUserId((int) $memo->student_master_pk);
                     if ($receiverUserId) {
+                        $senderIdentity = resolve_chat_sender_identity(Auth::user()->user_id, $request->role_type);
+                        $senderName = $senderIdentity['display_name'] ?? 'The incharge';
+                        $senderRole = $senderIdentity['role_name'] ?? null;
+                        $senderLabel = $senderRole ? "{$senderName} ({$senderRole})" : $senderName;
+
                         app(NotificationService::class)->create(
                             (int) $receiverUserId,
                             'memo',
                             'MemoDiscipline',
                             (int) $memo->pk,
                             'New Message on Your Discipline Memo',
-                            'The incharge has replied to your discipline memo.'
+                            "{$senderLabel} has replied to your discipline memo."
                         );
                     }
                 }
