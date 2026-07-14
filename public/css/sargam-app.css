@@ -426,104 +426,23 @@ table.dataTable > thead > tr > th.sorting,
 table.dataTable > thead > tr > th.sorting_asc,
 table.dataTable > thead > tr > th.sorting_desc { cursor: pointer; }
 
-/* =====================================================================
-   Global success toast
-   Styles every SweetAlert2 icon:'success' message into one consistent
-   card (green check + bold "Success" + message). Driven by
-   public/js/sargam-success-toast.js — do not restyle per module.
-   ===================================================================== */
-.swal2-popup.swal2-toast.sargam-success-toast {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-areas:
-        "icon title"
-        "icon text";
-    align-items: center;
-    column-gap: 0.75rem;
-    row-gap: 0;
-    padding: 0.9rem 1.15rem;
-    border: 1px solid #eaecf0;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12), 0 2px 6px rgba(16, 24, 40, 0.06);
-    background: #ffffff;
-    min-width: 300px;
-    max-width: 420px;
-}
-
-/* Icon cell — strip SweetAlert's default success ring/animation, keep our glyph. */
-.sargam-success-toast .sargam-success-toast__icon.swal2-icon {
-    grid-area: icon;
-    width: 2rem;
-    height: 2rem;
-    min-width: 2rem;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    background: transparent !important;
-    box-shadow: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: none;
-}
-
-.sargam-success-toast .sargam-success-toast__icon.swal2-icon .swal2-success-ring,
-.sargam-success-toast .sargam-success-toast__icon.swal2-icon [class^="swal2-success-line"],
-.sargam-success-toast .sargam-success-toast__icon.swal2-icon [class^="swal2-success-circular"] {
+/* scrollX tables (e.g. Estate grids) clone the header into
+   .dataTables_scrollHead (the visible one) but keep the ORIGINAL thead inside
+   .dataTables_scrollBody for column sizing. That sizing header is collapsed,
+   yet its absolutely-positioned sort arrows get re-shown by the rules above —
+   producing a duplicate ("2-2") set of arrows just under the real header.
+   Keep the sizing-header arrows hidden so only the visible header shows them. */
+.dataTables_scrollBody table.dataTable > thead > tr > th.sorting::before,
+.dataTables_scrollBody table.dataTable > thead > tr > th.sorting::after,
+.dataTables_scrollBody table.dataTable > thead > tr > th.sorting_asc::before,
+.dataTables_scrollBody table.dataTable > thead > tr > th.sorting_asc::after,
+.dataTables_scrollBody table.dataTable > thead > tr > th.sorting_desc::before,
+.dataTables_scrollBody table.dataTable > thead > tr > th.sorting_desc::after,
+.dataTables_scrollBody table.dataTable > thead > tr > td.sorting::before,
+.dataTables_scrollBody table.dataTable > thead > tr > td.sorting::after,
+.dataTables_scrollBody table.dataTable > thead > tr > td.sorting_asc::before,
+.dataTables_scrollBody table.dataTable > thead > tr > td.sorting_asc::after,
+.dataTables_scrollBody table.dataTable > thead > tr > td.sorting_desc::before,
+.dataTables_scrollBody table.dataTable > thead > tr > td.sorting_desc::after {
     display: none !important;
-}
-
-.sargam-success-toast .sargam-success-toast__icon.swal2-icon .swal2-icon-content {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-}
-
-.sargam-success-toast__glyph {
-    display: block;
-}
-
-.sargam-success-toast .sargam-success-toast__title.swal2-title {
-    grid-area: title;
-    justify-self: start;
-    margin: 0;
-    padding: 0;
-    font-size: 1rem;
-    font-weight: 700;
-    line-height: 1.35;
-    color: #101828;
-    text-align: left;
-}
-
-.sargam-success-toast .sargam-success-toast__text.swal2-html-container {
-    grid-area: text;
-    justify-self: start;
-    margin: 0.1rem 0 0;
-    padding: 0;
-    font-size: 0.875rem;
-    font-weight: 400;
-    line-height: 1.4;
-    color: #475467;
-    text-align: left;
-}
-
-/* Hide the empty html-container SweetAlert renders when there is no message. */
-.sargam-success-toast .sargam-success-toast__text.swal2-html-container:empty {
-    display: none;
-}
-
-/* Keep the card to icon + title + message only. */
-.sargam-success-toast .swal2-actions,
-.sargam-success-toast .swal2-footer,
-.sargam-success-toast .swal2-timer-progress-bar,
-.sargam-success-toast .swal2-close {
-    display: none !important;
-}
-
-@media (max-width: 575.98px) {
-    .swal2-popup.swal2-toast.sargam-success-toast {
-        min-width: 0;
-        width: calc(100vw - 2rem);
-    }
 }
