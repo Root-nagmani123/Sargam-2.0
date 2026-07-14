@@ -27,6 +27,19 @@
     text-underline-offset: 0.15em;
 }
 
+/* Attendance DataTable chrome (search / pagination / showing) */
+.attendance-page #attendanceTable_wrapper .att-search .dataTables_filter { margin: 0; }
+.attendance-page #attendanceTable_wrapper .att-search input {
+    min-width: 260px;
+    max-width: 100%;
+}
+.attendance-page #attendanceTable_wrapper .att-count .dataTables_info,
+.attendance-page #attendanceTable_wrapper .att-count .dataTables_length { color: #667085; font-size: 0.875rem; padding: 0; margin: 0; }
+.attendance-page #attendanceTable_wrapper .att-count .dataTables_length label { margin: 0; display: inline-flex; align-items: center; gap: 0.4rem; }
+.attendance-page #attendanceTable_wrapper .att-count .dataTables_length select { width: auto; display: inline-block; }
+.attendance-page #attendanceTable_wrapper .dataTables_paginate { margin: 0; }
+.attendance-page #attendanceTable_wrapper .dataTables_paginate .pagination { margin: 0; }
+
 /* Custom tooltip (course full name) */
 #attendanceCustomTooltip {
     position: fixed;
@@ -238,11 +251,17 @@
                 </div>
             </div>
 
-            {{-- Hidden date range driven by the Time Period filter (backend still reads from_date / to_date) --}}
-            <input type="hidden" id="from_date" name="from_date" value="{{ date('Y-m-d') }}">
-            <input type="hidden" id="to_date" name="to_date" value="{{ date('Y-m-d') }}">
+            <!-- Reset Button -->
+            <div class="text-end mb-3 mb-lg-4">
+                <button class="btn btn-outline-secondary px-4 py-2 shadow-sm d-inline-flex align-items-center rounded-pill"
+                    id="resetAttendance" type="button">
+                    <span class="material-symbols-rounded me-2 fs-6">refresh</span>
+                    Reset
+                </button>
+            </div>
 
-            <div class="programme-dt-panel">
+            <div id="attendanceTableCard">
+                <div class="programme-dt-panel">
                 <div id="attendanceTableDiv" class="table-responsive">
                     <table id="attendanceTable" class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                         <thead>
@@ -283,11 +302,9 @@
                         </tbody>
                     </table>
                 </div>
-                <div id="attendanceDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="attendanceTable"></div>
+                </div>
             </div>
         </div>
-    </div>
-</div>
 
 <div id="attendanceCustomTooltip" role="tooltip" aria-hidden="true"></div>
 
