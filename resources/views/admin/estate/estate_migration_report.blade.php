@@ -134,47 +134,46 @@
 @endsection
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-<style>.ts-dropdown { z-index: 1060 !important; }</style>
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
+<style>
+    .select2-container--open { z-index: 1060; } /* sirf khula dropdown modal ke upar; closed widget normal flow me (modal ke peeche) */
+    .select2-container--default .select2-selection--single { min-height: calc(1.5em + 0.75rem + 2px); display: flex; align-items: center; }
+    .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.5; padding-left: 0.25rem; }
+</style>
 @endpush
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+{{-- Select2 JS globally footer (admin.layouts.footer) se load hoti hai; yahan include ki zaroorat nahi. --}}
 <script>
 $(document).ready(function() {
     var filterSelectIds = ['filter_allotment_year', 'filter_campus_name', 'filter_building_name', 'filter_type_of_building', 'filter_house_no', 'filter_employee_name', 'filter_department_name', 'filter_employee_type', 'filter_stay_period_text'];
 
-    function initTomSelects() {
-        if (typeof TomSelect !== 'undefined') {
-            var commonCfg = {
-                allowEmptyOption: true,
-                create: false,
-                dropdownParent: 'body',
-                maxOptions: null,
-                hideSelected: false,
-                onInitialize: function () { this.activeOption = null; }
-            };
-            filterSelectIds.forEach(function(id) {
-                var el = document.getElementById(id);
-                if (!el) return;
-                if (el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
-                new TomSelect(el, Object.assign({}, commonCfg, {}));
+    // Page-level filter selects (kisi modal ke andar nahi) -> dropdownParent ki zaroorat nahi.
+    function initFilterSelects() {
+        if (typeof $.fn.select2 === 'undefined') return;
+        filterSelectIds.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            if ($(el).data('select2')) { try { $(el).select2('destroy'); } catch (e) {} }
+            $(el).select2({
+                allowClear: false,
+                width: '100%'
             });
-        }
+        });
     }
 
-    function destroyTomSelects() {
-        if (typeof TomSelect !== 'undefined') {
-            filterSelectIds.forEach(function(id) {
-                var el = document.getElementById(id);
-                if (el && el.tomselect) {
-                    try { el.tomselect.destroy(); } catch (e) {}
-                }
-            });
-        }
+    function destroyFilterSelects() {
+        if (typeof $.fn.select2 === 'undefined') return;
+        filterSelectIds.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el && $(el).data('select2')) {
+                try { $(el).select2('destroy'); } catch (e) {}
+            }
+        });
     }
 
-    initTomSelects();
+    initFilterSelects();
 
     var table = $('#estateMigrationReportTable').DataTable({
         processing: true,
@@ -242,6 +241,9 @@ $(document).ready(function() {
             });
         }
         $el.html(html);
+        // Options native <select> me rebuild ho gaye; Select2 widget ko silently refresh karo
+        // (change.select2 namespaced hai -> app ke .on('change') cascade handlers fire nahi hote).
+        $el.trigger('change.select2');
     }
 
     function getFilterParams() {
@@ -335,7 +337,7 @@ $(document).ready(function() {
     });
 
     $('#btnResetFilters').on('click', function() {
-        destroyTomSelects();
+        destroyFilterSelects();
         $('#filter_allotment_year, #filter_campus_name, #filter_building_name, #filter_type_of_building, #filter_house_no, #filter_employee_name, #filter_department_name, #filter_employee_type, #filter_stay_period_text').val('');
         $.get(filterOptionsUrl, {}, function(opts) {
             fillSelect($('#filter_allotment_year'), opts.years || [], '— All Years —');
@@ -347,7 +349,7 @@ $(document).ready(function() {
             fillSelect($('#filter_department_name'), opts.departments || [], '— All Departments —');
             fillSelect($('#filter_employee_type'), opts.employeeTypes || [], '— All Types —');
             fillSelect($('#filter_stay_period_text'), opts.stayPeriods || [], '— All Periods —');
-            initTomSelects();
+            initFilterSelects();
             table.ajax.reload(null, false);
         });
     });

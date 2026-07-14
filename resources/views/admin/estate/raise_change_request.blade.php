@@ -109,34 +109,31 @@
 @endsection
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-<style>.ts-dropdown { z-index: 1060 !important; }</style>
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
+<style>
+    .select2-container--open { z-index: 1060; } /* sirf khula dropdown modal ke upar; closed widget normal flow me (modal ke peeche) */
+    .select2-container--default .select2-selection--single { min-height: calc(1.5em + 0.75rem + 2px); display: flex; align-items: center; }
+    .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.5; padding-left: 0.25rem; }
+</style>
 @endpush
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+{{-- Select2 JS globally footer (admin.layouts.footer) se load hoti hai; yahan include ki zaroorat nahi. --}}
 <script>
 (function() {
     var blocksUrl = '{{ route("admin.estate.possession.blocks") }}';
     var unitSubTypesUrl = '{{ route("admin.estate.possession.unit-sub-types") }}';
     var vacantHousesUrl = '{{ route("admin.estate.change-request.vacant-houses") }}';
 
-    if (window.TomSelect) {
-        var commonCfg = {
-            allowEmptyOption: true,
-            create: false,
-            dropdownParent: 'body',
-            maxOptions: null,
-            hideSelected: false,
-            onInitialize: function () { this.activeOption = null; }
-        };
+    if (typeof $.fn.select2 !== 'undefined') {
         var estateEl = document.getElementById('raise_estate_name');
         var unitTypeEl = document.getElementById('raise_unit_type');
-        if (estateEl && !estateEl.tomselect) {
-            new TomSelect(estateEl, Object.assign({}, commonCfg, { placeholder: '— Select —' }));
+        if (estateEl && !$(estateEl).data('select2')) {
+            $(estateEl).select2({ placeholder: '— Select —', allowClear: false, width: '100%' });
         }
-        if (unitTypeEl && !unitTypeEl.tomselect) {
-            new TomSelect(unitTypeEl, Object.assign({}, commonCfg, { placeholder: '— Select —' }));
+        if (unitTypeEl && !$(unitTypeEl).data('select2')) {
+            $(unitTypeEl).select2({ placeholder: '— Select —', allowClear: false, width: '100%' });
         }
     }
 
