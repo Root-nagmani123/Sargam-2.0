@@ -306,14 +306,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </td>
                                 <td class="text-center cru-col-subject">
                                     <small class="text-muted">
-                                        @if($doc->detail)
-                                        @if($doc->detail->timetable)
-                                        {{ Str::limit($doc->detail->timetable->topic_name, 20) }}
-                                        @elseif($doc->detail->topic_pk)
-                                        {{ Str::limit($doc->detail->topic_pk, 20) }}
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
+                                        @if($doc->fallback_subject)
+                                        {{ Str::limit($doc->fallback_subject, 20) }}
                                         @else
                                         <span class="text-muted">N/A</span>
                                         @endif
@@ -321,14 +315,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </td>
                                 <td class="text-center cru-col-topic">
                                     <small class="text-muted">
-                                        @if($doc->detail)
-                                        @if($doc->detail->timetable)
-                                        {{ Str::limit($doc->detail->timetable->topic_name, 20) }}
-                                        @elseif($doc->detail->topic_pk)
-                                        {{ Str::limit($doc->detail->topic_pk, 20) }}
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
+                                        @if($doc->fallback_topic)
+                                        {{ Str::limit($doc->fallback_topic, 20) }}
                                         @else
                                         <span class="text-muted">N/A</span>
                                         @endif
@@ -375,14 +363,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </td>
                                 <td class="text-center cru-col-author">
                                     <small class="text-muted">
-                                        @if($doc->detail)
-                                        @if($doc->detail->author)
-                                        {{ Str::limit($doc->detail->author->full_name, 15) }}
-                                        @elseif($doc->detail->author_name)
-                                        {{ Str::limit($doc->detail->author_name, 15) }}
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
+                                        @if($doc->fallback_author)
+                                        {{ Str::limit($doc->fallback_author, 15) }}
                                         @else
                                         <span class="text-muted">N/A</span>
                                         @endif
