@@ -1752,6 +1752,34 @@ public function memo_notice_conversation(Request $request)
                 'status' => 2
             ]);
         }
+
+        // Notify the OT that the memo/notice conversation has been closed.
+        if ($type === 'memo') {
+            $memoForNotify = DB::table('student_memo_status')->where('pk', $validated['memo_notice_id'])->first();
+            if ($memoForNotify) {
+                $this->notifyStudentAboutMemo(
+                    (int) $memoForNotify->pk,
+                    (int) $memoForNotify->student_pk,
+                    (int) $memoForNotify->course_master_pk,
+                    (int) $memoForNotify->student_notice_status_pk,
+                    (string) ($memoForNotify->date ?? now()->format('Y-m-d')),
+                    'Memo Closed',
+                    'has been closed'
+                );
+            }
+        } else {
+            $noticeForNotify = DB::table('student_notice_status')->where('pk', $validated['memo_notice_id'])->first();
+            if ($noticeForNotify) {
+                if (empty($noticeForNotify->student_pk)) {
+                    $noticeForNotify->student_pk = $this->resolveNoticeStudentPk((int) $validated['memo_notice_id']);
+                }
+                $this->notifyStudentAboutNotice(
+                    $noticeForNotify,
+                    'Notice Closed',
+                    'has been closed'
+                );
+            }
+        }
     }
 
 
