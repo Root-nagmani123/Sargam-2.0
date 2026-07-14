@@ -240,17 +240,11 @@ $(document).ready(function() {
 
     function openPrintWindow(tableHtml) {
         var billMonth = ($('#bill_month').val() || '').trim();
-        var win = window.open('', '_blank');
-        if (!win) {
-            window.print();
-            return;
-        }
 
         var today = new Date();
         var dateStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-        win.document.open();
-        win.document.write(
+        var printHtml = (
             '<!doctype html><html><head><meta charset="utf-8">' +
             '<title>Estate Bill Report - Grid View</title>' +
             '<style>' +
@@ -290,13 +284,40 @@ $(document).ready(function() {
             '<div class="print-footer"><p>Generated on ' + today.toLocaleString() + '</p></div>' +
             '</body></html>'
         );
-        win.document.close();
 
+        // Popup windows live/gov domain par block ho jaate hain (tab window.print() poore page ko
+        // print kar deta tha). Isliye hidden iframe use karo — ye popup-blocker se affected nahi hota.
+        var existing = document.getElementById('billReportPrintFrame');
+        if (existing && existing.parentNode) { existing.parentNode.removeChild(existing); }
+        var frame = document.createElement('iframe');
+        frame.id = 'billReportPrintFrame';
+        frame.setAttribute('aria-hidden', 'true');
+        frame.style.position = 'fixed';
+        frame.style.right = '0';
+        frame.style.bottom = '0';
+        frame.style.width = '0';
+        frame.style.height = '0';
+        frame.style.border = '0';
+        document.body.appendChild(frame);
+
+        var fdoc = frame.contentWindow.document;
+        fdoc.open();
+        fdoc.write(printHtml);
+        fdoc.close();
+
+        // Images (logos) load hone ke baad print karo.
         setTimeout(function() {
-            win.focus();
-            win.print();
-            win.close();
-        }, 400);
+            try {
+                frame.contentWindow.focus();
+                frame.contentWindow.print();
+            } catch (e) {
+                window.print(); // last-resort fallback
+            }
+            // Print dialog band hone ke baad iframe cleanup.
+            setTimeout(function() {
+                if (frame && frame.parentNode) { frame.parentNode.removeChild(frame); }
+            }, 1000);
+        }, 500);
     }
 
     function initOrReloadBillReportGrid() {
