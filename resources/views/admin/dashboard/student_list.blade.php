@@ -945,6 +945,27 @@
             clearTimeout(filterReflowTimer);
             filterReflowTimer = setTimeout(reflowFilters, 150);
         });
+
+        /* ── Close the "+N Filters" popover on an outside click ──
+           The dropdown is data-bs-auto-close="false" because its filters use
+           Select2 / the daterangepicker, whose menus render on <body>; Bootstrap's
+           built-in auto-close would treat interacting with those as an "outside"
+           click and close the popover. So we close it ourselves, but only on a
+           genuine outside click — never when the click landed in the popover, a
+           Select2 widget/dropdown, or the daterangepicker calendar. */
+        $(document).on('mousedown.slMoreFilters', function(e) {
+            if ($moreBtn.attr('aria-expanded') !== 'true') { return; } // popover closed
+            if ($(e.target).closest('#slMoreFiltersWrap, .select2-container, .select2-dropdown, .daterangepicker').length) {
+                return; // click inside the popover or one of its body-rendered menus
+            }
+            if (typeof bootstrap !== 'undefined' && bootstrap.Dropdown) {
+                bootstrap.Dropdown.getOrCreateInstance($moreBtn[0]).hide();
+            } else {
+                // Fallback: mirror what Bootstrap's hide() does to the markup.
+                $moreWrap.find('.dropdown-menu').removeClass('show');
+                $moreBtn.attr('aria-expanded', 'false');
+            }
+        });
     });
 </script>
 @endpush
