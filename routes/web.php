@@ -134,7 +134,7 @@ Route::get('/logout', function () {
 
 // Public Routes
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [LoginController::class, 'authenticate'])->name('post_login');
+Route::post('/login', [LoginController::class, 'authenticate'])->middleware('throttle:login')->name('post_login');
 
 
 

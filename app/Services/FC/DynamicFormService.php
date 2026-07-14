@@ -1297,6 +1297,16 @@ class DynamicFormService
             $rules .= '|regex:/^[A-Z]{5}[0-9]{4}[A-Z]$/';
         }
 
+        // Reject HTML / angle brackets in ANY user-supplied value (CWE-20 / CWE-79),
+        // not only free-text — this also covers select / date / radio inputs that can
+        // be tampered with (e.g. via the browser or a searchable dropdown). Non-string
+        // values (checkbox arrays, uploaded files) pass the rule untouched, so it is
+        // safe across field types; number fields already returned above with a numeric
+        // rule. Existing data is unaffected — only new submissions are validated.
+        if ($field->field_type !== 'file' && ! preg_match('/\bno_html\b/', $rules)) {
+            $rules .= '|no_html';
+        }
+
         return $rules;
     }
 
@@ -1443,7 +1453,8 @@ class DynamicFormService
                 if ($file->isValid()) {
                     $stored = $file->storeAs(
                         'fc/pre_history',
-                        $userId.'_'.uniqid('', true).'.'.$file->getClientOriginalExtension(),
+                        // Extension derived from validated content, not the client name (CWE-434).
+                        $userId.'_'.uniqid('', true).'.'.$file->extension(),
                         'public'
                     );
                     $docPath = 'storage/'.$stored;

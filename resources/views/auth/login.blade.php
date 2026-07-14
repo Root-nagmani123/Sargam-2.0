@@ -1193,7 +1193,7 @@
                 @endif
 
                 <!-- Login Form -->
-                <form action="{{ route('post_login') }}" method="POST" id="loginForm" novalidate>
+                <form action="{{ route('post_login') }}" method="POST" id="loginForm" novalidate autocomplete="off">
                     @csrf
 
                     <!-- Username -->
@@ -1208,7 +1208,7 @@
                             name="username"
                             value="{{ old('username') }}"
                             placeholder="Enter your username or ID"
-                            autocomplete="username"
+                            autocomplete="off"
                             required
                             autofocus>
                         <div class="form-hint">Your official registration number or ID</div>
@@ -1228,7 +1228,7 @@
                                 id="password"
                                 name="password"
                                 placeholder="Enter your password"
-                                autocomplete="current-password"
+                                autocomplete="off"
                                 required>
                             <button type="button" class="password-toggle-btn" id="togglePassword" aria-label="Show password">
                                 <i class="bi bi-eye fs-5" aria-hidden="true"></i>

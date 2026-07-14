@@ -4489,7 +4489,15 @@ public function uploadPdf(Request $request)
     function submit_change_password(Request $request) {
     $request->validate([
         'current_password' => 'required',
-        'new_password' => 'required|min:8|confirmed',
+        'new_password' => [
+            'required',
+            'confirmed',
+            'min:8',
+            // Strong password policy (CWE-521): upper + lower + number + special char.
+            'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/',
+        ],
+    ], [
+        'new_password.regex' => 'Password must include uppercase, lowercase, a number and a special character.',
     ]);
     try {
       $user = Auth::user();

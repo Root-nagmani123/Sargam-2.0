@@ -2001,10 +2001,27 @@ class CalendarController extends Controller
                 'rangeLabel' => $rangeLabel,
                 'days'       => $days,
                 'rows'       => $rows,
+                '_hasEvents' => $weekEvents->isNotEmpty(),
             ];
 
             $cursor->addWeek();
         }
+
+        // Keep only weeks that actually contain sessions. A visible-range export
+        // (e.g. a whole month) otherwise emits a blank grid for every event-free
+        // week, so a single week of data prints as several mostly-empty weeks.
+        $nonEmpty = array_values(array_filter($weeks, static fn ($w) => $w['_hasEvents']));
+
+        // If nothing in the range has events, still return the first week so a
+        // deliberately-empty single-week export renders a blank template.
+        $weeks = !empty($nonEmpty)
+            ? $nonEmpty
+            : (empty($weeks) ? [] : [$weeks[0]]);
+
+        foreach ($weeks as &$week) {
+            unset($week['_hasEvents']);
+        }
+        unset($week);
 
         return $weeks;
     }
