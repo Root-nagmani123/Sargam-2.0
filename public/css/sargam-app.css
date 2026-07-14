@@ -425,3 +425,24 @@ table.dataTable > thead > tr > td.sorting_desc::after {
 table.dataTable > thead > tr > th.sorting,
 table.dataTable > thead > tr > th.sorting_asc,
 table.dataTable > thead > tr > th.sorting_desc { cursor: pointer; }
+
+/* scrollX tables (e.g. Estate grids) clone the header into
+   .dataTables_scrollHead (the visible one) but keep the ORIGINAL thead inside
+   .dataTables_scrollBody for column sizing. That sizing header is collapsed,
+   yet its absolutely-positioned sort arrows get re-shown by the rules above —
+   producing a duplicate ("2-2") set of arrows just under the real header.
+   Keep the sizing-header arrows hidden so only the visible header shows them. */
+.dataTables_scrollBody table.dataTable > thead > tr > th.sorting::before,
+.dataTables_scrollBody table.dataTable > thead > tr > th.sorting::after,
+.dataTables_scrollBody table.dataTable > thead > tr > th.sorting_asc::before,
+.dataTables_scrollBody table.dataTable > thead > tr > th.sorting_asc::after,
+.dataTables_scrollBody table.dataTable > thead > tr > th.sorting_desc::before,
+.dataTables_scrollBody table.dataTable > thead > tr > th.sorting_desc::after,
+.dataTables_scrollBody table.dataTable > thead > tr > td.sorting::before,
+.dataTables_scrollBody table.dataTable > thead > tr > td.sorting::after,
+.dataTables_scrollBody table.dataTable > thead > tr > td.sorting_asc::before,
+.dataTables_scrollBody table.dataTable > thead > tr > td.sorting_asc::after,
+.dataTables_scrollBody table.dataTable > thead > tr > td.sorting_desc::before,
+.dataTables_scrollBody table.dataTable > thead > tr > td.sorting_desc::after {
+    display: none !important;
+}

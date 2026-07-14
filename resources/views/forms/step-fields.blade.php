@@ -161,6 +161,7 @@
 @endphp
 @push('scripts')
 @include('fc.registration.partials.fc-form-validation')
+@include('fc.registration.partials.fc-scroll-to-error-script')
 @if($hasSameAsPermanent ?? false)
 @include('fc.registration.partials.same-as-permanent-script')
 @endif
