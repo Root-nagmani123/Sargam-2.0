@@ -631,48 +631,79 @@ $selectedClientType = (string) request()->input('client_type', '');
 }
 
 /* Column widths tuned so all td are visible in one go */
-#addReportItemsTable th:nth-child(1),
-#editReportItemsTable th:nth-child(1) {
+#addReportItemsTable th:nth-child(1) {
     width: 28%;
 }
 
-#addReportItemsTable th:nth-child(2),
-#editReportItemsTable th:nth-child(2) {
+#addReportItemsTable th:nth-child(2) {
     width: 8%;
 }
 
-#addReportItemsTable th:nth-child(3),
-#editReportItemsTable th:nth-child(3) {
+#addReportItemsTable th:nth-child(3) {
     width: 11%;
 }
 
-#addReportItemsTable th:nth-child(4),
-#editReportItemsTable th:nth-child(4) {
+#addReportItemsTable th:nth-child(4) {
     width: 11%;
 }
 
-#addReportItemsTable th:nth-child(5),
-#editReportItemsTable th:nth-child(5) {
+#addReportItemsTable th:nth-child(5) {
     width: 10%;
 }
 
-#addReportItemsTable th:nth-child(6),
-#editReportItemsTable th:nth-child(6) {
+#addReportItemsTable th:nth-child(6) {
     width: 14%;
 }
 
-#addReportItemsTable th:nth-child(7),
-#editReportItemsTable th:nth-child(7) {
+#addReportItemsTable th:nth-child(7) {
     width: 9%;
 }
 
-#addReportItemsTable th:nth-child(8),
-#editReportItemsTable th:nth-child(8) {
+#addReportItemsTable th:nth-child(8) {
     width: 11%;
 }
 
-#addReportItemsTable th:nth-child(9),
+#editReportItemsTable th:nth-child(1) {
+    width: 16%;
+}
+
+#editReportItemsTable th:nth-child(2) {
+    width: 20%;
+}
+
+#editReportItemsTable th:nth-child(3) {
+    width: 7%;
+}
+
+#editReportItemsTable th:nth-child(4) {
+    width: 9%;
+}
+
+#editReportItemsTable th:nth-child(5) {
+    width: 9%;
+}
+
+#editReportItemsTable th:nth-child(6) {
+    width: 8%;
+}
+
+#editReportItemsTable th:nth-child(7) {
+    width: 11%;
+}
+
+#editReportItemsTable th:nth-child(8) {
+    width: 8%;
+}
+
 #editReportItemsTable th:nth-child(9) {
+    width: 9%;
+}
+
+#editReportItemsTable th:nth-child(10) {
+    width: 5%;
+}
+
+#addReportItemsTable th:nth-child(9) {
     width: 5%;
 }
 
@@ -1370,6 +1401,22 @@ $selectedClientType = (string) request()->input('client_type', '');
     overflow-y: auto;
     max-height: calc(100dvh - 10rem);
 }
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked,
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .choices,
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .ts-wrapper,
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .form-check-input {
+    pointer-events: none !important;
+}
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .form-control,
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .form-select,
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .choices__inner {
+    background-color: var(--bs-secondary-bg, #e9ecef) !important;
+    cursor: not-allowed;
+}
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .form-check-label {
+    cursor: not-allowed;
+    opacity: 0.85;
+}
 </style>
 <div class="modal fade" id="editReportModal" tabindex="-1" aria-labelledby="editReportModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
@@ -1390,7 +1437,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                         </div>
                         <div class="card-body">
                             <div class="row g-3">
-                                <div class="col-md-12">
+                                <div class="col-md-12 edit-client-identity-locked">
                                     <label class="form-label voucher-label">Client Type <span
                                             class="text-danger">*</span></label>
                                     <div class="d-flex flex-wrap gap-3 pt-1">
@@ -1414,7 +1461,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                                         <option value="2">UPI</option>
                                     </select>
                                 </div>
-                                <div class="col-md-4" id="editDrClientNameWrap" style="display:none;">
+                                <div class="col-md-4 edit-client-identity-locked" id="editDrClientNameWrap" style="display:none;">
                                     <label class="form-label voucher-label">Client Name <span
                                             class="text-danger">*</span></label>
                                     <select name="client_type_pk" class="form-select  edit-client-type-pk"
@@ -1445,11 +1492,11 @@ $selectedClientType = (string) request()->input('client_type', '');
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-md-4" id="editDrNameFieldWrap" style="display:none;">
+                                <div class="col-md-4 edit-client-identity-locked" id="editDrNameFieldWrap" style="display:none;">
                                     <label class="form-label voucher-label">Name <span
                                             class="text-danger">*</span></label>
-                                    <input type="text" name="client_name" class="form-control  edit-client-name"
-                                        id="editDrClientNameInput" placeholder="Client / section / role name" required>
+                                    <input type="text" name="client_name" class="form-control  edit-client-name bg-light"
+                                        id="editDrClientNameInput" placeholder="Client / section / role name" required readonly>
                                     <datalist id="editDrCourseBuyerNames"></datalist>
                                     <datalist id="editDrGenericBuyerNames"></datalist>
                                     <select id="editDrFacultySelect" class="form-select " style="display:none;">
@@ -1484,20 +1531,19 @@ $selectedClientType = (string) request()->input('client_type', '');
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label voucher-label">Transfer From Store <span
-                                            class="text-danger">*</span></label>
-                                    <select name="inve_store_master_pk" class="form-select  edit-store-id" required>
+                                    <label class="form-label voucher-label">Remarks / Reference Number / Order
+                                        By</label>
+                                    <input type="text" name="remarks" class="form-control  edit-remarks"
+                                        placeholder="Remarks / Reference Number / Order By (optional)">
+                                    <select name="inve_store_master_pk" class="form-select edit-store-id d-none" tabindex="-1" aria-hidden="true">
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
                                         <option value="{{ $store['id'] }}">{{ $store['store_name'] }}</option>
                                         @endforeach
                                     </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label voucher-label">Remarks / Reference Number / Order
-                                        By</label>
-                                    <input type="text" name="remarks" class="form-control  edit-remarks"
-                                        placeholder="Remarks / Reference Number / Order By (optional)">
+                                    <input type="hidden" name="multi_store" id="editMultiStoreFlag" value="0">
+                                    <input type="hidden" name="filtered_edit" id="editFilteredEditFlag" value="0">
+                                    <div id="editListingFilterHiddens"></div>
                                 </div>
                             </div>
                         </div>
@@ -1519,6 +1565,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                                     id="editReportItemsTable">
                                     <thead class="voucher-brand-head">
                                         <tr>
+                                            <th>Store</th>
                                             <th>Item Name <span class="text-white">*</span></th>
                                             <th>Unit</th>
                                             <th>Available Qty</th>
@@ -1563,6 +1610,7 @@ $selectedClientType = (string) request()->input('client_type', '');
     let editRowIndex = 0;
     let currentStoreId = null;
     let editCurrentStoreId = null;
+    let editCurrentStoreName = '';
 
     function safeFocus(el) {
         if (!el || typeof el.focus !== 'function') return;
@@ -2020,9 +2068,10 @@ $selectedClientType = (string) request()->input('client_type', '');
             try { paySel.tomselect.setValue(String(v.payment_type ?? 1)); } catch (e) {}
         }
         var storeSel = document.querySelector('#editReportModal select.edit-store-id');
-        var sid = v.store_id || v.inve_store_master_pk || '';
-        if (storeSel && storeSel.tomselect && sid !== '') {
-            try { storeSel.tomselect.setValue(String(sid)); } catch (e) {}
+        if (v && v.filtered_view) {
+            applyEditFilteredStoreDisplay(v);
+        } else if (storeSel) {
+            applyEditFilteredStoreDisplay(v || {});
         }
         var ecs = document.getElementById('editDrClientNameSelect');
         if (ecs && ecs.tomselect && slug !== 'ot' && slug !== 'course' && v.client_type_pk != null && String(v.client_type_pk) !== '') {
@@ -2387,11 +2436,9 @@ $selectedClientType = (string) request()->input('client_type', '');
             }));
         }
         var storeSel = document.querySelector('#editReportModal select.edit-store-id');
-        if (storeSel && !storeSel.tomselect) {
-            editModalTomSelectInstances.store = createChoicesInstance(storeSel, createBlankSearchConfig({
-                placeholder: 'Select Store',
-                clearOnOpen: true
-            }));
+        // Store field is hidden in Edit modal; keep native select value only (no Choices/TomSelect).
+        if (storeSel && storeSel.tomselect) {
+            try { storeSel.tomselect.destroy(); } catch (e) {}
         }
         var editNameInpForInit = document.getElementById('editDrClientNameInput');
         var nameValForInit = (editNameInpForInit && editNameInpForInit.value) ? String(editNameInpForInit.value)
@@ -3470,6 +3517,37 @@ $selectedClientType = (string) request()->input('client_type', '');
     loadAddDrBuyerNames();
 
     // Edit modal: same Faculty / Academy Staff / Mess Staff dropdown logic
+    function isEditClientIdentityFrozen() {
+        var modal = document.getElementById('editReportModal');
+        return !!(modal && modal.classList.contains('edit-client-identity-frozen'));
+    }
+
+    function freezeEditClientIdentityFields(v) {
+        var modal = document.getElementById('editReportModal');
+        if (!modal) return;
+        modal.classList.add('edit-client-identity-frozen');
+
+        var nameInput = document.getElementById('editDrClientNameInput');
+        if (nameInput) {
+            nameInput.readOnly = true;
+            nameInput.classList.add('bg-light');
+            nameInput.removeAttribute('list');
+            if (v && v.client_name != null) {
+                nameInput.value = String(v.client_name || '');
+            }
+        }
+
+        var clientIdInput = document.getElementById('editDrClientId');
+        if (clientIdInput && v && v.client_id != null && String(v.client_id) !== '') {
+            clientIdInput.value = String(v.client_id);
+        }
+    }
+
+    function unfreezeEditClientIdentityFields() {
+        var modal = document.getElementById('editReportModal');
+        if (modal) modal.classList.remove('edit-client-identity-frozen');
+    }
+
     function updateEditDrNameField() {
         const clientTypeRadio = document.querySelector('#editReportModal .edit-dr-client-type-radio:checked');
         const clientNameSelect = document.getElementById('editDrClientNameSelect');
@@ -3532,7 +3610,11 @@ $selectedClientType = (string) request()->input('client_type', '');
             nameInput.style.display = 'block';
             nameInput.placeholder = 'Name';
             nameInput.setAttribute('required', 'required');
-            nameInput.setAttribute('list', 'editDrCourseBuyerNames');
+            if (!isEditClientIdentityFrozen()) {
+                nameInput.setAttribute('list', 'editDrCourseBuyerNames');
+            } else {
+                nameInput.removeAttribute('list');
+            }
             [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                 if (sel) {
                     setSelectVisible(sel, false);
@@ -3551,7 +3633,11 @@ $selectedClientType = (string) request()->input('client_type', '');
         } else {
             nameInput.style.display = showAny ? 'none' : 'block';
             nameInput.removeAttribute('required');
-            nameInput.setAttribute('list', 'editDrGenericBuyerNames');
+            if (!isEditClientIdentityFrozen()) {
+                nameInput.setAttribute('list', 'editDrGenericBuyerNames');
+            } else {
+                nameInput.removeAttribute('list');
+            }
             [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                 if (!sel) return;
                 const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ?
@@ -3586,6 +3672,11 @@ $selectedClientType = (string) request()->input('client_type', '');
             }
             if (!showAny) nameInput.setAttribute('required', 'required');
         }
+
+        // Always keep Name non-editable on Edit.
+        nameInput.readOnly = true;
+        nameInput.classList.add('bg-light');
+        nameInput.removeAttribute('list');
     }
 
     function loadEditDrBuyerNames() {
@@ -3643,6 +3734,7 @@ $selectedClientType = (string) request()->input('client_type', '');
     }
     document.querySelectorAll('#editReportModal .edit-dr-client-type-radio').forEach(function(radio) {
         radio.addEventListener('change', function() {
+            if (isEditClientIdentityFrozen()) return;
             var editClientNameWrap = document.getElementById('editDrClientNameWrap');
             var editNameFieldWrap = document.getElementById('editDrNameFieldWrap');
             var clientIdInput = document.getElementById('editDrClientId');
@@ -3903,12 +3995,254 @@ $selectedClientType = (string) request()->input('client_type', '');
         if (clientIdInput && selectedOpt) clientIdInput.value = selectedOpt.dataset.pk || '';
     });
 
+    function ensureEditClientTypePkOption(selectEl, clientTypePk, label) {
+        if (!selectEl || clientTypePk === null || typeof clientTypePk === 'undefined' || String(clientTypePk) === '') {
+            return;
+        }
+        const pk = String(clientTypePk);
+        const exists = Array.from(selectEl.options || []).some(function(opt) {
+            return String(opt.value) === pk;
+        });
+        if (exists) {
+            return;
+        }
+        const opt = document.createElement('option');
+        opt.value = pk;
+        opt.textContent = (label && String(label).trim()) ? String(label).trim() : ('Category #' + pk);
+        selectEl.appendChild(opt);
+    }
+
+    function syncEditListingFilterHiddens() {
+        const wrap = document.getElementById('editListingFilterHiddens');
+        if (!wrap) return;
+        wrap.innerHTML = '';
+        const params = new URLSearchParams(window.location.search || '');
+        // NOTE: do NOT sync client_type_pk — it collides with edit form field name
+        // and overwrites the voucher client category on submit.
+        const keys = ['start_date', 'end_date', 'client_type', 'buyer_name', 'return_status'];
+        keys.forEach(function(key) {
+            const values = params.getAll(key);
+            if (!values.length) return;
+            values.forEach(function(val) {
+                if (val === null || val === '') return;
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = val;
+                wrap.appendChild(input);
+            });
+        });
+        params.getAll('store[]').concat(params.getAll('store')).forEach(function(val) {
+            if (val === null || val === '') return;
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'store[]';
+            input.value = val;
+            wrap.appendChild(input);
+        });
+        params.getAll('status[]').concat(params.getAll('status')).forEach(function(val) {
+            if (val === null || val === '') return;
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'status[]';
+            input.value = val;
+            wrap.appendChild(input);
+        });
+    }
+
+    function prepareEditFormForSubmit(formEl) {
+        if (!formEl) return;
+        syncEditListingFilterHiddens();
+
+        // Ensure Choices-backed selects keep a submittable native value.
+        formEl.querySelectorAll('select').forEach(function(sel) {
+            if (sel.disabled) {
+                sel.disabled = false;
+            }
+            if (sel.tomselect && typeof sel.tomselect.getValue === 'function') {
+                try {
+                    const v = sel.tomselect.getValue();
+                    const normalized = Array.isArray(v) ? (v[0] || '') : (v || '');
+                    if (normalized !== '') {
+                        sel.value = String(normalized);
+                    }
+                } catch (e) {}
+            }
+        });
+
+        // Guarantee new-row store_id is posted even if Choices UI desyncs.
+        formEl.querySelectorAll('#editModalItemsBody .edit-dr-item-row').forEach(function(row) {
+            const storeSel = row.querySelector('.edit-dr-store-select');
+            if (!storeSel) return;
+            let storeVal = '';
+            if (storeSel.tomselect && typeof storeSel.tomselect.getValue === 'function') {
+                try {
+                    const v = storeSel.tomselect.getValue();
+                    storeVal = Array.isArray(v) ? (v[0] || '') : (v || '');
+                } catch (e) {
+                    storeVal = storeSel.value || '';
+                }
+            } else {
+                storeVal = storeSel.value || '';
+            }
+            storeSel.disabled = false;
+            storeSel.value = storeVal;
+            // Keep a single source of truth hidden input for store_id.
+            let backup = row.querySelector('input.edit-dr-store-id-backup');
+            if (!backup) {
+                backup = document.createElement('input');
+                backup.type = 'hidden';
+                backup.className = 'edit-dr-store-id-backup';
+                storeSel.insertAdjacentElement('afterend', backup);
+            }
+            backup.name = storeSel.getAttribute('name') || '';
+            backup.value = storeVal;
+            storeSel.removeAttribute('name');
+        });
+
+        // Ensure legacy client_type_pk is posted even if dropdown options were re-seeded.
+        if (formEl.dataset && formEl.dataset.clientTypePk) {
+            let pkInput = formEl.querySelector('select[name="client_type_pk"], input[name="client_type_pk"]');
+            const legacyPk = String(formEl.dataset.clientTypePk);
+            if (pkInput) {
+                if (!pkInput.value || String(pkInput.value) === '') {
+                    if (pkInput.tagName === 'SELECT') {
+                        ensureEditClientTypePkOption(pkInput, legacyPk, formEl.dataset.clientName || '');
+                    }
+                    pkInput.value = legacyPk;
+                    if (pkInput.tomselect && typeof pkInput.tomselect.setValue === 'function') {
+                        try { pkInput.tomselect.setValue(legacyPk); } catch (e) {}
+                    }
+                }
+            } else {
+                const hiddenPk = document.createElement('input');
+                hiddenPk.type = 'hidden';
+                hiddenPk.name = 'client_type_pk';
+                hiddenPk.value = legacyPk;
+                formEl.appendChild(hiddenPk);
+            }
+        }
+    }
+
+    function applyEditFilteredStoreDisplay(v) {
+        const editStoreSelect = document.querySelector('#editReportModal select.edit-store-id');
+        const editMultiStoreFlag = document.getElementById('editMultiStoreFlag');
+        const editFilteredEditFlag = document.getElementById('editFilteredEditFlag');
+        const sid = v ? (v.store_id || v.inve_store_master_pk || '') : '';
+
+        if (editMultiStoreFlag) {
+            editMultiStoreFlag.value = (v && v.multi_store) ? '1' : '0';
+        }
+        if (editFilteredEditFlag) {
+            editFilteredEditFlag.value = (v && v.filtered_view) ? '1' : '0';
+        }
+
+        editCurrentStoreName = (v && (v.store_name_display || v.store_name))
+            ? String(v.store_name_display || v.store_name)
+            : '';
+
+        if (editStoreSelect) {
+            editStoreSelect.classList.add('d-none');
+            editStoreSelect.removeAttribute('required');
+            if (sid !== '') {
+                editStoreSelect.value = String(sid);
+            }
+        }
+
+        syncEditListingFilterHiddens();
+    }
+
+    function getEditStoreOptionsHtml(selectedStoreId) {
+        const storeSelect = document.querySelector('#editReportModal select.edit-store-id');
+        let html = '<option value="">Select Store</option>';
+        if (!storeSelect) {
+            return html;
+        }
+        Array.from(storeSelect.options).forEach(function(opt) {
+            if (!opt.value) {
+                return;
+            }
+            const selected = String(selectedStoreId || '') === String(opt.value) ? ' selected' : '';
+            html += '<option value="' + String(opt.value).replace(/"/g, '&quot;') + '"' + selected + '>' +
+                String(opt.textContent || '').replace(/</g, '&lt;') + '</option>';
+        });
+        return html;
+    }
+
+    function fillEditRowItemOptions(row, items, selectedItemId) {
+        const select = row ? row.querySelector('.edit-dr-item-select') : null;
+        if (!select) {
+            return;
+        }
+        const currentValue = selectedItemId != null ? String(selectedItemId) : getSelectValue(select);
+        if (select.tomselect) {
+            try {
+                select.tomselect.destroy();
+            } catch (e) {}
+        }
+        select.innerHTML = '<option value="">Select Item</option>';
+        (items || []).forEach(function(item) {
+            const option = document.createElement('option');
+            option.value = item.id;
+            option.textContent = item.item_name || '—';
+            option.setAttribute('data-unit', item.unit_measurement || '');
+            option.setAttribute('data-rate', item.standard_cost || 0);
+            option.setAttribute('data-available', item.available_quantity || 0);
+            if (item.price_tiers && item.price_tiers.length > 0) {
+                option.setAttribute('data-price-tiers', JSON.stringify(item.price_tiers));
+            }
+            if (String(item.id) === String(currentValue)) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+        if (typeof Choices !== 'undefined') {
+            createChoicesInstance(select, createItemSelectConfig());
+        }
+    }
+
+    function bindEditRowStoreSelect(row) {
+        const storeSel = row ? row.querySelector('.edit-dr-store-select') : null;
+        if (!storeSel || storeSel.dataset.bound === '1') {
+            return;
+        }
+        storeSel.dataset.bound = '1';
+        storeSel.addEventListener('change', function() {
+            const storeId = getSelectValue(this);
+            const itemSelect = row.querySelector('.edit-dr-item-select');
+            const unitInp = row.querySelector('.edit-dr-unit');
+            const availInp = row.querySelector('.edit-dr-avail');
+            const rateInp = row.querySelector('.edit-dr-rate');
+            const qtyInp = row.querySelector('.edit-dr-qty');
+            if (itemSelect) {
+                setSelectValue(itemSelect, '');
+            }
+            if (unitInp) unitInp.value = '—';
+            if (availInp) availInp.value = '';
+            if (rateInp) rateInp.value = '';
+            if (qtyInp) qtyInp.value = '';
+            updateEditRowTotal(row);
+            updateEditGrandTotal();
+            if (!storeId) {
+                fillEditRowItemOptions(row, [], '');
+                refreshEditAllAvailable();
+                return;
+            }
+            fetchStoreItems(storeId, function() {
+                fillEditRowItemOptions(row, filteredItems, '');
+                refreshEditAllAvailable();
+            });
+        });
+    }
+
     // Edit modal row helpers
     function getEditRowHtml(index, item) {
         item = item || {};
-        const sourceItems = Array.isArray(filteredItems) && filteredItems.length > 0 ? filteredItems :
-            itemSubcategories;
-        const options = sourceItems.map(s => {
+        const isExistingLine = !!(item.id);
+        const sourceItems = (!isExistingLine && !(item.store_id || editCurrentStoreId))
+            ? []
+            : (Array.isArray(filteredItems) && filteredItems.length > 0 ? filteredItems : itemSubcategories);
+        let options = sourceItems.map(s => {
             let attrs = 'data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') +
                 '" data-rate="' + (s.standard_cost || 0) + '" data-available="' + (s.available_quantity ||
                     0) + '"';
@@ -3918,7 +4252,17 @@ $selectedClientType = (string) request()->input('client_type', '');
             }
             return '<option value="' + s.id + '" ' + attrs + (item.item_subcategory_id == s.id ?
                 ' selected' : '') + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>';
-        }).join('');
+        });
+        if (item.item_subcategory_id && !sourceItems.some(function(s) {
+                return String(s.id) === String(item.item_subcategory_id);
+            })) {
+            options.unshift('<option value="' + item.item_subcategory_id + '" selected data-unit="' + (item
+                    .unit || '').replace(/"/g, '&quot;') + '" data-rate="' + (item.rate != null ? item
+                    .rate : 0) + '" data-available="' + (item.available_quantity != null ? item
+                    .available_quantity : 0) + '">' + (item.item_name || '—').replace(/</g, '&lt;') +
+                '</option>');
+        }
+        const optionsHtml = options.join('');
         const avail = item.available_quantity != null ? item.available_quantity : '';
         const qty = item.quantity != null ? item.quantity : '';
         const rate = item.rate != null ? item.rate : '';
@@ -3928,10 +4272,26 @@ $selectedClientType = (string) request()->input('client_type', '');
             '';
         const originalQtyAttr = (item.quantity != null && item.quantity !== '') ? (' data-original-qty="' + (
             parseFloat(item.quantity) || 0) + '"') : '';
+        const lineIdField = item.id ? ('<input type="hidden" name="items[' + index + '][line_id]" value="' +
+            item.id + '">') : '';
+        const storeId = item.store_id || (!isExistingLine ? '' : (editCurrentStoreId || ''));
+        const storeName = String(item.store_name || (!isExistingLine ? '' : editCurrentStoreName) || '—')
+            .replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        let storeCell = '';
+        if (isExistingLine) {
+            storeCell = '<td class="text-wrap text-break small">' +
+                '<input type="hidden" name="items[' + index + '][store_id]" value="' +
+                String(storeId || '').replace(/"/g, '&quot;') + '">' + storeName + '</td>';
+        } else {
+            storeCell = '<td><select name="items[' + index +
+                '][store_id]" class="form-select edit-dr-store-select" required>' +
+                getEditStoreOptionsHtml(storeId) + '</select></td>';
+        }
         return '<tr class="edit-dr-item-row"' + originalQtyAttr + '>' +
-            '<td><select name="items[' + index +
+            storeCell +
+            '<td>' + lineIdField + '<select name="items[' + index +
             '][item_subcategory_id]" class="form-select  edit-dr-item-select" required><option value="">Select Item</option>' +
-            options + '</select></td>' +
+            optionsHtml + '</select></td>' +
             '<td><input type="text" name="items[' + index +
             '][unit]" class="form-control  edit-dr-unit" readonly placeholder="—" value="' + (item.unit || '')
             .replace(/"/g, '&quot;') + '"></td>' +
@@ -3944,7 +4304,8 @@ $selectedClientType = (string) request()->input('client_type', '');
             '<td><input type="text" class="form-control  edit-dr-left bg-light" readonly value="' + left +
             '"></td>' +
             '<td><input type="date" name="items[' + index +
-            '][issue_date]" class="form-control  edit-dr-issue-date" value="' + issueDate + '"></td>' +
+            '][issue_date]" class="form-control  edit-dr-issue-date"' + (isExistingLine ? '' :
+                ' required') + ' value="' + issueDate + '"></td>' +
             '<td><input type="text" name="items[' + index +
             '][rate]" class="form-control  edit-dr-rate" required value="' + rate + '"></td>' +
             '<td><input type="text" class="form-control  edit-dr-total bg-light" readonly value="' + total +
@@ -4032,6 +4393,8 @@ $selectedClientType = (string) request()->input('client_type', '');
         const newTr = div.querySelector('tr');
         tbody.appendChild(newTr);
         editRowIndex++;
+        bindEditRowStoreSelect(newTr);
+        // Use native store select (no Choices) so store_id always submits reliably.
         const sel = newTr.querySelector('.edit-dr-item-select');
         if (sel && typeof Choices !== 'undefined') createChoicesInstance(sel, createItemSelectConfig());
         const opt = getSelectSelectedOption(sel);
@@ -4141,7 +4504,8 @@ $selectedClientType = (string) request()->input('client_type', '');
                     setTimeout(function() {
                         const lastRow = editModalItemsBodyEl.querySelector('.edit-dr-item-row:last-child');
                         if (lastRow) {
-                            const firstSelect = lastRow.querySelector('.edit-dr-item-select');
+                            const storeSelect = lastRow.querySelector('.edit-dr-store-select');
+                            const firstSelect = storeSelect || lastRow.querySelector('.edit-dr-item-select');
                             if (firstSelect && firstSelect.tomselect && firstSelect.tomselect.wrapper) {
                                 var inner = firstSelect.tomselect.wrapper.querySelector('.choices__inner');
                                 if (inner) inner.click();
@@ -4170,7 +4534,8 @@ $selectedClientType = (string) request()->input('client_type', '');
         e.preventDefault();
         e.stopPropagation();
         const reportId = btn.getAttribute('data-report-id');
-        fetch(baseUrl + '/' + reportId, {
+        const viewQuery = window.location.search || '';
+        fetch(baseUrl + '/' + reportId + viewQuery, {
                 headers: {
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
@@ -4241,7 +4606,8 @@ $selectedClientType = (string) request()->input('client_type', '');
         e.preventDefault();
         e.stopPropagation();
         const reportId = btn.getAttribute('data-report-id');
-        fetch(baseUrl + '/' + reportId + '/return', {
+        const returnQuery = window.location.search || '';
+        fetch(baseUrl + '/' + reportId + '/return' + returnQuery, {
                 headers: {
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
@@ -4291,7 +4657,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                         '"><div class="invalid-feedback">Return date must be between issue date and today.</div></td></tr>'
                     );
                 });
-                document.getElementById('returnItemForm').action = baseUrl + '/' + reportId + '/return';
+                document.getElementById('returnItemForm').action = baseUrl + '/' + reportId + '/return' + returnQuery;
                 new bootstrap.Modal(document.getElementById('returnItemModal')).show();
             })
             .catch(err => {
@@ -4452,6 +4818,8 @@ $selectedClientType = (string) request()->input('client_type', '');
             editRowIndex++;
         }
         tbody.querySelectorAll('.edit-dr-item-row').forEach(function(row) {
+            bindEditRowStoreSelect(row);
+            // Native store select only — avoid Choices submit issues for store_id.
             row.querySelector('.edit-dr-avail').addEventListener('input', function() {
                 updateEditRowLeft(row);
             });
@@ -4493,8 +4861,11 @@ $selectedClientType = (string) request()->input('client_type', '');
         e.preventDefault();
         e.stopPropagation();
         const reportId = btn.getAttribute('data-report-id');
+        const editQuery = window.location.search || '';
+        // Keep update URL clean; listing filters go as hidden fields to avoid
+        // colliding with voucher fields (e.g. client_type_pk).
         document.getElementById('editReportForm').action = baseUrl + '/' + reportId;
-        fetch(baseUrl + '/' + reportId + '/edit', {
+        fetch(baseUrl + '/' + reportId + '/edit' + editQuery, {
                 headers: {
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
@@ -4516,7 +4887,16 @@ $selectedClientType = (string) request()->input('client_type', '');
                 const v = data.voucher;
                 document.getElementById('editReportModalLabel').textContent = 'Edit Selling Voucher #' +
                     (v.id || reportId);
-                document.querySelector('.edit-store-id').value = v.store_id || v.inve_store_master_pk || '';
+                applyEditFilteredStoreDisplay(v);
+                const editFormEl = document.getElementById('editReportForm');
+                if (editFormEl) {
+                    editFormEl.dataset.clientTypePk = (v.client_type_pk != null ? String(v.client_type_pk) : '');
+                    editFormEl.dataset.clientName = (v.client_name != null ? String(v.client_name) : '');
+                }
+                var editClientIdEl = document.getElementById('editDrClientId');
+                if (editClientIdEl) {
+                    editClientIdEl.value = (v.client_id != null && String(v.client_id) !== '') ? String(v.client_id) : '';
+                }
                 document.querySelector('.edit-remarks').value = v.remarks || '';
                 const editRefNumEl = document.querySelector('.edit-reference-number');
                 if (editRefNumEl) editRefNumEl.value = v.reference_number || '';
@@ -4634,7 +5014,8 @@ $selectedClientType = (string) request()->input('client_type', '');
                     }
                     if (editNameInp) {
                         editNameInp.style.display = 'block';
-                        editNameInp.value = v.client_name || '';
+                        editNameInp.readOnly = true;
+                        editNameInp.classList.add('bg-light');
                         editNameInp.placeholder = 'Course name';
                         editNameInp.setAttribute('required', 'required');
                     }
@@ -4647,6 +5028,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                             rebuildEditClientNameSelect(slug);
                         }
                         editClientSelect = document.getElementById('editDrClientNameSelect');
+                        ensureEditClientTypePkOption(editClientSelect, v.client_type_pk, v.client_name);
                         setSelectValue(editClientSelect, v.client_type_pk || '');
                     }
                     if (editOtSelect) {
@@ -4668,7 +5050,8 @@ $selectedClientType = (string) request()->input('client_type', '');
                     }
                     if (editNameInp) {
                         editNameInp.style.display = 'block';
-                        editNameInp.readOnly = false;
+                        editNameInp.readOnly = true;
+                        editNameInp.classList.add('bg-light');
                         editNameInp.placeholder = 'Client / section / role name';
                         editNameInp.setAttribute('required', 'required');
                     }
@@ -4677,13 +5060,24 @@ $selectedClientType = (string) request()->input('client_type', '');
                 // Ensure TomSelect instances exist for the final state (and preserve selected values)
                 initEditModalTomSelects();
                 syncEditDrChoicesFromVoucher(v, slug);
+                freezeEditClientIdentityFields(v);
                 editCurrentStoreId = v.store_id || v.inve_store_master_pk || '';
+                if (!editCurrentStoreName) {
+                    var storeOpt = document.querySelector(
+                        '#editReportModal select.edit-store-id option[value="' +
+                        String(editCurrentStoreId).replace(/"/g, '\\"') + '"]'
+                    );
+                    editCurrentStoreName = storeOpt ? String(storeOpt.textContent || '').trim() : '';
+                }
                 const items = data.items || [];
                 const openEditModalWithItems = function() {
                     buildEditItemsTable(items);
                     new bootstrap.Modal(document.getElementById('editReportModal')).show();
                 };
-                if (editCurrentStoreId) {
+                if (v.filtered_view) {
+                    filteredItems = Array.isArray(itemSubcategories) ? itemSubcategories.slice() : [];
+                    openEditModalWithItems();
+                } else if (editCurrentStoreId) {
                     fetchStoreItems(editCurrentStoreId, function() {
                         updateEditItemDropdowns();
                         openEditModalWithItems();
@@ -4720,9 +5114,15 @@ $selectedClientType = (string) request()->input('client_type', '');
     if (editReportModal) {
         editReportModal.addEventListener('shown.bs.modal', function() {
             initEditModalTomSelects();
+            var editFormEl = document.getElementById('editReportForm');
+            freezeEditClientIdentityFields({
+                client_name: editFormEl ? editFormEl.dataset.clientName : '',
+                client_id: (document.getElementById('editDrClientId') || {}).value || ''
+            });
         });
         editReportModal.addEventListener('hidden.bs.modal', function() {
             destroyEditModalTomSelects();
+            unfreezeEditClientIdentityFields();
         });
     }
 
@@ -5100,10 +5500,26 @@ $selectedClientType = (string) request()->input('client_type', '');
     var editReportFormEl = document.getElementById('editReportForm');
     if (editReportFormEl) {
         editReportFormEl.addEventListener('submit', function(e) {
+            prepareEditFormForSubmit(this);
             document.querySelectorAll('#editModalItemsBody .edit-dr-item-row').forEach(function(row) {
                 enforceQtyWithinAvailable(row, '.edit-dr-avail', '.edit-dr-qty');
             });
-            if (!this.checkValidity()) {
+            // Re-validate after preparing store_id hidden fields.
+            const newStoreRows = this.querySelectorAll('#editModalItemsBody .edit-dr-store-select');
+            let storeMissing = false;
+            newStoreRows.forEach(function(sel) {
+                const backup = sel.parentElement
+                    ? sel.parentElement.querySelector('input.edit-dr-store-id-backup')
+                    : null;
+                const val = (backup && backup.value) ? backup.value : (sel.value || '');
+                if (!val) {
+                    storeMissing = true;
+                    sel.setCustomValidity('Please select a store.');
+                } else {
+                    sel.setCustomValidity('');
+                }
+            });
+            if (storeMissing || !this.checkValidity()) {
                 e.preventDefault();
                 e.stopPropagation();
                 this.classList.add('was-validated');
