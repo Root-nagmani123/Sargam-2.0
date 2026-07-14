@@ -174,6 +174,7 @@
                         <li class="px-2 py-2">
                             <a class="dropdown-item notification-item {{ $notification->is_read ? '' : 'unread' }}"
                                href="javascript:void(0)"
+                               title="{{ $notification->title ?? 'Notification' }}&#10;&#10;{{ $notification->message ?? '' }}"
                                onclick="markAsRead({{ $notification->pk }})">
 
                                 <div class="notification-title">
@@ -437,7 +438,9 @@
                         @if($notificationsMobile->count() > 0)
                         @foreach($notificationsMobile as $notification)
                         <a class="notification-item text-decoration-none {{ $notification->is_read ? '' : 'unread' }}"
-                            href="javascript:void(0)" onclick="markAsRead({{ $notification->pk }})">
+                            href="javascript:void(0)"
+                            title="{{ $notification->title ?? 'Notification' }}&#10;&#10;{{ $notification->message ?? '' }}"
+                            onclick="markAsRead({{ $notification->pk }})">
                             <div class="notification-title">{{ $notification->title ?? 'Notification' }}</div>
                             <div class="notification-message mt-1">{{ Str::limit($notification->message ?? '', 100) }}</div>
                             <div class="notification-time mt-2">
