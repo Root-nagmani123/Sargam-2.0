@@ -16,8 +16,6 @@ use App\Http\Controllers\FC\{
     DocumentUploadController,
     RegistrationStatusController,
     FcJoiningAttendanceController,
-    FcJoiningSampleDocumentController,
-    FcJoiningDocumentFormController,
     FormBuilderController,
     FormManagementController,
     GenericFormController,
@@ -103,14 +101,6 @@ Route::middleware(['auth'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->grou
         Route::put('/doc-masters/{doc}',      [FormBuilderController::class, 'updateDocMaster'])->name('doc-master.update');
         Route::delete('/doc-masters/{doc}',   [FormBuilderController::class, 'deleteDocMaster'])->name('doc-master.delete');
         Route::post('/doc-masters/reorder',   [FormBuilderController::class, 'reorderDocMasters'])->name('doc-master.reorder');
-    });
-
-    // ── Sample Document Master (downloadable blank forms per joining document) ──
-    Route::prefix('sample-documents')->name('sample-documents.')->group(function () {
-        Route::get('/',             [FcJoiningSampleDocumentController::class, 'index'])->name('index');
-        Route::post('/',            [FcJoiningSampleDocumentController::class, 'store'])->name('store');
-        Route::put('/{sample}',     [FcJoiningSampleDocumentController::class, 'update'])->name('update');
-        Route::delete('/{sample}',  [FcJoiningSampleDocumentController::class, 'destroy'])->name('destroy');
     });
 
     Route::prefix('joining')->name('joining.')->group(function () {
@@ -207,10 +197,6 @@ Route::middleware(['auth'])->prefix('fc-reg/forms')->name('fc-reg.forms.')->grou
     Route::get('/{form}/step/{step}',        [GenericFormController::class, 'showStep'])->name('step');
     Route::post('/{form}/step/{step}',       [GenericFormController::class, 'saveStep'])->name('step.save');
     Route::post('/{form}/group/{group}',     [GenericFormController::class, 'saveGroup'])->name('group.save');
-
-    // Fillable joining-document forms (fill online → generates a PDF into the doc slot)
-    Route::get('/{form}/step/{step}/fill/{field}',  [FcJoiningDocumentFormController::class, 'show'])->name('doc-form');
-    Route::post('/{form}/step/{step}/fill/{field}', [FcJoiningDocumentFormController::class, 'save'])->name('doc-form.save');
 });
 
 // ── FC Travel plans (admin) ────────────────────────────────────
@@ -242,27 +228,14 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     Route::post('/student/{userId}/form-documents/{formFieldId}/verify', [ReportController::class, 'updateDynamicFormDocumentVerification'])
         ->name('student.form-documents.verify');
 
-    // Health Risk Factors — course-wise report + exports
-    Route::get('/health-risk', [ReportController::class, 'healthRiskReport'])->name('health-risk');
-    Route::get('/health-risk/print', [ReportController::class, 'healthRiskPrint'])->name('health-risk.print');
-    Route::get('/health-risk/export-pdf', [ReportController::class, 'healthRiskExportPdf'])->name('health-risk.export.pdf');
-    Route::get('/health-risk/export-excel', [ReportController::class, 'healthRiskExportExcel'])->name('health-risk.export.excel');
-
-    // Descriptive Roll (first 2 steps) — course-wise, per-student PDF + bulk ZIP
-    Route::get('/descriptive-roll',                        [ReportController::class, 'firstTwoStepsIndex'])->name('descriptive-roll');
-    Route::get('/descriptive-roll/zip',                    [ReportController::class, 'firstTwoStepsZip'])->name('descriptive-roll.zip');
-    Route::get('/descriptive-roll/student/{username}/pdf', [ReportController::class, 'firstTwoStepsStudentPdf'])->name('descriptive-roll.student.pdf');
-
     // Form-specific dynamic report (works for any form, any number of steps)
     Route::get('/form/{form}',        [ReportController::class, 'formOverview'])->name('form');
     Route::get('/form/{form}/export', [ReportController::class, 'formExportCsv'])->name('form.export');
-    Route::get('/form/{form}/export-pdf-zip', [ReportController::class, 'formExportPdfZip'])->name('form.export.pdf-zip');
 
     // Aggregated reports
     Route::get('/by-service',   [ReportController::class, 'byService'])->name('service');
     Route::get('/by-state',     [ReportController::class, 'byState'])->name('state');
-    Route::get('/documents',            [ReportController::class, 'documents'])->name('documents');
-    Route::get('/documents/export-zip', [ReportController::class, 'documentsExportZip'])->name('documents.export');
+    Route::get('/documents',    [ReportController::class, 'documents'])->name('documents');
     Route::get('/bank-details', [ReportController::class, 'bankDetails'])->name('bank');
 
     // CSV exports

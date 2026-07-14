@@ -325,8 +325,8 @@ class FrontPageController extends Controller
                 'password' => Hash::make($request->reg_password),
             ]);
 
-        // Email the username and password to the trainee (best-effort: never block account creation).
-        $this->sendCredentialsEmail($registration->email ?? null, $request->reg_name, $request->reg_password, $registration->pk ?? null);
+        // Email only the username — never email the plain-text password (CWE-312).
+        $this->sendCredentialsEmail($registration->email ?? null, $request->reg_name, $registration->pk ?? null);
 
         return redirect()->route('fc.login', $this->intentQueryForFcFormLinks())->with(
             'sweet_success',
@@ -361,7 +361,7 @@ class FrontPageController extends Controller
      * Email the FC login credentials (username + password) to the trainee.
      * Best-effort: any mail failure is logged but never blocks account creation.
      */
-    protected function sendCredentialsEmail(?string $email, string $username, string $password, ?int $registrationPk = null): void
+    protected function sendCredentialsEmail(?string $email, string $username, ?int $registrationPk = null): void
     {
         $email = trim((string) $email);
         if ($email === '') {
@@ -372,11 +372,13 @@ class FrontPageController extends Controller
             $fromAddress = config('mail.from.address') ?: 'no-reply@lbsnaa.gov.in';
             $fromName = config('mail.from.name') ?: 'LBSNAA Foundation Course';
 
+            // Plain-text password is intentionally NOT included in this email (CWE-312:
+            // Cleartext Storage of Sensitive Information). The candidate just set their
+            // own password and already knows it.
             $body = "Dear Candidate,\n\n"
                 . "Your login credentials for the LBSNAA Foundation Course registration portal have been created successfully.\n\n"
-                . "Username: {$username}\n"
-                . "Password: {$password}\n\n"
-                . "Please keep these credentials confidential and do not share them with anyone.\n\n"
+                . "Username: {$username}\n\n"
+                . "Please keep your credentials confidential and do not share them with anyone.\n\n"
                 . "Regards,\n"
                 . "Lal Bahadur Shastri National Academy of Administration, Mussoorie";
 
@@ -414,13 +416,43 @@ class FrontPageController extends Controller
             ])->withInput();
         }
 
+        // ── Lockout check (CWE-307): 5 attempts → 15-minute lock ─────────────
+        $rosterRow = DB::table('fc_registration_master')
+            ->where('user_id', $regName)
+            ->first();
+
+        if ($rosterRow) {
+            if ($rosterRow->locked_until && now()->lt($rosterRow->locked_until)) {
+                $minutesLeft = (int) ceil(now()->diffInSeconds($rosterRow->locked_until) / 60);
+                return back()->withErrors([
+                    'login' => "Account locked due to too many failed login attempts. Try again in {$minutesLeft} minute(s).",
+                ])->withInput();
+            }
+        }
+
         // FC login: authenticate only against fc_registration_master (main /login uses user_credentials).
         $roster = $rosterAuth->findStagedRosterByLogin($regName);
         if ($roster && $rosterAuth->verifyStagedPassword($roster, $request->reg_password)) {
+            // Reset lockout counters on success
+            DB::table('fc_registration_master')
+                ->where('pk', $roster->pk)
+                ->update(['failed_login_attempts' => 0, 'locked_until' => null]);
+
             $this->fcRegistrationIntent->forgetIntent();
             $rosterAuth->establishStagedSession($roster);
 
             return $this->fcRegistrationIntent->redirectAfterFcWebLogin($intentFormId, $intentSetAt);
+        }
+
+        // Record failed attempt
+        if ($rosterRow) {
+            $attempts = ((int) $rosterRow->failed_login_attempts) + 1;
+            DB::table('fc_registration_master')
+                ->where('pk', $rosterRow->pk)
+                ->update([
+                    'failed_login_attempts' => $attempts,
+                    'locked_until'          => $attempts >= 5 ? now()->addMinutes(15) : null,
+                ]);
         }
 
         return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
