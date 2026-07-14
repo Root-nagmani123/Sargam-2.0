@@ -350,16 +350,17 @@ class AttendanceController extends Controller
                 ->addColumn('status', function ($row) {
                     // Marked once every student in the group+course has a saved row (status != 0).
                     return $this->isAttendanceMarked($row)
-                        ? '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">Marked</span>'
-                        : '<span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-3 py-1">Not Marked</span>';
+                        ? '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle rounded-pill px-3 py-1 fw-medium">Marked</span>'
+                        : '<span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle rounded-pill px-3 py-1 fw-medium">Not Marked</span>';
                 })
                 ->addColumn('actions', function ($row) use ($currentPath) {
-                    // Mark-attendance action = fingerprint icon; turns green once
-                    // every student in the group+course has a saved row (status != 0).
+                    // Admin action = stacked pencil "Edit/Mark Attendance" link; label
+                    // reads "Edit" once every student in the group+course has a saved
+                    // row (status != 0), otherwise "Mark".
                     $isMarked = $this->isAttendanceMarked($row);
                     $markBtnClass = $isMarked ? 'btn btn-success btn-sm' : 'btn btn-primary btn-sm';
-                    $markIconClass = $isMarked ? 'att-action-icon is-marked' : 'att-action-icon';
                     $markTitle = $isMarked ? 'Attendance Marked' : 'Mark Attendance';
+                    $markLabel = $isMarked ? 'Edit Attendance' : 'Mark Attendance';
 
         // if ($currentPath === 'user_attendance') {
              if (hasRole('Student-OT')) {
@@ -389,14 +390,14 @@ class AttendanceController extends Controller
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
-        ]) . '" class="' . $markIconClass . '" title="' . $markTitle . '" aria-label="' . $markTitle . '"><i class="bi bi-fingerprint" aria-hidden="true"></i></a>';
+        ]) . '" class="btn btn-link btn-sm text-primary text-decoration-none d-inline-flex flex-column align-items-center lh-1 p-1" title="' . $markTitle . '" aria-label="' . $markTitle . '"><i class="bi bi-pencil-square" style="font-size:1.35rem;" aria-hidden="true"></i><span class="small mt-1 text-center lh-sm">' . $markLabel . '</span></a>';
         }
         else{
             return '<a href="' . route('attendance.mark', [
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
-        ]) . '" class="' . $markIconClass . '" title="' . $markTitle . '" aria-label="' . $markTitle . '"><i class="bi bi-fingerprint" aria-hidden="true"></i></a>';
+        ]) . '" class="btn btn-link btn-sm text-primary text-decoration-none d-inline-flex flex-column align-items-center lh-1 p-1" title="' . $markTitle . '" aria-label="' . $markTitle . '"><i class="bi bi-pencil-square" style="font-size:1.35rem;" aria-hidden="true"></i><span class="small mt-1 text-center lh-sm">' . $markLabel . '</span></a>';
         }
 
         // Admin Page
@@ -1614,7 +1615,7 @@ $currentPath = $segments[1] ?? null;
         // Hover/title: always full course name (or fallback to display)
         $title = $full !== '' ? $full : $display;
 
-        return '<span class="attendance-course-cell text-body" data-tooltip="' . e($title) . '">' . e($display) . '</span>';
+        return '<span class="attendance-course-cell text-primary fw-medium" data-tooltip="' . e($title) . '">' . e($display) . '</span>';
     }
 
     /**

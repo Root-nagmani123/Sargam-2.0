@@ -45,33 +45,15 @@
     white-space: normal;
 }
 
-/* Mark-attendance action = fingerprint icon (green once fully marked) */
-.attendance-page .att-action-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    border-radius: 8px;
-    color: #004a93;
-    font-size: 1.2rem;
-    line-height: 1;
-    text-decoration: none;
-    transition: background-color 0.15s ease, color 0.15s ease;
+/* Edit-attendance action = stacked pencil icon + label (blue link) */
+.attendance-page td .btn-link.text-primary {
+    --bs-btn-color: #004a93;
+    --bs-btn-hover-color: #003c78;
+    min-width: 88px;
 }
 
-.attendance-page .att-action-icon:hover {
-    background: #eef3f9;
-    color: #004a93;
-}
-
-.attendance-page .att-action-icon.is-marked {
-    color: #027a48;
-}
-
-.attendance-page .att-action-icon.is-marked:hover {
-    background: #ecfdf3;
-    color: #027a48;
+.attendance-page td .btn-link.text-primary:hover .small {
+    text-decoration: underline;
 }
 
 /* Download CSV button (right of the Active/Archived tabs) */
