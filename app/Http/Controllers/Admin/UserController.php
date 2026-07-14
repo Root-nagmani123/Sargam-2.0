@@ -23,6 +23,7 @@ use App\Models\FacultyMaster;
 use App\Models\Holiday;
 use App\Services\NotificationService;
 use App\Exports\UsersExport;
+use App\Exports\StudentListReportExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Excel as ExcelWriter;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -1739,7 +1740,15 @@ class UserController extends Controller
             abort(404);
         }
 
-        if (! is_faculty_portal_user() && ! hasRole('Super Admin')) {
+        // Anyone who can VIEW the list may export it. Mirror the data-visibility
+        // guard in resolveDashboardStudentListPayload(): Super Admin, a standard
+        // faculty-portal user, OR a coordinator/ACC reached via their faculty pk
+        // (login role need not be a standard faculty-portal role). Otherwise the
+        // export 403s for users who see the on-screen table fine.
+        $exportFacultyPk = get_auth_faculty_master_pk();
+        if (! hasRole('Super Admin')
+            && ! is_faculty_portal_user()
+            && ! ($exportFacultyPk && ! hasRole('Student-OT'))) {
             abort(403, 'You are not authorized to export the student list.');
         }
 
@@ -1756,35 +1765,114 @@ class UserController extends Controller
         $timestamp = now()->format('Ymd_His');
         $fileBase = "student_list_{$timestamp}";
 
+        $reportTitle = 'Student List';
+        $filterSummary = $this->dashboardStudentListFilterSummary($request);
+        $header = $this->buildStudentListExportHeaderData($request);
+
         // Browser-printable report: same clean layout as the PDF, rendered as
         // HTML in a new tab that auto-opens the print dialog.
         if ($format === 'print') {
-            return view('admin.dashboard.export.student_list_print', [
+            return view('admin.dashboard.export.student_list_print', array_merge([
                 'headings' => $exportData['headings'],
                 'rows' => $exportData['rows'],
                 'generatedAt' => now()->format('d-m-Y H:i'),
-                'filterSummary' => $this->dashboardStudentListFilterSummary($request),
-            ]);
+                'filterSummary' => $filterSummary,
+                'reportTitle' => $reportTitle,
+            ], $header));
         }
 
         if ($format === 'pdf') {
             ini_set('memory_limit', '512M');
 
-            $pdf = Pdf::loadView('admin.dashboard.export.student_list_pdf', [
+            $pdf = Pdf::loadView('admin.dashboard.export.student_list_pdf', array_merge([
                 'headings' => $exportData['headings'],
                 'rows' => $exportData['rows'],
                 'generatedAt' => now()->format('d-m-Y H:i'),
-                'filterSummary' => $this->dashboardStudentListFilterSummary($request),
-            ])->setPaper('a4', 'landscape');
+                'filterSummary' => $filterSummary,
+                'reportTitle' => $reportTitle,
+            ], $header))
+                ->setPaper('a4', 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'isPhpEnabled' => true,
+                    'dpi' => 96,
+                ]);
 
             return $pdf->download("{$fileBase}.pdf");
         }
 
+        // "CSV" download is delivered as a branded .xlsx: a plain CSV cannot carry
+        // the logos, blue title band or centred/merged academy titles, so — like
+        // the other report exports in this app — it is a styled workbook that
+        // visually mirrors the Print/PDF header (institution → course → report
+        // title → column band), not a flat comma file.
         return Excel::download(
-            new UsersExport($exportData['headings'], $exportData['rows']),
-            "{$fileBase}.csv",
-            ExcelWriter::CSV
+            new StudentListReportExport(
+                $exportData['headings'],
+                $exportData['rows'],
+                $reportTitle,
+                (string) ($header['courseName'] ?? ''),
+                (string) ($header['courseDuration'] ?? ''),
+                $filterSummary,
+                now()->format('d-m-Y H:i'),
+                count($exportData['rows']),
+            ),
+            "{$fileBase}.xlsx",
+            ExcelWriter::XLSX
         );
+    }
+
+    /**
+     * Branded LBSNAA header assets for the student-list exports — the same
+     * emblem / Hindi title / 75-years logo and course line used by the official
+     * Student Medical Exemption report layout.
+     *
+     * @return array{logoLeft:?string,logoRight:?string,titleHindi:?string,courseName:string,courseDuration:string}
+     */
+    private function buildStudentListExportHeaderData(Request $request): array
+    {
+        $toDataUri = static function (string $path): ?string {
+            if (! is_file($path) || ! is_readable($path)) {
+                return null;
+            }
+            $raw = @file_get_contents($path);
+            if ($raw === false) {
+                return null;
+            }
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = match ($ext) {
+                'svg' => 'image/svg+xml',
+                'jpg', 'jpeg' => 'image/jpeg',
+                default => 'image/png',
+            };
+
+            return 'data:' . $mime . ';base64,' . base64_encode($raw);
+        };
+
+        $courseName = '';
+        $courseDuration = '';
+        if ($request->filled('course_id')) {
+            $course = CourseMaster::find($request->input('course_id'));
+            if ($course) {
+                $courseName = (string) ($course->course_name ?? '');
+                $start = ! empty($course->start_date ?? $course->start_year ?? null)
+                    ? Carbon::parse($course->start_date ?? $course->start_year)->format('j F Y') : '';
+                $end = ! empty($course->end_date)
+                    ? Carbon::parse($course->end_date)->format('j F Y') : '';
+                $courseDuration = ($start && $end) ? $start . ' to ' . $end : '';
+            }
+        }
+
+        return [
+            'logoLeft' => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
+            'logoRight' => $toDataUri(public_path('admin_assets/images/logos/constitution-75.png'))
+                ?: $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
+            'titleHindi' => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
+            'courseName' => $courseName,
+            'courseDuration' => $courseDuration,
+        ];
     }
 
     /**

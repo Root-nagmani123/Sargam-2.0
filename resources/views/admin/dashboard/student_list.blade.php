@@ -137,6 +137,9 @@
     .student-list-page .sl-toolbar-btn:hover { background: #f9fafb; }
     .student-list-page .sl-toolbar-btn i { font-size: 1rem; line-height: 1; }
 
+    /* +N Filters wrapper sits inline in the flex filter row (JS toggles it on/off). */
+    .student-list-page .sl-more-filters-wrap { display: inline-flex; align-items: center; }
+
     .student-list-page .sl-more-filters {
         color: #004a93;
         font-weight: 600;
@@ -375,7 +378,7 @@
                     <span>Download</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-1 py-2" aria-labelledby="studentListDownloadBtn">
-                    <li><button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="studentListDownloadCsv"><i class="bi bi-filetype-csv text-success"></i><span>Download CSV</span></button></li>
+                    <li><button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="studentListDownloadCsv"><i class="bi bi-file-earmark-excel text-success"></i><span>Download Excel</span></button></li>
                     <li><button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="studentListDownloadPdf"><i class="bi bi-filetype-pdf text-danger"></i><span>Download PDF</span></button></li>
                 </ul>
             </div>
@@ -434,17 +437,6 @@
                         </select>
                     </div>
 
-                    {{-- Cadre --}}
-                    <div class="sl-filter-item" id="slItemCadre">
-                        <span class="sl-filter-label-text">Cadre</span>
-                        <select id="cadreFilter" class="form-select sl-filter-select" aria-label="Filter by cadre">
-                            <option value="">Cadre</option>
-                            @foreach(($cadreOptions ?? []) as $cadre)
-                                <option value="{{ $cadre }}" {{ (string)($filters['cadre'] ?? '') === (string)$cadre ? 'selected' : '' }}>{{ $cadre }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
                     {{-- OT / Participant --}}
                     <div class="sl-filter-item" id="slItemParticipant">
                         <span class="sl-filter-label-text">OT / Participant</span>
@@ -455,6 +447,18 @@
                             @endforeach
                         </select>
                     </div>
+
+                    {{-- Overflow "+N Filters" popover: any filter that doesn't fit the
+                         row is moved in here by the reflow script below. --}}
+                    <div class="dropdown sl-more-filters-wrap" id="slMoreFiltersWrap" style="display:none;">
+                        <button type="button" class="btn sl-more-filters dropdown-toggle" id="moreFiltersBtn"
+                            data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false">+0 Filters</button>
+                        <div class="dropdown-menu dropdown-menu-end sl-more-menu p-3">
+                            <div class="sl-more-menu-header">More Filters</div>
+                            <div id="slOverflowSlot"></div>
+                        </div>
+                    </div>
+
                     <button type="button" class="btn programme-dt-btn-reset" id="resetFilters">Reset Filters</button>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
@@ -863,17 +867,23 @@
             if (dt) { dt.columns.adjust(); relayoutPinnedColumns(); }
         });
 
-        /* ── Responsive filters: overflow inline filters into the +Filters dropdown ── */
+        /* ── Responsive filters: filters that fit stay inline; the rest collapse
+              into the "+N Filters" dropdown. Recomputed on load + resize. ── */
         const $filterRow = $('#slFilterRow');
         const $overflowSlot = $('#slOverflowSlot');
         const $moreWrap = $('#slMoreFiltersWrap');
         const $moreBtn = $('#moreFiltersBtn');
-        const inlineFilterIds = ['#slItemPeriod', '#slItemSession', '#slItemTopic', '#slItemCadre', '#slItemParticipant'];
-        const STATIC_DROPDOWN_COUNT = {{ ($availableCourses->isNotEmpty() ? 1 : 0) + 4 }}; // Course? + Duty, ACC, Cadre, House (CC/ACC faculty is conditional)
+        // Visual left-to-right order: leftmost filters stay inline the longest.
+        const inlineFilterIds = ['#slItemPeriod', '#slItemCadre', '#slItemSession', '#slItemTopic', '#slItemParticipant'];
 
         function updateMoreFiltersLabel() {
             const moved = $overflowSlot.children('.sl-filter-item').length;
-            $moreBtn.text('+' + (STATIC_DROPDOWN_COUNT + moved) + ' Filters');
+            if (moved > 0) {
+                $moreBtn.text('+' + moved + ' Filters');
+                $moreWrap.css('display', '');       // show (falls back to CSS inline-flex)
+            } else {
+                $moreWrap.css('display', 'none');   // nothing overflowed → hide the button
+            }
         }
         function filterRowWraps(baseTop) {
             let wraps = false;
@@ -883,15 +893,19 @@
             return wraps;
         }
         function reflowFilters() {
+            // 1. Pull every filter back inline (drains the overflow slot).
             inlineFilterIds.forEach(function(sel) {
                 const el = document.querySelector(sel);
                 if (el) { $(el).insertBefore($moreWrap); }
             });
-            const first = $filterRow.children(':visible').first()[0];
-            if (first) {
-                const baseTop = first.getBoundingClientRect().top;
+            // 2. Show the button so its own width counts while measuring.
+            $moreWrap.css('display', '');
+            // 3. Move the trailing filters into the overflow until the row fits on one line.
+            const first = $filterRow.children(':visible').first();
+            if (first.length) {
+                const baseTop = first[0].getBoundingClientRect().top;
                 let guard = 0;
-                while (filterRowWraps(baseTop) && guard < 10) {
+                while (filterRowWraps(baseTop) && guard < 12) {
                     const $last = $filterRow.children('.sl-filter-item').last();
                     if (!$last.length) { break; }
                     $overflowSlot.prepend($last);
