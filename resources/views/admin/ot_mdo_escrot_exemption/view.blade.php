@@ -325,7 +325,7 @@
                             @endif
                         </div>
                     </div>
-                    <span class="badge rounded-pill text-bg-primary fs-6 fw-semibold px-3 py-2 d-inline-flex align-items-center gap-1">
+                    <span class="badge rounded-1 text-bg-primary fs-6 fw-semibold px-3 py-2 d-inline-flex align-items-center gap-1">
                         <i class="bi bi-card-checklist" aria-hidden="true"></i>
                         {{ $student['duty_count'] }} {{ Str::plural('Duty', $student['duty_count']) }}
                     </span>

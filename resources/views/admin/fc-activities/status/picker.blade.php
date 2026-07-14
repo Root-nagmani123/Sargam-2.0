@@ -46,7 +46,7 @@
         </p>
         @if($departments->isNotEmpty())
             <div class="d-flex flex-wrap gap-2 mt-3">
-                <span class="badge rounded-pill bg-white text-dark border fw-normal px-3 py-2">
+                <span class="badge rounded-1 bg-white text-dark border fw-normal px-3 py-2">
                     <i class="bi bi-building me-1 text-primary"></i>{{ $departments->count() }} department{{ $departments->count() === 1 ? '' : 's' }}
                 </span>
             </div>

@@ -66,10 +66,10 @@ class CourseMasterDataTable extends DataTable
             })
             ->addColumn('status', function ($row) {
                 if ((int) $row->active_inactive === 1) {
-                    return '<span class="badge rounded-pill programme-status-badge programme-status-badge--active">Active</span>';
+                    return '<span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>';
                 }
 
-                return '<span class="badge rounded-pill programme-status-badge programme-status-badge--inactive">Inactive</span>';
+                return '<span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>';
             })
             ->addColumn('action', function ($row) {
                 $editUrl = route('programme.edit', ['id' => encrypt($row->pk)]);

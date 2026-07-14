@@ -96,12 +96,12 @@
                 <div class="col-12 col-lg-5">
                     {{-- Summary badges --}}
                     <div class="d-flex flex-wrap gap-2 mb-3">
-                        <span class="badge rounded-pill px-3 py-2 fs-6" style="background: #1a8a7d;">
+                        <span class="badge rounded-1 px-3 py-2 fs-6" style="background: #1a8a7d;">
                             {{ $totalParticipants }} Officer Trainees
                         </span>
-                        <span class="badge rounded-pill bg-primary px-3 py-2 fs-6">{{ $maleCount }}</span>
-                        <span class="badge rounded-pill px-3 py-2 fs-6" style="background: #e91e90;">{{ $femaleCount }}</span>
-                        <span class="badge rounded-pill bg-secondary px-3 py-2 fs-6">Total: {{ $totalParticipants }}</span>
+                        <span class="badge rounded-1 bg-primary px-3 py-2 fs-6">{{ $maleCount }}</span>
+                        <span class="badge rounded-1 px-3 py-2 fs-6" style="background: #e91e90;">{{ $femaleCount }}</span>
+                        <span class="badge rounded-1 bg-secondary px-3 py-2 fs-6">Total: {{ $totalParticipants }}</span>
                     </div>
 
                     {{-- Gender icons --}}

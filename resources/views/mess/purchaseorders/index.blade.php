@@ -78,7 +78,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                                 <div class="h-100 rounded-3 border border-light-subtle bg-white p-3 p-md-4">
                                     <div class="d-flex align-items-center gap-2 mb-3">
                                         <span
-                                            class="badge rounded-pill bg-primary-subtle text-primary-emphasis fw-semibold px-3"
+                                            class="badge rounded-1 bg-primary-subtle text-primary-emphasis fw-semibold px-3"
                                             style="font-size: 0.7rem; letter-spacing: 0.06em;">Period</span>
                                         <span class="small text-body-secondary">Order date range</span>
                                     </div>
@@ -124,7 +124,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                                 <div class="h-100 rounded-3 border border-light-subtle bg-white p-3 p-md-4">
                                     <div class="d-flex align-items-center gap-2 mb-3">
                                         <span
-                                            class="badge rounded-pill bg-success-subtle text-success-emphasis fw-semibold px-3"
+                                            class="badge rounded-1 bg-success-subtle text-success-emphasis fw-semibold px-3"
                                             style="font-size: 0.7rem; letter-spacing: 0.06em;">Scope</span>
                                         <span class="small text-body-secondary">Vendors & stores <span
                                                 class="d-none d-sm-inline">(leave blank for all)</span></span>

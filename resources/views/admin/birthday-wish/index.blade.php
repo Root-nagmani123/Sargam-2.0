@@ -69,7 +69,7 @@ $senderName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                     <h6 class="mb-0 fw-semibold d-flex align-items-center gap-2">
                         <span class="material-icons material-symbols-rounded text-primary">cake</span>
                         Today's Birthdays
-                        <span class="badge rounded-pill text-bg-primary ms-auto">{{ $todayBirthdays->count() }}</span>
+                        <span class="badge rounded-1 text-bg-primary ms-auto">{{ $todayBirthdays->count() }}</span>
                     </h6>
                 </div>
                 <div class="card-body p-3" style="max-height: 65vh; overflow-y: auto;">
