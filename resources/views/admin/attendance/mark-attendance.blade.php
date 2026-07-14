@@ -65,25 +65,62 @@
 .att-mark-page .att-duty    { color: #004a93; background: #eff8ff; }
 .att-mark-page .att-exempt  { color: #475467; background: #f2f4f7; }
 
-/* Fingerprint action */
+/* Update-attendance action = stacked icon + label (blue link) */
 .att-mark-page .att-action-icon {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 2rem; height: 2rem; border-radius: 8px; color: #004a93; font-size: 1.2rem;
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; padding: 0.25rem 0.5rem; border-radius: 8px; color: #004a93;
     text-decoration: none; border: 0; background: transparent; cursor: pointer;
-    transition: background-color .15s ease;
+    line-height: 1.1; transition: background-color .15s ease;
 }
+.att-mark-page .att-action-icon i { font-size: 1.25rem; }
+.att-mark-page .att-action-label { font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
 .att-mark-page .att-action-icon:hover { background: #eef3f9; }
+.att-mark-page .att-action-icon:hover .att-action-label { text-decoration: underline; }
 
-/* Mark-OT modal */
-#markOtModal .modal-content { border: 0; border-radius: 14px; }
-#markOtModal .mark-ot-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0.85rem 0; border-top: 1px solid #eef2f6;
+/* Breadcrumb */
+.att-mark-page .att-crumb a { color: #667085; text-decoration: none; }
+.att-mark-page .att-crumb a:hover { color: #004a93; text-decoration: underline; }
+.att-mark-page .att-crumb-sep { color: #cbd2da; margin: 0 0.15rem; }
+.att-mark-page .att-crumb-current { color: #101828; font-weight: 600; }
+
+/* Session info cards (Course / Topic / Faculty / Date / Session Time) */
+.att-mark-page .att-info-cards {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.75rem;
 }
-#markOtModal .mark-ot-section { font-size: 0.9rem; font-weight: 700; color: #101828; margin: 1rem 0 0.25rem; }
-#markOtModal .form-switch .form-check-input { width: 2.6rem; height: 1.4rem; cursor: pointer; }
-#markOtModal .form-check-input:checked { background-color: #004a93; border-color: #004a93; }
-#markOtModal .att-radio-group { display: flex; flex-wrap: wrap; gap: 1.25rem; }
+.att-mark-page .att-info-card {
+    display: flex; align-items: flex-start; gap: 0.65rem;
+    background: #fff; border: 1px solid #e4e7ec; border-radius: 12px;
+    padding: 0.85rem 0.95rem; min-width: 0;
+}
+.att-mark-page .att-info-ico {
+    flex-shrink: 0; width: 2rem; height: 2rem; border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #eff4fb; color: #004a93; font-size: 1rem;
+}
+.att-mark-page .att-info-body { min-width: 0; }
+.att-mark-page .att-info-label { font-size: 0.75rem; color: #667085; margin-bottom: 0.15rem; }
+.att-mark-page .att-info-value {
+    font-size: 0.9rem; font-weight: 700; color: #101828; line-height: 1.25;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+@media (max-width: 991.98px) { .att-mark-page .att-info-cards { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 575.98px) { .att-mark-page .att-info-cards { grid-template-columns: repeat(2, 1fr); } }
+
+/* Context filter boxes (Course Name / Time Period) — display styled like dropdowns */
+.att-mark-page .att-filter-box {
+    display: inline-flex; align-items: center; gap: 0.6rem;
+    height: 48px; padding: 0 0.85rem; background: #fff;
+    border: 1px solid #d0d5dd; border-radius: 8px; color: #344054; max-width: 260px;
+}
+.att-mark-page .att-filter-label { font-size: 0.72rem; color: #667085; }
+.att-mark-page .att-filter-value {
+    font-size: 0.9rem; font-weight: 600; color: #101828;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.att-mark-page .att-filter-caret { color: #98a2b3; font-size: 0.8rem; margin-left: auto; }
+
+/* Inline "Update Attendance Status" radios — keep them tidy in a narrow column */
+.att-mark-page #studentAttendanceTable td .form-check-inline { margin-right: 0.85rem; }
 
 .att-mark-page .att-footer {
     border-top: 1px solid #e4e7ec; padding: 0.875rem 1rem; color: #667085; font-size: 0.875rem;
@@ -94,6 +131,10 @@
 @section('setup_content')
 @php
     $courseName = optional($courseGroup->course)->course_name ?? 'OT';
+    $topicRaw = optional($courseGroup->timetable)->subject_topic;
+    $topicName = $topicRaw ? trim(preg_replace('/\s+/u', ' ', strip_tags((string) $topicRaw))) : 'N/A';
+    $topicName = $topicName !== '' ? $topicName : 'N/A';
+    $facultyName = ($facultyName ?? '') !== '' ? $facultyName : 'N/A';
     $sessionDate = optional($courseGroup->timetable)->START_DATE
         ? \Carbon\Carbon::parse($courseGroup->timetable->START_DATE)->format('d/m/Y') : 'N/A';
     $sessionTime = optional($courseGroup->timetable)->class_session ?? 'N/A';
@@ -109,21 +150,43 @@
             <div class="d-flex align-items-center gap-3">
                 <a href="{{ route('attendance.index') }}" class="att-back" aria-label="Back"><i class="bi bi-arrow-left"></i></a>
                 <div>
-                    <div class="att-crumb">Home / OT Attendance / Mark Attendance</div>
-                    <h4 class="att-title" title="{{ $courseName }}">{{ $courseName }}'s OT Attendance</h4>
+                    <nav class="att-crumb" aria-label="breadcrumb">
+                        <a href="{{ route('admin.dashboard') }}">Home</a>
+                        <span class="att-crumb-sep">/</span> Time Table
+                        <span class="att-crumb-sep">/</span> <a href="{{ route('attendance.index') }}">Attendance</a>
+                        <span class="att-crumb-sep">/</span> <span class="att-crumb-current">Topic wise Attendance</span>
+                    </nav>
+                    <h4 class="att-title" title="{{ $courseName }}">{{ $courseName }}'s Attendance</h4>
                 </div>
             </div>
             @if($canMark)
-            <div class="d-flex flex-wrap align-items-center gap-2">
-                <button type="button" class="btn att-btn-outline" id="markAbsentBulk">
-                    <i class="bi bi-x-circle"></i> Mark Absent in Bulk
-                </button>
-                <button type="button" class="btn btn-primary att-btn-primary px-4" id="markPresentBulk">
-                    <i class="bi bi-check2-circle"></i> Mark Present in Bulk
-                </button>
-            </div>
+            <button type="button" class="btn btn-primary att-btn-primary px-4" id="markAllBtn">
+                <i class="bi bi-check2-circle me-1"></i> Mark Attendance
+            </button>
             @endif
         </div>
+    </div>
+
+    {{-- Session info cards --}}
+    @php
+        $infoCards = [
+            ['label' => 'Course Name',  'value' => $courseName],
+            ['label' => 'Topic Name',   'value' => $topicName],
+            ['label' => 'Faculty Name', 'value' => $facultyName],
+            ['label' => 'Topic Date',   'value' => $sessionDate],
+            ['label' => 'Session Time', 'value' => $sessionTime],
+        ];
+    @endphp
+    <div class="att-info-cards mb-3">
+        @foreach($infoCards as $card)
+        <div class="att-info-card">
+            <span class="att-info-ico"><i class="bi bi-journal-text"></i></span>
+            <div class="att-info-body">
+                <div class="att-info-label">{{ $card['label'] }}</div>
+                <div class="att-info-value" title="{{ $card['value'] }}">{{ $card['value'] }}</div>
+            </div>
+        </div>
+        @endforeach
     </div>
 
     {{-- Download --}}
@@ -143,12 +206,19 @@
         <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
             <div class="card-body p-3 p-md-4">
 
-                {{-- Filter bar --}}
+                {{-- Filter bar (context for this session — Course + Time Period) --}}
                 <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
                     <span class="fw-semibold text-body-secondary me-1">Filters</span>
-                    <span class="att-info"><small>Course Name</small>&nbsp;{{ \Illuminate\Support\Str::limit($courseName, 28) }}</span>
-                    <span class="att-info"><small>Time Period</small>&nbsp;{{ $sessionDate }}</span>
-                    <span class="att-info d-none d-lg-inline-flex"><small>Session</small>&nbsp;{{ $sessionTime }}</span>
+                    <div class="att-filter-box" title="{{ $courseName }}">
+                        <span class="att-filter-label">Course Name</span>
+                        <span class="att-filter-value">{{ \Illuminate\Support\Str::limit($courseName, 26) }}</span>
+                        <i class="bi bi-chevron-down att-filter-caret" aria-hidden="true"></i>
+                    </div>
+                    <div class="att-filter-box">
+                        <span class="att-filter-label">Time Period</span>
+                        <span class="att-filter-value">{{ $sessionDate }}</span>
+                        <i class="bi bi-chevron-down att-filter-caret" aria-hidden="true"></i>
+                    </div>
                     <div class="ms-auto d-flex flex-wrap align-items-center gap-2">
                         <button type="button" class="att-btn-outline" id="btnAttColumns"
                             data-bs-toggle="modal" data-bs-target="#attColumnModal" title="Show / hide columns">
@@ -171,65 +241,6 @@
             </div>
         </div>
     </form>
-</div>
-
-{{-- Per-OT Mark Attendance modal (opened by the fingerprint action) --}}
-<div class="modal fade att-mark-page" id="markOtModal" tabindex="-1" aria-labelledby="markOtModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold" id="markOtModalLabel">Mark Attendance - <span id="markOtName">OT Name</span></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <hr class="my-3">
-            <div class="modal-body">
-                <div class="mb-2">
-                    <label class="form-label fw-semibold">Attendance <span class="text-danger">*</span></label>
-                    <div class="att-radio-group">
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="ot_status_radio" id="otRadioPresent" value="1" checked>
-                            <label class="form-check-label" for="otRadioPresent">Present</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="ot_status_radio" id="otRadioLate" value="2">
-                            <label class="form-check-label" for="otRadioLate">Late</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="ot_status_radio" id="otRadioAbsent" value="3">
-                            <label class="form-check-label" for="otRadioAbsent">Absent</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mark-ot-row">
-                    <span>MDO Duty</span>
-                    <div class="form-check form-switch m-0">
-                        <input class="form-check-input" type="checkbox" role="switch" id="otMdo">
-                    </div>
-                </div>
-
-                <div class="mark-ot-section">Exemptions</div>
-
-                <div class="mark-ot-row">
-                    <span>Medical Exemptions</span>
-                    <div class="form-check form-switch m-0">
-                        <input class="form-check-input" type="checkbox" role="switch" id="otMedical">
-                    </div>
-                </div>
-
-                <div class="mark-ot-row">
-                    <span>Other Exemptions</span>
-                    <div class="form-check form-switch m-0">
-                        <input class="form-check-input" type="checkbox" role="switch" id="otOther">
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary px-4" id="otMarkSave">Mark Attendance</button>
-            </div>
-        </div>
-    </div>
 </div>
 
 {{-- Column visibility modal --}}
@@ -260,28 +271,10 @@ $(function () {
         $('#otCount').text($('#studentAttendanceTable tbody tr').filter(':visible').not(':has(td.dataTables_empty)').length);
     }
 
-    // Bulk mark: apply to checked rows, or ALL rows when none are checked, then save.
-    function bulkMark(status) {
-        var $checked = $('#studentAttendanceTable tbody .ot-check:checked');
-        var $targets = $checked.length ? $checked : $('#studentAttendanceTable tbody .ot-check');
-        if (!$targets.length) { return; }
-        $targets.each(function () {
-            var pk = this.value;
-            $('.ot-status[data-ot="' + pk + '"]').val(status);
-        });
-        document.getElementById('attMarkForm').submit();
-    }
-    $('#markPresentBulk').on('click', function () { bulkMark(1); });
-    $('#markAbsentBulk').on('click', function () { bulkMark(3); });
-
-    // Header select-all
-    $(document).on('change', '#otCheckAll', function () {
-        $('#studentAttendanceTable tbody .ot-check').prop('checked', this.checked);
-    });
-    $(document).on('change', '.ot-check', function () {
-        var total = $('#studentAttendanceTable tbody .ot-check').length;
-        var sel = $('#studentAttendanceTable tbody .ot-check:checked').length;
-        $('#otCheckAll').prop('checked', total > 0 && sel === total);
+    // "Mark Attendance" saves every OT's inline Present/Late/Absent selection at once.
+    $('#markAllBtn').on('click', function () {
+        var form = document.getElementById('attMarkForm');
+        if (form) { form.submit(); }
     });
 
     // Client-side search over the loaded rows.
@@ -296,54 +289,27 @@ $(function () {
     $('#studentAttendanceTable').on('draw.dt', updateCount);
     setTimeout(updateCount, 400);
 
-    /* ── Per-OT Mark Attendance modal ── */
+    /* ── Per-OT save (Update Attendance action) ── */
     var STATUS_MAP = {
         0: ['Not Marked', 'att-nm'], 1: ['Present', 'att-present'], 2: ['Late', 'att-late'],
         3: ['Absent', 'att-absent'], 4: ['MDO', 'att-duty'], 5: ['Escort', 'att-duty'],
         6: ['Medical', 'att-exempt'], 7: ['Other', 'att-exempt']
     };
-    var markOtModalEl = document.getElementById('markOtModal');
-    var markOtModal = (window.bootstrap && markOtModalEl) ? new bootstrap.Modal(markOtModalEl) : null;
-    var currentOtPk = null;
 
     function updateOtBadge(pk, status) {
-        $('.ot-status[data-ot="' + pk + '"]').val(status);
         var m = STATUS_MAP[status] || STATUS_MAP[0];
         $('.att-badge[data-ot="' + pk + '"]').text(m[0]).attr('class', 'att-badge ' + m[1]);
-        // reflect new status on the fingerprint button too
         $('.js-mark-ot[data-ot="' + pk + '"]').attr('data-status', status);
+        var $radio = $('input[name="student[' + pk + ']"][value="' + status + '"]');
+        if ($radio.length) { $radio.prop('checked', true); }
     }
 
-    // Open the modal, prefilled from the OT's current status.
+    // "Update Attendance" saves THIS OT's inline Present/Late/Absent selection via AJAX
+    // and refreshes its Current Status pill — no modal.
     $(document).on('click', '.js-mark-ot', function () {
-        if (!markOtModal) return;
-        currentOtPk = String($(this).data('ot'));
-        var status = parseInt($(this).attr('data-status'), 10) || 0;
-        $('#markOtName').text($(this).data('name') || '');
-
-        $('#otMdo, #otMedical, #otOther').prop('checked', false);
-        $('input[name="ot_status_radio"][value="1"]').prop('checked', true);
-        if (status === 2 || status === 3) {
-            $('input[name="ot_status_radio"][value="' + status + '"]').prop('checked', true);
-        } else if (status === 4) { $('#otMdo').prop('checked', true); }
-        else if (status === 6) { $('#otMedical').prop('checked', true); }
-        else if (status === 7) { $('#otOther').prop('checked', true); }
-
-        markOtModal.show();
-    });
-
-    // MDO / Medical / Other are mutually exclusive (single status per OT).
-    $('#otMdo, #otMedical, #otOther').on('change', function () {
-        if (this.checked) { $('#otMdo, #otMedical, #otOther').not(this).prop('checked', false); }
-    });
-
-    $('#otMarkSave').on('click', function () {
-        if (!currentOtPk) return;
-        var status;
-        if ($('#otMedical').is(':checked')) status = 6;
-        else if ($('#otOther').is(':checked')) status = 7;
-        else if ($('#otMdo').is(':checked')) status = 4;
-        else status = parseInt($('input[name="ot_status_radio"]:checked').val(), 10) || 1;
+        var pk = String($(this).data('ot'));
+        var $checked = $('input[name="student[' + pk + ']"]:checked');
+        var status = $checked.length ? (parseInt($checked.val(), 10) || 1) : 1;
 
         var data = {
             _token: '{{ csrf_token() }}',
@@ -351,13 +317,12 @@ $(function () {
             course_pk: $('#course_pk').val(),
             timetable_pk: $('#timetable_pk').val()
         };
-        data['student[' + currentOtPk + ']'] = status;
+        data['student[' + pk + ']'] = status;
 
         var $btn = $(this).prop('disabled', true);
         $.post('{{ route("attendance.save") }}', data)
             .done(function () {
-                updateOtBadge(currentOtPk, status);
-                if (markOtModal) markOtModal.hide();
+                updateOtBadge(pk, status);
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({ icon: 'success', title: 'Attendance saved', timer: 1200, showConfirmButton: false });
                 }
@@ -383,8 +348,8 @@ $(function () {
         var idxs = dt.columns().indexes().toArray();
         if (!idxs.length) { return false; }
 
-        // Locked (always visible): checkbox, S. No., Action (last column).
-        var LOCKED = [0, 1, idxs[idxs.length - 1]];
+        // Locked (always visible): S. No. and the Action column (last).
+        var LOCKED = [idxs[0], idxs[idxs.length - 1]];
         var hidden = colGetHidden().filter(function (i) { return LOCKED.indexOf(i) === -1; });
         colPersist(hidden);
 
@@ -399,7 +364,6 @@ $(function () {
         dt.columns().every(function () {
             var idx = this.index();
             var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
-            if (idx === 0) { title = 'Checkbox'; }
             if (!title) { title = 'Column ' + (idx + 1); }
             var locked = LOCKED.indexOf(idx) !== -1;
             var inputId = 'attcol_' + idx;

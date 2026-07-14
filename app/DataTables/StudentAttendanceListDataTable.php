@@ -22,10 +22,10 @@ class StudentAttendanceListDataTable extends DataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->addColumn('checkbox', fn($row) => '<input type="checkbox" class="form-check-input ot-check" value="' . $row->studentsMaster->pk . '">')
             ->addColumn('student_code', fn($row) => e($row->studentsMaster->generated_OT_code ?? 'N/A'))
             ->addColumn('student_name', fn($row) => e($row->studentsMaster->display_name ?? 'N/A'))
             ->addColumn('attendance_status', fn($row) => $this->renderStatusBadge($row))
+            ->addColumn('update_status', fn($row) => $this->renderRadioGroup($row, 'status', [1 => 'Present', 2 => 'Late', 3 => 'Absent']))
             ->addColumn('mdo_duty', fn($row) => $this->renderMdoCell($row))
             ->addColumn('escort_duty', fn($row) => $this->renderEscortCell($row))
             ->addColumn('action', fn($row) => $this->renderActionCell($row))
@@ -44,7 +44,7 @@ class StudentAttendanceListDataTable extends DataTable
                     });
                 }
             }, true)
-            ->rawColumns(['checkbox', 'attendance_status', 'mdo_duty', 'escort_duty', 'action']);
+            ->rawColumns(['attendance_status', 'update_status', 'mdo_duty', 'escort_duty', 'action']);
     }
 
     public function query(): QueryBuilder
@@ -95,13 +95,13 @@ class StudentAttendanceListDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('checkbox')->title('<input type="checkbox" class="form-check-input" id="otCheckAll">')->addClass('text-center align-middle')->orderable(false)->searchable(false)->width(40),
             Column::computed('DT_RowIndex')->title('S. No.')->addClass('text-center align-middle')->orderable(false)->searchable(false),
             Column::make('student_code')->title('OT Code')->addClass('align-middle')->orderable(false)->searchable(true),
             Column::make('student_name')->title('OT Name')->addClass('align-middle')->orderable(false)->searchable(true),
-            Column::make('attendance_status')->title('Attendance Status')->addClass('align-middle')->orderable(false)->searchable(false),
-            Column::make('mdo_duty')->title('MDO Duty')->addClass('align-middle')->orderable(false)->searchable(false),
-            Column::make('escort_duty')->title('Escort/Moderator Duty')->addClass('align-middle')->orderable(false)->searchable(false),
+            Column::make('attendance_status')->title('Current Attendance Status')->addClass('text-center align-middle')->orderable(false)->searchable(false),
+            Column::make('update_status')->title('Update Attendance Status')->addClass('align-middle')->orderable(false)->searchable(false),
+            Column::make('mdo_duty')->title('MDO Duty')->addClass('text-center align-middle')->orderable(false)->searchable(false),
+            Column::make('escort_duty')->title('Escort/ Modular Duty')->addClass('text-center align-middle')->orderable(false)->searchable(false),
             Column::computed('action')->title('Action')->addClass('text-center align-middle')->orderable(false)->searchable(false),
         ];
     }
@@ -141,8 +141,10 @@ class StudentAttendanceListDataTable extends DataTable
         $status = $this->getSavedStatus($pk);
         [$label, $cls] = $this->statusLabelClass($status);
 
-        return '<input type="hidden" name="student[' . $pk . ']" value="' . $status . '" class="ot-status" data-ot="' . $pk . '">'
-            . '<span class="att-badge ' . $cls . '" data-ot="' . $pk . '">' . $label . '</span>';
+        // Display-only pill of the SAVED status. The editable field (name="student[pk]")
+        // is now owned by the inline "Update Attendance Status" radios so there is no
+        // duplicate form field.
+        return '<span class="att-badge ' . $cls . '" data-ot="' . $pk . '">' . $label . '</span>';
     }
 
     protected function renderMdoCell($row): string
@@ -185,7 +187,8 @@ class StudentAttendanceListDataTable extends DataTable
 
         return '<button type="button" class="att-action-icon js-mark-ot" '
             . 'data-ot="' . $pk . '" data-status="' . $status . '" data-name="' . $name . '" '
-            . 'title="Mark attendance" aria-label="Mark attendance"><i class="bi bi-fingerprint"></i></button>';
+            . 'title="Update Attendance" aria-label="Update Attendance">'
+            . '<i class="bi bi-clipboard-check"></i><span class="att-action-label">Update Attendance</span></button>';
     }
 
     protected function renderRadio($row, int $value, string $label, string $labelClass = 'text-dark'): string

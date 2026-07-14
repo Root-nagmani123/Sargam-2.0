@@ -670,6 +670,7 @@ $currentPath = $segments[1] ?? null;
                 'courseGroup' => $courseGroup,
                 'currentPath' => $currentPath,
                 'allMarked' => $allMarked,
+                'facultyName' => $this->resolveTimetableFacultyNames($courseGroup?->timetable),
             ]);
         } catch (\Exception $e) {
             Log::error('Error fetching attendance data: ' . $e->getMessage());
