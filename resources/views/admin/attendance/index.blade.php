@@ -181,6 +181,19 @@ hr {
     text-underline-offset: 0.15em;
 }
 
+/* Attendance DataTable chrome (search / pagination / showing) */
+.attendance-page #attendanceTable_wrapper .att-search .dataTables_filter { margin: 0; }
+.attendance-page #attendanceTable_wrapper .att-search input {
+    min-width: 260px;
+    max-width: 100%;
+}
+.attendance-page #attendanceTable_wrapper .att-count .dataTables_info,
+.attendance-page #attendanceTable_wrapper .att-count .dataTables_length { color: #667085; font-size: 0.875rem; padding: 0; margin: 0; }
+.attendance-page #attendanceTable_wrapper .att-count .dataTables_length label { margin: 0; display: inline-flex; align-items: center; gap: 0.4rem; }
+.attendance-page #attendanceTable_wrapper .att-count .dataTables_length select { width: auto; display: inline-block; }
+.attendance-page #attendanceTable_wrapper .dataTables_paginate { margin: 0; }
+.attendance-page #attendanceTable_wrapper .dataTables_paginate .pagination { margin: 0; }
+
 /* Custom tooltip (course full name) */
 #attendanceCustomTooltip {
     position: fixed;
@@ -326,6 +339,7 @@ hr {
             </div>
 
             <div id="attendanceTableCard">
+                <div class="programme-dt-panel">
                 <div id="attendanceTableDiv" class="table-responsive">
                     <table id="attendanceTable" class="table align-middle table-attendance w-100 mb-0">
                         <thead class="table-light">
@@ -364,6 +378,7 @@ hr {
                             @endif
                         </tbody>
                     </table>
+                </div>
                 </div>
             </div>
         </div>

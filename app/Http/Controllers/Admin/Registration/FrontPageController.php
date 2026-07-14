@@ -282,8 +282,9 @@ class FrontPageController extends Controller
             'reg_password' => [
                 'required',
                 'string',
-                'min:6',
-                'regex:/^(?=.*[\W_]).+$/', // at least one special character
+                'min:8',
+                // Strong password policy (CWE-521): upper + lower + number + special char.
+                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/',
             ],
             'reg_confirm_password' => 'required|same:reg_password',
         ], [
@@ -292,8 +293,8 @@ class FrontPageController extends Controller
             'reg_name.unique' => 'The username has already been taken.',
             'reg_mobile.required' => 'Mobile number is required.',
             'reg_mobile.digits' => 'Mobile number must be 10 digits.',
-            'reg_password.min' => 'The password must be at least 6 characters.',
-            'reg_password.regex' => 'The password must contain at least one special character.',
+            'reg_password.min' => 'The password must be at least 8 characters.',
+            'reg_password.regex' => 'Password must include uppercase, lowercase, a number and a special character.',
             'reg_confirm_password.same' => 'The confirm password and password must match.',
         ], [
             // Define custom field labels
@@ -345,11 +346,15 @@ class FrontPageController extends Controller
     // session()->invalidate() flushes the staged roster pk, so the user is fully signed out.
     public function logout(Request $request)
     {
+        // Capture the programme (?form=) token before invalidating the session so the
+        // trainee returns to the same login URL they logged out from.
+        $formQuery = $this->fcRegistrationIntent->formQueryForHeaderLinks($request);
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('fc.login');
+        return redirect()->route('fc.login', $formQuery);
     }
 
     /**
@@ -1067,7 +1072,7 @@ class FrontPageController extends Controller
                 'medical_exemption_doc' => $medicalDocPath,
                 'previous_fc_course_name' => !empty($request->course) ? $request->course : null,
                 'fc_date'                 => !empty($request->year) ? $request->year : null,
-                // 'previous_fc_institution_name' => !empty($request->institution_name) ? $request->institution_name : null,
+                'previous_fc_institution_name' => !empty($request->institution_name) ? $request->institution_name : null,
                 'appearing_roll_no'       => !empty($request->roll_number) ? $request->roll_number : null,
 
             ]
@@ -1100,10 +1105,15 @@ class FrontPageController extends Controller
             'new_password' => [
                 'required',
                 'string',
-                'min:6',
-                'regex:/^(?=.*[\W_]).+$/'
+                'min:8',
+                // Strong password policy (CWE-521): upper + lower + number + special char.
+                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/',
             ],
             'confirm_password' => 'required|same:new_password',
+        ], [
+            'new_password.min' => 'The password must be at least 8 characters.',
+            'new_password.regex' => 'Password must include uppercase, lowercase, a number and a special character.',
+            'confirm_password.same' => 'The confirm password and password must match.',
         ]);
 
         // Check user exists by mobile number

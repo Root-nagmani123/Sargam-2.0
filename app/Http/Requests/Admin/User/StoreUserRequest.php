@@ -26,7 +26,8 @@ class StoreUserRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            // Strong password policy (CWE-521): upper + lower + number + special char.
+            'password' => ['required', 'string', 'min:8', 'confirmed', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/'],
             'roles' => ['nullable', 'array'],
             'roles.*' => ['exists:roles,name'],
         ];
@@ -46,6 +47,7 @@ class StoreUserRequest extends FormRequest
             'email.unique' => 'This email is already registered.',
             'password.required' => 'The password field is required.',
             'password.min' => 'The password must be at least 8 characters.',
+            'password.regex' => 'Password must include uppercase, lowercase, a number and a special character.',
             'password.confirmed' => 'The password confirmation does not match.',
             'roles.*.exists' => 'One or more selected roles do not exist.',
         ];

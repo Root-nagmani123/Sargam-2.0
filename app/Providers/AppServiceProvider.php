@@ -9,6 +9,7 @@ use App\Services\SidebarMenu\BreadcrumbResolver;
 use App\Services\SidebarMenu\MenuService;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -36,6 +37,13 @@ class AppServiceProvider extends ServiceProvider
     {
         Paginator::useBootstrap();
 
+        // Reject HTML / angle brackets in free-text inputs to block stored XSS at the
+        // source (CWE-20 / CWE-79). Non-string values pass through untouched; only
+        // fields that explicitly opt in via the `no_html` rule are affected.
+        Validator::extend('no_html', function ($attribute, $value) {
+            return ! is_string($value) || preg_match('/[<>]/', $value) === 0;
+        }, 'The :attribute field must not contain HTML or the characters < and >.');
+
         view()->composer('*', function ($view) use ($menuService) {
             if (! auth()->check()) {
                 return;
@@ -46,6 +54,19 @@ class AppServiceProvider extends ServiceProvider
             }
 
             $view->with('sidebarMenus', $menuService->getMenus());
+        });
+
+        // Keep the programme (?form=) token on the FC header login/logout links so it
+        // is never dropped as the trainee moves through the public registration funnel.
+        view()->composer('fc.layouts.header', function ($view) {
+            if ($view->offsetExists('fcHeaderFormQuery')) {
+                return;
+            }
+
+            $view->with(
+                'fcHeaderFormQuery',
+                app(\App\Services\FC\FcRegistrationIntentService::class)->formQueryForHeaderLinks(request())
+            );
         });
 
         view()->composer(['admin.*', 'components.breadcrum'], function ($view) {

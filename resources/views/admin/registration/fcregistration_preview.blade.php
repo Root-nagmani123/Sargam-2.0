@@ -22,6 +22,7 @@
                         <th>Service Master PK</th>
                         <th>Course Master PK</th>
                         <th>Web Auth</th>
+                        <th>Ph Value</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -39,6 +40,7 @@
                             <td>{{ $row['service_master_pk'] }}</td>
                             <td>{{ $row['course_master_pk'] ?? '' }}</td>
                             <td>{{ $row['web_auth'] }}</td>
+                            <td>{{ $row['ph_value'] ?? '' }}</td>
                         </tr>
                     @endforeach
                 </tbody>

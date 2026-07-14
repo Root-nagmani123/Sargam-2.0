@@ -1,6 +1,13 @@
 @extends('admin.layouts.master')
 @section('title', $form->form_name . ' — Report')
 
+@push('styles')
+<style>
+    #foColMenu { max-height: 320px; overflow-y: auto; min-width: 220px; }
+    #foColMenu .form-check-label { cursor: pointer; }
+</style>
+@endpush
+
 @section('setup_content')
 <div class="container-fluid px-3">
 
@@ -26,10 +33,10 @@
             <a href="{{ route('admin.reports.documents') }}?{{ $formScopeQuery }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-earmark-check me-1"></i>Documents</a>
             <a href="{{ route('admin.reports.bank') }}?{{ $formScopeQuery }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-bank me-1"></i>Bank Details</a>
             <a href="{{ route('admin.travel.index') }}?{{ $formScopeQuery }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-train-front me-1"></i>Travel Plans</a>
-            <a href="{{ route('admin.reports.form.export', $form) }}{{ $exportQuery ? '?'.$exportQuery : '' }}" class="btn btn-sm btn-success">
+            <a href="{{ route('admin.reports.form.export', $form) }}" id="fcExportCsvBtn" data-base="{{ route('admin.reports.form.export', $form) }}" class="btn btn-sm btn-success">
                 <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export CSV
             </a>
-            <a href="{{ route('admin.reports.form.export.pdf-zip', $form) }}{{ $exportQuery ? '?'.$exportQuery : '' }}" class="btn btn-sm btn-danger"
+            <a href="{{ route('admin.reports.form.export.pdf-zip', $form) }}" id="fcBulkZipBtn" data-base="{{ route('admin.reports.form.export.pdf-zip', $form) }}" class="btn btn-sm btn-danger"
                title="Download a ZIP of every listed student's registration profile PDF (respects the current filters)"
                onclick="(function(a){var i=a.querySelector('i'),o=i.className;i.className='spinner-border spinner-border-sm me-1';a.style.pointerEvents='none';a.style.opacity='.7';setTimeout(function(){i.className=o;a.style.pointerEvents='';a.style.opacity='';},8000);})(this);">
                 <i class="bi bi-file-earmark-zip me-1"></i>Bulk PDF (ZIP)
@@ -90,10 +97,10 @@
     {{-- Filters --}}
     <div class="card border-0 shadow-sm mb-3" style="border-radius:8px;">
         <div class="card-body py-2 px-3">
-            <form method="GET" action="{{ request()->url() }}" class="row g-2 align-items-end fc-overview-filter-form">
+            <form onsubmit="return false;" class="row g-2 align-items-end fc-overview-filter-form">
                 <div class="col-sm-6 col-md-3 col-lg-2">
                     <label class="form-label small mb-1">Status</label>
-                    <select name="status" class="form-select form-select-sm">
+                    <select id="f_status" name="status" class="form-select form-select-sm">
                         <option value="">All Status</option>
                         <option value="COMPLETE"   {{ request('status')=='COMPLETE'  ?'selected':'' }}>Complete</option>
                         <option value="INCOMPLETE" {{ request('status')=='INCOMPLETE'?'selected':'' }}>Incomplete</option>
@@ -101,7 +108,7 @@
                 </div>
                 <div class="col-sm-6 col-md-3 col-lg-2">
                     <label class="form-label small mb-1">Service</label>
-                    <select name="service_id" class="form-select form-select-sm">
+                    <select id="f_service_id" name="service_id" class="form-select form-select-sm">
                         <option value="">All Services</option>
                         @foreach($services as $sv)
                             @php $key = $sv->pk ?? $sv->id; @endphp
@@ -114,110 +121,33 @@
                 <div class="col-sm-6 col-md-4 col-lg-3">
                     <label class="form-label small mb-1">Search</label>
                     <div class="input-group input-group-sm">
-                        <input type="text" name="search" class="form-control"
+                        <input type="text" id="f_search" name="search" class="form-control"
                                placeholder="Name / Username / Mobile"
                                value="{{ request('search') }}">
-                        <button type="submit" class="btn btn-primary btn-sm px-2"><i class="bi bi-search"></i></button>
-                        <a href="{{ request()->url() }}" class="btn btn-outline-secondary btn-sm px-2"><i class="bi bi-x"></i></a>
+                        <button type="button" id="fcOverviewSearchBtn" class="btn btn-primary btn-sm px-2"><i class="bi bi-search"></i></button>
+                        <button type="button" id="fcOverviewClearBtn" class="btn btn-outline-secondary btn-sm px-2"><i class="bi bi-x"></i></button>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-2 col-lg-2 ms-lg-auto text-lg-end">
+                    <label class="form-label small mb-1 d-none d-lg-block">&nbsp;</label>
+                    <div class="dropdown" id="foColDropdown">
+                        <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle d-inline-flex align-items-center gap-1"
+                                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Show / hide columns">
+                            <i class="bi bi-layout-three-columns"></i> Columns
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end py-2" id="foColMenu"></ul>
                     </div>
                 </div>
             </form>
         </div>
     </div>
 
-    {{-- Table --}}
-    <div id="fc-overview-table-wrapper" class="card border-0 shadow-sm" style="border-radius:8px;">
-        <div class="card-header bg-white border-bottom py-2 px-3">
-            <span class="small fw-semibold">
-                Showing {{ $students->firstItem() }}–{{ $students->lastItem() }} of {{ $students->total() }} students
-            </span>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-hover table-sm mb-0" style="font-size:12px;">
-                <thead class="table-light">
-                    <tr>
-                        <th class="px-3">#</th>
-                        <th>Username</th>
-                        <th>Full Name</th>
-                        <th>Service</th>
-                        <th>Cadre</th>
-                        <th>State</th>
-                        <th>Mobile</th>
-                        {{-- Dynamic step columns --}}
-                        @foreach($steps as $step)
-                            <th class="text-center" title="{{ $step->step_name }}">
-                                {{ Str::limit($step->step_name, 10) }}
-                            </th>
-                        @endforeach
-                        <th class="text-center">Progress</th>
-                        <th class="text-center">Status</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                @forelse($students as $idx => $s)
-                    <tr>
-                        <td class="px-3">{{ $students->firstItem() + $idx }}</td>
-                        <td><code style="font-size:11px">{{ $s->login_username ?? '—' }}</code></td>
-                        <td>{{ $s->full_name ?? '—' }}</td>
-                        <td>
-                            <span class="badge bg-primary-subtle text-primary" style="font-size:10px;">
-                                {{ $s->service_code ?? '—' }}
-                            </span>
-                        </td>
-                        <td>{{ $s->cadre ?? '—' }}</td>
-                        <td>{{ $s->allotted_state ?? '—' }}</td>
-                        <td>{{ $s->mobile_no ?? '—' }}</td>
-                        {{-- Dynamic tick/cross per step --}}
-                        @foreach($steps as $step)
-                            <td class="text-center">
-                                @if($s->{$step->tracker_column} ?? false)
-                                    <i class="bi bi-check-circle-fill text-success" style="font-size:13px;"></i>
-                                @else
-                                    <i class="bi bi-circle text-secondary" style="font-size:13px;opacity:.4;"></i>
-                                @endif
-                            </td>
-                        @endforeach
-                        {{-- Progress bar --}}
-                        <td class="text-center">
-                            @if($totalSteps > 0)
-                                <div class="progress" style="height:6px;width:60px;margin:auto;">
-                                    <div class="progress-bar bg-success"
-                                         style="width:{{ ($s->steps_done / $totalSteps) * 100 }}%"></div>
-                                </div>
-                                <span style="font-size:10px;color:#666;">{{ $s->steps_done }}/{{ $totalSteps }}</span>
-                            @else
-                                <span class="text-muted" style="font-size:10px;">—</span>
-                            @endif
-                        </td>
-                        <td class="text-center">
-                            @if($s->status === 'SUBMITTED')
-                                <span class="badge bg-success" style="font-size:10px;">Submitted</span>
-                            @elseif($totalSteps > 0 && (int) ($s->steps_done ?? 0) >= $totalSteps)
-                                <span class="badge bg-success" style="font-size:10px;">Complete</span>
-                            @else
-                                <span class="badge bg-warning text-dark" style="font-size:10px;">Incomplete</span>
-                            @endif
-                        </td>
-                        <td>
-                            <a href="{{ route('admin.reports.student', $s->route_user_id ?? $s->{$userKey}) . '?ref=' . urlencode(request()->fullUrl()) }}"
-                               class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size:11px;">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="{{ 8 + $totalSteps + 3 }}" class="text-center py-4 text-muted">
-                            No students found.
-                        </td>
-                    </tr>
-                @endforelse
-                </tbody>
-            </table>
-        </div>
-        <div class="card-footer bg-white py-2 px-3">
-            {{ $students->links() }}
+    {{-- Table (Yajra DataTable — server-side AJAX) --}}
+    <div class="card border-0 shadow-sm" style="border-radius:8px;">
+        <div class="card-body p-3">
+            <div class="table-responsive">
+                {!! $dataTable->table(['class' => 'table table-hover table-sm mb-0', 'style' => 'font-size:12px;width:100%;', 'data-sargam-dt-ui' => 'false']) !!}
+            </div>
         </div>
     </div>
 
@@ -226,72 +156,109 @@
 
 @push('scripts')
 <script>
-(function () {
-    var form    = document.querySelector('.fc-overview-filter-form');
-    var wrapper = document.getElementById('fc-overview-table-wrapper');
-    var timer;
+$(function () {
+    var ajaxUrl = "{{ route('admin.reports.form', $form) }}";
 
-    function doFetch(url) {
-        wrapper.style.opacity = '0.5';
-        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(function (r) { return r.text(); })
-            .then(function (html) {
-                var doc     = new DOMParser().parseFromString(html, 'text/html');
-                var newWrap = doc.getElementById('fc-overview-table-wrapper');
-                if (newWrap) {
-                    wrapper.innerHTML = newWrap.innerHTML;
-                }
-                wrapper.style.opacity = '';
-                history.pushState(null, '', url);
-            })
-            .catch(function () { wrapper.style.opacity = ''; });
-    }
+    function fStatus()  { return $('#f_status').val() || ''; }
+    function fService() { return $('#f_service_id').val() || ''; }
+    function fSearch()  { return $('#f_search').val() || ''; }
 
-    function buildUrl() {
-        var params = new FormData(form);
-        return form.action + '?' + new URLSearchParams(params).toString();
-    }
-
-    // Intercept explicit form submit (search button)
-    form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        doFetch(buildUrl());
+    var table = $('#fcFormOverviewTable').DataTable({
+        processing: true,
+        serverSide: true,
+        searching: true,
+        ordering: true,
+        order: [],
+        autoWidth: false,
+        responsive: false,
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+        language: {
+            processing: 'Loading…',
+            search: '',
+            searchPlaceholder: 'Search',
+            lengthMenu: 'Show _MENU_',
+            info: 'Showing _START_–_END_ of _TOTAL_ students',
+            infoEmpty: 'Showing 0 of 0 students',
+            infoFiltered: '',
+            emptyTable: 'No students found.',
+            zeroRecords: 'No students found.',
+            paginate: { previous: '‹', next: '›' }
+        },
+        ajax: {
+            url: ajaxUrl,
+            type: 'GET',
+            data: function (d) {
+                d.f_status     = fStatus();
+                d.f_service_id = fService();
+                d.f_search     = fSearch();
+            }
+        },
+        columns: [
+            { data: 'DT_RowIndex',    name: 'DT_RowIndex',    orderable: false, searchable: false, className: 'text-center', width: '40px' },
+            { data: '{{ $userKey }}', name: '{{ $userKey }}', orderable: false },
+            { data: 'full_name',      name: 'full_name' },
+            { data: 'service_code',   name: 'service_code',   orderable: false, searchable: false },
+            { data: 'cadre',          name: 'cadre',          orderable: false, searchable: false },
+            { data: 'allotted_state', name: 'allotted_state', orderable: false, searchable: false },
+            { data: 'mobile_no',      name: 'mobile_no',      orderable: false },
+@foreach($steps as $step)
+            { data: '{{ $step->tracker_column }}', name: '{{ $step->tracker_column }}', orderable: false, searchable: false, className: 'text-center' },
+@endforeach
+            { data: 'progress_bar',   name: 'progress_bar',   orderable: false, searchable: false, className: 'text-center' },
+            { data: 'status',         name: 'status',         orderable: false, searchable: false, className: 'text-center' },
+            { data: 'action',         name: 'action',         orderable: false, searchable: false, className: 'text-center' }
+        ],
+        dom: "<'row mb-2 align-items-center'<'col-sm-6'l><'col-sm-6'f>>rt<'row mt-2 align-items-center'<'col-sm-5'i><'col-sm-7'p>>"
     });
 
-    // Dropdowns fire immediately
-    form.querySelectorAll('select').forEach(function (sel) {
-        sel.addEventListener('change', function () { doFetch(buildUrl()); });
-    });
-
-    // Search text: debounce 400 ms
-    var searchEl = form.querySelector('input[name="search"]');
-    if (searchEl) {
-        searchEl.addEventListener('input', function () {
-            clearTimeout(timer);
-            timer = setTimeout(function () { doFetch(buildUrl()); }, 400);
+    // Keep the CSV / Bulk-ZIP exports in sync with the active filters (they read the
+    // status / service_id / search params server-side, same as before).
+    function syncExportLinks() {
+        var qs = $.param({ status: fStatus(), service_id: fService(), search: fSearch() });
+        $('#fcExportCsvBtn, #fcBulkZipBtn').each(function () {
+            this.href = $(this).data('base') + '?' + qs;
         });
     }
 
-    // Clear button (the ×  link) — intercept and reset
-    form.querySelector('a.btn-outline-secondary')?.addEventListener('click', function (e) {
-        e.preventDefault();
-        form.querySelectorAll('select').forEach(function (s) { s.value = ''; });
-        if (searchEl) searchEl.value = '';
-        doFetch(form.action);
+    // Column show / hide menu (buttons.colVis isn't loaded app-wide, so build our own).
+    function buildColMenu() {
+        var $menu = $('#foColMenu').empty();
+        table.columns().every(function () {
+            var col   = this;
+            var title = ($(col.header()).text() || '').trim();
+            if (!title || title === '#') { return; } // skip the row-index & blank action columns
+            var $li = $('<li class="px-3 py-1"><div class="form-check mb-0">' +
+                '<input type="checkbox" class="form-check-input me-2"' + (col.visible() ? ' checked' : '') + '>' +
+                '<label class="form-check-label">' + title + '</label></div></li>');
+            $li.find('input').on('change', function () { col.visible($(this).prop('checked')); });
+            $li.find('label').on('click', function (e) {
+                e.preventDefault();
+                var $cb = $(this).closest('.form-check').find('input');
+                $cb.prop('checked', !$cb.prop('checked')).trigger('change');
+            });
+            $menu.append($li);
+        });
+    }
+
+    var timer;
+    function reload() { syncExportLinks(); table.ajax.reload(); }
+
+    $('#f_status, #f_service_id').on('change', reload);
+    $('#f_search').on('keyup', function (e) {
+        if (e.which === 13) { reload(); return; }
+        clearTimeout(timer);
+        timer = setTimeout(reload, 400);
+    });
+    $('#fcOverviewSearchBtn').on('click', reload);
+    $('#fcOverviewClearBtn').on('click', function () {
+        $('#f_status, #f_service_id').val('');
+        $('#f_search').val('');
+        reload();
     });
 
-    // Pagination links inside the wrapper — only intercept links back to this same page
-    document.addEventListener('click', function (e) {
-        var link = e.target.closest('#fc-overview-table-wrapper a[href]');
-        if (!link) { return; }
-        // Only intercept pagination links (same path as current page); let eye-icon etc. navigate normally
-        try {
-            var linkPath = new URL(link.href).pathname;
-            if (linkPath !== window.location.pathname) { return; }
-        } catch (err) { return; }
-        e.preventDefault();
-        doFetch(link.href);
-    });
-})();
+    syncExportLinks();
+    buildColMenu();
+});
 </script>
 @endpush

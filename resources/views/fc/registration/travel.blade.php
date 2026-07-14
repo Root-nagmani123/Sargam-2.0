@@ -213,6 +213,33 @@
                     <div class="form-text text-muted">Only dates configured by admin are available.</div>
                 </div>
                 <div class="col-12 col-md-6 field-block">
+                    @php
+                        $currentArrivalTime = old('arrival_time_dehradun', $plan?->arrival_time_dehradun);
+                        $currentArrivalTime = $currentArrivalTime !== null ? trim((string) $currentArrivalTime) : '';
+                        $arrivalTimeOptions = [];
+                        for ($h = 0; $h < 24; $h++) {
+                            foreach ([0, 30] as $mm) {
+                                $arrivalTimeOptions[] = \Carbon\Carbon::createFromTime($h, $mm)->format('g:i A');
+                            }
+                        }
+                        $arrivalTimeInList = $currentArrivalTime !== '' && in_array($currentArrivalTime, $arrivalTimeOptions, true);
+                    @endphp
+                    <label class="form-label">Arrival time at Dehradun Airport/Railway Station<span class="text-danger">*</span></label>
+                    <select name="arrival_time_dehradun" id="arrivalTimeDehradun" class="form-select" required>
+                        <option value="">-- Select arrival time --</option>
+                        @if($currentArrivalTime !== '' && ! $arrivalTimeInList)
+                            <option value="{{ $currentArrivalTime }}" selected>{{ $currentArrivalTime }}</option>
+                        @endif
+                        @foreach($arrivalTimeOptions as $t)
+                            <option value="{{ $t }}" {{ $currentArrivalTime === $t ? 'selected' : '' }}>{{ $t }}</option>
+                        @endforeach
+                    </select>
+                    <div class="form-text text-muted">Choose an activity slot at least 2 hours after this time.</div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-1">
+                <div class="col-12 col-md-6 field-block">
                     <label class="form-label">Activity slot <span class="text-danger">*</span></label>
                     <select name="fc_travel_arrival_slot_id" id="arrivalSlotSelect" class="form-select" required>
                         <option value="">-- Select slot --</option>
@@ -229,7 +256,7 @@
                                 @continue
                             @endif
                             @php $visibleSlotCount++; @endphp
-                            <option value="{{ $s->id }}" data-slot-date="{{ $s->slot_date?->format('Y-m-d') }}" {{ $sel ? 'selected' : '' }}>
+                            <option value="{{ $s->id }}" data-slot-date="{{ $s->slot_date?->format('Y-m-d') }}" data-slot-start="{{ $s->time_start ? \Illuminate\Support\Str::substr($s->time_start, 0, 5) : '' }}" {{ $sel ? 'selected' : '' }}>
                                 {{ $s->slot_label }}
                                 @if($s->time_start && $s->time_end)
                                     ({{ \Illuminate\Support\Str::substr($s->time_start, 0, 5) }}–{{ \Illuminate\Support\Str::substr($s->time_end, 0, 5) }})
@@ -243,6 +270,15 @@
                     </select>
                     <div class="form-text text-muted">Slots are shown only for the selected arrival date.</div>
                 </div>
+                <div class="col-12 col-md-6 field-block">
+                    <label class="form-label">Mode of journey <span class="text-danger">*</span></label>
+                    <select name="mode_of_journey" class="form-select" required>
+                        <option value="">-- Select --</option>
+                        @foreach(['By Air', 'By Road', 'By Train'] as $m)
+                            <option value="{{ $m }}" {{ old('mode_of_journey', $plan?->mode_of_journey) === $m ? 'selected' : '' }}>{{ $m }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 {{-- Keep for future use (currently hidden):
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold">Expected time (optional)</label>
@@ -254,33 +290,9 @@
 
             <div class="row g-3 mb-1">
                 <div class="col-12 col-md-6 field-block">
-                    <label class="form-label">Mode of journey <span class="text-danger">*</span></label>
-                    <select name="mode_of_journey" class="form-select" required>
-                        <option value="">-- Select --</option>
-                        @foreach(['By Air', 'By Road', 'By Train'] as $m)
-                            <option value="{{ $m }}" {{ old('mode_of_journey', $plan?->mode_of_journey) === $m ? 'selected' : '' }}>{{ $m }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-12 col-md-6 field-block">
                     <label class="form-label">Flight No / Train No/ Vehicle No <span class="text-danger">*</span></label>
                     <input type="text" name="journey_vehicle_no" class="form-control" maxlength="200" required
                            value="{{ old('journey_vehicle_no', $plan?->journey_vehicle_no) }}">
-                </div>
-            </div>
-
-            <div class="row g-3 mb-1">
-                {{-- Keep for future use (currently hidden):
-                <div class="col-12 col-md-6 field-block">
-                    <label class="form-label small fw-semibold">Date of arrival at Academy</label>
-                    <input type="date" name="academy_arrival_date" class="form-control"
-                           value="{{ old('academy_arrival_date', $plan?->academy_arrival_date?->format('Y-m-d')) }}">
-                </div>
-                --}}
-                <div class="col-12 col-md-6 field-block">
-                    <label class="form-label">Arrival time at Dehradun Airport/Railway Station<span class="text-danger">*</span></label>
-                    <input type="text" name="arrival_time_dehradun" class="form-control" maxlength="120" placeholder="e.g. 6:00 AM" required
-                           value="{{ old('arrival_time_dehradun', $plan?->arrival_time_dehradun) }}">
                 </div>
                 <div class="col-12 col-md-6 field-block">
                     <label class="form-label">Whether Require Academy Vehicle From Dehradun Airport/Railway Station to Academy <span class="text-danger">*</span></label>
@@ -297,6 +309,13 @@
                         </div>
                     </div>
                 </div>
+                {{-- Keep for future use (currently hidden):
+                <div class="col-12 col-md-6 field-block">
+                    <label class="form-label small fw-semibold">Date of arrival at Academy</label>
+                    <input type="date" name="academy_arrival_date" class="form-control"
+                           value="{{ old('academy_arrival_date', $plan?->academy_arrival_date?->format('Y-m-d')) }}">
+                </div>
+                --}}
             </div>
 
             <div class="row g-3 mb-1">
@@ -306,6 +325,8 @@
                               placeholder="Special needs…">{{ old('special_requirements', $plan?->special_requirements) }}</textarea>
                 </div>
             </div>
+
+            <div id="travelGapError" class="alert alert-danger small py-2 d-none" role="alert"></div>
 
             <div class="d-flex justify-content-between flex-wrap gap-2 border-top pt-3">
                 <a href="{{ $travelNav['backUrl'] ?? route('fc-reg.registration.bank') }}" class="btn btn-outline-secondary btn-sm">
@@ -347,6 +368,8 @@
             (function () {
                 const dateSelect = document.getElementById('joiningDateSelect');
                 const slotSelect = document.getElementById('arrivalSlotSelect');
+                const arrivalTimeInput = document.getElementById('arrivalTimeDehradun');
+                const gapErrorBox = document.getElementById('travelGapError');
                 const form = document.getElementById('travelSubmitForm');
                 const previewBtn = document.getElementById('previewTravelPlanBtn');
                 const previewModalEl = document.getElementById('travelPlanPreviewModal');
@@ -354,6 +377,60 @@
                 const closePreviewBtn = document.getElementById('closeTravelPlanPreviewBtn');
                 const editTravelPlanBtn = document.getElementById('editTravelPlanBtn');
                 if (!dateSelect || !slotSelect || !form || !previewBtn || !previewModalEl || !confirmSubmitBtn || !closePreviewBtn || !editTravelPlanBtn) return;
+
+                const MIN_GAP_MINUTES = 120;
+
+                // Parse free-text time like "6:00 AM", "18:30", "6 pm" into minutes since midnight.
+                function parseTimeToMinutes(value) {
+                    if (!value) return null;
+                    const m = String(value).trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+                    if (!m) return null;
+                    let hour = parseInt(m[1], 10);
+                    const min = m[2] ? parseInt(m[2], 10) : 0;
+                    const mer = m[3] ? m[3].toLowerCase() : '';
+                    if (min > 59) return null;
+                    if (mer === 'am') {
+                        if (hour < 1 || hour > 12) return null;
+                        if (hour === 12) hour = 0;
+                    } else if (mer === 'pm') {
+                        if (hour < 1 || hour > 12) return null;
+                        if (hour !== 12) hour += 12;
+                    } else if (hour > 23) {
+                        return null;
+                    }
+                    return hour * 60 + min;
+                }
+
+                function arrivalSlotGapMessage() {
+                    const arrivalMinutes = parseTimeToMinutes(arrivalTimeInput ? arrivalTimeInput.value : '');
+                    if (arrivalMinutes === null) {
+                        return 'Please enter your arrival time at Dehradun in a valid format (e.g. 6:00 AM).';
+                    }
+                    const slotOpt = slotSelect.options[slotSelect.selectedIndex];
+                    const slotStart = slotOpt ? slotOpt.getAttribute('data-slot-start') : '';
+                    const slotMinutes = parseTimeToMinutes(slotStart);
+                    if (slotMinutes === null) return null; // slot has no start time to compare against
+                    if (slotMinutes - arrivalMinutes < MIN_GAP_MINUTES) {
+                        return 'The activity slot must be at least 2 hours after your arrival time at Dehradun. Please choose a later slot or adjust your Dehradun arrival time.';
+                    }
+                    return null;
+                }
+
+                function showGapError(msg) {
+                    if (!gapErrorBox) return;
+                    gapErrorBox.textContent = msg;
+                    gapErrorBox.classList.remove('d-none');
+                    gapErrorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+
+                function clearGapError() {
+                    if (!gapErrorBox) return;
+                    gapErrorBox.textContent = '';
+                    gapErrorBox.classList.add('d-none');
+                }
+
+                if (arrivalTimeInput) arrivalTimeInput.addEventListener('change', clearGapError);
+                slotSelect.addEventListener('change', clearGapError);
 
                 function filterSlotsByDate() {
                     const selectedDate = dateSelect.value;
@@ -449,6 +526,12 @@
                         form.reportValidity();
                         return;
                     }
+                    const gapMsg = arrivalSlotGapMessage();
+                    if (gapMsg) {
+                        showGapError(gapMsg);
+                        return;
+                    }
+                    clearGapError();
                     fillPreview();
                     openPreviewModal();
                 });
