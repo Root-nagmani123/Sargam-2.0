@@ -159,9 +159,12 @@
 @endsection
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
 <style>
-.ts-dropdown { z-index: 1060 !important; }
+.select2-container--open { z-index: 1060; } /* sirf khula dropdown modal ke upar; closed widget normal flow me (modal ke peeche) */
+.select2-container--default .select2-selection--single { min-height: calc(1.5em + 0.75rem + 2px); display: flex; align-items: center; }
+.select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.5; padding-left: 0.25rem; }
 #updateMeterReadingTable td { vertical-align: middle; font-size: 0.85rem; }
 #updateMeterReadingTable .other-dual-stacked .other-dual-col { vertical-align: top; }
 #updateMeterReadingTable .other-dual-seg { padding-top: 0.35rem; padding-bottom: 0.35rem; }
@@ -173,7 +176,7 @@
 @endpush
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+{{-- Select2 JS globally footer (admin.layouts.footer) se load hoti hai; yahan include ki zaroorat nahi. --}}
 <script>
 @if ($meterReadingPageAlertMessage !== null)
 (function () {
@@ -190,13 +193,13 @@ $(document).ready(function() {
     let dataTable = null;
     let lastInvalidReadingAlertAt = 0;
 
-    var tsOpts = { allowEmptyOption: true, create: false, dropdownParent: 'body', maxOptions: null, hideSelected: false, onInitialize: function() { this.activeOption = null; } };
     function initTs(el, placeholder) {
-        if (!el || typeof TomSelect === 'undefined') return null;
-        if (el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
-        return new TomSelect(el, Object.assign({}, tsOpts, { placeholder: placeholder || 'Select' }));
+        if (!el || typeof $.fn.select2 === 'undefined') return null;
+        if ($(el).data('select2')) { try { $(el).select2('destroy'); } catch (e) {} }
+        $(el).select2({ placeholder: placeholder || 'Select', allowClear: false, width: '100%' });
+        return $(el);
     }
-    function getSelVal(el) { return (el && el.tomselect) ? el.tomselect.getValue() : $(el).val(); }
+    function getSelVal(el) { var v = el ? $(el).val() : ''; return (v === null || v === undefined) ? '' : v; }
 
     var tsEstate = null, tsUnitName = null, tsBuilding = null, tsUnitSub = null;
     if (document.getElementById('estate_name')) tsEstate = initTs(document.getElementById('estate_name'), 'Select');
@@ -206,8 +209,8 @@ $(document).ready(function() {
 
     function loadBuildingsThenPrefill(campusId, blockId, unitSubTypeId, thenLoadData) {
         var elB = document.getElementById('building'), elSub = document.getElementById('unit_sub_type');
-        if (tsBuilding) { try { tsBuilding.destroy(); } catch (e) {} tsBuilding = null; }
-        if (tsUnitSub) { try { tsUnitSub.destroy(); } catch (e) {} tsUnitSub = null; }
+        if (tsBuilding) { try { $('#building').select2('destroy'); } catch (e) {} tsBuilding = null; }
+        if (tsUnitSub) { try { $('#unit_sub_type').select2('destroy'); } catch (e) {} tsUnitSub = null; }
         $('#building').html('<option value="">Select</option>');
         $('#unit_sub_type').html('<option value="">All</option>');
         if (elB) tsBuilding = initTs(elB, 'Select');
@@ -215,14 +218,14 @@ $(document).ready(function() {
         if (!campusId) { if (thenLoadData) $('#loadMeterReadingsBtn').click(); return; }
         $.get(blocksUrl, { campus_id: campusId }, function(res) {
             if (res.status && res.data) {
-                if (tsBuilding) { try { tsBuilding.destroy(); } catch (e) {} tsBuilding = null; }
+                if (tsBuilding) { try { $('#building').select2('destroy'); } catch (e) {} tsBuilding = null; }
                 $('#building').html('<option value="">Select</option>');
                 $.each(res.data, function(i, b) {
                     var sel = (blockId && String(b.pk) === String(blockId)) ? ' selected' : '';
                     $('#building').append('<option value="'+b.pk+'"'+sel+'>'+b.block_name+'</option>');
                 });
                 if (elB) tsBuilding = initTs(elB, 'Select');
-                if (blockId && tsBuilding) tsBuilding.setValue(String(blockId), true);
+                if (blockId && tsBuilding) $('#building').val(String(blockId)).trigger('change.select2');
             }
             if (blockId && unitSubTypeId != null) {
                 loadUnitSubTypesThenPrefill(campusId, blockId, unitSubTypeId, thenLoadData);
@@ -234,12 +237,12 @@ $(document).ready(function() {
 
     function loadUnitSubTypesThenPrefill(campusId, blockId, unitSubTypeId, thenLoadData) {
         var elSub = document.getElementById('unit_sub_type');
-        if (tsUnitSub) { try { tsUnitSub.destroy(); } catch (e) {} tsUnitSub = null; }
+        if (tsUnitSub) { try { $('#unit_sub_type').select2('destroy'); } catch (e) {} tsUnitSub = null; }
         $('#unit_sub_type').html('<option value="">All</option>');
         if (elSub) tsUnitSub = initTs(elSub, 'All');
         if (!campusId || !blockId) { if (thenLoadData) $('#loadMeterReadingsBtn').click(); return; }
         $.get(unitSubTypesUrl, { campus_id: campusId, block_id: blockId }, function(res) {
-            if (tsUnitSub) { try { tsUnitSub.destroy(); } catch (e) {} tsUnitSub = null; }
+            if (tsUnitSub) { try { $('#unit_sub_type').select2('destroy'); } catch (e) {} tsUnitSub = null; }
             $('#unit_sub_type').html('<option value="">All</option>');
             if (res.status && res.data) {
                 $.each(res.data, function(i, u) {
@@ -248,7 +251,7 @@ $(document).ready(function() {
                 });
             }
             if (elSub) tsUnitSub = initTs(elSub, 'All');
-            if (unitSubTypeId != null && unitSubTypeId !== '' && tsUnitSub) tsUnitSub.setValue(String(unitSubTypeId), true);
+            if (unitSubTypeId != null && unitSubTypeId !== '' && tsUnitSub) $('#unit_sub_type').val(String(unitSubTypeId)).trigger('change.select2');
             if (thenLoadData) $('#loadMeterReadingsBtn').click();
         });
     }
@@ -256,8 +259,8 @@ $(document).ready(function() {
     $(document).on('change', '#estate_name', function() {
         const campusId = getSelVal(this);
         var elB = document.getElementById('building'), elSub = document.getElementById('unit_sub_type');
-        if (tsBuilding) { try { tsBuilding.destroy(); } catch (e) {} tsBuilding = null; }
-        if (tsUnitSub) { try { tsUnitSub.destroy(); } catch (e) {} tsUnitSub = null; }
+        if (tsBuilding) { try { $('#building').select2('destroy'); } catch (e) {} tsBuilding = null; }
+        if (tsUnitSub) { try { $('#unit_sub_type').select2('destroy'); } catch (e) {} tsUnitSub = null; }
         $('#building').html('<option value="">Select</option>');
         $('#unit_sub_type').html('<option value="">All</option>');
         if (elB) tsBuilding = initTs(elB, 'Select');
@@ -265,7 +268,7 @@ $(document).ready(function() {
         if (!campusId) return;
         $.get(blocksUrl, { campus_id: campusId }, function(res) {
             if (res.status && res.data) {
-                if (tsBuilding) { try { tsBuilding.destroy(); } catch (e) {} tsBuilding = null; }
+                if (tsBuilding) { try { $('#building').select2('destroy'); } catch (e) {} tsBuilding = null; }
                 $('#building').html('<option value="">Select</option>');
                 $.each(res.data, function(i, b) {
                     $('#building').append('<option value="'+b.pk+'">'+b.block_name+'</option>');
@@ -279,14 +282,14 @@ $(document).ready(function() {
         const campusId = getSelVal(document.getElementById('estate_name'));
         const blockId = getSelVal(this);
         var elSub = document.getElementById('unit_sub_type');
-        if (tsUnitSub) { try { tsUnitSub.destroy(); } catch (e) {} tsUnitSub = null; }
+        if (tsUnitSub) { try { $('#unit_sub_type').select2('destroy'); } catch (e) {} tsUnitSub = null; }
         $('#unit_sub_type').html('<option value="">All</option>');
         if (!campusId || !blockId) {
             if (elSub) tsUnitSub = initTs(elSub, 'All');
             return;
         }
         $.get(unitSubTypesUrl, { campus_id: campusId, block_id: blockId }, function(res) {
-            if (tsUnitSub) { try { tsUnitSub.destroy(); } catch (e) {} tsUnitSub = null; }
+            if (tsUnitSub) { try { $('#unit_sub_type').select2('destroy'); } catch (e) {} tsUnitSub = null; }
             $('#unit_sub_type').html('<option value="">All</option>');
             if (res.status && res.data) {
                 $.each(res.data, function(i, u) {
@@ -301,7 +304,7 @@ $(document).ready(function() {
     if (prefill && prefill.bill_month) {
         $('#bill_month').val(prefill.bill_month);
         if (prefill.campus_id) {
-            if (tsEstate) tsEstate.setValue(String(prefill.campus_id), true);
+            if (tsEstate) $('#estate_name').val(String(prefill.campus_id)).trigger('change.select2');
             else $('#estate_name').val(prefill.campus_id);
             loadBuildingsThenPrefill(prefill.campus_id, prefill.block_id, prefill.unit_sub_type_id, true);
         } else {
