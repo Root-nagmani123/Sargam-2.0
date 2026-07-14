@@ -5,8 +5,29 @@
         ? $group->activeGroupFields
         : $group->groupFields;
     $isReadonly = $readonly ?? false;
+    // Field names that must render disabled for this trainee (e.g. Optional Subject Second
+    // for non-IFoS services). Existing display/insert logic is otherwise untouched.
+    $disabledFields = $disabledFields ?? [];
+
+    // Fields shown only when another field in the same row holds a given value.
+    // (Spouse Name dropdown appears only when "Is your spouse also registering?" = Yes.)
+    $conditionalOn = [
+        'spouse_name' => ['field' => 'spouse_in_cse', 'value' => 'Yes'],
+    ];
 @endphp
 
+@once
+<style>
+    /* Fields switched off by a business rule (e.g. Optional Subject Second for
+       non-IFoS services) — clearly faded so they read as unavailable, not empty. */
+    .fc-field-disabled,
+    .fc-field-disabled:disabled {
+        background-color: #eceff1 !important;
+        opacity: .55;
+        cursor: not-allowed;
+    }
+</style>
+@endonce
 @php $hideRemoveRow = ($group->max_rows <= 1 && $group->min_rows >= 1) || $isReadonly; @endphp
 <div class="repeatable-row border rounded p-3 mb-2 bg-light position-relative" data-index="{{ $i }}">
     <div class="row g-2">
@@ -33,8 +54,13 @@
                 $isStateLookup = $gf->field_type === 'select'
                     && $gf->lookup_table
                     && str_contains(strtolower((string) $gf->lookup_table), 'state');
+                $fieldDisabled = $isReadonly || in_array($gf->field_name, $disabledFields, true);
             @endphp
-            <div class="{{ $gf->css_class }}">
+            <div class="{{ $gf->css_class }}"
+                @if(isset($conditionalOn[$gf->field_name]))
+                    data-fc-cond-name="{{ $groupName }}[{{ $i }}][{{ $conditionalOn[$gf->field_name]['field'] }}]"
+                    data-fc-cond-value="{{ $conditionalOn[$gf->field_name]['value'] }}"
+                @endif>
                 <label class="form-label small fw-semibold">
                     {{ $gf->label }}
                     @if($gf->is_required)<span class="text-danger">*</span>@endif
@@ -77,14 +103,15 @@
                     @case('select')
                         <select name="{{ $fieldName }}"
                                 @if($gf->is_required) data-required="1" @endif
-                                class="form-select form-select-sm {{ str_contains($gf->css_class ?? '', 'select2-field') ? 'select2-dynamic' : '' }} @error($errorKey) is-invalid @enderror @if($isStateLookup) fc-state-select @endif"
+                                class="form-select form-select-sm {{ str_contains($gf->css_class ?? '', 'select2-field') ? 'select2-dynamic' : '' }} @error($errorKey) is-invalid @enderror @if($isStateLookup) fc-state-select @endif {{ in_array($gf->field_name, $disabledFields, true) ? 'fc-field-disabled' : '' }}"
                                 @if($isStateLookup && str_ends_with($gf->field_name, '_state_id'))
                                     data-fc-country-field="{{ str_replace('_state_id', '_country_id', $gf->field_name) }}"
                                 @endif
-                                {{ $isReadonly ? 'disabled' : '' }}>
+                                {{ $fieldDisabled ? 'disabled' : '' }}>
                             <option value="">-- Select --</option>
                             @if(count($lookupItems) > 0)
                                 @foreach($lookupItems as $item)
+                                    @if(trim((string) ($item->{$lblCol} ?? '')) === '') @continue @endif
                                     <option value="{{ $item->{$valCol} }}"
                                             @if($isStateLookup && isset($item->country_master_pk))
                                                 data-country-id="{{ $item->country_master_pk }}"
@@ -97,6 +124,21 @@
                                 @endforeach
                             @endif
                         </select>
+                        @break
+                    @case('radio')
+                        <div class="d-flex flex-wrap gap-3 mt-1">
+                            @foreach($options as $ri => $opt)
+                                <div class="form-check">
+                                    <input class="form-check-input @error($errorKey) is-invalid @enderror" type="radio"
+                                           name="{{ $fieldName }}" value="{{ $opt['value'] }}"
+                                           id="fc_grd_{{ $gf->id }}_{{ $i }}_{{ $ri }}"
+                                           @if($gf->is_required) data-required="1" @endif
+                                           {{ (string)$fieldValue === (string)$opt['value'] ? 'checked' : '' }}
+                                           {{ $isReadonly ? 'disabled' : '' }}>
+                                    <label class="form-check-label small" for="fc_grd_{{ $gf->id }}_{{ $i }}_{{ $ri }}">{{ $opt['label'] }}</label>
+                                </div>
+                            @endforeach
+                        </div>
                         @break
                     @case('checkbox')
                         @if(count($options) > 0)
@@ -154,7 +196,10 @@
                 @endif
 
                 @error($errorKey)
-                    <div class="invalid-feedback">{{ $message }}</div>
+                    {{-- d-block forces the message to show regardless of the Bootstrap
+                         `.is-invalid ~ .invalid-feedback` sibling rule, which does not
+                         apply for wrapped / select2-enhanced fields. --}}
+                    <div class="invalid-feedback d-block">{{ $message }}</div>
                 @enderror
             </div>
         @endforeach

@@ -134,7 +134,7 @@ Route::get('/logout', function () {
 
 // Public Routes
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [LoginController::class, 'authenticate'])->name('post_login');
+Route::post('/login', [LoginController::class, 'authenticate'])->middleware('throttle:login')->name('post_login');
 
 
 
@@ -844,6 +844,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::get('/show/{id}', 'show')->name('show');
         Route::post('/update/{id}', 'update')->name('update');
         Route::get('/export', 'export')->name('export');
 

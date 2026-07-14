@@ -85,8 +85,6 @@
                                         {{ $field->label }}
                                         @if($field->is_required)
                                             <span class="badge bg-danger-subtle text-danger ms-1">Mandatory</span>
-                                        @else
-                                            <span class="badge bg-secondary-subtle text-secondary ms-1">Optional</span>
                                         @endif
                                     </div>
                                     @if($field->help_text)

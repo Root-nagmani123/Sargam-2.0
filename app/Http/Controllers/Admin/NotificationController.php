@@ -77,8 +77,15 @@ class NotificationController extends Controller
     /**
      * Return refreshed notification list HTML for desktop and mobile panels.
      */
-    public function panels()
+    public function panels(Request $request)
     {
+        // AJAX-only endpoint. A direct browser navigation here (stale link, bookmark,
+        // prefetch, redirect) would otherwise dump the raw JSON on screen — send those
+        // hits to the dashboard instead. The live poller always sets these headers.
+        if (! $request->ajax() && ! $request->wantsJson()) {
+            return redirect()->route('admin.dashboard');
+        }
+
         $context = $this->notificationListContext();
 
         return response()->json([

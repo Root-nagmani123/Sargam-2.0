@@ -70,5 +70,20 @@ class RouteServiceProvider extends ServiceProvider
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
+
+        // Brute-force / account-lockout protection for authentication endpoints
+        // (CWE-307). Keyed by the submitted identifier + client IP so distinct
+        // users on a shared network never lock each other out. Generous enough
+        // for genuine users; returns HTTP 429 once automated guessing exceeds it.
+        RateLimiter::for('login', function (Request $request) {
+            $identifier = strtolower(trim((string) (
+                $request->input('username')
+                ?: $request->input('reg_name')
+                ?: $request->input('mobile_number')
+                ?: ''
+            )));
+
+            return Limit::perMinute(6)->by($identifier.'|'.$request->ip());
+        });
     }
 }

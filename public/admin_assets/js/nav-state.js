@@ -218,7 +218,7 @@
     }
 
     function ensureVisibleContentPane() {
-        var panes = document.querySelectorAll('#mainNavbarContent .tab-pane');
+        var panes = document.querySelectorAll('#mainNavbarContent > .tab-pane');
         if (!panes.length) {
             return;
         }

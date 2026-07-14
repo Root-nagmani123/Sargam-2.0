@@ -1,10 +1,10 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Student Medical Exemption - Sargam | Lal Bahadur')
+@section('title', 'Student Medical Exemption')
 
 @section('setup_content')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css">
-<link rel="stylesheet" href="{{ asset('css/choices-theme.css') }}?v={{ filemtime(public_path('css/choices-theme.css')) }}">
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}?v={{ filemtime(public_path('css/select2-theme.css')) }}">
 <style>
 /* =====================================================================
    Add Student Medical Exemption — page-scoped polish.
@@ -29,16 +29,19 @@
     min-height: 44px;
     border-radius: var(--ds-radius-2);
 }
-/* Keep Select2 visually consistent with native controls */
-.sme-form .select2-container .select2-selection--single {
-    min-height: var(--ds-control-h);
-    border-color: var(--bs-border-color);
-    border-radius: var(--ds-radius-1);
-    display: flex;
-    align-items: center;
+.sme-form input[readonly].sme-days {
+    background: var(--bs-secondary-bg, #eef1f4);
+    color: var(--ds-ink);
 }
-.sme-form .select2-container--default .select2-selection--single .select2-selection__arrow {
-    height: calc(var(--ds-control-h) - 2px);
+.sme-form textarea.form-control {
+    min-height: 88px;
+    resize: vertical;
+    line-height: 1.5;
+}
+.sme-remarks-row {
+    margin-top: var(--ds-space-1);
+    padding-top: var(--ds-space-3);
+    border-top: 1px dashed var(--ds-line);
 }
 .sme-form-footer {
     margin-top: var(--ds-space-4);
@@ -46,6 +49,11 @@
     border-top: 1px solid var(--ds-line);
 }
 </style>
+
+@php
+    $doctorName = Auth::user() ? trim((Auth::user()->first_name ?? '') . ' ' . (Auth::user()->last_name ?? '')) : '';
+    $opdOptions = ['IPD', 'OPD', 'After OPD', 'Referral'];
+@endphp
 
 <div class="container-fluid">
     <x-breadcrum title="Add Student Medical Exemption" />
@@ -59,81 +67,89 @@
 
                 {{-- ============ Basic Information ============ --}}
                 <h6 class="sme-section-title">Basic Information</h6>
-
+                <hr class="my-3">
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label">Doctor Name <span class="text-danger">*</span></label>
-                        <select name="employee_master_pk" class="form-select" readonly required>
+                        <label class="form-label">Course Name <span class="text-danger">*</span></label>
+                        <select name="course_master_pk" id="courseDropdown" class="form-select" required>
+                            <option value="">Select Course Name</option>
+                            @foreach($courses as $course)
+                            <option value="{{ $course->pk }}" {{ old('course_master_pk') == $course->pk ? 'selected' : '' }}>
+                                {{ $course->couse_short_name ?: $course->course_name }}
+                            </option>
+                            @endforeach
+                        </select>
+                        @error('course_master_pk')<small class="text-danger">{{ $message }}</small>@enderror
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Name of Officer Trainee <span class="text-danger">*</span></label>
+                        <select name="student_master_pk" id="studentDropdown" class="form-select" required>
+                            <option value="">Select Course First</option>
+                        </select>
+                        @error('student_master_pk')<small class="text-danger">{{ $message }}</small>@enderror
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Treating Doctor Name <span class="text-danger">*</span></label>
+                        <select name="employee_master_pk" class="form-select" required>
                             @if(Auth::user())
-                            <option value="{{ Auth::user()->user_id }}" selected>{{ Auth::user()->first_name }} {{ Auth::user()->last_name }}</option>
+                            <option value="{{ Auth::user()->user_id }}" selected>{{ $doctorName !== '' ? $doctorName : 'Current Doctor' }}</option>
                             @endif
                         </select>
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label">Course <span class="text-danger">*</span></label>
-                        <select name="course_master_pk" class="form-select" id="courseDropdown" required>
-                            <option value="">Select Course Name</option>
-                            @foreach($courses as $course)
-                            <option value="{{ $course->pk }}"
-                                {{ old('course_master_pk') == $course->pk ? 'selected' : '' }}>
-                                {{ $course->course_name }}
+                        <label class="form-label">Exemption Category <span class="text-danger">*</span></label>
+                        <select name="exemption_category_master_pk" class="form-select" required>
+                            <option value="">Select Category</option>
+                            @foreach($categories as $cat)
+                            <option value="{{ $cat->pk }}" {{ old('exemption_category_master_pk') == $cat->pk ? 'selected' : '' }}>
+                                {{ $cat->exemp_category_name }}
                             </option>
                             @endforeach
                         </select>
-                        @error('course_master_pk')
-                        <small class="text-danger">{{ $message }}</small>
-                        @enderror
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">Student Name <span class="text-danger">*</span></label>
-                        <select name="student_master_pk" class="form-select" id="studentDropdown" required>
-                            <option value="">Search Student</option>
-                            {{-- Student options will be populated by AJAX --}}
-                        </select>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">OT Code</label>
-                        <input type="text" class="form-control" name="ot_code" id="otCodeField"
-                               placeholder="eg. A72" readonly>
+                        @error('exemption_category_master_pk')<small class="text-danger">{{ $message }}</small>@enderror
                     </div>
                 </div>
 
                 {{-- ============ Exemption and Other Information ============ --}}
                 <h6 class="sme-section-title mt-4">Exemption and Other Information</h6>
-
+                <hr class="my-3">
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label">Exemption Category <span class="text-danger">*</span></label>
-                        <select name="exemption_category_master_pk" class="form-select" required>
+                        <label class="form-label">IPD/OPD/After OPD/Referral <span class="text-danger">*</span></label>
+                        <select name="opd_category" class="form-select" required>
                             <option value="">Select Category</option>
-                            @foreach($categories as $cat)
-                            <option value="{{ $cat->pk }}"
-                                {{ old('exemption_category_master_pk') == $cat->pk ? 'selected' : '' }}>
-                                {{ $cat->exemp_category_name }}
-                            </option>
+                            @foreach($opdOptions as $opt)
+                            <option value="{{ $opt }}" {{ old('opd_category') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
                             @endforeach
                         </select>
-                        @error('exemption_category_master_pk')
-                        <small class="text-danger">{{ $message }}</small>
-                        @enderror
+                        @error('opd_category')<small class="text-danger">{{ $message }}</small>@enderror
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">OPD Category</label>
-                        <select name="opd_category" class="form-select">
-                            <option value="">Select Type</option>
-                            @foreach(['OPD', 'Referred', 'IPD', 'Other'] as $type)
-                            <option value="{{ $type }}" {{ old('opd_category') == $type ? 'selected' : '' }}>
-                                {{ $type }}
-                            </option>
-                            @endforeach
-                        </select>
-                        @error('opd_category')
-                        <small class="text-danger">{{ $message }}</small>
-                        @enderror
+                        <label class="form-label">Start Date <span class="text-danger">*</span></label>
+                        <input type="date" name="arrival_date" id="arrivalDate" class="form-control sme-arr" required value="{{ old('arrival_date') }}">
+                        @error('arrival_date')<small class="text-danger">{{ $message }}</small>@enderror
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Start Time <span class="text-danger">*</span></label>
+                        <input type="time" name="arrival_time" id="arrivalTime" class="form-control" required value="{{ old('arrival_time') }}">
+                        @error('arrival_time')<small class="text-danger">{{ $message }}</small>@enderror
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">End Date <span class="text-danger">*</span></label>
+                        <input type="date" name="departure_date" id="departureDate" class="form-control sme-dep" required value="{{ old('departure_date') }}">
+                        @error('departure_date')<small class="text-danger">{{ $message }}</small>@enderror
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">End Time <span class="text-danger">*</span></label>
+                        <input type="time" name="departure_time" id="departureTime" class="form-control" required value="{{ old('departure_time') }}">
+                        @error('departure_time')<small class="text-danger">{{ $message }}</small>@enderror
                     </div>
 
                     <div class="col-md-4">
@@ -141,42 +157,33 @@
                         <select name="exemption_medical_speciality_pk" class="form-select" required>
                             <option value="">Select Speciality</option>
                             @foreach($specialities as $spec)
-                            <option value="{{ $spec->pk }}"
-                                {{ old('exemption_medical_speciality_pk') == $spec->pk ? 'selected' : '' }}>
+                            <option value="{{ $spec->pk }}" {{ old('exemption_medical_speciality_pk') == $spec->pk ? 'selected' : '' }}>
                                 {{ $spec->speciality_name }}
                             </option>
                             @endforeach
                         </select>
-                        @error('exemption_medical_speciality_pk')
-                        <small class="text-danger">{{ $message }}</small>
-                        @enderror
+                        @error('exemption_medical_speciality_pk')<small class="text-danger">{{ $message }}</small>@enderror
                     </div>
 
-                    <div class="col-md-6">
-                        <label class="form-label">Start Date &amp; Time <span class="text-danger">*</span></label>
-                        <input type="datetime-local" name="from_date" class="form-control" required
-                               value="{{ old('from_date') }}">
-                        @error('from_date')
-                        <small class="text-danger">{{ $message }}</small>
-                        @enderror
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">End Date &amp; Time</label>
-                        <input type="datetime-local" name="to_date" class="form-control"
-                               value="{{ old('to_date') }}">
-                        @error('to_date')
-                        <small class="text-danger">{{ $message }}</small>
-                        @enderror
+                    <div class="col-md-4">
+                        <label class="form-label">Days</label>
+                        <input type="number" name="days" id="daysField" class="form-control sme-days" placeholder="eg. 6" readonly value="{{ old('days') }}">
                     </div>
 
                     <div class="col-12">
-                        <label class="form-label">Description</label>
-                        <textarea name="Description" class="form-control" rows="3"
-                                  placeholder="">{{ old('Description') }}</textarea>
-                        @error('Description')
-                        <small class="text-danger">{{ $message }}</small>
-                        @enderror
+                        <div class="row g-3 sme-remarks-row">
+                            <div class="col-md-6">
+                                <label class="form-label">Diagnosis / Remarks</label>
+                                <textarea name="Description" class="form-control" rows="3" placeholder="eg. Enter remarks...">{{ old('Description') }}</textarea>
+                                @error('Description')<small class="text-danger">{{ $message }}</small>@enderror
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">PT/Outdoor Advise</label>
+                                <textarea name="pt_outdoor_advise" class="form-control" rows="3" placeholder="eg. Yoga">{{ old('pt_outdoor_advise') }}</textarea>
+                                @error('pt_outdoor_advise')<small class="text-danger">{{ $message }}</small>@enderror
+                            </div>
+                        </div>
                     </div>
 
                     <div class="col-12">
@@ -187,9 +194,7 @@
                             Allowed types: PDF, JPG, JPEG, PNG, DOC, DOCX &nbsp;|&nbsp; Max size: <strong>5 MB</strong>
                         </div>
                         <div id="fileError" class="text-danger small mt-1" style="display:none;"></div>
-                        @error('Doc_upload')
-                        <small class="text-danger">{{ $message }}</small>
-                        @enderror
+                        @error('Doc_upload')<small class="text-danger">{{ $message }}</small>@enderror
                     </div>
                 </div>
 
@@ -197,7 +202,7 @@
                 <div class="sme-form-footer d-flex flex-wrap justify-content-end gap-2">
                     <a href="{{ route('student.medical.exemption.index') }}"
                        class="btn btn-outline-secondary px-4">Cancel</a>
-                    <button class="btn btn-primary px-4" type="submit">Submit</button>
+                    <button class="btn btn-primary px-4" type="submit">Add Student Medical Exemption</button>
                 </div>
             </form>
         </div>
@@ -206,59 +211,58 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
+{{-- Select2 (select2.full.min.js) is already loaded globally in the admin footer. --}}
 <script>
 $(document).ready(function() {
-    var otMap = {};
-
-    // Turn EVERY <select> in the form into a Choices.js dropdown
-    var choicesMap = {};
-    document.querySelectorAll('.sme-form select').forEach(function(sel) {
-        choicesMap[sel.id || sel.name] = new Choices(sel, {
-            searchEnabled: sel.options.length > 5,
-            searchPlaceholderValue: 'Search...',
-            itemSelectText: '',
-            shouldSort: false,
-            allowHTML: false
-        });
+    // Standalone page init (the modal path has its own initialiser in the index view).
+    // Turn every select into a Select2 dropdown styled (via CSS) like .form-select.
+    $('.sme-form select').each(function(){
+        $(this).select2({ width: '100%', allowClear: false });
     });
 
-    var studentSelect = document.getElementById('studentDropdown');
-    var studentChoices = choicesMap['studentDropdown'];
-
-    // Rebuild the student list + ot-code lookup map
+    // Course -> Officer Trainee cascade.
     function setStudents(list, placeholder, loading) {
-        otMap = {};
-        var choices = [{ value: '', label: placeholder || 'Search Student', selected: true, disabled: !!loading }];
+        var $sel = $('#studentDropdown');
+        if (!$sel.length) return;
+        var $opts = $('<div>').append($('<option>').val('').text(placeholder || 'Select Officer Trainee'));
         (list || []).forEach(function(s) {
-            otMap[String(s.pk)] = s.generated_OT_code || '';
-            choices.push({ value: String(s.pk), label: s.display_name });
+            var label = s.display_name + (s.generated_OT_code ? ' (' + s.generated_OT_code + ')' : '');
+            $opts.append($('<option>').val(String(s.pk)).text(label));
         });
-        studentChoices.clearStore();
-        studentChoices.setChoices(choices, 'value', 'label', true);
-        $('#otCodeField').val('');
+        $sel.html($opts.html()).val('');
+        if ($sel.hasClass('select2-hidden-accessible')) { $sel.trigger('change.select2'); }
     }
-
-    // Course -> Student AJAX
     $('#courseDropdown').on('change', function() {
         var courseId = $(this).val();
         if (!courseId) { setStudents([], 'Select Course First'); return; }
         setStudents(null, 'Loading...', true);
         $.get('{{ route("student.medical.exemption.getStudentsByCourse") }}', { course_id: courseId })
-            .done(function(response) { setStudents(response.students, 'Search Student'); });
+            .done(function(res) { setStudents(res.students, 'Select Officer Trainee'); });
     });
 
-    // Student -> OT Code
-    studentSelect.addEventListener('change', function() {
-        $('#otCodeField').val(otMap[studentChoices.getValue(true)] || '');
+    // Days = inclusive span between arrival and departure dates.
+    function recalcDays() {
+        var a = document.getElementById('arrivalDate');
+        var d = document.getElementById('departureDate');
+        var out = document.getElementById('daysField');
+        if (!a || !d || !out) return;
+        if (a.value && d.value) {
+            var da = new Date(a.value), dd = new Date(d.value);
+            var diff = Math.floor((dd - da) / 86400000);
+            out.value = (diff >= 0) ? (diff + 1) : '';
+        } else {
+            out.value = '';
+        }
+    }
+    ['arrivalDate', 'departureDate'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('change', recalcDays);
     });
+    recalcDays();
 
     // Attachment validation
-    var ALLOWED_TYPES = ['application/pdf','image/jpeg','image/png','application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     var ALLOWED_EXT  = ['pdf','jpg','jpeg','png','doc','docx'];
     var MAX_SIZE_MB  = 5;
-
     document.getElementById('Doc_upload').addEventListener('change', function() {
         var errEl = document.getElementById('fileError');
         errEl.style.display = 'none';
@@ -279,7 +283,6 @@ $(document).ready(function() {
         }
     });
 
-    // Block form submit if file error is visible
     document.querySelector('.sme-form').addEventListener('submit', function(e) {
         var errEl = document.getElementById('fileError');
         if (errEl.style.display !== 'none' && errEl.textContent) {
