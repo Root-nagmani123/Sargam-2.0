@@ -415,290 +415,6 @@
             padding: .375rem .75rem;
         }
 
-        /* Advanced Sargam 2.0 Loader - Bootstrap 5 */
-        .sargam-loader {
-            position: fixed;
-            inset: 0;
-            background: radial-gradient(ellipse at center, #ffffff 0%, #f0f7ff 50%, #e8f0fa 100%);
-            z-index: 9999;
-            transition: opacity 0.5s ease, visibility 0.5s ease;
-            overflow: hidden;
-        }
-
-        .sargam-loader.hidden {
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-        }
-
-        /* Floating particles */
-        .sargam-loader-particles {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-        }
-
-        .sargam-loader-particle {
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            background: linear-gradient(135deg, #004a93, #0d6efd);
-            border-radius: 50%;
-            opacity: 0.4;
-            animation: sargamFloat 4s ease-in-out infinite;
-        }
-
-        .sargam-loader-particle:nth-child(1) {
-            left: 15%;
-            top: 20%;
-            animation-delay: 0s;
-        }
-
-        .sargam-loader-particle:nth-child(2) {
-            left: 85%;
-            top: 25%;
-            animation-delay: 0.5s;
-        }
-
-        .sargam-loader-particle:nth-child(3) {
-            left: 75%;
-            top: 75%;
-            animation-delay: 1s;
-        }
-
-        .sargam-loader-particle:nth-child(4) {
-            left: 20%;
-            top: 80%;
-            animation-delay: 1.5s;
-        }
-
-        .sargam-loader-particle:nth-child(5) {
-            left: 50%;
-            top: 15%;
-            animation-delay: 2s;
-        }
-
-        .sargam-loader-particle:nth-child(6) {
-            left: 10%;
-            top: 50%;
-            animation-delay: 2.5s;
-        }
-
-        .sargam-loader-particle:nth-child(7) {
-            left: 90%;
-            top: 55%;
-            animation-delay: 3s;
-        }
-
-        .sargam-loader-particle:nth-child(8) {
-            left: 45%;
-            top: 85%;
-            animation-delay: 3.5s;
-        }
-
-        @keyframes sargamFloat {
-
-            0%,
-            100% {
-                transform: translate(0, 0) scale(1);
-                opacity: 0.4;
-            }
-
-            25% {
-                transform: translate(15px, -20px) scale(1.2);
-                opacity: 0.7;
-            }
-
-            50% {
-                transform: translate(-10px, 15px) scale(0.9);
-                opacity: 0.5;
-            }
-
-            75% {
-                transform: translate(-20px, -10px) scale(1.1);
-                opacity: 0.6;
-            }
-        }
-
-        /* Rotating rings container */
-        .sargam-loader-rings {
-            position: relative;
-            width: 140px;
-            height: 140px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .sargam-loader-ring {
-            position: absolute;
-            border-radius: 50%;
-            border: 3px solid transparent;
-        }
-
-        .sargam-loader-ring-outer {
-            width: 100%;
-            height: 100%;
-            border-top-color: #004a93;
-            border-right-color: #0d6efd;
-            border-bottom-color: #004a93;
-            border-left-color: transparent;
-            animation: sargamSpin 1.2s linear infinite;
-        }
-
-        .sargam-loader-ring-mid {
-            width: 100px;
-            height: 100px;
-            border-top-color: transparent;
-            border-right-color: #0d6efd;
-            border-bottom-color: transparent;
-            border-left-color: #004a93;
-            animation: sargamSpin 1s linear infinite reverse;
-        }
-
-        .sargam-loader-ring-inner {
-            width: 60px;
-            height: 60px;
-            border-top-color: #0d6efd;
-            border-right-color: transparent;
-            border-bottom-color: #004a93;
-            border-left-color: transparent;
-            animation: sargamSpin 0.8s linear infinite;
-        }
-
-        @keyframes sargamSpin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* Brand text with letter-by-letter animation */
-        .sargam-loader-brand {
-            display: inline-flex;
-            gap: 2px;
-            font-size: clamp(1.75rem, 5vw, 3rem);
-            font-weight: 800;
-            font-family: 'Poppins', 'Segoe UI', system-ui, sans-serif;
-            letter-spacing: 0.02em;
-        }
-
-        .sargam-loader-brand span {
-            display: inline-block;
-            color: #004a93;
-            background: linear-gradient(135deg, #004a93 0%, #0066cc 40%, #0d6efd 70%, #004a93 100%);
-            background-size: 200% auto;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: sargamLetterPop 2s ease-in-out infinite;
-            text-shadow: 0 0 30px rgba(0, 74, 147, 0.2);
-        }
-
-        .sargam-loader-brand span:nth-child(1) {
-            animation-delay: 0s;
-        }
-
-        .sargam-loader-brand span:nth-child(2) {
-            animation-delay: 0.05s;
-        }
-
-        .sargam-loader-brand span:nth-child(3) {
-            animation-delay: 0.1s;
-        }
-
-        .sargam-loader-brand span:nth-child(4) {
-            animation-delay: 0.15s;
-        }
-
-        .sargam-loader-brand span:nth-child(5) {
-            animation-delay: 0.2s;
-        }
-
-        .sargam-loader-brand span:nth-child(6) {
-            animation-delay: 0.25s;
-        }
-
-        .sargam-loader-brand span:nth-child(7) {
-            animation-delay: 0.3s;
-            min-width: 0.25em;
-        }
-
-        .sargam-loader-brand span:nth-child(8) {
-            animation-delay: 0.35s;
-        }
-
-        .sargam-loader-brand span:nth-child(9) {
-            animation-delay: 0.4s;
-        }
-
-        .sargam-loader-brand span:nth-child(10) {
-            animation-delay: 0.45s;
-        }
-
-        @keyframes sargamLetterPop {
-
-            0%,
-            100% {
-                transform: translateY(0) scale(1);
-                opacity: 1;
-            }
-
-            50% {
-                transform: translateY(-4px) scale(1.05);
-                opacity: 0.9;
-            }
-        }
-
-        /* Segmented progress dots */
-        .sargam-loader-dots {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .sargam-loader-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: rgba(0, 74, 147, 0.2);
-            animation: sargamDotPulse 1.4s ease-in-out infinite;
-        }
-
-        .sargam-loader-dot:nth-child(1) {
-            animation-delay: 0s;
-        }
-
-        .sargam-loader-dot:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-
-        .sargam-loader-dot:nth-child(3) {
-            animation-delay: 0.4s;
-        }
-
-        .sargam-loader-dot:nth-child(4) {
-            animation-delay: 0.6s;
-        }
-
-        .sargam-loader-dot:nth-child(5) {
-            animation-delay: 0.8s;
-        }
-
-        @keyframes sargamDotPulse {
-
-            0%,
-            100% {
-                transform: scale(0.8);
-                background: rgba(0, 74, 147, 0.2);
-            }
-
-            50% {
-                transform: scale(1.2);
-                background: #0d6efd;
-            }
-        }
-
         /* Sidebar toggle icon rotation */
         #sidebarToggleIcon {
             transition: transform 0.3s ease-in-out;
@@ -715,38 +431,12 @@
 </head>
 
 <body data-sidebartype="full" @class(['has-dynamic-sidebar', 'admin-mess-module' => request()->routeIs('admin.mess.*')])>
-    <!-- Preloader - Advanced Sargam 2.0 Loader (Bootstrap 5) -->
-    <div class="sargam-loader d-flex align-items-center justify-content-center" id="sargamLoader" role="status"
-        aria-live="polite" aria-label="Loading Sargam 2.0">
-        <div class="sargam-loader-particles">
-            <span class="sargam-loader-particle"></span>
-            <span class="sargam-loader-particle"></span>
-            <span class="sargam-loader-particle"></span>
-            <span class="sargam-loader-particle"></span>
-            <span class="sargam-loader-particle"></span>
-            <span class="sargam-loader-particle"></span>
-            <span class="sargam-loader-particle"></span>
-            <span class="sargam-loader-particle"></span>
-        </div>
-        <div class="sargam-loader-inner d-flex flex-column align-items-center gap-4 position-relative">
-            <div class="sargam-loader-rings">
-                <span class="sargam-loader-ring sargam-loader-ring-outer"></span>
-                <span class="sargam-loader-ring sargam-loader-ring-mid"></span>
-                <span class="sargam-loader-ring sargam-loader-ring-inner"></span>
-            </div>
-            <span class="sargam-loader-brand">
-                <span>S</span><span>A</span><span>R</span><span>G</span><span>A</span><span>M</span><span>
-                </span><span>2</span><span>.</span><span>0</span>
-            </span>
-            <div class="sargam-loader-dots">
-                <span class="sargam-loader-dot" role="presentation"></span>
-                <span class="sargam-loader-dot" role="presentation"></span>
-                <span class="sargam-loader-dot" role="presentation"></span>
-                <span class="sargam-loader-dot" role="presentation"></span>
-                <span class="sargam-loader-dot" role="presentation"></span>
-            </div>
-        </div>
-    </div>
+    {{-- Preloader — shared with faculty/layouts/master, styles + hide logic included. --}}
+    @include('layouts.partials.service-loader')
+
+    {{-- Sidebar + content silhouette, raised while an in-app navigation is in
+         flight (driver: js/sargam-nav-skeleton.js, loaded with the scripts). --}}
+    @include('layouts.partials.nav-skeleton')
 
     <div id="main-wrapper">
         @include('admin.layouts.header_new')
@@ -805,6 +495,9 @@
 
     @include('admin.layouts.footer')
     <script src="{{ asset('js/forms.js') }}"></script>
+    {{-- Before nav-state.js: that calls showSargamNavSkeleton() for the category
+         tabs, which are hash links its own click handler can't detect. --}}
+    <script src="{{ asset('js/sargam-nav-skeleton.js') }}?v={{ @filemtime(public_path('js/sargam-nav-skeleton.js')) ?: time() }}"></script>
     <script src="{{ asset('admin_assets/js/sidebar-navigation-fixed.js') }}"></script>
     <script src="{{ asset('admin_assets/js/sidebar-panel-accordion.js') }}?v=2"></script>
     <script src="{{ asset('admin_assets/js/tab-persistence.js') }}"></script>
@@ -842,26 +535,8 @@
             });
         });
     </script>
-    <script>
-        (function () {
-            function hideSargamLoader() {
-                var loader = document.getElementById('sargamLoader');
-                if (!loader || loader.classList.contains('hidden')) return;
-                loader.classList.add('hidden');
-                setTimeout(function () { loader.style.display = 'none'; }, 500);
-            }
-            window.hideSargamLoader = hideSargamLoader;
-            window.addEventListener('load', hideSargamLoader);
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', function () {
-                    setTimeout(hideSargamLoader, 300);
-                });
-            } else {
-                setTimeout(hideSargamLoader, 0);
-            }
-            setTimeout(hideSargamLoader, 8000);
-        })();
-    </script>
+    {{-- The preloader's hide logic (and window.hideSargamLoader) lives with the
+         overlay itself, in layouts/partials/service-loader. --}}
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             try {
@@ -1085,16 +760,19 @@
         }
         window.clearSidebarGroupSelectedVisual = clearSidebarGroupSelectedVisual;
 
-        function clearSidebarGroupSelection() {
-            clearSidebarGroupSelectedVisual();
-            $('#sidebar-title').text('').removeClass('border-bottom');
-            $('#sidebarnav').html(
-                '<li class="sidebar-item sidebar-empty-state list-unstyled">'
+        // Shared so a failed menu fetch lands on the same state as an empty one.
+        function sidebarEmptyStateHtml() {
+            return '<li class="sidebar-item sidebar-empty-state list-unstyled">'
                 + '<div class="px-3 py-4 text-center">'
                 + '<i class="material-icons material-symbols-rounded sidebar-empty-icon mb-2" aria-hidden="true">info</i>'
                 + '<span class="sidebar-empty-message small fw-medium d-block">No active menu</span>'
-                + '</div></li>'
-            );
+                + '</div></li>';
+        }
+
+        function clearSidebarGroupSelection() {
+            clearSidebarGroupSelectedVisual();
+            $('#sidebar-title').text('').removeClass('border-bottom');
+            $('#sidebarnav').html(sidebarEmptyStateHtml());
         }
         window.clearSidebarGroupSelection = clearSidebarGroupSelection;
 
@@ -1132,6 +810,14 @@
                 url: '{{ route("sidebar.menu") }}',
                 type: 'GET',
                 data: $.extend({ group_id: groupId }, navAjaxContext()),
+                beforeSend: function () {
+                    // #sidebarnav ships empty and is filled from here, so this is
+                    // the sidebar's real loading state — placeholder it rather
+                    // than leaving the panel blank until the response lands.
+                    if (typeof window.sidebarMenuSkeletonHtml === 'function') {
+                        $('#sidebarnav').html(window.sidebarMenuSkeletonHtml());
+                    }
+                },
                 success: function (response) {
                     $('#sidebarnav').html(response);
                     markActiveSidebarMenuLink();
@@ -1140,6 +826,9 @@
                 },
                 error: function (xhr) {
                     console.error(xhr.responseText);
+                    // Placeholders must never outlive the request that raised
+                    // them — a failed fetch would otherwise shimmer forever.
+                    $('#sidebarnav').html(sidebarEmptyStateHtml());
                 }
             });
         }
@@ -1150,12 +839,23 @@
                 if (typeof done === 'function') done();
                 return;
             }
+            /* Unlike #sidebarnav, the rail is already populated (server-rendered
+               on first paint, or by the previous category). Keep a copy: if this
+               fetch fails, restoring it is far better than leaving the skeleton
+               up or blanking the only navigation on screen. */
+            var previousRailHtml = $('#sidebar-groups').html();
+
             $.ajax({
                 url: '{{ route("sidebar.groups") }}',
                 type: 'GET',
                 data: {
                     category_id: categoryId,
                     active_group_id: window.SARGAM_ACTIVE_GROUP_ID || null
+                },
+                beforeSend: function () {
+                    if (typeof window.sidebarRailSkeletonHtml === 'function') {
+                        $('#sidebar-groups').html(window.sidebarRailSkeletonHtml());
+                    }
                 },
                 success: function (response) {
                     $('#sidebar-groups').html(response);
@@ -1166,6 +866,7 @@
                 },
                 error: function (xhr) {
                     console.error(xhr.responseText);
+                    $('#sidebar-groups').html(previousRailHtml);
                     if (typeof done === 'function') done();
                 }
             });

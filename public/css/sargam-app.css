@@ -446,3 +446,217 @@ table.dataTable > thead > tr > th.sorting_desc { cursor: pointer; }
 .dataTables_scrollBody table.dataTable > thead > tr > td.sorting_desc::after {
     display: none !important;
 }
+
+/* =====================================================================
+   LAYER D — SKELETON LOADERS
+   ---------------------------------------------------------------------
+   Three related things live here:
+
+     1. .ds-skeleton*   — opt-in placeholder primitives. Like Layer C they
+                          do nothing until a page adds the class, so they
+                          are safe to ship app-wide.
+     2. .ds-nav-skel    — the in-place skeleton raised over the sidebar +
+                          content while an in-app navigation is in flight.
+                          The real topbar stays live above it.
+     3. .ds-skeleton-tr — placeholder rows painted into a real <tbody> by
+                          datatable-global-ui.js during server-side fetches.
+
+   NOT here: the #sargamLoader page preloader. That is the service-notice
+   card, and it ships its own inline CSS in layouts/partials/service-loader
+   (it must paint before this stylesheet is guaranteed to have loaded).
+   ===================================================================== */
+:root {
+    /* Tuned to stay legible on BOTH surfaces a placeholder can land on: the
+       white card (--ds-surface) and the grey page canvas (--ds-canvas,
+       #f1f4f9). A lighter base disappears against the canvas. */
+    --ds-skeleton-base:  #dde3ec;   /* resting placeholder tint      */
+    --ds-skeleton-sheen: #eff3f9;   /* highlight that sweeps across  */
+    --ds-skeleton-speed: 1.4s;
+}
+
+@keyframes ds-skeleton-sweep {
+    from { background-position: 200% 0; }
+    to   { background-position: -200% 0; }
+}
+
+/* ── Primitive ──────────────────────────────────────────────────────── */
+.ds-skeleton {
+    display: block;
+    background-color: var(--ds-skeleton-base);
+    background-image: linear-gradient(90deg,
+        var(--ds-skeleton-base)  0%,
+        var(--ds-skeleton-sheen) 50%,
+        var(--ds-skeleton-base)  100%);
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    border-radius: var(--ds-radius-1);
+    animation: ds-skeleton-sweep var(--ds-skeleton-speed) ease-in-out infinite;
+    /* A placeholder is decoration: never selectable, clickable, or readable. */
+    pointer-events: none;
+    user-select: none;
+    color: transparent;
+    flex-shrink: 0;
+}
+
+/* ── Shape modifiers ────────────────────────────────────────────────── */
+.ds-skeleton-text   { height: 0.75rem; }
+.ds-skeleton-text-sm{ height: 0.625rem; }
+.ds-skeleton-title  { height: 1.25rem; width: 40%; }
+.ds-skeleton-avatar { width: 2.25rem; height: 2.25rem; border-radius: 50%; }
+.ds-skeleton-icon   { width: 1.25rem; height: 1.25rem; }
+.ds-skeleton-btn    { height: var(--ds-control-h); width: 7rem; }
+.ds-skeleton-btn-sm { height: var(--ds-control-h-sm); width: 5rem; }
+.ds-skeleton-chip   { height: 1.5rem; width: 4rem; }
+
+/* Stacked text lines: last line runs short, the way real copy does. */
+.ds-skeleton-lines > .ds-skeleton + .ds-skeleton { margin-top: var(--ds-space-2); }
+.ds-skeleton-lines > .ds-skeleton:last-child     { width: 70%; }
+
+/* ── Card wrapper (matches .ds-card so swaps are seamless) ──────────── */
+.ds-skeleton-card {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-card);
+    box-shadow: var(--ds-shadow-sm);
+    padding: var(--ds-space-3);
+}
+
+/* ── Navigation skeleton (sidebar + content) ────────────────────────────
+   This app is server-rendered: after a link click the browser keeps painting
+   the OLD page until the server responds, so a slow screen looks frozen and
+   users click again. Covering the sidebar and content acknowledges the click.
+
+   Deliberately NOT full-screen: the topbar stays live above it, so the app
+   never looks like it hard-reloaded. The offset from the top and the width of
+   the side column are both measured off the real chrome by
+   js/sargam-nav-skeleton.js — no width constants duplicated here. */
+.ds-nav-skel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1029;              /* under the topbar / offcanvas, over content */
+    display: none;
+    background: var(--ds-canvas, #f1f4f9);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.ds-nav-skel.is-visible {
+    display: flex;
+    opacity: 1;
+}
+
+/* Icon rail + menu panel; the wrapper is sized by JS to the real sidebar. */
+.ds-nav-skel-side {
+    display: flex;
+    flex: 0 0 auto;
+    overflow: hidden;
+}
+
+.ds-skel-rail,
+.ds-skel-menu {
+    background: var(--ds-surface);
+    border-right: 1px solid var(--ds-line);
+    padding: var(--ds-space-3) var(--ds-space-2);
+    overflow: hidden;
+}
+.ds-skel-rail { flex: 0 0 105px; }
+.ds-skel-menu { flex: 1 1 auto; min-width: 0; }
+
+.ds-skel-rail-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--ds-space-1);
+    padding: var(--ds-space-2) 0;
+}
+.ds-skel-rail-item .ds-skeleton:first-child { width: 1.5rem; height: 1.5rem; border-radius: var(--ds-radius-2); }
+.ds-skel-rail-item .ds-skeleton:last-child  { width: 2.75rem; height: 0.5rem; }
+
+.ds-skel-menu-title { width: 55%; height: 0.875rem; margin-bottom: var(--ds-space-3); }
+.ds-skel-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    padding: var(--ds-space-2) var(--ds-space-1);
+}
+.ds-skel-menu-item .ds-skeleton:first-child { width: 1.125rem; height: 1.125rem; }
+.ds-skel-menu-item .ds-skeleton:last-child  { height: 0.625rem; flex: 1; }
+/* Vary label lengths so the rail reads as a menu, not a barcode. */
+.ds-skel-menu-item:nth-child(3n)   .ds-skeleton:last-child { max-width: 60%; }
+.ds-skel-menu-item:nth-child(3n+1) .ds-skeleton:last-child { max-width: 85%; }
+.ds-skel-menu-item:nth-child(3n+2) .ds-skeleton:last-child { max-width: 72%; }
+
+/* Collapsed sidebar → collapse the skeleton menu panel too. */
+body[data-sidebartype="mini-sidebar"] .ds-skel-menu { display: none; }
+
+.ds-skel-content {
+    flex: 1;
+    min-width: 0;
+    padding: var(--ds-space-3);
+    overflow: hidden;
+}
+.ds-skel-page-head {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-3);
+    margin-bottom: var(--ds-space-4);
+}
+.ds-skel-page-head .ds-skel-page-title { width: 14rem; height: 1.5rem; }
+.ds-skel-page-head .ds-skel-page-btn   { margin-left: auto; }
+
+.ds-skel-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    margin-bottom: var(--ds-space-3);
+}
+.ds-skel-toolbar .ds-skel-search { margin-left: auto; width: 12rem; height: var(--ds-control-h); }
+
+/* Table silhouette */
+.ds-skel-table       { display: flex; flex-direction: column; gap: var(--ds-space-3); }
+.ds-skel-tr          { display: flex; align-items: center; gap: var(--ds-space-3); }
+.ds-skel-tr > .ds-skeleton { flex: 1; height: 0.75rem; }
+.ds-skel-tr.ds-skel-thead > .ds-skeleton { height: 0.875rem; }
+/* Narrow first (S.No) and last (Action) columns, like every index page. */
+.ds-skel-tr > .ds-skeleton:first-child { flex: 0 0 2.5rem; }
+.ds-skel-tr > .ds-skeleton:last-child  { flex: 0 0 4rem; }
+
+/* Below the sidebar breakpoint the real chrome goes off-canvas — so does this. */
+@media (max-width: 1023.98px) {
+    .ds-nav-skel-side { display: none; }
+}
+
+/* On a phone six columns squeeze into a barcode, and the real table collapses
+   via DataTables Responsive anyway. Keep the first two data columns plus the
+   trailing Action column and drop the rest. */
+@media (max-width: 767.98px) {
+    .ds-skel-tr > .ds-skeleton:nth-child(n+4):nth-last-child(n+2) { display: none; }
+}
+
+/* ── DataTables: skeleton rows during server-side fetches ───────────────
+   Painted into the real <tbody> by datatable-global-ui.js, so they inherit
+   the table's own column widths and cell padding. */
+tr.ds-skeleton-tr > td { background: transparent; }
+tr.ds-skeleton-tr > td > .ds-skeleton { height: 0.75rem; }
+/* The built-in "Processing..." box would otherwise sit on top of the rows. */
+.sargam-dt-skeleton-active .dataTables_processing { display: none !important; }
+
+/* ── Accessibility / print ──────────────────────────────────────────────
+   Reduced motion keeps the placeholder (it still communicates "content is
+   coming") but drops the sweep to a flat tint. */
+@media (prefers-reduced-motion: reduce) {
+    .ds-skeleton {
+        animation: none;
+        background-image: none;
+    }
+    .ds-nav-skel { transition: none; }
+}
+
+@media print {
+    .ds-skeleton,
+    .ds-nav-skel,
+    .sargam-loader { display: none !important; }
+}

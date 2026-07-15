@@ -86,6 +86,12 @@
         if (cur === dest) {
             return false;
         }
+        /* Category tabs are href="#..." links driven by JS, so the skeleton's own
+           click handler skips them as hash links. Raise it here instead — we only
+           reach this line when a real navigation follows. */
+        if (typeof global.showSargamNavSkeleton === 'function') {
+            global.showSargamNavSkeleton();
+        }
         global.location.assign(url);
         return true;
     }
@@ -119,6 +125,10 @@
                 var cur = normalizeUrlForCompare(global.location.href);
                 var dest = normalizeUrlForCompare(homeUrl);
                 if (cur !== dest) {
+                    // Real navigation ahead — see the note in navigateToTab().
+                    if (typeof global.showSargamNavSkeleton === 'function') {
+                        global.showSargamNavSkeleton();
+                    }
                     global.location.assign(homeUrl);
                     return;
                 }
