@@ -78,7 +78,7 @@
     font-weight: 600;
 }
 
-/* Download link */
+/* Download link (also used as a <button class="dropdown-toggle"> on the discipline page) */
 .mnm-page .mnm-download,
 .disc-page .disc-download {
     background: #fff;
@@ -91,6 +91,8 @@
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
+    border: 1px solid #dee2e6;
+    cursor: pointer;
 }
 
 .mnm-page .mnm-download:hover,
@@ -220,6 +222,50 @@
     font-size: 0.875rem;
     color: #344054;
     vertical-align: middle;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.disc-page table#discTable tbody td {
+    max-width: 220px;
+}
+
+/* Force a visible, working horizontal scrollbar on these wide tables — some
+   browser/OS combos render the default Bootstrap .table-responsive scrollbar
+   as a thin overlay that's easy to miss, making the last columns (e.g.
+   Remarks, Conclusion Remark) look "missing" when they're just off-screen. */
+.send-notice-page .table-responsive,
+.mnm-page .table-responsive,
+.disc-page .table-responsive {
+    overflow-x: auto !important;
+    scrollbar-width: auto;
+    scrollbar-color: #98a2b3 #f2f4f7;
+}
+
+.send-notice-page .table-responsive::-webkit-scrollbar,
+.mnm-page .table-responsive::-webkit-scrollbar,
+.disc-page .table-responsive::-webkit-scrollbar {
+    height: 12px;
+}
+
+.send-notice-page .table-responsive::-webkit-scrollbar-track,
+.mnm-page .table-responsive::-webkit-scrollbar-track,
+.disc-page .table-responsive::-webkit-scrollbar-track {
+    background: #f2f4f7;
+    border-radius: 6px;
+}
+
+.send-notice-page .table-responsive::-webkit-scrollbar-thumb,
+.mnm-page .table-responsive::-webkit-scrollbar-thumb,
+.disc-page .table-responsive::-webkit-scrollbar-thumb {
+    background: #98a2b3;
+    border-radius: 6px;
+}
+
+.send-notice-page .table-responsive::-webkit-scrollbar-thumb:hover,
+.mnm-page .table-responsive::-webkit-scrollbar-thumb:hover,
+.disc-page .table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #667085;
 }
 
 /* DataTables current page button */

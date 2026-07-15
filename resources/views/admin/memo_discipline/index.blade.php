@@ -185,18 +185,27 @@
             // date filter is active — exportCsv() then reads that as "brand new request,
             // default to today-only", silently downloading the wrong (empty) dataset.
             // http_build_query() with real '' strings guarantees the keys stay present.
-            $discDownloadUrl = route('memo.discipline.export_csv') . '?' . http_build_query([
+            $discExportParams = [
                 'program_name' => $programNameFilter ?? '',
                 'discipline_master_pk' => $disciplineFilter ?? '',
                 'status' => $statusFilter ?? '',
+                'minor_major' => $categoryFilter ?? '',
                 'from_date' => $fromDateFilter ?? '',
                 'to_date' => $toDateFilter ?? '',
                 'search' => $searchFilter ?? '',
-            ]);
+            ];
+            $discDownloadUrl = route('memo.discipline.export_csv') . '?' . http_build_query($discExportParams);
+            $discDownloadPdfUrl = route('memo.discipline.export_pdf') . '?' . http_build_query($discExportParams);
         @endphp
-        <a href="{{ $discDownloadUrl }}" id="discDownloadLink" class="disc-download">
-            <i class="bi bi-download"></i> Download
-        </a>
+        <div class="dropdown">
+            <button type="button" id="discDownloadToggle" class="disc-download dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-download"></i> Download
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="discDownloadToggle">
+                <li><a href="{{ $discDownloadUrl }}" id="discDownloadLink" class="dropdown-item"><i class="bi bi-file-earmark-excel me-1"></i> Excel (.xlsx)</a></li>
+                <li><a href="{{ $discDownloadPdfUrl }}" id="discDownloadPdfLink" class="dropdown-item"><i class="bi bi-file-earmark-pdf me-1"></i> PDF</a></li>
+            </ul>
+        </div>
     </div>
 
     <!-- start Zero Configuration -->
@@ -234,6 +243,12 @@
                         <option value="1" {{ $statusFilter == '1' ? 'selected' : '' }}>Recorded</option>
                         <option value="2" {{ $statusFilter == '2' ? 'selected' : '' }}>Memo Sent</option>
                         <option value="3" {{ $statusFilter == '3' ? 'selected' : '' }}>Closed</option>
+                    </select>
+
+                    <select class="form-select" id="minor_major" name="minor_major" aria-label="Category">
+                        <option value="">Category</option>
+                        <option value="2" {{ (string)$categoryFilter === '2' ? 'selected' : '' }}>Major</option>
+                        <option value="1" {{ (string)$categoryFilter === '1' ? 'selected' : '' }}>Minor</option>
                     </select>
 
                     <select class="form-select" id="discTimePeriod" aria-label="Time Period">
@@ -328,17 +343,21 @@
                             window.history.replaceState({}, '', url);
                             updateFilterCount();
 
-                            // The Download link is a static server-rendered href from page
-                            // load — without this, it would keep pointing at whatever
+                            // The Download links are static server-rendered hrefs from page
+                            // load — without this, they'd keep pointing at whatever
                             // filters were active on that initial load (e.g. today-only)
                             // even after AJAX-applying different filters, silently
                             // exporting the wrong/empty dataset. Reuse this fetch's own
                             // query string (minus per_page, which the export doesn't use).
-                            const downloadLink = document.getElementById('discDownloadLink');
-                            if (downloadLink) {
-                                const listParams = new URLSearchParams(url.split('?')[1] || '');
-                                listParams.delete('per_page');
-                                downloadLink.href = "{{ route('memo.discipline.export_csv') }}" + '?' + listParams.toString();
+                            const listParams = new URLSearchParams(url.split('?')[1] || '');
+                            listParams.delete('per_page');
+                            const excelLink = document.getElementById('discDownloadLink');
+                            if (excelLink) {
+                                excelLink.href = "{{ route('memo.discipline.export_csv') }}" + '?' + listParams.toString();
+                            }
+                            const pdfLink = document.getElementById('discDownloadPdfLink');
+                            if (pdfLink) {
+                                pdfLink.href = "{{ route('memo.discipline.export_pdf') }}" + '?' + listParams.toString();
                             }
                         })
                         .catch(function() {
@@ -459,14 +478,20 @@
             </script>
 
             <hr class="my-3">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <button type="button" class="btn btn-sm btn-outline-primary" id="discBulkPdfBtn" disabled>
+                    <i class="bi bi-file-earmark-pdf"></i> Download Selected as PDF (ZIP)<span id="discBulkCount"></span>
+                </button>
+            </div>
             <div id="memoDisciplineListContainer">
                 <div class="table-responsive">
                     {{-- data-sargam-dt-ui="false": this page uses server-side Laravel
                          pagination with its own .programme-dt-footer below. Opt out of the
                          global DataTables UI enhancer so it doesn't hijack + empty that footer. --}}
-                    <table id="discTable" class="table align-middle mb-0 text-nowrap" data-sargam-dt-ui="false">
+                    <table id="discTable" class="table align-middle mb-0" data-sargam-dt-ui="false">
                         <thead>
                             <tr>
+                                <th style="width:36px;"><input type="checkbox" class="form-check-input" id="discSelectAll" aria-label="Select all"></th>
                                 <th>S. No.</th>
                                 <th>Program Name</th>
                                 <th>Name</th>
@@ -474,9 +499,11 @@
                                 <th>Cadre</th>
                                 <th>Date of Infraction</th>
                                 <th>Infraction</th>
+                                <th>Category</th>
                                 <th class="text-center">Submitted</th>
                                 <th class="text-center">Final</th>
                                 <th>Remarks</th>
+                                <th>Conclusion Remark</th>
                                 <th>Created Date</th>
                                 <th>Status</th>
                                 @if(! hasRole('Officer Trainee'))
@@ -488,6 +515,7 @@
                         <tbody>
                             @forelse ($memos as $index => $memo)
                             <tr>
+                                <td><input type="checkbox" class="form-check-input disc-row-check" value="{{ $memo->pk }}" aria-label="Select record"></td>
                                 <td class="fw-semibold text-muted">{{ $memos->firstItem() + $index }}</td>
                                 <td class="fw-semibold">{{ $memo->course->course_name ?? 'N/A' }}</td>
                                 <td class="fw-semibold">{{ $memo->student->display_name ?? 'N/A' }}</td>
@@ -495,9 +523,19 @@
                                 <td class="text-muted">{{ $memo->student->cadre->cadre_name ?? 'N/A' }}</td>
                                 <td class="text-muted">{{ $memo->date ? \Carbon\Carbon::parse($memo->date)->format('d M Y') : 'N/A' }}</td>
                                 <td><span class="badge bg-info-subtle text-info">{{ $memo->discipline->discipline_name ?? 'N/A' }}</span></td>
+                                <td>
+                                    @if($memo->minor_major == 2)
+                                    <span class="badge bg-danger-subtle text-danger">Major</span>
+                                    @elseif($memo->minor_major == 1)
+                                    <span class="badge bg-secondary-subtle text-secondary">Minor</span>
+                                    @else
+                                    <span class="text-muted">—</span>
+                                    @endif
+                                </td>
                                 <td class="text-center fw-semibold text-warning">{{ $memo->mark_deduction_submit }}</td>
                                 <td class="text-center fw-semibold text-danger">{{ $memo->final_mark_deduction }}</td>
                                 <td class="text-muted">{{ $memo->remarks ?? '—' }}</td>
+                                <td class="text-muted">{{ $memo->conclusion_remark ?? '—' }}</td>
                                 <td class="text-muted">{{ !empty($memo->created_date) ? \Carbon\Carbon::parse($memo->created_date)->format('d M Y') : 'N/A' }}</td>
 
                                 <!-- Status -->
@@ -584,7 +622,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="{{ hasRole('Officer Trainee') ? 12 : 13 }}" class="text-center py-5 text-muted">
+                                <td colspan="{{ hasRole('Officer Trainee') ? 15 : 16 }}" class="text-center py-5 text-muted">
                                     <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                                     <span class="fw-medium">No memo records available</span>
                                 </td>
@@ -595,8 +633,8 @@
                 </div>
                 <!-- Pagination (design-system footer: numbered pages + "Showing [N] of M items") -->
                 @php
-                    $discPerPage = (int) request('per_page', 10);
-                    if (!in_array($discPerPage, [10, 25, 50, 100, 200], true)) $discPerPage = 10;
+                    $discPerPage = (string) request('per_page', '10');
+                    if (!in_array($discPerPage, ['10', '25', '50', '100', '200', 'all'], true)) $discPerPage = '10';
                 @endphp
                 <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
                     <div class="programme-dt-pagination">
@@ -606,8 +644,8 @@
                         <div class="dataTables_length">
                             <label class="mb-0">Showing
                                 <select id="discPerPage" class="form-select form-select-sm" aria-label="Rows per page">
-                                    @foreach([10, 25, 50, 100, 200] as $pp)
-                                    <option value="{{ $pp }}" {{ $discPerPage === $pp ? 'selected' : '' }}>{{ $pp }}</option>
+                                    @foreach(['10' => '10', '25' => '25', '50' => '50', '100' => '100', '200' => '200', 'all' => 'All'] as $ppValue => $ppLabel)
+                                    <option value="{{ $ppValue }}" {{ $discPerPage === $ppValue ? 'selected' : '' }}>{{ $ppLabel }}</option>
                                     @endforeach
                                 </select>
                             </label>
@@ -632,6 +670,10 @@
                     @csrf
                     <input type="hidden" id="editMemoPk">
                     <div class="modal-body">
+                        <div class="alert alert-info d-flex align-items-center gap-2 py-2 mb-3" id="editMemoCategoryBanner">
+                            <i class="bi bi-info-circle"></i>
+                            <span id="editMemoCategoryBannerText"></span>
+                        </div>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Course</label>
@@ -654,6 +696,19 @@
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Discipline Marks <span class="text-danger">*</span></label>
                                 <input type="number" step="0.01" min="0" id="editMemoMarks" name="mark_deduction_submit" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold d-block">Category <span class="text-danger">*</span></label>
+                                <div class="d-flex gap-3 pt-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="minor_major" id="editMemoMajor" value="2" required>
+                                        <label class="form-check-label" for="editMemoMajor">Major</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="minor_major" id="editMemoMinor" value="1" required>
+                                        <label class="form-check-label" for="editMemoMinor">Minor</label>
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Template</label>
@@ -738,19 +793,123 @@
 $(document).ready(function() {
 
     @php
-        $discActionTargets = hasRole('Officer Trainee') ? '[0]' : '[0, -1]';
+        // Column 0 is the select checkbox, column 1 is S. No. — neither is orderable.
+        $discActionTargets = hasRole('Officer Trainee') ? '[0, 1]' : '[0, 1, -1]';
     @endphp
+
+    // Maps #discTable header column index -> the sort key exportCsv() understands.
+    // Must stay in the same order as the <th> cells. Blank entries (checkbox, S. No.,
+    // Action) are not orderable, so they never produce a sort key.
+    var DISC_COLUMN_SORT_KEYS = ['', '', 'program', 'name', 'ot_code', 'cadre', 'date',
+        'infraction', '', 'submitted', 'final', 'remarks', 'conclusion_remark',
+        'created_date', 'status', ''
+    ];
+
+    // Keep the Download links' (Excel + PDF) sort_col/sort_dir in sync with however
+    // the table is currently sorted on screen — whatever order the data is in on
+    // the page is the order it should download in.
+    window.discUpdateDownloadSort = function () {
+        ['discDownloadLink', 'discDownloadPdfLink'].forEach(function (id) {
+            var link = document.getElementById(id);
+            if (!link) return;
+            var base = link.href.split('?')[0];
+            var params = new URLSearchParams(link.href.split('?')[1] || '');
+            params.delete('sort_col');
+            params.delete('sort_dir');
+            if (window.discSortCol) {
+                params.set('sort_col', window.discSortCol);
+                params.set('sort_dir', window.discSortDir || 'asc');
+            }
+            link.href = base + '?' + params.toString();
+        });
+    };
+
+    $(document).on('order.dt', '#discTable', function () {
+        var order = $('#discTable').DataTable().order();
+        var key = order && order.length ? DISC_COLUMN_SORT_KEYS[order[0][0]] : '';
+        window.discSortCol = key || null;
+        window.discSortDir = key ? order[0][1] : null;
+        window.discUpdateDownloadSort();
+    });
+
+    // ── Bulk "Download Selected as PDF (ZIP)" ──
+    // Checkboxes live inside #memoDisciplineListContainer, which gets replaced
+    // wholesale on every AJAX filter/reinit — delegate from a stable ancestor
+    // instead of binding to the checkboxes directly.
+    window.discUpdateBulkPdfState = function () {
+        var checked = document.querySelectorAll('.disc-row-check:checked');
+        var btn = document.getElementById('discBulkPdfBtn');
+        var countEl = document.getElementById('discBulkCount');
+        if (btn) btn.disabled = checked.length === 0;
+        if (countEl) countEl.textContent = checked.length ? ' (' + checked.length + ')' : '';
+
+        var selectAll = document.getElementById('discSelectAll');
+        var all = document.querySelectorAll('.disc-row-check');
+        if (selectAll) selectAll.checked = all.length > 0 && checked.length === all.length;
+    };
+
+    $(document).on('change', '#discSelectAll', function () {
+        var checked = this.checked;
+        document.querySelectorAll('.disc-row-check').forEach(function (cb) { cb.checked = checked; });
+        window.discUpdateBulkPdfState();
+    });
+
+    $(document).on('change', '.disc-row-check', function () {
+        window.discUpdateBulkPdfState();
+    });
+
+    $(document).on('click', '#discBulkPdfBtn', function () {
+        var ids = Array.from(document.querySelectorAll('.disc-row-check:checked')).map(function (cb) { return cb.value; });
+        if (!ids.length) return;
+
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{{ route('memo.discipline.export_pdf_zip') }}";
+        form.style.display = 'none';
+
+        var csrf = document.createElement('input');
+        csrf.type = 'hidden';
+        csrf.name = '_token';
+        csrf.value = "{{ csrf_token() }}";
+        form.appendChild(csrf);
+
+        ids.forEach(function (id) {
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids[]';
+            input.value = id;
+            form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+        form.remove();
+    });
 
     window.reinitDiscTable = function () {
         if ($.fn.DataTable.isDataTable('#discTable')) {
             $('#discTable').DataTable().destroy();
         }
+        // A fresh (re)load always starts from the server's own order (pk desc),
+        // so the download link's sort should reset to match — until the user
+        // clicks a column header again.
+        window.discSortCol = null;
+        window.discSortDir = null;
+        window.discUpdateDownloadSort();
+        window.discUpdateBulkPdfState();
         if ($('#discTable tbody tr td[colspan]').length === 0) {
             $('#discTable').DataTable({
                 paging: false,
                 searching: false,
                 ordering: true,
                 info: false,
+                order: [],
+                // The app-wide DataTables default turns this on, which makes DataTables
+                // treat column 0 (the select checkbox) as its "responsive control" column
+                // — clicking the checkbox then also toggles a child detail row. This table
+                // already handles overflow via its own horizontal scroll, so responsive
+                // column-collapsing isn't needed here.
+                responsive: false,
                 columnDefs: [
                     { orderable: false, targets: {!! $discActionTargets !!} }
                 ]
@@ -766,7 +925,7 @@ $(document).ready(function() {
 @push('scripts')
 <script>
 $(document).ready(function() {
-    const disciplineChoicesIds = ['program_name', 'discipline_master_pk', 'status', 'discTimePeriod'];
+    const disciplineChoicesIds = ['program_name', 'discipline_master_pk', 'status', 'minor_major', 'discTimePeriod'];
 
     function initDisciplineChoices() {
         if (typeof window.Choices === 'undefined') return;
@@ -818,7 +977,7 @@ $(document).ready(function() {
         }
     }
 
-    $('#program_name, #discipline_master_pk, #status, #from_date, #to_date').on('change', discRunFilter);
+    $('#program_name, #discipline_master_pk, #status, #minor_major, #from_date, #to_date').on('change', discRunFilter);
 
     /* ── Time Period presets → from/to dates ── */
     function discFmt(d) {
@@ -1112,7 +1271,12 @@ $(function () {
         $.get(routeStudents, { course_id: courseId }).done(function (res) {
             if (res && res.status) {
                 gmDefaulters = (res.students || []).map(function (s) {
-                    return { pk: String(s.pk), name: s.display_name + (s.generated_OT_code ? ' (' + s.generated_OT_code + ')' : '') };
+                    return {
+                        pk: String(s.pk),
+                        name: s.display_name + (s.generated_OT_code ? ' (' + s.generated_OT_code + ')' : ''),
+                        majorCount: s.major_count || 0,
+                        minorCount: s.minor_count || 0
+                    };
                 });
                 (res.discipline_master_data || []).forEach(function (d) {
                     $('#gmDiscipline').append($('<option>').val(d.pk).text(d.discipline_name));
@@ -1180,18 +1344,25 @@ $(function () {
     });
 
     // ── Student picker ──
-    function pickerItem(pk, name) {
-        return $('<label class="an-item">')
+    function pickerItem(pk, name, majorCount, minorCount) {
+        var $item = $('<label class="an-item">')
             .attr('data-pk', pk)
             .attr('data-search', name.toLowerCase())
             .append($('<input type="checkbox" class="form-check-input an-check">'))
-            .append($('<span>').text(name));
+            .append($('<span class="flex-grow-1">').text(name));
+        if (majorCount) {
+            $item.append($('<span class="badge bg-danger-subtle text-danger">').text(majorCount + ' Major'));
+        }
+        if (minorCount) {
+            $item.append($('<span class="badge bg-warning-subtle text-warning">').text(minorCount + ' Minor'));
+        }
+        return $item;
     }
     function renderPicker() {
         var $av = $('#spAvailable').empty();
         var $sel = $('#spSelected').empty();
         gmDefaulters.forEach(function (d) {
-            (gmSelected.indexOf(d.pk) > -1 ? $sel : $av).append(pickerItem(d.pk, d.name));
+            (gmSelected.indexOf(d.pk) > -1 ? $sel : $av).append(pickerItem(d.pk, d.name, d.majorCount, d.minorCount));
         });
         if (!$av.children('.an-item').length) $av.append('<div class="an-empty text-muted">No students.</div>');
         if (!$sel.children('.an-item').length) $sel.append('<div class="an-empty text-muted">No students selected.</div>');
@@ -1379,6 +1550,7 @@ $(function () {
         $('#editMemoPk').val('');
         $('#editMemoDiscipline').html('<option value="">Loading…</option>');
         $('#editMemoTemplate').html('<option value="">Select Discipline first</option>');
+        $('#editMemoCategoryBannerText').text('Loading history…');
         $('#editMemoSaveBtn').prop('disabled', true);
         // Reset the preview for the freshly opened memo.
         emTemplateMap = {}; emSelectedTplPk = null; editCoursePk = null;
@@ -1392,6 +1564,15 @@ $(function () {
             $('#editMemoStudent').val(data.student_name);
             $('#editMemoDate').val(data.date);
             $('#editMemoMarks').val(data.mark_deduction_submit);
+            // Defaults to Minor when this memo has no category yet.
+            $('input[name="minor_major"][value="' + (data.minor_major || 1) + '"]').prop('checked', true);
+            var majorCount = data.major_count || 0;
+            var minorCount = data.minor_count || 0;
+            $('#editMemoCategoryBannerText').text(
+                (majorCount || minorCount)
+                    ? ('This participant already has ' + majorCount + ' Major and ' + minorCount + ' Minor memo(s) in this course.')
+                    : 'This is the first memo for this participant in this course.'
+            );
             $('#editMemoRemarks').val(data.remarks);
             editMemoCourseId = data.course_master_pk;
 
@@ -1450,6 +1631,7 @@ $(function () {
                 date:                      $('#editMemoDate').val(),
                 discipline_master_pk:      $('#editMemoDiscipline').val(),
                 mark_deduction_submit:     $('#editMemoMarks').val(),
+                minor_major:               $('input[name="minor_major"]:checked').val(),
                 remarks:                   $('#editMemoRemarks').val(),
                 memo_notice_template_pk:   $('#editMemoTemplate').val(),
             },

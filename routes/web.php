@@ -1003,6 +1003,8 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
         Route::get('/my-memos', [MemoDisciplineController::class, 'otIndex'])->name('ot_index');
         Route::delete('/delete/{id}', [MemoDisciplineController::class, 'destroy'])->name('destroy');
         Route::get('/export-csv', [MemoDisciplineController::class, 'exportCsv'])->name('export_csv');
+        Route::get('/export-pdf', [MemoDisciplineController::class, 'exportPdf'])->name('export_pdf');
+        Route::post('/export-pdf-zip', [MemoDisciplineController::class, 'exportPdfZip'])->name('export_pdf_zip');
         Route::get('create', [MemoDisciplineController::class, 'create'])->name('create');
         Route::get('edit/{id}', [MemoDisciplineController::class, 'edit'])->name('edit');
         Route::post('update/{id}', [MemoDisciplineController::class, 'update'])->name('update');

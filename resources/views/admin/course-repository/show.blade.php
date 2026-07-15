@@ -556,8 +556,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div id="uploadFormErrors" class="alert alert-danger d-none mx-3 mt-3 mb-0" role="alert"></div>
                 <div id="uploadEditNotice" class="alert alert-info d-none mx-3 mt-3 mb-0 py-2 small" role="status">
                     <i class="bi bi-info-circle me-1"></i>
-                    Editing existing document. Current file: <span id="uploadEditCurrentFile" class="fw-semibold"></span>.
-                    Choose a new file only if you want to replace it.
+                    Editing existing document. Current file:
+                    <a id="uploadEditCurrentFile" class="fw-semibold text-decoration-underline" href="#"
+                        target="_blank" rel="noopener" style="color:#0d6efd;"></a>.
+                    Choose a new file only if you want to replace it. The "Document Upload" box below only
+                    shows a file once you pick a <em>new</em> one to replace it with — browsers can't
+                    pre-fill a file input with the existing file's name.
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
@@ -1777,6 +1781,17 @@ window.crDocEdit = (function() {
         return document.getElementById(id);
     }
 
+    // Attachment rows can repeat (name="attachments[]" etc.) when added via the
+    // "+" button, so pick the input that actually has a file selected rather
+    // than assuming it's always the first one in DOM order.
+    function findFileInput(name) {
+        var inputs = document.querySelectorAll('#uploadForm input[name="' + name + '"]');
+        for (var i = 0; i < inputs.length; i++) {
+            if (inputs[i].files && inputs[i].files.length > 0) return inputs[i];
+        }
+        return inputs[0] || null;
+    }
+
     function wait(ms) {
         return new Promise(function(resolve) {
             setTimeout(resolve, ms);
@@ -1970,7 +1985,7 @@ window.crDocEdit = (function() {
         }
     }
 
-    function setEditChrome(on, currentFile) {
+    function setEditChrome(on, currentFile, pk) {
         var title = $id('uploadModalLabel');
         if (title) title.textContent = on ? 'Edit Document' : 'Upload Document';
         var btn = $id('uploadBtn');
@@ -1978,7 +1993,27 @@ window.crDocEdit = (function() {
         var notice = $id('uploadEditNotice');
         if (notice) notice.classList.toggle('d-none', !on);
         var cur = $id('uploadEditCurrentFile');
-        if (cur) cur.textContent = currentFile || '';
+        if (cur) {
+            cur.textContent = currentFile || '';
+            cur.href = (on && pk) ? ('/course-repository/document/' + pk + '/download') : '#';
+        }
+
+        // A document being edited has exactly one file. The "Add More Attachment"
+        // (+) rows exist only for the bulk "Add Document" flow — if left visible
+        // during edit, a file picked into row 2+ is silently ignored by submit()
+        // (which only reads the first attachments[] input), so the update
+        // "succeeds" without the new file ever reaching the server. Collapse any
+        // leftover extra rows and hide "add row" while editing.
+        ['course_attachments_tbody', 'other_attachments_tbody'].forEach(function(tbodyId) {
+            var tbody = $id(tbodyId);
+            if (!tbody) return;
+            var rows = tbody.querySelectorAll('.attachment-row');
+            for (var i = 1; i < rows.length; i++) rows[i].remove();
+        });
+        Array.prototype.forEach.call(
+            document.querySelectorAll('.add-attachment-course, .add-attachment-other'),
+            function(b) { b.style.display = on ? 'none' : ''; }
+        );
     }
 
     // Reset the upload modal back to "create" mode.
@@ -2004,7 +2039,7 @@ window.crDocEdit = (function() {
 
         var category = data.category || 'Course';
         selectCategory(category);
-        setEditChrome(true, data.upload_document || '');
+        setEditChrome(true, data.upload_document || '', data.pk);
         setTitleRow(category, data.file_title);
 
         var d = data.detail || {};
@@ -2055,7 +2090,7 @@ window.crDocEdit = (function() {
             fd.append('video_link', (($id('video_link_course') || {}).value) || '');
             var t1 = document.querySelector('#uploadForm input[name="attachment_titles[]"]');
             fileTitle = t1 ? t1.value : '';
-            fileInput = document.querySelector('#uploadForm input[name="attachments[]"]');
+            fileInput = findFileInput('attachments[]');
         } else if (category === 'Other') {
             fd.append('course_name', (($id('course_name_other') || {}).value) || '');
             fd.append('subject_name', (($id('major_subject_other') || {}).value) || '');
@@ -2068,7 +2103,7 @@ window.crDocEdit = (function() {
             fd.append('video_link', (($id('video_link_other') || {}).value) || '');
             var t2 = document.querySelector('#uploadForm input[name="attachment_titles_other[]"]');
             fileTitle = t2 ? t2.value : '';
-            fileInput = document.querySelector('#uploadForm input[name="attachments_other[]"]');
+            fileInput = findFileInput('attachments_other[]');
         } else {
             fd.append('keywords', (($id('Key_words_institutional') || {}).value) || '');
             fd.append('sector_master', (($id('sector_master_institutional') || {}).value) || '');
