@@ -23,11 +23,30 @@
     font-size: 0.875rem;
     color: var(--ds-ink);
     margin-bottom: var(--ds-space-1);
+    line-height: 1.35;
+    display: block;
 }
 .sme-form .form-control,
 .sme-form .form-select {
     min-height: 44px;
     border-radius: var(--ds-radius-2);
+    width: 100%;
+}
+.sme-form .select2-container {
+    width: 100% !important;
+    height: 44px !important;
+}
+.sme-form select.select2-hidden-accessible {
+    min-height: 0 !important;
+    height: 1px !important;
+}
+.sme-form .sme-field {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+.sme-form .row > [class*="col-"] {
+    position: relative;
 }
 .sme-form input[readonly].sme-days {
     background: var(--bs-secondary-bg, #eef1f4);
@@ -52,7 +71,8 @@
 
 @php
     $doctorName = Auth::user() ? trim((Auth::user()->first_name ?? '') . ' ' . (Auth::user()->last_name ?? '')) : '';
-    $opdOptions = ['IPD', 'OPD', 'After OPD', 'Referral'];
+    // Driven by the Medical Case Master (falls back to the legacy list if none active).
+    $opdOptions = (isset($opdOptions) && count($opdOptions)) ? $opdOptions : ['IPD', 'OPD', 'After OPD', 'Referral'];
 @endphp
 
 <div class="container-fluid">
@@ -93,15 +113,19 @@
                     <div class="col-md-6">
                         <label class="form-label">Treating Doctor Name <span class="text-danger">*</span></label>
                         <select name="employee_master_pk" class="form-select" required>
-                            @if(Auth::user())
-                            <option value="{{ Auth::user()->user_id }}" selected>{{ $doctorName !== '' ? $doctorName : 'Current Doctor' }}</option>
-                            @endif
+                            <option value="">Select Doctor</option>
+                            @foreach($doctors as $doctor)
+                            <option value="{{ $doctor->pk }}" {{ old('employee_master_pk', Auth::user()->user_id ?? '') == $doctor->pk ? 'selected' : '' }}>
+                                {{ trim($doctor->first_name . ' ' . $doctor->last_name) }}
+                            </option>
+                            @endforeach
                         </select>
+                        @error('employee_master_pk')<small class="text-danger">{{ $message }}</small>@enderror
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label">Exemption Category <span class="text-danger">*</span></label>
-                        <select name="exemption_category_master_pk" class="form-select" required>
+                        <label class="form-label">Exemption Category</label>
+                        <select name="exemption_category_master_pk" class="form-select">
                             <option value="">Select Category</option>
                             @foreach($categories as $cat)
                             <option value="{{ $cat->pk }}" {{ old('exemption_category_master_pk') == $cat->pk ? 'selected' : '' }}>
@@ -117,57 +141,71 @@
                 <h6 class="sme-section-title mt-4">Exemption and Other Information</h6>
                 <hr class="my-3">
                 <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">IPD/OPD/After OPD/Referral <span class="text-danger">*</span></label>
-                        <select name="opd_category" class="form-select" required>
-                            <option value="">Select Category</option>
-                            @foreach($opdOptions as $opt)
-                            <option value="{{ $opt }}" {{ old('opd_category') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
-                            @endforeach
-                        </select>
-                        @error('opd_category')<small class="text-danger">{{ $message }}</small>@enderror
+                    <div class="col-md-6">
+                        <div class="sme-field">
+                            <label class="form-label">Medical Case <span class="text-danger">*</span></label>
+                            <select name="opd_category" class="form-select" required>
+                                <option value="">Select Category</option>
+                                @foreach($opdOptions as $opt)
+                                <option value="{{ $opt }}" {{ old('opd_category') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                                @endforeach
+                            </select>
+                            @error('opd_category')<small class="text-danger">{{ $message }}</small>@enderror
+                        </div>
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">Start Date <span class="text-danger">*</span></label>
-                        <input type="date" name="arrival_date" id="arrivalDate" class="form-control sme-arr" required value="{{ old('arrival_date') }}">
-                        @error('arrival_date')<small class="text-danger">{{ $message }}</small>@enderror
+                    <div class="col-md-6">
+                        <div class="sme-field">
+                            <label class="form-label">Medical Speciality <span class="text-danger">*</span></label>
+                            <select name="exemption_medical_speciality_pk" class="form-select" required>
+                                <option value="">Select Speciality</option>
+                                @foreach($specialities as $spec)
+                                <option value="{{ $spec->pk }}" {{ old('exemption_medical_speciality_pk') == $spec->pk ? 'selected' : '' }}>
+                                    {{ $spec->speciality_name }}
+                                </option>
+                                @endforeach
+                            </select>
+                            @error('exemption_medical_speciality_pk')<small class="text-danger">{{ $message }}</small>@enderror
+                        </div>
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">Start Time <span class="text-danger">*</span></label>
-                        <input type="time" name="arrival_time" id="arrivalTime" class="form-control" required value="{{ old('arrival_time') }}">
-                        @error('arrival_time')<small class="text-danger">{{ $message }}</small>@enderror
+                    <div class="col-md-3 col-6">
+                        <div class="sme-field">
+                            <label class="form-label">Start Date <span class="text-danger">*</span></label>
+                            <input type="date" name="arrival_date" id="arrivalDate" class="form-control sme-arr" required value="{{ old('arrival_date') }}">
+                            @error('arrival_date')<small class="text-danger">{{ $message }}</small>@enderror
+                        </div>
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">End Date <span class="text-danger">*</span></label>
-                        <input type="date" name="departure_date" id="departureDate" class="form-control sme-dep" required value="{{ old('departure_date') }}">
-                        @error('departure_date')<small class="text-danger">{{ $message }}</small>@enderror
+                    <div class="col-md-3 col-6">
+                        <div class="sme-field">
+                            <label class="form-label">Start Time</label>
+                            <input type="time" name="arrival_time" id="arrivalTime" class="form-control" value="{{ old('arrival_time') }}">
+                            @error('arrival_time')<small class="text-danger">{{ $message }}</small>@enderror
+                        </div>
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">End Time <span class="text-danger">*</span></label>
-                        <input type="time" name="departure_time" id="departureTime" class="form-control" required value="{{ old('departure_time') }}">
-                        @error('departure_time')<small class="text-danger">{{ $message }}</small>@enderror
+                    <div class="col-md-3 col-6">
+                        <div class="sme-field">
+                            <label class="form-label">End Date</label>
+                            <input type="date" name="departure_date" id="departureDate" class="form-control sme-dep" value="{{ old('departure_date') }}">
+                            @error('departure_date')<small class="text-danger">{{ $message }}</small>@enderror
+                        </div>
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">Medical Speciality <span class="text-danger">*</span></label>
-                        <select name="exemption_medical_speciality_pk" class="form-select" required>
-                            <option value="">Select Speciality</option>
-                            @foreach($specialities as $spec)
-                            <option value="{{ $spec->pk }}" {{ old('exemption_medical_speciality_pk') == $spec->pk ? 'selected' : '' }}>
-                                {{ $spec->speciality_name }}
-                            </option>
-                            @endforeach
-                        </select>
-                        @error('exemption_medical_speciality_pk')<small class="text-danger">{{ $message }}</small>@enderror
+                    <div class="col-md-3 col-6">
+                        <div class="sme-field">
+                            <label class="form-label">End Time</label>
+                            <input type="time" name="departure_time" id="departureTime" class="form-control" value="{{ old('departure_time') }}">
+                            @error('departure_time')<small class="text-danger">{{ $message }}</small>@enderror
+                        </div>
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">Days</label>
-                        <input type="number" name="days" id="daysField" class="form-control sme-days" placeholder="eg. 6" readonly value="{{ old('days') }}">
+                    <div class="col-md-3 col-6">
+                        <div class="sme-field">
+                            <label class="form-label">Days</label>
+                            <input type="number" name="days" id="daysField" class="form-control sme-days" placeholder="eg. 6" readonly value="{{ old('days') }}">
+                        </div>
                     </div>
 
                     <div class="col-12">
@@ -217,7 +255,10 @@ $(document).ready(function() {
     // Standalone page init (the modal path has its own initialiser in the index view).
     // Turn every select into a Select2 dropdown styled (via CSS) like .form-select.
     $('.sme-form select').each(function(){
-        $(this).select2({ width: '100%', allowClear: false });
+        var $sel = $(this);
+        var $parent = $sel.closest('.sme-field');
+        if (!$parent.length) { $parent = $sel.parent(); }
+        $sel.select2({ width: '100%', dropdownParent: $parent, allowClear: false });
     });
 
     // Course -> Officer Trainee cascade.

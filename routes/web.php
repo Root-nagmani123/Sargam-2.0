@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\{
     MDOEscrotExemptionController,
     AttendanceController,
     StudentMedicalExemptionController,
+    MedicalExemptionReportController,
     CourseMemoDecisionMappController,
     CourseAttendanceNoticeMapController,
     HostelBuildingFloorMappingController,
@@ -849,6 +850,14 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         Route::get('/export', 'export')->name('export');
 
         Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+
+    // Medical Exemption Report — per-OT summary + drill-down (read-only report)
+    Route::prefix('medical-exemption-report')->name('medical.exemption.report.')->controller(MedicalExemptionReportController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/export', 'export')->name('export');
+        Route::get('/detail/{student}/{course}', 'detail')->name('detail');
+        Route::get('/detail/{student}/{course}/export', 'detailExport')->name('detail.export');
     });
 
     // PT Exemption Master (Leave Management)

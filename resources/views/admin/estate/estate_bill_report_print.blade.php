@@ -216,9 +216,12 @@
 .bill-footer .sign-sub { font-size: 8pt; margin-top: 2px; color: #718096; }
 </style>
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
 <style>
-.ts-dropdown { z-index: 1060 !important; max-height: 220px !important; overflow-y: auto !important; }
+    .select2-container--open { z-index: 1060; } /* sirf khula dropdown modal ke upar; closed widget normal flow me (modal ke peeche) */
+    .select2-container--default .select2-selection--single { min-height: calc(1.5em + 0.75rem + 2px); display: flex; align-items: center; }
+    .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.5; padding-left: 0.25rem; }
 </style>
 @endpush
 <div class="container-fluid">
@@ -484,22 +487,25 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+{{-- Select2 JS globally footer (admin.layouts.footer) se load hoti hai; yahan include ki zaroorat nahi. --}}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var form = document.querySelector("form[action=\"{{ route('admin.estate.reports.bill-report-print') }}\"]");
     var urlEmployees = "{{ route('admin.estate.reports.bill-report-print.employees') }}";
+    // Ye filter form page-level hai (kisi modal ke andar nahi), isliye dropdownParent set nahi karte.
     var commonCfg = {
-        allowEmptyOption: true,
-        create: false,
-        dropdownParent: 'body',
-        maxOptions: null,
-        hideSelected: false,
+        allowClear: false,
+        width: '100%',
     };
+
+    // Safe destroy (agar Select2 laga ho to hi).
+    function destroySelect2(el) {
+        if (el && $(el).data('select2')) { try { $(el).select2('destroy'); } catch (e) {} }
+    }
 
     function getFormSelectVal(id) {
         var el = document.getElementById(id);
-        return el && el.tomselect ? el.tomselect.getValue() : (el ? el.value : '');
+        return el ? ($(el).val() || '') : '';
     }
 
     function loadEmployeesForCategory() {
@@ -515,7 +521,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(function (res) {
                 var empEl = document.getElementById('employee_pk');
                 if (!empEl) return;
-                if (empEl.tomselect) { try { empEl.tomselect.destroy(); } catch (e) {} }
+                destroySelect2(empEl);
                 var html = '<option value="">— Select Employee —</option>';
                 if (res.status && res.data && res.data.length) {
                     res.data.forEach(function (e) {
@@ -524,16 +530,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     });
                 }
                 empEl.innerHTML = html;
-                if (typeof TomSelect !== 'undefined') {
-                    new TomSelect(empEl, Object.assign({}, commonCfg, { placeholder: '— Select Employee —' }));
+                if (typeof $.fn.select2 !== 'undefined') {
+                    $(empEl).select2(Object.assign({}, commonCfg, { placeholder: '— Select Employee —' }));
                 }
             })
             .catch(function () {
                 var empEl = document.getElementById('employee_pk');
-                if (empEl && empEl.tomselect) { try { empEl.tomselect.destroy(); } catch (e) {} }
+                if (empEl) destroySelect2(empEl);
                 if (empEl) empEl.innerHTML = '<option value="">— Select Employee —</option>';
-                if (empEl && typeof TomSelect !== 'undefined') {
-                    new TomSelect(empEl, Object.assign({}, commonCfg, { placeholder: '— Select Employee —' }));
+                if (empEl && typeof $.fn.select2 !== 'undefined') {
+                    $(empEl).select2(Object.assign({}, commonCfg, { placeholder: '— Select Employee —' }));
                 }
             });
     }
@@ -546,7 +552,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var params = [];
             names.forEach(function (name) {
                 var el = form.querySelector('[name="' + name + '"]');
-                var val = el && el.tomselect ? el.tomselect.getValue() : (el ? el.value : '');
+                var val = el ? ($(el).val() || '') : '';
                 if (val !== undefined && String(val).trim() !== '') {
                     params.push(encodeURIComponent(name) + '=' + encodeURIComponent(String(val).trim()));
                 }
@@ -556,7 +562,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    if (typeof TomSelect !== 'undefined') {
+    if (typeof $.fn.select2 !== 'undefined') {
         var ids = [
             { id: 'employee_category', placeholder: 'Employee Category' },
             { id: 'month', placeholder: '— Select Month —' },
@@ -566,20 +572,14 @@ document.addEventListener('DOMContentLoaded', function () {
         ];
         ids.forEach(function (item) {
             var el = document.getElementById(item.id);
-            if (el && !el.tomselect) {
-                new TomSelect(el, Object.assign({}, commonCfg, { placeholder: item.placeholder }));
+            if (el && !$(el).data('select2')) {
+                $(el).select2(Object.assign({}, commonCfg, { placeholder: item.placeholder }));
             }
         });
 
-        var catEl = document.getElementById('employee_category');
-        var monthEl = document.getElementById('month');
-        var yearEl = document.getElementById('year');
-        function attachEmployeeReload() {
-            if (catEl && catEl.tomselect) catEl.tomselect.on('change', loadEmployeesForCategory);
-            if (monthEl && monthEl.tomselect) monthEl.tomselect.on('change', loadEmployeesForCategory);
-            if (yearEl && yearEl.tomselect) yearEl.tomselect.on('change', loadEmployeesForCategory);
-        }
-        attachEmployeeReload();
+        // Category / Month / Year change hone par employee list dobara load karo.
+        // Select2 native <select> par 'change' fire karta hai, isliye jQuery change binding kaafi hai.
+        $('#employee_category, #month, #year').on('change', loadEmployeesForCategory);
     }
 });
 </script>

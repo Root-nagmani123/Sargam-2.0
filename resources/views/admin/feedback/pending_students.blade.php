@@ -41,7 +41,7 @@
                                                     <i class="material-symbols-rounded fs-6 text-primary flex-shrink-0" aria-hidden="true">school</i>
                                                     <span class="text-truncate">Active</span>
                                                 </span>
-                                                <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary border-opacity-25 flex-shrink-0" id="activeCourseBadge">{{ count($activeCourses ?? []) }}</span>
+                                                <span class="badge rounded-1 bg-primary-subtle text-primary border border-primary border-opacity-25 flex-shrink-0" id="activeCourseBadge">{{ count($activeCourses ?? []) }}</span>
                                             </span>
                                         </label>
                                     </div>
@@ -55,7 +55,7 @@
                                                     <i class="material-symbols-rounded fs-6 text-body-secondary flex-shrink-0" aria-hidden="true">inventory_2</i>
                                                     <span class="text-truncate">Archive</span>
                                                 </span>
-                                                <span class="badge rounded-pill bg-body-secondary text-body border flex-shrink-0" id="archiveCourseBadge">{{ count($archiveCourses ?? []) }}</span>
+                                                <span class="badge rounded-1 bg-body-secondary text-body border flex-shrink-0" id="archiveCourseBadge">{{ count($archiveCourses ?? []) }}</span>
                                             </span>
                                         </label>
                                     </div>
@@ -663,8 +663,8 @@
                     }
                     html += '</td>';
                     html += '<td><small class="text-body">' + escapeHtml(student.course_summary || '—') + '</small></td>';
-                    html += '<td class="text-center"><span class="badge rounded-pill bg-success-subtle text-success badge-count">' + student.feedback_given + '</span></td>';
-                    html += '<td class="text-center"><span class="badge rounded-pill bg-danger-subtle text-danger badge-count">' + student.feedback_not_given + '</span></td>';
+                    html += '<td class="text-center"><span class="badge rounded-1 bg-success-subtle text-success badge-count">' + student.feedback_given + '</span></td>';
+                    html += '<td class="text-center"><span class="badge rounded-1 bg-danger-subtle text-danger badge-count">' + student.feedback_not_given + '</span></td>';
                     html += '<td class="text-center"><i class="material-symbols-rounded accordion-icon" aria-hidden="true">expand_more</i></td>';
                     html += '</tr>';
 
@@ -689,9 +689,9 @@
                         html += '<td>' + escapeHtml(session.date) + '</td>';
                         html += '<td>' + escapeHtml(session.time) + '</td>';
                         if (session.feedback_status === 'given') {
-                            html += '<td class="text-center"><span class="badge rounded-pill bg-success-subtle text-success badge-status">Given</span></td>';
+                            html += '<td class="text-center"><span class="badge rounded-1 bg-success-subtle text-success badge-status">Given</span></td>';
                         } else {
-                            html += '<td class="text-center"><span class="badge rounded-pill bg-danger-subtle text-danger badge-status">Not Given</span></td>';
+                            html += '<td class="text-center"><span class="badge rounded-1 bg-danger-subtle text-danger badge-status">Not Given</span></td>';
                         }
                         html += '</tr>';
                     });

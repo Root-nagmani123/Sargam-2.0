@@ -170,8 +170,12 @@
         </button>
     </div>
 
-    <div class="card overflow-hidden rounded-3">
-        <div class="card-body p-3 p-md-4">
+    <div class="card attendance-main-card">
+        <div class="attendance-topbar px-4 py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <h4 class="fw-bold page-title mb-0">Attendance</h4>
+            <span class="badge rounded-1 text-bg-primary-subtle text-primary-emphasis px-3 py-2 fw-semibold">Filter and manage records</span>
+        </div>
+        <div class="card-body p-4">
 
             {{-- Filter toolbar (programme-dt design system) --}}
             <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar attendance-choices-bootstrap">

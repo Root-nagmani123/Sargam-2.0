@@ -322,9 +322,9 @@ window.statusToggleUrl = "{{ route('admin.toggleStatus') }}";
         }
         var $cell = $row.find('.sm-module-status-cell');
         if (String(status) === '1') {
-            $cell.html('<span class="badge rounded-pill programme-status-badge programme-status-badge--active">Active</span>');
+            $cell.html('<span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>');
         } else {
-            $cell.html('<span class="badge rounded-pill programme-status-badge programme-status-badge--inactive">Inactive</span>');
+            $cell.html('<span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>');
         }
     }
 

@@ -508,7 +508,7 @@
                 @csrf
                 {{-- Forces JSON response from store() so the modal can reset without a full page redirect --}}
                 <input type="hidden" name="respond_json" value="1">
-                <input type="hidden" name="client_id" id="modalClientId" value="">
+                <input type="hidden" name="client_id" id="modalClientId" value="{{ old('client_id') }}">
                 <div class="modal-header border-bottom bg-light">
                     <h5 class="modal-title fw-semibold" id="addSellingVoucherModalLabel">Add Selling Voucher</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -769,19 +769,19 @@
                                     <select id="editModalFacultySelect" class="form-select" style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
-                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
+                                            <option value="{{ e($f->full_name) }}" data-pk="{{ $f->pk }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editModalAcademyStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
-                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}" data-pk="{{ $e->pk }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editModalMessStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
-                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}" data-pk="{{ $e->pk }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editModalCourseNameSelect" class="form-select" style="display:none;">
@@ -1425,59 +1425,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function createEditModalItemSelectConfig() {
-        return Object.assign(createItemSelectConfig(), {
-            onDropdownOpen: function (dropdown) {
-                var self = this;
-                var modalEl = self.input && self.input.closest ? self.input.closest('.modal') : null;
-                var modalBody = modalEl ? modalEl.querySelector('.modal-body') : null;
-                var helper = window.MessModalDropdownStability;
-                self._modalDropdownState = helper && modalEl ? helper.onOpen(modalEl) : null;
-                if (!self._modalDropdownState && modalBody) self._modalDropdownState = { scrollTop: modalBody.scrollTop };
-                function clearInputAndCursor() {
-                    var input = (dropdown && dropdown.querySelector('input.choices__input--cloned')) ||
-                        (dropdown && dropdown.querySelector('input')) ||
-                        self.control_input;
-                    if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
-                    if (typeof self.onSearchChange === 'function') self.onSearchChange('');
-                    if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
-                    if (input) {
-                        input.value = '';
-                        safeFocus(input);
-                        try { input.setSelectionRange(0, 0); } catch (e) {}
-                        input.scrollLeft = 0;
-                    }
-                    if (helper && modalEl) {
-                        helper.keepScroll(modalEl, self._modalDropdownState);
-                    } else if (modalBody && self._modalDropdownState && typeof self._modalDropdownState.scrollTop === 'number') {
-                        modalBody.scrollTop = self._modalDropdownState.scrollTop;
-                    }
-                }
-                self.clear(true);
-                clearInputAndCursor();
-                setTimeout(function () {
-                    self.clear(true);
-                    clearInputAndCursor();
-                }, 0);
-                setTimeout(function () {
-                    self.clear(true);
-                    clearInputAndCursor();
-                }, 50);
-                setTimeout(function () {
-                    self.clear(true);
-                    clearInputAndCursor();
-                }, 100);
-                if (dropdown) {
-                    setTimeout(function () {
-                        var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"], .choices__item--selectable[aria-selected="true"]');
-                        opts.forEach(function (opt) {
-                            opt.classList.remove('active');
-                            opt.classList.remove('selected');
-                            opt.setAttribute('aria-selected', 'false');
-                        });
-                    }, 0);
-                }
-            }
-        });
+        // Same as Add item select: clear search box on open, NEVER clear the selected item.
+        // (Previously self.clear() on open wiped Item Name + Available/Left Qty in Edit.)
+        return createItemSelectConfig();
     }
 
     // Cache original Client Name options so we can rebuild the select per Client Type.
@@ -1597,6 +1547,42 @@ document.addEventListener('DOMContentLoaded', function() {
                 try { el.tomselect.setValue(cn); } catch (e) {}
             });
         }
+        // Keep hidden client_id in sync (API value, or data-pk from selected Name option)
+        var clientIdEl = document.getElementById('editModalClientId');
+        if (clientIdEl) {
+            if (v.client_id != null && String(v.client_id) !== '') {
+                clientIdEl.value = String(v.client_id);
+            } else if (editSlug === 'employee' || editSlug === 'ot') {
+                var resolvedPk = '';
+                ['editModalFacultySelect', 'editModalAcademyStaffSelect', 'editModalMessStaffSelect'].forEach(function(id) {
+                    if (resolvedPk) return;
+                    var el = document.getElementById(id);
+                    if (!el || el.style.display === 'none') return;
+                    var opt = el.options[el.selectedIndex];
+                    if (opt && opt.dataset && opt.dataset.pk) resolvedPk = String(opt.dataset.pk);
+                });
+                if (resolvedPk) clientIdEl.value = resolvedPk;
+            }
+        }
+    }
+
+    /** Ensure edit form posts client_id for employee/OT (from hidden field or selected Name option). */
+    function syncEditModalClientIdBeforeSubmit() {
+        var slugRadio = document.querySelector('#editSellingVoucherModal .edit-client-type-radio:checked');
+        var slug = slugRadio ? String(slugRadio.value || '').toLowerCase() : '';
+        if (slug !== 'employee' && slug !== 'ot') return;
+        var clientIdEl = document.getElementById('editModalClientId');
+        if (!clientIdEl) return;
+        if (clientIdEl.value && String(clientIdEl.value).trim() !== '') return;
+        ['editModalFacultySelect', 'editModalAcademyStaffSelect', 'editModalMessStaffSelect'].forEach(function(id) {
+            if (clientIdEl.value) return;
+            var el = document.getElementById(id);
+            if (!el || el.style.display === 'none') return;
+            var opt = el.options[el.selectedIndex];
+            if (opt && opt.dataset && opt.dataset.pk) {
+                clientIdEl.value = String(opt.dataset.pk);
+            }
+        });
     }
 
     // When user clicks any Cancel/Close button in a modal (secondary button),
@@ -2481,7 +2467,14 @@ document.addEventListener('DOMContentLoaded', function() {
     function getBaseAvailableForItem(itemId) {
         if (!itemId) return 0;
         const item = filteredItems.find(function(i) { return String(i.id) === String(itemId); });
-        return item ? (parseFloat(item.available_quantity) || 0) : 0;
+        if (item) return parseFloat(item.available_quantity) || 0;
+        const master = (itemSubcategories || []).find(function(i) { return String(i.id) === String(itemId); });
+        if (master) return parseFloat(master.available_quantity) || 0;
+        const opt = document.querySelector('#editModalItemsBody .sv-item-select option[value="' + String(itemId).replace(/"/g, '\\"') + '"]');
+        if (opt && opt.dataset && opt.dataset.available != null && opt.dataset.available !== '') {
+            return parseFloat(opt.dataset.available) || 0;
+        }
+        return 0;
     }
 
     function refreshAllAvailable() {
@@ -3337,13 +3330,27 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function getEditRowHtml(index, item) {
-        const sourceItems = Array.isArray(filteredItems) && filteredItems.length > 0 ? filteredItems : itemSubcategories;
+        const sourceItems = Array.isArray(filteredItems) && filteredItems.length > 0 ? filteredItems.slice() : (itemSubcategories || []).slice();
+        // Keep saved voucher item visible even if it is missing from current store stock list
+        if (item && item.item_subcategory_id) {
+            const exists = sourceItems.some(function(s) { return String(s.id) === String(item.item_subcategory_id); });
+            if (!exists) {
+                sourceItems.unshift({
+                    id: item.item_subcategory_id,
+                    item_name: item.item_name || ('Item #' + item.item_subcategory_id),
+                    unit_measurement: item.unit || '',
+                    standard_cost: item.rate || 0,
+                    available_quantity: item.available_quantity || 0,
+                    price_tiers: []
+                });
+            }
+        }
         const options = sourceItems.map(s => {
             let attrs = 'data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '" data-rate="' + (s.standard_cost || 0) + '" data-available="' + (s.available_quantity || 0) + '"';
             if (s.price_tiers && s.price_tiers.length > 0) {
                 attrs += ' data-price-tiers="' + (JSON.stringify(s.price_tiers) || '').replace(/"/g, '&quot;') + '"';
             }
-            return '<option value="' + s.id + '" ' + attrs + (item && item.item_subcategory_id == s.id ? ' selected' : '') + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>';
+            return '<option value="' + s.id + '" ' + attrs + (item && String(item.item_subcategory_id) === String(s.id) ? ' selected' : '') + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>';
         }).join('');
         const qty = item ? item.quantity : '';
         const avail = item ? item.available_quantity : 0;
@@ -3359,7 +3366,7 @@ document.addEventListener('DOMContentLoaded', function() {
             '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  sv-qty" step="0.01" min="0.01" placeholder="0" value="' + qty + '" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
             '<td><input type="text" class="form-control  sv-left bg-light" readonly placeholder="0" value="' + left + '"></td>' +
             '<td><input type="number" name="items[' + index + '][rate]" class="form-control  sv-rate" step="0.01" min="0" placeholder="0" value="' + rate + '" required></td>' +
-            '<td><input type="text" class="form-control  sv-total bg-light" readonly placeholder="0.00" value="' + (total ? total.toFixed(2) : '') + '"></td>' +
+            '<td><input type="text" class="form-control  sv-total bg-light" readonly placeholder="0.00" value="' + (total ? Number(total).toFixed(2) : '') + '"></td>' +
             '<td><button type="button" class="btn btn-sm btn-outline-danger sv-remove-row edit-sv-remove-row" title="Remove">×</button></td>' +
             '</tr>';
     }
@@ -3436,7 +3443,18 @@ document.addEventListener('DOMContentLoaded', function() {
             const currentValue = select.value;
             select.innerHTML = '<option value="">Select Item</option>';
 
-            const sourceItems = Array.isArray(filteredItems) && filteredItems.length > 0 ? filteredItems : itemSubcategories;
+            const sourceItems = Array.isArray(filteredItems) && filteredItems.length > 0 ? filteredItems.slice() : (itemSubcategories || []).slice();
+            if (currentValue && !sourceItems.some(function(s) { return String(s.id) === String(currentValue); })) {
+                const optLabel = (row.querySelector('.sv-unit') && row.querySelector('.sv-unit').value) ? ('Item #' + currentValue) : ('Item #' + currentValue);
+                sourceItems.unshift({
+                    id: currentValue,
+                    item_name: optLabel,
+                    unit_measurement: (row.querySelector('.sv-unit') || {}).value || '',
+                    standard_cost: (row.querySelector('.sv-rate') || {}).value || 0,
+                    available_quantity: (row.querySelector('.sv-avail') || {}).value || 0,
+                    price_tiers: []
+                });
+            }
             sourceItems.forEach(item => {
                 const option = document.createElement('option');
                 option.value = item.id;
@@ -3447,7 +3465,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (item.price_tiers && item.price_tiers.length > 0) {
                     option.setAttribute('data-price-tiers', JSON.stringify(item.price_tiers));
                 }
-                if (item.id == currentValue) {
+                if (String(item.id) === String(currentValue)) {
                     option.selected = true;
                 }
                 select.appendChild(option);
@@ -3456,10 +3474,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (select.tomselect) {
                     try { select.tomselect.destroy(); } catch (e) {}
                 }
-                createChoicesInstance(select, createItemSelectConfig());
+                var ts = createChoicesInstance(select, createEditModalItemSelectConfig());
+                if (currentValue && ts && typeof ts.setValue === 'function') {
+                    try { ts.setValue(String(currentValue)); } catch (e) {}
+                }
             }
             updateUnit(row);
         });
+        refreshEditAllAvailable();
         updateEditGrandTotal();
     }
 
@@ -3478,10 +3500,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (typeof Choices !== 'undefined') {
             tbody.querySelectorAll('.sv-item-select').forEach(function(select) {
+                var selectedVal = select.value || '';
                 if (select.tomselect) {
                     try { select.tomselect.destroy(); } catch (e) {}
                 }
-                createChoicesInstance(select, createEditModalItemSelectConfig());
+                var ts = createChoicesInstance(select, createEditModalItemSelectConfig());
+                if (selectedVal && ts && typeof ts.setValue === 'function') {
+                    try { ts.setValue(String(selectedVal)); } catch (e) {}
+                }
             });
         }
         updateEditRemoveButtons();
@@ -3718,6 +3744,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     document.querySelector('#editSellingVoucherModal select.edit-payment-type').value = String(v.payment_type ?? 1);
                     const editSlug = (v.client_type_slug || 'employee');
+
+                    // Required for employee/OT updates — must be set from saved voucher (not only on Name change)
+                    var editClientIdEl = document.getElementById('editModalClientId');
+                    if (editClientIdEl) {
+                        editClientIdEl.value = (v.client_id != null && String(v.client_id) !== '') ? String(v.client_id) : '';
+                    }
                     
                     document.getElementById('editModalClientNameInput').value = v.client_name || '';
                     document.getElementById('editModalFacultySelect').value = v.client_name || '';
@@ -3811,7 +3843,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     const openEditModalWithItems = function() {
                         buildEditItemsTable(items);
-                        // Initialize Choices in Edit modal (payment, client, store, name dropdowns, item selects)
+                        // Initialize Choices in Edit modal (payment, client, store, name dropdowns)
                         if (typeof initEditModalTomSelects === 'function') {
                             initEditModalTomSelects();
                         }
@@ -3831,12 +3863,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             updateEditModalNameField();
                         }
                         syncEditSellingVoucherChoicesFromVoucher(v, editSlug);
+                        // Re-apply item avail/left after voucher field sync (store items already loaded)
+                        refreshEditAllAvailable();
+                        updateEditGrandTotal();
                         const modal = new bootstrap.Modal(document.getElementById('editSellingVoucherModal'));
                         modal.show();
                     };
                     if (editCurrentStoreId) {
                         fetchStoreItems(editCurrentStoreId, function() {
-                            updateEditItemDropdowns();
                             openEditModalWithItems();
                         });
                     } else {
@@ -4069,6 +4103,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (editSellingVoucherForm) {
         editSellingVoucherForm.addEventListener('submit', function(e) {
+            syncEditModalClientIdBeforeSubmit();
             document.querySelectorAll('#editModalItemsBody .sv-item-row').forEach(enforceQtyWithinAvailable);
             if (!this.checkValidity()) {
                 e.preventDefault();
@@ -4079,11 +4114,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }, true);
     }
 
-    @if($errors->any() || session('open_selling_voucher_modal'))
+    @if(session('open_selling_voucher_modal') || ($errors->any() && old('_method') !== 'PUT'))
     var modal = document.getElementById('addSellingVoucherModal');
     if (modal && typeof bootstrap !== 'undefined') {
         (new bootstrap.Modal(modal)).show();
     }
+    @elseif($errors->any() && old('_method') === 'PUT')
+    (function() {
+        var msgs = @json($errors->all());
+        var text = (msgs && msgs.length) ? msgs.join('\n') : 'Failed to update selling voucher.';
+        if (window.toastr) {
+            toastr.error(text);
+        } else {
+            alert(text);
+        }
+    })();
     @endif
 
     // Print View modal content (Selling Voucher) – correct design with standard header

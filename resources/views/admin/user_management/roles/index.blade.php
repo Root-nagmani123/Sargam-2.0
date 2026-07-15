@@ -238,7 +238,7 @@
             $toggleWrap.detach();
             $statusCell.empty().append(
                 jQuery('<span>', {
-                    class: 'badge rounded-pill programme-status-badge roles-status-badge ' + badgeClass,
+                    class: 'badge rounded-1 programme-status-badge roles-status-badge ' + badgeClass,
                     text: label
                 })
             );

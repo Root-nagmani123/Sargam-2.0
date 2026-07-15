@@ -1061,20 +1061,20 @@ class KitchenIssueController extends Controller
 
         $paymentHtml = '<span class="text-muted">—</span>';
         if ($paymentType === KitchenIssueMaster::PAYMENT_CREDIT) {
-            $paymentHtml = '<span class="badge rounded-pill text-bg-warning">Credit</span>';
+            $paymentHtml = '<span class="badge rounded-1 text-bg-warning">Credit</span>';
         } elseif ($paymentType === KitchenIssueMaster::PAYMENT_CASH) {
-            $paymentHtml = '<span class="badge rounded-pill text-bg-secondary">Cash</span>';
+            $paymentHtml = '<span class="badge rounded-1 text-bg-secondary">Cash</span>';
         } elseif ($paymentType === KitchenIssueMaster::PAYMENT_ONLINE) {
-            $paymentHtml = '<span class="badge rounded-pill text-bg-info">UPI</span>';
+            $paymentHtml = '<span class="badge rounded-1 text-bg-info">UPI</span>';
         }
 
-        $statusHtml = '<span class="badge rounded-pill text-bg-secondary">'.e((string) $status).'</span>';
+        $statusHtml = '<span class="badge rounded-1 text-bg-secondary">'.e((string) $status).'</span>';
         if ($status === KitchenIssueMaster::STATUS_PENDING) {
-            $statusHtml = '<span class="badge rounded-pill text-bg-warning">Pending</span>';
+            $statusHtml = '<span class="badge rounded-1 text-bg-warning">Pending</span>';
         } elseif ($status === KitchenIssueMaster::STATUS_APPROVED) {
-            $statusHtml = '<span class="badge rounded-pill text-bg-success">Approved</span>';
+            $statusHtml = '<span class="badge rounded-1 text-bg-success">Approved</span>';
         } elseif ($status === KitchenIssueMaster::STATUS_COMPLETED) {
-            $statusHtml = '<span class="badge rounded-pill text-bg-primary">Completed</span>';
+            $statusHtml = '<span class="badge rounded-1 text-bg-primary">Completed</span>';
         }
 
         $reqDateRaw = $row->issue_date ?? $row->created_at ?? '';
@@ -1089,7 +1089,7 @@ class KitchenIssueController extends Controller
 
         $returnBadge = '';
         if ($rq > 0) {
-            $returnBadge = '<span class="badge rounded-pill text-bg-info">Returned</span>';
+            $returnBadge = '<span class="badge rounded-1 text-bg-info">Returned</span>';
         }
 
         $deleteForm = '';
@@ -1696,6 +1696,26 @@ class KitchenIssueController extends Controller
             return redirect()->route('admin.mess.material-management.index')->with('error', 'Edit is disabled for approved voucher.');
         }
 
+        // Edit form may omit client_id when identity fields are unchanged; keep existing buyer for employee/OT.
+        $incomingSlug = strtolower(trim((string) $request->input('client_type_slug', '')));
+        if (
+            !$request->filled('client_id')
+            && in_array($incomingSlug, ['employee', 'ot'], true)
+            && !empty($kitchenIssue->client_id)
+            && in_array((int) $kitchenIssue->client_type, [
+                KitchenIssueMaster::CLIENT_EMPLOYEE,
+                KitchenIssueMaster::CLIENT_OT,
+            ], true)
+        ) {
+            $request->merge(['client_id' => (int) $kitchenIssue->client_id]);
+        }
+
+        // Historical vouchers may reference item_subcategory_id values that no longer exist
+        // (e.g. the subcategory was later deleted). Don't block saving the rest of the voucher
+        // over a row the user didn't touch — only require a live subcategory for ids that are
+        // new to this voucher (i.e. the user actually picked them in this edit).
+        $preExistingSubcategoryIds = $kitchenIssue->items()->pluck('item_subcategory_id')->all();
+
         $request->validate([
             'store_id' => ['required', function ($attribute, $value, $fail) {
                 if (str_starts_with($value, 'sub_')) {
@@ -1728,7 +1748,16 @@ class KitchenIssueController extends Controller
             'reference_number' => 'nullable|string|max:100',
             'order_by' => 'nullable|string|max:100',
             'items' => 'required|array|min:1',
-            'items.*.item_subcategory_id' => 'required|exists:mess_item_subcategories,id',
+            'items.*.item_subcategory_id' => ['required', function ($attribute, $value, $fail) use ($preExistingSubcategoryIds) {
+                if (in_array($value, $preExistingSubcategoryIds, false)) {
+                    // Already on this voucher before this edit — preserve it even if the
+                    // subcategory record was since deleted.
+                    return;
+                }
+                if (!\App\Models\Mess\ItemSubcategory::where('id', $value)->exists()) {
+                    $fail('The selected item is invalid.');
+                }
+            }],
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.rate' => 'required|numeric|min:0',
             'items.*.available_quantity' => 'nullable|numeric|min:0',
@@ -1764,10 +1793,17 @@ class KitchenIssueController extends Controller
             // When updating: effective available = current stock + this voucher's existing issue qty per item
             // (so saving without changes does not fail)
             $existingQtyByItem = [];
+            $existingItemDisplayById = [];
             foreach ($kitchenIssue->items as $existingItem) {
                 $itemId = (int) ($existingItem->item_subcategory_id ?? 0);
                 if ($itemId > 0) {
                     $existingQtyByItem[$itemId] = ($existingQtyByItem[$itemId] ?? 0) + (float) ($existingItem->quantity ?? 0);
+                    if (!isset($existingItemDisplayById[$itemId])) {
+                        $existingItemDisplayById[$itemId] = [
+                            'item_name' => $existingItem->item_name ?? '',
+                            'unit' => $existingItem->unit ?? '',
+                        ];
+                    }
                 }
             }
 
@@ -1784,6 +1820,16 @@ class KitchenIssueController extends Controller
             $clientId = null;
             if (in_array($request->client_type_slug, ['employee', 'ot']) && $request->filled('client_id')) {
                 $clientId = (int) $request->client_id;
+            } elseif (
+                in_array($request->client_type_slug, ['employee', 'ot'], true)
+                && in_array((int) $kitchenIssue->client_type, [
+                    KitchenIssueMaster::CLIENT_EMPLOYEE,
+                    KitchenIssueMaster::CLIENT_OT,
+                ], true)
+                && !empty($kitchenIssue->client_id)
+            ) {
+                // Preserve existing buyer when edit form omits client_id (e.g. identity fields unchanged)
+                $clientId = (int) $kitchenIssue->client_id;
             }
 
             $kitchenIssue->update([
@@ -1842,16 +1888,17 @@ class KitchenIssueController extends Controller
                 $qty = (float) ($row['quantity'] ?? 0);
                 $rate = (float) ($row['rate'] ?? 0);
                 $avail = (float) ($row['available_quantity'] ?? 0);
+                $fallbackDisplay = $existingItemDisplayById[(int) $row['item_subcategory_id']] ?? ['item_name' => '', 'unit' => ''];
                 KitchenIssueItem::create([
                     'kitchen_issue_master_pk' => $kitchenIssue->pk,
                     'item_subcategory_id' => $row['item_subcategory_id'],
-                    'item_name' => $sub ? ($sub->item_name ?? $sub->name ?? '') : '',
+                    'item_name' => $sub ? ($sub->item_name ?? $sub->name ?? '') : $fallbackDisplay['item_name'],
                     'quantity' => $qty,
                     'available_quantity' => $avail,
                     'return_quantity' => 0,
                     'rate' => $rate,
                     'amount' => $qty * $rate,
-                    'unit' => $sub->unit_measurement ?? '',
+                    'unit' => $sub ? ($sub->unit_measurement ?? '') : $fallbackDisplay['unit'],
                 ]);
             }
 

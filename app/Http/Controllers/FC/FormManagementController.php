@@ -21,16 +21,15 @@ use Illuminate\Validation\ValidationException;
 class FormManagementController extends Controller
 {
     // ── List all forms ───────────────────────────────────────────────
-    public function index(): View
+    public function index()
     {
-        $courses = $this->courseOptionsForFormFilter('active');
+        $forms = FcForm::withCount('steps')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-        return view('admin.forms.index', compact('courses'));
+        return view('admin.forms.index', compact('forms'));
     }
 
-    /**
-     * AJAX: HTML fragment for forms grid (no full page reload).
-     */
     public function ajaxList(Request $request)
     {
         $forms = $this->formsIndexQuery($request)
@@ -41,13 +40,13 @@ class FormManagementController extends Controller
 
         return response()->json([
             'success' => true,
-            'html' => $html,
-            'count' => $forms->count(),
+            'html'    => $html,
+            'count'   => $forms->count(),
         ]);
     }
 
     /**
-     * AJAX: course dropdown options for form filter (by active/archive, like Course Master).
+     * AJAX: course dropdown options for form filter (by active/archive).
      */
     public function filterCourses(Request $request): JsonResponse
     {
@@ -67,7 +66,7 @@ class FormManagementController extends Controller
             ->withCount('steps');
 
         $statusFilter = $request->input('status_filter', 'active');
-        $currentDate = Carbon::now()->format('Y-m-d');
+        $currentDate  = Carbon::now()->format('Y-m-d');
 
         if ($statusFilter === 'archive') {
             $query->whereHas('courseMaster', function ($q) use ($currentDate) {
@@ -104,11 +103,6 @@ class FormManagementController extends Controller
         return $query;
     }
 
-    /**
-     * Courses that have at least one form in the given archive/active bucket.
-     *
-     * @return array<int, string>
-     */
     protected function courseOptionsForFormFilter(string $status): array
     {
         $formQuery = $this->formsIndexQuery(new Request(['status_filter' => $status]));
@@ -133,9 +127,7 @@ class FormManagementController extends Controller
     {
         $tables = $this->getExistingTables();
         $sourceForms = FcForm::withCount('steps')->orderBy('form_name')->get();
-        $courses = $this->courseOptionsForSelect();
-
-        return view('admin.forms.create', compact('tables', 'sourceForms', 'courses'));
+        return view('admin.forms.create', compact('tables', 'sourceForms'));
     }
 
     public function store(Request $request)
@@ -148,16 +140,13 @@ class FormManagementController extends Controller
             'consolidation_table' => 'nullable|string|max:100',
             'user_identifier'     => 'nullable|string|max:100',
             'source_form_id'      => 'nullable|integer|exists:fc_forms,id',
-            'course_master_pk'    => ['required', 'integer', Rule::exists('course_master', 'pk')],
         ]);
-
-        $this->assertCourseNotLinkedToAnotherActiveForm((int) $validated['course_master_pk']);
 
         $sourceFormId = $validated['source_form_id'] ?? null;
         unset($validated['source_form_id']);
 
-        $validated['icon']            = $validated['icon'] ?? 'bi-file-text';
-        $validated['user_identifier'] = $validated['user_identifier'] ?? 'user_id';
+        $validated['icon']            = $validated['icon'] ?: 'bi-file-text';
+        $validated['user_identifier'] = $validated['user_identifier'] ?: 'username';
         $validated['is_active']       = 1;
 
         $form = FcForm::create($validated);
@@ -165,7 +154,6 @@ class FormManagementController extends Controller
         // Clone steps from source form
         if ($sourceFormId) {
             $sourceSteps = FcFormStep::where('form_id', $sourceFormId)
-                ->with(['fields', 'fieldGroups.groupFields'])
                 ->orderBy('step_number')
                 ->get();
 
@@ -204,10 +192,9 @@ class FormManagementController extends Controller
     // ── Edit form settings & manage steps ────────────────────────────
     public function edit(FcForm $form)
     {
-        $form->load(['steps' => fn($q) => $q->orderBy('step_number'), 'courseMaster']);
+        $form->load(['steps' => fn($q) => $q->orderBy('step_number')]);
         $form->loadCount('steps');
         $tables = $this->getExistingTables();
-        $courses = $this->courseOptionsForSelect();
 
         // Reference step-number → target_table mapping from FC Registration (form_id=1)
         $referenceSteps = FcFormStep::where('form_id', 1)
@@ -217,40 +204,20 @@ class FormManagementController extends Controller
 
         $nextStepNumber = ($form->steps->max('step_number') ?? 0) + 1;
 
-        return view('admin.forms.edit', compact('form', 'tables', 'referenceSteps', 'nextStepNumber', 'courses'));
+        return view('admin.forms.edit', compact('form', 'tables', 'referenceSteps', 'nextStepNumber'));
     }
 
     public function update(Request $request, FcForm $form)
     {
-        $willBeActive = $request->boolean('is_active');
-
         $validated = $request->validate([
             'form_name'           => 'required|string|max:150',
             'description'         => 'nullable|string',
             'icon'                => 'nullable|string|max:50',
             'consolidation_table' => 'nullable|string|max:100',
             'is_active'           => 'nullable|boolean',
-            'course_master_pk'    => [
-                $willBeActive ? 'required' : 'nullable',
-                'integer',
-                Rule::exists('course_master', 'pk'),
-            ],
         ]);
 
-        $validated['is_active'] = $willBeActive;
-
-        if (! empty($validated['course_master_pk'])) {
-            $this->assertCourseNotLinkedToAnotherActiveForm(
-                (int) $validated['course_master_pk'],
-                $form->id,
-                $willBeActive
-            );
-        } elseif ($willBeActive) {
-            return back()->withErrors([
-                'course_master_pk' => 'Link this form to a Course Master programme before activating.',
-            ])->withInput();
-        }
-
+        $validated['is_active'] = $request->boolean('is_active');
         $form->update($validated);
 
         return back()->with('success', 'Form settings updated.');
@@ -281,7 +248,7 @@ class FormManagementController extends Controller
         $validated['form_id']     = $form->id;
         $validated['step_number'] = ($form->steps()->max('step_number') ?? 0) + 1;
         $validated['is_active']   = 1;
-        $validated['icon']        = $validated['icon'] ?? 'bi-file-text';
+        $validated['icon']        = $validated['icon'] ?: 'bi-file-text';
 
         unset($validated['has_groups']);
         FcFormStep::create($validated);
@@ -402,44 +369,5 @@ class FormManagementController extends Controller
         }
 
         return response()->json($result);
-    }
-
-    /** @return array<int, string> pk => course_name */
-    protected function courseOptionsForSelect(): array
-    {
-        $currentDate = Carbon::now()->format('Y-m-d');
-
-        return CourseMaster::query()
-            ->where(function ($q) use ($currentDate) {
-                $q->whereNull('end_date')
-                    ->orWhere('end_date', '>=', $currentDate);
-            })
-            ->orderBy('course_name')
-            ->pluck('course_name', 'pk')
-            ->toArray();
-    }
-
-    protected function assertCourseNotLinkedToAnotherActiveForm(
-        int $courseMasterPk,
-        ?int $ignoreFormId = null,
-        bool $mustBeActive = true
-    ): void {
-        if (! $mustBeActive) {
-            return;
-        }
-
-        $query = FcForm::query()
-            ->where('course_master_pk', $courseMasterPk)
-            ->where('is_active', true);
-
-        if ($ignoreFormId) {
-            $query->where('id', '!=', $ignoreFormId);
-        }
-
-        if ($query->exists()) {
-            throw ValidationException::withMessages([
-                'course_master_pk' => 'This course already has an active registration form. Deactivate the other form first.',
-            ]);
-        }
     }
 }

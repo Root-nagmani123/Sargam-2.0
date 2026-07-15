@@ -15,6 +15,7 @@ class StudentMedicalExemption extends Model
         'course_master_pk',
         'student_master_pk',
         'employee_master_pk',
+        'created_by',
         'exemption_category_master_pk',
         'from_date',
         'to_date',
@@ -54,5 +55,10 @@ public function student()
 public function employee()
 {
     return $this->belongsTo(EmployeeMaster::class, 'employee_master_pk', 'pk');
+}
+
+public function creator()
+{
+    return $this->belongsTo(\App\Models\User::class, 'created_by');
 }
 }
