@@ -171,10 +171,6 @@
     </div>
 
     <div class="card attendance-main-card">
-        <div class="attendance-topbar px-4 py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
-            <h4 class="fw-bold page-title mb-0">Attendance</h4>
-            <span class="badge rounded-1 text-bg-primary-subtle text-primary-emphasis px-3 py-2 fw-semibold">Filter and manage records</span>
-        </div>
         <div class="card-body p-4">
 
             {{-- Filter toolbar (programme-dt design system) --}}
@@ -253,15 +249,6 @@
                     </button>
                     <div id="attendanceDtSearch" class="programme-dt-search" data-dt-search-for="attendanceTable"></div>
                 </div>
-            </div>
-
-            <!-- Reset Button -->
-            <div class="text-end mb-3 mb-lg-4">
-                <button class="btn btn-outline-secondary px-4 py-2 shadow-sm d-inline-flex align-items-center rounded-pill"
-                    id="resetAttendance" type="button">
-                    <span class="material-symbols-rounded me-2 fs-6">refresh</span>
-                    Reset
-                </button>
             </div>
 
             <div id="attendanceTableCard">
