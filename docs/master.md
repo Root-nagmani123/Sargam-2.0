@@ -19,7 +19,7 @@ script/style stacks.
     @stack('styles')                       ← page-specific <style> / <link>
   </head>
   <body class="has-dynamic-sidebar …">
-    #sargamLoader                           ← preloader
+    #sargamLoader                           ← app-shell skeleton (preloader)
     #main-wrapper
       @include('admin.layouts.header_new')
       .page-wrapper
@@ -128,8 +128,25 @@ The dynamic sidebar is data-driven and hydrated client-side:
 
 ## Other shell behaviour
 
-- **Preloader** (`#sargamLoader`) hides on `window.load` (and via safety timeouts
-  at 300ms/8s); `window.hideSargamLoader()` is exposed.
+- **Preloader** (`#sargamLoader`) is an app-shell **skeleton** — a silhouette of
+  the topbar / sidebar / page card, styled by LAYER D of `css/sargam-app.css`.
+  It hides on `window.load` (and via safety timeouts at 300ms/8s), and is
+  re-shown on in-app link navigation: this is a server-rendered MPA, so after a
+  click the browser keeps painting the *old* page until the server responds,
+  which reads as a frozen screen. Both `window.hideSargamLoader()` and
+  `window.showSargamLoader()` are exposed.
+  - The navigation trigger is deliberately conservative — `target=_blank`,
+    `download`, hash-only, cross-origin, `javascript:`/`mailto:`,
+    `[data-bs-toggle]`, modified clicks and `preventDefault()`ed clicks are all
+    skipped, since a skeleton over a page that never navigates is stuck until
+    the 15s cap. Opt a link out with `data-no-skeleton`.
+  - Keep the `.sargam-loader` / `#sargamLoader` names: several print
+    stylesheets and `sidebar-dynamic-toggle.js` target them by name.
+- **Skeleton kit** — `.ds-skeleton` + modifiers (`-text`, `-title`, `-avatar`,
+  `-btn`, `-chip`, `-card`) are available app-wide for any page or widget.
+  Server-side DataTables get skeleton rows automatically via
+  `js/datatable-global-ui.js` (opt out with `data-no-skeleton`); the sidebar
+  AJAX loaders paint skeleton menu items while fetching.
 - **Mess module** (`admin.mess.*` routes) gets a body class
   `admin-mess-module`, a "data may be outdated" stale hint, and its own
   smooth-scroll + column-manager partials.
