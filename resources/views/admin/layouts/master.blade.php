@@ -415,6 +415,290 @@
             padding: .375rem .75rem;
         }
 
+        /* Advanced Sargam 2.0 Loader - Bootstrap 5 */
+        .sargam-loader {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at center, #ffffff 0%, #f0f7ff 50%, #e8f0fa 100%);
+            z-index: 9999;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+            overflow: hidden;
+        }
+
+        .sargam-loader.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        /* Floating particles */
+        .sargam-loader-particles {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .sargam-loader-particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: linear-gradient(135deg, #004a93, #0d6efd);
+            border-radius: 50%;
+            opacity: 0.4;
+            animation: sargamFloat 4s ease-in-out infinite;
+        }
+
+        .sargam-loader-particle:nth-child(1) {
+            left: 15%;
+            top: 20%;
+            animation-delay: 0s;
+        }
+
+        .sargam-loader-particle:nth-child(2) {
+            left: 85%;
+            top: 25%;
+            animation-delay: 0.5s;
+        }
+
+        .sargam-loader-particle:nth-child(3) {
+            left: 75%;
+            top: 75%;
+            animation-delay: 1s;
+        }
+
+        .sargam-loader-particle:nth-child(4) {
+            left: 20%;
+            top: 80%;
+            animation-delay: 1.5s;
+        }
+
+        .sargam-loader-particle:nth-child(5) {
+            left: 50%;
+            top: 15%;
+            animation-delay: 2s;
+        }
+
+        .sargam-loader-particle:nth-child(6) {
+            left: 10%;
+            top: 50%;
+            animation-delay: 2.5s;
+        }
+
+        .sargam-loader-particle:nth-child(7) {
+            left: 90%;
+            top: 55%;
+            animation-delay: 3s;
+        }
+
+        .sargam-loader-particle:nth-child(8) {
+            left: 45%;
+            top: 85%;
+            animation-delay: 3.5s;
+        }
+
+        @keyframes sargamFloat {
+
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+                opacity: 0.4;
+            }
+
+            25% {
+                transform: translate(15px, -20px) scale(1.2);
+                opacity: 0.7;
+            }
+
+            50% {
+                transform: translate(-10px, 15px) scale(0.9);
+                opacity: 0.5;
+            }
+
+            75% {
+                transform: translate(-20px, -10px) scale(1.1);
+                opacity: 0.6;
+            }
+        }
+
+        /* Rotating rings container */
+        .sargam-loader-rings {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sargam-loader-ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 3px solid transparent;
+        }
+
+        .sargam-loader-ring-outer {
+            width: 100%;
+            height: 100%;
+            border-top-color: #004a93;
+            border-right-color: #0d6efd;
+            border-bottom-color: #004a93;
+            border-left-color: transparent;
+            animation: sargamSpin 1.2s linear infinite;
+        }
+
+        .sargam-loader-ring-mid {
+            width: 100px;
+            height: 100px;
+            border-top-color: transparent;
+            border-right-color: #0d6efd;
+            border-bottom-color: transparent;
+            border-left-color: #004a93;
+            animation: sargamSpin 1s linear infinite reverse;
+        }
+
+        .sargam-loader-ring-inner {
+            width: 60px;
+            height: 60px;
+            border-top-color: #0d6efd;
+            border-right-color: transparent;
+            border-bottom-color: #004a93;
+            border-left-color: transparent;
+            animation: sargamSpin 0.8s linear infinite;
+        }
+
+        @keyframes sargamSpin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Brand text with letter-by-letter animation */
+        .sargam-loader-brand {
+            display: inline-flex;
+            gap: 2px;
+            font-size: clamp(1.75rem, 5vw, 3rem);
+            font-weight: 800;
+            font-family: 'Poppins', 'Segoe UI', system-ui, sans-serif;
+            letter-spacing: 0.02em;
+        }
+
+        .sargam-loader-brand span {
+            display: inline-block;
+            color: #004a93;
+            background: linear-gradient(135deg, #004a93 0%, #0066cc 40%, #0d6efd 70%, #004a93 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: sargamLetterPop 2s ease-in-out infinite;
+            text-shadow: 0 0 30px rgba(0, 74, 147, 0.2);
+        }
+
+        .sargam-loader-brand span:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .sargam-loader-brand span:nth-child(2) {
+            animation-delay: 0.05s;
+        }
+
+        .sargam-loader-brand span:nth-child(3) {
+            animation-delay: 0.1s;
+        }
+
+        .sargam-loader-brand span:nth-child(4) {
+            animation-delay: 0.15s;
+        }
+
+        .sargam-loader-brand span:nth-child(5) {
+            animation-delay: 0.2s;
+        }
+
+        .sargam-loader-brand span:nth-child(6) {
+            animation-delay: 0.25s;
+        }
+
+        .sargam-loader-brand span:nth-child(7) {
+            animation-delay: 0.3s;
+            min-width: 0.25em;
+        }
+
+        .sargam-loader-brand span:nth-child(8) {
+            animation-delay: 0.35s;
+        }
+
+        .sargam-loader-brand span:nth-child(9) {
+            animation-delay: 0.4s;
+        }
+
+        .sargam-loader-brand span:nth-child(10) {
+            animation-delay: 0.45s;
+        }
+
+        @keyframes sargamLetterPop {
+
+            0%,
+            100% {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: translateY(-4px) scale(1.05);
+                opacity: 0.9;
+            }
+        }
+
+        /* Segmented progress dots */
+        .sargam-loader-dots {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sargam-loader-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(0, 74, 147, 0.2);
+            animation: sargamDotPulse 1.4s ease-in-out infinite;
+        }
+
+        .sargam-loader-dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .sargam-loader-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .sargam-loader-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        .sargam-loader-dot:nth-child(4) {
+            animation-delay: 0.6s;
+        }
+
+        .sargam-loader-dot:nth-child(5) {
+            animation-delay: 0.8s;
+        }
+
+        @keyframes sargamDotPulse {
+
+            0%,
+            100% {
+                transform: scale(0.8);
+                background: rgba(0, 74, 147, 0.2);
+            }
+
+            50% {
+                transform: scale(1.2);
+                background: #0d6efd;
+            }
+        }
+
         /* Sidebar toggle icon rotation */
         #sidebarToggleIcon {
             transition: transform 0.3s ease-in-out;
@@ -431,7 +715,38 @@
 </head>
 
 <body data-sidebartype="full" @class(['has-dynamic-sidebar', 'admin-mess-module' => request()->routeIs('admin.mess.*')])>
-    @include('admin.layouts.partials.skeleton-shell')
+    <!-- Preloader - Advanced Sargam 2.0 Loader (Bootstrap 5) -->
+    <div class="sargam-loader d-flex align-items-center justify-content-center" id="sargamLoader" role="status"
+        aria-live="polite" aria-label="Loading Sargam 2.0">
+        <div class="sargam-loader-particles">
+            <span class="sargam-loader-particle"></span>
+            <span class="sargam-loader-particle"></span>
+            <span class="sargam-loader-particle"></span>
+            <span class="sargam-loader-particle"></span>
+            <span class="sargam-loader-particle"></span>
+            <span class="sargam-loader-particle"></span>
+            <span class="sargam-loader-particle"></span>
+            <span class="sargam-loader-particle"></span>
+        </div>
+        <div class="sargam-loader-inner d-flex flex-column align-items-center gap-4 position-relative">
+            <div class="sargam-loader-rings">
+                <span class="sargam-loader-ring sargam-loader-ring-outer"></span>
+                <span class="sargam-loader-ring sargam-loader-ring-mid"></span>
+                <span class="sargam-loader-ring sargam-loader-ring-inner"></span>
+            </div>
+            <span class="sargam-loader-brand">
+                <span>S</span><span>A</span><span>R</span><span>G</span><span>A</span><span>M</span><span>
+                </span><span>2</span><span>.</span><span>0</span>
+            </span>
+            <div class="sargam-loader-dots">
+                <span class="sargam-loader-dot" role="presentation"></span>
+                <span class="sargam-loader-dot" role="presentation"></span>
+                <span class="sargam-loader-dot" role="presentation"></span>
+                <span class="sargam-loader-dot" role="presentation"></span>
+                <span class="sargam-loader-dot" role="presentation"></span>
+            </div>
+        </div>
+    </div>
 
     <div id="main-wrapper">
         @include('admin.layouts.header_new')
@@ -527,7 +842,26 @@
             });
         });
     </script>
-    <script src="{{ asset('js/sargam-skeleton-loader.js') }}?v={{ @filemtime(public_path('js/sargam-skeleton-loader.js')) ?: time() }}"></script>
+    <script>
+        (function () {
+            function hideSargamLoader() {
+                var loader = document.getElementById('sargamLoader');
+                if (!loader || loader.classList.contains('hidden')) return;
+                loader.classList.add('hidden');
+                setTimeout(function () { loader.style.display = 'none'; }, 500);
+            }
+            window.hideSargamLoader = hideSargamLoader;
+            window.addEventListener('load', hideSargamLoader);
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function () {
+                    setTimeout(hideSargamLoader, 300);
+                });
+            } else {
+                setTimeout(hideSargamLoader, 0);
+            }
+            setTimeout(hideSargamLoader, 8000);
+        })();
+    </script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             try {
@@ -764,35 +1098,6 @@
         }
         window.clearSidebarGroupSelection = clearSidebarGroupSelection;
 
-        /* Sidebar skeletons — #sidebarnav and #sidebar-groups are filled by AJAX
-           and would otherwise sit blank (or hold the PREVIOUS group's menu,
-           which is worse: it looks like the click did nothing) until the
-           response lands. Markup mirrors admin/layouts partials so the swap to
-           real items doesn't shift the layout. */
-        function sargamSidebarMenuSkeleton(count) {
-            var html = '';
-            for (var i = 0; i < (count || 7); i++) {
-                html += '<li class="sidebar-item list-unstyled" aria-hidden="true">'
-                    + '<span class="ds-skel-menu-item">'
-                    + '<span class="ds-skeleton"></span>'
-                    + '<span class="ds-skeleton"></span>'
-                    + '</span></li>';
-            }
-            return html;
-        }
-
-        function sargamSidebarGroupsSkeleton(count) {
-            var html = '';
-            for (var i = 0; i < (count || 5); i++) {
-                html += '<li class="mini-nav-item" aria-hidden="true">'
-                    + '<span class="ds-skel-rail-item">'
-                    + '<span class="ds-skeleton"></span>'
-                    + '<span class="ds-skeleton"></span>'
-                    + '</span></li>';
-            }
-            return html;
-        }
-
         function ensureDynamicSidebarNavVisible() {
             if (typeof window.setDynamicSidebarMenuExpanded === 'function') {
                 window.setDynamicSidebarMenuExpanded(true, false);
@@ -823,7 +1128,6 @@
                     groupId
                 );
             }
-            $('#sidebarnav').html(sargamSidebarMenuSkeleton(7));
             $.ajax({
                 url: '{{ route("sidebar.menu") }}',
                 type: 'GET',
@@ -836,8 +1140,6 @@
                 },
                 error: function (xhr) {
                     console.error(xhr.responseText);
-                    // Never leave the skeleton up as if data were still coming.
-                    clearSidebarGroupSelection();
                 }
             });
         }
@@ -848,7 +1150,6 @@
                 if (typeof done === 'function') done();
                 return;
             }
-            $('#sidebar-groups').html(sargamSidebarGroupsSkeleton(5));
             $.ajax({
                 url: '{{ route("sidebar.groups") }}',
                 type: 'GET',
@@ -865,8 +1166,6 @@
                 },
                 error: function (xhr) {
                     console.error(xhr.responseText);
-                    // Drop the skeleton; a stuck one implies data is still loading.
-                    $('#sidebar-groups').empty();
                     if (typeof done === 'function') done();
                 }
             });

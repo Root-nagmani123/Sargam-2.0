@@ -313,6 +313,86 @@
 #sidebarToggleIcon.rotated {
     transform: rotate(180deg);
 }
+.alphabet-loader {
+        position: fixed;
+        inset: 0;
+        background: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+
+    .alphabet-loader .letters {
+        display: flex;
+        gap: 8px;
+    }
+
+    .alphabet-loader .letters span {
+        font-size: 32px;
+        font-weight: 700;
+        font-family: 'Montserrat', sans-serif;
+        color: #004a93;
+        opacity: 0.2;
+        animation: pulseText 1.2s infinite ease-in-out;
+    }
+
+    .alphabet-loader .letters span:nth-child(1) {
+        animation-delay: 0s;
+    }
+
+    .alphabet-loader .letters span:nth-child(2) {
+        animation-delay: 0.1s;
+    }
+
+    .alphabet-loader .letters span:nth-child(3) {
+        animation-delay: 0.2s;
+    }
+
+    .alphabet-loader .letters span:nth-child(4) {
+        animation-delay: 0.3s;
+    }
+
+    .alphabet-loader .letters span:nth-child(5) {
+        animation-delay: 0.4s;
+    }
+
+    .alphabet-loader .letters span:nth-child(6) {
+        animation-delay: 0.5s;
+    }
+
+    .alphabet-loader .letters span:nth-child(7) {
+        animation-delay: 0.6s;
+    }
+
+    .alphabet-loader .letters span:nth-child(8) {
+        animation-delay: 0.7s;
+    }
+
+    .alphabet-loader .letters span:nth-child(9) {
+        animation-delay: 0.8s;
+    }
+
+    .alphabet-loader .letters span:nth-child(10) {
+        animation-delay: 0.9s;
+    }
+
+    @keyframes pulseText {
+        0% {
+            opacity: 0.2;
+            transform: translateY(0);
+        }
+
+        50% {
+            opacity: 1;
+            transform: translateY(-6px);
+        }
+
+        100% {
+            opacity: 0.2;
+            transform: translateY(0);
+        }
+    }
 
     </style>
     
@@ -325,7 +405,21 @@
 </head>
 
 <body data-sidebartype="mini-sidebar">
-    @include('admin.layouts.partials.skeleton-shell')
+    <!-- Preloader -->
+    <div class="alphabet-loader" id="alphabetLoader">
+        <div class="letters">
+            <span>S</span>
+            <span>A</span>
+            <span>R</span>
+            <span>G</span>
+            <span>A</span>
+            <span>M</span>
+            <span>&nbsp;</span>
+            <span>2</span>
+            <span>.</span>
+            <span>0</span>
+        </div>
+    </div>
     <div id="main-wrapper">
         @include('faculty.layouts.sidebar')
         <div class="page-wrapper">
@@ -364,7 +458,6 @@
     </div>
 
     @include('admin.layouts.footer')
-    <script src="{{ asset('js/sargam-skeleton-loader.js') }}?v={{ @filemtime(public_path('js/sargam-skeleton-loader.js')) ?: time() }}"></script>
     <script src="{{ asset('js/forms.js') }}"></script>
     <script src="{{ asset('js/mobile-sidebar.js') }}"></script>
     <script src="{{ asset('admin_assets/js/tab-memory.js') }}" defer></script>

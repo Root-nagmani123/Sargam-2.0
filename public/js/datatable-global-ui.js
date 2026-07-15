@@ -551,102 +551,6 @@
         });
     }
 
-    /* ── Skeleton rows while a server-side fetch is in flight ─────────────────
-       Server-side (Yajra) tables empty the tbody and show DataTables' plain
-       "Processing..." text on every page/filter/sort. Paint placeholder rows
-       into the real tbody instead: they inherit the table's own column widths
-       and cell padding, so the swap to real rows doesn't shift the layout.
-
-       Client-side tables are skipped — their rows are already in the DOM, so
-       `processing` there fires on sort/filter and would flash for a frame.
-
-       Bound per-table rather than delegated on document, because DataTables
-       fires this one with triggerHandler(), which does not bubble.
-
-       Opt out with data-no-skeleton on the <table> or any ancestor. */
-    var SKELETON_GRACE_MS = 120;
-    var SKELETON_ROWS_FALLBACK = 8;
-    /* Fixed width cycle, not random: re-randomising per draw makes the rows
-       twitch between fetches, which reads as broken rather than as loading. */
-    var SKELETON_WIDTHS = [88, 62, 75, 54, 80, 68];
-
-    function skeletonColumnCount(settings, api) {
-        var count = 0;
-        // Counts only visible columns, matching the cells a real row renders.
-        try { count = api.columns(':visible').count(); } catch (e) { count = 0; }
-        if (!count) {
-            count = $(settings.nTable).find('thead tr').last().children().length;
-        }
-        return count || 1;
-    }
-
-    function skeletonRowCount(api) {
-        var len = 0;
-        try { len = api.page.len(); } catch (e) { len = 0; }
-        if (!len || len < 0) { len = SKELETON_ROWS_FALLBACK; }  // -1 === "All"
-        return Math.max(3, Math.min(len, 10));
-    }
-
-    function paintSkeletonRows(settings) {
-        var api = new $.fn.dataTable.Api(settings);
-        var tbody = settings.nTBody;
-        if (!tbody) { return; }
-
-        var cols = skeletonColumnCount(settings, api);
-        var rows = skeletonRowCount(api);
-        var html = '';
-
-        for (var r = 0; r < rows; r++) {
-            html += '<tr class="ds-skeleton-tr" aria-hidden="true">';
-            for (var c = 0; c < cols; c++) {
-                html += '<td><span class="ds-skeleton" style="width:' +
-                    SKELETON_WIDTHS[(r + c) % SKELETON_WIDTHS.length] + '%"></span></td>';
-            }
-            html += '</tr>';
-        }
-
-        tbody.innerHTML = html;
-        try { $(api.table().container()).addClass('sargam-dt-skeleton-active'); } catch (e) { /* noop */ }
-    }
-
-    function clearSkeletonActive(settings) {
-        try {
-            var api = new $.fn.dataTable.Api(settings);
-            $(api.table().container()).removeClass('sargam-dt-skeleton-active');
-        } catch (e) { /* noop */ }
-    }
-
-    function attachSkeletonRows(settings) {
-        if (!settings.oFeatures || !settings.oFeatures.bServerSide) {
-            return;
-        }
-
-        var $table = $(settings.nTable);
-        if ($table.data('sargamDtSkeleton')) { return; }
-        if ($table.is('[data-no-skeleton]') || $table.closest('[data-no-skeleton]').length) { return; }
-        $table.data('sargamDtSkeleton', true);
-
-        var timer = null;
-
-        $table.on('processing.dt' + NS, function (e, s, processing) {
-            if (processing) {
-                // Grace window: a 40ms response would otherwise flash placeholders.
-                if (timer) { clearTimeout(timer); }
-                timer = setTimeout(function () {
-                    timer = null;
-                    paintSkeletonRows(s);
-                }, SKELETON_GRACE_MS);
-                return;
-            }
-
-            if (timer) { clearTimeout(timer); timer = null; }
-            /* The draw that precedes processing=false has already replaced the
-               tbody wholesale, so the rows are gone — this just drops the
-               marker class (and covers the error path, where no draw runs). */
-            clearSkeletonActive(s);
-        });
-    }
-
     // Patch the DataTables initialisers once so the normalisation applies to
     // every table on the page, without touching each call site.
     (function patchDataTableInit() {
@@ -675,13 +579,6 @@
     $(document).on('preInit.dt' + NS, function (e, settings) {
         var api = new $.fn.dataTable.Api(settings);
         var $table = $(api.table().node());
-
-        /* Bound here (not in init.dt) so the FIRST fetch is covered too — for a
-           server-side table init.dt only fires once that fetch has returned.
-           Runs before the shouldEnhance() opt-out: that opt-out is about where
-           the search/pagination controls get moved, not about whether a table
-           should give loading feedback. */
-        try { attachSkeletonRows(settings); } catch (err) { /* noop */ }
 
         if (!shouldEnhance($table)) {
             settings.oInit.sargamDtUi = false;
