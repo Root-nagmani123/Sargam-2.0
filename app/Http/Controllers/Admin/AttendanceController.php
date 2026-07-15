@@ -246,46 +246,18 @@ class AttendanceController extends Controller
                     $q->whereDate('END_DATE', '<=', $toDate);
                 }
 
-                if ($request->attendance_type === 'manual') {
-                    $q->where('session_type', 2)
-                        ->where('class_session', $request->session_value);
-                } elseif ($request->attendance_type === 'normal') {
-                    $q->where('session_type', 1)
-                        ->where('class_session', $request->session_value);
-                } elseif ($request->attendance_type === 'full_day') {
-                    $q->where('full_day', 1);
-                }
+                $this->applyTimetableFilters($q, $request);
             });
 
-            // Filter for Internal Faculty: Show only courses where faculty is CC or ACC
-            if (hasRole('Internal Faculty')) {
-                $userId = auth()->user()->user_id;
-                $facultyPk = FacultyMaster::where('employee_master_pk', $userId)->value('pk');
-                
-                if ($facultyPk) {
-                    // Get course IDs where faculty is CC or ACC
-                    $coordinatorCourseIds = CourseCordinatorMaster::where(function($q) use ($facultyPk) {
-                        $q->where('Coordinator_name', $facultyPk)
-                          ->orWhere('Assistant_Coordinator_name', $facultyPk);
-                    })
-                    ->pluck('courses_master_pk')
-                    ->unique()
-                    ->toArray();
-                    
-                    if (!empty($coordinatorCourseIds)) {
-                        $query->whereIn('Programme_pk', $coordinatorCourseIds);
-                    } else {
-                        // If no courses found, return empty result
-                        $query->whereRaw('1 = 0');
-                    }
-                } else {
-                    // If faculty PK not found, return empty result
-                    $query->whereRaw('1 = 0');
-                }
-            }
+            $this->applyInternalFacultyCourseScope($query);
 
             if (!empty($request->programme)) {
                 $query->where('Programme_pk', $request->programme);
+            }
+
+            // Group lives on the mapping, not the timetable, so it filters here.
+            if (filled($request->input('group_pk'))) {
+                $query->where('group_pk', $request->input('group_pk'));
             }
 
             // Send Direct Notice: collapse the per-session rows to one row per
@@ -400,8 +372,8 @@ class AttendanceController extends Controller
                 ->addColumn('status', function ($row) {
                     // Marked once every student in the group+course has a saved row (status != 0).
                     return $this->isAttendanceMarked($row)
-                        ? '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle rounded-pill px-3 py-1 fw-medium">Marked</span>'
-                        : '<span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle rounded-pill px-3 py-1 fw-medium">Not Marked</span>';
+                        ? '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle rounded-1 px-3 py-1 fw-medium">Marked</span>'
+                        : '<span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle rounded-1 px-3 py-1 fw-medium">Not Marked</span>';
                 })
                 ->addColumn('actions', function ($row) use ($currentPath) {
                     // Admin action = stacked pencil "Edit/Mark Attendance" link; label
@@ -474,6 +446,176 @@ class AttendanceController extends Controller
      * attendance-type/session, role (Internal Faculty) and course filters used
      * by both the DataTable list and the CSV export, so the two never drift.
      */
+    /**
+     * Narrow a timetable query by the Attendance Type filter.
+     *
+     * An empty type is "All Types" and narrows nothing — that is what the grid
+     * loads with, so the default view is every session in the selected period.
+     * Manual / Normal narrow to their session_type, and only pin a specific
+     * class_session once one has actually been picked: pinning an empty
+     * session_value matched no rows and silently emptied the grid.
+     */
+    private function applyAttendanceTypeFilter($q, Request $request): void
+    {
+        $type = $request->input('attendance_type');
+
+        if ($type === 'manual' || $type === 'normal') {
+            $q->where('session_type', $type === 'manual' ? 2 : 1);
+
+            if (filled($request->input('session_value'))) {
+                $q->where('class_session', $request->input('session_value'));
+            }
+        } elseif ($type === 'full_day') {
+            $q->where('full_day', 1);
+        }
+    }
+
+    /**
+     * Internal Faculty only ever see courses they coordinate (CC or ACC). Applied
+     * to the grid, the export and the filter-option lists from one place, so the
+     * panel can never offer a group or faculty from a course they can't open.
+     */
+    private function applyInternalFacultyCourseScope($query): void
+    {
+        if (!hasRole('Internal Faculty')) {
+            return;
+        }
+
+        $facultyPk = FacultyMaster::where('employee_master_pk', auth()->user()->user_id)->value('pk');
+
+        if (!$facultyPk) {
+            $query->whereRaw('1 = 0');
+            return;
+        }
+
+        $coordinatorCourseIds = CourseCordinatorMaster::where(function ($q) use ($facultyPk) {
+            $q->where('Coordinator_name', $facultyPk)
+              ->orWhere('Assistant_Coordinator_name', $facultyPk);
+        })
+        ->pluck('courses_master_pk')
+        ->unique()
+        ->toArray();
+
+        if (empty($coordinatorCourseIds)) {
+            $query->whereRaw('1 = 0');
+            return;
+        }
+
+        $query->whereIn('Programme_pk', $coordinatorCourseIds);
+    }
+
+    /**
+     * Option lists for the "More filters" panel (Topic / Venue / Faculty / Group),
+     * cascaded to the selected course so every option matches real sessions.
+     *
+     * Deliberately NOT narrowed by the Time Period: the grid loads showing only
+     * today, and lists built from one day's sessions would come up empty.
+     */
+    public function attendanceFilterOptions(Request $request)
+    {
+        try {
+            $programme = $request->input('programme');
+
+            $mappings = CourseGroupTimetableMapping::query();
+            $this->applyInternalFacultyCourseScope($mappings);
+
+            if (filled($programme)) {
+                $mappings->where('Programme_pk', $programme);
+            }
+
+            $scoped = $mappings->get(['group_pk', 'timetable_pk']);
+
+            $groups = GroupTypeMasterCourseMasterMap::whereIn('pk', $scoped->pluck('group_pk')->unique()->filter())
+                ->orderBy('group_name')
+                ->get(['pk', 'group_name'])
+                ->map(fn ($g) => ['value' => (string) $g->pk, 'label' => $g->group_name ?: 'NO GROUP'])
+                ->values();
+
+            $timetables = CalendarEvent::whereIn('pk', $scoped->pluck('timetable_pk')->unique()->filter())
+                ->get(['pk', 'subject_topic', 'venue_id', 'faculty_master', 'internal_faculty']);
+
+            // Topic is free text: the raw value filters, a tidied one-line version
+            // labels. Blank topics can't be offered — there'd be nothing to show.
+            $topics = $timetables->pluck('subject_topic')
+                ->filter(fn ($t) => $t !== null && trim(strip_tags((string) $t)) !== '')
+                ->unique()
+                ->map(fn ($t) => [
+                    'value' => (string) $t,
+                    'label' => Str::limit(trim(preg_replace('/\s+/u', ' ', strip_tags((string) $t))), 80),
+                ])
+                ->sortBy('label', SORT_NATURAL | SORT_FLAG_CASE)
+                ->values();
+
+            $venues = VenueMaster::whereIn('venue_id', $timetables->pluck('venue_id')->unique()->filter())
+                ->orderBy('venue_name')
+                ->get(['venue_id', 'venue_name'])
+                ->map(fn ($v) => ['value' => (string) $v->venue_id, 'label' => $v->venue_name])
+                ->values();
+
+            $facultyPks = $timetables->flatMap(fn ($t) => array_merge(
+                $this->parseFacultyIds($t->faculty_master),
+                $this->parseFacultyIds($t->internal_faculty)
+            ))->unique()->filter()->values();
+
+            $faculty = FacultyMaster::whereIn('pk', $facultyPks)
+                ->whereNotNull('full_name')
+                ->where('full_name', '!=', '')
+                ->orderBy('full_name')
+                ->get(['pk', 'full_name'])
+                ->map(fn ($f) => ['value' => (string) $f->pk, 'label' => $f->full_name])
+                ->values();
+
+            return response()->json([
+                'status' => 'success',
+                'topics' => $topics,
+                'venues' => $venues,
+                'faculty' => $faculty,
+                'groups' => $groups,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error building attendance filter options: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Every filter that lives on the timetable row: attendance type/session plus
+     * the Topic / Venue / Faculty narrowing from the "More filters" panel. Each
+     * is skipped when empty, so an untouched panel changes nothing.
+     *
+     * Call this inside the whereHas('timetable', ...) closure. The Group filter
+     * is NOT here — group_pk is on the mapping, so it applies to the outer query.
+     */
+    private function applyTimetableFilters($q, Request $request): void
+    {
+        $this->applyAttendanceTypeFilter($q, $request);
+
+        if (filled($request->input('venue_id'))) {
+            $q->where('venue_id', $request->input('venue_id'));
+        }
+
+        // Topic is free text on the timetable, so the dropdown's value is the
+        // stored topic itself and matches exactly.
+        if (filled($request->input('topic'))) {
+            $q->where('subject_topic', $request->input('topic'));
+        }
+
+        $facultyPk = (int) $request->input('faculty_pk');
+        if ($facultyPk > 0) {
+            // Faculty ids are stored as JSON lists, so match with a digit-boundary
+            // regex — a plain LIKE '%4%' would also match 84, 14, 40...
+            $pattern = '(^|[^0-9])' . $facultyPk . '([^0-9]|$)';
+            $q->where(function ($fq) use ($pattern) {
+                $fq->where('faculty_master', 'REGEXP', $pattern)
+                   ->orWhere('internal_faculty', 'REGEXP', $pattern);
+            });
+        }
+    }
+
     private function buildAttendanceQuery(Request $request)
     {
         $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : null;
@@ -503,46 +645,18 @@ class AttendanceController extends Controller
                 $q->whereDate('END_DATE', '<=', $toDate);
             }
 
-            if ($request->attendance_type === 'manual') {
-                $q->where('session_type', 2)
-                    ->where('class_session', $request->session_value);
-            } elseif ($request->attendance_type === 'normal') {
-                $q->where('session_type', 1)
-                    ->where('class_session', $request->session_value);
-            } elseif ($request->attendance_type === 'full_day') {
-                $q->where('full_day', 1);
-            }
+            $this->applyTimetableFilters($q, $request);
         });
 
-        // Filter for Internal Faculty: Show only courses where faculty is CC or ACC
-        if (hasRole('Internal Faculty')) {
-            $userId = auth()->user()->user_id;
-            $facultyPk = FacultyMaster::where('employee_master_pk', $userId)->value('pk');
-
-            if ($facultyPk) {
-                // Get course IDs where faculty is CC or ACC
-                $coordinatorCourseIds = CourseCordinatorMaster::where(function ($q) use ($facultyPk) {
-                    $q->where('Coordinator_name', $facultyPk)
-                      ->orWhere('Assistant_Coordinator_name', $facultyPk);
-                })
-                ->pluck('courses_master_pk')
-                ->unique()
-                ->toArray();
-
-                if (!empty($coordinatorCourseIds)) {
-                    $query->whereIn('Programme_pk', $coordinatorCourseIds);
-                } else {
-                    // If no courses found, return empty result
-                    $query->whereRaw('1 = 0');
-                }
-            } else {
-                // If faculty PK not found, return empty result
-                $query->whereRaw('1 = 0');
-            }
-        }
+        $this->applyInternalFacultyCourseScope($query);
 
         if (!empty($request->programme)) {
             $query->where('Programme_pk', $request->programme);
+        }
+
+        // Group lives on the mapping, not the timetable, so it filters here.
+        if (filled($request->input('group_pk'))) {
+            $query->where('group_pk', $request->input('group_pk'));
         }
 
         return $query;
@@ -1672,6 +1786,32 @@ $currentPath = $segments[1] ?? null;
     /**
      * timetable.faculty_master / internal_faculty are often JSON arrays of faculty PKs — not a single FK.
      */
+    /**
+     * Faculty ids as stored on a timetable row: normally a JSON list — ["84"]
+     * or [84] — but occasionally a bare id. Returns [] for anything unparseable.
+     */
+    private function parseFacultyIds($raw): array
+    {
+        if ($raw === null || $raw === '') {
+            return [];
+        }
+
+        $decoded = is_array($raw) ? $raw : json_decode((string) $raw, true);
+
+        if (!is_array($decoded)) {
+            return is_numeric($raw) ? [(int) $raw] : [];
+        }
+
+        $ids = [];
+        foreach ($decoded as $id) {
+            if ($id !== null && $id !== '' && is_numeric($id)) {
+                $ids[] = (int) $id;
+            }
+        }
+
+        return $ids;
+    }
+
     private function resolveTimetableFacultyNames(?CalendarEvent $timetable): string
     {
         if (!$timetable) {
@@ -1682,28 +1822,7 @@ $currentPath = $segments[1] ?? null;
 
         $ids = [];
         foreach (['faculty_master', 'internal_faculty'] as $column) {
-            $raw = $timetable->{$column} ?? null;
-            if ($raw === null || $raw === '') {
-                continue;
-            }
-            if (is_array($raw)) {
-                $decoded = $raw;
-            } else {
-                $decoded = json_decode((string) $raw, true);
-            }
-
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                foreach ($decoded as $id) {
-                    if ($id === null || $id === '') {
-                        continue;
-                    }
-                    if (is_numeric($id)) {
-                        $ids[] = (int) $id;
-                    }
-                }
-            } elseif (is_numeric($raw)) {
-                $ids[] = (int) $raw;
-            }
+            $ids = array_merge($ids, $this->parseFacultyIds($timetable->{$column} ?? null));
         }
 
         $ids = array_values(array_unique(array_filter($ids)));

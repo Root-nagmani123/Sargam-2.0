@@ -95,6 +95,81 @@
     line-height: 1;
 }
 
+/* ── "+N Filters" popover — same pattern as the Student List toolbar ── */
+.attendance-page .attendance-more-filters {
+    color: #004a93;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.attendance-page .attendance-more-filters:hover { text-decoration: underline; }
+.attendance-page .attendance-more-filters.dropdown-toggle::after { display: none; }
+
+.attendance-page .attendance-more-menu {
+    min-width: 320px;
+}
+
+.attendance-page .attendance-more-menu-header {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #101828;
+    padding-bottom: 0.65rem;
+    margin-bottom: 0.85rem;
+    border-bottom: 1px solid #eef2f6;
+}
+
+/* Each filter inside the popover = a floating-label box. */
+.attendance-page .attendance-more-menu .attendance-filter-item {
+    display: block;
+    position: relative;
+    margin-bottom: 0.75rem;
+}
+
+.attendance-page .attendance-more-menu .attendance-filter-item:last-child { margin-bottom: 0; }
+
+.attendance-page .attendance-more-menu .attendance-filter-label-text {
+    display: block;
+    position: absolute;
+    top: 6px;
+    left: 0.875rem;
+    z-index: 2;
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: #667085;
+    margin: 0;
+    pointer-events: none;
+}
+
+/* Student List uses plain selects here; these are Choices, so the generated
+   .choices__inner is what has to carry the floating-label geometry. */
+.attendance-page .attendance-more-menu .choices { width: 100%; margin-bottom: 0; }
+
+.attendance-page .attendance-more-menu .choices__inner.form-select {
+    min-height: 52px;
+    border-radius: 10px;
+    padding: 1.35rem 2.25rem 0.35rem 0.875rem;
+    color: #101828;
+}
+
+/* A long topic must ellipsis inside the box, never widen the popover. */
+.attendance-page .attendance-more-menu .choices__list--single {
+    padding: 0;
+}
+
+.attendance-page .attendance-more-menu .choices__list--single .choices__item {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The search box Choices injects sits inside the popover's own dropdown. */
+.attendance-page .attendance-more-menu .choices__list--dropdown {
+    z-index: 1056;
+}
+
 /* Time Period date-range input */
 .attendance-page .attendance-daterange-wrap {
     position: relative;
@@ -200,7 +275,8 @@
                     {{-- Attendance Type --}}
                     <div class="programme-dt-filter-select">
                         <select id="attendance_type" class="form-select js-attendance-choice" aria-label="Attendance Type">
-                            <option value="full_day" selected>Full Day</option>
+                            <option value="" selected>All Types</option>
+                            <option value="full_day">Full Day</option>
                             <option value="manual">Manual</option>
                             <option value="normal">Normal</option>
                         </select>
@@ -235,6 +311,43 @@
                         </select>
                     </div>
 
+                    {{-- "+N Filters" popover (Topic / Venue / Faculty / Group). Options are
+                         loaded per selected course — see attendanceLoadFilterOptions().
+                         auto-close="outside" keeps it open while a Choices list is used. --}}
+                    <div class="dropdown" id="attendanceMoreFiltersWrap">
+                        <a href="javascript:void(0)" class="attendance-more-filters dropdown-toggle"
+                            id="attendanceMoreFilters" data-bs-toggle="dropdown"
+                            data-bs-auto-close="outside" aria-expanded="false">+4 Filters</a>
+                        <div class="dropdown-menu attendance-more-menu p-3 shadow-sm border rounded-3"
+                            aria-labelledby="attendanceMoreFilters">
+                            <div class="attendance-more-menu-header">Filters</div>
+                            <div class="attendance-filter-item">
+                                <span class="attendance-filter-label-text">Topic</span>
+                                <select id="filter_topic" class="form-select js-attendance-choice" aria-label="Filter by topic">
+                                    <option value="">All Topics</option>
+                                </select>
+                            </div>
+                            <div class="attendance-filter-item">
+                                <span class="attendance-filter-label-text">Venue</span>
+                                <select id="filter_venue" class="form-select js-attendance-choice" aria-label="Filter by venue">
+                                    <option value="">All Venues</option>
+                                </select>
+                            </div>
+                            <div class="attendance-filter-item">
+                                <span class="attendance-filter-label-text">Faculty</span>
+                                <select id="filter_faculty" class="form-select js-attendance-choice" aria-label="Filter by faculty">
+                                    <option value="">All Faculty</option>
+                                </select>
+                            </div>
+                            <div class="attendance-filter-item">
+                                <span class="attendance-filter-label-text">Group</span>
+                                <select id="filter_group" class="form-select js-attendance-choice" aria-label="Filter by group">
+                                    <option value="">All Groups</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
                     <button type="button" class="btn programme-dt-btn-reset" id="resetAttendance">
                         Reset Filters
                     </button>
@@ -250,6 +363,11 @@
                     <div id="attendanceDtSearch" class="programme-dt-search" data-dt-search-for="attendanceTable"></div>
                 </div>
             </div>
+
+            {{-- Hidden date range driven by the Time Period filter (backend still reads from_date / to_date).
+                 Seeded server-side with today so the on-load auto-search has a range to send. --}}
+            <input type="hidden" id="from_date" name="from_date" value="{{ date('Y-m-d') }}">
+            <input type="hidden" id="to_date" name="to_date" value="{{ date('Y-m-d') }}">
 
             <div id="attendanceTableCard">
                 <div class="programme-dt-panel">
@@ -508,18 +626,14 @@ $(function () {
         $period.data('daterangepicker').setEndDate(t);
     });
 
-    // Download the currently-filtered list as CSV (same filters the table uses).
+    // Download the currently-filtered list as CSV. Reuses the grid's own filter
+    // payload (custom.js) rather than rebuilding it — a second copy is exactly
+    // how the Attendance Type / Session filters silently stopped applying.
     $('#attendanceDownload').on('click', function () {
-        var params = $.param({
-            programme: $('#programme').val() || '',
-            from_date: $('#from_date').val() || '',
-            to_date: $('#to_date').val() || '',
-            attendance_type: $('#attendance_type').val() || '',
-            session_value: ($('#attendance_type').val() === 'normal')
-                ? ($('#session').val() || '')
-                : ($('#attendance_type').val() === 'manual' ? ($('#manual_session').val() || '') : ''),
-        });
-        window.location.href = "{{ route('attendance.export_list') }}" + '?' + params;
+        if (typeof attendanceFilterParams !== 'function') {
+            return;
+        }
+        window.location.href = "{{ route('attendance.export_list') }}" + '?' + $.param(attendanceFilterParams());
     });
 });
 </script>
