@@ -16,6 +16,7 @@
             'png' => 'image/png',
             'webp' => 'image/webp',
             'jpg', 'jpeg' => 'image/jpeg',
+            'ico' => 'image/x-icon',
             default => 'application/octet-stream',
         };
 
@@ -24,19 +25,24 @@
 
     // Fall back to a normal asset URL if the file is missing, so a bad path degrades to a
     // broken link rather than an empty src.
+    // favicon.ico, not .png: there is no favicon.png, so the embed returned null and the
+    // asset() fallback baked an absolute http://localhost/... URL into the pre-rendered
+    // template — the exact failure the note above warns about.
     $logoSargam = $embed('admin_assets/images/logos/logo.svg') ?? asset('admin_assets/images/logos/logo.svg');
-    $logoLbsnaa = $embed('admin_assets/images/logos/logo-web.png') ?? asset('admin_assets/images/logos/logo-web.png');
-    $logoEmblem = $embed('admin_assets/images/logos/ashoka.png') ?? asset('admin_assets/images/logos/ashoka.png');
-    $favicon    = $embed('admin_assets/images/logos/favicon.png') ?? asset('admin_assets/images/logos/favicon.png');
+    $favicon    = $embed('admin_assets/images/logos/favicon.ico') ?? asset('admin_assets/images/logos/favicon.ico');
 
     // Academy backdrop photo, re-encoded down from the login carousel original. Decorative:
-    // no asset() fallback, since without it the brand gradient underneath still stands alone.
-    $bgPhoto = $embed('admin_assets/images/backgrounds/maintenance-bg.webp');
+    // no asset() fallback, since without it the brand wash underneath still stands alone.
+    $bgPhoto = $embed('https://www.lbsnaa.gov.in/news_images/1781608933_A03A9454.JPG');
 
     // Seconds until the next automatic retry, from either source Laravel may supply it:
     // `artisan down --render` passes $retryAfter into the view directly, while a request-time
     // 503 carries it as a Retry-After header on the HttpException. Clamped so a stray value
-    // can't produce a countdown that never ends or hammers the server.
+    // can't produce a countdown that never ends or hammers the server. The ceiling is the
+    // 105-minute maintenance window (shown as "1:45 hours"); a longer real window is still
+    // shown as 1:45, and the page simply retries again when it elapses.
+    $maxRetryAfter = 105 * 60;
+
     $retry = null;
 
     if (isset($retryAfter) && is_numeric($retryAfter)) {
@@ -45,7 +51,7 @@
         $retry = (int) ($exception->getHeaders()['Retry-After'] ?? 0);
     }
 
-    $retryAfter = max(15, min($retry ?: 60, 900));
+    $retryAfter = max(15, min($retry ?: 60, $maxRetryAfter));
 @endphp
 <!DOCTYPE html>
 <html lang="en" dir="ltr" data-bs-theme="light">
@@ -54,7 +60,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <meta name="robots" content="noindex, nofollow">
-    <meta name="theme-color" content="#004a93">
+    <meta name="theme-color" content="#0d1829">
     <meta name="color-scheme" content="light">
     <meta name="description" content="Sargam 2.0 - Lal Bahadur Shastri National Academy of Administration Portal is temporarily unavailable for scheduled maintenance.">
 
@@ -63,34 +69,28 @@
     <link rel="icon" type="image/png" href="{{ $favicon }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap" rel="stylesheet">
 
     <style>
     :root {
         --primary: #004a93;
-        --primary-dark: #003366;
-        --primary-hover: #003d7a;
-        --primary-subtle: #f0f6fc;
-        --accent-saffron: #ff9933;
-        --accent-green: #138808;
-        --text-heading: #0f172a;
-        --text-body: #334155;
-        --text-muted: #64748b;
+        --navy: #0d1829;
+        --text-heading: #1c2b47;
+        --text-muted: #6b7a90;
         --surface: #ffffff;
-        --border: #e2e8f0;
-        --radius-md: 0.5rem;
-        --radius-3xl: 1rem;
-        --transition: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+        --btn-waiting: #7f9dc4;
         --font-sans: 'Inter', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        /* Driven by the A+ / A / A- controls; every type size below is relative to it. */
+        --type-scale: 1;
     }
 
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
         font-family: var(--font-sans);
-        font-size: 1rem;
-        color: var(--text-body);
-        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        font-size: calc(1rem * var(--type-scale));
+        color: var(--text-heading);
+        background: var(--navy);
         min-height: 100vh;
         display: flex;
         flex-direction: column;
@@ -111,44 +111,28 @@
     }
 @endif
 
-    /* Brand wash over the photo. The message itself sits on the opaque card, so this only has
-       to carry the footer text — hence the heavier top and bottom and the lighter middle,
-       which lets the most of the picture through where the card is not covering it. */
+    /* Brand wash over the photo. The message sits on an opaque card, so this only has to
+       carry the footer text — kept light enough to leave the photograph legible. */
     body::after {
         content: '';
         position: fixed;
         inset: 0;
-        background: linear-gradient(
-            180deg,
-            rgba(0,51,102,0.78) 0%,
-            rgba(0,74,147,0.52) 42%,
-            rgba(0,28,58,0.88) 100%);
+        background: linear-gradient(180deg, rgba(13,24,41,0.55) 0%, rgba(16,45,84,0.42) 45%, rgba(13,24,41,0.62) 100%);
         pointer-events: none;
     }
 
-    .tricolor {
-        height: 4px;
-        flex: none;
-        background: linear-gradient(90deg,
-            var(--accent-saffron) 33.33%,
-            #ffffff 33.33%, #ffffff 66.66%,
-            var(--accent-green) 66.66%);
-    }
-
-    /* ── Institutional header: National Emblem + Government of India + LBSNAA ── */
-    .topbar {
+    /* ── Government bar ──────────────────────────────────────────────────── */
+    .gov-bar {
         position: relative;
-        z-index: 1;
+        z-index: 2;
         flex: none;
-        background: #fff;
-        border-bottom: 1px solid var(--border);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        background: var(--navy);
     }
 
-    .topbar-inner {
-        max-width: 1140px;
+    .gov-bar-inner {
+        max-width: 1360px;
         margin: 0 auto;
-        padding: 10px 20px;
+        padding: 18px 28px;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -156,193 +140,223 @@
         flex-wrap: wrap;
     }
 
-    .topbar-left {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        min-width: 0;
+    .gov-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+
+    .gov-flag {
+        width: 26px;
+        height: auto;
+        flex: none;
+        border-radius: 2px;
+        box-shadow: 0 0 0 1px rgba(255,255,255,0.25);
     }
 
-    .emblem { height: 42px; width: auto; flex: none; }
-
-    .govt {
-        font-size: 0.8125rem;
-        font-weight: 600;
-        color: var(--text-body);
-        line-height: 1.35;
+    .gov-text {
+        color: #fff;
+        font-size: calc(0.875rem * var(--type-scale));
+        font-weight: 500;
         white-space: nowrap;
     }
 
-    .govt [lang="hi"] {
-        font-family: 'Noto Sans Devanagari', var(--font-sans);
-        display: block;
+    .gov-text [lang="hi"] { font-family: 'Noto Sans Devanagari', var(--font-sans); }
+    .gov-text .sep { opacity: 0.45; margin: 0 2px; }
+
+    .gov-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+
+    .gov-divider { width: 1px; height: 18px; background: rgba(255,255,255,0.22); }
+
+    .skip-link {
+        color: #fff;
+        font-size: calc(0.875rem * var(--type-scale));
+        text-decoration: none;
+        white-space: nowrap;
     }
 
-    .govt-en { color: var(--text-muted); font-weight: 500; }
+    .skip-link:hover { text-decoration: underline; }
 
-    .lbsnaa-logo { width: 200px; max-width: 100%; height: auto; display: block; }
+    .text-size { display: flex; align-items: center; gap: 2px; }
 
+    .text-size button {
+        font-family: inherit;
+        background: none;
+        border: 0;
+        color: #fff;
+        padding: 2px 6px;
+        border-radius: 4px;
+        cursor: pointer;
+        line-height: 1.4;
+    }
+
+    .text-size button[data-size="large"]  { font-size: calc(1rem * var(--type-scale)); }
+    .text-size button[data-size="normal"] { font-size: calc(0.875rem * var(--type-scale)); }
+    .text-size button[data-size="small"]  { font-size: calc(0.75rem * var(--type-scale)); }
+
+    .text-size button:hover { background: rgba(255,255,255,0.12); }
+    .text-size button.is-active { background: rgba(255,255,255,0.2); font-weight: 600; }
+
+    .lang { position: relative; }
+
+    .lang-btn {
+        font-family: inherit;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        background: none;
+        border: 0;
+        color: #fff;
+        font-size: calc(0.875rem * var(--type-scale));
+        padding: 4px 6px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .lang-btn:hover { background: rgba(255,255,255,0.12); }
+    .lang-btn svg { flex: none; }
+    .lang-caret { transition: transform 200ms ease; }
+    .lang-btn[aria-expanded="true"] .lang-caret { transform: rotate(180deg); }
+
+    .lang-menu {
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        min-width: 132px;
+        background: #fff;
+        border-radius: 6px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.28);
+        padding: 4px;
+        list-style: none;
+        z-index: 3;
+    }
+
+    .lang-menu[hidden] { display: none; }
+
+    .lang-menu button {
+        font-family: inherit;
+        display: block;
+        width: 100%;
+        text-align: left;
+        background: none;
+        border: 0;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: calc(0.875rem * var(--type-scale));
+        color: var(--text-heading);
+        cursor: pointer;
+    }
+
+    .lang-menu button:hover { background: #f1f5f9; }
+    .lang-menu button[aria-current="true"] { color: var(--primary); font-weight: 600; }
+    .lang-menu [lang="hi"] { font-family: 'Noto Sans Devanagari', var(--font-sans); }
+
+    /* ── Card ────────────────────────────────────────────────────────────── */
     .page {
         flex: 1;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 32px 20px;
+        padding: 40px 20px;
         position: relative;
         z-index: 1;
     }
 
     .card {
         background: var(--surface);
-        border-radius: var(--radius-3xl);
+        border-radius: 10px;
         box-shadow: 0 20px 60px -12px rgba(0,0,0,0.35);
-        max-width: 640px;
+        max-width: 585px;
         width: 100%;
-        padding: 48px 44px 40px;
+        padding: 44px 44px 40px;
         text-align: center;
     }
 
+    .card:focus { outline: none; }
+
     .brand-logo {
-        width: 190px;
+        width: 168px;
         max-width: 60%;
         height: auto;
-        margin: 0 auto 32px;
+        margin: 0 auto 30px;
         display: block;
     }
 
-    /* Animated maintenance illustration */
-    .illustration { width: 132px; height: 132px; margin: 0 auto 28px; display: block; }
-    .gear-lg { transform-origin: 48px 48px; animation: spin 9s linear infinite; }
-    .gear-sm { transform-origin: 90px 90px; animation: spin-rev 6s linear infinite; }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-    @keyframes spin-rev { to { transform: rotate(-360deg); } }
-
-    .eyebrow {
-        display: inline-flex;
+    .tool-circle {
+        width: 96px;
+        height: 96px;
+        margin: 0 auto 26px;
+        border-radius: 50%;
+        background: #eef4fb;
+        display: flex;
         align-items: center;
-        gap: 8px;
-        background: var(--primary-subtle);
-        color: var(--primary);
-        font-size: 0.75rem;
-        font-weight: 600;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        padding: 6px 14px;
-        border-radius: 999px;
+        justify-content: center;
+    }
+
+    .tool-icon { width: 50px; height: 50px; display: block; }
+    .tool-wrench { animation: tool-nudge 3.2s ease-in-out infinite; transform-origin: 32px 32px; }
+
+    @keyframes tool-nudge {
+        0%, 62%, 100% { transform: rotate(0deg); }
+        72%           { transform: rotate(-11deg); }
+        84%           { transform: rotate(3deg); }
+    }
+
+    h1 {
+        font-size: calc(1.625rem * var(--type-scale));
+        font-weight: 700;
+        color: var(--text-heading);
+        line-height: 1.3;
+        margin-bottom: 6px;
+    }
+
+    .alt-title {
+        font-size: calc(0.9375rem * var(--type-scale));
+        font-weight: 400;
+        color: var(--text-heading);
         margin-bottom: 18px;
     }
 
-    .status-dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: var(--accent-saffron);
-        animation: pulse 1.8s ease-in-out infinite;
-    }
-
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
-
-    h1 {
-        font-size: 2rem;
-        font-weight: 700;
-        color: var(--text-heading);
-        line-height: 1.25;
-        margin-bottom: 12px;
-    }
-
-    .subtitle-hi {
-        font-family: 'Noto Sans Devanagari', var(--font-sans);
-        font-size: 1.0625rem;
-        font-weight: 500;
-        color: var(--primary);
-        margin-bottom: 16px;
-    }
-
     .message {
-        font-size: 1rem;
+        font-size: calc(0.9375rem * var(--type-scale));
         line-height: 1.65;
         color: var(--text-muted);
-        max-width: 460px;
-        margin: 0 auto 28px;
+        max-width: 430px;
+        margin: 0 auto 30px;
     }
 
-    .retry-bar {
-        background: var(--primary-subtle);
-        border: 1px solid #dbe7f4;
-        border-radius: var(--radius-md);
-        padding: 14px 18px;
-        font-size: 0.875rem;
-        color: var(--text-body);
-        margin-bottom: 28px;
-    }
-
-    .retry-bar strong { color: var(--primary); font-variant-numeric: tabular-nums; }
-
-    .actions {
-        display: flex;
-        gap: 12px;
-        justify-content: center;
-        flex-wrap: wrap;
-    }
+    /* Devanagari needs a little more leading than Inter to stay comfortable. */
+    [lang="hi"] .alt-title,
+    [lang="hi"] .message { line-height: 1.75; }
 
     .btn {
         font-family: inherit;
-        font-size: 0.9375rem;
-        font-weight: 600;
-        padding: 12px 28px;
-        border: 1px solid transparent;
-        border-radius: var(--radius-md);
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        transition: var(--transition);
+        font-size: calc(0.9375rem * var(--type-scale));
+        font-weight: 500;
+        color: #fff;
+        background: var(--btn-waiting);
+        padding: 12px 26px;
+        border: 0;
+        border-radius: 6px;
+        cursor: not-allowed;
+        transition: background 200ms ease;
     }
 
-    .btn-primary {
+    /* Enabled only once the wait is over — until then the label is the countdown. */
+    .btn:not([disabled]) {
         background: var(--primary);
-        color: #fff;
+        cursor: pointer;
         box-shadow: 0 4px 14px rgba(0,74,147,0.35);
     }
 
-    .btn-primary:hover {
-        background: var(--primary-hover);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(0,74,147,0.45);
-    }
-
-    .btn-secondary {
-        background: #fff;
-        color: var(--text-body);
-        border-color: var(--border);
-    }
-
-    .btn-secondary:hover { background: #f8fafc; border-color: #cbd5e1; }
-
-    .btn:focus-visible { outline: 3px solid #ff6b35; outline-offset: 2px; }
-
-    .help {
-        margin-top: 32px;
-        padding-top: 24px;
-        border-top: 1px solid var(--border);
-        font-size: 0.8125rem;
-        color: var(--text-muted);
-    }
-
-    .help a { color: var(--primary); font-weight: 600; text-decoration: none; }
-    .help a:hover { text-decoration: underline; }
+    .btn:not([disabled]):hover { background: #003d7a; }
+    .btn:focus-visible { outline: 3px solid #ff9933; outline-offset: 2px; }
 
     .footer {
         position: relative;
         z-index: 1;
+        flex: none;
         text-align: center;
-        color: rgba(255,255,255,0.85);
-        font-size: 0.8125rem;
-        padding: 0 20px 24px;
+        color: rgba(255,255,255,0.9);
+        font-size: calc(0.8125rem * var(--type-scale));
+        padding: 0 20px 28px;
     }
-
 
     .sr-only {
         position: absolute;
@@ -355,19 +369,17 @@
     }
 
     @media (max-width: 780px) {
-        .topbar-inner { justify-content: center; gap: 12px; padding: 10px 16px; }
-        .emblem { height: 34px; }
-        .govt { font-size: 0.75rem; }
-        .lbsnaa-logo { width: 165px; }
+        .gov-bar-inner { padding: 12px 16px; gap: 10px; }
+        .gov-right { gap: 10px; width: 100%; justify-content: space-between; }
+        .skip-link { display: none; }
     }
 
     @media (max-width: 600px) {
-        .card { padding: 36px 24px 32px; border-radius: 0.875rem; }
-        h1 { font-size: 1.5rem; }
-        .illustration { width: 104px; height: 104px; }
-        .brand-logo { margin-bottom: 24px; }
-        .actions { flex-direction: column; }
-        .btn { width: 100%; justify-content: center; }
+        .card { padding: 32px 22px 30px; }
+        h1 { font-size: calc(1.375rem * var(--type-scale)); }
+        .tool-circle { width: 82px; height: 82px; }
+        .tool-icon { width: 42px; height: 42px; }
+        .btn { width: 100%; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -376,101 +388,285 @@
     </style>
 </head>
 <body>
-    <div class="tricolor"></div>
-
-    <header class="topbar" role="banner">
-        <div class="topbar-inner">
-            <div class="topbar-left">
-                <img src="{{ $logoEmblem }}"
-                     alt="National Emblem of India - Satyameva Jayate"
-                     class="emblem">
-                <span class="govt">
+    <header class="gov-bar" role="banner">
+        <div class="gov-bar-inner">
+            <div class="gov-left">
+                {{-- Drawn inline rather than linked: this page is served precisely when the
+                     app is down, so it must not depend on an image request (the login page's
+                     flag points at a Wikipedia URL, which is not safe to rely on here). --}}
+                <svg class="gov-flag" viewBox="0 0 36 24" role="img" aria-label="National Flag of India">
+                    <rect width="36" height="24" fill="#fff"/>
+                    <rect width="36" height="8" fill="#ff9933"/>
+                    <rect y="16" width="36" height="8" fill="#138808"/>
+                    <g stroke="#000080" fill="none">
+                        <circle cx="18" cy="12" r="3.3" stroke-width="0.7"/>
+                        @for ($i = 0; $i < 24; $i++)
+                            <line x1="18" y1="12" x2="18" y2="8.7" stroke-width="0.25"
+                                  transform="rotate({{ $i * 15 }} 18 12)"/>
+                        @endfor
+                    </g>
+                    <circle cx="18" cy="12" r="0.65" fill="#000080"/>
+                </svg>
+                {{-- The national lockup is bilingual by convention and stays that way in
+                     both languages — translating the English half just rendered it twice. --}}
+                <span class="gov-text">
                     <span lang="hi">भारत सरकार</span>
-                    <span class="govt-en">Government of India</span>
+                    <span class="sep">|</span>
+                    <span lang="en">Government of India</span>
                 </span>
             </div>
-            {{-- Right-sized web variant (400px) rather than the full-resolution logo.png,
-                 which stays reserved for PDF/print exports. --}}
-            <img src="{{ $logoLbsnaa }}"
-                 alt="Lal Bahadur Shastri National Academy of Administration, Mussoorie"
-                 class="lbsnaa-logo">
+
+            <nav class="gov-right" aria-label="Accessibility Options">
+                <a href="#maint-card" class="skip-link" data-i18n="skip">Skip to content</a>
+                <span class="gov-divider" aria-hidden="true"></span>
+
+                <div class="text-size" role="group" data-i18n-label="textSize" aria-label="Text Size">
+                    <button type="button" data-size="large" data-i18n-label="textLarge" aria-label="Increase text size">A+</button>
+                    <button type="button" data-size="normal" class="is-active" data-i18n-label="textNormal" aria-label="Normal text size">A</button>
+                    <button type="button" data-size="small" data-i18n-label="textSmall" aria-label="Decrease text size">A-</button>
+                </div>
+
+                <span class="gov-divider" aria-hidden="true"></span>
+
+                <div class="lang">
+                    <button type="button" class="lang-btn" id="langBtn" aria-expanded="false" aria-haspopup="true" aria-controls="langMenu">
+                        <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                            <path d="M8 0a8 8 0 100 16A8 8 0 008 0zM1.5 8c0-.6.08-1.18.23-1.73L3 7.5l1.5 1.5v1.5l1.5 1.5v1.86A6.51 6.51 0 011.5 8zm11.4 4.36A6.47 6.47 0 019 14.46V13a1.5 1.5 0 00-1.5-1.5v-1.5l3-3-1.5-1.5H7l-1-1V3.6a6.5 6.5 0 016.9 8.76z"/>
+                        </svg>
+                        <span id="langLabel">English</span>
+                        <svg class="lang-caret" width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                            <path d="M8 11L3 6h10z"/>
+                        </svg>
+                    </button>
+                    <ul class="lang-menu" id="langMenu" role="menu" hidden>
+                        <li role="none"><button type="button" role="menuitem" data-lang="en" lang="en" aria-current="true">English</button></li>
+                        <li role="none"><button type="button" role="menuitem" data-lang="hi" lang="hi" aria-current="false">हिन्दी</button></li>
+                    </ul>
+                </div>
+            </nav>
         </div>
     </header>
 
     <main class="page">
-        <div class="card" role="status" aria-live="polite">
-            <img src="{{ $logoSargam }}"
-                 alt="Sargam 2.0 Portal"
-                 class="brand-logo">
+        <div class="card" id="maint-card" role="status" aria-live="polite" tabindex="-1">
+            <img src="{{ $logoSargam }}" alt="Sargam 2.0" class="brand-logo">
 
-            <svg class="illustration" viewBox="0 0 128 128" aria-hidden="true" focusable="false">
-                <circle cx="64" cy="64" r="62" fill="#f0f6fc"/>
-                <g class="gear-lg" fill="#004a93">
-                    <path d="M71.5 48L77.85 51.01L77.32 54.36L70.35 55.26L67.01 61.81L70.38 67.98L67.98 70.38L61.81 67.01L55.26 70.35L54.36 77.32L51.01 77.85L48 71.5L40.74 70.35L35.91 75.46L32.89 73.92L34.19 67.01L28.99 61.81L22.08 63.11L20.54 60.09L25.65 55.26L24.5 48L18.15 44.99L18.68 41.64L25.65 40.74L28.99 34.19L25.62 28.02L28.02 25.62L34.19 28.99L40.74 25.65L41.64 18.68L44.99 18.15L48 24.5L55.26 25.65L60.09 20.54L63.11 22.08L61.81 28.99L67.01 34.19L73.92 32.89L75.46 35.91L70.35 40.74Z"/>
-                </g>
-                <circle cx="48" cy="48" r="9" fill="#f0f6fc"/>
-                <g class="gear-sm" fill="#ff9933">
-                    <path d="M106 90L110.83 92.63L110.26 95.54L104.78 96.12L101.31 101.31L102.87 106.59L100.4 108.24L96.12 104.78L90 106L87.37 110.83L84.46 110.26L83.88 104.78L78.69 101.31L73.41 102.87L71.76 100.4L75.22 96.12L74 90L69.17 87.37L69.74 84.46L75.22 83.88L78.69 78.69L77.13 73.41L79.6 71.76L83.88 75.22L90 74L92.63 69.17L95.54 69.74L96.12 75.22L101.31 78.69L106.59 77.13L108.24 79.6L104.78 83.88Z"/>
-                </g>
-                <circle cx="90" cy="90" r="6" fill="#f0f6fc"/>
-            </svg>
+            <div class="tool-circle">
+                <svg class="tool-icon" viewBox="0 0 64 64" fill="none" aria-hidden="true" focusable="false">
+                    {{-- Screwdriver, laid bottom-left to top-right --}}
+                    <g transform="rotate(45 32 32)">
+                        <rect x="28.5" y="7" width="7" height="17" rx="3.5" fill="#1e4d8f"/>
+                        <rect x="30" y="23" width="4" height="3" fill="#16375f"/>
+                        <rect x="30.6" y="26" width="2.8" height="21" fill="#3d7ac4"/>
+                        <path d="M30.6 47h2.8l-1.4 5z" fill="#3d7ac4"/>
+                    </g>
+                    {{-- Wrench, crossed over it. The -45° sits on an OUTER group: the
+                         nudge animation below sets `transform` on .tool-wrench, and a CSS
+                         transform replaces the element's transform attribute outright
+                         rather than composing with it — so keeping both on one element
+                         left the wrench standing upright. --}}
+                    <g transform="rotate(-45 32 32)">
+                        <g class="tool-wrench">
+                            <rect x="29.8" y="24" width="4.4" height="28" rx="2.2" fill="#d92b2b"/>
+                            {{-- Open-end head: a stroked circle with one dash gap, turned so
+                                 the gap faces away from the handle. Cheaper and cleaner than
+                                 a hand-plotted C outline. --}}
+                            <circle cx="32" cy="20" r="7.5" fill="none" stroke="#d92b2b" stroke-width="4.2"
+                                    stroke-dasharray="36 11" transform="rotate(-47.5 32 20)"/>
+                        </g>
+                    </g>
+                </svg>
+            </div>
 
-            <span class="eyebrow"><span class="status-dot"></span> Scheduled Maintenance</span>
+            <h1 data-i18n="title">Sargam is Under Maintenance</h1>
+            {{-- The counterpart language, always shown in brackets under the heading. --}}
+            <p class="alt-title" lang="hi" data-i18n="altTitle">(सरगम में मेंटेनेंस का काम चल रहा है)</p>
 
-            <h1>We&rsquo;ll be back shortly</h1>
-            <p class="subtitle-hi">सरगम पोर्टल पर रखरखाव कार्य चल रहा है</p>
-
-            <p class="message">
-                Sargam 2.0 is temporarily offline while we carry out planned maintenance to improve
-                performance and reliability. No action is needed &mdash; your data is safe and the
-                portal will return automatically.
+            <p class="message" data-i18n="message">
+                Sargam 2.0 is temporarily offline while we carry out prepared maintenance to improve
+                performance and reliability.
             </p>
 
-            <div class="retry-bar">
-                Checking again in <strong id="countdown">{{ $retryAfter }}</strong> seconds&hellip;
-            </div>
-
-            <div class="actions">
-                <button type="button" class="btn btn-primary" onclick="location.reload()">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                        <path d="M8 3a5 5 0 104.546 2.914l1.36-.63A6.5 6.5 0 118 1.5V0l3 2.5L8 5V3z"/>
-                    </svg>
-                    Refresh Now
-                </button>
-                <a href="{{ url('/') }}" class="btn btn-secondary">Go to Home</a>
-            </div>
-
-            <div class="help">
-                Facing an urgent issue? Contact the Sargam support desk at
-                <a href="mailto:support@lbsnaa.gov.in">support@lbsnaa.gov.in</a>
-            </div>
+            <button type="button" class="btn" id="refreshBtn" disabled>Wait to Refresh</button>
         </div>
     </main>
 
-    <div class="footer">
-        &copy; {{ date('Y') }} Lal Bahadur Shastri National Academy of Administration, Mussoorie,
-        Government of India. All Rights Reserved
-    </div>
-    <div class="tricolor"></div>
+    <footer class="footer" data-i18n="footer">
+        &copy; {{ date('Y') }} LBSNAA Mussoorie, Government of India. All Rights Reserved
+    </footer>
 
-    <p class="sr-only" id="announcer"></p>
+    <p class="sr-only" id="announcer" aria-live="polite"></p>
 
     <script>
         (function () {
-            var remaining = {{ $retryAfter }};
-            var el = document.getElementById('countdown');
-            var announcer = document.getElementById('announcer');
+            'use strict';
 
-            announcer.textContent = 'Sargam is under maintenance. The page will retry automatically in '
-                + remaining + ' seconds.';
+            var YEAR = {{ (int) date('Y') }};
+
+            /* Strings live here rather than in lang/: this page renders while the app is
+               down (artisan down --render), and the project has no `hi` locale to resolve
+               against anyway. Swapping is client-side so no request is needed. */
+            var T = {
+                en: {
+
+                    skip: 'Skip to content',
+                    textSize: 'Text Size', textLarge: 'Increase text size',
+                    textNormal: 'Normal text size', textSmall: 'Decrease text size',
+                    langName: 'English',
+                    title: 'Sargam is Under Maintenance',
+                    altTitle: '(सरगम में मेंटेनेंस का काम चल रहा है)',
+                    message: 'Sargam 2.0 is temporarily offline while we carry out prepared maintenance to improve performance and reliability.',
+                    waitFor: 'Wait for {t} to Refresh',
+                    refreshNow: 'Refresh Now',
+                    hours: 'hours', minutes: 'minutes', seconds: 'seconds',
+                    footer: '© ' + YEAR + ' LBSNAA Mussoorie, Government of India. All Rights Reserved',
+                    announce: 'Sargam is under maintenance. The page will retry automatically.'
+                },
+                hi: {
+
+                    skip: 'मुख्य सामग्री पर जाएँ',
+                    textSize: 'अक्षर आकार', textLarge: 'अक्षर आकार बढ़ाएँ',
+                    textNormal: 'सामान्य अक्षर आकार', textSmall: 'अक्षर आकार घटाएँ',
+                    langName: 'हिन्दी',
+                    title: 'सरगम में मेंटेनेंस का काम चल रहा है',
+                    altTitle: '(Sargam is Under Maintenance)',
+                    message: 'सरगम 2.0 अस्थायी रूप से ऑफ़लाइन है, क्योंकि प्रदर्शन और विश्वसनीयता बेहतर बनाने के लिए नियोजित रखरखाव किया जा रहा है।',
+                    waitFor: 'रीफ़्रेश करने के लिए {t} प्रतीक्षा करें',
+                    refreshNow: 'अभी रीफ़्रेश करें',
+                    hours: 'घंटे', minutes: 'मिनट', seconds: 'सेकंड',
+                    footer: '© ' + YEAR + ' एलबीएसएनएए मसूरी, भारत सरकार। सर्वाधिकार सुरक्षित।',
+                    announce: 'सरगम में रखरखाव कार्य चल रहा है। पृष्ठ स्वतः पुनः प्रयास करेगा।'
+                }
+            };
+
+            var SCALES = { small: 0.875, normal: 1, large: 1.125 };
+
+            var remaining = {{ $retryAfter }};
+            var lang = 'en';
+
+            var btn = document.getElementById('refreshBtn');
+            var announcer = document.getElementById('announcer');
+            var langBtn = document.getElementById('langBtn');
+            var langMenu = document.getElementById('langMenu');
+            var langLabel = document.getElementById('langLabel');
+
+            function store(key, value) {
+                try { localStorage.setItem(key, value); } catch (e) { /* private mode */ }
+            }
+            function read(key) {
+                try { return localStorage.getItem(key); } catch (e) { return null; }
+            }
+
+            function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+            /* "1:45 hours" over an hour, "9:05 minutes" under one, plain seconds at the end. */
+            function formatWait(sec) {
+                var t = T[lang];
+                if (sec >= 3600) {
+                    return Math.floor(sec / 3600) + ':' + pad(Math.floor((sec % 3600) / 60)) + ' ' + t.hours;
+                }
+                if (sec >= 60) {
+                    return Math.floor(sec / 60) + ':' + pad(sec % 60) + ' ' + t.minutes;
+                }
+                return sec + ' ' + t.seconds;
+            }
+
+            function paintButton() {
+                if (remaining > 0) {
+                    btn.disabled = true;
+                    btn.textContent = T[lang].waitFor.replace('{t}', formatWait(remaining));
+                } else {
+                    btn.disabled = false;
+                    btn.textContent = T[lang].refreshNow;
+                }
+            }
+
+            function applyLang(next) {
+                lang = T[next] ? next : 'en';
+                var t = T[lang];
+
+                document.documentElement.setAttribute('lang', lang);
+
+                document.querySelectorAll('[data-i18n]').forEach(function (el) {
+                    var key = el.getAttribute('data-i18n');
+                    if (t[key]) { el.textContent = t[key]; }
+                });
+                document.querySelectorAll('[data-i18n-label]').forEach(function (el) {
+                    var key = el.getAttribute('data-i18n-label');
+                    if (t[key]) { el.setAttribute('aria-label', t[key]); }
+                });
+
+                // The bracketed line always carries the OTHER language, so tag it as such.
+                var alt = document.querySelector('.alt-title');
+                if (alt) { alt.setAttribute('lang', lang === 'en' ? 'hi' : 'en'); }
+
+                langLabel.textContent = t.langName;
+                langMenu.querySelectorAll('[data-lang]').forEach(function (b) {
+                    b.setAttribute('aria-current', b.getAttribute('data-lang') === lang ? 'true' : 'false');
+                });
+
+                announcer.textContent = t.announce;
+                paintButton();
+                store('sargamMaintLang', lang);
+            }
+
+            function applyScale(size) {
+                var scale = SCALES[size] || 1;
+                document.documentElement.style.setProperty('--type-scale', scale);
+                document.querySelectorAll('.text-size button').forEach(function (b) {
+                    b.classList.toggle('is-active', b.getAttribute('data-size') === size);
+                });
+                store('sargamMaintScale', size);
+            }
+
+            document.querySelectorAll('.text-size button').forEach(function (b) {
+                b.addEventListener('click', function () { applyScale(b.getAttribute('data-size')); });
+            });
+
+            function closeLangMenu() {
+                langMenu.hidden = true;
+                langBtn.setAttribute('aria-expanded', 'false');
+            }
+
+            langBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var open = langMenu.hidden;
+                langMenu.hidden = !open;
+                langBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            });
+
+            langMenu.querySelectorAll('[data-lang]').forEach(function (b) {
+                b.addEventListener('click', function () {
+                    applyLang(b.getAttribute('data-lang'));
+                    closeLangMenu();
+                    langBtn.focus();
+                });
+            });
+
+            document.addEventListener('click', function (e) {
+                if (!langMenu.hidden && !e.target.closest('.lang')) { closeLangMenu(); }
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && !langMenu.hidden) { closeLangMenu(); langBtn.focus(); }
+            });
+
+            btn.addEventListener('click', function () {
+                if (!btn.disabled) { location.reload(); }
+            });
+
+            // Restore the visitor's choices across the automatic reload below.
+            applyScale(read('sargamMaintScale') || 'normal');
+            applyLang(read('sargamMaintLang') || 'en');
 
             setInterval(function () {
                 remaining -= 1;
                 if (remaining <= 0) {
+                    remaining = 0;
+                    paintButton();
                     location.reload();
                     return;
                 }
-                el.textContent = remaining;
+                paintButton();
             }, 1000);
         })();
     </script>
