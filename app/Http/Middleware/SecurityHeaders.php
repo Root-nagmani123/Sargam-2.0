@@ -58,7 +58,7 @@ class SecurityHeaders
         // HSTS only over HTTPS (browsers ignore it on plain HTTP; omitting it
         // there keeps local http:// development working).
         if ($request->isSecure() && ! $headers->has('Strict-Transport-Security')) {
-            $headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+            $headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
         }
 
         // Prevent caching of authenticated / dynamic HTML so sensitive pages are

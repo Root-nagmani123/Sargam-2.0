@@ -148,11 +148,11 @@
                                 <td>{{ $cb->payment_type ?? '—' }}</td>
                                 <td>
                                     @if(($cb->status ?? 0) == 2)
-                                        <span class="badge rounded-pill text-bg-success shadow-sm px-3 py-2">Paid</span>
+                                        <span class="badge rounded-1 text-bg-success shadow-sm px-3 py-2">Paid</span>
                                     @elseif(($cb->status ?? 0) == 1)
-                                        <span class="badge rounded-pill text-bg-warning text-dark shadow-sm px-3 py-2">Partial</span>
+                                        <span class="badge rounded-1 text-bg-warning text-dark shadow-sm px-3 py-2">Partial</span>
                                     @else
-                                        <span class="badge rounded-pill text-bg-secondary shadow-sm px-3 py-2">Unpaid</span>
+                                        <span class="badge rounded-1 text-bg-secondary shadow-sm px-3 py-2">Unpaid</span>
                                     @endif
                                 </td>
                                 <td class="text-center no-print">

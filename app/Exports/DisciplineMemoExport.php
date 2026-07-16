@@ -16,6 +16,7 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use Carbon\Carbon;
 
 class DisciplineMemoExport implements
@@ -31,13 +32,75 @@ class DisciplineMemoExport implements
     protected array $filters;
     protected string $exportDate;
     protected int $headerRows = 5; // rows used by the LBSNAA header before the data table
-    protected string $lastCol = 'M';
 
-    public function __construct(Collection $memos, array $filters, string $exportDate)
+    /** Ordered data-column keys to emit (subset of columnDefs()). */
+    protected array $cols;
+
+    /** Whether to prepend the '#' serial column. */
+    protected bool $showSerial;
+
+    /**
+     * The ONE definition of the export's data columns, in order — shared by the
+     * Excel sheet and the PDF (MemoDisciplineController::exportPdf reads this too),
+     * so the two exports cannot drift apart in column set, order or heading.
+     *
+     * Keys are the slugs the index page's Column Visibility modal sends in ?cols=,
+     * which is how hiding a column in the table drops it from both downloads.
+     *
+     *   heading  — column title in both exports
+     *   pdfClass — width/alignment class in export_pdf.blade.php
+     *   center   — centre-align this column in the Excel sheet
+     *   value    — cell value for one memo row
+     *
+     * NOTE: the table's Category and Action columns are deliberately absent — they
+     * have never been part of either export, so hiding them changes nothing.
+     */
+    public static function columnDefs(): array
     {
+        return [
+            'program' => ['heading' => 'Program Name', 'pdfClass' => 'col-program', 'center' => false,
+                'value' => fn ($m) => $m->course->course_name ?? 'N/A'],
+            'name' => ['heading' => 'Student Name', 'pdfClass' => 'col-name', 'center' => false,
+                'value' => fn ($m) => $m->student->display_name ?? 'N/A'],
+            'ot_code' => ['heading' => 'OT/Participant Code', 'pdfClass' => 'col-code', 'center' => false,
+                'value' => fn ($m) => $m->student->generated_OT_code ?? 'N/A'],
+            'cadre' => ['heading' => 'Cadre', 'pdfClass' => 'col-cadre', 'center' => false,
+                'value' => fn ($m) => $m->student->cadre->cadre_name ?? 'N/A'],
+            'date' => ['heading' => 'Date of Infraction', 'pdfClass' => 'col-date', 'center' => true,
+                'value' => fn ($m) => $m->date ? Carbon::parse($m->date)->format('d M Y') : 'N/A'],
+            'infraction' => ['heading' => 'Infraction', 'pdfClass' => 'col-infraction', 'center' => false,
+                'value' => fn ($m) => $m->discipline->discipline_name ?? 'N/A'],
+            'submitted' => ['heading' => 'Submitted Marks', 'pdfClass' => 'col-marks', 'center' => true,
+                'value' => fn ($m) => $m->mark_deduction_submit ?? ''],
+            'final' => ['heading' => 'Final Marks', 'pdfClass' => 'col-marks', 'center' => true,
+                'value' => fn ($m) => $m->final_mark_deduction ?? ''],
+            'remarks' => ['heading' => 'Remarks', 'pdfClass' => 'col-remarks', 'center' => false,
+                'value' => fn ($m) => $m->remarks ?? ''],
+            'conclusion_remark' => ['heading' => 'Conclusion Remark', 'pdfClass' => 'col-remarks', 'center' => false,
+                'value' => fn ($m) => $m->conclusion_remark ?? ''],
+            'created_date' => ['heading' => 'Created Date', 'pdfClass' => 'col-date', 'center' => true,
+                'value' => fn ($m) => $m->created_date ? Carbon::parse($m->created_date)->format('d M Y') : 'N/A'],
+            'status' => ['heading' => 'Status', 'pdfClass' => 'col-status', 'center' => true,
+                'value' => fn ($m) => static::statusLabel($m->status)],
+        ];
+    }
+
+    /**
+     * @param string[]|null $cols       Ordered data columns to emit; null = all of them.
+     * @param bool          $showSerial Emit the leading '#' serial column.
+     */
+    public function __construct(
+        Collection $memos,
+        array $filters,
+        string $exportDate,
+        ?array $cols = null,
+        bool $showSerial = true
+    ) {
         $this->memos = $memos;
         $this->filters = $filters;
         $this->exportDate = $exportDate;
+        $this->cols = $cols ?? array_keys(static::columnDefs());
+        $this->showSerial = $showSerial;
     }
 
     public function title(): string
@@ -50,26 +113,42 @@ class DisciplineMemoExport implements
         return 'A' . ($this->headerRows + 1);
     }
 
-    public function headings(): array
+    /** Total emitted columns, serial included. */
+    protected function columnCount(): int
     {
-        return [
-            '#',
-            'Program Name',
-            'Student Name',
-            'OT/Participant Code',
-            'Cadre',
-            'Date of Infraction',
-            'Infraction',
-            'Submitted Marks',
-            'Final Marks',
-            'Remarks',
-            'Conclusion Remark',
-            'Created Date',
-            'Status',
-        ];
+        return count($this->cols) + ($this->showSerial ? 1 : 0);
     }
 
-    protected function statusLabel(?int $status): string
+    /** Sheet letter of the last emitted column — was hard-coded 'M' when the column set was fixed. */
+    protected function lastColLetter(): string
+    {
+        return Coordinate::stringFromColumnIndex(max(1, $this->columnCount()));
+    }
+
+    /** Sheet letter for a data column, or null when it isn't being emitted. */
+    protected function colLetter(string $key): ?string
+    {
+        $i = array_search($key, $this->cols, true);
+        if ($i === false) {
+            return null;
+        }
+
+        return Coordinate::stringFromColumnIndex($i + 1 + ($this->showSerial ? 1 : 0));
+    }
+
+    public function headings(): array
+    {
+        $defs = static::columnDefs();
+        $headings = $this->showSerial ? ['#'] : [];
+
+        foreach ($this->cols as $key) {
+            $headings[] = $defs[$key]['heading'];
+        }
+
+        return $headings;
+    }
+
+    public static function statusLabel(?int $status): string
     {
         return match ($status) {
             1 => 'Recorded',
@@ -81,35 +160,41 @@ class DisciplineMemoExport implements
 
     public function array(): array
     {
+        $defs = static::columnDefs();
         $rows = [];
         $serial = 0;
 
         foreach ($this->memos as $memo) {
             $serial++;
-            $rows[] = [
-                $serial,
-                $memo->course->course_name ?? 'N/A',
-                $memo->student->display_name ?? 'N/A',
-                $memo->student->generated_OT_code ?? 'N/A',
-                $memo->student->cadre->cadre_name ?? 'N/A',
-                $memo->date ? Carbon::parse($memo->date)->format('d M Y') : 'N/A',
-                $memo->discipline->discipline_name ?? 'N/A',
-                $memo->mark_deduction_submit ?? '',
-                $memo->final_mark_deduction ?? '',
-                $memo->remarks ?? '',
-                $memo->conclusion_remark ?? '',
-                $memo->created_date ? Carbon::parse($memo->created_date)->format('d M Y') : 'N/A',
-                $this->statusLabel($memo->status),
-            ];
+            $row = $this->showSerial ? [$serial] : [];
+            foreach ($this->cols as $key) {
+                $row[] = ($defs[$key]['value'])($memo);
+            }
+            $rows[] = $row;
         }
 
         return $rows;
     }
 
+    /** Sheet letters to centre — the serial plus every column flagged `center`. */
+    protected function centerColLetters(): array
+    {
+        $defs = static::columnDefs();
+        $letters = $this->showSerial ? ['A'] : [];
+
+        foreach ($this->cols as $key) {
+            if (!empty($defs[$key]['center']) && ($letter = $this->colLetter($key)) !== null) {
+                $letters[] = $letter;
+            }
+        }
+
+        return $letters;
+    }
+
     public function styles(Worksheet $sheet)
     {
         $lastRow = $sheet->getHighestRow();
-        $lastCol = $this->lastCol;
+        $lastCol = $this->lastColLetter();
         $dataStart = $this->headerRows + 1; // heading row
         $dataRowStart = $dataStart + 1;     // first data row
 
@@ -139,7 +224,10 @@ class DisciplineMemoExport implements
                 'font' => ['size' => 10],
             ]);
 
-            // Alternating row shading
+            // Alternating row shading + the status badge. The badge column is looked
+            // up by key rather than assumed to be the last one — Status is no longer
+            // guaranteed to be last (or present) once columns can be hidden.
+            $statusCol = $this->colLetter('status');
             $row = $dataRowStart;
             foreach ($this->memos as $memo) {
                 if (($row - $dataRowStart) % 2 === 1) {
@@ -148,26 +236,26 @@ class DisciplineMemoExport implements
                     ]);
                 }
 
-                // Status badge color
-                $statusCell = "{$lastCol}{$row}";
-                $badgeColor = match ($memo->status) {
-                    1 => '198754', // Recorded — green
-                    2 => 'FFC107', // Memo Sent — amber
-                    default => '6C757D', // Closed — gray
-                };
-                $sheet->getStyle($statusCell)->applyFromArray([
-                    'font' => ['bold' => true, 'color' => ['rgb' => $memo->status == 2 ? '212529' : 'FFFFFF']],
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $badgeColor]],
-                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-                ]);
+                if ($statusCol !== null) {
+                    $badgeColor = match ($memo->status) {
+                        1 => '198754', // Recorded — green
+                        2 => 'FFC107', // Memo Sent — amber
+                        default => '6C757D', // Closed — gray
+                    };
+                    $sheet->getStyle("{$statusCol}{$row}")->applyFromArray([
+                        'font' => ['bold' => true, 'color' => ['rgb' => $memo->status == 2 ? '212529' : 'FFFFFF']],
+                        'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $badgeColor]],
+                        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+                    ]);
+                }
 
                 $row++;
             }
         }
 
-        // Center a few columns
-        $centerCols = ['A', 'F', 'H', 'I', 'L', 'M'];
-        foreach ($centerCols as $col) {
+        // Center a few columns — derived from columnDefs()' `center` flag, so the
+        // letters track whichever columns actually got emitted.
+        foreach ($this->centerColLetters() as $col) {
             if ($lastRow >= $dataRowStart) {
                 $sheet->getStyle("{$col}{$dataRowStart}:{$col}{$lastRow}")
                     ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
@@ -185,7 +273,7 @@ class DisciplineMemoExport implements
         return [
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
-                $lastCol = $this->lastCol;
+                $lastCol = $this->lastColLetter();
 
                 // ── LBSNAA Header ──
                 // Row 1: Institution name (merged)

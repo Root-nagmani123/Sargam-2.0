@@ -105,12 +105,24 @@ select.is-invalid + .select2-container--default .select2-selection--single {
 }
 
 /* --- Width / height per context ------------------------------------- */
-/* Add / Edit form dropdowns fill their grid column. */
+/* Add / Edit form dropdowns fill their grid column.
+   Height MUST stay 44px — if the container grows taller than the control,
+   Select2 positions the open panel below the container and a visible gap appears. */
 #smeFormBody .select2-container,
-.sme-form .select2-container { width: 100% !important; }
+.sme-form .select2-container {
+    width: 100% !important;
+    height: 44px !important;
+}
+
+/* min-height on .form-select must not win over the hidden native <select> */
+#smeFormBody select.select2-hidden-accessible,
+.sme-form select.select2-hidden-accessible {
+    min-height: 0 !important;
+    height: 1px !important;
+}
 
 /* Listing course filter matches the 42px filter-chip footprint. */
-.sme-filterbar .select2-container { min-width: 180px; max-width: 240px; }
+.sme-filterbar .select2-container { min-width: 180px; max-width: 240px; height: auto !important; }
 .sme-filterbar .select2-container--default .select2-selection--single {
     height: 42px;
     border-radius: var(--ds-radius-1, 6px);

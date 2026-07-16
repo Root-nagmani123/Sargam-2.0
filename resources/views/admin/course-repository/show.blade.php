@@ -75,102 +75,84 @@ document.addEventListener('DOMContentLoaded', function() {
             role="toolbar" aria-label="Repository actions">
             <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#uploadModal"
                 aria-label="Upload documents"
-                class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold text-nowrap shadow-sm">
-                <span class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">upload_file</span>
+                class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold text-nowrap shadow-sm">
+                <i class="bi bi-upload" aria-hidden="true"></i>
                 <span class="d-none d-sm-inline">Upload Documents</span>
                 <span class="d-inline d-sm-none">Upload</span>
             </a>
             <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#createModal"
                 aria-label="Add new sub category"
-                class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold text-nowrap shadow-sm">
-                <span class="material-icons material-symbols-rounded fs-6 lh-1"
-                    aria-hidden="true">create_new_folder</span>
+                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold text-nowrap shadow-sm">
+                <i class="bi bi-folder-plus" aria-hidden="true"></i>
                 <span class="d-none d-sm-inline">Add Sub Category</span>
                 <span class="d-inline d-sm-none">Add</span>
             </a>
         </div>
     </x-breadcrum>
 
-    <div class="datatables">
-        <div class="card border-0 shadow-lg modern-card">
-            <div class="card-body p-4">
-                <!-- Page Title and Actions -->
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 pb-3 border-bottom">
-                    <div class="d-flex align-items-center gap-3">
-                        <div>
-                            <h3 class="mb-0 fw-bold text-primary">{{ $repository->course_repository_name }}</h3>
-                        </div>
-                    </div>
-                    <div class="d-flex flex-wrap align-items-center gap-3">
-
-                        <!-- Upload Documents (Secondary Action) -->
-                        <button type="button"
-                            class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-medium shadow-sm btn-hover-lift"
-                            data-bs-toggle="modal" data-bs-target="#uploadModal">
-                            <span class="material-icons material-symbols-rounded fs-6">
-                                upload
-                            </span>
-                            <span>Upload Documents</span>
-                        </button>
-
-                        <!-- Add Category (Primary Action) -->
-                        <button type="button"
-                            class="btn btn-primary btn-sm d-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-medium shadow btn-hover-lift"
-                            data-bs-toggle="modal" data-bs-target="#createModal">
-                            <span class="material-icons material-symbols-rounded fs-6">
-                                add
-                            </span>
-                            <span>Add Category</span>
-                        </button>
-
-                    </div>
-
+    @if($repository->children->count() == 0 && $documents->count() == 0)
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
+            <div class="text-center py-5 px-3 cr-admin-empty">
+                <div
+                    class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 cr-admin-empty-icon">
+                    <i class="bi bi-folder-x display-6 text-secondary" aria-hidden="true"></i>
                 </div>
-
-                @if($repository->children->count() == 0 && $documents->count() == 0)
-                <div class="text-center py-5 px-3 cr-admin-empty">
-                    <div
-                        class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 cr-admin-empty-icon">
-                        <i class="bi bi-folder-x display-6 text-secondary" aria-hidden="true"></i>
-                    </div>
-                    <h5 class="text-secondary mb-2 fw-semibold">No Content Found</h5>
-                    <p class="text-muted mb-4 small">Start by adding a sub-category or uploading a document.</p>
-                    <div class="d-flex flex-wrap gap-2 justify-content-center">
-                        <a href="javascript:void(0)" class="btn btn-primary btn-sm rounded-1 px-3"
-                            data-bs-toggle="modal" data-bs-target="#createModal">
-                            <i class="bi bi-folder-plus me-1" aria-hidden="true"></i>Add Sub Category
-                        </a>
-                        <a href="javascript:void(0)" class="btn btn-outline-primary btn-sm rounded-1 px-3"
-                            data-bs-toggle="modal" data-bs-target="#uploadModal">
-                            <i class="bi bi-upload me-1" aria-hidden="true"></i>Upload Document
-                        </a>
-                    </div>
+                <h5 class="text-secondary mb-2 fw-semibold">No Content Found</h5>
+                <p class="text-muted mb-4 small">Start by adding a sub-category or uploading a document.</p>
+                <div class="d-flex flex-wrap gap-2 justify-content-center">
+                    <a href="javascript:void(0)" class="btn btn-primary rounded-1 px-4 fw-semibold"
+                        data-bs-toggle="modal" data-bs-target="#createModal">
+                        <i class="bi bi-folder-plus me-1" aria-hidden="true"></i>Add Sub Category
+                    </a>
+                    <a href="javascript:void(0)" class="btn btn-outline-primary rounded-1 px-4 fw-semibold"
+                        data-bs-toggle="modal" data-bs-target="#uploadModal">
+                        <i class="bi bi-upload me-1" aria-hidden="true"></i>Upload Document
+                    </a>
                 </div>
-                @else
-                <!-- Child Repositories Section -->
-                @if($repository->children->count() > 0)
-                <div class="mb-4">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0 datatable cr-admin-table"
-                            id="child_repositories" data-export="false">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th class="ps-4 fw-semibold text-secondary small">#</th>
-                                    <th class="fw-semibold text-secondary small">Category</th>
-                                    <th class="fw-semibold text-secondary small">Details</th>
-                                    <th class="fw-semibold text-secondary small">Sub-Categories</th>
-                                    <th class="fw-semibold text-secondary small">Documents</th>
-                                    <th class="text-center fw-semibold text-secondary small">Actions</th>
-                                </tr>
-                            </thead>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- Sub-Categories Section -->
+    @if($repository->children->count() > 0)
+    <div class="card overflow-hidden rounded-3 mb-4">
+        <div class="card-body p-3 p-md-4">
+
+            <div
+                class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <h2 class="cr-admin-section-title mb-0">Sub-Categories</h2>
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" data-bs-toggle="modal"
+                        data-bs-target="#childColumnVisibilityModal" title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div class="programme-dt-search" data-dt-search-for="child_repositories"></div>
+                </div>
+            </div>
+
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table"
+                        id="child_repositories">
+                        <thead>
+                            <tr>
+                                <th>S. No.</th>
+                                <th>Category</th>
+                                <th>Details</th>
+                                <th>Sub-Categories</th>
+                                <th>Documents</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
                             <tbody>
                                 @foreach ($repository->children as $index => $child)
 
-                                <tr class="border-bottom">
+                                <tr>
 
-                                    <td class="ps-4 fw-medium text-muted">
-                                        {{ $loop->iteration }}
-                                    </td>
+                                    <td>{{ $loop->iteration }}</td>
 
                                     <td>
                                         <div class="d-flex align-items-center gap-3">
@@ -179,24 +161,22 @@ document.addEventListener('DOMContentLoaded', function() {
                                             \Storage::disk('public')->exists($child->category_image))
 
                                             <img src="{{ asset('storage/' . $child->category_image) }}" alt=""
-                                                class="rounded-circle object-fit-cover shadow-sm" width="42"
-                                                height="42">
+                                                class="rounded-circle object-fit-cover flex-shrink-0" width="40"
+                                                height="40">
 
                                             @else
 
-                                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center"
-                                                style="width:42px;height:42px;">
+                                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center flex-shrink-0"
+                                                style="width:40px;height:40px;">
                                                 <i class="bi bi-image text-muted"></i>
                                             </div>
 
                                             @endif
 
-                                            <div>
-                                                <a href="{{ route('course-repository.show', $child->pk) }}"
-                                                    class="text-decoration-none text-dark fw-medium">
-                                                    {{ $child->course_repository_name }}
-                                                </a>
-                                            </div>
+                                            <a href="{{ route('course-repository.show', $child->pk) }}"
+                                                class="cr-link-category">
+                                                {{ $child->course_repository_name }}
+                                            </a>
 
                                         </div>
                                     </td>
@@ -209,40 +189,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
                                     <td>
                                         <a href="{{ route('course-repository.show', $child->pk) }}"
-                                            class="text-decoration-none fw-medium small">
+                                            class="cr-link-subcategory {{ $child->children->count() == 0 ? 'cr-link-muted' : '' }}">
                                             {{ $child->children->count() }} Sub-Categories
                                         </a>
                                     </td>
 
                                     <td>
+                                        @php $childDocCount = $child->getDocumentCount(); @endphp
                                         <a href="{{ route('course-repository.show', $child->pk) }}"
-                                            class="text-decoration-none fw-medium small">
-                                            View {{ str_pad($child->getDocumentCount(), 2, '0', STR_PAD_LEFT) }}
+                                            class="cr-link-documents {{ $childDocCount == 0 ? 'cr-link-muted' : '' }}">
+                                            View {{ str_pad($childDocCount, 2, '0', STR_PAD_LEFT) }}
                                             Attachments
                                         </a>
                                     </td>
 
-                                    <td class="text-center">
+                                    <td>
 
-                                        <div class="d-inline-flex align-items-center">
+                                        <div class="d-inline-flex align-items-center gap-2">
 
-                                            <a href="javascript:void(0)"
-                                                class="btn btn-light bg-transparent border-0 p-0 edit-repo"
+                                            <button type="button" class="programme-action-btn edit-repo"
                                                 data-pk="{{ $child->pk }}"
                                                 data-name="{{ $child->course_repository_name }}"
                                                 data-details="{{ $child->course_repository_details }}"
                                                 data-image="{{ $child->category_image }}"
-                                                data-attachment="{{ $child->category_attachment }}" title="Edit">
+                                                data-attachment="{{ $child->category_attachment }}" title="Edit"
+                                                aria-label="Edit sub-category">
+                                                <i class="bi bi-pencil" aria-hidden="true"></i>
+                                            </button>
 
-                                                <i class="bi bi-pencil text-primary"></i>
-                                            </a>
-
-                                            <a href="javascript:void(0)"
-                                                class="btn btn-light bg-transparent border-0 p-0 delete-repo"
-                                                data-pk="{{ $child->pk }}" title="Delete">
-
-                                                <i class="bi bi-trash text-danger"></i>
-                                            </a>
+                                            <button type="button"
+                                                class="programme-action-btn programme-action-btn--danger delete-repo"
+                                                data-pk="{{ $child->pk }}" title="Delete"
+                                                aria-label="Delete sub-category">
+                                                <i class="bi bi-trash" aria-hidden="true"></i>
+                                            </button>
 
                                         </div>
 
@@ -254,35 +234,50 @@ document.addEventListener('DOMContentLoaded', function() {
                             </tbody>
                         </table>
                     </div>
+                    <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                        data-dt-footer-for="child_repositories"></div>
                 </div>
-                @endif
+
             </div>
-
-            @endif
         </div>
-        @if($documents->count() > 0)
-        <div class="card">
-            <div class="card-body">
-                <!-- Documents Section -->
+        @endif
 
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 datatable cr-admin-table" id="documents"
-                        data-export="false">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="text-center cru-col-dsno" scope="col">S.No.</th>
-                                <th class="cru-col-docname" scope="col">Document Name</th>
-                                <th class="cru-col-filetitle" scope="col">File Title</th>
-                                <th class="cru-col-coursename" scope="col">Course Name</th>
-                                <th class="cru-col-subject" scope="col">Subject</th>
-                                <th class="cru-col-topic" scope="col">Topic</th>
-                                <th class="cru-col-sessiondate" scope="col">Session Date</th>
-                                <th class="cru-col-sector" scope="col">Sector</th>
-                                <th class="cru-col-ministry" scope="col">Ministry</th>
-                                <th class="cru-col-author" scope="col">Author</th>
-                                <th class="text-center cru-col-daction" scope="col">Action</th>
-                            </tr>
-                        </thead>
+        <!-- Documents Section -->
+        @if($documents->count() > 0)
+        <div class="card overflow-hidden rounded-3">
+            <div class="card-body p-3 p-md-4">
+
+                <div
+                    class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                    <h2 class="cr-admin-section-title mb-0">Documents</h2>
+                    <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                        <button type="button" class="btn programme-dt-btn-columns" data-bs-toggle="modal"
+                            data-bs-target="#documentsColumnVisibilityModal" title="Show / hide columns">
+                            <span>Columns</span>
+                            <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                        </button>
+                        <div class="programme-dt-search" data-dt-search-for="documents"></div>
+                    </div>
+                </div>
+
+                <div class="programme-dt-panel">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" id="documents">
+                            <thead>
+                                <tr>
+                                    <th scope="col">S. No.</th>
+                                    <th scope="col">Document Name</th>
+                                    <th scope="col">File Title</th>
+                                    <th scope="col">Course Name</th>
+                                    <th scope="col">Subject</th>
+                                    <th scope="col">Topic</th>
+                                    <th scope="col">Session Date</th>
+                                    <th scope="col">Sector</th>
+                                    <th scope="col">Ministry</th>
+                                    <th scope="col">Author</th>
+                                    <th scope="col">Action</th>
+                                </tr>
+                            </thead>
                         <tbody>
                             @foreach ($documents as $index => $doc)
                             <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
@@ -370,34 +365,37 @@ document.addEventListener('DOMContentLoaded', function() {
                                         @endif
                                     </small>
                                 </td>
-                                <td class="text-center cru-col-daction">
-                                    <div class="d-inline-flex gap-1" role="group" aria-label="Document actions">
-                                        <a href="javascript:void(0)" class="cr-admin-icon-btn edit-doc"
+                                <td class="cru-col-daction">
+                                    <div class="d-inline-flex align-items-center gap-2" role="group"
+                                        aria-label="Document actions">
+                                        <button type="button" class="programme-action-btn edit-doc"
                                             data-pk="{{ $doc->pk }}" data-bs-toggle="tooltip" title="Edit"
-                                            aria-label="Edit"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+                                            aria-label="Edit"><i class="bi bi-pencil" aria-hidden="true"></i></button>
                                         <a href="{{ route('course-repository.document.download', $doc->pk) }}?file={{ urlencode($doc->upload_document) }}"
-                                            class="cr-admin-icon-btn" data-bs-toggle="tooltip" title="Download"
+                                            class="programme-action-btn" data-bs-toggle="tooltip" title="Download"
                                             aria-label="Download">
                                             <i class="bi bi-download" aria-hidden="true"></i>
                                         </a>
-                                        <a href="javascript:void(0)" class="cr-admin-icon-btn text-danger delete-doc"
+                                        <button type="button"
+                                            class="programme-action-btn programme-action-btn--danger delete-doc"
                                             data-pk="{{ $doc->pk }}" data-bs-toggle="tooltip" title="Delete"
                                             aria-label="Delete">
                                             <i class="bi bi-trash" aria-hidden="true"></i>
-                                        </a>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
                             @endforeach
                         </tbody>
                     </table>
+                    </div>
+                    <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                        data-dt-footer-for="documents"></div>
                 </div>
 
             </div>
         </div>
         @endif
-    </div>
-</div>
 </div>
 
 <!-- Create Category Modal -->
@@ -1196,274 +1194,38 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
-<!-- Column Visibility — Sub-Categories & Documents tables (DataTables) -->
-<script>
-(function() {
-    'use strict';
-
-    // Per-table column config. idx = DataTables column index. locked columns stay visible.
-    var TABLES = {
-        'child_repositories': {
-            storageKey: 'cru-columns-child_repositories',
-            columns: [{
-                    idx: 0,
-                    label: '#',
-                    locked: true
-                },
-                {
-                    idx: 1,
-                    label: 'Image'
-                },
-                {
-                    idx: 2,
-                    label: 'Sub Category Name'
-                },
-                {
-                    idx: 3,
-                    label: 'Details'
-                },
-                {
-                    idx: 4,
-                    label: 'Sub-Categories'
-                },
-                {
-                    idx: 5,
-                    label: 'Documents'
-                },
-                {
-                    idx: 6,
-                    label: 'Actions',
-                    locked: true
-                }
-            ]
-        },
-        'documents': {
-            storageKey: 'cru-columns-documents',
-            columns: [{
-                    idx: 0,
-                    label: 'S.No.',
-                    locked: true
-                },
-                {
-                    idx: 1,
-                    label: 'Document Name'
-                },
-                {
-                    idx: 2,
-                    label: 'File Title'
-                },
-                {
-                    idx: 3,
-                    label: 'Course Name'
-                },
-                {
-                    idx: 4,
-                    label: 'Subject'
-                },
-                {
-                    idx: 5,
-                    label: 'Topic'
-                },
-                {
-                    idx: 6,
-                    label: 'Session Date'
-                },
-                {
-                    idx: 7,
-                    label: 'Sector'
-                },
-                {
-                    idx: 8,
-                    label: 'Ministry'
-                },
-                {
-                    idx: 9,
-                    label: 'Author'
-                },
-                {
-                    idx: 10,
-                    label: 'Action',
-                    locked: true
-                }
-            ]
-        }
-    };
-
-    function toggleable(cfg) {
-        return cfg.columns.filter(function(c) {
-            return !c.locked;
-        });
-    }
-
-    function defaults(cfg) {
-        var s = {};
-        toggleable(cfg).forEach(function(c) {
-            s[c.idx] = true;
-        });
-        return s;
-    }
-
-    function loadState(cfg) {
-        try {
-            var raw = localStorage.getItem(cfg.storageKey);
-            if (!raw) return defaults(cfg);
-            var parsed = JSON.parse(raw);
-            if (!parsed || typeof parsed !== 'object') return defaults(cfg);
-            var base = defaults(cfg);
-            Object.keys(base).forEach(function(k) {
-                if (typeof parsed[k] === 'boolean') base[k] = parsed[k];
-            });
-            return base;
-        } catch (e) {
-            return defaults(cfg);
-        }
-    }
-
-    function saveState(cfg, state) {
-        try {
-            localStorage.setItem(cfg.storageKey, JSON.stringify(state));
-        } catch (e) {}
-    }
-
-    function buildModal(tableId, cfg) {
-        var modalId = 'cruColVisModal-' + tableId;
-        if (document.getElementById(modalId)) return;
-
-        var chips = cfg.columns.map(function(c) {
-            if (c.locked) {
-                return '<div class="col">' +
-                    '<label class="cru-colvis-chip cru-colvis-chip-locked d-flex align-items-center gap-2 mb-0" title="Always visible">' +
-                    '<input type="checkbox" class="form-check-input m-0" checked disabled>' +
-                    '<span class="text-truncate">' + c.label + '</span>' +
-                    '</label></div>';
-            }
-            return '<div class="col">' +
-                '<label class="cru-colvis-chip d-flex align-items-center gap-2 mb-0">' +
-                '<input type="checkbox" class="form-check-input m-0 cru-col-toggle-checkbox" data-table="' +
-                tableId + '" data-col="' + c.idx + '" checked>' +
-                '<span class="text-truncate">' + c.label + '</span>' +
-                '</label></div>';
-        }).join('');
-
-        var html =
-            '<div class="modal fade cru-colvis-modal" id="' + modalId + '" tabindex="-1" aria-labelledby="' +
-            modalId + '-label" aria-hidden="true">' +
-            '<div class="modal-dialog modal-dialog-centered modal-lg">' +
-            '<div class="modal-content border-0 rounded-4 shadow">' +
-            '<div class="modal-header border-0 pb-2 px-4 pt-4">' +
-            '<h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="' + modalId + '-label">' +
-            '<i class="bi bi-sliders2 text-primary" aria-hidden="true"></i> Column Visibility' +
-            '</h5>' +
-            '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
-            '</div>' +
-            '<hr class="cru-colvis-divider mx-4 my-0">' +
-            '<div class="modal-body px-4 py-4">' +
-            '<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">' + chips + '</div>' +
-            '</div>' +
-            '<div class="modal-footer border-0 px-4 pb-4 pt-0 d-flex justify-content-between">' +
-            '<button type="button" class="btn btn-link btn-sm text-decoration-none p-0 d-inline-flex align-items-center gap-1 cru-col-toggle-reset" data-table="' +
-            tableId + '">' +
-            '<i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset to default' +
-            '</button>' +
-            '<button type="button" class="btn btn-outline-primary btn-sm px-4 fw-semibold" data-bs-dismiss="modal">Close</button>' +
-            '</div>' +
-            '</div>' +
-            '</div>' +
-            '</div>';
-        document.body.insertAdjacentHTML('beforeend', html);
-    }
-
-    function buildTrigger(tableId, wrapper) {
-        var trigger =
-            '<span class="cru-column-toggle d-inline-flex align-items-center ms-2">' +
-            '<button type="button" class="btn btn-light border btn-sm d-inline-flex align-items-center gap-2 fw-semibold cru-colvis-trigger" ' +
-            'data-bs-toggle="modal" data-bs-target="#cruColVisModal-' + tableId + '" title="Show / hide columns">' +
-            '<i class="bi bi-layout-three-columns" aria-hidden="true"></i>' +
-            '<span class="d-none d-sm-inline">Columns</span>' +
-            '</button>' +
-            '</span>';
-        var filter = wrapper.querySelector('.dataTables_filter');
-        var searchInput = filter ? filter.querySelector('input') : null;
-        if (searchInput) {
-            searchInput.insertAdjacentHTML('afterend', trigger);
-        } else if (filter) {
-            filter.insertAdjacentHTML('beforeend', trigger);
-        } else {
-            wrapper.insertAdjacentHTML('afterbegin', trigger);
-        }
-    }
-
-    function buildTable(tableId, cfg) {
-        if (!(window.jQuery && jQuery.fn && jQuery.fn.dataTable)) return false;
-        var el = document.getElementById(tableId);
-        if (!el || !jQuery.fn.dataTable.isDataTable(el)) return false;
-
-        var api = jQuery(el).DataTable();
-        var wrapper = el.closest('.dataTables_wrapper');
-        if (!wrapper) return false;
-        if (wrapper.querySelector('.cru-column-toggle')) return true; // already built
-
-        buildModal(tableId, cfg);
-        buildTrigger(tableId, wrapper);
-
-        function applyState(state) {
-            toggleable(cfg).forEach(function(c) {
-                var vis = state[c.idx] !== false;
-                api.column(c.idx).visible(vis, false);
-                var cb = document.querySelector('.cru-col-toggle-checkbox[data-table="' + tableId +
-                    '"][data-col="' + c.idx + '"]');
-                if (cb) cb.checked = vis;
-            });
-            api.columns.adjust();
-        }
-
-        applyState(loadState(cfg));
-
-        document.querySelectorAll('.cru-col-toggle-checkbox[data-table="' + tableId + '"]').forEach(function(cb) {
-            cb.addEventListener('change', function() {
-                var idx = parseInt(this.getAttribute('data-col'), 10);
-                var next = loadState(cfg);
-                if (!this.checked) {
-                    var visibleCount = toggleable(cfg).filter(function(c) {
-                        return next[c.idx] !== false;
-                    }).length;
-                    if (visibleCount <= 1) {
-                        this.checked = true;
-                        return;
-                    }
-                }
-                next[idx] = this.checked;
-                api.column(idx).visible(this.checked);
-                saveState(cfg, next);
-            });
-        });
-
-        document.querySelectorAll('.cru-col-toggle-reset[data-table="' + tableId + '"]').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                try {
-                    localStorage.removeItem(cfg.storageKey);
-                } catch (e) {}
-                applyState(defaults(cfg));
-            });
-        });
-        return true;
-    }
-
-    // The global DataTables init runs on DOMContentLoaded; retry briefly until each table exists.
-    Object.keys(TABLES).forEach(function(tableId) {
-        if (!document.getElementById(tableId)) return; // section not rendered
-        var tries = 0;
-        (function attempt() {
-            if (buildTable(tableId, TABLES[tableId])) return;
-            if (tries++ < 40) setTimeout(attempt, 100);
-        })();
-    });
-})();
-</script>
+<!-- Column Visibility — Sub-Categories & Documents tables -->
+@foreach ([
+    ['id' => 'childColumnVisibilityModal', 'grid' => 'childColumnToggleGrid', 'label' => 'Sub-Categories'],
+    ['id' => 'documentsColumnVisibilityModal', 'grid' => 'documentsColumnToggleGrid', 'label' => 'Documents'],
+] as $colvis)
+<div class="modal fade" id="{{ $colvis['id'] }}" tabindex="-1" aria-labelledby="{{ $colvis['id'] }}Label"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="{{ $colvis['id'] }}Label">
+                    Column Visibility — {{ $colvis['label'] }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="{{ $colvis['grid'] }}"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4"
+                    data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endforeach
 
 @include('admin.course-repository.partials.single-click-links')
 @endsection
 
+@section('scripts')
 <script>
 // ===== UPLOAD FORM SUBMIT - EVENT DELEGATION (runs first, always attached) =====
 document.addEventListener('submit', function uploadFormSubmitHandler(e) {
@@ -4239,3 +4001,124 @@ document.addEventListener('click', function(e) {
 });
 </script>
 @include('admin.course-repository.partials.cr-design-scripts')
+
+{{-- Sub-Categories + Documents lists: client-side DataTables on the shared
+     programme-dt design system. The global enhancer (js/datatable-global-ui.js)
+     moves each table's search box and pagination into the matching
+     [data-dt-search-for] / [data-dt-footer-for] slots. --}}
+<script>
+$(function() {
+    var TABLES = [{
+            id: 'child_repositories',
+            grid: '#childColumnToggleGrid',
+            storageKey: 'courseRepositoryShow:hiddenColumns:child:v1'
+        },
+        {
+            id: 'documents',
+            grid: '#documentsColumnToggleGrid',
+            storageKey: 'courseRepositoryShow:hiddenColumns:documents:v1'
+        }
+    ];
+
+    function getHidden(key) {
+        try {
+            var arr = JSON.parse(localStorage.getItem(key) || '[]');
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function persistHidden(key, arr) {
+        try {
+            localStorage.setItem(key, JSON.stringify(arr));
+        } catch (e) {}
+    }
+
+    TABLES.forEach(function(cfg) {
+        var $table = $('#' + cfg.id);
+        if (!$table.length || $.fn.dataTable.isDataTable($table)) {
+            return;
+        }
+
+        var dt = $table.DataTable({
+            responsive: true,
+            autoWidth: false,
+            pageLength: 10,
+            lengthMenu: [
+                [10, 25, 50, 100, -1],
+                [10, 25, 50, 100, 'All']
+            ],
+            order: [],
+            columnDefs: [{
+                    targets: 0,
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    targets: -1,
+                    orderable: false,
+                    searchable: false
+                }
+            ]
+        });
+
+        // Server order is preserved, so S. No. must follow the visible page.
+        dt.on('draw.dt', function() {
+            var start = dt.page.info().start;
+            dt.column(0, {
+                page: 'current'
+            }).nodes().each(function(cell, i) {
+                cell.innerHTML = start + i + 1;
+            });
+        });
+
+        var hidden = getHidden(cfg.storageKey);
+        dt.columns().every(function() {
+            this.visible(hidden.indexOf(this.index()) === -1, false);
+        });
+        dt.columns.adjust();
+
+        var $grid = $(cfg.grid).empty();
+        if (!$grid.length) {
+            return;
+        }
+
+        dt.columns().every(function() {
+            var idx = this.index();
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (!title) {
+                return;
+            }
+
+            var inputId = 'colvis_' + cfg.id + '_' + idx;
+            var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .prop('checked', hidden.indexOf(idx) === -1);
+
+            $cb.on('change', function() {
+                var h = getHidden(cfg.storageKey);
+                var pos = h.indexOf(idx);
+                if (this.checked) {
+                    if (pos !== -1) h.splice(pos, 1);
+                } else if (pos === -1) {
+                    h.push(idx);
+                }
+                persistHidden(cfg.storageKey, h);
+                dt.column(idx).visible(this.checked, false);
+                dt.columns.adjust();
+            });
+
+            $('<div class="col-12 col-sm-6 col-md-4"></div>')
+                .append(
+                    $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                    .attr('for', inputId)
+                    .append($cb)
+                    .append($('<span></span>').text(title))
+                )
+                .appendTo($grid);
+        });
+    });
+});
+</script>
+@endsection
