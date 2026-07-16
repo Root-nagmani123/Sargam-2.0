@@ -2,16 +2,18 @@
 namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\{Country, State, District, City};
+use App\DataTables\Master\CountryMasterDataTable;
+use App\DataTables\Master\StateMasterDataTable;
+use App\DataTables\Master\DistrictMasterDataTable;
+use App\DataTables\Master\CityMasterDataTable;
 use Illuminate\Http\Request;
 
 
 class LocationController extends Controller
 {
-    public function countryIndex()
+    public function countryIndex(CountryMasterDataTable $dataTable)
     {
-        $countries = Country::paginate(10);
-
-        return view('admin.country.index', compact('countries'));
+        return $dataTable->render('admin.country.index');
     }
 
     public function countryCreate()
@@ -76,11 +78,9 @@ class LocationController extends Controller
     }
 
     // State
-    public function stateIndex()
+    public function stateIndex(StateMasterDataTable $dataTable)
     {
-        $states = State::paginate(10);
-        // print_r($states);die;
-        return view('admin.state.index', compact('states'));
+        return $dataTable->render('admin.state.index');
     }
 
     public function stateCreate()
@@ -146,10 +146,9 @@ class LocationController extends Controller
     }
 
     // District
-    public function districtIndex()
+    public function districtIndex(DistrictMasterDataTable $dataTable)
     {
-        $districts = District::paginate(10);
-        return view('admin.district.index', compact('districts'));
+        return $dataTable->render('admin.district.index');
     }
 
     public function districtCreate()
@@ -216,10 +215,9 @@ class LocationController extends Controller
     }
 
     // City
-    public function cityIndex()
+    public function cityIndex(CityMasterDataTable $dataTable)
     {
-        $cities = City::with(['state', 'district'])->paginate(10);
-        return view('admin.city.index', compact('cities'));
+        return $dataTable->render('admin.city.index');
     }
 
     public function cityCreate()
