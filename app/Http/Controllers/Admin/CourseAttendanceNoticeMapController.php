@@ -3206,6 +3206,19 @@ public function endChat(Request $request)
                     'conclusion_remark'         => $validated['conclusion_remark'],
                     'modified_date'             => now(),
                 ]);
+
+            $memoForNotify = DB::table('student_memo_status')->where('pk', $validated['id'])->first();
+            if ($memoForNotify) {
+                $this->notifyStudentAboutMemo(
+                    (int) $memoForNotify->pk,
+                    (int) $memoForNotify->student_pk,
+                    (int) $memoForNotify->course_master_pk,
+                    (int) $memoForNotify->student_notice_status_pk,
+                    (string) ($memoForNotify->date ?? now()->format('Y-m-d')),
+                    'Memo Closed',
+                    'has been closed'
+                );
+            }
         } else {
             DB::table('student_notice_status')
                 ->where('pk', $validated['id'])
@@ -3214,6 +3227,18 @@ public function endChat(Request $request)
                     'conclusion_type_pk' => $validated['memo_conclusion_master_pk'],
                     'conclusion_remark'  => $validated['conclusion_remark'],
                 ]);
+
+            $noticeForNotify = DB::table('student_notice_status')->where('pk', $validated['id'])->first();
+            if ($noticeForNotify) {
+                if (empty($noticeForNotify->student_pk)) {
+                    $noticeForNotify->student_pk = $this->resolveNoticeStudentPk((int) $validated['id']);
+                }
+                $this->notifyStudentAboutNotice(
+                    $noticeForNotify,
+                    'Notice Closed',
+                    'has been closed'
+                );
+            }
         }
 
         return response()->json(['success' => true, 'message' => 'Conversation ended successfully.']);
