@@ -123,16 +123,43 @@ class ReportController extends Controller
         $dataTable    = new FcFormOverviewDataTable($form);
         $steps        = $dataTable->steps;
         $totalSteps   = $dataTable->totalSteps;
+        $userKey      = $dataTable->userKey;
         $trackerTable = $form->trackerStorageTable();
 
-        // Summary counts — always computed from DB (not paginated)
+        // Summary counts — always computed from DB (not paginated), scoped to this
+        // form the same way FcFormOverviewDataTable::query() scopes its rows.
+        $scoped = function () use ($trackerTable, $form) {
+            $q = DB::table($trackerTable);
+            if (Schema::hasColumn($trackerTable, 'form_id')) {
+                $q->where('form_id', $form->id);
+            }
+            return $q;
+        };
+
+        // COMPLETE / INCOMPLETE are derived from the step columns (the status column
+        // never holds 'COMPLETE'), mirroring the DataTable's own status filter so the
+        // cards agree with the table they link to.
+        $completeQuery = $scoped();
+        foreach ($steps as $step) {
+            $completeQuery->where($step->tracker_column, 1);
+        }
+
+        $incompleteQuery = $scoped()->where(function ($sub) use ($steps) {
+            foreach ($steps as $step) {
+                $sub->orWhere(function ($q) use ($step) {
+                    $q->where($step->tracker_column, '!=', 1)
+                      ->orWhereNull($step->tracker_column);
+                });
+            }
+        });
+
         $summary = [
-            'total'      => DB::table($trackerTable)->count(),
-            'submitted'  => DB::table($trackerTable)->where('status', 'SUBMITTED')->count(),
-            'incomplete' => DB::table($trackerTable)->where('status', 'INCOMPLETE')->count(),
+            'total'      => $scoped()->count(),
+            'complete'   => $totalSteps > 0 ? $completeQuery->count() : 0,
+            'incomplete' => $totalSteps > 0 ? $incompleteQuery->count() : $scoped()->count(),
         ];
         foreach ($steps as $step) {
-            $summary[$step->tracker_column] = DB::table($trackerTable)
+            $summary[$step->tracker_column] = $scoped()
                 ->where($step->tracker_column, 1)->count();
         }
 
@@ -143,7 +170,7 @@ class ReportController extends Controller
 
         return $dataTable->render(
             'fc.report.form-overview',
-            compact('form', 'steps', 'totalSteps', 'summary', 'services')
+            compact('form', 'steps', 'totalSteps', 'userKey', 'summary', 'services')
         );
     }
 
