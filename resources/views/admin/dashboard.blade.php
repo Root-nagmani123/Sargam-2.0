@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-calendar.css') }}?v=4">
 <link rel="stylesheet" href="{{ asset('css/dashboard-stat-cards.css') }}?v=2">
-<link rel="stylesheet" href="{{ asset('css/dashboard-main.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('css/dashboard-main.css') }}?v=3">
 
 @php
 $user = Auth::user();
@@ -211,13 +211,11 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
             <div class="col">
                 @if(in_array('widget_notices', $enabledWidgetKeys))
                 @php
-                $noticeTabKeys = ['office-orders', 'work-allocation', 'notice-circular'];
-                $noticeTabLabels = [
-                'office-orders' => 'Office Orders',
-                'work-allocation' => 'Work Allocation',
-                'notice-circular' => 'Notice/ Circular/ Order',
+                $noticeCategoryLabels = [
+                'office-orders' => 'Office Order',
+                'work-allocation' => 'Work Allocations',
+                'notice-circular' => 'Notice',
                 ];
-                $noticeTabCounts = ['office-orders' => 0, 'work-allocation' => 0, 'notice-circular' => 0];
                 $resolveDashboardNoticeTab = function ($type) {
                 $t = strtolower((string) ($type ?? ''));
                 if (str_contains($t, 'office order')) {
@@ -228,17 +226,6 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 }
                 return 'notice-circular';
                 };
-                foreach ($notices as $noticeForTab) {
-                $tabKey = $resolveDashboardNoticeTab($noticeForTab->notice_type ?? '');
-                $noticeTabCounts[$tabKey]++;
-                }
-                $defaultNoticeTab = 'office-orders';
-                foreach ($noticeTabKeys as $tabKeyCandidate) {
-                if ($noticeTabCounts[$tabKeyCandidate] > 0) {
-                $defaultNoticeTab = $tabKeyCandidate;
-                break;
-                }
-                }
                 @endphp
                 <div class="card dashboard-panel dashboard-feed-panel mb-3" id="dashboard-notices-panel">
                     <div class="card-header py-3 px-4">
@@ -252,7 +239,6 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                             </a>
                             @endif
                         </div>
-                        <hr class="dashboard-feed-divider">
                     </div>
                     <div class="card-body pt-0 px-4 pb-3 dashboard-list-scroll">
                         @if(count($notices) === 0)
@@ -270,69 +256,43 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                             @endif
                         </div>
                         @else
-                        <div class="dashboard-notice-tabs" role="tablist" aria-label="Notice categories">
-                            @foreach($noticeTabKeys as $tabKey)
-                            <button type="button"
-                                class="dashboard-notice-tab {{ $tabKey === $defaultNoticeTab ? 'active' : '' }}{{ $noticeTabCounts[$tabKey] === 0 ? ' dashboard-notice-tab-empty' : '' }}"
-                                role="tab" aria-selected="{{ $tabKey === $defaultNoticeTab ? 'true' : 'false' }}"
-                                data-notice-tab="{{ $tabKey }}" id="dashboard-notice-tab-{{ $tabKey }}">
-                                {{ $noticeTabLabels[$tabKey] }}@if($noticeTabCounts[$tabKey] > 0):
-                                {{ $noticeTabCounts[$tabKey] }}@endif
-                            </button>
-                            @endforeach
-                        </div>
-                        <p class="dashboard-notice-list-empty d-none mb-0" id="dashboard-notice-tab-empty"
-                            role="status">
-                            No notices in this category.
-                        </p>
                         <ul class="list-unstyled mb-0 ps-0" id="dashboard-notice-list">
                             @foreach($notices as $notice)
                             @php
-                            $noticeTab = $resolveDashboardNoticeTab($notice->notice_type ?? '');
+                            $noticeCategory = $noticeCategoryLabels[$resolveDashboardNoticeTab($notice->notice_type ??
+                            '')];
                             $noticeDate = $notice->created_at ?? $notice->display_date ?? null;
-                            $isNewNotice = $noticeDate && \Carbon\Carbon::parse($noticeDate)->diffInDays(now()) < 7;
-                                $displayFrom=!empty($notice->display_date)
-                                ? \Carbon\Carbon::parse($notice->display_date)->format('j F, Y')
-                                : null;
-                                $displayTo = !empty($notice->expiry_date)
-                                ? \Carbon\Carbon::parse($notice->expiry_date)->format('j F, Y')
-                                : null;
-                                if ($displayFrom && $displayTo) {
-                                $noticeDateLabel = $displayFrom . ' to ' . $displayTo;
-                                } elseif ($displayFrom) {
-                                $noticeDateLabel = $displayFrom;
-                                } elseif ($noticeDate) {
-                                $noticeDateLabel = date('j F, Y', strtotime($noticeDate));
-                                } else {
-                                $noticeDateLabel = '—';
-                                }
-                                @endphp
-                                <li class="mb-2 {{ $noticeTab !== $defaultNoticeTab ? 'd-none' : '' }}"
-                                    data-notice-tab-item="{{ $noticeTab }}">
-                                    <div
-                                        class="dashboard-notice-item {{ $isNewNotice ? 'dashboard-notice-item-new' : '' }}">
-                                        <span class="notice-icon-wrap" aria-hidden="true"><span
-                                                class="material-icons material-symbols-rounded">description</span></span>
-                                        <div class="min-w-0">
-                                            <div
-                                                class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
-                                                <span class="dashboard-notice-title">{{ $notice->notice_title }}</span>
-                                                @if($isNewNotice)
-                                                <span
-                                                    class="badge bg-danger dashboard-notice-new-tag flex-shrink-0">New</span>
-                                                @endif
-                                            </div>
-                                            <small class="dashboard-notice-date">{{ $noticeDateLabel }}</small>
-                                            @if($notice->document)
-                                            <a href="{{ asset('storage/' . $notice->document) }}" target="_blank"
-                                                class="dashboard-notice-attachment text-danger text-decoration-none">
-                                                <i class="bi bi-paperclip" aria-hidden="true"></i>View attachment
-                                            </a>
+                            $noticeDateLabel = $noticeDate
+                            ? \Carbon\Carbon::parse($noticeDate)->format('d/m/Y h:i A')
+                            : null;
+                            $noticeAuthor = \Illuminate\Support\Str::title(trim((string) ($notice->author_name ?? '')));
+                            $noticeAuthorDept = trim((string) ($notice->author_department ?? ''));
+                            @endphp
+                            <li class="dashboard-notice-row">
+                                <div class="dashboard-notice-item">
+                                    <span class="dashboard-notice-title">{{ $notice->notice_title }}</span>
+                                    <div class="dashboard-notice-meta">
+                                        <small class="dashboard-notice-byline">
+                                            @if($noticeAuthor !== '')
+                                            <span class="dashboard-notice-byline__tilde" aria-hidden="true">~</span>by
+                                            <span class="dashboard-notice-author">{{ $noticeAuthor }}@if($noticeAuthorDept !== '') ({{ $noticeAuthorDept }})@endif</span>
                                             @endif
-                                        </div>
+                                            @if($noticeDateLabel)
+                                            <span class="dashboard-notice-date">{{ $noticeAuthor !== '' ? 'on ' : '' }}{{
+                                                $noticeDateLabel }}</span>
+                                            @endif
+                                        </small>
+                                        <span class="dashboard-notice-type-pill">{{ $noticeCategory }}</span>
                                     </div>
-                                </li>
-                                @endforeach
+                                    @if($notice->document)
+                                    <a href="{{ asset('storage/' . $notice->document) }}" target="_blank"
+                                        class="dashboard-notice-attachment text-danger text-decoration-none">
+                                        <i class="bi bi-paperclip" aria-hidden="true"></i>View attachment
+                                    </a>
+                                    @endif
+                                </div>
+                            </li>
+                            @endforeach
                         </ul>
                         <div class="dashboard-feed-footer">
                             <a href="{{ route('admin.dashboard.feed', ['tab' => 'notices']) }}"
@@ -946,36 +906,6 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
         const id = btn.dataset.notificationId;
         if (!id) return;
         window.markAsReadDashboard(id, btn);
-    });
-
-    document.addEventListener('click', function(e) {
-        const tabBtn = e.target && e.target.closest ? e.target.closest(
-            '.dashboard-notice-tab[data-notice-tab]') :
-            null;
-        if (!tabBtn) return;
-
-        const activeTab = tabBtn.dataset.noticeTab;
-        if (!activeTab) return;
-
-        document.querySelectorAll('.dashboard-notice-tab[data-notice-tab]').forEach(function(button) {
-            const isActive = button.dataset.noticeTab === activeTab;
-            button.classList.toggle('active', isActive);
-            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
-        });
-
-        let visibleCount = 0;
-        document.querySelectorAll('[data-notice-tab-item]').forEach(function(item) {
-            const show = item.dataset.noticeTabItem === activeTab;
-            item.classList.toggle('d-none', !show);
-            if (show) {
-                visibleCount++;
-            }
-        });
-
-        const emptyState = document.getElementById('dashboard-notice-tab-empty');
-        if (emptyState) {
-            emptyState.classList.toggle('d-none', visibleCount > 0);
-        }
     });
 
     document.addEventListener('DOMContentLoaded', function() {
