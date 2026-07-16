@@ -15,7 +15,7 @@ class FcFormOverviewDataTable extends DataTable
     protected FcForm $form;
     public \Illuminate\Support\Collection $steps;
     protected string $trackerTable;
-    public string $userKey;
+    protected string $userKey;
     public int $totalSteps;
 
     public function __construct(FcForm $form)
