@@ -33,8 +33,6 @@ class CourseRepositoryController extends Controller
             $parentRepository = null;
             $ancestors = [];
             $documents_count_array = [];
-            $perPage = (int) $request->input('per_page', 15);
-            $perPage = in_array($perPage, [10, 15, 25, 50, 100]) ? $perPage : 15;
 
             if ($parentPk) {
                 // Show children of specific parent
@@ -42,8 +40,7 @@ class CourseRepositoryController extends Controller
                 $repositories = $parentRepository->children()
                     ->with(['children', 'documents'])
                     ->orderBy('created_date', 'desc')
-                    ->paginate($perPage)
-                    ->withQueryString();
+                    ->get();
                    
             
                                 $documents_count_array = [];
@@ -75,8 +72,7 @@ class CourseRepositoryController extends Controller
                     })
                     ->with(['children', 'documents'])
                     ->orderBy('created_date', 'desc')
-                    ->paginate($perPage)
-                    ->withQueryString();
+                    ->get();
                     $documents_count_array = [];
 
                     foreach ($repositories as $child) {
@@ -97,7 +93,6 @@ class CourseRepositoryController extends Controller
                 'parentPk' => $parentPk,
                 'ancestors' => $ancestors,
                 'documents_count_array' => $documents_count_array,
-                'perPage' => $perPage,
             ]);
         } catch (Exception $e) {
             Log::error('Error in course repository index: ' . $e->getMessage());
