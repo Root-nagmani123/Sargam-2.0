@@ -306,13 +306,6 @@ class EmployeeIDCardApprovalController extends Controller
             $permQuery->where('permanent_type', $request->card_type);
         }
 
-        // Pagination parameters
-        $perPage = (int) $request->get('per_page', 10);
-        $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 10;
-        $newPage = max(1, (int) $request->get('new_page', 1));
-        $forApprovalPage = max(1, (int) $request->get('for_page', 1));
-        $issuedPage = max(1, (int) $request->get('issued_page', 1));
-        $rejectPage = max(1, (int) $request->get('reject_page', 1));
 
         // For tab-wise split + independent pagination we need complete filtered sets.
         $permRows = $permQuery->get();
@@ -563,20 +556,8 @@ class EmployeeIDCardApprovalController extends Controller
                 || $status !== 'Pending';
         })->values();
 
-        $newRequests = new LengthAwarePaginator(
-            $newRows->forPage($newPage, $perPage)->values(),
-            $newRows->count(),
-            $perPage,
-            $newPage,
-            ['path' => $request->url(), 'pageName' => 'new_page', 'query' => $request->query()]
-        );
-        $forApprovalRequests = new LengthAwarePaginator(
-            $forApprovalRows->forPage($forApprovalPage, $perPage)->values(),
-            $forApprovalRows->count(),
-            $perPage,
-            $forApprovalPage,
-            ['path' => $request->url(), 'pageName' => 'for_page', 'query' => $request->query()]
-        );
+        $newRequests = $newRows;
+        $forApprovalRequests = $forApprovalRows;
 
         // ── Issued tab ─────────────────────────────────────────────────────────
         // All approved records (id_status = 2). Card print still sets id_card_generate_date when present.
@@ -713,13 +694,7 @@ class EmployeeIDCardApprovalController extends Controller
             $issuedMerged = $issuedMerged->filter(fn ($d) => $this->approval2MatchesGlobalSearch($needle, $d))->values();
         }
 
-        $issuedRequests = new LengthAwarePaginator(
-            $issuedMerged->forPage($issuedPage, $perPage)->values(),
-            $issuedMerged->count(),
-            $perPage,
-            $issuedPage,
-            ['path' => $request->url(), 'pageName' => 'issued_page', 'query' => $request->query()]
-        );
+        $issuedRequests = $issuedMerged;
 
         // ── Rejected tab ───────────────────────────────────────────────────────
         // id_status = 3 only (same scope as contractual dup: Approval II reachable rows).
@@ -838,13 +813,7 @@ class EmployeeIDCardApprovalController extends Controller
             $rejectedMerged = $rejectedMerged->filter(fn ($d) => $this->approval2MatchesGlobalSearch($needle, $d))->values();
         }
 
-        $rejectedRequests = new LengthAwarePaginator(
-            $rejectedMerged->forPage($rejectPage, $perPage)->values(),
-            $rejectedMerged->count(),
-            $perPage,
-            $rejectPage,
-            ['path' => $request->url(), 'pageName' => 'reject_page', 'query' => $request->query()]
-        );
+        $rejectedRequests = $rejectedMerged;
         // ──────────────────────────────────────────────────────────────────────
 
         $activeTab = $request->get('tab', 'new');
@@ -1027,13 +996,6 @@ class EmployeeIDCardApprovalController extends Controller
         $dateTo = $request->get('date_to');
         $dateFromDt = empty($dateFrom) ? null : \Carbon\Carbon::parse($dateFrom)->startOfDay()->toDateTimeString();
         $dateToDt = empty($dateTo) ? null : \Carbon\Carbon::parse($dateTo)->endOfDay()->toDateTimeString();
-
-        $perPage = (int) $request->get('per_page', 10);
-        $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 10;
-        $newPage = max(1, (int) $request->get('new_page', 1));
-        $forApprovalPage = max(1, (int) $request->get('for_page', 1));
-        $issuedPage = max(1, (int) $request->get('issued_page', 1));
-        $rejectPage = max(1, (int) $request->get('reject_page', 1));
 
         // Final-stage eligible pools (same scope as old approval3)
         $hasA2 = SecurityParmIdApplyApproval::select('security_parm_id_apply_pk')
@@ -1220,34 +1182,10 @@ class EmployeeIDCardApprovalController extends Controller
         $issuedRows = $merged->filter(fn ($r) => (string) ($r->status ?? '') === 'Approved')->values();
         $rejectedRows = $merged->filter(fn ($r) => (string) ($r->status ?? '') === 'Rejected')->values();
 
-        $newRequests = new LengthAwarePaginator(
-            $newRows->forPage($newPage, $perPage)->values(),
-            $newRows->count(),
-            $perPage,
-            $newPage,
-            ['path' => $request->url(), 'pageName' => 'new_page', 'query' => $request->query()]
-        );
-        $forApprovalRequests = new LengthAwarePaginator(
-            $forApprovalRows->forPage($forApprovalPage, $perPage)->values(),
-            $forApprovalRows->count(),
-            $perPage,
-            $forApprovalPage,
-            ['path' => $request->url(), 'pageName' => 'for_page', 'query' => $request->query()]
-        );
-        $issuedRequests = new LengthAwarePaginator(
-            $issuedRows->forPage($issuedPage, $perPage)->values(),
-            $issuedRows->count(),
-            $perPage,
-            $issuedPage,
-            ['path' => $request->url(), 'pageName' => 'issued_page', 'query' => $request->query()]
-        );
-        $rejectedRequests = new LengthAwarePaginator(
-            $rejectedRows->forPage($rejectPage, $perPage)->values(),
-            $rejectedRows->count(),
-            $perPage,
-            $rejectPage,
-            ['path' => $request->url(), 'pageName' => 'reject_page', 'query' => $request->query()]
-        );
+        $newRequests = $newRows;
+        $forApprovalRequests = $forApprovalRows;
+        $issuedRequests = $issuedRows;
+        $rejectedRequests = $rejectedRows;
 
         $activeTab = $request->get('tab', 'new');
         if ($activeTab === 'archive') {

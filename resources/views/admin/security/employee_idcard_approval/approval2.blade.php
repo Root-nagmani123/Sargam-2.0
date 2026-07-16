@@ -94,76 +94,64 @@
                 <li class="nav-item" role="presentation">
                     <button class="nav-link {{ ($activeTab ?? 'new') === 'new' ? 'active' : '' }}" id="new-request-tab" data-bs-toggle="tab" data-bs-target="#new-request-panel" type="button" role="tab" aria-controls="new-request-panel" aria-selected="{{ ($activeTab ?? 'new') === 'new' ? 'true' : 'false' }}" data-tab-key="new">
                         New Request
-                        <span class="badge bg-white text-primary ms-1">{{ $newRequests->total() }}</span>
+                        <span class="badge bg-white text-primary ms-1">{{ $newRequests->count() }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link {{ ($activeTab ?? 'new') === 'for_approval' ? 'active' : '' }}" id="for-approval-tab" data-bs-toggle="tab" data-bs-target="#for-approval-panel" type="button" role="tab" aria-controls="for-approval-panel" aria-selected="{{ ($activeTab ?? 'new') === 'for_approval' ? 'true' : 'false' }}" data-tab-key="for_approval">
                         processed request
-                        <span class="badge bg-secondary ms-1">{{ $forApprovalRequests->total() }}</span>
+                        <span class="badge bg-secondary ms-1">{{ $forApprovalRequests->count() }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link {{ ($activeTab ?? 'new') === 'issued' ? 'active' : '' }}" id="issued-tab" data-bs-toggle="tab" data-bs-target="#issued-panel" type="button" role="tab" aria-controls="issued-panel" aria-selected="{{ ($activeTab ?? 'new') === 'issued' ? 'true' : 'false' }}" data-tab-key="issued">
                         <i class="material-icons material-symbols-rounded" style="font-size:16px;vertical-align:middle;">verified</i>
                         Issued
-                        <span class="badge bg-secondary ms-1">{{ $issuedRequests->total() }}</span>
+                        <span class="badge bg-secondary ms-1">{{ $issuedRequests->count() }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link {{ ($activeTab ?? 'new') === 'rejected' ? 'active' : '' }}" id="rejected-tab" data-bs-toggle="tab" data-bs-target="#rejected-panel" type="button" role="tab" aria-controls="rejected-panel" aria-selected="{{ ($activeTab ?? 'new') === 'rejected' ? 'true' : 'false' }}" data-tab-key="rejected">
                         <i class="material-icons material-symbols-rounded" style="font-size:16px;vertical-align:middle;">cancel</i>
                         Rejected
-                        <span class="badge bg-secondary ms-1">{{ $rejectedRequests->total() }}</span>
+                        <span class="badge bg-secondary ms-1">{{ $rejectedRequests->count() }}</span>
                     </button>
                 </li>
             </ul>
 
             <div class="tab-content">
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'new' ? 'show active' : '' }}" id="new-request-panel" role="tabpanel" aria-labelledby="new-request-tab" style="{{ ($activeTab ?? 'new') === 'new' ? 'display:block;' : 'display:none;' }}">
-                    @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $newRequests, 'approvalStage' => 2])
-                    <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <small class="text-muted">Showing {{ $newRequests->firstItem() ?? 0 }} to {{ $newRequests->lastItem() ?? 0 }} of {{ $newRequests->total() }} entries</small>
-                        {{ $newRequests->appends(array_merge(request()->query(), ['tab' => 'new']))->links() }}
-                    </div>
+                    @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $newRequests, 'approvalStage' => 2, 'tableId' => 'idNewTable'])
+                    @include('components.mess-master-datatables', ['tableId' => 'idNewTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 9, 'orderDir' => 'desc', 'actionColumnIndex' => 8, 'infoLabel' => 'requests'])
                 </div>
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'for_approval' ? 'show active' : '' }}" id="for-approval-panel" role="tabpanel" aria-labelledby="for-approval-tab" style="{{ ($activeTab ?? 'new') === 'for_approval' ? 'display:block;' : 'display:none;' }}">
-                    @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $forApprovalRequests, 'approvalStage' => 2])
-                    <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <small class="text-muted">Showing {{ $forApprovalRequests->firstItem() ?? 0 }} to {{ $forApprovalRequests->lastItem() ?? 0 }} of {{ $forApprovalRequests->total() }} entries</small>
-                        {{ $forApprovalRequests->appends(array_merge(request()->query(), ['tab' => 'for_approval']))->links() }}
-                    </div>
+                    @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $forApprovalRequests, 'approvalStage' => 2, 'tableId' => 'idForApprovalTable'])
+                    @include('components.mess-master-datatables', ['tableId' => 'idForApprovalTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 9, 'orderDir' => 'desc', 'actionColumnIndex' => 8, 'infoLabel' => 'requests'])
                 </div>
 
                 {{-- Issued: all approved rows (Permanent / Duplicate / Contractual). Card print confirms physical issue. --}}
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'issued' ? 'show active' : '' }}" id="issued-panel" role="tabpanel" aria-labelledby="issued-tab" style="{{ ($activeTab ?? 'new') === 'issued' ? 'display:block;' : 'display:none;' }}">
-                    @if($issuedRequests->total() === 0)
+                    @if($issuedRequests->count() === 0)
                         <div class="text-center text-muted py-5">
                             <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">verified</i>
                             <p class="mt-2 mb-0">No issued records found.</p>
                         </div>
                     @else
-                        @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $issuedRequests, 'approvalStage' => 2])
-                        <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <small class="text-muted">Showing {{ $issuedRequests->firstItem() ?? 0 }} to {{ $issuedRequests->lastItem() ?? 0 }} of {{ $issuedRequests->total() }} entries</small>
-                            {{ $issuedRequests->appends(array_merge(request()->query(), ['tab' => 'issued']))->links() }}
-                        </div>
+                        @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $issuedRequests, 'approvalStage' => 2, 'tableId' => 'idIssuedTable'])
+                        @include('components.mess-master-datatables', ['tableId' => 'idIssuedTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 9, 'orderDir' => 'desc', 'actionColumnIndex' => 8, 'infoLabel' => 'requests'])
                     @endif
                 </div>
 
                 {{-- Rejected only --}}
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'rejected' ? 'show active' : '' }}" id="rejected-panel" role="tabpanel" aria-labelledby="rejected-tab" style="{{ ($activeTab ?? 'new') === 'rejected' ? 'display:block;' : 'display:none;' }}">
-                    @if($rejectedRequests->total() === 0)
+                    @if($rejectedRequests->count() === 0)
                         <div class="text-center text-muted py-5">
                             <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">cancel</i>
                             <p class="mt-2 mb-0">No rejected records found.</p>
                         </div>
                     @else
-                        @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $rejectedRequests, 'approvalStage' => 2])
-                        <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <small class="text-muted">Showing {{ $rejectedRequests->firstItem() ?? 0 }} to {{ $rejectedRequests->lastItem() ?? 0 }} of {{ $rejectedRequests->total() }} entries</small>
-                            {{ $rejectedRequests->appends(array_merge(request()->query(), ['tab' => 'rejected']))->links() }}
-                        </div>
+                        @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $rejectedRequests, 'approvalStage' => 2, 'tableId' => 'idRejectedTable'])
+                        @include('components.mess-master-datatables', ['tableId' => 'idRejectedTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 9, 'orderDir' => 'desc', 'actionColumnIndex' => 8, 'infoLabel' => 'requests'])
                     @endif
                 </div>
             </div>

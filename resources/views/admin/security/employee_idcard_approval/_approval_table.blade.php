@@ -1,8 +1,8 @@
 {{-- Shared table for Approval I and Approval II - same columns and layout --}}
-@props(['requests', 'approvalStage' => 1])
+@props(['requests', 'approvalStage' => 1, 'tableId' => 'approvalTable'])
 
 <div class="table-responsive">
-    <table class="table text-nowrap align-middle mb-0" id="approvalTable">
+    <table class="table text-nowrap align-middle mb-0" id="{{ $tableId }}">
         <thead class="table-primary">
             <tr>
                 <th style="width:50px;" class="text-center">S.No.</th>

@@ -213,14 +213,6 @@ class VehiclePassApprovalController extends Controller
             })->values();
         }
 
-        $perPage = (int) $request->get('per_page', 10);
-        $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 10;
-
-        $newPage = max(1, (int) $request->get('new_page', 1));
-        $forPage = max(1, (int) $request->get('for_page', 1));
-        $issuedPage = max(1, (int) $request->get('issued_page', 1));
-        $rejectPage = max(1, (int) $request->get('reject_page', 1));
-
         $newList = $merged->filter(function ($d) {
             $isApproved = (($d->status_int ?? 1) === 2) && (($d->has_level2 ?? false) === true);
             $isRejected = (($d->status_int ?? 1) === 3);
@@ -245,34 +237,10 @@ class VehiclePassApprovalController extends Controller
         $issuedList = $merged->filter(fn ($d) => (($d->status_int ?? 1) === 2) && (($d->has_level2 ?? false) === true))->values();
         $rejectedList = $merged->filter(fn ($d) => ($d->status_int ?? 1) === 3)->values();
 
-        $newApplications = new LengthAwarePaginator(
-            $newList->forPage($newPage, $perPage)->values(),
-            $newList->count(),
-            $perPage,
-            $newPage,
-            ['path' => $request->url(), 'pageName' => 'new_page', 'query' => $request->query()]
-        );
-        $processedApplications = new LengthAwarePaginator(
-            $processedList->forPage($forPage, $perPage)->values(),
-            $processedList->count(),
-            $perPage,
-            $forPage,
-            ['path' => $request->url(), 'pageName' => 'for_page', 'query' => $request->query()]
-        );
-        $issuedApplications = new LengthAwarePaginator(
-            $issuedList->forPage($issuedPage, $perPage)->values(),
-            $issuedList->count(),
-            $perPage,
-            $issuedPage,
-            ['path' => $request->url(), 'pageName' => 'issued_page', 'query' => $request->query()]
-        );
-        $rejectedApplications = new LengthAwarePaginator(
-            $rejectedList->forPage($rejectPage, $perPage)->values(),
-            $rejectedList->count(),
-            $perPage,
-            $rejectPage,
-            ['path' => $request->url(), 'pageName' => 'reject_page', 'query' => $request->query()]
-        );
+        $newApplications = $newList;
+        $processedApplications = $processedList;
+        $issuedApplications = $issuedList;
+        $rejectedApplications = $rejectedList;
 
         $activeTab = $request->get('tab', 'new');
         if ($activeTab === 'archive') {

@@ -80,7 +80,7 @@
                             title="Passes waiting for your approve or reject action at this stage.">
                         <i class="material-icons material-symbols-rounded d-inline align-middle" style="font-size:18px;">assignment_turned_in</i>
                         <span class="align-middle">Pending — your action</span>
-                        <span class="badge rounded-1 bg-white text-primary ms-1">{{ $newApplications->total() }}</span>
+                        <span class="badge rounded-1 bg-white text-primary ms-1">{{ $newApplications->count() }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -89,7 +89,7 @@
                             title="Only after Level 1 is approved. Waiting for final approval or view-only here.">
                         <i class="material-icons material-symbols-rounded d-inline align-middle" style="font-size:18px;">hourglass_top</i>
                         <span class="align-middle">Pending — other stage</span>
-                        <span class="badge rounded-1 bg-warning text-dark ms-1">{{ $processedApplications->total() }}</span>
+                        <span class="badge rounded-1 bg-warning text-dark ms-1">{{ $processedApplications->count() }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -98,7 +98,7 @@
                             title="Fully approved vehicle passes.">
                         <i class="material-icons material-symbols-rounded d-inline align-middle" style="font-size:18px;">check_circle</i>
                         <span class="align-middle">Approved</span>
-                        <span class="badge rounded-1 bg-success ms-1">{{ $issuedApplications->total() }}</span>
+                        <span class="badge rounded-1 bg-success ms-1">{{ $issuedApplications->count() }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -107,7 +107,7 @@
                             title="Applications rejected at any stage.">
                         <i class="material-icons material-symbols-rounded d-inline align-middle" style="font-size:18px;">cancel</i>
                         <span class="align-middle">Rejected</span>
-                        <span class="badge rounded-1 bg-danger ms-1">{{ $rejectedApplications->total() }}</span>
+                        <span class="badge rounded-1 bg-danger ms-1">{{ $rejectedApplications->count() }}</span>
                     </button>
                 </li>
             </ul>
@@ -120,48 +120,36 @@
             <div class="tab-content">
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'new' ? 'show active' : '' }}" id="veh-new-panel" role="tabpanel"
                      style="{{ ($activeTab ?? 'new') === 'new' ? 'display:block;' : 'display:none;' }}">
-                    @include('admin.security.vehicle_pass_approval._vehicle_pass_table', ['applications' => $newApplications])
-                    <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <small class="text-muted">Showing {{ $newApplications->firstItem() ?? 0 }} to {{ $newApplications->lastItem() ?? 0 }} of {{ $newApplications->total() }} entries</small>
-                        {{ $newApplications->appends(array_merge(request()->query(), ['tab' => 'new']))->links() }}
-                    </div>
+                    @include('admin.security.vehicle_pass_approval._vehicle_pass_table', ['applications' => $newApplications, 'tableId' => 'vehNewTable'])
+                    @include('components.mess-master-datatables', ['tableId' => 'vehNewTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 6, 'orderDir' => 'desc', 'actionColumnIndex' => 7, 'infoLabel' => 'requests'])
                 </div>
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'for_approval' ? 'show active' : '' }}" id="veh-for-panel" role="tabpanel"
                      style="{{ ($activeTab ?? 'new') === 'for_approval' ? 'display:block;' : 'display:none;' }}">
-                    @include('admin.security.vehicle_pass_approval._vehicle_pass_table', ['applications' => $processedApplications])
-                    <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <small class="text-muted">Showing {{ $processedApplications->firstItem() ?? 0 }} to {{ $processedApplications->lastItem() ?? 0 }} of {{ $processedApplications->total() }} entries</small>
-                        {{ $processedApplications->appends(array_merge(request()->query(), ['tab' => 'for_approval']))->links() }}
-                    </div>
+                    @include('admin.security.vehicle_pass_approval._vehicle_pass_table', ['applications' => $processedApplications, 'tableId' => 'vehForApprovalTable'])
+                    @include('components.mess-master-datatables', ['tableId' => 'vehForApprovalTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 6, 'orderDir' => 'desc', 'actionColumnIndex' => 7, 'infoLabel' => 'requests'])
                 </div>
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'issued' ? 'show active' : '' }}" id="veh-issued-panel" role="tabpanel"
                      style="{{ ($activeTab ?? 'new') === 'issued' ? 'display:block;' : 'display:none;' }}">
-                    @if($issuedApplications->total() === 0)
+                    @if($issuedApplications->count() === 0)
                         <div class="text-center text-muted py-5">
                             <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">verified</i>
                             <p class="mt-2 mb-0">No approved passes in this tab.</p>
                         </div>
                     @else
-                        @include('admin.security.vehicle_pass_approval._vehicle_pass_table', ['applications' => $issuedApplications])
-                        <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <small class="text-muted">Showing {{ $issuedApplications->firstItem() ?? 0 }} to {{ $issuedApplications->lastItem() ?? 0 }} of {{ $issuedApplications->total() }} entries</small>
-                            {{ $issuedApplications->appends(array_merge(request()->query(), ['tab' => 'issued']))->links() }}
-                        </div>
+                        @include('admin.security.vehicle_pass_approval._vehicle_pass_table', ['applications' => $issuedApplications, 'tableId' => 'vehIssuedTable'])
+                        @include('components.mess-master-datatables', ['tableId' => 'vehIssuedTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 6, 'orderDir' => 'desc', 'actionColumnIndex' => 7, 'infoLabel' => 'requests'])
                     @endif
                 </div>
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'rejected' ? 'show active' : '' }}" id="veh-rejected-panel" role="tabpanel"
                      style="{{ ($activeTab ?? 'new') === 'rejected' ? 'display:block;' : 'display:none;' }}">
-                    @if($rejectedApplications->total() === 0)
+                    @if($rejectedApplications->count() === 0)
                         <div class="text-center text-muted py-5">
                             <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">cancel</i>
                             <p class="mt-2 mb-0">No rejected records found.</p>
                         </div>
                     @else
-                        @include('admin.security.vehicle_pass_approval._vehicle_pass_table', ['applications' => $rejectedApplications])
-                        <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <small class="text-muted">Showing {{ $rejectedApplications->firstItem() ?? 0 }} to {{ $rejectedApplications->lastItem() ?? 0 }} of {{ $rejectedApplications->total() }} entries</small>
-                            {{ $rejectedApplications->appends(array_merge(request()->query(), ['tab' => 'rejected']))->links() }}
-                        </div>
+                        @include('admin.security.vehicle_pass_approval._vehicle_pass_table', ['applications' => $rejectedApplications, 'tableId' => 'vehRejectedTable'])
+                        @include('components.mess-master-datatables', ['tableId' => 'vehRejectedTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 6, 'orderDir' => 'desc', 'actionColumnIndex' => 7, 'infoLabel' => 'requests'])
                     @endif
                 </div>
             </div>

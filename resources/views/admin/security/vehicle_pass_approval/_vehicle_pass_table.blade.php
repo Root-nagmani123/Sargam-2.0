@@ -1,7 +1,7 @@
-{{-- @include vars: applications (LengthAwarePaginator) --}}
+{{-- @include vars: applications (Collection), tableId --}}
 <div class="datatables">
     <div class="table-responsive">
-        <table class="table text-nowrap align-middle mb-0 vehicle-pass-approval-table">
+        <table class="table text-nowrap align-middle mb-0 vehicle-pass-approval-table" id="{{ $tableId }}">
             <thead>
                 <tr>
                     <th scope="col">Employee Name</th>
