@@ -1,5 +1,6 @@
 @php
-    $headings    = $headings ?? [];
+    $columns     = $columns ?? [];
+    $showSerial  = $showSerial ?? true;
     $rows        = $rows ?? collect();
     $filterLine  = $filterLine ?? '';
     $printedOn   = $printedOn ?? now()->format('d-m-Y H:i');
@@ -124,52 +125,42 @@
     </div>
 
     <table class="data-table">
+        {{-- Columns are driven by $columns (DisciplineMemoExport::columnDefs(), filtered
+             by whatever is still visible in the table) rather than hard-coded, so this
+             renders whichever subset the request asked for and can't drift from the
+             Excel sheet. Cells are keyed by column key — never by position. --}}
+        @php $colCount = count($columns) + ($showSerial ? 1 : 0); @endphp
         <thead>
             <tr>
-                <th class="col-sno">#</th>
-                <th class="col-program">Program Name</th>
-                <th class="col-name">Student Name</th>
-                <th class="col-code">OT/Participant Code</th>
-                <th class="col-cadre">Cadre</th>
-                <th class="col-date">Date of Infraction</th>
-                <th class="col-infraction">Infraction</th>
-                <th class="col-marks">Submitted</th>
-                <th class="col-marks">Final</th>
-                <th class="col-remarks">Remarks</th>
-                <th class="col-remarks">Conclusion Remark</th>
-                <th class="col-date">Created Date</th>
-                <th class="col-status">Status</th>
+                @if($showSerial)<th class="col-sno">#</th>@endif
+                @foreach($columns as $col)
+                    <th class="{{ $col['class'] }}">{{ $col['heading'] }}</th>
+                @endforeach
             </tr>
         </thead>
         <tbody>
             @forelse($rows as $index => $row)
-                @php
-                    $cells = array_values((array) $row);
-                    $status = $cells[11] ?? '';
-                    $badgeClass = match ($status) {
-                        'Recorded' => 'badge-recorded',
-                        'Memo Sent' => 'badge-sent',
-                        default => 'badge-closed',
-                    };
-                @endphp
                 <tr>
-                    <td class="col-sno">{{ $index + 1 }}</td>
-                    <td class="col-program">{{ $cells[0] ?? '' }}</td>
-                    <td class="col-name">{{ $cells[1] ?? '' }}</td>
-                    <td class="col-code">{{ $cells[2] ?? '' }}</td>
-                    <td class="col-cadre">{{ $cells[3] ?? '' }}</td>
-                    <td class="col-date">{{ $cells[4] ?? '' }}</td>
-                    <td class="col-infraction">{{ $cells[5] ?? '' }}</td>
-                    <td class="col-marks">{{ $cells[6] ?? '' }}</td>
-                    <td class="col-marks">{{ $cells[7] ?? '' }}</td>
-                    <td class="col-remarks">{{ $cells[8] ?? '' }}</td>
-                    <td class="col-remarks">{{ $cells[9] ?? '' }}</td>
-                    <td class="col-date">{{ $cells[10] ?? '' }}</td>
-                    <td class="col-status"><span class="badge {{ $badgeClass }}">{{ $status }}</span></td>
+                    @if($showSerial)<td class="col-sno">{{ $index + 1 }}</td>@endif
+                    @foreach($columns as $col)
+                        @php $value = $row[$col['key']] ?? ''; @endphp
+                        @if($col['key'] === 'status')
+                            @php
+                                $badgeClass = match ($value) {
+                                    'Recorded' => 'badge-recorded',
+                                    'Memo Sent' => 'badge-sent',
+                                    default => 'badge-closed',
+                                };
+                            @endphp
+                            <td class="{{ $col['class'] }}"><span class="badge {{ $badgeClass }}">{{ $value }}</span></td>
+                        @else
+                            <td class="{{ $col['class'] }}">{{ $value }}</td>
+                        @endif
+                    @endforeach
                 </tr>
             @empty
                 <tr>
-                    <td colspan="13" style="text-align:center;">No records found.</td>
+                    <td colspan="{{ $colCount }}" style="text-align:center;">No records found.</td>
                 </tr>
             @endforelse
         </tbody>

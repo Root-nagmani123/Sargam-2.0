@@ -308,16 +308,59 @@ public function destroy($id)
 }
 
 /**
+ * Which columns an export should emit.
+ *
+ * The index page's Column Visibility modal puts ?cols=<slug,...> on the Download
+ * links, naming the columns STILL VISIBLE in the table — so a column hidden on
+ * screen is left out of the Excel/PDF too.
+ *
+ * Absent or empty => every column. That one rule covers three cases: a plain
+ * Download with nothing hidden, an older/bookmarked link that predates ?cols=,
+ * and the degenerate "user unticked everything" case (a column-less sheet would
+ * be useless, so fall back to the full set rather than emit nothing).
+ *
+ * @return array{cols: string[], showSerial: bool}
+ */
+private function resolveDisciplineExportCols(Request $request): array
+{
+    $known = array_keys(DisciplineMemoExport::columnDefs());
+    $raw = trim((string) $request->get('cols', ''));
+
+    if ($raw === '') {
+        return ['cols' => $known, 'showSerial' => true];
+    }
+
+    $wanted = array_filter(array_map('trim', explode(',', $raw)));
+
+    // Intersect against $known rather than trusting $wanted: this keeps the
+    // canonical column ORDER and silently drops anything unrecognised, so a
+    // hand-edited ?cols= can't reorder the report or inject a column.
+    $cols = array_values(array_intersect($known, $wanted));
+
+    if (empty($cols)) {
+        return ['cols' => $known, 'showSerial' => true];
+    }
+
+    // 'sno' isn't a data column — it drives the Excel '#'/PDF serial only.
+    return ['cols' => $cols, 'showSerial' => in_array('sno', $wanted, true)];
+}
+
+/**
  * Download the Send Discipline Memo listing as a styled Excel report.
- * Same filters/sort/dataset as index() (minus pagination).
+ * Same filters/sort/dataset as index() (minus pagination), and the same columns
+ * currently visible in the table.
  */
 public function exportCsv(Request $request)
 {
     ['memos' => $memos, 'filters' => $filters] = $this->buildDisciplineExportData($request);
+    ['cols' => $cols, 'showSerial' => $showSerial] = $this->resolveDisciplineExportCols($request);
 
     $fileName = 'send-discipline-memo-' . now()->format('Y-m-d_His') . '.xlsx';
 
-    return Excel::download(new DisciplineMemoExport($memos, $filters, now()->format('d-m-Y H:i:s')), $fileName);
+    return Excel::download(
+        new DisciplineMemoExport($memos, $filters, now()->format('d-m-Y H:i:s'), $cols, $showSerial),
+        $fileName
+    );
 }
 
 /**
@@ -326,6 +369,7 @@ public function exportCsv(Request $request)
 public function exportPdf(Request $request)
 {
     ['memos' => $memos, 'filters' => $filters] = $this->buildDisciplineExportData($request);
+    ['cols' => $cols, 'showSerial' => $showSerial] = $this->resolveDisciplineExportCols($request);
 
     @ini_set('memory_limit', '256M');
     @set_time_limit(120);
@@ -335,25 +379,23 @@ public function exportPdf(Request $request)
         ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoPath))
         : null;
 
-    $headings = ['Program Name', 'Student Name', 'OT/Participant Code', 'Cadre', 'Date of Infraction',
-        'Infraction', 'Submitted Marks', 'Final Marks', 'Remarks', 'Conclusion Remark', 'Created Date', 'Status'];
+    // Columns/headings/values all come from the Excel export's columnDefs(), so the
+    // PDF and the sheet stay identical in column set, order and wording. The blade
+    // renders whatever it's handed and keys each cell by column key.
+    $defs = DisciplineMemoExport::columnDefs();
+    $columns = array_map(fn ($key) => [
+        'key'     => $key,
+        'heading' => $defs[$key]['heading'],
+        'class'   => $defs[$key]['pdfClass'],
+    ], $cols);
 
-    $statusLabels = ['1' => 'Recorded', '2' => 'Memo Sent', '3' => 'Closed'];
-    $rows = $memos->map(function ($memo) use ($statusLabels) {
-        return [
-            $memo->course->course_name ?? 'N/A',
-            $memo->student->display_name ?? 'N/A',
-            $memo->student->generated_OT_code ?? 'N/A',
-            $memo->student->cadre->cadre_name ?? 'N/A',
-            $memo->date ? Carbon::parse($memo->date)->format('d M Y') : 'N/A',
-            $memo->discipline->discipline_name ?? 'N/A',
-            $memo->mark_deduction_submit ?? '',
-            $memo->final_mark_deduction ?? '',
-            $memo->remarks ?? '',
-            $memo->conclusion_remark ?? '',
-            $memo->created_date ? Carbon::parse($memo->created_date)->format('d M Y') : 'N/A',
-            $statusLabels[(string) $memo->status] ?? 'Closed',
-        ];
+    $rows = $memos->map(function ($memo) use ($cols, $defs) {
+        $row = [];
+        foreach ($cols as $key) {
+            $row[$key] = ($defs[$key]['value'])($memo);
+        }
+
+        return $row;
     });
 
     $filterLine = 'Program: ' . $filters['program']
@@ -363,7 +405,8 @@ public function exportPdf(Request $request)
         . '  |  Period: ' . $filters['period'];
 
     $pdf = Pdf::loadView('admin.memo_discipline.export_pdf', [
-        'headings'    => $headings,
+        'columns'     => $columns,
+        'showSerial'  => $showSerial,
         'rows'        => $rows,
         'filterLine'  => $filterLine,
         'printedOn'   => now()->format('d-m-Y H:i'),
