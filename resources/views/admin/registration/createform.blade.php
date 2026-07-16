@@ -90,7 +90,7 @@
     <div class="section-entry card border-0 shadow-sm rounded-4 overflow-hidden" id="section_${index}">
         <div class="card-header bg-primary bg-opacity-10 border-0 py-3 px-3 px-md-4 d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-2">
             <h2 class="h5 fw-semibold text-body mb-0 d-flex align-items-center gap-2">
-                <span class="badge rounded-pill bg-primary">Section ${index + 1}</span>
+                <span class="badge rounded-1 bg-primary">Section ${index + 1}</span>
             </h2>
         </div>
         <div class="card-body p-3 p-md-4">

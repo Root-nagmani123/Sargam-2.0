@@ -230,6 +230,17 @@ select.sme-filter-control {
 #smeFormBody .is-invalid { border-color: var(--bs-danger); }
 #smeFormBody .form-control,
 #smeFormBody .form-select { min-height: 44px; border-radius: var(--ds-radius-2); }
+/* Let Select2 panels escape the modal body instead of being clipped or offset. */
+#smeFormModal .modal-content,
+#smeFormModal .modal-body { overflow: visible; }
+#smeFormBody .sme-field {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+#smeFormBody .row > [class*="col-"] {
+    position: relative;
+}
 /* Select2 dropdowns in the Add / Edit modal are themed in css/select2-theme.css
    (Bootstrap .form-select look, chevron caret, matching panel). */
 #smeFormBody textarea.form-control {
@@ -686,7 +697,7 @@ select.sme-filter-control {
                     <li>
                         <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="smeExportCsv">
                             <i class="material-icons material-symbols-rounded text-success" style="font-size:18px;" aria-hidden="true">table_chart</i>
-                            <span>Download CSV</span>
+                            <span>Download Excel</span>
                         </button>
                     </li>
                 </ul>
@@ -708,6 +719,24 @@ select.sme-filter-control {
                         <option value="">Course Name</option>
                         @foreach($courses as $course)
                         <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                        @endforeach
+                    </select>
+
+                    {{-- Medical Case --}}
+                    <select name="opd_category_filter" id="opd_category_filter" class="form-select sme-filter-control"
+                            aria-label="Medical Case">
+                        <option value="">Medical Case</option>
+                        @foreach($opdOptions as $opt)
+                        <option value="{{ $opt }}">{{ $opt }}</option>
+                        @endforeach
+                    </select>
+
+                    {{-- Exemption Category --}}
+                    <select name="exemption_category_filter" id="exemption_category_filter" class="form-select sme-filter-control"
+                            aria-label="Exemption Category">
+                        <option value="">Exemption Category</option>
+                        @foreach($categories as $cat)
+                        <option value="{{ $cat->pk }}">{{ $cat->exemp_category_name }}</option>
                         @endforeach
                     </select>
 
@@ -778,11 +807,13 @@ select.sme-filter-control {
                                 <th class="col">Officer Trainee</th>
                                 <th class="col" style="white-space: normal;width: 12%;">Course</th>
                                 <th class="col">Doctor Name</th>
+                                <th class="col">Created By</th>
+                                <th class="col">Created On</th>
                                 <th class="col">Medical Speciality</th>
                                 <th class="col">Duration</th>
                                 <th class="col">Days</th>
                                 <th class="col">Category</th>
-                                <th class="col">IPD/OPD/After OPD/Referral</th>
+                                <th class="col">Medical Case</th>
                                 <th class="col">PT/ Outdoor Advise</th>
                                 <th class="col">Diagnosis / Remarks</th>
                                 <th class="col sme-col-no-print">Document</th>
@@ -933,6 +964,8 @@ $(document).ready(function() {
                 d.custom_search = $('#search').val();
                 d.from_date = $('#from_date_filter').val();
                 d.to_date = $('#to_date_filter').val();
+                d.opd_category = $('#opd_category_filter').val();
+                d.exemption_category = $('#exemption_category_filter').val();
 
                 // ✅ status now properly passed
                 d.status = courseStatus;
@@ -966,6 +999,14 @@ $(document).ready(function() {
             {
                 data: 'assigned_by',
                 name: 'employee.first_name'
+            },
+            {
+                data: 'created_by',
+                name: 'creator.first_name'
+            },
+            {
+                data: 'created_on',
+                name: 'created_date'
             },
             {
                 data: 'speciality',
@@ -1020,6 +1061,11 @@ $(document).ready(function() {
         table.ajax.reload(null, false);
     });
 
+    // Reload table when Medical Case / Exemption Category filters change
+    $('#opd_category_filter, #exemption_category_filter').on('change', function() {
+        table.ajax.reload(null, false);
+    });
+
     $('#from_date_filter, #to_date_filter').on('change', function() {
         table.ajax.reload(null, false);
     });
@@ -1039,6 +1085,8 @@ $(document).ready(function() {
         $('#course_filter').val('');
         if (courseFilterSelect2) { $('#course_filter').trigger('change.select2'); }
         else { $('#course_filter').trigger('change'); }
+        $('#opd_category_filter').val('');
+        $('#exemption_category_filter').val('');
         $('#from_date_filter').val('');
         $('#to_date_filter').val('');
 
@@ -1196,14 +1244,16 @@ $(document).ready(function() {
         });
 
         // Turn EVERY <select> in the injected form into a Select2 dropdown, styled
-        // (via CSS) to match Bootstrap's .form-select. dropdownParent keeps the
-        // panel inside the modal so it isn't clipped and its search box is focusable.
+        // (via CSS) to match Bootstrap's .form-select. Attach the panel to the field
+        // wrapper (not the modal root) so it sits flush under the control with no gap.
         if ($form.length && $.fn.select2){
             $form.find('select').each(function(){
                 var $sel = $(this).removeClass('select2');
+                var $parent = $sel.closest('.sme-field');
+                if (!$parent.length) { $parent = $sel.parent(); }
                 $sel.select2({
                     width: '100%',
-                    dropdownParent: $('#smeFormModal'),
+                    dropdownParent: $parent,
                     allowClear: false
                 });
             });
@@ -1378,11 +1428,23 @@ $(document).ready(function() {
         var search = $('#search').val();
         var from = $('#from_date_filter').val();
         var to = $('#to_date_filter').val();
+        var opdCategory = $('#opd_category_filter').val();
+        var exemptionCategory = $('#exemption_category_filter').val();
 
         if (course) params.set('course_filter', course);
         if (search) params.set('search', search);
         if (from) params.set('from_date_filter', from);
         if (to) params.set('to_date_filter', to);
+        if (opdCategory) params.set('opd_category_filter', opdCategory);
+        if (exemptionCategory) params.set('exemption_category_filter', exemptionCategory);
+
+        // Respect the on-screen Column Visibility toggles. Only the exportable data
+        // columns (0..11) count; Document (12) and Action (13) are never exported.
+        var visibleCols = [];
+        table.columns().every(function (idx) {
+            if (idx <= 11 && this.visible()) visibleCols.push(idx);
+        });
+        params.set('columns', visibleCols.join(','));
 
         return smeExportBase + '?' + params.toString();
     }
@@ -1394,7 +1456,7 @@ $(document).ready(function() {
 
     $('#smeExportCsv').on('click', function(e) {
         e.preventDefault();
-        window.location.href = smeExportUrl('csv');
+        window.location.href = smeExportUrl('excel');
     });
 
     $(document).on('click', '.sme-edit-btn', function(e){
@@ -1438,7 +1500,7 @@ $(document).ready(function() {
             '</div>' +
             '<h6 class="sme-view-section-title">Exemption and Other Information</h6>' +
             '<div class="row g-3">' +
-                smeViewField('IPD/OPD/After OPD/Referral', data.opd_category) +
+                smeViewField('Medical Case', data.opd_category) +
                 smeViewField('Start Date', data.arrival_date) +
                 smeViewField('Start Time', data.arrival_time) +
                 smeViewField('End Date', data.departure_date) +
@@ -1576,6 +1638,16 @@ function getFilterInfo() {
     var courseSelect = document.getElementById('course_filter');
     if (courseSelect && courseSelect.value) {
         parts.push('Course: ' + courseSelect.options[courseSelect.selectedIndex].text);
+    }
+
+    var opdSelect = document.getElementById('opd_category_filter');
+    if (opdSelect && opdSelect.value) {
+        parts.push('Medical Case: ' + opdSelect.options[opdSelect.selectedIndex].text);
+    }
+
+    var exemptionCategorySelect = document.getElementById('exemption_category_filter');
+    if (exemptionCategorySelect && exemptionCategorySelect.value) {
+        parts.push('Exemption Category: ' + exemptionCategorySelect.options[exemptionCategorySelect.selectedIndex].text);
     }
 
     var fromDate = (document.getElementById('from_date_filter') || {}).value;

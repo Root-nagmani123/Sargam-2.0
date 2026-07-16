@@ -155,7 +155,7 @@
                                                     default => null,
                                                 };
                                             @endphp
-                                            <span class="badge rounded-pill bg-{{ $statusClass }}"
+                                            <span class="badge rounded-1 bg-{{ $statusClass }}"
                                                   @if($statusTooltip) data-bs-toggle="tooltip" data-bs-placement="top" title="{{ e($statusTooltip) }}" @endif>
                                                 {{ $request->status ?? '--' }}
                                             </span>
@@ -267,7 +267,7 @@
                                                     default => null,
                                                 };
                                             @endphp
-                                            <span class="badge rounded-pill bg-{{ $statusClass }}"
+                                            <span class="badge rounded-1 bg-{{ $statusClass }}"
                                                   @if($statusTooltip) data-bs-toggle="tooltip" data-bs-placement="top" title="{{ e($statusTooltip) }}" @endif>
                                                 {{ $request->status ?? '--' }}
                                             </span>
@@ -426,7 +426,7 @@
                                                     default => null,
                                                 };
                                             @endphp
-                                            <span class="badge rounded-pill bg-{{ $statusClass }}"
+                                            <span class="badge rounded-1 bg-{{ $statusClass }}"
                                                   @if($statusTooltip) data-bs-toggle="tooltip" data-bs-placement="top" title="{{ e($statusTooltip) }}" @endif>
                                                 <i class="material-icons material-symbols-rounded" style="font-size:12px;">{{ $statusIcon }}</i>
                                                 {{ $request->status }}

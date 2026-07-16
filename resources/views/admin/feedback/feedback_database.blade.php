@@ -263,7 +263,6 @@
                             <option value="">None</option>
                             <option value="content">Content</option>
                             <option value="presentation">Presentation</option>
-                            <option value="average">Average</option>
                         </select>
                     </div>
                     <div class="col-lg-2 col-md-2">
