@@ -317,6 +317,22 @@
     box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
 }
 
+/* An open filter dropdown must sit ABOVE the frozen table columns. Those cells are
+   position:sticky with z-index 2 (body) / 3 (header), which without this would cover
+   the leftmost filters' dropdowns (Program Name, Discipline) as they open over the
+   table. Raising the open Choices container creates a stacking context above them. */
+.disc-page .choices.is-open,
+.mnm-page .choices.is-open,
+.send-notice-page .choices.is-open {
+    position: relative;
+    z-index: 30;
+}
+.disc-page .choices__list--dropdown,
+.mnm-page .choices__list--dropdown,
+.send-notice-page .choices__list--dropdown {
+    z-index: 30;
+}
+
 .send-notice-page .choices__list--single,
 .mnm-page .choices__list--single,
 .disc-page .choices__list--single {

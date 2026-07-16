@@ -175,8 +175,17 @@ class CourseRepositoryController extends Controller
                 'ancestors' => $ancestors,
                 'documents_count_array' => $documents_count_array,
                 // Data for dynamic dropdowns
-                'activeCourses' => CourseMaster::where('active_inactive', 1)->get(),
-                'archivedCourses' => CourseMaster::where('active_inactive', 0)->get(),
+                // Active = still running, i.e. enabled AND not yet ended — the same
+                // definition the rest of the app uses (CourseAttendanceNoticeMapController,
+                // MemoDisciplineController). Archived is deliberately "everything else"
+                // rather than active_inactive=0, so every course lands in exactly one
+                // bucket and none becomes unreachable.
+                //
+                // This used to split on active_inactive alone, which is an enabled/disabled
+                // flag, not a lifecycle one: nearly every course is enabled, so "Active"
+                // listed 141 of 143 courses — i.e. the filter appeared to do nothing.
+                'activeCourses' => CourseMaster::activeRunning()->get(),
+                'archivedCourses' => CourseMaster::archived()->get(),
                 'subjects' => SubjectMaster::where('active_inactive', 1)->get(),
                 'topics' => CourseRepositorySubtopic::all(),
                 'authors' => FacultyMaster::select('pk','full_name')->get(),
@@ -578,6 +587,10 @@ class CourseRepositoryController extends Controller
                     'pk' => $document->pk,
                     'file_title' => $document->file_title,
                     'upload_document' => $document->upload_document,
+                    // Inline URL (storage symlink, served inline — not the forced-download
+                    // route) so the edit modal can show an image thumbnail. Null when the
+                    // path is unresolved; the front-end falls back to a file-type icon.
+                    'file_url' => $document->public_file_url,
                     'category' => $category,
                     'detail' => $detail ? [
                         'course_master_pk' => $detail->course_master_pk,
@@ -1182,7 +1195,7 @@ class CourseRepositoryController extends Controller
                 $this->getUserFilterViewData($request),
                 [
                     'repositories' => $repositories,
-                    'documentCounts' => $this->bulkTotalDocumentCounts($repositories),
+                    'documentCounts' => $this->bulkOwnDocumentCounts($repositories),
                 ]
             ));
         } catch (Exception $e) {
@@ -1447,12 +1460,12 @@ class CourseRepositoryController extends Controller
                 $documents_count_array[$child->pk] = $documents_count;
             }
           
-            // Apply filters if provided
-            $date      = $request->query('date');
-            $coursePk  = $request->query('course');
-            $subjectPk = $request->query('subject');
-            $week      = $request->query('week');
-            $facultyPk = $request->query('faculty');
+            // Apply filters if provided. Use the SAME filter set + application logic as
+            // the rest of the user views (getFilters + applyUserDetailFilters) so every
+            // control the filter card offers actually filters here — this inline block
+            // previously handled only course/subject/week/date/faculty and silently
+            // ignored sector, ministry and search.
+            $filters = $this->getFilters($request);
 
             // Query CourseRepositoryDocument so the view can access $doc->upload_document,
             // $doc->file_title, $doc->detail->course, $doc->public_file_url, etc.
@@ -1465,23 +1478,12 @@ class CourseRepositoryController extends Controller
                 })
                 ->with(['detail.course', 'detail.subject', 'detail.topic', 'detail.author']);
 
-            if ($date || $coursePk || $subjectPk || $week || $facultyPk) {
-                $documentsQuery->whereHas('detail', function ($detailQuery) use ($date, $coursePk, $subjectPk, $week, $facultyPk) {
-                    if ($coursePk) {
-                        $detailQuery->where('course_master_pk', $coursePk);
-                    }
-                    if ($subjectPk) {
-                        $detailQuery->where('subject_pk', $subjectPk);
-                    }
-                    if ($date) {
-                        $detailQuery->whereDate('session_date', $date);
-                    }
-                    if ($week) {
-                        $detailQuery->whereRaw('WEEK(session_date, 3) = ?', [$week]);
-                    }
-                    if ($facultyPk) {
-                        $detailQuery->where('author_name', $facultyPk);
-                    }
+            // Only constrain by detail when a filter is actually set — an unconditional
+            // whereHas('detail') would drop documents linked directly to the master
+            // (which have no detail row).
+            if ($this->hasActiveUserFilters($filters)) {
+                $documentsQuery->whereHas('detail', function ($detailQuery) use ($filters) {
+                    $this->applyUserDetailFilters($detailQuery, $filters);
                 });
             }
 
@@ -1526,7 +1528,7 @@ class CourseRepositoryController extends Controller
                     'documents' => $documents,
                     'ancestors' => $ancestors,
                     'documents_count_array' => $documents_count_array,
-                    'documentCounts' => $this->bulkTotalDocumentCounts($repository->children),
+                    'documentCounts' => $this->bulkOwnDocumentCounts($repository->children),
                 ]
             ));
         } catch (Exception $e) {
@@ -1544,52 +1546,59 @@ class CourseRepositoryController extends Controller
      * per-node queries that CourseRepositoryMaster::getTotalDocumentCount() runs,
      * which is too slow when called once per row across a large repository tree.
      */
-    private function bulkTotalDocumentCounts($repositories): array
+    /**
+     * Own (direct) document count per repository — the documents attached to the
+     * node itself, either directly (course_repository_master_pk) or via a detail
+     * whose course_repository_master_pk is the node. This is the SAME set the inner
+     * "Documents (N)" page lists (CourseRepositoryMaster::getDocumentCount()), NOT a
+     * recursive subtree total.
+     *
+     * The card/list used to show the recursive total, so a category's "N Attachments"
+     * counted every document in its sub-categories too — even though the card already
+     * shows a separate "N Sub-categories" and those documents are reached by opening
+     * the sub-category. Opening the category then revealed only its own documents, so
+     * the two numbers disagreed. Counting own documents here makes the card match what
+     * the inner page shows.
+     *
+     * Deduped: a document attached BOTH directly and via a detail of the same node is
+     * counted once (a plain direct + via-detail sum double-counts it).
+     *
+     * @param  iterable  $repositories
+     * @return array<int,int>  keyed by repository pk
+     */
+    private function bulkOwnDocumentCounts($repositories): array
     {
-        $nodes = CourseRepositoryMaster::where('del_folder_status', 1)
-            ->select('pk', 'parent_type')
-            ->get();
-
-        $childrenMap = [];
-        foreach ($nodes as $node) {
-            if ($node->parent_type) {
-                $childrenMap[$node->parent_type][] = $node->pk;
-            }
+        $pks = collect($repositories)->pluck('pk')->filter()->values();
+        if ($pks->isEmpty()) {
+            return [];
         }
 
         $directCounts = CourseRepositoryDocument::where('del_type', 1)
-            ->whereNotNull('course_repository_master_pk')
-            ->selectRaw('course_repository_master_pk, count(*) as cnt')
+            ->whereIn('course_repository_master_pk', $pks)
+            ->selectRaw('course_repository_master_pk as pk, count(*) as cnt')
             ->groupBy('course_repository_master_pk')
-            ->pluck('cnt', 'course_repository_master_pk');
+            ->pluck('cnt', 'pk');
 
+        // Via-detail documents, EXCLUDING any already counted as direct on the same
+        // node, so a document attached both ways isn't counted twice.
         $viaDetailCounts = CourseRepositoryDocument::query()
-            ->join('course_repository_details', 'course_repository_details.pk', '=', 'course_repository_documents.course_repository_details_pk')
+            ->join('course_repository_details as dt', 'dt.pk', '=', 'course_repository_documents.course_repository_details_pk')
             ->where('course_repository_documents.del_type', 1)
-            ->selectRaw('course_repository_details.course_repository_master_pk as master_pk, count(*) as cnt')
-            ->groupBy('course_repository_details.course_repository_master_pk')
-            ->pluck('cnt', 'master_pk');
+            ->whereIn('dt.course_repository_master_pk', $pks)
+            ->where(function ($q) {
+                $q->whereNull('course_repository_documents.course_repository_master_pk')
+                    ->orWhereColumn('course_repository_documents.course_repository_master_pk', '!=', 'dt.course_repository_master_pk');
+            })
+            ->selectRaw('dt.course_repository_master_pk as pk, count(*) as cnt')
+            ->groupBy('dt.course_repository_master_pk')
+            ->pluck('cnt', 'pk');
 
-        $ownCounts = [];
-        foreach ($nodes as $node) {
-            $ownCounts[$node->pk] = ($directCounts[$node->pk] ?? 0) + ($viaDetailCounts[$node->pk] ?? 0);
+        $out = [];
+        foreach ($pks as $pk) {
+            $out[$pk] = (int) ($directCounts[$pk] ?? 0) + (int) ($viaDetailCounts[$pk] ?? 0);
         }
 
-        $totals = [];
-        foreach ($repositories as $repository) {
-            $total = 0;
-            $queue = [$repository->pk];
-            while ($queue) {
-                $pk = array_shift($queue);
-                $total += $ownCounts[$pk] ?? 0;
-                foreach ($childrenMap[$pk] ?? [] as $childPk) {
-                    $queue[] = $childPk;
-                }
-            }
-            $totals[$repository->pk] = $total;
-        }
-
-        return $totals;
+        return $out;
     }
 
     private function getFilters(Request $request)
@@ -1660,6 +1669,10 @@ class CourseRepositoryController extends Controller
         }
         if (!empty($filters['date'])) {
             $detailQuery->whereDate('session_date', $filters['date']);
+        }
+        if (!empty($filters['week'])) {
+            // ISO week (mode 3) so it matches the "Week N" the picker offers.
+            $detailQuery->whereRaw('WEEK(session_date, 3) = ?', [$filters['week']]);
         }
         if (!empty($filters['faculty'])) {
             $detailQuery->where('author_name', $filters['faculty']);

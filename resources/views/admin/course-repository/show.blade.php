@@ -27,6 +27,23 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
+
+    /* Edit-modal current-file preview card (thumbnail-or-icon + name + × to replace). */
+    .cr-edit-preview-thumb {
+        width: 44px;
+        height: 44px;
+        object-fit: cover;
+        background: #f8f9fa;
+    }
+    .cr-edit-preview-icon i {
+        font-size: 1.9rem;
+        line-height: 1;
+        color: #6c757d;
+    }
+    .cr-edit-preview .btn-close {
+        padding: 0.3rem;
+        background-size: 0.65em;
+    }
 </style>
 @endpush
 
@@ -89,6 +106,12 @@ document.addEventListener('DOMContentLoaded', function() {
             </a>
         </div>
     </x-breadcrum>
+
+    {{-- Every failure path in downloadDocument() (and the create/update/delete actions)
+         does redirect()->back()->with('error', ...). Without this component that flash
+         is rendered nowhere, so a failed download just bounced the user back to this
+         page with no message — indistinguishable from "the button reloaded the page". --}}
+    <x-session_message />
 
     @if($repository->children->count() == 0 && $documents->count() == 0)
     <div class="card overflow-hidden rounded-3">
@@ -487,7 +510,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <label for="edit_course_repository_details" class="form-label">Description</label>
                         <textarea class="form-control" id="edit_course_repository_details"
                             name="course_repository_details" rows="3"
-                            placeholder="eg. Lorem ipsum dolor sit amet"></textarea>
+                            placeholder="eg. Enter description...."></textarea>
                     </div>
                     <div class="mb-0">
                         <label class="form-label d-flex align-items-center gap-1">
@@ -511,23 +534,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             <img id="preview_edit_show" src="" alt="Preview" class="img-thumbnail rounded-1 shadow-sm"
                                 style="max-width: 120px; display: none;">
                         </div>
-                    </div>
-
-                    <div class="mb-0">
-                        <label class="form-label">Attachment</label>
-                        <div id="current_attachment_container_show" class="mb-2" style="display: none;">
-                            <p class="text-muted mb-1 small">Current attachment</p>
-                            <a id="current_attachment_show" href="#" target="_blank" rel="noopener"
-                                class="d-inline-flex align-items-center gap-1 small">
-                                <i class="bi bi-paperclip"></i><span>View current file</span>
-                            </a>
-                        </div>
-                        @include('admin.course-repository.partials.cr-design-file', [
-                        'inputId' => 'category_attachment_edit',
-                        'inputName' => 'category_attachment',
-                        'accept' => '.jpeg,.png,.jpg,.gif,.pdf,.doc,.docx,.xls,.xlsx',
-                        ])
-                        <div class="form-text small text-muted mt-1">JPG, PNG, GIF, PDF, DOC, XLS (Max 5MB)</div>
                     </div>
                 </div>
                 <div class="modal-footer cr-admin-modal-footer d-flex justify-content-end gap-2">
@@ -553,13 +559,57 @@ document.addEventListener('DOMContentLoaded', function() {
                 <input type="hidden" name="upload_edit_pk" id="upload_edit_pk" value="">
                 <div id="uploadFormErrors" class="alert alert-danger d-none mx-3 mt-3 mb-0" role="alert"></div>
                 <div id="uploadEditNotice" class="alert alert-info d-none mx-3 mt-3 mb-0 py-2 small" role="status">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Editing existing document. Current file:
-                    <a id="uploadEditCurrentFile" class="fw-semibold text-decoration-underline" href="#"
-                        target="_blank" rel="noopener" style="color:#0d6efd;"></a>.
-                    Choose a new file only if you want to replace it. The "Document Upload" box below only
-                    shows a file once you pick a <em>new</em> one to replace it with — browsers can't
-                    pre-fill a file input with the existing file's name.
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <span>
+                            <i class="bi bi-info-circle me-1"></i>
+                            Current file:
+                            <a id="uploadEditCurrentFile" class="fw-semibold text-decoration-underline" href="#"
+                                target="_blank" rel="noopener" style="color:#0d6efd;"></a>
+                        </span>
+                        {{-- A real, labelled button (not a bare btn-link glyph, which was there
+                             but invisible against the notice text). type="button" because this
+                             sits inside #uploadForm and a default submit button would submit the
+                             form instead of deleting. Reuses the existing .delete-doc delegated
+                             handler (document-level); its data-pk is filled by setEditChrome() on
+                             edit-open and cleared on reset so a stray click never targets pk "". --}}
+                        <button type="button" id="uploadEditDeleteBtn"
+                            class="delete-doc btn btn-sm btn-danger d-inline-flex align-items-center gap-1"
+                            data-pk="" title="Delete this document" aria-label="Delete this document">
+                            <i class="bi bi-trash" aria-hidden="true"></i> Delete
+                        </button>
+                    </div>
+
+                    {{-- Preview of the currently-uploaded file with a × to clear it. The ×
+                         does NOT delete anything server-side — it swaps the UI into "pick a
+                         new file" mode and focuses the file input; the replacement is
+                         committed on save once a new file is chosen. (The red Delete button
+                         above is the separate "remove this document entirely" action.)
+                         Populated by setEditChrome(); img falls back to a type icon when the
+                         file isn't an image or can't load (e.g. file missing from storage). --}}
+                    <div id="uploadEditPreview"
+                        class="cr-edit-preview d-none position-relative d-inline-flex align-items-center gap-2 mt-2 p-2 pe-4 bg-white border rounded">
+                        <img id="uploadEditPreviewImg" src="" alt="Current file preview"
+                            class="cr-edit-preview-thumb rounded border d-none"
+                            onerror="this.classList.add('d-none');var ic=document.getElementById('uploadEditPreviewIcon');if(ic)ic.classList.remove('d-none');">
+                        <span id="uploadEditPreviewIcon" class="cr-edit-preview-icon d-none">
+                            <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                        </span>
+                        <span id="uploadEditPreviewName" class="text-truncate" style="max-width:260px;"></span>
+                        <button type="button" id="uploadEditPreviewClear"
+                            class="btn-close position-absolute top-0 end-0 m-1"
+                            aria-label="Remove current file and upload a new one"
+                            title="Remove — then choose a new file below"></button>
+                    </div>
+                    <div id="uploadEditReplacingHint" class="text-success mt-2 d-none">
+                        <i class="bi bi-check-circle me-1"></i>
+                        Current file removed. Choose a new file in the "Document Upload" box below to replace it.
+                    </div>
+
+                    <div class="mt-1">
+                        Choose a new file only if you want to replace it. The "Document Upload" box below only
+                        shows a file once you pick a <em>new</em> one to replace it with — browsers can't
+                        pre-fill a file input with the existing file's name.
+                    </div>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
@@ -1535,6 +1585,60 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
     }
 });
 
+// ===== Course Name -> Choices.js (searchable, fixed width, wraps long names) =====
+// Choices owns the rendered dropdown, so the native data-status show/hide trick no
+// longer works; we keep a canonical snapshot of every course and rebuild the
+// Choices list (filtered by Active/Archived) on demand instead.
+//
+// These MUST stay at script scope, NOT inside the crDocEdit IIFE below. Two separate
+// scopes use them: the IIFE (edit/prefill, via syncCourseChoiceForEdit) and the
+// DOMContentLoaded block further down (Choices init + the Active/Archived radio
+// handler). While they were declared inside the IIFE, `var` made them private to it,
+// so the DOMContentLoaded block threw "courseChoices is not defined" on first touch —
+// which aborted that whole callback, and every handler it had yet to register
+// (including the Active/Archived radios) silently never bound.
+var courseChoices = null;
+var courseOptionsAll = []; // [{ value, label, status }]
+
+function getCheckedCourseStatus() {
+    var checked = document.querySelector('input[name="course_status"]:checked');
+    return checked ? checked.value : 'active';
+}
+
+// Rebuild the Course Name choices to only those matching `status`.
+// When `keepValue` is passed, that course is re-selected after the rebuild.
+function applyCourseStatusChoices(status, keepValue) {
+    if (!courseChoices) return;
+    var list = [{ value: '', label: 'Select', placeholder: true, selected: !keepValue }];
+    courseOptionsAll.forEach(function (o) {
+        if (o.status === status) {
+            list.push({ value: o.value, label: o.label });
+        }
+    });
+    courseChoices.setChoices(list, 'value', 'label', true); // replace existing
+    if (keepValue !== undefined && keepValue !== null && keepValue !== '') {
+        try { courseChoices.setChoiceByValue(String(keepValue)); } catch (e) { /* ignore */ }
+    }
+}
+
+// Used by the edit/prefill flow: make sure the saved course is present and selected,
+// syncing the Active/Archived radio so the visible list matches.
+function syncCourseChoiceForEdit(pk, label) {
+    if (!courseChoices || pk === null || pk === undefined || pk === '') return;
+    pk = String(pk);
+    var found = null;
+    for (var i = 0; i < courseOptionsAll.length; i++) {
+        if (String(courseOptionsAll[i].value) === pk) { found = courseOptionsAll[i]; break; }
+    }
+    var status = found ? found.status : getCheckedCourseStatus();
+    if (!found) {
+        courseOptionsAll.push({ value: pk, label: label || pk, status: status });
+    }
+    var radio = document.querySelector('input[name="course_status"][value="' + status + '"]');
+    if (radio && !radio.checked) radio.checked = true;
+    applyCourseStatusChoices(status, pk);
+}
+
 // ===== DOCUMENT EDIT MODE — reuses the Upload modal so the form looks identical to "Add" =====
 window.crDocEdit = (function() {
     'use strict';
@@ -1566,51 +1670,10 @@ window.crDocEdit = (function() {
         }));
     }
 
-    // ===== Course Name -> Choices.js (searchable, fixed width, wraps long names) =====
-    // Choices owns the rendered dropdown, so the native data-status show/hide trick no
-    // longer works; we keep a canonical snapshot of every course and rebuild the
-    // Choices list (filtered by Active/Archived) on demand instead.
-    var courseChoices = null;
-    var courseOptionsAll = []; // [{ value, label, status }]
-
-    function getCheckedCourseStatus() {
-        var checked = document.querySelector('input[name="course_status"]:checked');
-        return checked ? checked.value : 'active';
-    }
-
-    // Rebuild the Course Name choices to only those matching `status`.
-    // When `keepValue` is passed, that course is re-selected after the rebuild.
-    function applyCourseStatusChoices(status, keepValue) {
-        if (!courseChoices) return;
-        var list = [{ value: '', label: 'Select', placeholder: true, selected: !keepValue }];
-        courseOptionsAll.forEach(function (o) {
-            if (o.status === status) {
-                list.push({ value: o.value, label: o.label });
-            }
-        });
-        courseChoices.setChoices(list, 'value', 'label', true); // replace existing
-        if (keepValue !== undefined && keepValue !== null && keepValue !== '') {
-            try { courseChoices.setChoiceByValue(String(keepValue)); } catch (e) { /* ignore */ }
-        }
-    }
-
-    // Used by the edit/prefill flow: make sure the saved course is present and selected,
-    // syncing the Active/Archived radio so the visible list matches.
-    function syncCourseChoiceForEdit(pk, label) {
-        if (!courseChoices || pk === null || pk === undefined || pk === '') return;
-        pk = String(pk);
-        var found = null;
-        for (var i = 0; i < courseOptionsAll.length; i++) {
-            if (String(courseOptionsAll[i].value) === pk) { found = courseOptionsAll[i]; break; }
-        }
-        var status = found ? found.status : getCheckedCourseStatus();
-        if (!found) {
-            courseOptionsAll.push({ value: pk, label: label || pk, status: status });
-        }
-        var radio = document.querySelector('input[name="course_status"][value="' + status + '"]');
-        if (radio && !radio.checked) radio.checked = true;
-        applyCourseStatusChoices(status, pk);
-    }
+    // NOTE: courseChoices / courseOptionsAll / getCheckedCourseStatus /
+    // applyCourseStatusChoices / syncCourseChoiceForEdit used to be declared HERE. They
+    // now live at script scope, above this IIFE, because the DOMContentLoaded block
+    // below uses them too and a `var` in here is private to this function.
 
     // Set a <select> value, injecting a labeled option if it isn't present.
     function setSelectValue(selectId, value, label) {
@@ -1747,7 +1810,55 @@ window.crDocEdit = (function() {
         }
     }
 
-    function setEditChrome(on, currentFile, pk) {
+    // Choose a Bootstrap-Icons file glyph from the file extension.
+    function fileIconClass(fileName) {
+        var ext = String(fileName || '').split('.').pop().toLowerCase();
+        if (ext === 'pdf') return 'bi-file-earmark-pdf';
+        if (ext === 'doc' || ext === 'docx') return 'bi-file-earmark-word';
+        if (ext === 'xls' || ext === 'xlsx' || ext === 'csv') return 'bi-file-earmark-excel';
+        if (ext === 'ppt' || ext === 'pptx') return 'bi-file-earmark-ppt';
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].indexOf(ext) !== -1) return 'bi-file-earmark-image';
+        return 'bi-file-earmark-text';
+    }
+    function isImageFile(fileName) {
+        var ext = String(fileName || '').split('.').pop().toLowerCase();
+        return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].indexOf(ext) !== -1;
+    }
+
+    // Fill (or clear) the current-file preview card: thumbnail for images, type icon
+    // otherwise. Cleared in create mode. The "replacing" hint is reset every time so a
+    // reopened modal never shows a stale "file removed" message.
+    function setEditFilePreview(on, fileName, fileUrl) {
+        var wrap = $id('uploadEditPreview');
+        var img = $id('uploadEditPreviewImg');
+        var icon = $id('uploadEditPreviewIcon');
+        var nameEl = $id('uploadEditPreviewName');
+        var hint = $id('uploadEditReplacingHint');
+
+        if (hint) hint.classList.add('d-none');
+        if (wrap) wrap.classList.toggle('d-none', !on);
+        if (nameEl) nameEl.textContent = on ? (fileName || '') : '';
+
+        if (!on) {
+            if (img) { img.classList.add('d-none'); img.removeAttribute('src'); }
+            if (icon) icon.classList.add('d-none');
+            return;
+        }
+        if (icon) {
+            var i = icon.querySelector('i');
+            if (i) i.className = 'bi ' + fileIconClass(fileName);
+        }
+        if (isImageFile(fileName) && fileUrl && img && icon) {
+            img.src = fileUrl;              // onerror in markup falls back to the icon
+            img.classList.remove('d-none');
+            icon.classList.add('d-none');
+        } else {
+            if (img) { img.classList.add('d-none'); img.removeAttribute('src'); }
+            if (icon) icon.classList.remove('d-none');
+        }
+    }
+
+    function setEditChrome(on, currentFile, pk, fileUrl) {
         var title = $id('uploadModalLabel');
         if (title) title.textContent = on ? 'Edit Document' : 'Upload Document';
         var btn = $id('uploadBtn');
@@ -1759,6 +1870,11 @@ window.crDocEdit = (function() {
             cur.textContent = currentFile || '';
             cur.href = (on && pk) ? ('/course-repository/document/' + pk + '/download') : '#';
         }
+        // Point the inline delete icon at THIS document. Cleared in "create" mode so
+        // the shared .delete-doc handler (which bails on an empty data-pk) can't fire.
+        var del = $id('uploadEditDeleteBtn');
+        if (del) del.setAttribute('data-pk', (on && pk) ? pk : '');
+        setEditFilePreview(on, currentFile, fileUrl);
 
         // A document being edited has exactly one file. The "Add More Attachment"
         // (+) rows exist only for the bulk "Add Document" flow — if left visible
@@ -1801,7 +1917,7 @@ window.crDocEdit = (function() {
 
         var category = data.category || 'Course';
         selectCategory(category);
-        setEditChrome(true, data.upload_document || '', data.pk);
+        setEditChrome(true, data.upload_document || '', data.pk, data.file_url || '');
         setTitleRow(category, data.file_title);
 
         var d = data.detail || {};
@@ -2018,6 +2134,30 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             return;
         }
+        // "×" on the current-file preview: switch to "pick a new file" mode. This is a
+        // client-side affordance only — nothing is deleted server-side. The old file is
+        // kept unless the user actually chooses a new one before saving, which is why the
+        // hint tells them to pick a file below.
+        const clearPreviewBtn = e.target.closest('#uploadEditPreviewClear');
+        if (clearPreviewBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            var preview = document.getElementById('uploadEditPreview');
+            if (preview) preview.classList.add('d-none');
+            var hint = document.getElementById('uploadEditReplacingHint');
+            if (hint) hint.classList.remove('d-none');
+            // Focus + reveal the first VISIBLE file input (the active category's row).
+            var fileInputs = document.querySelectorAll('#uploadForm input[type="file"]');
+            for (var fi = 0; fi < fileInputs.length; fi++) {
+                if (fileInputs[fi].offsetParent !== null) { // visible
+                    try { fileInputs[fi].scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e2) {}
+                    fileInputs[fi].focus();
+                    break;
+                }
+            }
+            return;
+        }
+
         const editDocBtn = e.target.closest('.edit-doc');
         if (editDocBtn) {
             e.preventDefault();
