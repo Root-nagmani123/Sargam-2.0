@@ -86,19 +86,27 @@ class CourseAttendanceNoticeMapController extends Controller
 
     if ($typeFilter !== null && $typeFilter !== '') {
         if ($typeFilter == '1') {
-            // Notice: get notices that haven't been converted to memos
-            $noticesQuery->where('sns.notice_memo', 1)->where('sns.status', '!=', 2);
+            // Notice: get notices that haven't been converted to a Memo. A closed
+            // Notice (status == 2) can mean either "closed directly as a Notice" or
+            // "converted to a Memo" — those are indistinguishable from status alone,
+            // so check for the absence of a student_memo_status row instead.
+            $noticesQuery->where('sns.notice_memo', 1)
+                ->whereNotExists(function ($q) {
+                    $q->select(DB::raw(1))
+                        ->from('student_memo_status')
+                        ->whereColumn('student_memo_status.student_notice_status_pk', 'sns.pk');
+                });
         }
         // if $typeFilter == '0' (memo), we'll fetch memos separately later
     }
 
-    if ($statusFilter !== null && $statusFilter !== '') {
-        if ($statusFilter == '1') {
-            $noticesQuery->where('sns.status', 1);
-        } elseif ($statusFilter == '0') {
-            $noticesQuery->where('sns.status', 2);
-        }
-    }
+    // Status filter is intentionally NOT applied here. A notice with sns.status == 2
+    // may either be a Notice closed directly, or a Notice converted to a Memo whose
+    // own open/closed state lives in student_memo_status — the two are indistinguishable
+    // from sns.status alone. Filtering here would also conflict with the "not converted
+    // to memo" condition above (sns.status != 2) when Type=Notice + Status=Close is
+    // selected together, always returning zero rows. The collection-level filter below
+    // (after memo substitution) applies status correctly against the resolved item.
 
     // Apply date range filter — use session date for attendance-based, notice date for direct
     if ($fromDateFilter) {
@@ -479,17 +487,26 @@ $noticeCount = $memos->groupBy(function($item) {
 
         if ($typeFilter !== null && $typeFilter !== '') {
             if ($typeFilter == '1') {
-                $noticesQuery->where('sns.notice_memo', 1)->where('sns.status', '!=', 2);
+                // Notice: get notices that haven't been converted to a Memo. A closed
+                // Notice (status == 2) can mean either "closed directly as a Notice" or
+                // "converted to a Memo" — those are indistinguishable from status alone,
+                // so check for the absence of a student_memo_status row instead.
+                $noticesQuery->where('sns.notice_memo', 1)
+                    ->whereNotExists(function ($q) {
+                        $q->select(DB::raw(1))
+                            ->from('student_memo_status')
+                            ->whereColumn('student_memo_status.student_notice_status_pk', 'sns.pk');
+                    });
             }
         }
 
-        if ($statusFilter !== null && $statusFilter !== '') {
-            if ($statusFilter == '1') {
-                $noticesQuery->where('sns.status', 1);
-            } elseif ($statusFilter == '0') {
-                $noticesQuery->where('sns.status', 2);
-            }
-        }
+        // Status filter is intentionally NOT applied here. A notice with sns.status == 2
+        // may either be a Notice closed directly, or a Notice converted to a Memo whose
+        // own open/closed state lives in student_memo_status — the two are indistinguishable
+        // from sns.status alone. Filtering here would also conflict with the "not converted
+        // to memo" condition above (sns.status != 2) when Type=Notice + Status=Close is
+        // selected together, always returning zero rows. The collection-level filter below
+        // (after memo substitution) applies status correctly against the resolved item.
 
         // Apply date range filter by session date
         if ($fromDateFilter) {
