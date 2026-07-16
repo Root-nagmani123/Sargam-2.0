@@ -6,7 +6,6 @@ use App\Models\CasteCategoryMaster;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
-use Yajra\DataTables\Html\Button;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Html\Editor\Editor;
 use Yajra\DataTables\Html\Editor\Fields;
@@ -71,19 +70,16 @@ class CasteCategoryMasterDataTable extends DataTable
             ->setTableId('castecategorymaster-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            //->dom('Bfrtip')
+            ->dom('frtip')
             // ->orderBy(1)
             ->selectStyleSingle()
             ->parameters([
+                'responsive' => true,
+                'autoWidth' => false,
                 'order' => [],
-            ])
-            ->buttons([
-                Button::make('excel'),
-                Button::make('csv'),
-                Button::make('pdf'),
-                Button::make('print'),
-                Button::make('reset'),
-                Button::make('reload')
+                'paging' => true,
+                'pagingType' => 'full_numbers',
+                'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
             ]);
     }
 

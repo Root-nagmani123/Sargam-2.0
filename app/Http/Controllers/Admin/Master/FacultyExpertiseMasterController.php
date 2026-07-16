@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Master;
 
 use App\Http\Controllers\Controller;
+use App\DataTables\Master\FacultyExpertiseMasterDataTable;
 use App\Models\FacultyExpertiseMaster;
 use App\Support\DataTableRedisCache;
 use Illuminate\Http\Request;
@@ -19,23 +20,9 @@ class FacultyExpertiseMasterController extends Controller
         DataTableRedisCache::bumpListEpoch(self::LIST_CACHE_EPOCH_KEY, 'FacultyExpertiseMasterController');
     }
 
-    public function index(Request $request)
+    public function index(FacultyExpertiseMasterDataTable $dataTable)
     {
-        $epoch = DataTableRedisCache::readListEpoch(self::LIST_CACHE_EPOCH_KEY);
-        $page = max(1, (int) $request->query('page', 1));
-        $cacheKey = 'master_fac_exp_list:v1:' . md5(json_encode(['epoch' => $epoch, 'page' => $page]));
-
-        $faculties = DataTableRedisCache::remember(
-            $cacheKey,
-            [
-                'enabled' => 'FACULTY_EXPERTISE_MASTER_LIST_CACHE_ENABLED',
-                'seconds' => 'FACULTY_EXPERTISE_MASTER_LIST_CACHE_SECONDS',
-            ],
-            'FacultyExpertiseMasterController@index',
-            fn () => FacultyExpertiseMaster::latest('pk')->paginate(10)
-        );
-
-        return view('admin.master.faculty_expertise_master.index', compact('faculties'));
+        return $dataTable->render('admin.master.faculty_expertise_master.index');
     }
 
     public function create() {

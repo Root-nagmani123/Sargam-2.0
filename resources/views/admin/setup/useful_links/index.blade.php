@@ -32,7 +32,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($usefulLinks as $index => $link)
+                            @foreach($usefulLinks as $index => $link)
                                 <tr data-usefullink-id="{{ $link->id }}">
                                     <td>{{ $index + 1 }}</td>
                                     <td>{{ $link->label }}</td>
@@ -79,11 +79,7 @@
                                         </div>
                                     </td>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="7" class="text-center text-muted">No Useful Links found.</td>
-                                </tr>
-                            @endforelse
+                            @endforeach
                         </tbody>
                     </table>
                 </div>
@@ -127,6 +123,15 @@
     }
 </style>
 <script>
+if (window.jQuery) {
+    $(document).on('preInit.dt', function (e, settings) {
+        if (settings.nTable && settings.nTable.id === 'usefulLinksTable') {
+            settings.oLanguage.sEmptyTable = 'No Useful Links found.';
+            settings.oLanguage.sZeroRecords = 'No matching Useful Links found.';
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const modalEl = document.getElementById('usefulLinksModal');
     const modalBody = modalEl.querySelector('.modal-body');

@@ -6,7 +6,6 @@ use App\Models\DepartmentMaster;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
-use Yajra\DataTables\Html\Button;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Html\Editor\Editor;
 use Yajra\DataTables\Html\Editor\Fields;
@@ -68,22 +67,17 @@ class DepartmentMasterDataTable extends DataTable
             ->setTableId('departmentmaster-table')
             ->columns($this->getColumns())
             ->minifiedAjax() // This will use the current route for ajax
+            ->dom('frtip')
             // ->orderBy(1)
             ->selectStyleSingle()
             ->responsive(true)
             ->parameters([
                 'responsive' => true,
-                'scrollX' => true,
                 'autoWidth' => false,
                 'order' => [],
-            ])
-            ->buttons([
-                Button::make('excel'),
-                Button::make('csv'),
-                Button::make('pdf'),
-                Button::make('print'),
-                Button::make('reset'),
-                Button::make('reload'),
+                'paging' => true,
+                'pagingType' => 'full_numbers',
+                'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
             ]);
     }
 
