@@ -190,6 +190,7 @@ public function otIndex(Request $request)
     $statusFilter      = $request->status;
     $searchFilter      = $request->search;
     $disciplineFilter  = $request->discipline_master_pk;
+    $categoryFilter    = $request->minor_major;
 
     // OT page defaults to their full history (no implicit "today" restriction).
     $fromDateFilter = $request->get('from_date') ?: null;
@@ -222,6 +223,9 @@ public function otIndex(Request $request)
         ->when($disciplineFilter, function ($q) use ($disciplineFilter) {
             $q->whereHas('discipline', fn($d) => $d->where('discipline_name', $disciplineFilter));
         })
+        ->when($categoryFilter !== null && $categoryFilter !== '', function ($q) use ($categoryFilter) {
+            $q->where('minor_major', $categoryFilter);
+        })
         ->when($searchFilter, function ($q) use ($searchFilter) {
             $q->where(function ($sub) use ($searchFilter) {
                 $sub->whereHas('course', function ($c) use ($searchFilter) {
@@ -251,6 +255,7 @@ public function otIndex(Request $request)
             'program_name'         => $programNameFilter ?? '',
             'discipline_master_pk' => $disciplineFilter ?? '',
             'status'               => $statusFilter ?? '',
+            'minor_major'          => $categoryFilter ?? '',
             'search'               => $searchFilter ?? '',
             'from_date'            => $fromDateFilter ?? '',
             'to_date'              => $toDateFilter ?? '',
@@ -263,6 +268,7 @@ public function otIndex(Request $request)
         'disciplines',
         'programNameFilter',
         'statusFilter',
+        'categoryFilter',
         'disciplineFilter',
         'searchFilter',
         'fromDateFilter',
@@ -475,7 +481,11 @@ public function exportPdfZip(Request $request)
             ])
             ->output();
 
-        $baseName = trim((string) preg_replace('/[^A-Za-z0-9_\-]+/', '_', $memo->student->display_name ?? ''), '_');
+        // Name + date of infraction, so a batch of downloaded PDFs is identifiable at a
+        // glance in the file explorer without opening each one.
+        $namePart = trim((string) preg_replace('/[^A-Za-z0-9_\-]+/', '_', $memo->student->display_name ?? ''), '_');
+        $datePart = $memo->date ? Carbon::parse($memo->date)->format('d-M-Y') : '';
+        $baseName = trim($namePart . ($datePart ? '_' . $datePart : ''), '_');
         $baseName = $baseName !== '' ? $baseName : ('memo_' . $memo->pk);
         $name = $baseName;
         $suffix = 1;
