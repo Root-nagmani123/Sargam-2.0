@@ -82,7 +82,7 @@
                             title="Applications waiting for your approve or reject action at this stage.">
                         <i class="material-icons material-symbols-rounded d-inline align-middle" style="font-size:18px;">assignment_turned_in</i>
                         <span class="align-middle">Pending — your action</span>
-                        <span class="badge rounded-1 bg-white text-primary ms-1">{{ $newFamilyGroups->total() }}</span>
+                        <span class="badge rounded-1 bg-white text-primary ms-1">{{ $newFamilyGroups->count() }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -91,7 +91,7 @@
                             title="Shows only requests where Level 1 is already approved. Waiting for final approval, or view-only until the other officer acts.">
                         <i class="material-icons material-symbols-rounded d-inline align-middle" style="font-size:18px;">hourglass_top</i>
                         <span class="align-middle">Pending — other stage</span>
-                        <span class="badge rounded-1 bg-warning text-dark ms-1">{{ $processedFamilyGroups->total() }}</span>
+                        <span class="badge rounded-1 bg-warning text-dark ms-1">{{ $processedFamilyGroups->count() }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -100,7 +100,7 @@
                             title="Fully approved / issued family ID requests.">
                         <i class="material-icons material-symbols-rounded d-inline align-middle" style="font-size:18px;">check_circle</i>
                         <span class="align-middle">Approved</span>
-                        <span class="badge rounded-1 bg-success ms-1">{{ $issuedFamilyGroups->total() }}</span>
+                        <span class="badge rounded-1 bg-success ms-1">{{ $issuedFamilyGroups->count() }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -109,7 +109,7 @@
                             title="Applications rejected at any stage.">
                         <i class="material-icons material-symbols-rounded d-inline align-middle" style="font-size:18px;">cancel</i>
                         <span class="align-middle">Rejected</span>
-                        <span class="badge rounded-1 bg-danger ms-1">{{ $rejectedFamilyGroups->total() }}</span>
+                        <span class="badge rounded-1 bg-danger ms-1">{{ $rejectedFamilyGroups->count() }}</span>
                     </button>
                 </li>
             </ul>
