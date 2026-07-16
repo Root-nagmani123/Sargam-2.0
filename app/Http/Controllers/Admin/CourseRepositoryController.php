@@ -487,7 +487,7 @@ class CourseRepositoryController extends Controller
                 foreach ($files as $index => $file) {
                     if ($file && $file->isValid()) {
                         // Generate unique filename
-                        $fileName = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
+                        $fileName = $this->buildDocumentFileName($file);
                         
                         // Store file in hierarchical folder structure under admin root
                         $storageFolder = trim($folderPath, '/');
@@ -659,7 +659,7 @@ class CourseRepositoryController extends Controller
                         ? trim($this->buildFolderPath($parent), '/')
                         : 'course_repository';
 
-                    $fileName = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
+                    $fileName = $this->buildDocumentFileName($file);
                     $filePath = $file->storeAs($storageFolder, $fileName, 'public');
 
                     // Remove the old physical file if we can resolve it
@@ -749,6 +749,20 @@ class CourseRepositoryController extends Controller
             Log::error('Error downloading document: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Download failed: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Storage filename: original name kept up front (so it's recognizable in the
+     * documents list / file explorer), timestamp suffix only for uniqueness.
+     */
+    private function buildDocumentFileName($file): string
+    {
+        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $safeName = trim(preg_replace('/[^A-Za-z0-9_\-]+/', '_', $originalName), '_');
+        $safeName = $safeName !== '' ? $safeName : 'file';
+        $extension = $file->getClientOriginalExtension();
+
+        return $safeName . '_' . time() . ($extension ? '.' . $extension : '');
     }
 
     /**
