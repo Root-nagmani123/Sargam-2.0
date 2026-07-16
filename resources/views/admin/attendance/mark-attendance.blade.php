@@ -9,7 +9,7 @@
 .att-mark-page .att-back {
     width: 36px; height: 36px; border-radius: 10px;
     display: inline-flex; align-items: center; justify-content: center;
-    color: #101828; background: #f2f4f7; text-decoration: none; font-size: 1.15rem;
+    color: #101828; text-decoration: none; font-size: 1.15rem;
 }
 .att-mark-page .att-back:hover { background: #e4e7ec; }
 .att-mark-page .att-crumb { font-size: 0.8rem; color: #667085; }
@@ -101,7 +101,7 @@
 .att-mark-page .att-info-label { font-size: 0.75rem; color: #667085; margin-bottom: 0.15rem; }
 .att-mark-page .att-info-value {
     font-size: 0.9rem; font-weight: 700; color: #101828; line-height: 1.25;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    overflow-wrap: anywhere;
 }
 @media (max-width: 991.98px) { .att-mark-page .att-info-cards { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 575.98px) { .att-mark-page .att-info-cards { grid-template-columns: repeat(2, 1fr); } }
@@ -189,12 +189,31 @@
         @endforeach
     </div>
 
-    {{-- Download --}}
-    <div class="d-flex justify-content-end mb-2">
-        <a href="{{ route('attendance.export', ['group_pk' => $group_pk, 'course_pk' => $course_pk, 'timetable_pk' => $courseGroup->timetable_pk]) }}"
-            class="att-btn-outline">
-            <i class="bi bi-download"></i> Download
-        </a>
+    {{-- Print / Download --}}
+    <div class="d-flex justify-content-end gap-2 mb-2">
+        <button type="button" class="att-btn-outline border-0" id="attPrintBtn">
+            <i class="bi bi-printer"></i> Print
+        </button>
+        <div class="dropdown">
+            <button type="button" class="att-btn-outline border-0 dropdown-toggle" id="attDownloadBtn"
+                data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-download"></i> Download
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm py-2" aria-labelledby="attDownloadBtn">
+                <li>
+                    <a class="dropdown-item d-flex align-items-center gap-2 py-2"
+                        href="{{ route('attendance.export', ['group_pk' => $group_pk, 'course_pk' => $course_pk, 'timetable_pk' => $courseGroup->timetable_pk, 'format' => 'pdf']) }}">
+                        <i class="bi bi-file-earmark-pdf text-danger"></i> <span>Download PDF</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item d-flex align-items-center gap-2 py-2"
+                        href="{{ route('attendance.export', ['group_pk' => $group_pk, 'course_pk' => $course_pk, 'timetable_pk' => $courseGroup->timetable_pk, 'format' => 'excel']) }}">
+                        <i class="bi bi-file-earmark-spreadsheet text-success"></i> <span>Download Excel</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
     </div>
 
     <form action="{{ route('attendance.save') }}" method="post" id="attMarkForm">
@@ -208,17 +227,6 @@
 
                 {{-- Filter bar (context for this session — Course + Time Period) --}}
                 <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-                    <span class="fw-semibold text-body-secondary me-1">Filters</span>
-                    <div class="att-filter-box" title="{{ $courseName }}">
-                        <span class="att-filter-label">Course Name</span>
-                        <span class="att-filter-value">{{ \Illuminate\Support\Str::limit($courseName, 26) }}</span>
-                        <i class="bi bi-chevron-down att-filter-caret" aria-hidden="true"></i>
-                    </div>
-                    <div class="att-filter-box">
-                        <span class="att-filter-label">Time Period</span>
-                        <span class="att-filter-value">{{ $sessionDate }}</span>
-                        <i class="bi bi-chevron-down att-filter-caret" aria-hidden="true"></i>
-                    </div>
                     <div class="ms-auto d-flex flex-wrap align-items-center gap-2">
                         <button type="button" class="att-btn-outline" id="btnAttColumns"
                             data-bs-toggle="modal" data-bs-target="#attColumnModal" title="Show / hide columns">
@@ -289,6 +297,95 @@ $(function () {
     $('#studentAttendanceTable').on('draw.dt', updateCount);
     setTimeout(updateCount, 400);
 
+    /* ── Print (client-side; mirrors the .xlsx header and honours column visibility + search) ── */
+    $('#attPrintBtn').on('click', function () {
+        var table = document.getElementById('studentAttendanceTable');
+        if (!table) { alert('Table not found!'); return; }
+        var printWindow = window.open('', '_blank');
+        if (!printWindow) { alert('Please allow pop-ups for this site to print the attendance sheet.'); return; }
+
+        var clone = table.cloneNode(true);
+
+        // Drop the interactive columns — radios and buttons mean nothing on paper.
+        var drop = [];
+        $(clone).find('thead th').each(function (i) {
+            var t = $(this).text().trim().toLowerCase();
+            if (t === 'update attendance status' || t === 'action') { drop.push(i); }
+        });
+        // Count the columns up front: removing cells shrinks the header as we go.
+        var colCount = $(clone).find('thead th').length;
+        $(clone).find('tr').each(function () {
+            var cells = this.children;
+            if (cells.length !== colCount) { return; } // skip the "no data" row (single colspan cell)
+            for (var i = drop.length - 1; i >= 0; i--) {
+                if (cells[drop[i]]) { cells[drop[i]].remove(); }
+            }
+        });
+
+        var logoLeft  = @json(asset('admin_assets/images/logos/logo_new.png'));
+        var logoRight = @json(file_exists(public_path('admin_assets/images/logos/constitution-75.png'))
+            ? asset('admin_assets/images/logos/constitution-75.png')
+            : asset('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png'));
+        var titleHindi = @json(asset('admin_assets/images/logos/lbsnaa-title-hi.png'));
+
+        // Same session context the .xlsx header block carries.
+        var meta = [
+            { label: 'Course',  value: @json($courseName) },
+            { label: 'Topic',   value: @json($topicName) },
+            { label: 'Faculty', value: @json($facultyName) }
+        ].filter(function (m) { return m.value && m.value !== 'N/A'; })
+         .map(function (m) { return m.label + ': ' + m.value; }).join('&nbsp; | &nbsp;');
+
+        var session = [
+            { label: 'Topic Date',   value: @json($sessionDate) },
+            { label: 'Session Time', value: @json($sessionTime) }
+        ].filter(function (m) { return m.value && m.value !== 'N/A'; })
+         .map(function (m) { return m.label + ': ' + m.value; }).join('&nbsp; | &nbsp;');
+
+        var printContent =
+            '<!DOCTYPE html><html><head><title>Attendance Report - Print</title><style>' +
+            'body{font-family:Arial,sans-serif;margin:16px;color:#1f2937;}' +
+            '.pdf-hdr{width:100%;border-collapse:collapse;margin-bottom:4px;}' +
+            '.pdf-hdr td{vertical-align:middle;} .pdf-hdr .logo{width:90px;text-align:center;}' +
+            '.pdf-hdr .logo img{max-height:64px;max-width:84px;} .pdf-hdr .center{text-align:center;padding:0 8px;}' +
+            '.pdf-hdr .inst-hi-img{height:18px;width:auto;margin-bottom:2px;}' +
+            '.pdf-hdr .inst-en{font-size:16px;font-weight:bold;color:#102a43;line-height:1.25;}' +
+            '.report-title{text-align:center;font-size:20px;font-weight:bold;color:#004a93;margin:8px 0 6px;padding-bottom:8px;border-bottom:2px solid #004a93;}' +
+            '.print-info{margin-bottom:12px;font-size:11px;color:#666;text-align:center;line-height:1.6;}' +
+            'table{width:100%;border-collapse:collapse;margin-top:10px;}' +
+            'table th,table td{border:1px solid #8fa3bd;padding:6px 8px;text-align:left;font-size:12px;}' +
+            'table thead th{font-weight:bold;background-color:#004a93 !important;color:#fff !important;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+            'table tbody tr:nth-child(even){background-color:#eef2f8;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+            '.att-badge{display:inline-block;padding:3px 8px;border-radius:4px;font-weight:600;font-size:11px;' +
+                '-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+            '.att-present{color:#027a48;background:#ecfdf3;} .att-absent{color:#b42318;background:#fef3f2;}' +
+            '.att-nm{color:#b54708;background:#fffaeb;} .att-late{color:#b54708;background:#fff6ed;}' +
+            '.att-duty{color:#004a93;background:#eff8ff;} .att-exempt{color:#475467;background:#f2f4f7;}' +
+            '.print-footer{margin-top:18px;text-align:center;font-size:10px;color:#666;border-top:1px solid #ccc;padding-top:10px;}' +
+            '@media print{@page{size:A4 landscape;margin:10mm;} body{margin:0;}}' +
+            '</style></head><body onload="window.focus();window.print();">' +
+            '<table class="pdf-hdr"><tr>' +
+                '<td class="logo"><img src="' + logoLeft + '" alt=""></td>' +
+                '<td class="center"><img class="inst-hi-img" src="' + titleHindi + '" alt="">' +
+                    '<div class="inst-en">Lal Bahadur Shastri National Academy of Administration, Mussoorie</div>' +
+                '</td>' +
+                '<td class="logo"><img src="' + logoRight + '" alt=""></td>' +
+            '</tr></table>' +
+            '<div class="report-title">Attendance Report</div>' +
+            '<div class="print-info">' +
+                (meta ? '<div>' + meta + '</div>' : '') +
+                (session ? '<div>' + session + '</div>' : '') +
+                '<div>Generated on ' + new Date().toLocaleString() + '</div>' +
+            '</div>' +
+            clone.outerHTML +
+            '<div class="print-footer"><p>Lal Bahadur Shastri National Academy of Administration, Mussoorie</p></div>' +
+            '</body></html>';
+
+        printWindow.document.open();
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+    });
+
     /* ── Per-OT save (Update Attendance action) ── */
     var STATUS_MAP = {
         0: ['Not Marked', 'att-nm'], 1: ['Present', 'att-present'], 2: ['Late', 'att-late'],
@@ -335,7 +432,16 @@ $(function () {
     });
 
     /* ── Column show / hide (DataTables visibility API) ── */
-    var COL_KEY = 'attMarkGrid:hiddenCols:v1';
+    // Hidden columns persist by column TITLE. The old v1 key stored numeric indexes,
+    // which kept hiding whichever column later landed on that index — bumping the key
+    // discards that stale state.
+    var COL_KEY = 'attMarkGrid:hiddenCols:v2';
+    try { localStorage.removeItem('attMarkGrid:hiddenCols:v1'); } catch (e) {}
+
+    function colTitle(col) {
+        var t = $(col.header()).text().replace(/\s+/g, ' ').trim();
+        return t || ('Column ' + (col.index() + 1));
+    }
     function colGetHidden() {
         try { var a = JSON.parse(localStorage.getItem(COL_KEY) || '[]'); return Array.isArray(a) ? a : []; }
         catch (e) { return []; }
@@ -350,34 +456,32 @@ $(function () {
 
         // Locked (always visible): S. No. and the Action column (last).
         var LOCKED = [idxs[0], idxs[idxs.length - 1]];
-        var hidden = colGetHidden().filter(function (i) { return LOCKED.indexOf(i) === -1; });
-        colPersist(hidden);
+        var hidden = colGetHidden();
 
         dt.columns().every(function () {
             var idx = this.index();
             if (LOCKED.indexOf(idx) !== -1) { this.visible(true, false); return; }
-            this.visible(hidden.indexOf(idx) === -1, false);
+            this.visible(hidden.indexOf(colTitle(this)) === -1, false);
         });
         dt.columns.adjust();
 
         var $grid = $('#attColumnGrid').empty();
         dt.columns().every(function () {
             var idx = this.index();
-            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
-            if (!title) { title = 'Column ' + (idx + 1); }
+            var title = colTitle(this);
             var locked = LOCKED.indexOf(idx) !== -1;
             var inputId = 'attcol_' + idx;
             var $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
             var $label = $('<label class="d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>').attr('for', inputId);
             var $cb = $('<input type="checkbox" class="form-check-input m-0">')
                 .attr('id', inputId)
-                .prop('checked', locked || hidden.indexOf(idx) === -1)
+                .prop('checked', locked || hidden.indexOf(title) === -1)
                 .prop('disabled', locked);
             $cb.on('change', function () {
                 if (locked) return;
                 var h = colGetHidden();
-                var pos = h.indexOf(idx);
-                if (this.checked) { if (pos !== -1) h.splice(pos, 1); } else { if (pos === -1) h.push(idx); }
+                var pos = h.indexOf(title);
+                if (this.checked) { if (pos !== -1) h.splice(pos, 1); } else { if (pos === -1) h.push(title); }
                 colPersist(h);
                 dt.column(idx).visible(this.checked, false);
                 dt.columns.adjust();

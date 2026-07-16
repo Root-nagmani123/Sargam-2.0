@@ -95,14 +95,14 @@ class StudentAttendanceListDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S. No.')->addClass('text-center align-middle')->orderable(false)->searchable(false),
-            Column::make('student_code')->title('OT Code')->addClass('align-middle')->orderable(false)->searchable(true),
-            Column::make('student_name')->title('OT Name')->addClass('align-middle')->orderable(false)->searchable(true),
-            Column::make('attendance_status')->title('Current Attendance Status')->addClass('text-center align-middle')->orderable(false)->searchable(false),
-            Column::make('update_status')->title('Update Attendance Status')->addClass('align-middle')->orderable(false)->searchable(false),
-            Column::make('mdo_duty')->title('MDO Duty')->addClass('text-center align-middle')->orderable(false)->searchable(false),
-            Column::make('escort_duty')->title('Escort/ Modular Duty')->addClass('text-center align-middle')->orderable(false)->searchable(false),
-            Column::computed('action')->title('Action')->addClass('text-center align-middle')->orderable(false)->searchable(false),
+            Column::computed('DT_RowIndex')->title('S. No.')->orderable(false)->searchable(false),
+            Column::make('student_code')->title('OT Code')->orderable(false)->searchable(true),
+            Column::make('student_name')->title('OT Name')->orderable(false)->searchable(true),
+            Column::make('attendance_status')->title('Current Attendance Status')->orderable(false)->searchable(true),
+            Column::make('update_status')->title('Update Attendance Status')->orderable(false)->searchable(true),
+            Column::make('mdo_duty')->title('MDO Duty')->orderable(false)->searchable(true),
+            Column::make('escort_duty')->title('Escort/ Modular Duty')->orderable(false)->searchable(true),
+            Column::computed('action')->title('Action')->orderable(false)->searchable(true),
         ];
     }
 

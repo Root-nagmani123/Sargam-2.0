@@ -12,6 +12,7 @@ use App\DataTables\StudentAttendanceListDataTable;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\AttendanceDataExport;
 use App\Exports\AttendanceListExport;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 
@@ -792,9 +793,10 @@ $currentPath = $segments[1] ?? null;
         }
     }
 
-    public function export($group_pk, $course_pk, $timetable_pk)
+    public function export(Request $request, $group_pk, $course_pk, $timetable_pk)
     {
         try {
+            $format = strtolower((string) $request->get('format')) === 'pdf' ? 'pdf' : 'excel';
             $courseGroup = CourseGroupTimetableMapping::with([
                 'course:pk,course_name',
                 'timetable',
@@ -830,8 +832,11 @@ $currentPath = $segments[1] ?? null;
 
             // Prepare export data
             $courseName = optional($courseGroup->course)->course_name ?? 'N/A';
-            $topicName = optional($courseGroup->timetable)->subject_topic ?? 'N/A';
-            $facultyName = optional($courseGroup->timetable)->faculty->full_name ?? 'N/A';
+            $topicRaw = optional($courseGroup->timetable)->subject_topic;
+            $topicName = $topicRaw ? trim(preg_replace('/\s+/u', ' ', strip_tags((string) $topicRaw))) : '';
+            $topicName = $topicName !== '' ? $topicName : 'N/A';
+            // Same resolver the page uses, so every mapped faculty reaches the header.
+            $facultyName = $this->resolveTimetableFacultyNames($courseGroup->timetable);
             $topicDate = !empty(optional($courseGroup->timetable)->START_DATE) 
                 ? Carbon::parse($courseGroup->timetable->START_DATE)->format('d-m-Y') 
                 : 'N/A';
@@ -842,13 +847,35 @@ $currentPath = $segments[1] ?? null;
             $timetableDate = $timetable ? $timetable->START_DATE : null;
             $timetableClassSession = $timetable ? $timetable->class_session : null;
 
-            // Generate filename
-            $filename = 'Attendance_' . str_replace(' ', '_', $courseName) . '_' . date('YmdHis') . '.xlsx';
+            // Generate filename. Strip anything a Content-Disposition filename can't
+            // carry — a course name with "/" (or the "N/A" fallback) otherwise throws.
+            $safeCourse = trim(preg_replace('/[^A-Za-z0-9\-_]+/', '_', (string) $courseName), '_');
+            $filename = 'Attendance_' . ($safeCourse !== '' ? $safeCourse : 'Report') . '_' . date('YmdHis');
 
-            return Excel::download(
-                new AttendanceDataExport($students, $courseName, $topicName, $facultyName, $topicDate, $sessionTime, $course_pk, $group_pk, $timetable_pk, $timetableDate, $timetableClassSession),
-                $filename
-            );
+            $export = new AttendanceDataExport($students, $courseName, $topicName, $facultyName, $topicDate, $sessionTime, $course_pk, $group_pk, $timetable_pk, $timetableDate, $timetableClassSession);
+
+            if ($format === 'pdf') {
+                @ini_set('memory_limit', '256M');
+                @set_time_limit(120);
+
+                // array() also primes the row count used by the header block.
+                $rows = $export->array();
+
+                $pdf = Pdf::loadView('admin.attendance.export_pdf', array_merge([
+                    'headings'    => $export->headings(),
+                    'rows'        => $rows,
+                    'reportTitle' => 'Attendance Report',
+                    'filterLine'  => $export->filterLine(),
+                    'sessionLine' => $export->sessionLine(),
+                    'printedOn'   => now()->format('d-m-Y H:i'),
+                ], $this->pdfHeaderAssets()))
+                    ->setPaper('a4', 'landscape')
+                    ->setOptions(['defaultFont' => 'DejaVu Sans', 'isRemoteEnabled' => true, 'isPhpEnabled' => true, 'dpi' => 96]);
+
+                return $pdf->download($filename . '.pdf');
+            }
+
+            return Excel::download($export, $filename . '.xlsx');
         } catch (\Exception $e) {
             Log::error('Error exporting attendance data: ' . $e->getMessage());
             return redirect()->back()->with('error', 'An error occurred while exporting attendance data: ' . $e->getMessage());
@@ -1810,6 +1837,44 @@ $currentPath = $segments[1] ?? null;
         }
 
         return $ids;
+    }
+
+    /**
+     * Branded LBSNAA header images as embedded data-URIs for the PDF view
+     * (mirrors the Medical Exemption Report export header).
+     *
+     * @return array{logoLeft:?string,logoRight:?string,titleHindi:?string}
+     */
+    private function pdfHeaderAssets(): array
+    {
+        $toDataUri = static function (string $path): ?string {
+            if (! is_file($path) || ! is_readable($path)) {
+                return null;
+            }
+            $raw = @file_get_contents($path);
+            if ($raw === false) {
+                return null;
+            }
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = match ($ext) {
+                'svg' => 'image/svg+xml',
+                'jpg', 'jpeg' => 'image/jpeg',
+                default => 'image/png',
+            };
+
+            return 'data:' . $mime . ';base64,' . base64_encode($raw);
+        };
+
+        $rightLogo = public_path('admin_assets/images/logos/constitution-75.png');
+        if (! is_file($rightLogo)) {
+            $rightLogo = public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png');
+        }
+
+        return [
+            'logoLeft'   => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
+            'logoRight'  => $toDataUri($rightLogo),
+            'titleHindi' => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
+        ];
     }
 
     private function resolveTimetableFacultyNames(?CalendarEvent $timetable): string
