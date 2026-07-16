@@ -126,31 +126,12 @@
 </div>
 @endsection
 
-@push('styles')
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-<style>.ts-dropdown { z-index: 1060 !important; }</style>
-@endpush
-
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    if (typeof TomSelect !== 'undefined') {
-        var commonCfg = {
-            allowEmptyOption: true,
-            create: false,
-            dropdownParent: 'body',
-            maxOptions: null,
-            hideSelected: false,
-            onInitialize: function () { this.activeOption = null; }
-        };
-        ['employee_type', 'block_id'].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (!el) return;
-            if (el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
-            new TomSelect(el, Object.assign({}, commonCfg, {}));
-        });
-    }
+    // NOTE: Employee Type / Building Name filters ko plain native <select> rakha gaya hai (Bootstrap
+    // form-select). Pehle widget-enhance (TomSelect/Select2) karne par is page pe dropdown blank aa
+    // raha tha; native select apne server-rendered options hamesha reliably dikhata hai.
     var dataTableInstance = null;
     var lastLoadedParams = null;
 

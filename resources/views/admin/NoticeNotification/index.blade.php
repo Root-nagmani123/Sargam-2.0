@@ -196,7 +196,7 @@
                                 </span>
                             </td>
                             <td class="col-type">
-                                <span class="badge rounded-pill bg-info-subtle text-info text-capitalize">
+                                <span class="badge rounded-1 bg-info-subtle text-info text-capitalize">
                                     {{ $n->notice_type }}
                                 </span>
                             </td>

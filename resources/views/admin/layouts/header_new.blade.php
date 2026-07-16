@@ -141,7 +141,7 @@
             </i>
 
             @if($unreadCount > 0)
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-1 bg-danger notification-badge">
                     {{ $unreadCount > 99 ? '99+' : $unreadCount }}
                 </span>
             @endif
@@ -206,7 +206,7 @@
                 title="Pending Feedback" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="material-icons material-symbols-rounded" style="font-size:20px">pending_actions</i>
             <span id="facultyFeedbackBadge"
-                  class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge"
+                  class="position-absolute top-0 start-100 translate-middle badge rounded-1 bg-danger notification-badge"
                   style="display:none"></span>
         </button>
         <div class="dropdown-menu dropdown-menu-end shadow border-0 p-0"
@@ -398,7 +398,7 @@
                             @endphp
                             <i class="material-icons material-symbols-rounded header-notification-bell {{ $unreadCountMobile > 0 ? 'header-notification-bell--ring' : '' }}" aria-hidden="true">notifications_active</i>
                             @if($unreadCountMobile > 0)
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge-mobile" style="font-size: 9px;">
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-1 bg-danger notification-badge-mobile" style="font-size: 9px;">
                                 {{ $unreadCountMobile > 99 ? '99+' : $unreadCountMobile }}
                             </span>
                             @endif
@@ -1567,7 +1567,7 @@
                         var label = count > 99 ? '99+' : String(count);
                         if (!badge) {
                             badge = document.createElement('span');
-                            badge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger ' + badgeClass;
+                            badge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-1 bg-danger ' + badgeClass;
                             if (badgeClass === 'notification-badge-mobile') { badge.style.fontSize = '9px'; }
                             btn.appendChild(badge);
                         }

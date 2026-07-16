@@ -58,7 +58,7 @@
                     <div class="col-12 col-md-6">
                         <label for="estate_unit_type_master_pk" class="form-label">Unit type <span class="text-danger">*</span></label>
                         <select class="form-select" id="estate_unit_type_master_pk" name="estate_unit_type_master_pk" required>
-                            <!-- <option value="">---select---</option> -->
+                            <option value="">---select---</option>
                         </select>
                         <div class="form-text">Select Unit type</div>
                     </div>
@@ -68,14 +68,14 @@
                     <div class="col-12 col-md-6">
                         <label for="estate_block_master_pk" class="form-label">Building Name <span class="text-danger">*</span></label>
                         <select class="form-select" id="estate_block_master_pk" name="estate_block_master_pk" required>
-                            <!-- <option value="">---select---</option> -->
+                            <option value="">---select---</option>
                         </select>
                         <div class="form-text">Select Building Name</div>
                     </div>
                     <div class="col-12 col-md-6">
                         <label for="estate_unit_sub_type_master_pk" class="form-label">Unit Sub Type <span class="text-danger">*</span></label>
                         <select class="form-select" id="estate_unit_sub_type_master_pk" name="estate_unit_sub_type_master_pk" required>
-                            <!-- <option value="">---select---</option> -->
+                            <option value="">---select---</option>
                         </select>
                         <div class="form-text">Select Unit Sub Type</div>
                     </div>
@@ -85,7 +85,7 @@
                     <div class="col-12 col-md-6">
                         <label for="estate_house_master_pk" class="form-label">House No.</label>
                         <select class="form-select" id="estate_house_master_pk" name="estate_house_master_pk" required>
-                            <!-- <option value="">---select---</option> -->
+                            <option value="">---select---</option>
                         </select>
                         <input type="hidden" id="house_no" name="house_no" value="{{ old('house_no', isset($record) ? $record->house_no : '') }}">
                         <div class="form-text">House No.</div>
@@ -197,12 +197,17 @@
 @endsection
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-<style>.ts-dropdown { z-index: 1060 !important; }</style>
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
+<style>
+    .select2-container--open { z-index: 1060; } /* sirf khula dropdown modal ke upar; closed widget normal flow me (modal ke peeche) */
+    .select2-container--default .select2-selection--single { min-height: calc(1.5em + 0.75rem + 2px); display: flex; align-items: center; }
+    .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.5; padding-left: 0.25rem; }
+</style>
 @endpush
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+{{-- Select2 JS globally footer (admin.layouts.footer) se load hoti hai; yahan include ki zaroorat nahi. --}}
 <script>
 $(document).ready(function() {
     const blocksUrl = "{{ route('admin.estate.possession.blocks') }}";
@@ -227,27 +232,44 @@ $(document).ready(function() {
     let isInitializing = true;
     var houseDataCache = {}; // pk -> { house_no, meter_one, meter_two }
 
-    // Tom Select: shared config (search + compact dropdown, prefilled value preserved)
-    var estateTsConfig = {
-        allowEmptyOption: true,
-        create: false,
-        dropdownParent: 'body',
-        maxOptions: null,
-        hideSelected: false,
-        placeholder: '---select---',
-        onInitialize: function() { this.activeOption = null; }
-    };
+    // NOTE: ye module pehle TomSelect use karta tha; ab Select2 (baaki app ke saath consistent).
+    // ts* variables sirf truthiness/state tracking ke liye rakhe hain (Select2 instance $(el).data('select2') se milta hai).
+    var estatePlaceholder = '---select---';
     var tsRequester = null, tsCampus = null, tsUnitType = null, tsBlock = null, tsUnitSub = null, tsHouse = null;
 
-    function initEstateTomSelect(el, opts) {
-        if (!el || typeof TomSelect === 'undefined') return null;
-        if (el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
-        var cfg = $.extend(true, {}, estateTsConfig, opts || {});
-        return new TomSelect(el, cfg);
+    // Select2 initialized hai ya nahi.
+    function isSelect2(el) {
+        return !!(el && $(el).data('select2'));
+    }
+    // Safe destroy (agar Select2 laga ho to hi).
+    function destroySelect2(el) {
+        if (isSelect2(el)) { try { $(el).select2('destroy'); } catch (e) {} }
+    }
+    // Ek select ko Select2 me init karo. Ye page-level form hai (modal nahi) -> dropdownParent omit.
+    function initEstateSelect2(el, placeholder) {
+        if (!el || typeof $.fn.select2 === 'undefined') return null;
+        destroySelect2(el);
+        $(el).select2({
+            placeholder: placeholder || estatePlaceholder,
+            allowClear: false,
+            width: '100%'
+        });
+        return $(el);
+    }
+    // Ek dependent select ko sirf empty placeholder option ke saath reset karo, fir Select2
+    // ko silently refresh (change.select2 -> app cascade handlers nahi firte).
+    function resetSelect(el) {
+        if (!el) return;
+        var $sel = $(el);
+        $sel.empty().append($('<option>', { value: '', text: estatePlaceholder }));
+        $sel.val('');
+        $sel.trigger('change.select2');
     }
 
+    // Native <select> value hamesha Select2 ke saath sync rehti hai, to plain val() kaafi hai.
     function getSelectVal(sel) {
-        return (sel && sel.tomselect) ? sel.tomselect.getValue() : $(sel).val();
+        var v = sel ? $(sel).val() : '';
+        return (v === null || v === undefined) ? '' : v;
     }
 
     function getSelectedOptionData(selId, dataAttr) {
@@ -258,21 +280,21 @@ $(document).ready(function() {
         return opt.attr(dataAttr) || '';
     }
 
-    // Static dropdowns: init Tom Select (prefilled value already in DOM)
+    // Static dropdowns: init Select2 (prefilled value already in DOM)
     var elRequester = document.getElementById('estate_other_req_pk');
     var elCampus = document.getElementById('estate_campus_master_pk');
-    if (elRequester) tsRequester = initEstateTomSelect(elRequester, { placeholder: '---select---' });
-    if (elCampus) tsCampus = initEstateTomSelect(elCampus, { placeholder: '---select---' });
+    if (elRequester) tsRequester = initEstateSelect2(elRequester, estatePlaceholder);
+    if (elCampus) tsCampus = initEstateSelect2(elCampus, estatePlaceholder);
 
-    // Dynamic dropdowns: init with placeholder so we can use clearOptions/addOption/setValue
+    // Dynamic dropdowns: init with placeholder; options native <option> se rebuild hote hain
     var elUnitType = document.getElementById('estate_unit_type_master_pk');
     var elBlock = document.getElementById('estate_block_master_pk');
     var elUnitSub = document.getElementById('estate_unit_sub_type_master_pk');
     var elHouse = document.getElementById('estate_house_master_pk');
-    if (elUnitType) tsUnitType = initEstateTomSelect(elUnitType, { placeholder: '---select---' });
-    if (elBlock) tsBlock = initEstateTomSelect(elBlock, { placeholder: '---select---' });
-    if (elUnitSub) tsUnitSub = initEstateTomSelect(elUnitSub, { placeholder: '---select---' });
-    if (elHouse) tsHouse = initEstateTomSelect(elHouse, { placeholder: '---select---' });
+    if (elUnitType) tsUnitType = initEstateSelect2(elUnitType, estatePlaceholder);
+    if (elBlock) tsBlock = initEstateSelect2(elBlock, estatePlaceholder);
+    if (elUnitSub) tsUnitSub = initEstateSelect2(elUnitSub, estatePlaceholder);
+    if (elHouse) tsHouse = initEstateSelect2(elHouse, estatePlaceholder);
 
     // Requester change -> fill request_id and section (use data from option by value)
     function syncRequesterDisplay() {
@@ -308,11 +330,12 @@ $(document).ready(function() {
     sanitizeOtherMeterInputs();
 
     function clearDynamicTs(clearUnitType, clearBlock, clearUnitSub, clearHouse) {
-        var emptyOpt = { value: '', text: '---select---' };
-        if (clearUnitType && tsUnitType) { tsUnitType.clearOptions(); tsUnitType.addOption(emptyOpt); tsUnitType.setValue(''); }
-        if (clearBlock && tsBlock) { tsBlock.clearOptions(); tsBlock.addOption(emptyOpt); tsBlock.setValue(''); }
-        if (clearUnitSub && tsUnitSub) { tsUnitSub.clearOptions(); tsUnitSub.addOption(emptyOpt); tsUnitSub.setValue(''); }
-        if (clearHouse && tsHouse) { tsHouse.clearOptions(); tsHouse.addOption(emptyOpt); tsHouse.setValue(''); }
+        // Select2 me options native <option> se rebuild hote hain; reset silently (change.select2)
+        // -> cascade change handlers dobara fire nahi hote (jaise TomSelect ka silent setValue).
+        if (clearUnitType && elUnitType) resetSelect(elUnitType);
+        if (clearBlock && elBlock) resetSelect(elBlock);
+        if (clearUnitSub && elUnitSub) resetSelect(elUnitSub);
+        if (clearHouse && elHouse) resetSelect(elHouse);
     }
 
     // Campus change -> fill unit types from pre-loaded data, then blocks
@@ -329,14 +352,16 @@ $(document).ready(function() {
         }
 
         var list = unitTypesByCampus[campusId] || [];
-        if (tsUnitType) {
-            tsUnitType.clearOptions();
-            tsUnitType.addOption({ value: '', text: '---select---' });
+        if (elUnitType) {
+            var $ut = $('#estate_unit_type_master_pk');
+            $ut.empty().append($('<option>', { value: '', text: estatePlaceholder }));
             $.each(list, function(i, ut) {
-                tsUnitType.addOption({ value: String(ut.pk), text: ut.unit_type });
+                $ut.append($('<option>', { value: String(ut.pk), text: ut.unit_type || '' }));
             });
             var toSet = initialSelections.unitType ? String(initialSelections.unitType) : (list.length === 1 ? String(list[0].pk) : '');
-            if (toSet) tsUnitType.setValue(toSet, true);
+            $ut.val(toSet || '');
+            // Silent refresh: prefill/auto-select karte waqt cascade change handler nahi chalna chahiye.
+            $ut.trigger('change.select2');
         }
         if (list.length) loadBlocks();
     });
@@ -360,14 +385,15 @@ $(document).ready(function() {
             campus_id: campusId,
             unit_type_id: unitTypeId || ''
         }, function(res) {
-            if (res.status && res.data && tsBlock) {
-                tsBlock.clearOptions();
-                tsBlock.addOption({ value: '', text: '---select---' });
+            if (res.status && res.data && elBlock) {
+                var $blk = $('#estate_block_master_pk');
+                $blk.empty().append($('<option>', { value: '', text: estatePlaceholder }));
                 $.each(res.data, function(i, b) {
-                    tsBlock.addOption({ value: String(b.pk), text: b.block_name });
+                    $blk.append($('<option>', { value: String(b.pk), text: b.block_name || '' }));
                 });
                 var toSet = initialSelections.block ? String(initialSelections.block) : '';
-                if (toSet) tsBlock.setValue(toSet, true);
+                $blk.val(toSet || '');
+                $blk.trigger('change.select2');
                 loadUnitSubTypes();
             }
         });
@@ -393,14 +419,15 @@ $(document).ready(function() {
             block_id: blockId,
             unit_type_id: unitTypeId
         }, function(res) {
-            if (res.status && res.data && tsUnitSub) {
-                tsUnitSub.clearOptions();
-                tsUnitSub.addOption({ value: '', text: '---select---' });
+            if (res.status && res.data && elUnitSub) {
+                var $ust = $('#estate_unit_sub_type_master_pk');
+                $ust.empty().append($('<option>', { value: '', text: estatePlaceholder }));
                 $.each(res.data, function(i, u) {
-                    tsUnitSub.addOption({ value: String(u.pk), text: u.unit_sub_type });
+                    $ust.append($('<option>', { value: String(u.pk), text: u.unit_sub_type || '' }));
                 });
                 var toSet = initialSelections.unitSub ? String(initialSelections.unitSub) : '';
-                if (toSet) tsUnitSub.setValue(toSet, true);
+                $ust.val(toSet || '');
+                $ust.trigger('change.select2');
                 loadHouses();
             }
         });
@@ -408,11 +435,7 @@ $(document).ready(function() {
 
     // Unit sub type change -> load houses
     $(document).on('change', '#estate_unit_sub_type_master_pk', function() {
-        if (tsHouse) {
-            tsHouse.clearOptions();
-            tsHouse.addOption({ value: '', text: '---select---' });
-            tsHouse.setValue('');
-        }
+        if (elHouse) resetSelect(elHouse);
         if (!isInitializing) initialSelections.house = null;
         loadHouses();
     });
@@ -430,10 +453,10 @@ $(document).ready(function() {
             unit_type_id: unitTypeId,
             include_house_pk: includeHousePk || ''
         }, function(res) {
-            if (res.status && res.data && tsHouse) {
+            if (res.status && res.data && elHouse) {
                 houseDataCache = {};
-                tsHouse.clearOptions();
-                tsHouse.addOption({ value: '', text: '---select---' });
+                var $h = $('#estate_house_master_pk');
+                $h.empty().append($('<option>', { value: '', text: estatePlaceholder }));
                 $.each(res.data, function(i, h) {
                     var pk = String(h.pk);
                     var houseNo = (h.house_no != null && h.house_no !== '') ? String(h.house_no) : '';
@@ -442,14 +465,19 @@ $(document).ready(function() {
                         meter_one: (h.meter_one != null && h.meter_one !== '') ? String(h.meter_one) : '',
                         meter_two: (h.meter_two != null && h.meter_two !== '') ? String(h.meter_two) : ''
                     };
-                    tsHouse.addOption({ value: pk, text: houseNo });
+                    $h.append($('<option>', { value: pk, text: houseNo }));
                 });
                 var toSet = initialSelections.house ? String(initialSelections.house) : '';
-                if (toSet) tsHouse.setValue(toSet, true);
+                $h.val(toSet || '');
+                // Silent: setValue(toSet, true) equivalent -> house change handler abhi nahi.
+                $h.trigger('change.select2');
                 updateHouseNoDisplay();
                 if (toSet) {
                     setTimeout(function() {
-                        if (tsHouse && tsHouse.getValue() !== toSet) tsHouse.setValue(toSet, false);
+                        // Non-silent: setValue(toSet, false) equivalent -> house change handler fire ho (display update).
+                        if (getSelectVal(elHouse) !== toSet) {
+                            $h.val(toSet).trigger('change');
+                        }
                         updateHouseNoDisplay();
                     }, 50);
                 }

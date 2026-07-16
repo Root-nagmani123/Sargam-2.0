@@ -33,7 +33,8 @@ class UpdateUserRequest extends FormRequest
                 'max:255', 
                 Rule::unique('users')->ignore($this->user->id)
             ],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            // Strong password policy (CWE-521): upper + lower + number + special char.
+            'password' => ['nullable', 'string', 'min:8', 'confirmed', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/'],
             'roles' => ['nullable', 'array'],
             'roles.*' => ['exists:roles,id'],
         ];
@@ -52,6 +53,7 @@ class UpdateUserRequest extends FormRequest
             'email.email' => 'Please enter a valid email address.',
             'email.unique' => 'This email is already registered.',
             'password.min' => 'The password must be at least 8 characters.',
+            'password.regex' => 'Password must include uppercase, lowercase, a number and a special character.',
             'password.confirmed' => 'The password confirmation does not match.',
             'roles.*.exists' => 'One or more selected roles do not exist.',
         ];

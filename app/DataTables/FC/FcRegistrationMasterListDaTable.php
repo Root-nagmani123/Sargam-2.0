@@ -133,7 +133,11 @@ class FcRegistrationMasterListDaTable extends DataTable
             </div>';
             })
 
-            ->rawColumns(['service_master_pk', 'schema_id', 'contact_no', 'dob', 'display_name', 'first_name', 'middle_name', 'last_name', 'email', 'rank', 'web_auth', 'exam_year', 'status', 'action', 'email_count']);
+            // Only 'status' and 'action' return intentional HTML and must stay raw.
+            // All name/email/text columns are auto-escaped by DataTables to prevent
+            // stored XSS from imported roster values (CWE-79); they render identically
+            // for normal data.
+            ->rawColumns(['status', 'action']);
     }
 
     /**

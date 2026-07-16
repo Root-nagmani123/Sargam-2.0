@@ -202,11 +202,11 @@ class RegistrationStep3Controller extends Controller
         $course = $this->registrationSessionName($userId);
 
         $validated = $request->validate([
-            'allergy_illness' => 'nullable|string|max:60000',
-            'prolonged_medication' => 'nullable|string|max:60000',
-            'hospital_history' => 'nullable|string|max:60000',
-            'altitude_illness' => 'nullable|string|max:60000',
-            'additional_info' => 'nullable|string|max:60000',
+            'allergy_illness' => 'nullable|string|max:60000|no_html',
+            'prolonged_medication' => 'nullable|string|max:60000|no_html',
+            'hospital_history' => 'nullable|string|max:60000|no_html',
+            'altitude_illness' => 'nullable|string|max:60000|no_html',
+            'additional_info' => 'nullable|string|max:60000|no_html',
             'pre_med_doc' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
@@ -219,7 +219,8 @@ class RegistrationStep3Controller extends Controller
             $file = $request->file('pre_med_doc');
             $stored = $file->storeAs(
                 'fc/pre_history',
-                $userId.'_'.uniqid('', true).'.'.$file->getClientOriginalExtension(),
+                // Extension derived from validated content, not the client name (CWE-434).
+                $userId.'_'.uniqid('', true).'.'.$file->extension(),
                 'public'
             );
             $docPath = 'storage/'.$stored;
@@ -252,13 +253,13 @@ class RegistrationStep3Controller extends Controller
         $validated = $request->validate([
             'qualifications'                    => 'required|array|min:1',
             'qualifications.*.qualification_id' => 'required|exists:qualification_master,pk',
-            'qualifications.*.degree_name'      => 'required|string|max:200',
+            'qualifications.*.degree_name'      => 'required|string|max:200|no_html',
             'qualifications.*.board_id'         => 'nullable|exists:university_board_name_master,pk',
-            'qualifications.*.institution_name' => 'required|string|max:300',
+            'qualifications.*.institution_name' => 'required|string|max:300|no_html',
             'qualifications.*.year_of_passing'  => 'required|digits:4',
-            'qualifications.*.percentage_cgpa'  => 'required|string|max:20',
+            'qualifications.*.percentage_cgpa'  => 'required|string|max:20|no_html',
             'qualifications.*.stream_id'        => 'nullable|exists:stream_master,pk',
-            'qualifications.*.subject_details'  => 'nullable|string|max:500',
+            'qualifications.*.subject_details'  => 'nullable|string|max:500|no_html',
         ]);
         DB::transaction(function () use ($userId, $validated) {
             StudentMasterQualificationDetails::forUser($userId)->delete();
@@ -275,10 +276,10 @@ class RegistrationStep3Controller extends Controller
         $validated = $request->validate([
             'higher_edus'                   => 'nullable|array',
             'higher_edus.*.degree_type'     => 'required|exists:degree_master,pk',
-            'higher_edus.*.subject_name'    => 'nullable|string|max:200',
-            'higher_edus.*.university_name' => 'required|string|max:300',
+            'higher_edus.*.subject_name'    => 'nullable|string|max:200|no_html',
+            'higher_edus.*.university_name' => 'required|string|max:300|no_html',
             'higher_edus.*.year_of_passing' => 'required|digits:4',
-            'higher_edus.*.percentage_cgpa' => 'nullable|string|max:20',
+            'higher_edus.*.percentage_cgpa' => 'nullable|string|max:20|no_html',
         ]);
         DB::transaction(function () use ($userId, $validated) {
             StudentMasterHigherEducationalDetails::forUser($userId)->delete();
@@ -294,8 +295,8 @@ class RegistrationStep3Controller extends Controller
         $userId = Auth::id();
         $validated = $request->validate([
             'employments'                     => 'nullable|array',
-            'employments.*.organisation_name' => 'required|string|max:300',
-            'employments.*.designation'       => 'required|string|max:200',
+            'employments.*.organisation_name' => 'required|string|max:300|no_html',
+            'employments.*.designation'       => 'required|string|max:200|no_html',
             'employments.*.job_type_id'       => 'nullable|exists:job_type_masters,id',
             'employments.*.from_date'         => 'required|date',
             'employments.*.to_date'           => 'nullable|date|after:employments.*.from_date',
@@ -315,12 +316,12 @@ class RegistrationStep3Controller extends Controller
     {
         $userId = Auth::id();
         $validated = $request->validate([
-            'spouse_name'         => 'nullable|string|max:200',
+            'spouse_name'         => 'nullable|string|max:200|no_html',
             'spouse_dob'          => 'nullable|date|before:today',
-            'spouse_occupation'   => 'nullable|string|max:200',
-            'spouse_organisation' => 'nullable|string|max:300',
-            'no_of_children'      => 'nullable|string|max:10',
-            'children_details'    => 'nullable|string|max:500',
+            'spouse_occupation'   => 'nullable|string|max:200|no_html',
+            'spouse_organisation' => 'nullable|string|max:300|no_html',
+            'no_of_children'      => 'nullable|string|max:10|no_html',
+            'children_details'    => 'nullable|string|max:500|no_html',
         ]);
         $validated[fc_user_col('student_master_spouse_masters')] = fc_user_val('student_master_spouse_masters', $userId);
         StudentMasterSpouseMaster::updateOrCreate([fc_user_col('student_master_spouse_masters') => fc_user_val('student_master_spouse_masters', $userId)], $validated);
@@ -337,10 +338,10 @@ class RegistrationStep3Controller extends Controller
             'languages.*.can_write'        => 'nullable|boolean',
             'languages.*.can_speak'        => 'nullable|boolean',
             'languages.*.proficiency'      => 'nullable|in:Basic,Intermediate,Fluent',
-            'medium_of_study'              => 'nullable|string|max:100',
+            'medium_of_study'              => 'nullable|string|max:100|no_html',
             'hindi_medium_school'          => 'nullable|boolean',
             'hindi_subject_studied'        => 'nullable|boolean',
-            'highest_hindi_exam'           => 'nullable|string|max:150',
+            'highest_hindi_exam'           => 'nullable|string|max:150|no_html',
         ]);
         DB::transaction(function () use ($userId, $validated) {
             StudentMasterLanguageKnown::forUser($userId)->delete();
@@ -364,12 +365,12 @@ class RegistrationStep3Controller extends Controller
     {
         $userId = Auth::id();
         $validated = $request->validate([
-            'hobbies'           => 'nullable|string',
-            'special_skills'    => 'nullable|string',
-            'extra_curricular'  => 'nullable|string',
+            'hobbies'           => 'nullable|string|no_html',
+            'special_skills'    => 'nullable|string|no_html',
+            'extra_curricular'  => 'nullable|string|no_html',
             'skills'            => 'nullable|array',
-            'skills.*.skill_name'   => 'required|string|max:200',
-            'skills.*.skill_level'  => 'nullable|string|max:100',
+            'skills.*.skill_name'   => 'required|string|max:200|no_html',
+            'skills.*.skill_level'  => 'nullable|string|max:100|no_html',
             'skills.*.year_acquired'=> 'nullable|digits:4',
         ]);
         DB::transaction(function () use ($userId, $validated) {
@@ -392,10 +393,10 @@ class RegistrationStep3Controller extends Controller
         $userId = Auth::id();
         $validated = $request->validate([
             'distinctions'                     => 'nullable|array',
-            'distinctions.*.distinction_type'  => 'required|string|max:200',
-            'distinctions.*.description'       => 'nullable|string|max:500',
+            'distinctions.*.distinction_type'  => 'required|string|max:200|no_html',
+            'distinctions.*.description'       => 'nullable|string|max:500|no_html',
             'distinctions.*.year'              => 'nullable|digits:4',
-            'distinctions.*.awarding_body'     => 'nullable|string|max:200',
+            'distinctions.*.awarding_body'     => 'nullable|string|max:200|no_html',
         ]);
         DB::transaction(function () use ($userId, $validated) {
             StudentMasterAcademicDistinction::forUser($userId)->delete();
@@ -412,13 +413,13 @@ class RegistrationStep3Controller extends Controller
         $validated = $request->validate([
             'sports_played'              => 'nullable|array',
             'sports_played.*.sport_id'   => 'required|exists:sports_masters,id',
-            'sports_played.*.level'      => 'nullable|string|max:100',
-            'sports_played.*.role'       => 'nullable|string|max:100',
+            'sports_played.*.level'      => 'nullable|string|max:100|no_html',
+            'sports_played.*.role'       => 'nullable|string|max:100|no_html',
             'sports_played.*.year'       => 'nullable|digits:4',
             'sports_training'                     => 'nullable|array',
             'sports_training.*.sport_id'          => 'required|exists:sports_masters,id',
-            'sports_training.*.training_institute'=> 'nullable|string|max:300',
-            'sports_training.*.duration'          => 'nullable|string|max:100',
+            'sports_training.*.training_institute'=> 'nullable|string|max:300|no_html',
+            'sports_training.*.duration'          => 'nullable|string|max:100|no_html',
             'sports_training.*.year'              => 'nullable|digits:4',
         ]);
         DB::transaction(function () use ($userId, $validated) {
@@ -438,8 +439,8 @@ class RegistrationStep3Controller extends Controller
     {
         $userId = Auth::id();
         $validated = $request->validate([
-            'chosen_module' => 'required|string|max:100',
-            'second_module' => 'nullable|string|max:100',
+            'chosen_module' => 'required|string|max:100|no_html',
+            'second_module' => 'nullable|string|max:100|no_html',
         ]);
         $validated[fc_user_col('student_master_module_masters')] = fc_user_val('student_master_module_masters', $userId);
         StudentMasterModuleMaster::updateOrCreate([fc_user_col('student_master_module_masters') => fc_user_val('student_master_module_masters', $userId)], $validated);

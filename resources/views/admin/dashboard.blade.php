@@ -150,7 +150,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     <i class="bi bi-balloon-heart-fill" aria-hidden="true"></i>
                 </span>
                 <h5 class="mb-0 fw-semibold">Birthday Wishes Received</h5>
-                <span class="badge rounded-pill text-bg-primary">{{ $myBirthdayWishCount }}</span>
+                <span class="badge rounded-1 text-bg-primary">{{ $myBirthdayWishCount }}</span>
                 <button type="button"
                     class="btn btn-sm btn-outline-primary rounded-pill ms-auto d-none d-md-inline-flex align-items-center gap-1"
                     data-bs-toggle="collapse" data-bs-target="#dashboard-birthday-wishes-collapse" aria-expanded="false"
@@ -532,7 +532,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                             {{ $employee->designation_name }}</p>
                                         @if($wishCount > 0)
                                         <span
-                                            class="badge rounded-pill bg-success-subtle text-success border border-success-subtle dashboard-birthday-badge mt-1"
+                                            class="badge rounded-1 bg-success-subtle text-success border border-success-subtle dashboard-birthday-badge mt-1"
                                             title="{{ $wishCount }} wishes sent">🎁 {{ $wishCount }}</span>
                                         @endif
                                     </div>

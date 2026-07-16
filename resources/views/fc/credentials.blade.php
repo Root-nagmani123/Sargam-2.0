@@ -4,6 +4,14 @@
 
 @section('content')
 
+<style>
+    .cred-rules { list-style: none; padding-left: 0; }
+    .cred-rules li { color: #6c757d; line-height: 1.6; }
+    .cred-rules li.ok { color: #198754; }
+    .cred-rules li.bad { color: #dc3545; }
+    .cred-rules .rule-icon { display: inline-block; width: 1.1em; font-weight: 700; }
+</style>
+
 <!-- Main Content Box -->
 <main style="flex:1;">
     <div class="container mt-5 mb-5">
@@ -34,10 +42,6 @@
                 @csrf
                 <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">Create Your Login Credentials
                 </h3>
-                <p class="text-muted small text-center mb-3">
-                    Your username and password are saved to your registration record first.
-                    Login is enabled after the administrator runs data migration.
-                </p>
                 <hr>
 
                 <!-- Username -->
@@ -49,6 +53,14 @@
                         pattern="[a-z][a-z0-9._]{5,19}"
                         title="Lowercase letters, numbers, dots and underscores only (6–20 characters).">
                     <div class="form-text text-muted">Use lowercase only — capital letters are converted automatically.</div>
+                    <ul class="small mt-2 mb-0 cred-rules" id="username-rules">
+                        <li data-rule="len"><span class="rule-icon">•</span> 6–20 characters long</li>
+                        <li data-rule="chars"><span class="rule-icon">•</span> Only lowercase letters, numbers, dot (.) and underscore (_)</li>
+                        <li data-rule="start"><span class="rule-icon">•</span> Must start with a letter</li>
+                        <li data-rule="end"><span class="rule-icon">•</span> Must end with a letter or number</li>
+                        <li data-rule="consec"><span class="rule-icon">•</span> No consecutive dots/underscores (no “..” or “__”)</li>
+                    </ul>
+                    <div class="small text-muted mt-2">Example: <code>rahul.kumar</code> &nbsp;or&nbsp; <code>arjun_singh1</code></div>
                 </div>
 
                 <!-- Mobile Number (hidden — taken from the registration link; required by the backend lookup) -->
@@ -60,7 +72,7 @@
                     <label class="form-label">Password</label>
                     <div class="input-group">
                         <input type="password" class="form-control" placeholder="Enter Password" name="reg_password"
-                            id="password" required>
+                            id="password" required autocomplete="new-password">
                         <button type="button" class="btn btn-primary" onclick="togglePassword('password', this)"
                             style="background-color: #004a93;border-color: #004a93;">
                             <i class="material-icons menu-icon me-3 fs-3">visibility</i>
@@ -73,12 +85,18 @@
                     <label class="form-label">Confirm Password</label>
                     <div class="input-group">
                         <input type="password" class="form-control" placeholder="Enter Confirm Password"
-                            name="reg_confirm_password" id="confirm_password" required>
+                            name="reg_confirm_password" id="confirm_password" required autocomplete="new-password">
                         <button type="button" class="btn btn-primary" onclick="togglePassword('confirm_password', this)"
                             style="background-color: #004a93;border-color: #004a93;">
                             <i class="material-icons menu-icon me-3 fs-3">visibility</i>
                         </button>
                     </div>
+                    <ul class="small mt-2 mb-0 cred-rules" id="password-rules">
+                        <li data-rule="len"><span class="rule-icon">•</span> At least 6 characters long</li>
+                        <li data-rule="special"><span class="rule-icon">•</span> At least one special character (e.g. ! @ # $ _)</li>
+                        <li data-rule="match"><span class="rule-icon">•</span> Password and Confirm Password match</li>
+                    </ul>
+                    <div class="small text-muted mt-2">Example: <code>Sargam@2026</code> &nbsp;(pick your own — do not reuse this example)</div>
                 </div>
 
                 <!-- Submit -->
@@ -110,6 +128,61 @@
     usernameInput.addEventListener('paste', function () {
         setTimeout(toLowerUsername, 0);
     });
+})();
+
+// Live rule checklist for Username & Password (mirrors the server-side validation).
+(function () {
+    function mark(listId, results, touched) {
+        var list = document.getElementById(listId);
+        if (!list) { return; }
+        Object.keys(results).forEach(function (key) {
+            var li = list.querySelector('[data-rule="' + key + '"]');
+            if (!li) { return; }
+            var icon = li.querySelector('.rule-icon');
+            li.classList.remove('ok', 'bad');
+            if (!touched) { icon.textContent = '•'; return; }
+            if (results[key]) { li.classList.add('ok'); icon.textContent = '✓'; }
+            else { li.classList.add('bad'); icon.textContent = '✗'; }
+        });
+    }
+
+    // Re-run on every kind of edit (typing, delete/backspace, paste, autofill, blur)
+    // so the checklist never gets out of sync with the field values.
+    function bind(el, fn) {
+        if (!el) { return; }
+        ['input', 'keyup', 'change', 'paste', 'blur'].forEach(function (ev) {
+            el.addEventListener(ev, function () { setTimeout(fn, 0); });
+        });
+    }
+
+    var uname = document.getElementById('reg_name');
+    function checkUsername() {
+        var v = (uname.value || '');
+        mark('username-rules', {
+            len: v.length >= 6 && v.length <= 20,
+            chars: /^[a-z0-9._]*$/.test(v),
+            start: /^[a-z]/.test(v),
+            end: /[a-z0-9]$/.test(v),
+            consec: !/[_.]{2}/.test(v)
+        }, v.length > 0);
+    }
+    bind(uname, checkUsername);
+    if (uname) { checkUsername(); }
+
+    var pwd = document.getElementById('password');
+    var cpwd = document.getElementById('confirm_password');
+    function checkPassword() {
+        var p = (pwd.value || ''), c = (cpwd.value || '');
+        mark('password-rules', {
+            len: p.length >= 6,
+            special: /[^A-Za-z0-9]/.test(p),
+            match: p.length > 0 && p === c
+        }, p.length > 0 || c.length > 0);
+    }
+    // Editing EITHER password field re-checks all three rules (incl. match).
+    bind(pwd, checkPassword);
+    bind(cpwd, checkPassword);
+    if (pwd && cpwd) { checkPassword(); }
 })();
 
 function togglePassword(id, btn) {

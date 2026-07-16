@@ -295,6 +295,56 @@ class AttendanceController extends Controller
 
             return DataTables::of($query)
                 ->addIndexColumn()
+                // Global search box: every visible column is a computed / relation
+                // value (topic, date, session, venue, group, course, faculty), so
+                // Yajra's default per-column search can't reach them. Resolve the term
+                // against each column's real underlying source so the search box
+                // filters on ALL columns of the table.
+                ->filter(function ($query) use ($request) {
+                    $search = trim((string) $request->input('search.value', ''));
+                    if ($search === '') {
+                        return;
+                    }
+
+                    $like = '%' . $search . '%';
+
+                    // Faculty is stored as faculty PK(s) on the timetable (a single id
+                    // or a JSON array like ["4","86"]) but shown as names — resolve the
+                    // matching PKs first, then match them inside the id columns with a
+                    // digit-boundary regex so "6" can't false-match inside "86".
+                    $facultyPks = array_map('intval', FacultyMaster::where('full_name', 'like', $like)->pluck('pk')->all());
+
+                    $query->where(function ($q) use ($like, $facultyPks) {
+                        // Course Name
+                        $q->where('course_master.course_name', 'like', $like)
+                          ->orWhere('course_master.couse_short_name', 'like', $like)
+                          // Group
+                          ->orWhereHas('group', function ($gq) use ($like) {
+                              $gq->where('group_name', 'like', $like);
+                          })
+                          // Venue (nested under the timetable)
+                          ->orWhereHas('timetable.venue', function ($vq) use ($like) {
+                              $vq->where('venue_name', 'like', $like);
+                          })
+                          // Topic, Session, Date + Faculty — all on the timetable row
+                          ->orWhereHas('timetable', function ($tq) use ($like, $facultyPks) {
+                              $tq->where('subject_topic', 'like', $like)
+                                 ->orWhere('class_session', 'like', $like)
+                                 ->orWhereRaw("DATE_FORMAT(START_DATE, '%d/%m/%Y') LIKE ?", [$like])
+                                 ->orWhereRaw("DATE_FORMAT(END_DATE, '%d/%m/%Y') LIKE ?", [$like])
+                                 ->orWhere('START_DATE', 'like', $like)
+                                 ->orWhere('END_DATE', 'like', $like);
+
+                              if (!empty($facultyPks)) {
+                                  $pattern = '(^|[^0-9])(' . implode('|', $facultyPks) . ')([^0-9]|$)';
+                                  $tq->orWhere(function ($fq) use ($pattern) {
+                                      $fq->where('faculty_master', 'REGEXP', $pattern)
+                                         ->orWhere('internal_faculty', 'REGEXP', $pattern);
+                                  });
+                              }
+                          });
+                    });
+                }, true)
                 ->addColumn('programme_name', function ($row) {
                     return $this->formatAttendanceCourseCell(
                         $row->attendance_course_short_name ?? null,

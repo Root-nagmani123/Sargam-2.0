@@ -121,7 +121,7 @@ $documentCount = $documents->count();
                             <tbody>
                                 @foreach ($documents as $index => $doc)
                                 @php
-                                    $fileUrl = $doc->public_file_url;
+                                    $fileUrl = $doc->resolved_file_url;
                                     $videoLink = trim((string) ($doc->detail->videolink ?? ''));
                                     $hasVideo = $videoLink !== '';
                                     $videoDetailPk = $doc->detail->pk ?? null;
@@ -145,8 +145,8 @@ $documentCount = $documents->count();
                                     </td>
                                     <td>
                                         <small>
-                                            @if($doc->detail && $doc->detail->subject)
-                                            {{ Str::limit($doc->detail->subject->subject_name, 20) }}
+                                            @if($doc->fallback_subject)
+                                            {{ Str::limit($doc->fallback_subject, 20) }}
                                             @else
                                             N/A
                                             @endif
@@ -154,8 +154,8 @@ $documentCount = $documents->count();
                                     </td>
                                     <td>
                                         <small>
-                                            @if($doc->detail && $doc->detail->topic)
-                                            {{ Str::limit($doc->detail->topic->subject_topic, 15) }}
+                                            @if($doc->fallback_topic)
+                                            {{ Str::limit($doc->fallback_topic, 15) }}
                                             @else
                                             N/A
                                             @endif
@@ -172,10 +172,8 @@ $documentCount = $documents->count();
                                     </td>
                                     <td>
                                         <small>
-                                            @if($doc->detail && $doc->detail->author)
-                                            {{ Str::limit($doc->detail->author->full_name, 15) }}
-                                            @elseif($doc->detail && $doc->detail->author_name && !is_numeric($doc->detail->author_name))
-                                            {{ Str::limit($doc->detail->author_name, 15) }}
+                                            @if($doc->fallback_author)
+                                            {{ Str::limit($doc->fallback_author, 15) }}
                                             @else
                                             N/A
                                             @endif
