@@ -27,6 +27,8 @@ $documentCount = $documents->count();
     <div class="container-fluid px-3 px-md-4 py-4" id="cru-user-main">
         <x-breadcrum :title="$repository->course_repository_name" :items="$crumbItems" />
 
+        @include('admin.course-repository.user.partials.flash-alert')
+
         <div id="cruFilterResults">
             @if($childCount === 0 && $documentCount === 0)
             <div class="card border-0 shadow-sm rounded-4 text-center py-5 px-3">

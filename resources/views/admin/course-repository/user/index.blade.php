@@ -23,24 +23,6 @@
             @include('admin.course-repository.user.partials.page-toolbar', ['showViewToggle' => true])
         </div>
 
-        {{-- Shared filter toolbar (with inline column show/hide) — stays visible across both card and grid views --}}
-        @if(isset($courses) && isset($subjects) && isset($faculties))
-        @include('admin.course-repository.user.partials.filter-card', [
-        'route' => route('admin.course-repository.user.index'),
-        'courses' => $courses,
-        'subjects' => $subjects,
-        'faculties' => $faculties,
-        'sectors' => $sectors ?? collect(),
-        'ministries' => $ministries ?? collect(),
-        'filters' => $filters ?? [],
-        'columnToggle' => [
-        'tableId' => $cruGridListTableId,
-        'storageKey' => $cruGridColumnStorageKey,
-        'columns' => $cruGridColumns,
-        ],
-        ])
-        @endif
-
         <div class="course-cards-grid mb-4 mb-md-5" id="courseCardsGrid">
             <div class="cru-view-cards card card-body">
                 <div class="row g-3 g-md-4">

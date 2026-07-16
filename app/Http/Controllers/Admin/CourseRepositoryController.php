@@ -1395,9 +1395,18 @@ class CourseRepositoryController extends Controller
             }
 
             $pdfRelativePath = $this->resolveDocumentRelativePath($pdfDocument);
+            // asset(), not Storage::disk('public')->url(): the disk's url is built from
+            // APP_URL, so it always pointed at http://localhost/storage/... no matter
+            // which host/port/subfolder the app was actually served from — the iframe
+            // then loaded nothing. asset() follows the current request's base, and is
+            // what CourseRepositoryDocument::public_file_url already uses.
+            // When the path resolves to nothing the file is not on the public disk at
+            // all, so public_file_url would only give the iframe a URL that 404s —
+            // i.e. a blank viewer with no explanation. Pass null instead and let the
+            // view show its "PDF document not available" state.
             $pdfViewUrl = $pdfRelativePath
-                ? Storage::disk('public')->url($pdfRelativePath)
-                : $pdfDocument->public_file_url;
+                ? asset('storage/' . $pdfRelativePath)
+                : null;
 
             return view('admin.course-repository.user.document-view', [
                 'document' => $document,

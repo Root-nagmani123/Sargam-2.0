@@ -1910,6 +1910,12 @@ window.crDocEdit = (function() {
             try {
                 form.reset();
             } catch (e) {}
+            // Same reason as the show.bs.modal handler: form.reset() empties the Course
+            // Name Choices list. Rebuild it before prefilling, so editing an Other /
+            // Institutional document (neither re-syncs it) still leaves a populated
+            // dropdown behind the Course radio. prefillCourse() re-applies it with the
+            // saved course selected.
+            applyCourseStatusChoices(getCheckedCourseStatus());
             form.dataset.currentFileTitle = data.file_title || '';
         }
         var pkEl = $id('upload_edit_pk');
@@ -3668,6 +3674,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     try {
                         f.reset();
                     } catch (e) {}
+                    // Choices listens for the form's reset event and restores the store it
+                    // captured before we filled it, so f.reset() leaves Course Name with
+                    // nothing but the placeholder — the list only came back once an
+                    // Active/Archived click rebuilt it. Rebuild it here instead, for the
+                    // status the radios were just reset to (Active).
+                    applyCourseStatusChoices(getCheckedCourseStatus());
                 }
             }
         });
