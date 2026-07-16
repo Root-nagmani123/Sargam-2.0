@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CourseMaster;
 use Illuminate\Http\Request;
 use App\Models\{CalendarEvent, GroupTypeMasterCourseMasterMap, CourseGroupTimetableMapping, StudentCourseGroupMap, ClassSessionMaster, VenueMaster, FacultyMaster, CourseStudentAttendance, Timetable, StudentMaster, MDOEscotDutyMap, StudentMedicalExemption, StudentMasterCourseMap, CourseCordinatorMaster};
+use App\Services\Attendance\OtExemptionResolver;
 use Yajra\DataTables\DataTables;
 use Carbon\Carbon;
 use App\DataTables\StudentAttendanceListDataTable;
@@ -894,11 +895,24 @@ $currentPath = $segments[1] ?? null;
             $group_pk = $request->group_pk; // if you have session reference
             $course_pk = $request->course_pk;
 
+            // An OT on MDO / Escort-Moderator / Other duty, or carrying a medical
+            // exemption for this session, is always Present and cannot be changed.
+            // Enforced here, not just on the page: the mark-attendance screen only
+            // reverts the radio, which a crafted POST would walk straight past.
+            $exemptions = new OtExemptionResolver((int) $course_pk, (int) $request->timetable_pk);
+
             if ($request->student) {
                 foreach ($request->student as $studentPk => $attendanceStatus) {
                     // Validate the attendance status
                     if (!in_array($attendanceStatus, [0, 1, 2, 3, 4, 5, 6, 7])) {
                         return redirect()->back()->with('error', 'Invalid attendance status for student ID: ' . $studentPk);
+                    }
+
+                    if ($exemptions->isExempt((int) $studentPk)) {
+                        // '1' as a STRING, not 1. status is ENUM('0','1',...) and MySQL
+                        // reads an integer as a 1-based index into the member list, so
+                        // int 1 silently stores '0' — Not Marked.
+                        $attendanceStatus = '1'; // Present
                     }
 
                     // Create or update the attendance record

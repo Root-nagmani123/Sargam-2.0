@@ -65,6 +65,13 @@
 .att-mark-page .att-duty    { color: #004a93; background: #eff8ff; }
 .att-mark-page .att-exempt  { color: #475467; background: #f2f4f7; }
 
+/* Why this row's status is stuck on Present (OT is on duty / exempt). */
+.att-mark-page .att-lock-note {
+    display: flex; align-items: center; gap: 0.3rem; margin-top: 0.25rem;
+    color: #004a93; font-size: 0.75rem; font-weight: 500;
+}
+.att-mark-page .att-lock-note i { font-size: 0.6875rem; }
+
 /* Update-attendance action = stacked icon + label (blue link) */
 .att-mark-page .att-action-icon {
     display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
@@ -384,6 +391,36 @@ $(function () {
         printWindow.document.open();
         printWindow.document.write(printContent);
         printWindow.document.close();
+    });
+
+    /* ── Locked OTs (on duty / exempt for this session) ──────────────────────
+       An OT with MDO, Escort/Moderator or Other duty, or a medical exemption
+       overlapping this session, is always Present and the status cannot be
+       changed. The radios are left enabled on purpose — a disabled input fires
+       no event, so the marker would just see the click do nothing. Instead we
+       put the selection back and say which duty is holding it.
+
+       AttendanceController::save enforces the same rule; this is only the
+       explanation. */
+    $(document).on('change', 'input[data-att-lock]', function () {
+        var reason = $(this).attr('data-att-lock');
+        var pk = String($(this).attr('data-att-ot'));
+
+        if (parseInt(this.value, 10) === 1) {
+            return; // Present is the only value a locked OT may hold.
+        }
+
+        $('input[name="student[' + pk + ']"][value="1"]').prop('checked', true);
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Status cannot be changed',
+                text: 'This OT has ' + reason + ' for this session, so attendance stays Present.'
+            });
+        } else {
+            alert('This OT has ' + reason + ' for this session, so attendance stays Present.');
+        }
     });
 
     /* ── Per-OT save (Update Attendance action) ── */
