@@ -1639,4 +1639,103 @@
 
 table>thead {
     background-color: transparent !important;
-}
+}
+/* ── Report Issue: floating launcher + modal ─────────────────────────── */
+.dash-report-fab {
+    position: fixed;
+    right: var(--ds-space-4, 1.5rem);
+    bottom: var(--ds-space-4, 1.5rem);
+    z-index: 1030;
+    width: 84px;
+    height: 84px;
+    padding: 0;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    background: var(--ds-primary, #004a93);
+    color: #fff;
+    box-shadow: var(--ds-shadow-lg, 0 4px 12px rgba(16, 24, 40, .18));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.dash-report-fab:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 24, 40, .28);
+}
+
+.dash-report-fab:focus-visible {
+    outline: none;
+    box-shadow: var(--ds-focus-ring, 0 0 0 .2rem rgba(0, 74, 147, .35)), var(--ds-shadow-lg, 0 4px 12px rgba(16, 24, 40, .18));
+}
+
+.dash-report-fab-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dash-report-fab-label {
+    font-size: .625rem;
+    font-weight: 600;
+    letter-spacing: .02em;
+    transform: rotate(-45deg);
+    white-space: nowrap;
+}
+
+.dash-report-modal .modal-content {
+    border: 0;
+    border-radius: var(--ds-radius-2, .5rem);
+}
+
+.dash-report-modal .modal-header,
+.dash-report-modal .modal-footer {
+    border: 0;
+}
+
+.dash-report-modal .modal-header {
+    padding-bottom: var(--ds-space-2, .5rem);
+}
+
+.dash-report-modal .modal-title {
+    font-weight: 600;
+    color: var(--ds-ink, #1f2937);
+}
+
+.dash-report-modal .form-label {
+    font-size: .875rem;
+    font-weight: 500;
+    color: var(--ds-ink, #1f2937);
+}
+
+.dash-report-modal .modal-footer .btn {
+    min-width: 104px;
+}
+
+.dash-report-hint {
+    margin-top: var(--ds-space-2, .5rem);
+    font-size: .75rem;
+    color: var(--ds-primary, #004a93);
+}
+
+@media (max-width: 575.98px) {
+    .dash-report-fab {
+        width: 68px;
+        height: 68px;
+        right: var(--ds-space-3, 1rem);
+        bottom: var(--ds-space-3, 1rem);
+    }
+
+    .dash-report-fab-label {
+        font-size: .5rem;
+    }
+}

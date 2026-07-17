@@ -412,6 +412,8 @@ class UserController extends Controller
 
         $enabledWidgetKeys = $baseCards->filter(fn($c) => str_starts_with($c->key, 'widget_'))->pluck('key')->toArray();
 
+        $issueReportModules = \App\Http\Controllers\Admin\IssueReportController::moduleOptions();
+
         $cardsToRender = $baseCards->filter(fn($c) => !str_starts_with($c->key, 'widget_'))->map(function ($card) use ($cardDefinitions, $cardCounts) {
             $def = $cardDefinitions[$card->key] ?? null;
             return [
@@ -461,7 +463,8 @@ class UserController extends Controller
             'fullDuplicateContractualIdCardRequests',
             'idCardApprovalRoute',
             'cardsToRender',
-            'enabledWidgetKeys'
+            'enabledWidgetKeys',
+            'issueReportModules'
         ));
     }
 
