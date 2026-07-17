@@ -8,8 +8,6 @@ use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Button;
 use Yajra\DataTables\Html\Column;
-use Yajra\DataTables\Html\Editor\Editor;
-use Yajra\DataTables\Html\Editor\Fields;
 use Yajra\DataTables\Services\DataTable;
 
 class BuildingFloorRoomMappingDataTable extends DataTable
@@ -24,35 +22,89 @@ class BuildingFloorRoomMappingDataTable extends DataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->addColumn('building_master_pk', function ($row) {
-
-                return '<label class="text-dark">' . optional($row->building)->building_name . '</label>';
-            })
-            ->addColumn('floor_master_pk', function ($row) {
-                return '<label class="text-dark">' . optional($row->floor)->floor_name ?? '—' . '</label>';
-            })
-            ->addColumn('room_name', function ($row) {
-                return '<label class="text-dark">' . $row->room_name . '</label>';
-            })
-            ->addColumn('capacity', function ($row) {
-                return '<label class="text-dark">' . $row->capacity . '</label>';
-            })
-            ->addColumn('actions', function ($row) {
-                return '<a href="' . route('hostel.building.floor.room.map.edit', encrypt($row->pk)) . '" class="btn btn-sm btn-primary">Edit</a>
-                ';
-            })
+            ->addColumn('building_master_pk', fn($row) => optional($row->building)->building_name ?? '—')
+            ->addColumn('floor_master_pk', fn($row) => optional($row->floor)->floor_name ?? '—')
+            ->addColumn('room_name', fn($row) => $row->room_name ?? '-')
+            ->addColumn('room_type', fn($row) => $row->room_type ?? '-')
+            ->addColumn('capacity', fn($row) => $row->capacity ?? '-')
             ->addColumn('comment', function ($row) {
-                return '<input type="text" class="form-control form-control-sm comment-input" 
-                            data-id="' . $row->pk . '" 
-                            value="' . htmlspecialchars($row->comment) . '">';
+                return '<input type="text" class="comment-input" data-id="' . $row->pk . '"
+                            value="' . htmlspecialchars($row->comment ?? '') . '" placeholder="Add comment">';
             })
-
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return '<div class="form-check form-switch d-inline-block ms-2">
-                <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                    data-table="building_floor_room_mapping" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
-            </div>';
+                return (int) $row->active_inactive === 1
+                    ? '<span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>'
+                    : '<span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>';
+            })
+            ->addColumn('action', function ($row) {
+                $deleteUrl = route('hostel.building.floor.room.map.destroy', encrypt($row->pk));
+                $isActive  = (int) $row->active_inactive === 1;
+                $checked   = $isActive ? 'checked' : '';
+                $csrf = csrf_token();
+
+                $rn = $row->room_name ?? '';
+                $roomMiddle = '';
+                if ($rn !== '') {
+                    $roomSuffix = substr($rn, 6);
+                    $roomMiddle = explode('-', $roomSuffix)[0] ?? '';
+                }
+
+                $editBtn = '<button type="button" class="programme-action-btn hr-edit-btn" aria-label="Edit room"'
+                        . ' data-id="' . encrypt($row->pk) . '"'
+                        . ' data-building="' . e($row->building_master_pk) . '"'
+                        . ' data-floor="' . e($row->floor_master_pk) . '"'
+                        . ' data-roomtype="' . e($row->room_type) . '"'
+                        . ' data-roomname="' . e($roomMiddle) . '"'
+                        . ' data-capacity="' . e($row->capacity) . '"'
+                        . ' data-comment="' . e($row->comment) . '"'
+                        . ' data-status="' . (int) $row->active_inactive . '">'
+                        . '<i class="bi bi-pencil" aria-hidden="true"></i>'
+                        . '</button>';
+
+                $deleteHtml = '<form action="' . $deleteUrl . '" method="POST" class="d-inline-flex m-0" onsubmit="return confirm(\'Are you sure you want to delete this room mapping?\')">'
+                        . '<input type="hidden" name="_token" value="' . $csrf . '">'
+                        . '<input type="hidden" name="_method" value="DELETE">'
+                        . '<button type="submit" class="programme-action-btn programme-action-btn--danger" aria-label="Delete room">'
+                        . '<i class="bi bi-trash3" aria-hidden="true"></i>'
+                        . '</button>'
+                        . '</form>';
+
+                return '
+                <div class="d-inline-flex align-items-center justify-content-center programme-action-group" role="group" aria-label="Row actions">
+                    ' . $editBtn . '
+                    <div class="form-check form-switch programme-action-switch mb-0">
+                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                            data-table="building_floor_room_mapping" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
+                    </div>
+                    ' . $deleteHtml . '
+                </div>';
+            })
+            ->setRowId('pk')
+            ->orderColumn('building_master_pk', function ($query, $order) {
+                $query->orderBy(
+                    \App\Models\BuildingMaster::select('building_name')
+                        ->whereColumn('building_master.pk', 'building_floor_room_mapping.building_master_pk'),
+                    $order
+                );
+            })
+            ->orderColumn('floor_master_pk', function ($query, $order) {
+                $query->orderBy(
+                    \App\Models\FloorMaster::select('floor_name')
+                        ->whereColumn('floor_master.pk', 'building_floor_room_mapping.floor_master_pk'),
+                    $order
+                );
+            })
+            ->orderColumn('room_name', function ($query, $order) {
+                $query->orderBy('room_name', $order);
+            })
+            ->orderColumn('room_type', function ($query, $order) {
+                $query->orderBy('room_type', $order);
+            })
+            ->orderColumn('capacity', function ($query, $order) {
+                $query->orderBy('capacity', $order);
+            })
+            ->filterColumn('room_name', function ($query, $keyword) {
+                $query->where('room_name', 'like', "%{$keyword}%");
             })
             ->filterColumn('comment', function ($query, $keyword) {
                 $query->whereRaw("IFNULL(comment,'') like ?", ["%{$keyword}%"]);
@@ -60,7 +112,7 @@ class BuildingFloorRoomMappingDataTable extends DataTable
             ->filterColumn('capacity', function ($query, $keyword) {
                 $query->where('capacity', 'like', "%{$keyword}%");
             })
-            ->rawColumns(['building_master_pk', 'floor_master_pk', 'room_name', 'capacity', 'actions', 'status', 'comment']);
+            ->rawColumns(['comment', 'status', 'action']);
     }
 
     /**
@@ -71,7 +123,16 @@ class BuildingFloorRoomMappingDataTable extends DataTable
      */
     public function query(BuildingFloorRoomMapping $model): QueryBuilder
     {
-        $query = $model->newQuery()->latest('pk');
+        $query = $model->newQuery()->with(['building', 'floor']);
+
+        // Default newest-first, but ONLY when the user hasn't clicked a column
+        // to sort — otherwise this base order would dominate (pk is unique, so
+        // a requested secondary sort would never take visible effect). When an
+        // order is requested, Yajra applies it on the unordered query.
+        if (empty(request('order'))) {
+            $query->latest('pk');
+        }
+
         if (request()->filled('building_id')) {
             $query->where('building_master_pk', request('building_id'));
         }
@@ -92,120 +153,48 @@ class BuildingFloorRoomMappingDataTable extends DataTable
      */
     public function html(): HtmlBuilder
     {
-        // Convert PHP array to JSON for JavaScript
-        $roomTypes = json_encode(BuildingFloorRoomMapping::$roomTypes);
-
         return $this->builder()
-            ->setTableId('hostelbuildingfloormapping-table')
-            ->columns($this->getColumns())
-            ->minifiedAjax()
-            ->parameters([
-                'order' => [],
-                'initComplete' => 'function(settings, json) {
-                    var api = this.api();
-
-                    // Room types array from PHP
-                    var roomTypes = ' . $roomTypes . ';
-
-                    // Create filter container above DataTable
-                    var filterHtml = `
-                        <div class="row mb-3">
-                            <div class="col-md-3">
-                                <label for="buildingFilter" class="form-label fw-bold">Filter by Building</label>
-                                <select id="buildingFilter" class="form-select">
-                                    <option value="">All Buildings</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label for="roomTypeFilter" class="form-label fw-bold">Filter by Room Type</label>
-                                <select id="roomTypeFilter" class="form-select">
-                                    <option value="">All Room Types</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label for="statusFilter" class="form-label fw-bold">Filter by Status</label>
-                                <select id="statusFilter" class="form-select">
-                                    <option value="">Select</option>
-                                    <option value="1">Active</option>
-                                    <option value="0">Inactive</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="d-flex align-items-end h-100">
-                                    <button class="btn btn-secondary mt-4" id="resetFilters">Reset Filters</button>
-                                    <a href="' . route('hostel.building.floor.room.map.export') . '" 
-                                    id="filterExportBtn"
-                                    class="btn btn-secondary mt-4 ms-2">Filter Export</a>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-
-                    // Insert filters above DataTable
-                    $("#hostelbuildingfloormapping-table_wrapper").prepend(filterHtml);
-
-                    // Populate buildings dynamically
-                    $.ajax({
-                        url: "' . route('api.get.buildings') . '",
-                        type: "GET",
-                        success: function(data) {
-                            $.each(data, function(i, item) {
-                                $("#buildingFilter").append(
-                                    "<option value=\'" + item.pk + "\'>" + item.building_name + "</option>"
-                                );
-                            });
-                        }
-                    });
-
-                    // Populate room type dropdown
-                    $.each(roomTypes, function(key, val) {
-                        $("#roomTypeFilter").append("<option value=\'" + key + "\'>" + val + "</option>");
-                    });
-
-                    // Reset filters
-                    $(document).on("click", "#resetFilters", function() {
-                        $("#buildingFilter").val("");
-                        $("#roomTypeFilter").val("");
-                        $("#statusFilter").val("");
-                        var url = "' . route('hostel.building.floor.room.map.index') . '";
-                        api.ajax.url(url).load();
-                    });
-
-                    // Handle both filters
-                    $(document).on("change", "#buildingFilter, #roomTypeFilter, #statusFilter", function() {
-                        var buildingId = $("#buildingFilter").val();
-                        var roomType = $("#roomTypeFilter").val();
-                        var status = $("#statusFilter").val();
-
-                        var url = "' . route('hostel.building.floor.room.map.index') . '?building_id=" + buildingId + "&room_type=" + roomType + "&status=" + status;
-                        api.ajax.url(url).load();
-                    });
-
-                    $(document).on("click", "#filterExportBtn", function(e) {
-                        e.preventDefault();
-                        var buildingId = $("#buildingFilter").val();
-                        var roomType = $("#roomTypeFilter").val();
-                        var status = $("#statusFilter").val();
-
-                        var baseUrl = "' . route('hostel.building.floor.room.map.export') . '";
-                        var params = "?building_id=" + buildingId + "&room_type=" + roomType + "&status=" + status;
-
-                        // Redirect to filtered export URL
-                        window.location.href = baseUrl + params;
-                    });
-                }',
-            ])
-            ->selectStyleSingle()
-            ->buttons([
-                Button::make('excel'),
-                Button::make('csv'),
-                Button::make('pdf'),
-                Button::make('print'),
-                Button::make('reset'),
-                Button::make('reload'),
-            ]);
+                    ->setTableId('hostelbuildingfloorroommapping-table')
+                    ->columns($this->getColumns())
+                    ->minifiedAjax()
+                    ->selectStyleSingle()
+                    ->responsive(true)
+                    ->parameters([
+                        'responsive'   => true,
+                        'scrollX'      => false,
+                        'autoWidth'    => false,
+                        'ordering'     => true,
+                        // Keep DataTables' native server-side ordering (see
+                        // datatable-global-ui.js): clicking a header re-queries and
+                        // sorts the FULL dataset, not just the visible page.
+                        'sargamServerOrder' => true,
+                        'searching'    => true,
+                        'lengthChange' => true,
+                        'pageLength'   => 10,
+                        'lengthMenu'   => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+                        'order'        => [],
+                        'language'     => [
+                            'search'           => '',
+                            'searchPlaceholder' => 'Search',
+                            'paginate'         => [
+                                'previous' => '‹',
+                                'next'     => '›',
+                            ],
+                            'lengthMenu'   => 'Showing _MENU_',
+                            'info'         => 'of _TOTAL_ items',
+                            'infoEmpty'    => 'of 0 items',
+                            'infoFiltered' => 'of _MAX_ items',
+                        ],
+                    ])
+                    ->buttons([
+                        Button::make('excel'),
+                        Button::make('csv'),
+                        Button::make('pdf'),
+                        Button::make('print'),
+                        Button::make('reset'),
+                        Button::make('reload'),
+                    ]);
     }
-
 
     /**
      * Get the dataTable columns definition.
@@ -215,14 +204,15 @@ class BuildingFloorRoomMappingDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('#')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('building_master_pk')->title('Building Name')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('floor_master_pk')->title('Floor')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('room_name')->title('Room Name')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('capacity')->title('Capacity')->addClass('text-center')->orderable(false),
-            Column::computed('comment')->title('Comment')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::computed('status')->title('Status')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::computed('DT_RowIndex')->title('S. No.')->searchable(false)->orderable(false)->addClass('text-center'),
+            Column::make('building_master_pk')->title('Building Name')->orderable(true)->searchable(false),
+            Column::make('floor_master_pk')->title('Floor Name')->orderable(true)->searchable(false),
+            Column::make('room_name')->title('Room Name')->orderable(true),
+            Column::make('room_type')->title('Room Type')->orderable(true)->searchable(false),
+            Column::make('capacity')->title('Capacity')->orderable(true)->addClass('text-center'),
+            Column::computed('comment')->title('Comment')->orderable(false)->searchable(true),
+            Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center'),
+            Column::computed('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center'),
         ];
     }
 

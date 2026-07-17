@@ -58,6 +58,19 @@ class OTHostelRoomDetailsDataTable extends DataTable
                             </div>
                         </div>';
             })
+            ->orderColumn('course_name', function ($query, $order) {
+                $query->orderBy(
+                    \App\Models\CourseMaster::select('course_name')
+                        ->whereColumn('course_master.pk', 'ot_hostel_room_details.course_master_pk'),
+                    $order
+                );
+            })
+            ->orderColumn('user_name', function ($query, $order) {
+                $query->orderBy('user_name', $order);
+            })
+            ->orderColumn('hostel_room_name', function ($query, $order) {
+                $query->orderBy('hostel_room_name', $order);
+            })
             ->rawColumns(['student_name', 'hostel_room_name', 'course_name', 'status', 'action']);
     }
 
@@ -89,7 +102,11 @@ class OTHostelRoomDetailsDataTable extends DataTable
                 'responsive'   => true,
                 'scrollX'      => false,
                 'autoWidth'    => false,
-                'ordering'     => false,
+                'ordering'     => true,
+                // Keep DataTables' native server-side ordering (see
+                // datatable-global-ui.js): clicking a header re-queries and
+                // sorts the FULL dataset, not just the visible page.
+                'sargamServerOrder' => true,
                 'searching'    => true,
                 'lengthChange' => true,
                 'pageLength'   => 10,
@@ -192,9 +209,9 @@ class OTHostelRoomDetailsDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S. No.')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('course_name')->title('Course Name')->orderable(false),
-            Column::make('user_name')->title('User Name')->orderable(false),
-            Column::make('hostel_room_name')->title('Hostel Room Name')->orderable(false),
+            Column::make('course_name')->title('Course Name')->orderable(true),
+            Column::make('user_name')->title('User Name')->orderable(true),
+            Column::make('hostel_room_name')->title('Hostel Room Name')->orderable(true),
             Column::computed('status')->title('Status')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('action')->title('Action')->addClass('text-center')->orderable(false)->searchable(false),
         ];

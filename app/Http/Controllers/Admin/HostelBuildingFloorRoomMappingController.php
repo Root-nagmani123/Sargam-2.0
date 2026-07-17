@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-// use App\DataTables\HostelBuildingFloorRoomMappingDataTable;
 use App\DataTables\BuildingFloorRoomMappingDataTable;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\FloorRoomMappingExport;
@@ -28,41 +27,13 @@ class HostelBuildingFloorRoomMappingController extends Controller
     {
         $this->roomTypes = BuildingFloorRoomMapping::$roomTypes;
     }
-    // public function index(HostelBuildingFloorRoomMappingDataTable $dataTable)
-    public function index(Request $request)
+    public function index(BuildingFloorRoomMappingDataTable $dataTable)
     {
-        $query = BuildingFloorRoomMapping::with(['building', 'floor'])->latest('pk');
-        
-        // Apply filters
-        if ($request->filled('building_id')) {
-            $query->where('building_master_pk', $request->building_id);
-        }
-        if ($request->filled('room_type')) {
-            $query->where('room_type', $request->room_type);
-        }
-        if ($request->filled('status')) {
-            $query->where('active_inactive', $request->status);
-        }
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('room_name', 'like', "%{$search}%")
-                  ->orWhere('capacity', 'like', "%{$search}%")
-                  ->orWhere('comment', 'like', "%{$search}%");
-            });
-        }
-        
-        $perPage = (int) $request->input('per_page', 10);
-        if ($perPage < 1) {
-            $perPage = 10;
-        }
-
-        $mappings = $query->paginate($perPage)->withQueryString();
         $buildings = BuildingMaster::active()->get();
         $floors = FloorMaster::active()->get();
         $roomTypes = $this->roomTypes;
 
-        return view('admin.building_floor_room_mapping.index', compact('mappings', 'buildings', 'floors', 'roomTypes'));
+        return $dataTable->render('admin.building_floor_room_mapping.index', compact('buildings', 'floors', 'roomTypes'));
     }
 
     public function create()

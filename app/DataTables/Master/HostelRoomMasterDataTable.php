@@ -40,6 +40,12 @@ class HostelRoomMasterDataTable extends DataTable
 
             ->setRowId('pk')
             ->setRowClass('text-center')
+            ->orderColumn('hostel_room_name', function ($query, $order) {
+                $query->orderBy('hostel_room_name', $order);
+            })
+            ->orderColumn('capacity', function ($query, $order) {
+                $query->orderBy('capacity', $order);
+            })
             ->filterColumn('hostel_room_name', function ($query, $keyword) {
                 $query->where('hostel_room_name', 'like', "%{$keyword}%");
             })
@@ -71,6 +77,11 @@ class HostelRoomMasterDataTable extends DataTable
                     //->dom('Bfrtip')
                     // ->orderBy(1)
                     ->parameters([
+                        'ordering' => true,
+                        // Keep DataTables' native server-side ordering (see
+                        // datatable-global-ui.js): clicking a header re-queries and
+                        // sorts the FULL dataset, not just the visible page.
+                        'sargamServerOrder' => true,
                         'order' => [],
                     ])
                     ->selectStyleSingle()
@@ -93,8 +104,8 @@ class HostelRoomMasterDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::make('hostel_room_name')->title('Hostel Room Name')->orderable(false)->addClass('text-center'),
-            Column::make('capacity')->title('Capacity')->orderable(false)->addClass('text-center'),
+            Column::make('hostel_room_name')->title('Hostel Room Name')->orderable(true)->addClass('text-center'),
+            Column::make('capacity')->title('Capacity')->orderable(true)->addClass('text-center'),
             Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center'),
             Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center')
         ];

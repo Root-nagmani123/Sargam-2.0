@@ -63,6 +63,9 @@ class HostelFloorMasterDataTable extends DataTable
                 </div>';
             })
             ->setRowId('pk')
+            ->orderColumn('floor_name', function ($query, $order) {
+                $query->orderBy('floor_name', $order);
+            })
             ->filterColumn('floor_name', function ($query, $keyword) {
                 $query->where('floor_name', 'like', "%{$keyword}%");
             })
@@ -77,7 +80,16 @@ class HostelFloorMasterDataTable extends DataTable
      */
     public function query(FloorMaster $model): QueryBuilder
     {
-        return $model->newQuery()->latest('pk');
+        $query = $model->newQuery();
+
+        // Default newest-first, but ONLY when the user hasn't clicked a column
+        // to sort — otherwise this base order would dominate (pk is unique, so
+        // a requested secondary sort would never take visible effect).
+        if (empty(request('order'))) {
+            $query->latest('pk');
+        }
+
+        return $query;
     }
 
     /**
@@ -97,7 +109,11 @@ class HostelFloorMasterDataTable extends DataTable
                         'responsive'   => true,
                         'scrollX'      => false,
                         'autoWidth'    => false,
-                        'ordering'     => false,
+                        'ordering'     => true,
+                        // Keep DataTables' native server-side ordering (see
+                        // datatable-global-ui.js): clicking a header re-queries and
+                        // sorts the FULL dataset, not just the visible page.
+                        'sargamServerOrder' => true,
                         'searching'    => true,
                         'lengthChange' => true,
                         'pageLength'   => 10,
@@ -135,7 +151,7 @@ class HostelFloorMasterDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S. No.')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::make('floor_name')->title('Floor Name')->orderable(false),
+            Column::make('floor_name')->title('Floor Name')->orderable(true),
             Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center'),
             Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center'),
         ];

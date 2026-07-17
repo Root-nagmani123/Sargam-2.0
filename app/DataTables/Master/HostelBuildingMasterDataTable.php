@@ -39,6 +39,9 @@ class HostelBuildingMasterDataTable extends DataTable
 
             ->setRowId('pk')
             ->setRowClass('text-center')
+            ->orderColumn('hostel_building_name', function ($query, $order) {
+                $query->orderBy('hostel_building_name', $order);
+            })
             ->filterColumn('hostel_building_name', function ($query, $keyword) {
                 $query->where('hostel_building_name', 'like', "%{$keyword}%");
             })
@@ -71,6 +74,11 @@ class HostelBuildingMasterDataTable extends DataTable
                     // ->orderBy(1)
                     ->selectStyleSingle()
                     ->parameters([
+                        'ordering' => true,
+                        // Keep DataTables' native server-side ordering (see
+                        // datatable-global-ui.js): clicking a header re-queries and
+                        // sorts the FULL dataset, not just the visible page.
+                        'sargamServerOrder' => true,
                         'order' => [],
                     ])
                     ->buttons([
@@ -92,7 +100,7 @@ class HostelBuildingMasterDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::make('hostel_building_name')->title('Hostel Building Name')->orderable(false)->addClass('text-center'),
+            Column::make('hostel_building_name')->title('Hostel Building Name')->orderable(true)->addClass('text-center'),
             Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center'),
             Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center')
         ];

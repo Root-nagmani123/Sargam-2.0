@@ -41,6 +41,20 @@ class HostelBuildingFloorMappingDataTable extends DataTable
                     data-table="hostel_building_floor_mapping" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
             </div>';
             })
+            ->orderColumn('hostel_building_name', function ($query, $order) {
+                $query->orderBy(
+                    \App\Models\HostelBuildingMaster::select('hostel_building_name')
+                        ->whereColumn('hostel_building_master.pk', 'hostel_building_floor_mapping.hostel_building_master_pk'),
+                    $order
+                );
+            })
+            ->orderColumn('hostel_floor_name', function ($query, $order) {
+                $query->orderBy(
+                    \App\Models\HostelFloorMaster::select('hostel_floor_name')
+                        ->whereColumn('hostel_floor_master.pk', 'hostel_building_floor_mapping.hostel_floor_master_pk'),
+                    $order
+                );
+            })
             ->rawColumns(['hostel_building_name', 'hostel_floor_name', 'actions', 'status']);
     }
 
@@ -52,7 +66,16 @@ class HostelBuildingFloorMappingDataTable extends DataTable
      */
     public function query(HostelBuildingFloorMapping $model): QueryBuilder
     {
-        return $model->with(['building', 'floor'])->latest('pk')->newQuery();
+        $query = $model->with(['building', 'floor'])->newQuery();
+
+        // Default newest-first, but ONLY when the user hasn't clicked a column
+        // to sort — otherwise this base order would dominate (pk is unique, so
+        // a requested secondary sort would never take visible effect).
+        if (empty(request('order'))) {
+            $query->latest('pk');
+        }
+
+        return $query;
     }
 
     /**
@@ -70,6 +93,11 @@ class HostelBuildingFloorMappingDataTable extends DataTable
                     ->orderBy(1)
                     ->selectStyleSingle()
                     ->parameters([
+                        'ordering' => true,
+                        // Keep DataTables' native server-side ordering (see
+                        // datatable-global-ui.js): clicking a header re-queries and
+                        // sorts the FULL dataset, not just the visible page.
+                        'sargamServerOrder' => true,
                         'order' => [],
                     ])
                     ->buttons([
@@ -91,8 +119,8 @@ class HostelBuildingFloorMappingDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('#')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('hostel_building_name')->title('Hostel Building Name')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('hostel_floor_name')->title('Hostel Floor Name')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('hostel_building_name')->title('Hostel Building Name')->addClass('text-center')->orderable(true)->searchable(false),
+            Column::make('hostel_floor_name')->title('Hostel Floor Name')->addClass('text-center')->orderable(true)->searchable(false),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false),
             Column::computed('status')->title('Status')->addClass('text-center')->orderable(false)->searchable(false),
         ];
