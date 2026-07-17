@@ -21,34 +21,41 @@ class DesignationMasterController extends Controller
     }
     function store(Request $request)
     {
-
-
         $id = $request->pk ? decrypt($request->pk) : null;
 
         $rules = [
             'designation_name' => [
                 'required',
                 'string',
-                'max:255',
+                // designation_name is varchar(100) — keep in sync with the column.
+                'max:100',
                 Rule::unique('designation_master', 'designation_name')->ignore($id, 'pk'),
             ],
         ];
 
-        $request->validate($rules);
+        $request->validate($rules, [], ['designation_name' => 'designation name']);
 
         $designation = $id ? DesignationMaster::find($id) : new DesignationMaster();
 
         if ($id && !$designation) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['status' => 'error', 'message' => 'Designation not found.'], 404);
+            }
+
             return redirect()->back()->with('error', 'Designation not found.');
         }
 
         $designation->designation_name = $request->designation_name;
+        $designation->active_inactive = $designation->active_inactive ?? 1;
         $designation->save();
 
         $message = $id ? 'Designation updated successfully.' : 'Designation created successfully.';
 
-        return redirect()->route('master.designation.index')->with('success', $message);
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['status' => 'success', 'message' => $message]);
+        }
 
+        return redirect()->route('master.designation.index')->with('success', $message);
     }
     function edit($id)
     {
