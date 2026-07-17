@@ -101,6 +101,11 @@ class FacultyController extends Controller
                     ($request->middlename ? $request->middlename . ' ' : '') .
                     $request->lastname
                 ),
+                // Short code printed on the weekly timetable; blank falls back to
+                // the full name there.
+                'abbreviation' => $request->filled('abbreviation')
+                    ? strtoupper(trim($request->abbreviation))
+                    : null,
                 'gender' => $request->gender,
                 'landline_no' => $request->landline,
                 'mobile_no' => $request->mobile,
@@ -635,6 +640,11 @@ class FacultyController extends Controller
                     ($request->middlename ? $request->middlename . ' ' : '') .
                     $request->lastname
                 ),
+                // Short code printed on the weekly timetable; blank falls back to
+                // the full name there.
+                'abbreviation'  => $request->filled('abbreviation')
+                    ? strtoupper(trim($request->abbreviation))
+                    : null,
                 'gender'        => $request->gender,
                 'landline_no'   => $request->landline,
                 'mobile_no'        => $request->mobile,

@@ -1388,6 +1388,8 @@ class CalendarManager {
         document.getElementById('btnWeekInfoPdf')?.addEventListener('click', () => this.openWeeklyInfoPdf(false));
         document.getElementById('btnEditWeekInfo')?.addEventListener('click', () => this.openWeeklyInfoEditor());
         document.getElementById('weeklyInfoForm')?.addEventListener('submit', (e) => this.saveWeeklyInfo(e));
+        document.getElementById('wiAddNote')?.addEventListener('click', () => this.addWeeklyInfoNoteRow());
+        document.getElementById('wiAddLanguage')?.addEventListener('click', () => this.addWeeklyInfoLanguageRow());
 
         // Form submission
         document.getElementById('eventForm')?.addEventListener('submit', (e) => this.handleFormSubmit(e));
@@ -2433,6 +2435,17 @@ async setInternalFaculty(internalFacultyIds) {
             document.getElementById('wi_participants_profile').value = data.participants_profile || '';
             document.getElementById('wi_mention_of_week').value = data.mention_of_week || '';
 
+            document.getElementById('wi_venue_line').value = data.venue_line || '';
+            document.getElementById('wi_outdoor').value = data.outdoor_activities || '';
+            document.getElementById('wi_signatory_name').value = data.signatory_name || '';
+            document.getElementById('wi_signatory_designation').value = data.signatory_designation || '';
+            document.getElementById('wi_signatory_date').value = (data.signatory_date || '').slice(0, 10);
+
+            this.renderWeeklyInfoNotes(data.notes || []);
+            this.renderWeeklyInfoLanguages(data.language_venues || []);
+            this.renderWeeklyInfoCounsellors(data.counsellors || [], data.counsellor_meta || {});
+            this.renderWeeklyInfoGuests(data.guests || [], data.guest_moderators || {});
+
             const course = (this.courses || []).find(c => c.pk == data.course_id);
             document.getElementById('weeklyInfoContext').textContent =
                 `${course ? course.course_name + ' — ' : ''}Week starting ${data.week_start}`;
@@ -2443,10 +2456,157 @@ async setInternalFaculty(internalFacultyIds) {
         }
     }
 
+    /** One removable text input per note. */
+    renderWeeklyInfoNotes(notes) {
+        const list = document.getElementById('wiNotesList');
+        list.innerHTML = '';
+        (notes.length ? notes : ['']).forEach(note => this.addWeeklyInfoNoteRow(note));
+    }
+
+    addWeeklyInfoNoteRow(value = '') {
+        const row = document.createElement('div');
+        row.className = 'input-group input-group-sm';
+        row.innerHTML = `
+            <input type="text" class="form-control" data-wi-note maxlength="1000" placeholder="Note text…">
+            <button type="button" class="btn btn-outline-danger" data-wi-remove title="Remove">
+                <i class="bi bi-x-lg"></i>
+            </button>`;
+        row.querySelector('[data-wi-note]').value = value || '';
+        row.querySelector('[data-wi-remove]').addEventListener('click', () => row.remove());
+        document.getElementById('wiNotesList').appendChild(row);
+    }
+
+    renderWeeklyInfoLanguages(rows) {
+        const list = document.getElementById('wiLanguageList');
+        list.innerHTML = '';
+        (rows.length ? rows : [{ language: '', venue: '' }]).forEach(r => this.addWeeklyInfoLanguageRow(r));
+    }
+
+    addWeeklyInfoLanguageRow(row = { language: '', venue: '' }) {
+        const el = document.createElement('div');
+        el.className = 'input-group input-group-sm';
+        el.innerHTML = `
+            <span class="input-group-text" style="min-width:0;">Language</span>
+            <input type="text" class="form-control" data-wi-lang maxlength="100" placeholder="e.g. Hindi">
+            <span class="input-group-text">Venue</span>
+            <input type="text" class="form-control" data-wi-lang-venue maxlength="200" placeholder="e.g. SR-A & B (Karmashila)">
+            <button type="button" class="btn btn-outline-danger" data-wi-remove title="Remove">
+                <i class="bi bi-x-lg"></i>
+            </button>`;
+        el.querySelector('[data-wi-lang]').value = row.language || '';
+        el.querySelector('[data-wi-lang-venue]').value = row.venue || '';
+        el.querySelector('[data-wi-remove]').addEventListener('click', () => el.remove());
+        document.getElementById('wiLanguageList').appendChild(el);
+    }
+
+    /** Counsellors come from the Counsellor Groups; only label + venue are editable. */
+    renderWeeklyInfoCounsellors(counsellors, meta) {
+        const body = document.getElementById('wiCounsellorRows');
+        body.innerHTML = '';
+        if (!counsellors.length) {
+            body.innerHTML = '<tr><td colspan="4" class="text-secondary small">No Counsellor Groups mapped for this course.</td></tr>';
+            return;
+        }
+        counsellors.forEach(c => {
+            const saved = meta[c.faculty_pk] || meta[String(c.faculty_pk)] || {};
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="small">${this.escapeHtml(c.name)}</td>
+                <td class="small text-secondary">${this.escapeHtml(c.cadres)}</td>
+                <td><input type="text" class="form-control form-control-sm" data-wi-c-label maxlength="60" placeholder="${this.escapeHtml(c.abbreviation || 'e.g. JD(SW)')}"></td>
+                <td><input type="text" class="form-control form-control-sm" data-wi-c-venue maxlength="120" placeholder="e.g. SR-I"></td>`;
+            tr.dataset.facultyPk = c.faculty_pk;
+            tr.querySelector('[data-wi-c-label]').value = saved.label || '';
+            tr.querySelector('[data-wi-c-venue]').value = saved.venue || '';
+            body.appendChild(tr);
+        });
+    }
+
+    renderWeeklyInfoGuests(guests, moderators) {
+        const body = document.getElementById('wiGuestRows');
+        body.innerHTML = '';
+        if (!guests.length) {
+            body.innerHTML = '<tr><td colspan="2" class="text-secondary small">No guest speakers scheduled this week.</td></tr>';
+            return;
+        }
+        guests.forEach(g => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="small">${this.escapeHtml(g.name)}${g.code ? ' <span class="text-secondary">(' + this.escapeHtml(g.code) + ')</span>' : ''}</td>
+                <td><input type="text" class="form-control form-control-sm" data-wi-mod maxlength="200" placeholder="e.g. Ms. Nausheen, B01"></td>`;
+            tr.dataset.facultyPk = g.faculty_pk;
+            tr.querySelector('[data-wi-mod]').value =
+                moderators[g.faculty_pk] || moderators[String(g.faculty_pk)] || '';
+            body.appendChild(tr);
+        });
+    }
+
+    escapeHtml(value) {
+        const div = document.createElement('div');
+        div.textContent = value ?? '';
+        return div.innerHTML;
+    }
+
+    /**
+     * Collect the info-sheet form into the payload the API expects.
+     *
+     * Built by hand rather than from FormData: the repeatable rows would collapse
+     * to their last value through Object.fromEntries, and the counsellor and guest
+     * maps have to be keyed by faculty pk.
+     */
+    collectWeeklyInfoPayload() {
+        const val = id => (document.getElementById(id)?.value ?? '').trim();
+        const map = (rows, keyAttr) => {
+            const out = {};
+            rows.forEach(tr => {
+                if (!tr.dataset.facultyPk) return;
+                const value = keyAttr(tr);
+                if (value !== null) out[tr.dataset.facultyPk] = value;
+            });
+            return out;
+        };
+
+        return {
+            course_id: val('wi_course_id'),
+            week_start: val('wi_week_start'),
+
+            director_name: val('wi_director'),
+            joint_director_name: val('wi_joint_director'),
+            participants_profile: val('wi_participants_profile'),
+            mention_of_week: val('wi_mention_of_week'),
+
+            venue_line: val('wi_venue_line'),
+            notes: [...document.querySelectorAll('#wiNotesList [data-wi-note]')]
+                .map(i => i.value.trim()).filter(Boolean),
+
+            outdoor_activities: val('wi_outdoor'),
+            language_venues: [...document.querySelectorAll('#wiLanguageList .input-group')]
+                .map(el => ({
+                    language: el.querySelector('[data-wi-lang]').value.trim(),
+                    venue: el.querySelector('[data-wi-lang-venue]').value.trim(),
+                }))
+                .filter(r => r.language !== ''),
+
+            counsellor_meta: map([...document.querySelectorAll('#wiCounsellorRows tr')], tr => {
+                const label = tr.querySelector('[data-wi-c-label]')?.value.trim() ?? '';
+                const venue = tr.querySelector('[data-wi-c-venue]')?.value.trim() ?? '';
+                return (label || venue) ? { label, venue } : null;
+            }),
+
+            guest_moderators: map([...document.querySelectorAll('#wiGuestRows tr')], tr => {
+                const name = tr.querySelector('[data-wi-mod]')?.value.trim() ?? '';
+                return name || null;
+            }),
+
+            signatory_name: val('wi_signatory_name'),
+            signatory_designation: val('wi_signatory_designation'),
+            signatory_date: val('wi_signatory_date'),
+        };
+    }
+
     /** Persist info-sheet details. */
     async saveWeeklyInfo(e) {
         e.preventDefault();
-        const form = document.getElementById('weeklyInfoForm');
         const alertEl = document.getElementById('weeklyInfoAlert');
         const saveBtn = document.getElementById('wiSaveBtn');
         alertEl.classList.add('d-none');
@@ -2460,7 +2620,7 @@ async setInternalFaculty(internalFacultyIds) {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
-                body: JSON.stringify(Object.fromEntries(new FormData(form).entries()))
+                body: JSON.stringify(this.collectWeeklyInfoPayload())
             });
             const data = await res.json();
             if (!res.ok) {

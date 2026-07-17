@@ -114,6 +114,20 @@
                     />
                 </div>
             </div>
+            <div class="col-md-3">
+                <div class="mb-3">
+                    {{-- Printed in the weekly timetable cells and its abbreviation
+                         legend. Left blank, the timetable prints the full name. --}}
+                    <x-input
+                        name="abbreviation"
+                        label="Timetable Abbreviation :"
+                        placeholder="e.g. GSM"
+                        formLabelClass="form-label"
+                        maxlength="12"
+                        value="{{ $faculty->abbreviation }}"
+                    />
+                </div>
+            </div>
     <div class="col-md-6">
         <div class="mb-3">
 
