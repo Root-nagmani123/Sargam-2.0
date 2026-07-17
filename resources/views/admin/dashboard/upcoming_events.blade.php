@@ -1,11 +1,11 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Upcoming Events - Sargam | Lal Bahadur')
+@section('title', 'Upcoming Events')
 
 @section('content')
 <div class="container-fluid">
 
-    <x-breadcrum title="Upcoming Events"></x-breadcrum>
+    <x-breadcrum title="Upcoming Events" :showBack="true"></x-breadcrum>
     <div class="card" >
         <div class="card-body">
           <div class="row">

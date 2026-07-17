@@ -5,7 +5,7 @@
 @section('content')
 @include('admin.dashboard.partials.faculty_table', [
     'faculties'    => $guest_faculty,
-    'tableId'      => 'guess_faculty',
+    'tableId'      => 'guest_faculty',
     'cssFile'      => 'css/guest_faculty.css',
     'cardClass'    => 'guest-faculty-card',
     'pageTitle'    => 'Guest Faculty',
