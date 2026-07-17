@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-calendar.css') }}?v=4">
 <link rel="stylesheet" href="{{ asset('css/dashboard-stat-cards.css') }}?v=2">
-<link rel="stylesheet" href="{{ asset('css/dashboard-main.css') }}?v=5">
+<link rel="stylesheet" href="{{ asset('css/dashboard-main.css') }}?v=7">
 
 @php
 $user = Auth::user();

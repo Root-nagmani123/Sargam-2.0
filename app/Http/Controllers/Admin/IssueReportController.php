@@ -2,15 +2,97 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\DataTables\IssueReportDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\IssueReport;
 use App\Models\SidebarMenu\MenuGroup;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class IssueReportController extends Controller
 {
+    /** Human labels for issue_reports.status. */
+    public const STATUS_LABELS = [
+        IssueReport::STATUS_OPEN        => 'Open',
+        IssueReport::STATUS_IN_PROGRESS => 'In Progress',
+        IssueReport::STATUS_RESOLVED    => 'Resolved',
+        IssueReport::STATUS_CLOSED      => 'Closed',
+    ];
+
+    /**
+     * Admin listing of reported issues (DataTable-driven).
+     */
+    public function index(IssueReportDataTable $dataTable)
+    {
+        return $dataTable->render('admin.issue_reports.index', [
+            'statusLabels' => self::STATUS_LABELS,
+        ]);
+    }
+
+    /**
+     * JSON detail for a single reported issue (feeds the admin details modal).
+     */
+    public function show($id)
+    {
+        $report = IssueReport::findOrFail($id);
+
+        $reporter = DB::table('user_credentials')
+            ->where('user_id', $report->reported_by)
+            ->first(['first_name', 'last_name', 'user_name', 'email_id', 'mobile_no']);
+
+        $reporterName = $reporter
+            ? trim(($reporter->first_name ?? '') . ' ' . ($reporter->last_name ?? ''))
+            : '';
+        if ($reporterName === '') {
+            $reporterName = $reporter->user_name ?? ('User #' . $report->reported_by);
+        }
+
+        return response()->json([
+            'success' => true,
+            'issue'   => [
+                'id'            => $report->id,
+                'reference'     => '#' . $report->id,
+                'reporter'      => $reporterName,
+                'reporter_email'=> $reporter->email_id ?? null,
+                'reporter_phone'=> $reporter->mobile_no ?? null,
+                'module_name'   => $report->module_name,
+                'sub_module'    => $report->sub_module,
+                'description'   => $report->description,
+                'page_url'      => $report->page_url,
+                'attachment_url'=> $report->attachment ? Storage::disk('public')->url($report->attachment) : null,
+                'status'        => (int) $report->status,
+                'status_label'  => self::STATUS_LABELS[(int) $report->status] ?? 'Open',
+                'reported_on'   => $report->created_at ? Carbon::parse($report->created_at)->format('d-m-Y h:i A') : null,
+            ],
+            'status_options' => self::STATUS_LABELS,
+        ]);
+    }
+
+    /**
+     * Update the workflow status of a reported issue.
+     */
+    public function updateStatus(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'status' => 'required|integer|in:' . implode(',', array_keys(self::STATUS_LABELS)),
+        ]);
+
+        $report = IssueReport::findOrFail($id);
+        $report->status = (int) $validated['status'];
+        $report->save();
+
+        return response()->json([
+            'success'      => true,
+            'message'      => 'Issue #' . $report->id . ' marked as ' . (self::STATUS_LABELS[$report->status] ?? 'Open') . '.',
+            'status'       => $report->status,
+            'status_label' => self::STATUS_LABELS[$report->status] ?? 'Open',
+        ]);
+    }
+
     /**
      * Modules offered in the "Report a problem" dropdown.
      * Groups are named non-uniquely across sidebar categories (e.g. "Time Table"
