@@ -14,10 +14,10 @@ use App\Http\Controllers\FC\{
     RegistrationStep3Controller,
     BankDetailsController,
     DocumentUploadController,
-    RegistrationStatusController,
-    FcJoiningAttendanceController,
     FcJoiningSampleDocumentController,
     FcJoiningDocumentFormController,
+    RegistrationStatusController,
+    FcJoiningAttendanceController,
     FormBuilderController,
     FormManagementController,
     GenericFormController,
@@ -242,6 +242,11 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     Route::post('/student/{userId}/form-documents/{formFieldId}/verify', [ReportController::class, 'updateDynamicFormDocumentVerification'])
         ->name('student.form-documents.verify');
 
+    // Form-specific dynamic report (works for any form, any number of steps)
+    Route::get('/form/{form}',            [ReportController::class, 'formOverview'])->name('form');
+    Route::get('/form/{form}/export',     [ReportController::class, 'formExportCsv'])->name('form.export');
+    Route::get('/form/{form}/export-pdf-zip', [ReportController::class, 'formExportPdfZip'])->name('form.export.pdf-zip');
+
     // Health Risk Factors — course-wise report + exports
     Route::get('/health-risk', [ReportController::class, 'healthRiskReport'])->name('health-risk');
     Route::get('/health-risk/print', [ReportController::class, 'healthRiskPrint'])->name('health-risk.print');
@@ -252,11 +257,6 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     Route::get('/descriptive-roll',                        [ReportController::class, 'firstTwoStepsIndex'])->name('descriptive-roll');
     Route::get('/descriptive-roll/zip',                    [ReportController::class, 'firstTwoStepsZip'])->name('descriptive-roll.zip');
     Route::get('/descriptive-roll/student/{username}/pdf', [ReportController::class, 'firstTwoStepsStudentPdf'])->name('descriptive-roll.student.pdf');
-
-    // Form-specific dynamic report (works for any form, any number of steps)
-    Route::get('/form/{form}',        [ReportController::class, 'formOverview'])->name('form');
-    Route::get('/form/{form}/export', [ReportController::class, 'formExportCsv'])->name('form.export');
-    Route::get('/form/{form}/export-pdf-zip', [ReportController::class, 'formExportPdfZip'])->name('form.export.pdf-zip');
 
     // Aggregated reports
     Route::get('/by-service',   [ReportController::class, 'byService'])->name('service');

@@ -152,9 +152,12 @@
 @endsection
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
 <style>
-.ts-dropdown { z-index: 1060 !important; }
+.select2-container--open { z-index: 1060; } /* sirf khula dropdown modal ke upar; closed widget normal flow me (modal ke peeche) */
+.select2-container--default .select2-selection--single { min-height: calc(1.5em + 0.75rem + 2px); display: flex; align-items: center; }
+.select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.5; padding-left: 0.25rem; }
 #updateMeterReadingOtherTable td { vertical-align: middle; font-size: 0.85rem; }
 #updateMeterReadingOtherTable .other-dual-stacked .other-dual-col { vertical-align: top; }
 #updateMeterReadingOtherTable .other-dual-seg { padding-top: 0.35rem; padding-bottom: 0.35rem; }
@@ -166,7 +169,7 @@
 @endpush
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+{{-- Select2 JS globally footer (admin.layouts.footer) se load hoti hai; yahan include ki zaroorat nahi. --}}
 <script>
 @if ($otherMeterReadingAlertMessage !== null)
 (function () {
@@ -186,13 +189,16 @@ $(document).ready(function() {
     let lastInvalidReadingAlertAt = 0;
     window.otherMeterRowData = window.otherMeterRowData || {};
 
-    var tsOpts = { allowEmptyOption: true, create: false, dropdownParent: 'body', maxOptions: null, hideSelected: false, onInitialize: function() { this.activeOption = null; } };
+    // NOTE: ye module pehle TomSelect use karta tha; ab Select2 (baaki app ke saath consistent).
+    // ts* variables sirf truthiness/state tracking ke liye rakhe hain (Select2 instance $(el).data('select2') se milta hai).
     function initTs(el, placeholder) {
-        if (!el || typeof TomSelect === 'undefined') return null;
-        if (el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
-        return new TomSelect(el, Object.assign({}, tsOpts, { placeholder: placeholder || '---Select---' }));
+        if (!el || typeof $.fn.select2 === 'undefined') return null;
+        if ($(el).data('select2')) { try { $(el).select2('destroy'); } catch (e) {} }
+        $(el).select2({ placeholder: placeholder || '---Select---', allowClear: false, width: '100%' });
+        return $(el);
     }
-    function getSelVal(el) { return (el && el.tomselect) ? el.tomselect.getValue() : $(el).val(); }
+    function destroyTs(el) { if (el && $(el).data('select2')) { try { $(el).select2('destroy'); } catch (e) {} } }
+    function getSelVal(el) { return el ? ($(el).val() || '') : ''; }
 
     var tsEstate = null, tsUnitName = null, tsBuilding = null, tsUnitSub = null;
     if (document.getElementById('estate_name')) tsEstate = initTs(document.getElementById('estate_name'), '---Select---');
@@ -211,8 +217,8 @@ $(document).ready(function() {
     $(document).on('change', '#estate_name', function() {
         const campusId = getSelVal(this);
         var elB = document.getElementById('building'), elSub = document.getElementById('unit_sub_type');
-        if (tsBuilding) { try { tsBuilding.destroy(); } catch (e) {} tsBuilding = null; }
-        if (tsUnitSub) { try { tsUnitSub.destroy(); } catch (e) {} tsUnitSub = null; }
+        destroyTs(elB); tsBuilding = null;
+        destroyTs(elSub); tsUnitSub = null;
         $('#building').html('<option value="">All</option>');
         $('#unit_sub_type').html('<option value="">All</option>');
         if (elB) tsBuilding = initTs(elB, 'All');
@@ -220,14 +226,15 @@ $(document).ready(function() {
         if (!campusId) return;
         $.get(blocksUrl, { campus_id: campusId }, function(res) {
             if (res.status && res.data) {
-                if (tsBuilding) { try { tsBuilding.destroy(); } catch (e) {} tsBuilding = null; }
+                destroyTs(elB); tsBuilding = null;
                 $('#building').html('<option value="">All</option>');
                 $.each(res.data, function(i, b) {
                     $('#building').append('<option value="'+b.pk+'">'+b.block_name+'</option>');
                 });
                 if (elB) tsBuilding = initTs(elB, 'All');
                 if (prefill && String(prefill.estate_campus_master_pk) === String(campusId) && tsBuilding) {
-                    tsBuilding.setValue(String(prefill.estate_block_master_pk || ''), true);
+                    // silent widget update; explicit change trigger cascade (unit sub types) chalata hai.
+                    $('#building').val(String(prefill.estate_block_master_pk || '')).trigger('change.select2');
                     $('#building').trigger('change');
                 }
             }
@@ -238,7 +245,7 @@ $(document).ready(function() {
         const campusId = getSelVal(document.getElementById('estate_name'));
         const blockId = getSelVal(this);
         var elSub = document.getElementById('unit_sub_type');
-        if (tsUnitSub) { try { tsUnitSub.destroy(); } catch (e) {} tsUnitSub = null; }
+        destroyTs(elSub); tsUnitSub = null;
         $('#unit_sub_type').html('<option value="">All</option>');
         if (!campusId || !blockId) {
             if (elSub) tsUnitSub = initTs(elSub, 'All');
@@ -252,7 +259,7 @@ $(document).ready(function() {
             }
             if (elSub) tsUnitSub = initTs(elSub, 'All');
             if (prefill && String(prefill.estate_campus_master_pk) === String(campusId) && String(prefill.estate_block_master_pk) === String(blockId) && prefill.estate_unit_sub_type_master_pk && tsUnitSub) {
-                tsUnitSub.setValue(String(prefill.estate_unit_sub_type_master_pk), true);
+                $('#unit_sub_type').val(String(prefill.estate_unit_sub_type_master_pk)).trigger('change.select2');
             }
         });
     });
@@ -624,8 +631,7 @@ $(document).ready(function() {
         if (prefill.bill_month) {
             $('#bill_month').val(prefill.bill_month).trigger('change');
         }
-        if (tsEstate) tsEstate.setValue(String(prefill.estate_campus_master_pk || ''), true);
-        else $('#estate_name').val(prefill.estate_campus_master_pk || '');
+        $('#estate_name').val(String(prefill.estate_campus_master_pk || '')).trigger('change.select2');
         $('#estate_name').trigger('change');
     }
     @endif

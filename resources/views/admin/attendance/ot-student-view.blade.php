@@ -339,7 +339,7 @@
                         <td class="text-center">
                             @if($record['duty_type'])
                             <span
-                                class="badge rounded-pill bg-info-subtle text-info-emphasis border border-info-subtle fw-semibold py-2 px-3">{{ $record['duty_type'] }}</span>
+                                class="badge rounded-1 bg-info-subtle text-info-emphasis border border-info-subtle fw-semibold py-2 px-3">{{ $record['duty_type'] }}</span>
                             @else
                             <span class="dash">-</span>
                             @endif
@@ -348,7 +348,7 @@
                         <td class="text-center">
                             @if($record['exemption_type'])
                             <span
-                                class="badge rounded-pill bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-semibold py-2 px-3">{{ $record['exemption_type'] }}</span>
+                                class="badge rounded-1 bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-semibold py-2 px-3">{{ $record['exemption_type'] }}</span>
                             @else
                             <span class="dash">-</span>
                             @endif

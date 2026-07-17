@@ -207,12 +207,17 @@
 @endsection
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-<style>.ts-dropdown { z-index: 1060 !important; }</style>
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
+<style>
+    .select2-container--open { z-index: 1060; } /* sirf khula dropdown modal ke upar; closed widget normal flow me (modal ke peeche) */
+    .select2-container--default .select2-selection--single { min-height: calc(1.5em + 0.75rem + 2px); display: flex; align-items: center; }
+    .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.5; padding-left: 0.25rem; }
+</style>
 @endpush
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+{{-- Select2 JS globally footer (admin.layouts.footer) se load hoti hai; yahan include ki zaroorat nahi. --}}
 <script>
 $(document).ready(function() {
     const canEditDates = @json($canEditDates);
@@ -221,22 +226,14 @@ $(document).ready(function() {
     const housesUrl = "{{ route('admin.estate.change-request.vacant-houses') }}";
     const unitTypesByCampus = @json($unitTypesByCampus ?? []);
 
-    if (typeof TomSelect !== 'undefined') {
+    if (typeof $.fn.select2 !== 'undefined') {
         const requesterEl = document.getElementById('estate_home_request_details_pk');
         const campusEl = document.getElementById('estate_campus_master_pk');
-        const commonConfig = {
-            allowEmptyOption: true,
-            create: false,
-            dropdownParent: 'body',
-            maxOptions: null,
-            hideSelected: false,
-            onInitialize: function () { this.activeOption = null; }
-        };
-        if (requesterEl && !requesterEl.tomselect) {
-            new TomSelect(requesterEl, Object.assign({}, commonConfig, { placeholder: '---select---' }));
+        if (requesterEl && !$(requesterEl).data('select2')) {
+            $(requesterEl).select2({ placeholder: '---select---', allowClear: false, width: '100%' });
         }
-        if (campusEl && !campusEl.tomselect) {
-            new TomSelect(campusEl, Object.assign({}, commonConfig, { placeholder: '---select---' }));
+        if (campusEl && !$(campusEl).data('select2')) {
+            $(campusEl).select2({ placeholder: '---select---', allowClear: false, width: '100%' });
         }
     }
 
@@ -248,8 +245,9 @@ $(document).ready(function() {
 
     function setCampusSelectValue(val) {
         const el = document.getElementById('estate_campus_master_pk');
-        if (el && el.tomselect) {
-            el.tomselect.setValue(val ? String(val) : '', true);
+        if (el && $(el).data('select2')) {
+            // Silent set: sirf Select2 widget update, app 'change' cascade nahi (caller explicitly trigger karta hai).
+            $(el).val(val ? String(val) : '').trigger('change.select2');
         } else {
             $('#estate_campus_master_pk').val(val || '').trigger('change');
         }

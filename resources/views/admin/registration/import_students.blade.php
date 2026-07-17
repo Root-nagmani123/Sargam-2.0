@@ -262,23 +262,23 @@
             <div class="card-body">
                 <ul class="nav nav-tabs mb-3" id="fcMigrateTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="tab-migrated" data-bs-toggle="tab"
+                        <button class="nav-link" id="tab-migrated" data-bs-toggle="tab"
                             data-bs-target="#pane-migrated" type="button" role="tab"
-                            aria-controls="pane-migrated" aria-selected="true">
+                            aria-controls="pane-migrated" aria-selected="false">
                             Migrated
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="tab-migrate" data-bs-toggle="tab"
+                        <button class="nav-link active" id="tab-migrate" data-bs-toggle="tab"
                             data-bs-target="#pane-migrate" type="button" role="tab"
-                            aria-controls="pane-migrate" aria-selected="false">
+                            aria-controls="pane-migrate" aria-selected="true">
                             Ready to migrate
                         </button>
                     </li>
                 </ul>
 
                 <div class="tab-content" id="fcMigrateTabContent">
-                    <div class="tab-pane fade show active" id="pane-migrated" role="tabpanel"
+                    <div class="tab-pane fade" id="pane-migrated" role="tabpanel"
                         aria-labelledby="tab-migrated" tabindex="0">
                         <p class="text-muted small mb-3">
                             Roster rows already linked to <strong>user_credentials</strong>
@@ -292,7 +292,7 @@
                         </div>
                     </div>
 
-                    <div class="tab-pane fade" id="pane-migrate" role="tabpanel"
+                    <div class="tab-pane fade show active" id="pane-migrate" role="tabpanel"
                         aria-labelledby="tab-migrate" tabindex="0">
                         <form method="POST" action="{{ route('admin.migrate.fc') }}" id="migrateForm">
                             @csrf
@@ -440,7 +440,7 @@
             var initialMigrateTab = @json(
                 session('success')
                     ? 'migrated'
-                    : (request()->query('tab') === 'eligible' ? 'eligible' : 'migrated')
+                    : (request()->query('tab') === 'migrated' ? 'migrated' : 'eligible')
             );
             setFcMigrateActiveTab(initialMigrateTab);
 

@@ -71,7 +71,7 @@
         <div class="mb-3 pb-2 border-bottom border-opacity-25">
             <h4 class="fw-bold mb-1" style="color:#1a3c6e;">Medical report</h4>
             <p class="text-muted small mb-0">
-                <span class="badge rounded-pill bg-light text-dark border">{{ $course }}</span>
+                <span class="badge rounded-1 bg-light text-dark border">{{ $course }}</span>
                 <span class="ms-2"><code class="user-select-all">{{ $ot->otcode }}</code></span>
                 <span class="d-none d-print-inline text-muted ms-2">· Printed {{ now()->format('d-m-Y H:i') }}</span>
             </p>
@@ -221,10 +221,10 @@
                                         <div class="fw-semibold" style="color:#1a3c6e;">{{ $v['label'] }}</div>
                                         <div class="d-flex align-items-center gap-2 flex-wrap">
                                             @if(($v['entry_policy'] ?? '') === 'repeat')
-                                                <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">Repeat</span>
+                                                <span class="badge rounded-1 bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">Repeat</span>
                                             @endif
                                             @if($rc > 0)
-                                                <span class="badge rounded-pill bg-light text-dark border">{{ $rc }} reading{{ $rc === 1 ? '' : 's' }}</span>
+                                                <span class="badge rounded-1 bg-light text-dark border">{{ $rc }} reading{{ $rc === 1 ? '' : 's' }}</span>
                                             @endif
                                         </div>
                                     </div>

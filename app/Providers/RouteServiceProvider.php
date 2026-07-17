@@ -75,6 +75,7 @@ class RouteServiceProvider extends ServiceProvider
         // (CWE-307). Keyed by the submitted identifier + client IP so distinct
         // users on a shared network never lock each other out. Generous enough
         // for genuine users; returns HTTP 429 once automated guessing exceeds it.
+        // Limit is read from LOGIN_RATE_LIMIT env var (default 6 for production).
         RateLimiter::for('login', function (Request $request) {
             $identifier = strtolower(trim((string) (
                 $request->input('username')
@@ -83,7 +84,8 @@ class RouteServiceProvider extends ServiceProvider
                 ?: ''
             )));
 
-            return Limit::perMinute(6)->by($identifier.'|'.$request->ip());
+            $limit = (int) env('LOGIN_RATE_LIMIT', 6);
+            return Limit::perMinute($limit)->by($identifier.'|'.$request->ip());
         });
     }
 }

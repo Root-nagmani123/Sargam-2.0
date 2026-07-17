@@ -465,7 +465,7 @@
                                 <div class="profile-avatar-wrap">
                                     <img src="{{ get_profile_pic() }}" data-fallback-src="{{ asset('images/dummypic.jpeg') }}" alt="Profile Picture" class="profile-avatar-image">
                                 </div>
-                                <span class="badge rounded-pill bg-light text-primary border mb-3">Profile Overview</span>
+                                <span class="badge rounded-1 bg-light text-primary border mb-3">Profile Overview</span>
                                 <h5 class="mb-1 fw-semibold text-dark">{{ $member->first_name }} {{ $member->last_name }}</h5>
                                 <p class="text-muted small mb-0">Use the guided sections to refresh profile data without leaving this page.</p>
                             </div>
@@ -538,7 +538,7 @@
                                     <h5 class="mb-1" id="profile-section-title">Personal Details</h5>
                                     <p class="text-muted mb-0">Update the fields in this section and continue when you are ready. Missing data will be highlighted automatically.</p>
                                 </div>
-                                <span class="badge rounded-pill bg-light text-primary border px-3 py-2" id="profile-section-badge">Step 1 of {{ count($profileSteps) }}</span>
+                                <span class="badge rounded-1 bg-light text-primary border px-3 py-2" id="profile-section-badge">Step 1 of {{ count($profileSteps) }}</span>
                             </div>
 
                             <div class="tab-content profile-step-content">

@@ -58,11 +58,15 @@
 
     @push('scripts')
         <script>
-            let employeePK = null;
+            // Seeded server-side — the only source of the PK for this edit session.
+            // Per-step validation no longer returns a pk (nothing is saved until Finish),
+            // so onFinished() below relies on this to tell the server which record to update.
+            let employeePK = {{ $member->pk ?? 'null' }};
 
             $(document).ready(function () {
                 const form = $("#member-form");
                 const loadedSteps = {};
+                let formIsDirty = false;
 
                 const wizard = $("#wizard").steps({
                     headerTag: "h3",
@@ -78,33 +82,18 @@
 
                         const currentStep = $(`#wizard-p-${currentIndex}`);
                         let stepData = currentStep.find(':input').serialize();
-
-                        if (employeePK) {
-                            stepData += `&emp_id=${employeePK}`;
-                        }
+                        stepData += `&emp_id=${employeePK}`;
 
                         let canProceed = false;
 
+                        // Validates this step's fields only — nothing is written to the
+                        // database yet. The record is updated in one shot from onFinished().
                         $.ajax({
-                            url: `/member/update-validate-step/${currentIndex + 1}/${employeePK || $('#emp_id').val()}`,
+                            url: `/member/update-validate-step/${currentIndex + 1}/${employeePK}`,
                             method: "POST",
                             data: stepData + '&_token={{ csrf_token() }}',
                             async: false,
                             success: function (success) {
-                                if (success.pk) {
-                                    employeePK = success.pk;
-
-                                    // Inject employeePK to all already loaded steps
-                                    $(".wizard section").each(function () {
-                                        const section = $(this);
-                                        if (!section.find('#employeePK').length) {
-                                            section.append(`<input type="hidden" id="employeePK" name="emp_id" value="${employeePK}">`);
-                                        } else {
-                                            section.find('#employeePK').val(employeePK); // Update value if exists
-                                        }
-                                    });
-                                }
-
                                 clearErrors(currentStep);
                                 canProceed = true;
                             },
@@ -135,10 +124,11 @@
                     },
 
                     onFinished: function () {
+                        // All 5 steps' inputs are still in the DOM (jQuery Steps never
+                        // removes them), so this FormData already carries every field from
+                        // every step — this is the single point where the record is saved.
                         const formData = new FormData(form[0]);
-                        if (employeePK) {
-                            formData.append('emp_id', employeePK);
-                        }
+                        formData.append('emp_id', employeePK);
 
                         $.ajax({
                             url: "{{ route('member.update') }}",
@@ -147,6 +137,7 @@
                             contentType: false,
                             processData: false,
                             success: function () {
+                                formIsDirty = false;
                                 alert("Member updated successfully!");
                                 window.location.href = "/member";
                             },
@@ -165,22 +156,60 @@
                     }
                 });
 
+                // --- Unsaved changes protection ---
+                // Any edit inside the wizard (including fields loaded later via AJAX,
+                // since this listener is delegated) marks the form dirty. Programmatic
+                // pre-filling of fields (loadStepContent below) doesn't fire input/change,
+                // so loading existing data doesn't falsely trip this.
+                form.on('input change', ':input', function () {
+                    formIsDirty = true;
+                });
+
+                // Reload / close tab / browser back-forward: browsers show their own
+                // built-in message and ignore any custom text we set here.
+                window.addEventListener('beforeunload', function (e) {
+                    if (formIsDirty) {
+                        e.preventDefault();
+                        e.returnValue = '';
+                    }
+                });
+
+                // In-app navigation (sidebar/menu links, breadcrumbs, etc.): show a
+                // friendlier confirmation instead of the plain browser dialog.
+                $(document).on('click', 'a[href]:not([href^="#"]):not([href^="javascript:"])', function (e) {
+                    if (!formIsDirty) return;
+                    if (e.which === 2 || e.ctrlKey || e.metaKey || e.shiftKey || $(this).attr('target') === '_blank') return;
+
+                    const link = this;
+                    e.preventDefault();
+
+                    Swal.fire({
+                        title: 'Details not saved yet!',
+                        text: "You've changed some information on this page that hasn't been saved. If you leave now, it will be lost. Do you still want to leave?",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Yes, leave without saving',
+                        cancelButtonText: 'Stay on this page'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            formIsDirty = false;
+                            window.location.href = link.href;
+                        }
+                    });
+                });
+
                 function loadStepContent(stepNumber) {
                     if (loadedSteps[stepNumber]) return;
 
                     const stepSection = $(`#wizard-p-${stepNumber - 1}`);
 
                     $.ajax({
-                        url: `/member/edit-step/${stepNumber}/${employeePK || $('#emp_id').val()}`,
+                        url: `/member/edit-step/${stepNumber}/${employeePK}`,
                         method: "GET",
                         success: function (html) {
                             stepSection.html(html);
-
-                            // Inject employeePK if available and not yet injected
-                            if (employeePK && !stepSection.find('#employeePK').length) {
-                                stepSection.append(`<input type="hidden" id="employeePK" name="emp_id" value="${employeePK}">`);
-                            }
-
                             loadedSteps[stepNumber] = true;
                         },
                         error: function (xhr) {

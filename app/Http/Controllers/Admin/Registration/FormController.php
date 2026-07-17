@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Validation\ValidationException;
 
 
 
@@ -695,14 +696,7 @@ class FormController extends Controller
             foreach ($request->all() as $key => $value) {
                 if (Str::startsWith($key, 'field_')) {
                     if ($value instanceof UploadedFile) {
-                        // Optional validation
-                        $request->validate([
-                            $key => 'file|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx|max:5120', // 5MB
-                        ]);
-
-                        $filename = time() . '_' . $value->getClientOriginalName();
-                        $path = $value->storeAs('form-uploads', $filename, 'public');
-
+                        $path = $this->validateAndStoreUpload($value, 'form-uploads');
                         $dynamicFields[Str::replaceFirst('field_', '', $key)] = $path;
                     } elseif (is_array($value)) {
                         $dynamicFields[Str::replaceFirst('field_', '', $key)] =  implode(',', $value);
@@ -771,10 +765,10 @@ class FormController extends Controller
 
                         // File upload detection
                         if ($request->hasFile($valueKey)) {
-                            $filePath = $request->file($valueKey)->store("form-uploads" . $formId . $userId, 'public');
-                            // dd($filePath);
-                            // $filePath = $request->file($valueKey)->store("form-uploads", 'public');
-
+                            $filePath = $this->validateAndStoreUpload(
+                                $request->file($valueKey),
+                                'form-uploads/' . $formId . '_' . $userId
+                            );
                             $fieldType = 'file';
                             $columnValue = null;
                         } elseif (is_array($columnValue)) {
@@ -1747,5 +1741,90 @@ class FormController extends Controller
             \Log::error('PDF Generation Error: ' . $e->getMessage());
             abort(500, 'An error occurred while generating the PDF.');
         }
+    }
+
+    /**
+     * Validate an uploaded file using:
+     *   1. Size limit (5 MB)
+     *   2. Extension whitelist + double-extension blocking (CWE-434)
+     *   3. Magic-bytes verification — actual file content must match declared extension
+     *   4. Random UUID filename — prevents path traversal and name enumeration
+     *
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    private function validateAndStoreUpload(UploadedFile $file, string $directory): string
+    {
+        // 1. Size limit: 5 MB
+        if ($file->getSize() > 5 * 1024 * 1024) {
+            throw ValidationException::withMessages(['file' => 'Uploaded file exceeds the maximum allowed size of 5 MB.']);
+        }
+
+        // 2. Strict extension whitelist + double-extension check
+        $allowedExtensions   = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx'];
+        $dangerousExtensions = [
+            'php', 'php3', 'php4', 'php5', 'phtml', 'phar',
+            'jsp', 'asp', 'aspx', 'exe', 'sh', 'bat', 'cmd',
+            'py', 'rb', 'pl', 'cgi', 'html', 'htm', 'svg', 'xml', 'js', 'vbs', 'ps1',
+        ];
+
+        $nameParts = explode('.', strtolower($file->getClientOriginalName()));
+        if (count($nameParts) < 2) {
+            throw ValidationException::withMessages(['file' => 'Invalid file name.']);
+        }
+
+        // Block any dot-segment that is a dangerous extension (catches double-extension attacks)
+        foreach ($nameParts as $part) {
+            if (in_array($part, $dangerousExtensions, true)) {
+                throw ValidationException::withMessages(['file' => 'Uploaded file type is not allowed.']);
+            }
+        }
+
+        $ext = end($nameParts);
+        if (!in_array($ext, $allowedExtensions, true)) {
+            throw ValidationException::withMessages(['file' => 'Only jpg, jpeg, png, gif, webp, pdf, doc, and docx files are permitted.']);
+        }
+
+        // 3. Magic-bytes verification: read first 12 bytes and confirm content matches extension
+        $handle = fopen($file->getRealPath(), 'rb');
+        $header = $handle ? fread($handle, 12) : '';
+        if ($handle) {
+            fclose($handle);
+        }
+        $bytes = strlen($header) >= 4 ? array_values(unpack('C*', $header)) : [];
+        $b = fn(int $i): int => $bytes[$i] ?? 0;
+
+        $validMagic = match (true) {
+            // JPEG: FF D8 FF
+            $b(0) === 0xFF && $b(1) === 0xD8 && $b(2) === 0xFF
+                => in_array($ext, ['jpg', 'jpeg'], true),
+            // PNG: 89 50 4E 47
+            $b(0) === 0x89 && $b(1) === 0x50 && $b(2) === 0x4E && $b(3) === 0x47
+                => $ext === 'png',
+            // GIF: 47 49 46 38
+            $b(0) === 0x47 && $b(1) === 0x49 && $b(2) === 0x46 && $b(3) === 0x38
+                => $ext === 'gif',
+            // WebP: RIFF....WEBP (needs 12 bytes)
+            $b(0) === 0x52 && $b(1) === 0x49 && $b(2) === 0x46 && $b(3) === 0x46
+                && $b(8) === 0x57 && $b(9) === 0x45 && $b(10) === 0x42 && $b(11) === 0x50
+                => $ext === 'webp',
+            // PDF: 25 50 44 46 (%PDF)
+            $b(0) === 0x25 && $b(1) === 0x50 && $b(2) === 0x44 && $b(3) === 0x46
+                => $ext === 'pdf',
+            // DOC — OLE Compound Document: D0 CF 11 E0
+            $b(0) === 0xD0 && $b(1) === 0xCF && $b(2) === 0x11 && $b(3) === 0xE0
+                => $ext === 'doc',
+            // DOCX — ZIP (PK): 50 4B 03 04
+            $b(0) === 0x50 && $b(1) === 0x4B && $b(2) === 0x03 && $b(3) === 0x04
+                => $ext === 'docx',
+            default => false,
+        };
+
+        if (!$validMagic) {
+            throw ValidationException::withMessages(['file' => 'File content does not match its declared type. Upload rejected.']);
+        }
+
+        // 4. Store under a random UUID filename — no original name preserved in the stored path
+        $safeName = Str::uuid() . '.' . $ext;
+        return $file->storeAs($directory, $safeName, 'public');
     }
 }

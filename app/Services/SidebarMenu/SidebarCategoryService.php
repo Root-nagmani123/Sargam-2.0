@@ -147,7 +147,7 @@ class SidebarCategoryService
 
     private function orderBadge($data)
     {
-        return '<span class="badge rounded-pill text-bg-primary px-3 py-2 fw-medium">'.e($data->order).'</span>';
+        return '<span class="badge rounded-1 text-bg-primary px-3 py-2 fw-medium">'.e($data->order).'</span>';
     }
 
     private function iconBadge($data)
