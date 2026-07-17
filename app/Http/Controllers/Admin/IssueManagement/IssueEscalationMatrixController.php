@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\IssueManagement;
 
+use App\DataTables\IssueEscalationMatrixDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\{
     IssueCategoryMaster,
@@ -10,7 +11,6 @@ use App\Models\{
 };
 use App\Support\DataTableRedisCache;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\{DB, Auth};
 
 class IssueEscalationMatrixController extends Controller
@@ -23,161 +23,14 @@ class IssueEscalationMatrixController extends Controller
     }
 
     /**
-     * Build matrix + categories (one categories query + one maps query — no per-category N+1).
-     *
-     * @return array{matrix: array<int, array{category: IssueCategoryMaster, level1: IssueCategoryEmployeeMap|null, level2: IssueCategoryEmployeeMap|null, level3: IssueCategoryEmployeeMap|null}>, categories: Collection<int, IssueCategoryMaster>}
-     */
-    private function buildMatrixData(): array
-    {
-        $categories = IssueCategoryMaster::active()->orderBy('issue_category')->get();
-        $ids = $categories->pluck('pk')->all();
-        if ($ids === []) {
-            return ['matrix' => [], 'categories' => $categories];
-        }
-
-        $allLevels = IssueCategoryEmployeeMap::query()
-            ->whereIn('issue_category_master_pk', $ids)
-            ->orderBy('priority')
-            ->with('employee')
-            ->get()
-            ->groupBy('issue_category_master_pk');
-
-        $matrix = [];
-        foreach ($categories as $category) {
-            $levels = $allLevels->get($category->pk, collect());
-            $matrix[] = [
-                'category' => $category,
-                'level1' => $levels->firstWhere('priority', 1),
-                'level2' => $levels->firstWhere('priority', 2),
-                'level3' => $levels->firstWhere('priority', 3),
-            ];
-        }
-
-        return ['matrix' => $matrix, 'categories' => $categories];
-    }
-
-    /**
-     * @param  array<int, array{category: IssueCategoryMaster, level1: IssueCategoryEmployeeMap|null, level2: IssueCategoryEmployeeMap|null, level3: IssueCategoryEmployeeMap|null}>  $matrix
-     */
-    private function matrixToCacheArray(array $matrix, Collection $categories): array
-    {
-        $serializeLevel = function (?IssueCategoryEmployeeMap $level): ?array {
-            if ($level === null) {
-                return null;
-            }
-            $emp = $level->relationLoaded('employee') ? $level->getRelation('employee') : $level->employee;
-            $empAttrs = $emp instanceof EmployeeMaster ? $emp->getAttributes() : null;
-
-            return [
-                'map' => $level->getAttributes(),
-                'employee' => $empAttrs,
-            ];
-        };
-
-        $rows = [];
-        foreach ($matrix as $row) {
-            $rows[] = [
-                'category' => $row['category']->getAttributes(),
-                'level1' => $serializeLevel($row['level1'] ?? null),
-                'level2' => $serializeLevel($row['level2'] ?? null),
-                'level3' => $serializeLevel($row['level3'] ?? null),
-            ];
-        }
-
-        return [
-            'matrix_rows' => $rows,
-            'categories' => $categories->map(fn (IssueCategoryMaster $c) => $c->getAttributes())->values()->all(),
-        ];
-    }
-
-    /**
-     * @return array{matrix: array<int, array<string, mixed>>, categories: Collection<int, IssueCategoryMaster>}
-     */
-    private function matrixFromCacheArray(array $cached): array
-    {
-        if (! isset($cached['matrix_rows'], $cached['categories']) || ! is_array($cached['matrix_rows']) || ! is_array($cached['categories'])) {
-            $built = $this->buildMatrixData();
-
-            return ['matrix' => $built['matrix'], 'categories' => $built['categories']];
-        }
-
-        $categories = IssueCategoryMaster::hydrate($cached['categories']);
-        $byCategoryPk = $categories->keyBy('pk');
-
-        $hydrateLevel = function (?array $data): ?IssueCategoryEmployeeMap {
-            if ($data === null || ! isset($data['map']) || ! is_array($data['map'])) {
-                return null;
-            }
-            $map = new IssueCategoryEmployeeMap;
-            $map->setRawAttributes($data['map']);
-            $map->syncOriginal();
-            if (! empty($data['employee']) && is_array($data['employee'])) {
-                $emp = new EmployeeMaster;
-                $emp->setRawAttributes($data['employee']);
-                $emp->syncOriginal();
-                $map->setRelation('employee', $emp);
-            }
-
-            return $map;
-        };
-
-        $matrix = [];
-        foreach ($cached['matrix_rows'] as $row) {
-            if (! isset($row['category']) || ! is_array($row['category'])) {
-                continue;
-            }
-            $pk = $row['category']['pk'] ?? null;
-            $category = $pk !== null ? $byCategoryPk->get($pk) : null;
-            if ($category === null) {
-                $category = IssueCategoryMaster::hydrate([$row['category']])->first();
-            }
-            if ($category === null) {
-                continue;
-            }
-            $matrix[] = [
-                'category' => $category,
-                'level1' => $hydrateLevel($row['level1'] ?? null),
-                'level2' => $hydrateLevel($row['level2'] ?? null),
-                'level3' => $hydrateLevel($row['level3'] ?? null),
-            ];
-        }
-
-        return ['matrix' => $matrix, 'categories' => $categories];
-    }
-
-    /**
      * Display escalation matrix - categories with 3-level hierarchy (employees + days).
      */
-    public function index()
+    public function index(IssueEscalationMatrixDataTable $dataTable)
     {
-        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_escalation_matrix:v1:' . md5(json_encode(['epoch' => $epoch]));
-
-        $cached = DataTableRedisCache::remember(
-            $cacheKey,
-            [
-                'enabled' => 'ISSUE_ESCALATION_MATRIX_CACHE_ENABLED',
-                'seconds' => 'ISSUE_ESCALATION_MATRIX_CACHE_SECONDS',
-            ],
-            'IssueEscalationMatrixController@index',
-            function () {
-                $built = $this->buildMatrixData();
-
-                return $this->matrixToCacheArray($built['matrix'], $built['categories']);
-            }
-        );
-
-        if (! is_array($cached) || ! isset($cached['matrix_rows'], $cached['categories'])) {
-            $built = $this->buildMatrixData();
-            $cached = $this->matrixToCacheArray($built['matrix'], $built['categories']);
-        }
-
-        $hydrated = $this->matrixFromCacheArray($cached);
-        $matrix = $hydrated['matrix'];
-        $categories = $hydrated['categories'];
+        $categories = IssueCategoryMaster::active()->orderBy('issue_category')->get();
         $employees = $this->getEmployeesForDropdown();
 
-        return view('admin.issue_management.escalation_matrix.index', compact('matrix', 'categories', 'employees'));
+        return $dataTable->render('admin.issue_management.escalation_matrix.index', compact('categories', 'employees'));
     }
 
     /**

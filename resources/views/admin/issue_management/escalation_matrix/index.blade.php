@@ -41,56 +41,7 @@
                 @endif
 
                 <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th width="5%">#</th>
-                                <th width="20%">Complaint Category</th>
-                                <th width="25%">Level 1 (Employee / Days)</th>
-                                <th width="25%">Level 2 (Employee / Days)</th>
-                                <th width="25%">Level 3 (Employee / Days)</th>
-                                <th width="10%">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($matrix as $index => $row)
-                            <tr>
-                                <td>{{ $index + 1 }}</td>
-                                <td><strong>{{ $row['category']->issue_category }}</strong></td>
-                                <td>
-                                    @if($row['level1'])
-                                        {{ $row['level1']->employee->name ?? 'N/A' }} <span class="badge bg-info">{{ $row['level1']->days_notify }} days</span>
-                                    @else
-                                        <span class="text-muted">—</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($row['level2'])
-                                        {{ $row['level2']->employee->name ?? 'N/A' }} <span class="badge bg-info">{{ $row['level2']->days_notify }} days</span>
-                                    @else
-                                        <span class="text-muted">—</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($row['level3'])
-                                        {{ $row['level3']->employee->name ?? 'N/A' }} <span class="badge bg-info">{{ $row['level3']->days_notify }} days</span>
-                                    @else
-                                        <span class="text-muted">—</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-warning" onclick="editMatrix({{ $row['category']->pk }}, {{ json_encode($row['category']->issue_category) }}, {{ $row['level1']?->employee_master_pk ?? 'null' }}, {{ $row['level1']?->days_notify ?? 0 }}, {{ $row['level2']?->employee_master_pk ?? 'null' }}, {{ $row['level2']?->days_notify ?? 0 }}, {{ $row['level3']?->employee_master_pk ?? 'null' }}, {{ $row['level3']?->days_notify ?? 0 }})">
-                                        <iconify-icon icon="solar:pen-bold"></iconify-icon> Edit
-                                    </button>
-                                </td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="6" class="text-center">No categories found. Add mapping to get started.</td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                    {!! $dataTable->table(['class' => 'table align-middle w-100']) !!}
                 </div>
             </div>
         </div>
@@ -144,6 +95,7 @@
 @endsection
 
 @section('scripts')
+{!! $dataTable->scripts() !!}
 <script>
 (function() {
     var escalationEmployees = @json($employees);

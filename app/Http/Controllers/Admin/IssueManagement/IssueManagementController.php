@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\IssueManagement;
 
 use App\Http\Controllers\Controller;
+use App\DataTables\IssueManagementCentcomDataTable;
 use App\Exports\IssueManagementExport;
 use App\Support\DataTableRedisCache;
 use App\Models\{
@@ -344,146 +345,14 @@ class IssueManagementController extends Controller
     }
 
     /**
-     * Centcom listing query (nodal or assignee scope + filters), without eager loads — for count / pk slice.
-     */
-    private function issueManagementCentcomFilteredQuery(Request $request): Builder
-    {
-        $query = IssueLogManagement::query();
-
-        // Centcom listing: show only issues where the logged-in employee
-        // is either the configured nodal officer (employee_master_pk)
-        // or currently assigned handler (assigned_to).
-        $ids = getEmployeeIdsForUser(Auth::user()->user_id);
-        if (empty($ids)) {
-            $ids = [Auth::user()->user_id];
-        }
-
-        $query->where(function ($q) use ($ids) {
-            $q->whereIn('employee_master_pk', $ids)
-                ->orWhereIn('assigned_to', $ids);
-        });
-
-        $query->orderBy('created_date', 'desc');
-
-        // Search (ID, description, category name, sub-category)
-        if ($request->filled('search')) {
-            $term = trim($request->search);
-            $query->where(function ($q) use ($term) {
-                if (is_numeric($term)) {
-                    $q->orWhere('pk', $term);
-                }
-                $q->orWhere('description', 'like', "%{$term}%")
-                    ->orWhereHas('category', fn ($cq) => $cq->where('issue_category', 'like', "%{$term}%"))
-                    ->orWhereHas('subCategoryMappings.subCategory', fn ($sq) => $sq->where('issue_sub_category', 'like', "%{$term}%"));
-            });
-        }
-
-        // Status (use has + !== '' so "0" works)
-        if ($request->has('status') && $request->status !== '') {
-            $query->where('issue_status', (int) $request->status);
-        }
-
-        // Category
-        if ($request->has('category') && $request->category !== '') {
-            $query->where('issue_category_master_pk', (int) $request->category);
-        }
-
-        // Priority
-        if ($request->has('priority') && $request->priority !== '') {
-            $query->where('issue_priority_master_pk', (int) $request->priority);
-        }
-
-        // Date range (Carbon for consistent timezone)
-        if ($request->filled('date_from')) {
-            $from = Carbon::parse($request->date_from)->startOfDay()->toDateTimeString();
-            $query->where('created_date', '>=', $from);
-        }
-        if ($request->filled('date_to')) {
-            $to = Carbon::parse($request->date_to)->endOfDay()->toDateTimeString();
-            $query->where('created_date', '<=', $to);
-        }
-
-        return $query;
-    }
-
-    /**
-     * @return array{total: int, ids: array<int, int>}
-     */
-    private function issueManagementCentcomPageSnapshot(Request $request, int $page): array
-    {
-        $base = $this->issueManagementCentcomFilteredQuery($request);
-        $perPage = self::INDEX_PER_PAGE;
-        $total = (int) (clone $base)->toBase()->getCountForPagination();
-        $ids = [];
-        if ($total > 0) {
-            $ids = (clone $base)->forPage($page, $perPage)->pluck('pk')->values()->all();
-            $ids = array_map('intval', $ids);
-        }
-
-        return ['total' => $total, 'ids' => $ids];
-    }
-
-    /**
      * Display issues reported on behalf (CENTCOM).
      */
-    public function centcom(Request $request)
+    public function centcom(Request $request, IssueManagementCentcomDataTable $dataTable)
     {
-        $userId = Auth::user()->user_id;
-        $scopedIds = getEmployeeIdsForUser($userId);
-        if (empty($scopedIds)) {
-            $scopedIds = [$userId];
-        }
-        $scopedIds = array_map('strval', $scopedIds);
-        sort($scopedIds);
-
-        $page = Paginator::resolveCurrentPage('page');
-        $epoch = DataTableRedisCache::readListEpoch(self::CENTCOM_LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_management_centcom:v1:' . md5(json_encode([
-            'epoch' => $epoch,
-            'user_id' => $userId,
-            'scoped_ids' => $scopedIds,
-            'status' => $request->get('status'),
-            'search' => trim((string) $request->get('search', '')),
-            'category' => $request->get('category'),
-            'priority' => $request->get('priority'),
-            'date_from' => $request->get('date_from'),
-            'date_to' => $request->get('date_to'),
-            'page' => $page,
-        ]));
-
-        $snapshot = DataTableRedisCache::remember(
-            $cacheKey,
-            [
-                'enabled' => 'ISSUE_MANAGEMENT_CENTCOM_CACHE_ENABLED',
-                'seconds' => 'ISSUE_MANAGEMENT_CENTCOM_CACHE_SECONDS',
-            ],
-            'IssueManagementController@centcom',
-            fn () => $this->issueManagementCentcomPageSnapshot($request, $page)
-        );
-
-        if (! is_array($snapshot) || ! array_key_exists('total', $snapshot) || ! array_key_exists('ids', $snapshot) || ! is_array($snapshot['ids'])) {
-            $snapshot = $this->issueManagementCentcomPageSnapshot($request, $page);
-        }
-
-        $total = (int) $snapshot['total'];
-        $ids = array_map('intval', $snapshot['ids']);
-        $items = $this->issueManagementHydrateIndexRows($ids);
-
-        $issues = new LengthAwarePaginator(
-            $items,
-            $total,
-            self::INDEX_PER_PAGE,
-            $page,
-            [
-                'path' => Paginator::resolveCurrentPath(),
-                'pageName' => 'page',
-            ]
-        );
-
         $categories = IssueCategoryMaster::active()->get();
         $priorities = IssuePriorityMaster::active()->ordered()->get();
 
-        return view('admin.issue_management.centcom', compact('issues', 'categories', 'priorities'));
+        return $dataTable->render('admin.issue_management.centcom', compact('categories', 'priorities'));
     }
 
     /**
