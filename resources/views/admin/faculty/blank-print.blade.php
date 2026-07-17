@@ -221,6 +221,11 @@ width: 170px;
                     <div class="label-sm">Current Sector</div>
                     <div class="data-line"></div>
                 </div>
+
+                <div class="col-md-4">
+                    <div class="label-sm">Service</div>
+                    <div class="data-line"></div>
+                </div>
             </div>
         </div>
 

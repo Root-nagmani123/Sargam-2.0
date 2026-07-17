@@ -103,10 +103,9 @@ JS;
                 'scrollX' => true,
                 'processing' => true,
                 'serverSide' => true,
-                'deferLoading' => 1,
                 'pageLength' => 25,
                 'lengthMenu' => [[10, 25, 50, 100], [10, 25, 50, 100]],
-                'order' => [[2, 'asc']],
+                'order' => [[1, 'asc']],
                 'searching' => true,
                 'columnDefs' => [
                     ['orderable' => false, 'searchable' => false, 'targets' => 0],

@@ -119,14 +119,15 @@
                 <p class="oath-accepted">ACCEPTED</p>
             </div>
 
-            {{-- ─────────────── HINDI (mirrors the same values) ─────────────── --}}
+            {{-- ─────────────── HINDI (candidate types their own Hindi; name mirrors within Hindi) ─────────────── --}}
             <div class="oath-doc oath-hindi" lang="hi">
                 <span class="lang-tag">हिन्दी</span>
+                <div style="font-size:.72rem; color:#64748b; font-style:italic; margin:.15rem 0 .6rem;">हिन्दी विवरण यहाँ भरें (वैकल्पिक) — या रिक्त छोड़कर मुद्रित प्रति पर हाथ से भरें। / Enter the Hindi details here (optional), or leave blank to hand-fill on the print.</div>
                 <h2 class="oath-title">शपथ / पुष्टि प्रपत्र</h2>
 
                 <p class="oath-body">
                     &ldquo;मैं
-                    <span class="blank blank--name" data-mirror-out="name">&nbsp;</span>
+                    <input type="text" name="hi[name]" class="blank blank--name" value="{{ $data['_hi']['name'] ?? '' }}" data-mirror="hi_name" autocomplete="off">
                     (परिवीक्षाधीन का नाम) शपथ लेता/लेती हूँ/सत्यनिष्ठा से प्रतिज्ञा करता/करती हूँ कि मैं भारत,
                     तथा विधि द्वारा यथास्थापित भारत के संविधान के प्रति वफादार एवं सत्यनिष्ठ रहूँगा/रहूँगी, मैं
                     भारत की प्रभुसत्ता एवं अखण्डता बनाये रखूँगा/रखूँगी तथा अपने पद के कर्तव्यों को निष्ठा,
@@ -141,18 +142,18 @@
                     </div>
                     <div class="oath-line">
                         <span class="oath-line__lbl">नाम</span>
-                        <span class="blank blank--flex" data-mirror-out="name">&nbsp;</span>
+                        <span class="blank blank--flex" data-mirror-out="hi_name">&nbsp;</span>
                     </div>
                     <div class="oath-line">
                         <span class="oath-line__lbl">सेवा</span>
-                        <span class="blank blank--flex" data-mirror-out="service">&nbsp;</span>
+                        <input type="text" name="hi[service]" class="blank blank--flex" value="{{ $data['_hi']['service'] ?? '' }}" autocomplete="off">
                     </div>
                 </div>
 
                 <p class="oath-place">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी, मसूरी</p>
                 <div class="oath-line">
                     <span class="oath-line__lbl" style="min-width:60px;">दिनांक</span>
-                    <span class="blank blank--sm" data-mirror-out="date">&nbsp;</span>
+                    <input type="text" name="hi[date]" class="blank blank--sm" value="{{ $data['_hi']['date'] ?? '' }}" autocomplete="off">
                 </div>
 
                 <p class="oath-note">(शपथ ग्रहण के लिए नैतिक आपत्तिकर्ता उपर्युक्त प्रपत्र में सत्यनिष्ठ बनने हेतु प्रतिज्ञा करें)</p>

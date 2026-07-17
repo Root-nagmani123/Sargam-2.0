@@ -10,6 +10,9 @@
     .form-check-label-border .form-check-input { margin: 0; }
     .form-check-label-border .form-check-label-text { font-weight: 500; }
     .prefill-locked { background-color: var(--bs-secondary-bg, #f8f9fa); cursor: not-allowed; pointer-events: none; }
+    /* Select2 native <select> ko hide karke sibling .select2-container banata hai; prefill lock us par apply karo */
+    select.prefill-locked + .select2-container { pointer-events: none; opacity: 0.9; }
+    select.prefill-locked + .select2-container .select2-selection { background-color: var(--bs-secondary-bg, #f8f9fa); cursor: not-allowed; }
     .noc-file-wrap { position: relative; }
     .noc-clear-btn {
         position: absolute;
@@ -256,13 +259,20 @@
 @endsection
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-<style>.ts-dropdown { z-index: 1060 !important; }</style>
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
+<style>
+    /* Select2 dropdown ko modal backdrop ke upar rakho */
+    .select2-container--open { z-index: 1060; } /* sirf khula dropdown modal ke upar; closed widget normal flow me (modal ke peeche) */
+    /* Height/border ko Bootstrap form-select ke saath align rakho */
+    .select2-container--default .select2-selection--single { min-height: calc(1.5em + 0.75rem + 2px); display: flex; align-items: center; }
+    .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.5; padding-left: 0.25rem; }
+</style>
 @endpush
 
 @push('scripts')
 {!! $dataTable->scripts() !!}
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+{{-- Select2 JS globally footer se load hota hai (admin.layouts.footer). Yahan alag se include ki zaroorat nahi. --}}
 <script>
 (function() {
     var unitTypesByCampus = @json($unitTypesByCampus ?? []);
@@ -280,22 +290,36 @@
     })();
     var campusesList = @json($campuses ?? []);
 
+    // NOTE: ye module pehle TomSelect use karta tha; ab Select2 (baaki app ke saath consistent).
+    // ts* variables sirf truthiness/state tracking ke liye rakhe hain (Select2 me instance $(el).data('select2') se milta hai).
     var tsEmployee = null, tsEstate = null, tsUnit = null, tsBuilding = null, tsUnitSub = null;
-    var commonCfg = {
-        allowEmptyOption: true,
-        create: false,
-        dropdownParent: 'body',
-        maxOptions: null,
-        hideSelected: false,
-        onInitialize: function () { this.activeOption = null; }
-    };
-    function initReturnHouseTs(el, placeholder) {
-        if (!el || typeof TomSelect === 'undefined') return null;
-        if (el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
-        return new TomSelect(el, Object.assign({}, commonCfg, { placeholder: placeholder || '--Select--' }));
+
+    // Select2 initialized hai ya nahi.
+    function isSelect2(el) {
+        return !!(el && $(el).data('select2'));
     }
+    // Safe destroy (agar Select2 laga ho to hi).
+    function destroySelect2(el) {
+        if (isSelect2(el)) { try { $(el).select2('destroy'); } catch (e) {} }
+    }
+    // Ek select ko Select2 me init karo. Modal ke andar hai isliye dropdownParent modal set karte hain
+    // (warna dropdown backdrop ke peeche chala jata hai aur search box focus nahi hota).
+    function initReturnHouseTs(el, placeholder) {
+        if (!el || typeof $.fn.select2 === 'undefined') return null;
+        destroySelect2(el);
+        var $modal = $('#requestHouseModal');
+        $(el).select2({
+            placeholder: placeholder || '--Select--',
+            allowClear: false,
+            width: '100%',
+            dropdownParent: $modal.length ? $modal : $(document.body)
+        });
+        return $(el);
+    }
+    // Native <select> value hamesha Select2 ke saath sync rehti hai, to plain val() kaafi hai.
     function getSelectVal(el) {
-        return (el && el.tomselect) ? el.tomselect.getValue() : $(el).val();
+        var v = el ? $(el).val() : '';
+        return (v === null || v === undefined) ? '' : v;
     }
 
     $(document).ready(function() {
@@ -308,18 +332,12 @@
         function setSelectValue($select, value, label) {
             if (value === undefined || value === null || value === '') return;
             var v = String(value);
-            var el = $select[0];
-            if (!$select.find('option[value="' + v + '"]').length && label) {
-                $select.append('<option value="' + v + '">' + label + '</option>');
-                if (el && el.tomselect) el.tomselect.addOption({ value: v, text: label });
-            }
-            if (el && el.tomselect) {
-                el.tomselect.setValue(v, true);
-                $select.trigger('change');
-                return;
+            // Agar option maujood nahi to label ke saath add karo (Select2 native <option> ko live padhta hai).
+            if (!$select.find('option[value="' + v.replace(/"/g, '\\"') + '"]').length && label) {
+                $select.append($('<option>', { value: v, text: label }));
             }
             $select.val(v);
-            $select.find('option[value="' + v + '"]').prop('selected', true);
+            // 'change' -> cascade handlers + Select2 UI dono update. (Cascade guard isFillingFromRequest se handle hota hai.)
             $select.trigger('change');
         }
 
@@ -369,7 +387,7 @@
             var empEl = document.getElementById('request_employee_name');
             $('#request_employee_name').attr('name', isOther ? 'estate_other_req_pk' : 'employee_select_id');
             $('#request_employee_loading').show();
-            if (empEl && empEl.tomselect) { try { empEl.tomselect.destroy(); } catch (e) {} tsEmployee = null; }
+            destroySelect2(empEl); tsEmployee = null;
             $('#request_employee_name').html('<option value="">--Select--</option>');
             var seq = ++employeeListRequestSeq;
             $.get(urlEmployees, { employee_type: type }, function(res) {
@@ -384,20 +402,15 @@
                         $sel.append('<option value="' + o.id + '" data-section="' + section + '">' + (o.name || '') + (o.request_no ? ' (' + o.request_no + ')' : '') + '</option>');
                     });
                 }
-                if (empEl && typeof TomSelect !== 'undefined') tsEmployee = initReturnHouseTs(empEl, '--Select--');
+                tsEmployee = initReturnHouseTs(empEl, '--Select--');
                 $('#request_section_name').val('');
                 clearRequestDetailsFields();
 
                 // Auto-select requester for self-service flow when request_id is present in URL.
                 if (type === 'LBSNAA' && preselectRequestId) {
                     var targetVal = String(preselectRequestId);
-                    var selEl = document.getElementById('request_employee_name');
-                    if (selEl && selEl.tomselect) {
-                        if (selEl.tomselect.options[targetVal]) {
-                            // false = NOT silent → change events fire, so details prefill.
-                            selEl.tomselect.setValue(targetVal, false);
-                        }
-                    } else if ($sel.find('option[value="' + targetVal.replace(/"/g, '\\"') + '"]').length) {
+                    if ($sel.find('option[value="' + targetVal.replace(/"/g, '\\"') + '"]').length) {
+                        // change fire hota hai -> details prefill trigger hoti hai.
                         $sel.val(targetVal).trigger('change');
                     }
                 }
@@ -407,25 +420,28 @@
         });
 
         function initModalDropdowns() {
-            if (typeof TomSelect === 'undefined') return;
+            if (typeof $.fn.select2 === 'undefined') return;
             var estateEl = document.getElementById('request_estate_name');
             var unitEl = document.getElementById('request_unit_name');
             var buildingEl = document.getElementById('request_building_name');
             var unitSubEl = document.getElementById('request_unit_sub_type');
-            if (estateEl && !estateEl.tomselect) tsEstate = initReturnHouseTs(estateEl, '--Select--');
-            if (unitEl && !unitEl.tomselect) tsUnit = initReturnHouseTs(unitEl, '--Select Estate first--');
-            if (buildingEl && !buildingEl.tomselect) tsBuilding = initReturnHouseTs(buildingEl, '--Select--');
-            if (unitSubEl && !unitSubEl.tomselect) tsUnitSub = initReturnHouseTs(unitSubEl, '--Select--');
+            if (estateEl && !isSelect2(estateEl)) tsEstate = initReturnHouseTs(estateEl, '--Select--');
+            if (unitEl && !isSelect2(unitEl)) tsUnit = initReturnHouseTs(unitEl, '--Select Estate first--');
+            if (buildingEl && !isSelect2(buildingEl)) tsBuilding = initReturnHouseTs(buildingEl, '--Select--');
+            if (unitSubEl && !isSelect2(unitSubEl)) tsUnitSub = initReturnHouseTs(unitSubEl, '--Select--');
         }
 
         function setHouseSelectOnly(html, selectedValue) {
             var el = document.getElementById('request_house_no');
-            if (el && el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
+            destroySelect2(el);
             var $h = $('#request_house_no');
             $h.html(html || '<option value="">--Select--</option>');
             var val = (selectedValue !== undefined && selectedValue !== null) ? String(selectedValue) : '';
             $h.val(val);
             if (el) el.value = val;
+            // Select2 re-init karke selected value reflect karao (native val pehle set ki hai).
+            initReturnHouseTs(el, '--Select--');
+            $h.trigger('change.select2');
         }
 
         $('#requestHouseModal').on('shown.bs.modal', function() {
@@ -465,8 +481,10 @@
                 $('#request_date_possession').val(d.possession_date_oth || '');
                 syncReturningDateMin(d.allotment_date || '');
                 if (!d.estate_campus_master_pk) {
-                    if (tsEstate) { try { document.getElementById('request_estate_name').tomselect.destroy(); } catch (e) {} tsEstate = null; }
+                    var estateElReset = document.getElementById('request_estate_name');
+                    destroySelect2(estateElReset); tsEstate = null;
                     $('#request_estate_name').val('');
+                    if (estateElReset) tsEstate = initReturnHouseTs(estateElReset, '--Select--');
                     destroyTsAndHtml('request_unit_name', '<option value="">--Select Estate first--</option>'); if (document.getElementById('request_unit_name')) tsUnit = initReturnHouseTs(document.getElementById('request_unit_name'), '--Select Estate first--');
                     destroyTsAndHtml('request_building_name', '<option value="">--Select--</option>'); if (document.getElementById('request_building_name')) tsBuilding = initReturnHouseTs(document.getElementById('request_building_name'), '--Select--');
                     destroyTsAndHtml('request_unit_sub_type', '<option value="">--Select--</option>'); if (document.getElementById('request_unit_sub_type')) tsUnitSub = initReturnHouseTs(document.getElementById('request_unit_sub_type'), '--Select--');
@@ -525,22 +543,25 @@
                             var houseEl = document.getElementById('request_house_no');
                             if (houseEl && housePk) {
                                 houseEl.value = housePk;
+                                // Select2 widget ko final value pe sync karo (UI reflect ho).
+                                if (isSelect2(houseEl)) $(houseEl).trigger('change.select2');
                                 var disp = document.getElementById('request_house_no_display');
                                 if (disp) disp.value = houseNoDisplay;
                             }
                             isFillingFromRequest = false;
                         }, 150);
-                    });
-                });
+                    }).fail(function() { isFillingFromRequest = false; });
+                }).fail(function() { isFillingFromRequest = false; });
+            }).fail(function() {
+                isFillingFromRequest = false;
             }).always(function() {
                 $('#request_details_loading').addClass('d-none');
-                setTimeout(function() { isFillingFromRequest = false; }, 200);
             });
         });
 
         function destroyTsAndHtml(id, html) {
             var el = document.getElementById(id);
-            if (el && el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
+            destroySelect2(el);
             if (id === 'request_unit_name') tsUnit = null; else if (id === 'request_building_name') tsBuilding = null; else if (id === 'request_unit_sub_type') tsUnitSub = null;
             $('#' + id).html(html || '<option value="">--Select--</option>');
         }
@@ -548,8 +569,9 @@
         function clearRequestDetailsFields() {
             setPrefilledFieldsLocked(false);
             var estateEl = document.getElementById('request_estate_name');
-            if (estateEl && estateEl.tomselect) estateEl.tomselect.setValue('', true);
-            else $('#request_estate_name').val('');
+            // Estate ko silently empty karo (change.select2 -> sirf widget update, cascade nahi).
+            $('#request_estate_name').val('');
+            if (isSelect2(estateEl)) $(estateEl).trigger('change.select2');
             destroyTsAndHtml('request_unit_name', '<option value="">--Select Estate first--</option>');
             tsUnit = initReturnHouseTs(document.getElementById('request_unit_name'), '--Select Estate first--');
             destroyTsAndHtml('request_building_name', '<option value="">--Select--</option>');
@@ -596,13 +618,9 @@
             $('#request_house_no_display').val('');
             if (!campusPk) return;
             var types = unitTypesByCampus[campusPk] || [];
-            if (unitEl && unitEl.tomselect) {
-                unitEl.tomselect.clearOptions();
-                unitEl.tomselect.addOption({ value: '', text: '--Select--' });
-                types.forEach(function(t) { unitEl.tomselect.addOption({ value: String(t.pk), text: t.unit_type || '' }); });
-            } else {
-                types.forEach(function(t) { $('#request_unit_name').append('<option value="' + t.pk + '">' + (t.unit_type || '') + '</option>'); });
-            }
+            var $unitSel = $('#request_unit_name');
+            types.forEach(function(t) { $unitSel.append($('<option>', { value: String(t.pk), text: t.unit_type || '' })); });
+            $unitSel.trigger('change.select2');
         });
 
         $(document).on('change', '#request_unit_name', function() {
@@ -618,14 +636,9 @@
             if (!unitTypeId) return;
             $.get(urlBlocks, { campus_id: campusId, unit_type_id: unitTypeId }, function(res) {
                 if (res.status && res.data) {
-                    var blkEl = document.getElementById('request_building_name');
-                    if (blkEl && blkEl.tomselect) {
-                        blkEl.tomselect.clearOptions();
-                        blkEl.tomselect.addOption({ value: '', text: '--Select--' });
-                        res.data.forEach(function(b) { blkEl.tomselect.addOption({ value: String(b.pk), text: b.block_name || '' }); });
-                    } else {
-                        res.data.forEach(function(b) { $('#request_building_name').append('<option value="' + b.pk + '">' + b.block_name + '</option>'); });
-                    }
+                    var $blkSel = $('#request_building_name');
+                    res.data.forEach(function(b) { $blkSel.append($('<option>', { value: String(b.pk), text: b.block_name || '' })); });
+                    $blkSel.trigger('change.select2');
                 }
             });
         });
@@ -641,14 +654,9 @@
             if (!campusId || !blockId) return;
             $.get(urlUnitSubTypes, { campus_id: campusId, block_id: blockId, unit_type_id: unitTypeId }, function(res) {
                 if (res.status && res.data) {
-                    var ustEl = document.getElementById('request_unit_sub_type');
-                    if (ustEl && ustEl.tomselect) {
-                        ustEl.tomselect.clearOptions();
-                        ustEl.tomselect.addOption({ value: '', text: '--Select--' });
-                        res.data.forEach(function(u) { ustEl.tomselect.addOption({ value: String(u.pk), text: u.unit_sub_type || '' }); });
-                    } else {
-                        res.data.forEach(function(u) { $('#request_unit_sub_type').append('<option value="' + u.pk + '">' + u.unit_sub_type + '</option>'); });
-                    }
+                    var $ustSel = $('#request_unit_sub_type');
+                    res.data.forEach(function(u) { $ustSel.append($('<option>', { value: String(u.pk), text: u.unit_sub_type || '' })); });
+                    $ustSel.trigger('change.select2');
                 }
             });
         });

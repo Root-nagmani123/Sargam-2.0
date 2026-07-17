@@ -463,11 +463,11 @@ class ProcessMessBillsEmployeeController extends Controller
         foreach ($rows as $idx => $cb) {
             $status = (int) ($cb->status ?? 0);
             if ($status === 2) {
-                $statusBadge = '<span class="badge rounded-pill text-bg-success shadow-sm px-3 py-2">✓ Paid</span>';
+                $statusBadge = '<span class="badge rounded-1 text-bg-success shadow-sm px-3 py-2">✓ Paid</span>';
             } elseif ($status === 1) {
-                $statusBadge = '<span class="badge rounded-pill text-bg-warning text-dark shadow-sm px-3 py-2">⏱ Partial</span>';
+                $statusBadge = '<span class="badge rounded-1 text-bg-warning text-dark shadow-sm px-3 py-2">⏱ Partial</span>';
             } else {
-                $statusBadge = '<span class="badge rounded-pill text-bg-secondary shadow-sm px-3 py-2">○ Unpaid</span>';
+                $statusBadge = '<span class="badge rounded-1 text-bg-secondary shadow-sm px-3 py-2">○ Unpaid</span>';
             }
 
             $row = [

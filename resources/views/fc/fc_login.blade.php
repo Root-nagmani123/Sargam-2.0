@@ -27,8 +27,10 @@
                                 </div>
                             @endif
 
-                            <form class="row g-3 g-md-4" method="POST" action="{{ route('fc.login.verify') }}">
-                                @csrf
+                            <form class="row g-3 g-md-4" method="POST" action="{{ route('fc.login.verify') }}" autocomplete="off">
+                                {{-- ⚠️ TEMPORARY load-test only — revert with: git checkout resources/views/fc/fc_login.blade.php --}}
+                                {{-- @csrf --}}
+
 
                                 <div class="col-12 text-center">
                                     <h1 class="h4 fw-bold text-primary mb-0">Login to Foundation Course</h1>
@@ -42,7 +44,7 @@
                                     <label for="reg_name" class="form-label fw-semibold">User Name</label>
                                     <input type="text" class="form-control form-control-lg rounded-3 @error('reg_name') is-invalid @enderror"
                                         id="reg_name" name="reg_name" placeholder="Enter your User Name"
-                                        value="{{ old('reg_name') }}" autocomplete="username" required>
+                                        value="{{ old('reg_name') }}" autocomplete="off" required>
                                 </div>
 
                                 <div class="col-12">
@@ -51,7 +53,7 @@
                                         <input type="password"
                                             class="form-control rounded-start-3 @error('reg_password') is-invalid @enderror"
                                             placeholder="Enter Password" name="reg_password" id="password"
-                                            autocomplete="current-password" required>
+                                            autocomplete="off" required>
                                         <button type="button"
                                             class="btn btn-primary rounded-end-3 px-3 d-inline-flex align-items-center justify-content-center"
                                             style="background-color: #004a93; border-color: #004a93;"

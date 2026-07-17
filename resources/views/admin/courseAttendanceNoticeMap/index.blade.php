@@ -221,7 +221,27 @@
                 @endunless
             </div>
             @unless(isOfficerTraineeUser())
-            <a href="{{ route('memo.notice.management.export_csv', request()->query()) }}" class="mnm-download">
+            @php
+                // Built from the controller's own resolved filter values, coerced to strings
+                // via ?? '' — NOT request()->query() and NOT route()'s array-param form.
+                // ConvertEmptyStringsToNull turns "from_date=" into PHP null before this
+                // renders; route()'s array-parameter builder then silently DROPS null-valued
+                // keys entirely (while $request->has() on the receiving end still treats an
+                // explicitly-present "from_date=" as present). So either shortcut produces a
+                // Download link with NO from_date/to_date keys at all whenever no date filter
+                // is active — exportCsv() then reads that as "brand new request, default to
+                // today-only", silently downloading the wrong (empty) dataset. See the same
+                // fix in memo_discipline/index.blade.php's Download link.
+                $mnmDownloadUrl = route('memo.notice.management.export_csv') . '?' . http_build_query([
+                    'program_name' => $programNameFilter ?? '',
+                    'type' => $typeFilter ?? '',
+                    'status' => $statusFilter ?? '',
+                    'from_date' => $fromDateFilter ?? '',
+                    'to_date' => $toDateFilter ?? '',
+                    'search' => $searchFilter ?? '',
+                ]);
+            @endphp
+            <a href="{{ $mnmDownloadUrl }}" id="mnmDownloadLink" class="mnm-download">
                 <i class="bi bi-download"></i> Download
             </a>
             @endunless
@@ -285,6 +305,7 @@
                     </div>
                 </div>
             </form>
+            <div id="mnmListContainer">
             <div class="table-responsive">
                 <table id="mnmTable" class="table align-middle mb-0">
                     <thead>
@@ -297,6 +318,7 @@
                             <th>Topic</th>
                             <th>Conclusion Type</th>
                             <th>Conclusion Remark</th>
+                            <th>Created Date</th>
                             <th>Status</th>
                             <th class="text-center">Action</th>
                         </tr>
@@ -337,6 +359,7 @@
                             <td>{{ $memo->topic_name ?? 'N/A' }}</td>
                             <td>{{ ($memo->discussion_name ?? '') !== '' ? $memo->discussion_name : 'N/A' }}</td>
                             <td>{{ ($memo->conclusion_remark ?? '') !== '' ? $memo->conclusion_remark : 'N/A' }}</td>
+                            <td>{{ !empty($memo->created_date) ? date('d-m-Y', strtotime($memo->created_date)) : 'N/A' }}</td>
                             <td><span class="mnm-status {{ $stClass }}">{{ $stLabel }}</span></td>
                             <td>
                                 <div class="mnm-actions justify-content-center">
@@ -424,7 +447,7 @@
                         </tr>
                         @empty
                         <tr class="align-middle">
-                            <td colspan="10" class="text-center text-muted py-5">
+                            <td colspan="11" class="text-center text-muted py-5">
                                 <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                                 No records found
                             </td>
@@ -449,6 +472,7 @@
 
                 </div>
             </div>
+            </div><!-- /#mnmListContainer -->
 
         </div>
     </div>
@@ -461,7 +485,7 @@
                 <div class="d-flex align-items-start justify-content-between gap-2">
                     <h4 class="conv-title mb-0">Conversation</h4>
                     <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn conv-endchat" id="endChatBtn">End Chat</button>
+                        <button type="button" class="btn conv-endchat" id="endChatBtn" disabled title="Open a conversation first">End Chat</button>
                         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close conversation panel" title="Close"></button>
                     </div>
                 </div>
@@ -746,11 +770,12 @@ $(document).ready(function() {
         $('.conv-toggle-btn').removeClass('active');
         $('.conv-toggle-btn[data-conv-type="' + type + '"]').addClass('active');
 
-        // End Chat is only allowed while the notice/memo is still open — a closed
-        // conversation can't be ended again, so disable the button for it.
+        // Keep End Chat disabled until the conversation actually loads into the
+        // chat window. It's enabled only once the chat is open AND still active
+        // (a closed notice/memo can't be ended again).
         $('#endChatBtn')
-            .prop('disabled', isClosed)
-            .attr('title', isClosed ? 'This ' + type + ' is already closed' : 'End Chat');
+            .prop('disabled', true)
+            .attr('title', 'Loading conversation…');
         $('#chatBody').html('<p class="text-muted text-center">Loading conversation...</p>');
 
         $.ajax({
@@ -758,11 +783,17 @@ $(document).ready(function() {
             type: 'GET',
             success: function(res) {
                 $('#chatBody').html(res);
+                // Chat is now open in the window → enable End Chat unless it's closed.
+                $('#endChatBtn')
+                    .prop('disabled', isClosed)
+                    .attr('title', isClosed ? 'This ' + type + ' is already closed' : 'End Chat');
             },
             error: function() {
                 $('#chatBody').html(
                     '<p class="text-danger text-center">Failed to load conversation.</p>'
                 );
+                // Load failed — no chat open, keep End Chat disabled.
+                $('#endChatBtn').prop('disabled', true).attr('title', 'Open a conversation first');
             }
         });
 
@@ -812,8 +843,8 @@ $(document).ready(function() {
                     $btn.prop('disabled', false);
                 }
             },
-            error: function() {
-                alert('Failed to end conversation.');
+            error: function(xhr) {
+                alert((xhr.responseJSON && xhr.responseJSON.message) || 'Failed to end conversation.');
                 $btn.prop('disabled', false);
             }
         });
@@ -823,6 +854,10 @@ $(document).ready(function() {
     document.getElementById('chatOffcanvas').addEventListener('hidden.bs.offcanvas', function () {
         // Do NOT reset _memoNoticeListenersRegistered — document-level listeners persist across opens
         // Resetting it causes duplicate listener registration on each re-open
+
+        // No chat is open now → disable End Chat until a conversation is opened again.
+        window.currentConv = { id: null, type: null };
+        $('#endChatBtn').prop('disabled', true).attr('title', 'Open a conversation first');
     });});
 </script>
 @push('scripts')
@@ -942,9 +977,13 @@ $(document).ready(function() {
         loadMemoTemplates(courseId, null, $(this).val());
     });
 
-    // Filter form submission on change
+    // Filter form submission on change → AJAX (no full page reload)
     $('#program_name, #type, #status, #from_date, #to_date').on('change', function() {
-        $('#filterForm').submit();
+        if (typeof window.applyMnmFiltersAjax === 'function') {
+            window.applyMnmFiltersAjax();
+        } else {
+            $('#filterForm').get(0).submit();
+        }
     });
 
     // Handle Generate Memo button (editable mode)
@@ -1257,18 +1296,24 @@ $(document).ready(function() {
 @push('scripts')
 <script>
 $(function () {
-    // ── DataTable sorting for #mnmTable ──
-    if ($('#mnmTable tbody tr td[colspan]').length === 0) {
-        $('#mnmTable').DataTable({
-            paging: false,
-            searching: false,
-            ordering: true,
-            info: false,
-            columnDefs: [
-                { orderable: false, targets: [0, 9] }
-            ]
-        });
-    }
+    // ── DataTable sorting for #mnmTable (reusable so AJAX filtering can re-init) ──
+    window.reinitMnmTable = function () {
+        if ($.fn.DataTable.isDataTable('#mnmTable')) {
+            $('#mnmTable').DataTable().destroy();
+        }
+        if ($('#mnmTable tbody tr td[colspan]').length === 0) {
+            $('#mnmTable').DataTable({
+                paging: false,
+                searching: false,
+                ordering: true,
+                info: false,
+                columnDefs: [
+                    { orderable: false, targets: [0, 10] }
+                ]
+            });
+        }
+    };
+    window.reinitMnmTable();
 });
 </script>
 @endpush
@@ -1276,6 +1321,45 @@ $(function () {
 @push('scripts')
 <script>
 $(function () {
+    // ── AJAX filter/search: swap only the table container, no full page reload ──
+    function applyMnmFiltersAjax() {
+        var form = document.getElementById('filterForm');
+        var listContainer = document.getElementById('mnmListContainer');
+        if (!form || !listContainer) { $('#filterForm').get(0).submit(); return; }
+        var params = new URLSearchParams(new FormData(form)).toString();
+        var url = "{{ route('memo.notice.management.index') }}" + (params ? '?' + params : '');
+        listContainer.style.opacity = '0.5';
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.text(); })
+            .then(function (html) {
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                var newList = doc.querySelector('#mnmListContainer');
+                if (newList) { listContainer.innerHTML = newList.innerHTML; }
+                window.history.replaceState({}, '', url);
+
+                // The Download link is a static server-rendered href from page load —
+                // without this, it would keep pointing at whatever filters were active
+                // on that initial load (e.g. today-only) even after AJAX-applying
+                // different filters, silently exporting the wrong/empty dataset.
+                var downloadLink = document.getElementById('mnmDownloadLink');
+                if (downloadLink) {
+                    downloadLink.href = "{{ route('memo.notice.management.export_csv') }}" + (params ? '?' + params : '');
+                }
+            })
+            .catch(function () { alert('Failed to apply filters'); })
+            .finally(function () {
+                listContainer.style.opacity = '1';
+                if (typeof window.reinitMnmTable === 'function') { window.reinitMnmTable(); }
+            });
+    }
+    window.applyMnmFiltersAjax = applyMnmFiltersAjax;
+
+    // Any native form submit (e.g. Enter key) → AJAX instead of full reload.
+    $('#filterForm').on('submit', function (e) {
+        e.preventDefault();
+        applyMnmFiltersAjax();
+    });
+
     // ── Time Period presets → from/to dates, then submit ──
     function mnmFmt(d) { return d.toISOString().split('T')[0]; }
     $('#mnmTimePeriod').on('change', function () {
@@ -1295,7 +1379,7 @@ $(function () {
         }
         $('#from_date').val(from);
         $('#to_date').val(to);
-        $('#filterForm').submit();
+        applyMnmFiltersAjax();
     });
 
     // ── Search: toggle, search-as-you-type (debounced), Enter, clear ──
@@ -1309,12 +1393,11 @@ $(function () {
     $('#search').on('input', function () {
         $('#mnmSearchClear').toggle(this.value.length > 0);
         clearTimeout(mnmSearchTimer);
-        // Filters here submit the whole form (full reload); debounce so we only
-        // search once the user pauses typing, not on every keystroke.
-        mnmSearchTimer = setTimeout(function () { $('#filterForm').submit(); }, 500);
+        // Debounced AJAX search: only the table container reloads, not the page.
+        mnmSearchTimer = setTimeout(function () { applyMnmFiltersAjax(); }, 500);
     });
     $('#search').on('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); clearTimeout(mnmSearchTimer); $('#filterForm').submit(); }
+        if (e.key === 'Enter') { e.preventDefault(); clearTimeout(mnmSearchTimer); applyMnmFiltersAjax(); }
     });
     $('#mnmSearchClear').on('click', function () {
         var $s = $('#search');
@@ -1322,7 +1405,7 @@ $(function () {
         clearTimeout(mnmSearchTimer);
         if ($s.val() === '') { $s.trigger('focus'); return; }
         $s.val('');
-        $('#filterForm').submit();
+        applyMnmFiltersAjax();
     });
 
     // After a search reload, put the cursor back in the search box (at the end)

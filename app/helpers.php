@@ -1087,15 +1087,11 @@ function get_Role_by_course()
         return [-1];
     }
 
-    $epoch = Cache::get('role_by_course_epoch', 1);
-    $cacheKey = 'role_by_course_v2_' . $user->pk . '_' . md5(implode(',', $userRoleIds)) . '_e' . $epoch;
-    $role_course = Cache::remember($cacheKey, 600, function () use ($userRoleIds) {
-        return DB::table('course_master as cm')
-            ->join('roles as r', 'cm.user_role_master_pk', '=', 'r.id')
-            ->whereIn('r.id', $userRoleIds)
-            ->pluck('cm.pk')
-            ->toArray();
-    });
+    $role_course = DB::table('course_master as cm')
+        ->join('roles as r', 'cm.user_role_master_pk', '=', 'r.id')
+        ->whereIn('r.id', $userRoleIds)
+        ->pluck('cm.pk')
+        ->toArray();
     if (empty($role_course)) {
         // Non-admin user with roles but no mapped courses should see no data.
         return [-1];
@@ -1620,5 +1616,127 @@ if (! function_exists('fc_report_join_student_master_firsts')) {
                 }
             });
         });
+    }
+}
+
+if (! function_exists('build_memo_notice_template_snapshot')) {
+    /**
+     * Freeze a memo/notice/discipline-memo template's display fields into a JSON
+     * blob at send time, so editing the template afterwards doesn't change what
+     * an OT already sees for something already sent to them.
+     *
+     * @param int|string|null $templatePk
+     * @return string|null
+     */
+    function build_memo_notice_template_snapshot($templatePk)
+    {
+        if (empty($templatePk)) {
+            return null;
+        }
+
+        $template = DB::table('memo_notice_templates')->where('pk', $templatePk)->first();
+        if (! $template) {
+            return null;
+        }
+
+        return json_encode([
+            'title' => $template->title,
+            'director_name' => $template->director_name,
+            'director_designation' => $template->director_designation,
+            'content' => $template->content,
+            'signature_image' => $template->signature_image,
+        ]);
+    }
+}
+
+if (! function_exists('apply_memo_notice_template_snapshot')) {
+    /**
+     * Overlay a stored template_snapshot onto a live-joined template_details row
+     * (as used by CourseAttendanceNoticeMapController's notice/memo viewers), so
+     * an already-sent notice/memo keeps showing what was frozen at send time.
+     * Rows sent before this feature existed have no snapshot yet, so they keep
+     * showing the live-joined (current) template — the old behaviour.
+     *
+     * @param object|null $row
+     * @return object|null
+     */
+    function apply_memo_notice_template_snapshot($row)
+    {
+        if (! $row || empty($row->template_snapshot)) {
+            return $row;
+        }
+
+        $snapshot = json_decode($row->template_snapshot, true);
+        if (! is_array($snapshot)) {
+            return $row;
+        }
+
+        foreach (['title', 'director_name', 'director_designation', 'content', 'signature_image'] as $field) {
+            if (array_key_exists($field, $snapshot)) {
+                $row->$field = $snapshot[$field];
+            }
+        }
+
+        return $row;
+    }
+}
+
+if (! function_exists('resolve_default_memo_notice_template_pk')) {
+    /**
+     * The same "latest active template for this course + type" fallback used by
+     * the live COALESCE joins in CourseAttendanceNoticeMapController, extracted so
+     * it can also run at send time (to pin + snapshot a template for sends that
+     * don't let the user pick one explicitly, e.g. a direct notice).
+     *
+     * @param int|string $coursePk
+     * @param string $type 'Notice' or 'Memo'
+     * @return int|null
+     */
+    function resolve_default_memo_notice_template_pk($coursePk, string $type)
+    {
+        if (empty($coursePk)) {
+            return null;
+        }
+
+        return DB::table('memo_notice_templates')
+            ->where('course_master_pk', $coursePk)
+            ->where('memo_notice_type', $type)
+            ->where('active_inactive', 1)
+            ->whereNull('deleted_at')
+            ->orderByDesc('pk')
+            ->value('pk');
+    }
+}
+
+if (! function_exists('resolve_default_discipline_memo_template_pk')) {
+    /**
+     * Discipline Memo template fallback: discipline-specific template for this
+     * course first, else the course-wide one (discipline_master_pk null). Same
+     * precedence as MemoDisciplineController's getTemplatesByDiscipline()/update().
+     *
+     * @param int|string $coursePk
+     * @param int|string|null $disciplinePk
+     * @return int|null
+     */
+    function resolve_default_discipline_memo_template_pk($coursePk, $disciplinePk = null)
+    {
+        if (empty($coursePk)) {
+            return null;
+        }
+
+        return DB::table('memo_notice_templates')
+            ->where('course_master_pk', $coursePk)
+            ->where('memo_notice_type', 'Discipline Memo')
+            ->where('active_inactive', 1)
+            ->whereNull('deleted_at')
+            ->where(function ($q) use ($disciplinePk) {
+                $q->whereNull('discipline_master_pk');
+                if ($disciplinePk) {
+                    $q->orWhere('discipline_master_pk', $disciplinePk);
+                }
+            })
+            ->orderByRaw('discipline_master_pk IS NULL')
+            ->orderBy('title')
+            ->value('pk');
     }
 }

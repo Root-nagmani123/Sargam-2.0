@@ -52,7 +52,7 @@
     @case('Text')
     @case('text')
         <div class="form-group">
-            <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
+            <label class="form-label">{!! e($fieldLabel) . $requiredAsterisk !!}</label>
             <input type="text" class="form-control" name="{{ $fieldName }}" value="{{ $value }}"
                 {{ $required ? 'required' : '' }} />
         </div>
@@ -60,13 +60,13 @@
 
     @case('Label')
     @case('label')
-        <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
+        <label class="form-label">{!! e($fieldLabel) . $requiredAsterisk !!}</label>
     @break
 
     @case('Date')
     @case('date')
         <div class="form-group">
-            <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
+            <label class="form-label">{!! e($fieldLabel) . $requiredAsterisk !!}</label>
             <input type="date" class="form-control" name="{{ $fieldName }}" value="{{ $value }}"
                 {{ $required ? 'required' : '' }} />
         </div>
@@ -75,7 +75,7 @@
     @case('Email')
     @case('email')
         <div class="form-group">
-            <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
+            <label class="form-label">{!! e($fieldLabel) . $requiredAsterisk !!}</label>
             <input type="email" class="form-control" name="{{ $fieldName }}" value="{{ $value }}"
                 {{ $required ? 'required' : '' }} />
         </div>
@@ -84,7 +84,7 @@
     @case('Textarea')
     @case('textarea')
         <div class="form-group">
-            <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
+            <label class="form-label">{!! e($fieldLabel) . $requiredAsterisk !!}</label>
             <textarea name="{{ $fieldName }}" class="form-control" {{ $required ? 'required' : '' }}>{{ $value }}</textarea>
         </div>
     @break
@@ -92,7 +92,7 @@
     {{-- @case('Select Box')
     @case('dropdown')
         <div class="form-group">
-            <label class="form-label" for="{{ $fieldName }}">{!! $fieldLabel . $requiredAsterisk !!}</label>
+            <label class="form-label" for="{{ $fieldName }}">{!! e($fieldLabel) . $requiredAsterisk !!}</label>
             <select class="form-control select" id="{{ $fieldName }}" name="{{ $fieldName }}"
                 {{ $required ? 'required' : '' }}>
                 <option value="">Choose Option</option>
@@ -245,7 +245,7 @@
         @endphp
 
         <div class="form-group">
-            <label class="form-label" for="{{ $fieldName }}">{!! $fieldLabel . $requiredAsterisk !!}</label>
+            <label class="form-label" for="{{ $fieldName }}">{!! e($fieldLabel) . $requiredAsterisk !!}</label>
             <select class="form-control select" id="{{ $fieldName }}" name="{{ $fieldName }}"
                 {{ $required ? 'required' : '' }}>
                 <option value="">Choose Option</option>
@@ -273,7 +273,7 @@
 
     @case('Radio Button')
     @case('radio')
-        <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label> <br>
+        <label class="form-label">{!! e($fieldLabel) . $requiredAsterisk !!}</label> <br>
         @php
             $radioOptions = explode(
                 ',',
@@ -296,7 +296,7 @@
 
     @case('Checkbox')
     @case('checkbox')
-        <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label> <br>
+        <label class="form-label">{!! e($fieldLabel) . $requiredAsterisk !!}</label> <br>
         @php
             $checkboxOptions = explode(',', $field->field_checkbox_options ?? ($field->fieldoption ?? ''));
             $selectedValues = is_array($value) ? $value : explode(',', $value ?? '');
@@ -317,7 +317,7 @@
 
     @case('number')
         <div class="form-group">
-            <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
+            <label class="form-label">{!! e($fieldLabel) . $requiredAsterisk !!}</label>
             <input class="form-control" type="number" name="{{ $fieldName }}" value="{{ $value }}"
                 {{ $required ? 'required' : '' }} />
         </div>
@@ -325,7 +325,7 @@
 
     @case('time')
         <div class="form-group">
-            <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
+            <label class="form-label">{!! e($fieldLabel) . $requiredAsterisk !!}</label>
             <input class="form-control" type="time" name="{{ $fieldName }}" value="{{ $value }}"
                 {{ $required ? 'required' : '' }} />
         </div>
@@ -334,7 +334,7 @@
     @case('File Upload')
     @case('file')
         <div class="form-group">
-            <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
+            <label class="form-label">{!! e($fieldLabel) . $requiredAsterisk !!}</label>
             <input class="form-control" type="file" name="{{ $fieldName }}" id="{{ $fieldName }}"
                 {{ $required ? 'required' : '' }} onchange="previewImage(event, this)" />
 

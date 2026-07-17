@@ -351,41 +351,50 @@ document.addEventListener('DOMContentLoaded', function() {
     // ==========================================
     
     function detectAndActivateCurrentTab() {
-        const bodyWrapper = document.querySelector('.body-wrapper');
-        if (!bodyWrapper) return;
+        const mainContent = document.querySelector('#mainNavbarContent');
+        if (!mainContent) return;
 
-        // Which content pane actually holds the page content (the page's @section).
+        // Only top-level layout panes — never nested page tabs (e.g. FC migrate
+        // #pane-migrated / #pane-migrate), or syncBodyWrapperTab strips every
+        // main pane and leaves a blank content area.
         let contentTabId = null;
-        bodyWrapper.querySelectorAll('.tab-pane').forEach(function(pane) {
-            if (pane.textContent.trim().length > 0 || pane.querySelector('*')) {
-                if (pane.id !== 'home') {
-                    contentTabId = '#' + pane.id;
-                }
+        mainContent.querySelectorAll(':scope > .tab-pane').forEach(function (pane) {
+            if (pane.id === 'home') {
+                return;
+            }
+            if (pane.children.length > 0 && pane.textContent.trim().length > 0) {
+                contentTabId = '#' + pane.id;
             }
         });
 
-        // The header tab to highlight comes from the RBAC resolver — the SAME source
-        // as the breadcrumb (window.SARGAM_ACTIVE_NAV_TAB). This keeps the active
-        // header tab in lock-step with the breadcrumb, even if a menu was relocated
-        // to a category whose content pane differs. Falls back to the content pane
-        // when the server value isn't available.
-        const tabToHighlight = (typeof window.SARGAM_ACTIVE_NAV_TAB === 'string' && window.SARGAM_ACTIVE_NAV_TAB)
+        const routeTab = (typeof window.SARGAM_ACTIVE_NAV_TAB === 'string' && window.SARGAM_ACTIVE_NAV_TAB)
             ? window.SARGAM_ACTIVE_NAV_TAB
-            : contentTabId;
+            : null;
+        const tabToHighlight = routeTab || contentTabId;
 
         if (tabToHighlight) {
-            document.querySelectorAll('.sidebar-category-link').forEach(function(tab) {
+            document.querySelectorAll('.sidebar-category-link').forEach(function (tab) {
                 var on = tab.getAttribute('href') === tabToHighlight;
                 tab.classList.toggle('active', on);
                 tab.setAttribute('aria-selected', on ? 'true' : 'false');
             });
         }
 
-        // Show whichever pane actually has content so the page never goes blank,
-        // even when the highlighted tab differs from the content's section.
-        if (contentTabId) {
-            syncBodyWrapperTab(contentTabId);
-            syncSidebarTab(contentTabId);
+        let paneToShow = null;
+        if (routeTab) {
+            const routePaneId = routeTab.replace(/^#/, '');
+            const routePane = mainContent.querySelector(':scope > #' + routePaneId + '.tab-pane');
+            if (routePane && routePane.children.length > 0) {
+                paneToShow = routeTab;
+            }
+        }
+        if (!paneToShow && contentTabId) {
+            paneToShow = contentTabId;
+        }
+
+        if (paneToShow) {
+            syncBodyWrapperTab(paneToShow);
+            syncSidebarTab(paneToShow);
             setTimeout(adjustAllDataTables, 150);
         }
     }

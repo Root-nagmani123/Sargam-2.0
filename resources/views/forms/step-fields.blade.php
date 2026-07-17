@@ -124,6 +124,8 @@
                             'lookups'         => $lookups,
                             'districtOptions' => $districtOptions ?? collect(),
                             'readonly'        => false,
+                            'lockedFields'    => $lockedFields ?? [],
+                            'prefillValues'   => $prefillValues ?? [],
                         ])
                     </div>
                 @endforeach
@@ -159,10 +161,12 @@
 @endphp
 @push('scripts')
 @include('fc.registration.partials.fc-form-validation')
+@include('fc.registration.partials.fc-scroll-to-error-script')
 @if($hasSameAsPermanent ?? false)
 @include('fc.registration.partials.same-as-permanent-script')
 @endif
 @include('fc.registration.partials.fc-location-cascade-script')
+@include('fc.registration.partials.fc-choices-init')
 <script>
 document.querySelectorAll('.fc-file-upload[data-max-kb]').forEach(function (input) {
     var maxKb = parseInt(input.getAttribute('data-max-kb'), 10) || 5120;

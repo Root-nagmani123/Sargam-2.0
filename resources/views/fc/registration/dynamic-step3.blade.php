@@ -100,6 +100,7 @@
                                             'row' => $row,
                                             'groupLookups' => $gLookups,
                                             'districtOptions' => $districtOptions ?? collect(),
+                                            'disabledFields' => ($disabledGroupFields[$group->group_name] ?? []),
                                         ])
                                     @endforeach
                                 @else
@@ -111,6 +112,7 @@
                                             'row' => (object)[],
                                             'groupLookups' => $gLookups,
                                             'districtOptions' => $districtOptions ?? collect(),
+                                            'disabledFields' => ($disabledGroupFields[$group->group_name] ?? []),
                                         ])
                                     @endfor
                                 @endif
@@ -298,4 +300,9 @@ document.querySelectorAll('.fc-file-upload[data-max-kb]').forEach(function (inpu
 </script>
 @include('fc.registration.partials.group-tabs-activate-script')
 @endempty
+@endpush
+
+{{-- Always runs (dynamic + legacy): scroll to the first validation error so it is never missed. --}}
+@push('scripts')
+@include('fc.registration.partials.fc-scroll-to-error-script')
 @endpush

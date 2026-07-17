@@ -107,8 +107,9 @@ class FeedbackController extends Controller
                 'c.course_name',
                 't.subject_topic',
 
-                DB::raw('ROUND(AVG(tf.content) * 20, 2) as avg_content_percent'),
-                DB::raw('ROUND(AVG(tf.presentation) * 20, 2) as avg_presentation_percent'),
+                // NULLIF so blank ratings never count as 0; remark-only groups average to NULL → shown as N/A.
+                DB::raw('ROUND(AVG(NULLIF(tf.content, "")) * 20, 2) as avg_content_percent'),
+                DB::raw('ROUND(AVG(NULLIF(tf.presentation, "")) * 20, 2) as avg_presentation_percent'),
 
                 DB::raw('COUNT(DISTINCT tf.student_master_pk) as participant_count'),
                 DB::raw('DATE(t.START_DATE) as session_date'),
@@ -120,10 +121,14 @@ class FeedbackController extends Controller
             ->join('faculty_master as f', 'tf.faculty_pk', '=', 'f.pk')
             ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
             ->where('tf.is_submitted', 1)
-            ->whereNotNull('tf.content')
-            ->whereNotNull('tf.presentation')
-            ->where('tf.content', '!=', '')
-            ->where('tf.presentation', '!=', '');
+            // Include remark-only feedback: sessions whose per-faculty feedback mode is
+            // "remark" store NULL content/presentation by design (see studentFeedback).
+            // Qualify a row if it has any rating OR a non-empty remark.
+            ->where(function ($q) {
+                $q->whereRaw("(tf.content IS NOT NULL AND tf.content <> '')")
+                  ->orWhereRaw("(tf.presentation IS NOT NULL AND tf.presentation <> '')")
+                  ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
+            });
 
         // Filter by course if specified
         if ($request->filled('course_id')) {
@@ -271,10 +276,12 @@ class FeedbackController extends Controller
                 ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
                 ->join('faculty_master as f', 'tf.faculty_pk', '=', 'f.pk')
                 ->where('tf.is_submitted', 1)
-                ->whereNotNull('tf.content')
-                ->whereNotNull('tf.presentation')
-                ->where('tf.content', '!=', '')
-                ->where('tf.presentation', '!=', '');
+                // Include faculty who only received remark-only feedback (NULL ratings).
+                ->where(function ($q) {
+                    $q->whereRaw("(tf.content IS NOT NULL AND tf.content <> '')")
+                      ->orWhereRaw("(tf.presentation IS NOT NULL AND tf.presentation <> '')")
+                      ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
+                });
 
             if ($request->filled('course_id')) {
                 $facultyQuery->where('t.course_master_pk', $request->course_id);
@@ -345,8 +352,8 @@ class FeedbackController extends Controller
 
                     'Topic' => $item->subject_topic,
 
-                    'Content (%)' => number_format($item->avg_content_percent, 2),
-                    'Presentation (%)' => number_format($item->avg_presentation_percent, 2),
+                    'Content (%)' => $item->avg_content_percent === null ? 'N/A' : number_format($item->avg_content_percent, 2),
+                    'Presentation (%)' => $item->avg_presentation_percent === null ? 'N/A' : number_format($item->avg_presentation_percent, 2),
 
                     'No. of Participants' => $item->participant_count,
                     'Session Date' => \Carbon\Carbon::parse($item->session_date)->format('d-m-Y'),
@@ -425,8 +432,8 @@ class FeedbackController extends Controller
                 'course_name' => $item->course_name,
                 'faculty_address' => $addr . $emailLine,
                 'topic' => $item->subject_topic ?? '—',
-                'content_pct' => number_format((float) $item->avg_content_percent, 2),
-                'presentation_pct' => number_format((float) $item->avg_presentation_percent, 2),
+                'content_pct' => $item->avg_content_percent === null ? 'N/A' : number_format((float) $item->avg_content_percent, 2),
+                'presentation_pct' => $item->avg_presentation_percent === null ? 'N/A' : number_format((float) $item->avg_presentation_percent, 2),
                 'participants' => (int) $item->participant_count,
                 'session_date' => Carbon::parse($item->session_date)->format('d-m-Y'),
                 'comments' => $item->all_comments ? str_replace(' | ', "\n", $item->all_comments) : '—',
@@ -682,8 +689,14 @@ class FeedbackController extends Controller
                 DB::raw('SUM(CASE WHEN tf.content = "1" THEN 1 ELSE 0 END) as content_1')
             )
             ->where('tf.is_submitted', 1)
-            ->whereNotNull('tf.presentation')
-            ->whereNotNull('tf.content')
+            // Include remark-only feedback (feedback mode "remark" → NULL ratings). Rows with
+            // no rating contribute 0 to the SUM(CASE) counts, so remark-only sessions surface
+            // with empty rating distributions (the view renders N/A instead of 0%).
+            ->where(function ($q) {
+                $q->whereNotNull('tf.content')
+                  ->orWhereNotNull('tf.presentation')
+                  ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
+            })
             ->groupBy('tf.faculty_pk', 'tf.topic_name', 'cm.course_name', 'fm.full_name', 'tt.START_DATE', 'tt.class_session');
 
         // Apply filters
@@ -900,8 +913,14 @@ class FeedbackController extends Controller
                 DB::raw('SUM(CASE WHEN tf.content = "1" THEN 1 ELSE 0 END) as content_1')
             )
             ->where('tf.is_submitted', 1)
-            ->whereNotNull('tf.presentation')
-            ->whereNotNull('tf.content')
+            // Include remark-only feedback (feedback mode "remark" → NULL ratings). Rows with
+            // no rating contribute 0 to the SUM(CASE) counts, so remark-only sessions surface
+            // with empty rating distributions (the view renders N/A instead of 0%).
+            ->where(function ($q) {
+                $q->whereNotNull('tf.content')
+                  ->orWhereNotNull('tf.presentation')
+                  ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
+            })
             ->groupBy('tf.faculty_pk', 'tf.topic_name', 'cm.course_name', 'fm.full_name', 'tt.START_DATE', 'tt.class_session');
 
         // Apply filters
@@ -1078,8 +1097,14 @@ class FeedbackController extends Controller
                 DB::raw('SUM(CASE WHEN tf.content = "1" THEN 1 ELSE 0 END) as content_1')
             )
             ->where('tf.is_submitted', 1)
-            ->whereNotNull('tf.presentation')
-            ->whereNotNull('tf.content')
+            // Include remark-only feedback (feedback mode "remark" → NULL ratings). Rows with
+            // no rating contribute 0 to the SUM(CASE) counts, so remark-only sessions surface
+            // with empty rating distributions (the view renders N/A instead of 0%).
+            ->where(function ($q) {
+                $q->whereNotNull('tf.content')
+                  ->orWhereNotNull('tf.presentation')
+                  ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
+            })
             ->groupBy('tf.faculty_pk', 'tf.topic_name', 'cm.course_name', 'fm.full_name', 'tt.START_DATE', 'tt.class_session');
 
         // Apply filters (EXACT same as showFacultyAverage)
@@ -1271,7 +1296,13 @@ class FeedbackController extends Controller
                     DB::raw('SUM(CASE WHEN tf.content = "2" THEN 1 ELSE 0 END) as content_2'),
                     DB::raw('SUM(CASE WHEN tf.content = "1" THEN 1 ELSE 0 END) as content_1')
                 )
-                ->where('tf.is_submitted', 1)->whereNotNull('tf.presentation')->whereNotNull('tf.content')
+                ->where('tf.is_submitted', 1)
+                // Include remark-only feedback (feedback mode "remark" → NULL ratings).
+                ->where(function ($q) {
+                    $q->whereNotNull('tf.content')
+                      ->orWhereNotNull('tf.presentation')
+                      ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
+                })
                 ->groupBy('tf.faculty_pk', 'tf.topic_name', 'cm.course_name', 'fm.full_name', 'tt.START_DATE', 'tt.class_session');
 
             if (!empty($programName)) {
@@ -1564,7 +1595,7 @@ class FeedbackController extends Controller
                 'cm.active_inactive as program_status',
                 'cm.end_date as program_end_date',
                 'fm.full_name as faculty_name',
-                'fm.faculty_type',
+                'tt.faculty_type',
                 'tf.faculty_pk',
                 'tt.START_DATE',
                 'tt.END_DATE',
@@ -1588,11 +1619,20 @@ class FeedbackController extends Controller
                 ELSE NULL 
              END SEPARATOR "|||") as remarks')
             );
+        // Include remark-only feedback. Sessions whose per-faculty feedback mode is
+        // "remark" (see CalendarController::resolveFacultyFeedbackType / studentFeedback)
+        // are captured with NULL content/presentation by design — the student form only
+        // renders the remark box, not the rating stars. Requiring both ratings therefore
+        // silently dropped all such feedback (e.g. current-course internal faculty). A row
+        // now qualifies if it carries any rating OR a non-empty remark.
         $query->where('tf.is_submitted', 1)
-              ->whereNotNull('tf.content')
-              ->whereNotNull('tf.presentation');
+              ->where(function ($q) {
+                  $q->whereNotNull('tf.content')
+                    ->orWhereNotNull('tf.presentation')
+                    ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
+              });
         // Group by - ADD class_session to group by
-        $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
+        $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'tt.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
 
         // Apply filters
         if ($programId && $programId !== '') {
@@ -1605,7 +1645,7 @@ class FeedbackController extends Controller
         }
 
         if (!empty($facultyType)) {
-            $query->whereIn('fm.faculty_type', $facultyType);
+            $query->whereIn('tt.faculty_type', $facultyType);
         }
 
         if ($fromDate) {
@@ -1792,6 +1832,10 @@ class FeedbackController extends Controller
                 ],
                 'content_percentage' => $contentPercentage,
                 'presentation_percentage' => $presentationPercentage,
+                // Whether any numeric rating was collected for this session. Remark-only
+                // sessions (feedback mode "remark") have no ratings, so the view shows the
+                // remarks and marks the rating table as not applicable instead of "0.00%".
+                'has_ratings' => ($contentTotal + $presentationTotal) > 0,
                 'remarks' => $remarks,
                 'raw_start_date' => $startDate ? $startDate->format('Y-m-d H:i:s') : null, // For sorting
             ];
@@ -1856,25 +1900,31 @@ class FeedbackController extends Controller
         // Validate: keep only allowed values
         $validTypes = array_values(array_filter((array) $selectedTypes, fn($t) => in_array($t, ['1', '2'], true)));
 
-        // Build query
-        $query = DB::table('faculty_master')
-            ->select('full_name', 'faculty_type')
-            ->whereNotNull('full_name')
-            ->where('full_name', '!=', '');
+        // Build query from actual session records so suggestions reflect how
+        // faculty were scheduled (session-level type on the timetable), matching
+        // the report's classification rather than the faculty's global type.
+        $query = DB::table('topic_feedback as tf')
+            ->join('timetable as tt', 'tf.timetable_pk', '=', 'tt.pk')
+            ->join('faculty_master as fm', 'tf.faculty_pk', '=', 'fm.pk')
+            ->select('fm.full_name', 'tt.faculty_type')
+            ->where('tf.is_submitted', 1)
+            ->whereNotNull('fm.full_name')
+            ->where('fm.full_name', '!=', '')
+            ->groupBy('fm.full_name', 'tt.faculty_type');
 
         // Only apply type filter when specific types are requested
         if (!empty($validTypes)) {
-            $query->whereIn('faculty_type', $validTypes);
+            $query->whereIn('tt.faculty_type', $validTypes);
         } else {
             // No type filter — search across Guest (2) and Internal (1)
-            $query->whereIn('faculty_type', ['1', '2']);
+            $query->whereIn('tt.faculty_type', ['1', '2']);
         }
 
         if (!empty($searchTerm)) {
-            $query->where('full_name', 'LIKE', '%' . $searchTerm . '%');
+            $query->where('fm.full_name', 'LIKE', '%' . $searchTerm . '%');
         }
 
-        $faculties = $query->orderBy('full_name')->limit(20)->get();
+        $faculties = $query->orderBy('fm.full_name')->limit(20)->get();
 
         // Map faculty types to display names (only Internal and Guest)
         $facultyTypeMap = [
@@ -1924,7 +1974,7 @@ class FeedbackController extends Controller
                 'cm.active_inactive as program_status',
                 'cm.end_date as program_end_date',
                 'fm.full_name as faculty_name',
-                'fm.faculty_type',
+                'tt.faculty_type',
                 'tf.faculty_pk',
                 'tt.START_DATE',
                 'tt.END_DATE',
@@ -1948,13 +1998,17 @@ class FeedbackController extends Controller
                     ELSE NULL 
                  END SEPARATOR "|||") as remarks')
             )
+            // Match the on-screen report: include remark-only feedback (NULL ratings).
             ->where('tf.is_submitted', 1)
-            ->whereNotNull('tf.content')
-            ->whereNotNull('tf.presentation');
+            ->where(function ($q) {
+                $q->whereNotNull('tf.content')
+                  ->orWhereNotNull('tf.presentation')
+                  ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
+            });
 
         $this->applyFeedbackReportCourseScope($query);
 
-        $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
+        $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'tt.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
 
         if ($programId && $programId !== '') {
             $this->assertFacultyReportProgramAccess((int) $programId);
@@ -1966,7 +2020,7 @@ class FeedbackController extends Controller
         }
 
         if (!empty($facultyType)) {
-            $query->whereIn('fm.faculty_type', $facultyType);
+            $query->whereIn('tt.faculty_type', $facultyType);
         }
 
         if ($fromDate) {
@@ -2112,13 +2166,13 @@ class FeedbackController extends Controller
                 'Content - Good' => $content_3,
                 'Content - Average' => $content_2,
                 'Content - Below Average' => $content_1,
-                'Content Percentage' => number_format($contentPercentage, 2) . '%',
+                'Content Percentage' => $contentPercentage > 0 ? number_format($contentPercentage, 2) . '%' : 'N/A',
                 'Presentation - Excellent' => $presentation_5,
                 'Presentation - Very Good' => $presentation_4,
                 'Presentation - Good' => $presentation_3,
                 'Presentation - Average' => $presentation_2,
                 'Presentation - Below Average' => $presentation_1,
-                'Presentation Percentage' => number_format($presentationPercentage, 2) . '%',
+                'Presentation Percentage' => $presentationPercentage > 0 ? number_format($presentationPercentage, 2) . '%' : 'N/A',
                 'Remarks' => $remarksText,
                 'Raw Start Date' => $startDate ? $startDate->format('Y-m-d H:i:s') : null, // For sorting
             ];
@@ -2212,7 +2266,7 @@ class FeedbackController extends Controller
                     'cm.active_inactive as program_status',
                     'cm.end_date as program_end_date',
                     'fm.full_name as faculty_name',
-                    'fm.faculty_type',
+                    'tt.faculty_type',
                     'tf.faculty_pk',
                     'tt.START_DATE',
                     'tt.END_DATE',
@@ -2231,13 +2285,17 @@ class FeedbackController extends Controller
                     DB::raw('COUNT(DISTINCT tf.student_master_pk) as participants'),
                     DB::raw('GROUP_CONCAT(DISTINCT CASE WHEN tf.remark IS NOT NULL AND TRIM(tf.remark) != "" THEN tf.remark ELSE NULL END SEPARATOR "|||") as remarks')
                 )
+                // Match the on-screen report: include remark-only feedback (NULL ratings).
                 ->where('tf.is_submitted', 1)
-                ->whereNotNull('tf.content')
-                ->whereNotNull('tf.presentation');
+                ->where(function ($q) {
+                    $q->whereNotNull('tf.content')
+                      ->orWhereNotNull('tf.presentation')
+                      ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
+                });
 
             $this->applyFeedbackReportCourseScope($query);
 
-            $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
+            $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'tt.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
 
             if ($programId && $programId !== '') {
                 $this->assertFacultyReportProgramAccess((int) $programId);
@@ -2247,7 +2305,7 @@ class FeedbackController extends Controller
                 $query->where('fm.full_name', 'LIKE', '%' . $facultyName . '%');
             }
             if (!empty($facultyType)) {
-                $query->whereIn('fm.faculty_type', $facultyType);
+                $query->whereIn('tt.faculty_type', $facultyType);
             }
             if ($fromDate) {
                 $query->whereDate('tt.START_DATE', '>=', $fromDate);
@@ -2312,10 +2370,10 @@ class FeedbackController extends Controller
                     'Time' => $sessionTime ? "({$sessionTime})" : '',
                     'Content - Excellent' => $c5, 'Content - Very Good' => $c4, 'Content - Good' => $c3,
                     'Content - Average' => $c2, 'Content - Below Average' => $c1,
-                    'Content Percentage' => number_format($cPct, 2) . '%',
+                    'Content Percentage' => $cPct > 0 ? number_format($cPct, 2) . '%' : 'N/A',
                     'Presentation - Excellent' => $p5, 'Presentation - Very Good' => $p4, 'Presentation - Good' => $p3,
                     'Presentation - Average' => $p2, 'Presentation - Below Average' => $p1,
-                    'Presentation Percentage' => number_format($pPct, 2) . '%',
+                    'Presentation Percentage' => $pPct > 0 ? number_format($pPct, 2) . '%' : 'N/A',
                     'Remarks' => implode("\n", $remarks),
                 ];
             })->toArray();
@@ -2501,6 +2559,19 @@ class FeedbackController extends Controller
             $row++;
 
             $tableStartRow = $row;
+            $isRemarkOnly = (($item['Content Percentage'] ?? '') === 'N/A') && (($item['Presentation Percentage'] ?? '') === 'N/A');
+            if ($isRemarkOnly) {
+                // Match the on-screen report: remark-only sessions show a note, not a 0/0 rating table.
+                $sheet->mergeCells('A' . $row . ':C' . $row);
+                $sheet->setCellValue('A' . $row, 'Remark-only feedback — numeric ratings were not collected for this session.');
+                $sheet->getStyle('A' . $row)->applyFromArray([
+                    'font' => ['italic' => true, 'color' => ['rgb' => '0B6B78']],
+                    'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8F6F8']],
+                    'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+                    'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN, 'color' => ['rgb' => 'D0D7DE']]],
+                ]);
+                $row++;
+            } else {
             $sheet->setCellValue('A' . $row, 'Rating');
             $sheet->setCellValue('B' . $row, 'Content *');
             $sheet->setCellValue('C' . $row, 'Presentation *');
@@ -2583,6 +2654,7 @@ class FeedbackController extends Controller
             ]);
             $this->applyTableCellStyle($sheet, 'A' . $row . ':C' . $row);
             $row++;
+            }
 
             // TOTAL PARTICIPANTS NOTE
             // $sheet->setCellValue('A' . $row, '* is defined as Total Student Count: ' . $item['Total Participants']);
@@ -2813,7 +2885,7 @@ class FeedbackController extends Controller
                     'cm.active_inactive as program_status',
                     'cm.end_date as program_end_date',
                     'fm.full_name as faculty_name',
-                    'fm.faculty_type',
+                    'tt.faculty_type',
                     'tf.faculty_pk',
                     'tt.START_DATE',
                     'tt.END_DATE',
@@ -2841,7 +2913,7 @@ class FeedbackController extends Controller
             }
 
             if (!empty($facultyType)) {
-                $query->whereIn('fm.faculty_type', $facultyType);
+                $query->whereIn('tt.faculty_type', $facultyType);
             }
 
             if ($fromDate) {
@@ -3049,7 +3121,7 @@ class FeedbackController extends Controller
                     'cm.active_inactive as program_status',
                     'cm.end_date as program_end_date',
                     'fm.full_name as faculty_name',
-                    'fm.faculty_type',
+                    'tt.faculty_type',
                     'tt.START_DATE',
                     'tt.END_DATE',
                     'tt.subject_topic as topic_name'
@@ -3073,7 +3145,7 @@ class FeedbackController extends Controller
             }
 
             if (!empty($facultyType)) {
-                $query->whereIn('fm.faculty_type', $facultyType);
+                $query->whereIn('tt.faculty_type', $facultyType);
             }
 
             if ($fromDate) {

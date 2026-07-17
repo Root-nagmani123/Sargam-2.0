@@ -124,6 +124,9 @@ class TravelPlanController extends Controller
         if (! $slot->hasRoomForUser($userId)) {
             return back()->withInput()->with('error', 'This time slot is full. Please pick another slot.');
         }
+        if ($gapError = $this->arrivalSlotGapError($request->arrival_time_dehradun, $slot)) {
+            return back()->withInput()->with('error', $gapError);
+        }
 
         $plan = StudentTravelPlanMaster::updateOrCreate(
             [fc_user_col('student_travel_plan_masters') => fc_user_val('student_travel_plan_masters', $userId)],
@@ -193,6 +196,9 @@ class TravelPlanController extends Controller
         if (! $slot->hasRoomForUser($userId)) {
             return back()->withInput()->with('error', 'The selected time slot is full. Please choose another slot.');
         }
+        if ($gapError = $this->arrivalSlotGapError($request->arrival_time_dehradun, $slot)) {
+            return back()->withInput()->with('error', $gapError);
+        }
 
         $plan = StudentTravelPlanMaster::updateOrCreate(
             [fc_user_col('student_travel_plan_masters') => fc_user_val('student_travel_plan_masters', $userId)],
@@ -216,5 +222,72 @@ class TravelPlanController extends Controller
             $userId,
             'Travel plan submitted.'
         );
+    }
+
+    /**
+     * Enforce a minimum 2-hour gap between the arrival time at Dehradun and the
+     * chosen activity slot's start time (student needs at least 2 hours to reach
+     * the academy). Returns an error message when the gap is violated, else null.
+     */
+    private function arrivalSlotGapError(?string $arrivalTime, FcTravelArrivalSlot $slot): ?string
+    {
+        $arrivalMinutes = $this->parseTimeToMinutes($arrivalTime);
+        $slotMinutes = $this->parseTimeToMinutes(
+            $slot->time_start ? substr((string) $slot->time_start, 0, 5) : null
+        );
+
+        // If either time is missing/unparseable, we cannot compute the gap — skip.
+        if ($arrivalMinutes === null || $slotMinutes === null) {
+            return null;
+        }
+
+        if ($slotMinutes - $arrivalMinutes < 120) {
+            return 'The activity slot must be at least 2 hours after your arrival time at Dehradun. Please choose a later slot or adjust your Dehradun arrival time.';
+        }
+
+        return null;
+    }
+
+    /**
+     * Parse a free-text time such as "6:00 AM", "18:30" or "6 pm" into minutes
+     * since midnight. Returns null when the value cannot be parsed.
+     */
+    private function parseTimeToMinutes(?string $value): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+        $value = trim($value);
+        if ($value === '' || ! preg_match('/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i', $value, $m)) {
+            return null;
+        }
+
+        $hour = (int) $m[1];
+        $min = isset($m[2]) && $m[2] !== '' ? (int) $m[2] : 0;
+        $mer = isset($m[3]) ? strtolower($m[3]) : '';
+
+        if ($min > 59) {
+            return null;
+        }
+
+        if ($mer === 'am') {
+            if ($hour < 1 || $hour > 12) {
+                return null;
+            }
+            if ($hour === 12) {
+                $hour = 0;
+            }
+        } elseif ($mer === 'pm') {
+            if ($hour < 1 || $hour > 12) {
+                return null;
+            }
+            if ($hour !== 12) {
+                $hour += 12;
+            }
+        } elseif ($hour > 23) {
+            return null;
+        }
+
+        return $hour * 60 + $min;
     }
 }

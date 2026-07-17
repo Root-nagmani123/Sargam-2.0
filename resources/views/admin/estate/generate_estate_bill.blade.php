@@ -234,16 +234,17 @@
 </div>
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
 <style>
-    .ts-dropdown {
-        z-index: 1060 !important;
-    }
+    .select2-container--open { z-index: 1060; } /* sirf khula dropdown modal ke upar; closed widget normal flow me (modal ke peeche) */
+    .select2-container--default .select2-selection--single { min-height: calc(1.5em + 0.75rem + 2px); display: flex; align-items: center; }
+    .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.5; padding-left: 0.25rem; }
 </style>
 @endpush
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+{{-- Select2 JS globally footer (admin.layouts.footer) se load hoti hai; yahan include ki zaroorat nahi. --}}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         var billMonthInput = document.getElementById('bill_month');
@@ -318,19 +319,13 @@
             }
         }
 
-        if (typeof TomSelect !== 'undefined') {
+        if (typeof $.fn.select2 !== 'undefined') {
             var unitSubEl = document.getElementById('unit_sub_type_pk');
-            if (unitSubEl && !unitSubEl.tomselect) {
-                new TomSelect(unitSubEl, {
-                    allowEmptyOption: true,
-                    create: false,
-                    dropdownParent: 'body',
+            if (unitSubEl && !$(unitSubEl).data('select2')) {
+                $(unitSubEl).select2({
                     placeholder: '— Select Unit Sub Type —',
-                    maxOptions: null,
-                    hideSelected: false,
-                    onInitialize: function() {
-                        this.activeOption = null;
-                    }
+                    allowClear: false,
+                    width: '100%'
                 });
             }
         }

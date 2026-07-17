@@ -44,7 +44,7 @@
 
                             @if (stripos($exemption->Exemption_name, 'completed foundation course') !== false)
                                 <div class="col-md-6">
-                                    <label for="course" class="form-label fw-semibold">Course <span
+                                    <label for="course" class="form-label fw-semibold">Already Completed Foundation Course <span
                                             class="text-danger">*</span></label>
                                     <input type="text" class="form-control rounded-3 @error('course') is-invalid @enderror"
                                         id="course" name="course" placeholder="Enter your course" value="{{ old('course') }}"
@@ -96,8 +96,8 @@
                                     <input type="file" class="form-control rounded-3 @error('medical_doc') is-invalid @enderror"
                                         id="medical_doc" name="medical_doc" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                                         data-max-bytes="{{ $medicalDocMaxBytes ?? 5242880 }}" required>
-                                    <div class="form-text">Supported formats: PDF, Word (.doc, .docx), JPG, JPEG, PNG. Max file
-                                        size: {{ ($medicalDocMaxKb ?? 5120) / 1024 }} MB.</div>
+                                    <div class="form-text">Preferably a <strong>PDF</strong>. Word (.doc, .docx), JPG, JPEG, PNG
+                                        also accepted. Max file size: {{ ($medicalDocMaxKb ?? 5120) / 1024 }} MB.</div>
                                     <div id="medical_doc_client_error" class="invalid-feedback d-block @if (!$errors->has('medical_doc')) d-none @endif">
                                         {{ $errors->first('medical_doc') }}
                                     </div>

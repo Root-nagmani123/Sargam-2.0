@@ -21,6 +21,10 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Symfony\Component\Process\Process;
+use App\DataTables\FC\FcDescriptiveRollReportDataTable;
+use App\DataTables\FC\FcHealthRiskReportDataTable;
+use App\Exports\FcHealthRiskExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
 {
@@ -121,6 +125,12 @@ class ReportController extends Controller
     public function formOverview(Request $request, FcForm $form)
     {
         $dataTable    = new FcFormOverviewDataTable($form);
+
+        // DataTables server-side AJAX → return JSON (same table + filter logic as before).
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
         $steps        = $dataTable->steps;
         $totalSteps   = $dataTable->totalSteps;
         $trackerTable = $form->trackerStorageTable();
@@ -156,209 +166,9 @@ class ReportController extends Controller
             ->select('pk', 'service_name', 'service_short_name')
             ->get();
 
-        // Build paginated students using the DataTable's query, with filter support
-        $query = $dataTable->query();
-        $this->fcApplyFormOverviewFilters($query, $request, $form, $steps);
-
-        $students = $query->orderBy('s1.full_name')->paginate(50)->withQueryString();
-
-        return view('fc.report.form-overview', compact(
-            'form', 'steps', 'totalSteps', 'summary', 'services', 'students', 'userKey'
+        return $dataTable->render('fc.report.form-overview', compact(
+            'form', 'steps', 'totalSteps', 'summary', 'services', 'userKey'
         ));
-    }
-
-    // ── 1b. Form Overview CSV Export ─────────────────────────────────
-    public function formExportCsv(Request $request, FcForm $form)
-    {
-        $dataTable  = new FcFormOverviewDataTable($form);
-        $steps      = $dataTable->steps;
-        $trackerTable = $form->trackerStorageTable();
-        $userKey    = $form->user_identifier ?: 'user_id';
-
-        $query = $dataTable->query();
-        $this->fcApplyFormOverviewFilters($query, $request, $form, $steps);
-
-        $stepHeaders = $steps->pluck('step_name')->toArray();
-        $headers = array_merge(
-            ['S.No.', 'Username', 'Full Name', 'Service', 'Cadre', 'State', 'Mobile'],
-            $stepHeaders,
-            ['Progress', 'Status']
-        );
-
-        $filename = 'fc_form_overview_' . $form->form_slug . '_' . now()->format('Ymd_His') . '.csv';
-
-        return response()->stream(function () use ($query, $steps, $headers) {
-            $out = fopen('php://output', 'w');
-            fputcsv($out, $headers);
-
-            $totalSteps = $steps->count();
-            $i = 0;
-            $query->orderBy('s1.full_name')->chunk(200, function ($rows) use ($out, $steps, $totalSteps, &$i) {
-                foreach ($rows as $r) {
-                    $stepCols  = $steps->map(fn ($s) => ($r->{$s->tracker_column} ?? 0) ? 'Yes' : 'No')->toArray();
-                    $totalDone = $steps->filter(fn ($s) => ($r->{$s->tracker_column} ?? 0))->count();
-
-                    // Mirror the blade's status logic: derive from steps_done, not raw DB status
-                    if (($r->status ?? '') === 'SUBMITTED') {
-                        $statusLabel = 'SUBMITTED';
-                    } elseif ($totalSteps > 0 && $totalDone >= $totalSteps) {
-                        $statusLabel = 'COMPLETE';
-                    } else {
-                        $statusLabel = 'INCOMPLETE';
-                    }
-
-                    fputcsv($out, array_merge(
-                        [
-                            ++$i,
-                            $r->login_username ?? '',
-                            $r->full_name ?? '',
-                            $r->service_code ?? '',
-                            $r->cadre ?? '',
-                            $r->allotted_state ?? '',
-                            $r->mobile_no ?? '',
-                        ],
-                        $stepCols,
-                        ["{$totalDone}/{$totalSteps}", $statusLabel]
-                    ));
-                }
-            });
-
-            fclose($out);
-        }, 200, [
-            'Content-Type'        => 'text/csv',
-            'Content-Disposition' => "attachment; filename={$filename}",
-            'Pragma'              => 'no-cache',
-        ]);
-    }
-
-    /**
-     * Apply the form-overview filters (Status / Service / Search) to a tracker query.
-     * Shared by the on-screen list, CSV export and bulk-PDF ZIP export so all three stay consistent.
-     */
-    private function fcApplyFormOverviewFilters($query, Request $request, FcForm $form, $steps): void
-    {
-        $trackerTable = $form->trackerStorageTable();
-        $userKey      = $form->user_identifier ?: 'user_id';
-        $hasFrm       = \Illuminate\Support\Facades\Schema::hasTable('fc_registration_master');
-
-        if ($request->filled('status')) {
-            if ($request->status === 'COMPLETE') {
-                foreach ($steps as $step) {
-                    $query->where("{$trackerTable}.{$step->tracker_column}", 1);
-                }
-            } elseif ($request->status === 'INCOMPLETE') {
-                $query->where(function ($q) use ($trackerTable, $steps) {
-                    foreach ($steps as $step) {
-                        $q->orWhere(function ($q2) use ($trackerTable, $step) {
-                            $q2->where("{$trackerTable}.{$step->tracker_column}", '!=', 1)
-                               ->orWhereNull("{$trackerTable}.{$step->tracker_column}");
-                        });
-                    }
-                });
-            } else {
-                $query->where("{$trackerTable}.status", $request->status);
-            }
-        }
-
-        if ($request->filled('service_id')) {
-            $sid = $request->service_id;
-            $query->where(function ($q) use ($sid, $hasFrm) {
-                $q->where('s1.service_id', $sid);
-                if ($hasFrm) {
-                    $q->orWhere('frm.service_master_pk', $sid);
-                }
-            });
-        }
-
-        if ($request->filled('search')) {
-            $term = '%' . $request->search . '%';
-            $query->where(function ($q) use ($term, $trackerTable, $userKey, $hasFrm) {
-                $q->where('s1.full_name', 'like', $term)
-                  ->orWhere('s1.first_name', 'like', $term)
-                  ->orWhere('s1.last_name', 'like', $term)
-                  ->orWhereRaw("CONCAT(COALESCE(s1.first_name,''), ' ', COALESCE(s1.last_name,'')) LIKE ?", [$term])
-                  ->orWhere('s1.mobile_no', 'like', $term)
-                  ->orWhere('uc.user_name', 'like', $term)
-                  ->orWhere("{$trackerTable}.{$userKey}", 'like', $term);
-                if ($hasFrm) {
-                    $q->orWhere('frm.user_id', 'like', $term);
-                }
-            });
-        }
-    }
-
-    /**
-     * Bulk export: one registration-profile PDF per student (respecting the active filters),
-     * bundled into a single ZIP under a folder named after the course/form.
-     */
-    public function formExportPdfZip(Request $request, FcForm $form)
-    {
-        @set_time_limit(0);
-
-        $dataTable    = new FcFormOverviewDataTable($form);
-        $steps        = $dataTable->steps;
-        $userKey      = $form->user_identifier ?: 'user_id';
-
-        $query = $dataTable->query();
-        $this->fcApplyFormOverviewFilters($query, $request, $form, $steps);
-
-        $rows = $query->orderBy('s1.full_name')->get();
-
-        if ($rows->isEmpty()) {
-            return back()->with('error', 'No students match the current filters. Nothing to export.');
-        }
-
-        $tmpPath = tempnam(sys_get_temp_dir(), 'fc_pdf_zip_');
-        $zip     = new \ZipArchive();
-        if ($zip->open($tmpPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
-            return back()->with('error', 'Could not create ZIP archive.');
-        }
-
-        $folder    = $this->safeZipName($form->form_name) ?: ('form_' . $form->id);
-        $added     = 0;
-        $seen      = [];
-        $usedNames = [];
-
-        foreach ($rows as $r) {
-            $uid = $r->{$userKey} ?? null;
-            if ($uid === null || $uid === '' || isset($seen[(string) $uid])) {
-                continue;
-            }
-            $seen[(string) $uid] = true;
-
-            $bytes = $this->fcStudentRegistrationPdfBytes((string) $uid);
-            if ($bytes === null) {
-                continue;
-            }
-
-            $label = $this->safeZipName(trim(((string) ($r->login_username ?? $uid)) . '_' . ((string) ($r->full_name ?? ''))));
-            if ($label === '') {
-                $label = 'user_' . $uid;
-            }
-
-            $name = $label . '.pdf';
-            $n    = 1;
-            while (isset($usedNames[$name])) {
-                $name = $label . '_' . (++$n) . '.pdf';
-            }
-            $usedNames[$name] = true;
-
-            $zip->addFromString($folder . '/' . $name, $bytes);
-            $added++;
-        }
-
-        $zip->close();
-
-        if ($added === 0) {
-            @unlink($tmpPath);
-            return back()->with('error', 'Could not generate any PDFs. Nothing to export.');
-        }
-
-        $filename = $folder . '_profiles_' . now()->format('Ymd_His') . '.zip';
-
-        return response()->download($tmpPath, $filename, [
-            'Content-Type' => 'application/zip',
-        ])->deleteFileAfterSend(true);
     }
 
     // ── 2. Student Detail View ────────────────────────────────────────
@@ -529,115 +339,6 @@ class ReportController extends Controller
             'Content-Type'        => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
-    }
-
-    /**
-     * Build the bilingual registration profile PDF for one student and return the raw bytes.
-     * Returns null when the student does not exist. Shared by the single-download and bulk-ZIP exports.
-     */
-    private function fcStudentRegistrationPdfBytes(string $username): ?string
-    {
-        $s1Col = fc_user_col('student_master_firsts');
-        $s2Col = fc_user_col('student_master_seconds');
-        $smCol = fc_user_col('student_masters');
-        $bkCol = fc_user_col('new_registration_bank_details_masters');
-        $sqCol = fc_user_col('student_master_qualification_details');
-        $seCol = fc_user_col('student_master_employment_details');
-        $slCol = fc_user_col('student_master_language_knowns');
-
-        $step1 = StudentMasterFirst::where($s1Col, $username)
-            ->with(['session', 'service', 'allottedState'])
-            ->first();
-        if (! $step1) {
-            return null;
-        }
-
-        $step2 = StudentMasterSecond::where($s2Col, $username)
-            ->with(['category', 'religion', 'permState', 'presState', 'fatherProfession'])
-            ->first();
-        $master = StudentMaster::where($smCol, $username)->first();
-        $bank = NewRegistrationBankDetailsMaster::where($bkCol, $username)->first();
-        $qualifications = DB::table('student_master_qualification_details')
-            ->where($sqCol, $username)
-            ->get()
-            ->map(function ($row) {
-                $row->qualification_name = $this->fcResolveLookupLabel(
-                    ['qualification_masters', 'qualification_master'],
-                    ['id', 'pk'],
-                    'qualification_name',
-                    $row->qualification_id ?? null
-                );
-                $row->board_name = $this->fcResolveLookupLabel(
-                    ['board_name_masters', 'board_name_master'],
-                    ['id', 'pk'],
-                    'board_name',
-                    $row->board_id ?? null
-                );
-                return $row;
-            });
-        $employments = DB::table('student_master_employment_details')
-            ->leftJoin('job_type_masters', 'student_master_employment_details.job_type_id', '=', 'job_type_masters.id')
-            ->where("student_master_employment_details.{$seCol}", $username)
-            ->select('student_master_employment_details.*', 'job_type_masters.job_type_name')
-            ->get();
-        $languages = DB::table('student_master_language_knowns')
-            ->where($slCol, $username)
-            ->get()
-            ->map(function ($row) {
-                $row->language_name = $this->fcResolveLookupLabel(
-                    ['language_master', 'language_masters'],
-                    ['id', 'pk'],
-                    'language_name',
-                    $row->language_id ?? null
-                );
-                return $row;
-            });
-        $sections = $this->fcStudentPdfSanitizeSections(
-            app(RegistrationService::class)->buildPdfSectionsFromFormDefinition($username)
-        );
-        $printedAt = $this->fcPdfSanitizeText(now()->format('d/m/Y H:i'));
-        $photoDataUri = $this->fcRegistrationPhotoDataUri($step1->photo_path);
-
-        $pdfFontFaceCss = $this->fcRegistrationEmbeddedFontFaceCss();
-        $pdfFontFamilyCss = $pdfFontFaceCss !== ''
-            ? "'FcRegPdf', 'DejaVu Sans', sans-serif"
-            : "'DejaVu Sans', sans-serif";
-
-        $viewData = [
-            'sections'       => $sections,
-            'username'       => $this->fcPdfSanitizeText($username),
-            'userId'         => $this->fcPdfSanitizeText($username),
-            'step1'          => $step1,
-            'pdfFullName'    => $this->fcPdfSanitizeText((string) ($step1->full_name ?? '')),
-            'printedAt'      => $printedAt,
-            'photoDataUri'   => $photoDataUri,
-            'pdfFontFaceCss' => $pdfFontFaceCss,
-            'pdfFontFamilyCss' => $pdfFontFamilyCss,
-        ];
-
-        $html = view('fc.report.student-detail-pdf', $viewData)->render();
-
-        $engine = strtolower((string) env('FC_REGISTRATION_PDF_ENGINE', 'auto'));
-
-        if ($engine !== 'dompdf' && ($engine === 'chrome' || $engine === 'auto')) {
-            $chromePdf = $this->fcRegistrationPdfRenderChrome($html);
-            if ($chromePdf !== null) {
-                return $chromePdf;
-            }
-            Log::info('FC registration PDF: using Dompdf fallback (Chrome unavailable or failed)', [
-                'engine' => $engine,
-                'chrome_bin' => $this->fcRegistrationChromeBinary(),
-            ]);
-        }
-
-        $this->fcEnsureDompdfFontCacheDir();
-
-        return Pdf::loadHTML($html)
-            ->setOption('isRemoteEnabled', true)
-            ->setOption('isFontSubsettingEnabled', false)
-            ->setPaper('a4', 'portrait')
-            ->addInfo(['Title' => 'FC Registration - '.$username])
-            ->output();
     }
 
     /**
@@ -1460,7 +1161,912 @@ class ReportController extends Controller
         fclose($out);
     }
 
-    // ── Documents ZIP Export ──────────────────────────────────────────
+    private function exportBankCsv(Request $request): void
+    {
+        // Mirror the bank report query (bankDetails): these tables key on user_id,
+        // not "username", and the identifier column is resolved via fc_user_col().
+        $s1Col  = fc_user_col('student_master_firsts');
+        $smCol  = fc_user_col('student_masters');
+        $bCol   = fc_user_col('new_registration_bank_details_masters');
+        $hasFrm = Schema::hasTable('fc_registration_master');
+
+        $out = fopen('php://output','w');
+        fputcsv($out, ['User ID','Full Name','Service','Bank Name','IFSC','Account No','Holder Name']);
+
+        $query = DB::table('student_master_firsts as s1')
+            ->leftJoin('student_masters as sm', "sm.{$smCol}", '=', "s1.{$s1Col}")
+            ->leftJoin('new_registration_bank_details_masters as b', "b.{$bCol}", '=', "s1.{$s1Col}")
+            ->leftJoin('service_masters as svc', 's1.service_id', '=', 'svc.id');
+
+        if ($hasFrm) {
+            $query->leftJoin('fc_registration_master as frm', 'frm.pk', '=', "s1.{$s1Col}")
+                  ->leftJoin('service_master as svc_frm', DB::raw('CAST(frm.service_master_pk AS UNSIGNED)'), '=', 'svc_frm.pk');
+        }
+
+        $serviceExpr = $hasFrm
+            ? "COALESCE(NULLIF(TRIM(svc.service_code),''), NULLIF(TRIM(svc_frm.service_short_name),''), NULLIF(TRIM(svc_frm.service_name),''))"
+            : "NULLIF(TRIM(svc.service_code),'')";
+
+        $query->whereNotNull('b.account_no')
+            ->when($request->filled('form_id'), fn ($q) => $q->where('sm.form_id', (int) $request->form_id))
+            ->select([
+                DB::raw("s1.{$s1Col} as user_id"),
+                DB::raw("NULLIF(TRIM(COALESCE(NULLIF(TRIM(s1.full_name),''), CONCAT(COALESCE(s1.first_name,''),' ',COALESCE(s1.last_name,'')))), '') as full_name"),
+                DB::raw("{$serviceExpr} as service_code"),
+                'b.bank_name', 'b.ifsc_code',
+                'b.account_no', 'b.account_holder_name',
+            ])
+            ->orderBy('s1.full_name')
+            ->each(fn ($r) => fputcsv($out, [
+                $r->user_id, $r->full_name ?? '', $r->service_code ?? '',
+                $r->bank_name ?? '', $r->ifsc_code ?? '',
+                $r->account_no ?? '', $r->account_holder_name ?? '',
+            ]));
+        fclose($out);
+    }
+
+    public function formExportCsv(Request $request, FcForm $form)
+    {
+        $dataTable  = new FcFormOverviewDataTable($form);
+        $steps      = $dataTable->steps;
+        $trackerTable = $form->trackerStorageTable();
+        $userKey    = $form->user_identifier ?: 'user_id';
+
+        $query = $dataTable->query();
+        $this->fcApplyFormOverviewFilters($query, $request, $form, $steps);
+
+        $stepHeaders = $steps->pluck('step_name')->toArray();
+        $headers = array_merge(
+            ['S.No.', 'Username', 'Full Name', 'Service', 'Cadre', 'State', 'Mobile'],
+            $stepHeaders,
+            ['Progress', 'Status']
+        );
+
+        $filename = 'fc_form_overview_' . $form->form_slug . '_' . now()->format('Ymd_His') . '.csv';
+
+        return response()->stream(function () use ($query, $steps, $headers) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, $headers);
+
+            $totalSteps = $steps->count();
+            $i = 0;
+            $query->orderBy('s1.full_name')->chunk(200, function ($rows) use ($out, $steps, $totalSteps, &$i) {
+                foreach ($rows as $r) {
+                    $stepCols  = $steps->map(fn ($s) => ($r->{$s->tracker_column} ?? 0) ? 'Yes' : 'No')->toArray();
+                    $totalDone = $steps->filter(fn ($s) => ($r->{$s->tracker_column} ?? 0))->count();
+
+                    // Mirror the blade's status logic: derive from steps_done, not raw DB status
+                    if (($r->status ?? '') === 'SUBMITTED') {
+                        $statusLabel = 'SUBMITTED';
+                    } elseif ($totalSteps > 0 && $totalDone >= $totalSteps) {
+                        $statusLabel = 'COMPLETE';
+                    } else {
+                        $statusLabel = 'INCOMPLETE';
+                    }
+
+                    fputcsv($out, array_merge(
+                        [
+                            ++$i,
+                            $r->login_username ?? '',
+                            $r->full_name ?? '',
+                            $r->service_code ?? '',
+                            $r->cadre ?? '',
+                            $r->allotted_state ?? '',
+                            $r->mobile_no ?? '',
+                        ],
+                        $stepCols,
+                        ["{$totalDone}/{$totalSteps}", $statusLabel]
+                    ));
+                }
+            });
+
+            fclose($out);
+        }, 200, [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => "attachment; filename={$filename}",
+            'Pragma'              => 'no-cache',
+        ]);
+    }
+
+    private function fcApplyFormOverviewFilters($query, Request $request, FcForm $form, $steps): void
+    {
+        $trackerTable = $form->trackerStorageTable();
+        $userKey      = $form->user_identifier ?: 'user_id';
+        $hasFrm       = \Illuminate\Support\Facades\Schema::hasTable('fc_registration_master');
+
+        if ($request->filled('status')) {
+            if ($request->status === 'COMPLETE') {
+                foreach ($steps as $step) {
+                    $query->where("{$trackerTable}.{$step->tracker_column}", 1);
+                }
+            } elseif ($request->status === 'INCOMPLETE') {
+                $query->where(function ($q) use ($trackerTable, $steps) {
+                    foreach ($steps as $step) {
+                        $q->orWhere(function ($q2) use ($trackerTable, $step) {
+                            $q2->where("{$trackerTable}.{$step->tracker_column}", '!=', 1)
+                               ->orWhereNull("{$trackerTable}.{$step->tracker_column}");
+                        });
+                    }
+                });
+            } else {
+                $query->where("{$trackerTable}.status", $request->status);
+            }
+        }
+
+        if ($request->filled('service_id')) {
+            $sid = $request->service_id;
+            $query->where(function ($q) use ($sid, $hasFrm) {
+                $q->where('s1.service_id', $sid);
+                if ($hasFrm) {
+                    $q->orWhere('frm.service_master_pk', $sid);
+                }
+            });
+        }
+
+        if ($request->filled('search')) {
+            $term = '%' . $request->search . '%';
+            $query->where(function ($q) use ($term, $trackerTable, $userKey, $hasFrm) {
+                $q->where('s1.full_name', 'like', $term)
+                  ->orWhere('s1.first_name', 'like', $term)
+                  ->orWhere('s1.last_name', 'like', $term)
+                  ->orWhereRaw("CONCAT(COALESCE(s1.first_name,''), ' ', COALESCE(s1.last_name,'')) LIKE ?", [$term])
+                  ->orWhere('s1.mobile_no', 'like', $term)
+                  ->orWhere('uc.user_name', 'like', $term)
+                  ->orWhere("{$trackerTable}.{$userKey}", 'like', $term);
+                if ($hasFrm) {
+                    $q->orWhere('frm.user_id', 'like', $term);
+                }
+            });
+        }
+    }
+
+    public function formExportPdfZip(Request $request, FcForm $form)
+    {
+        @set_time_limit(0);
+
+        $dataTable    = new FcFormOverviewDataTable($form);
+        $steps        = $dataTable->steps;
+        $userKey      = $form->user_identifier ?: 'user_id';
+
+        $query = $dataTable->query();
+        $this->fcApplyFormOverviewFilters($query, $request, $form, $steps);
+
+        $rows = $query->orderBy('s1.full_name')->get();
+
+        if ($rows->isEmpty()) {
+            return back()->with('error', 'No students match the current filters. Nothing to export.');
+        }
+
+        $tmpPath = tempnam(sys_get_temp_dir(), 'fc_pdf_zip_');
+        $zip     = new \ZipArchive();
+        if ($zip->open($tmpPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            return back()->with('error', 'Could not create ZIP archive.');
+        }
+
+        $folder    = $this->safeZipName($form->form_name) ?: ('form_' . $form->id);
+        $added     = 0;
+        $seen      = [];
+        $usedNames = [];
+
+        foreach ($rows as $r) {
+            $uid = $r->{$userKey} ?? null;
+            if ($uid === null || $uid === '' || isset($seen[(string) $uid])) {
+                continue;
+            }
+            $seen[(string) $uid] = true;
+
+            $bytes = $this->fcStudentRegistrationPdfBytes((string) $uid);
+            if ($bytes === null) {
+                continue;
+            }
+
+            $label = $this->safeZipName(trim(((string) ($r->login_username ?? $uid)) . '_' . ((string) ($r->full_name ?? ''))));
+            if ($label === '') {
+                $label = 'user_' . $uid;
+            }
+
+            $name = $label . '.pdf';
+            $n    = 1;
+            while (isset($usedNames[$name])) {
+                $name = $label . '_' . (++$n) . '.pdf';
+            }
+            $usedNames[$name] = true;
+
+            $zip->addFromString($folder . '/' . $name, $bytes);
+            $added++;
+        }
+
+        $zip->close();
+
+        if ($added === 0) {
+            @unlink($tmpPath);
+            return back()->with('error', 'Could not generate any PDFs. Nothing to export.');
+        }
+
+        $filename = $folder . '_profiles_' . now()->format('Ymd_His') . '.zip';
+
+        return response()->download($tmpPath, $filename, [
+            'Content-Type' => 'application/zip',
+        ])->deleteFileAfterSend(true);
+    }
+
+    public function firstTwoStepsIndex(Request $request)
+    {
+        $selectedFormId = (int) $request->input('form_id', 0);
+        $form = $selectedFormId > 0 ? FcForm::find($selectedFormId) : null;
+
+        $dataTable = new FcDescriptiveRollReportDataTable($form);
+
+        // DataTables server-side AJAX → return JSON scoped to the selected course.
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('fc.report.first-two-index', array_merge(
+            ['form' => $form],
+            ['forms' => $this->fcReportCourseOptions()]
+        ));
+    }
+
+    public function healthRiskReport(Request $request)
+    {
+        $selectedFormId = (int) $request->input('form_id', 0);
+        $form = $selectedFormId > 0 ? FcForm::find($selectedFormId) : null;
+
+        $dataTable = new FcHealthRiskReportDataTable($form);
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('fc.report.health-risk-index', array_merge(
+            ['form' => $form],
+            ['forms' => $this->fcReportCourseOptions()]
+        ));
+    }
+
+    public function healthRiskPrint(Request $request)
+    {
+        try {
+            $ctx = $this->buildHealthRiskExportContext($request);
+            return view('fc.report.health-risk-export', array_merge($ctx, ['mode' => 'print']));
+        } catch (\Throwable $e) {
+            return redirect()->route('admin.reports.health-risk')->with('error', 'Select a course first, then Print.');
+        }
+    }
+
+    public function healthRiskExportPdf(Request $request)
+    {
+        try {
+            $ctx = $this->buildHealthRiskExportContext($request);
+            $pdf = Pdf::loadView('fc.report.health-risk-export', array_merge($ctx, ['mode' => 'pdf']))
+                ->setPaper('A4', 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'sans-serif',
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'dpi' => 96,
+                ]);
+            return $pdf->download('health_risk_' . date('Y-m-d_His') . '.pdf');
+        } catch (\Throwable $e) {
+            return redirect()->route('admin.reports.health-risk')->with('error', 'PDF export failed. Select a course and try again.');
+        }
+    }
+
+    public function healthRiskExportExcel(Request $request)
+    {
+        try {
+            $ctx = $this->buildHealthRiskExportContext($request);
+            return Excel::download(
+                new FcHealthRiskExport(
+                    $ctx['rows'],
+                    $ctx['filters'],
+                    $ctx['export_date'],
+                    $ctx['record_count'],
+                    $ctx['visible_keys'],
+                    $ctx['column_headers']
+                ),
+                'health_risk_' . now()->format('Y-m-d_H-i') . '.xlsx'
+            );
+        } catch (\Throwable $e) {
+            return redirect()->route('admin.reports.health-risk')->with('error', 'Excel export failed. Select a course and try again.');
+        }
+    }
+
+    private function buildHealthRiskExportContext(Request $request): array
+    {
+        $form = FcForm::find((int) $request->input('form_id', 0));
+        if (! $form) {
+            throw new \RuntimeException('No course selected.');
+        }
+        $courseName = DB::table('fc_forms')
+            ->leftJoin('course_master as cm', 'fc_forms.course_master_pk', '=', 'cm.pk')
+            ->where('fc_forms.id', $form->id)
+            ->value(DB::raw('COALESCE(cm.course_name, fc_forms.form_name)'));
+
+        // Export columns in the same order as the on-screen DataTable.
+        $columnHeaders = array_merge(
+            ['s_no' => 'S.No.', 'username' => 'Username', 'full_name' => 'Full Name', 'service' => 'Service'],
+            FcHealthRiskReportDataTable::HEALTH_COLUMNS
+        );
+        $allKeys = array_keys($columnHeaders);
+
+        $visibleKeys = $allKeys;
+        if ($request->filled('visible_columns')) {
+            $indices = array_map('intval', array_filter(explode(',', (string) $request->visible_columns), 'strlen'));
+            $picked = [];
+            foreach ($indices as $i) {
+                if (isset($allKeys[$i])) {
+                    $picked[] = $allKeys[$i];
+                }
+            }
+            if ($picked !== []) {
+                $visibleKeys = $picked;
+            }
+        }
+
+        $term    = trim((string) ($request->input('search') ?: $request->input('search_term') ?: ''));
+        $records = collect();
+
+        // The course may not have an FC form (no health data) — then the report is empty.
+        if ($form) {
+            $query = (new FcHealthRiskReportDataTable($form))->query();
+
+            if ($term !== '') {
+                $like    = '%' . $term . '%';
+                $t       = $form->trackerStorageTable();
+                $userKey = $form->user_identifier ?: 'user_id';
+                $hasFrm  = Schema::hasTable('fc_registration_master');
+                $query->where(function ($sub) use ($like, $t, $userKey, $hasFrm) {
+                    $sub->where('s1.full_name', 'like', $like)
+                        ->orWhere('s1.first_name', 'like', $like)
+                        ->orWhere('s1.last_name', 'like', $like)
+                        ->orWhere('s1.mobile_no', 'like', $like)
+                        ->orWhere('uc.user_name', 'like', $like)
+                        ->orWhere("{$t}.{$userKey}", 'like', $like);
+                    if ($hasFrm) {
+                        $sub->orWhere('frm.user_id', 'like', $like);
+                    }
+                });
+            }
+
+            $records = $query->orderBy('s1.full_name')->get();
+        }
+
+        $healthCols = array_keys(FcHealthRiskReportDataTable::HEALTH_COLUMNS);
+
+        $rows = [];
+        foreach ($records as $i => $r) {
+            $full = [
+                's_no'      => $i + 1,
+                'username'  => $r->login_username ?? '—',
+                'full_name' => $r->full_name ?? '—',
+                'service'   => $r->service_code ?? '—',
+            ];
+            foreach ($healthCols as $c) {
+                $val = trim((string) ($r->{$c} ?? ''));
+                $full[$c] = $val === '' ? '—' : $val;
+            }
+            $rows[] = array_intersect_key($full, array_flip($visibleKeys));
+        }
+
+        return [
+            'rows'           => $rows,
+            'visible_keys'   => $visibleKeys,
+            'column_headers' => $columnHeaders,
+            'filters'        => ['course' => $courseName ?: ($form?->form_name ?? '—'), 'search' => $term !== '' ? $term : '—'],
+            'record_count'   => $records->count(),
+            'export_date'    => now()->format('d-m-Y H:i'),
+        ];
+    }
+
+    /**
+     * Number of leading form steps included in the "Descriptive Roll" report
+     * (Descriptive Roll + Descriptive Roll Continue…).
+     */
+    private const FIRST_TWO_STEP_LIMIT = 2;
+
+    private function fcReportCourseOptions()
+    {
+        $today = now()->format('Y-m-d');
+
+        return DB::table('fc_forms')
+            ->leftJoin('course_master as cm', 'fc_forms.course_master_pk', '=', 'cm.pk')
+            ->where('fc_forms.is_active', 1)
+            ->orderBy('fc_forms.form_name')
+            ->get(['fc_forms.id', 'fc_forms.form_name', 'cm.course_name', 'cm.end_date'])
+            ->map(function ($f) use ($today) {
+                $f->course_type = ($f->end_date !== null && $f->end_date < $today) ? 'archived' : 'active';
+                return $f;
+            });
+    }
+
+    public function firstTwoStepsStudentPdf(string $username)
+    {
+        $bytes = $this->fcStudentRegistrationPdfBytes($username, self::FIRST_TWO_STEP_LIMIT);
+        abort_unless($bytes !== null, 404, "Student '{$username}' not found.");
+
+        $filename = 'Descriptive_Roll_'.$username.'_'.now()->format('Ymd_His').'.pdf';
+
+        return response($bytes, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
+    }
+
+    public function firstTwoStepsZip(Request $request)
+    {
+        @set_time_limit(0);
+
+        $selectedFormId = (int) $request->input('form_id', 0);
+        $form = $selectedFormId > 0 ? FcForm::find($selectedFormId) : null;
+        if (! $form) {
+            return back()->with('error', 'Please select a course first.');
+        }
+
+        $dataTable = new FcFormOverviewDataTable($form);
+        $steps     = $dataTable->steps;
+        $userKey   = $form->user_identifier ?: 'user_id';
+
+        $query = $dataTable->query();
+        $this->fcApplyFormOverviewFilters($query, $request, $form, $steps);
+        $rows = $query->orderBy('s1.full_name')->get();
+
+        if ($rows->isEmpty()) {
+            return back()->with('error', 'No students match the current filters. Nothing to export.');
+        }
+
+        @ini_set('memory_limit', '1024M');
+
+        $folder = $this->safeZipName($form->form_name) ?: ('course_' . $form->id);
+
+        // De-duplicate students and pre-compute each unique PDF file name.
+        $students  = [];
+        $seen      = [];
+        $usedNames = [];
+        foreach ($rows as $r) {
+            $uid = $r->{$userKey} ?? null;
+            if ($uid === null || $uid === '' || isset($seen[(string) $uid])) {
+                continue;
+            }
+            $seen[(string) $uid] = true;
+
+            // Name each PDF after the student (name first, then login as fallback/suffix).
+            $label = $this->safeZipName(trim(((string) ($r->full_name ?? '')) . '_' . ((string) ($r->login_username ?? $uid))));
+            if ($label === '') {
+                $label = 'user_' . $uid;
+            }
+            $name = $label . '.pdf';
+            $n    = 1;
+            while (isset($usedNames[$name])) {
+                $name = $label . '_' . (++$n) . '.pdf';
+            }
+            $usedNames[$name] = true;
+
+            $students[] = ['uid' => (string) $uid, 'entry' => $folder . '/' . $name];
+        }
+
+        if ($students === []) {
+            return back()->with('error', 'No students to export.');
+        }
+
+        $tmpPath = tempnam(sys_get_temp_dir(), 'fc_dr_zip_');
+        $zip     = new \ZipArchive();
+        if ($zip->open($tmpPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            return back()->with('error', 'Could not create ZIP archive.');
+        }
+
+        // Reference the font by file:// (once) rather than embedding ~200KB of base64 in
+        // every page — 16× smaller HTML and far less per-Chrome memory, so many renders
+        // can run concurrently. The Dompdf fallback builds its own embedded font.
+        $fontFaceCss   = $this->fcRegistrationChromeFontFaceCss();
+        $fontFamilyCss = $fontFaceCss !== ''
+            ? "'FcRegPdf', 'DejaVu Sans', sans-serif"
+            : "'DejaVu Sans', sans-serif";
+
+        $engine    = strtolower((string) env('FC_REGISTRATION_PDF_ENGINE', 'auto'));
+        $useChrome = $engine !== 'dompdf' && $this->fcRegistrationChromeBinary() !== null;
+
+        $added = 0;
+        // Flush the in-memory ZIP buffer to disk periodically so a 1000+ file export
+        // does not accumulate every PDF in memory at once.
+        $flush = function () use (&$zip, $tmpPath) {
+            $zip->close();
+            $zip->open($tmpPath);
+        };
+
+        if ($useChrome) {
+            // Render PDFs with a pool of parallel headless-Chrome processes instead of
+            // spawning (and waiting for) one at a time — the dominant cost for large runs.
+            // How many Chrome renders run at once. Each Chrome uses ~200-300MB, so raise
+            // this on beefy servers (faster) and lower it on memory-constrained ones via
+            // FC_PDF_ZIP_CONCURRENCY. Failures are retried sequentially, so an over-high
+            // value degrades gracefully rather than dropping PDFs.
+            $concurrency = max(1, min(16, (int) env('FC_PDF_ZIP_CONCURRENCY', 4)));
+            $work = storage_path('app/temp/fc-pdf');
+            if (! is_dir($work)) {
+                @mkdir($work, 0755, true);
+            }
+
+            $failed = [];
+            foreach (array_chunk($students, 200) as $chunk) {
+                $pdfPaths = $this->fcRenderPdfFilesBatchChrome(
+                    array_keys($chunk),
+                    function ($i) use ($chunk, $form, $fontFaceCss, $fontFamilyCss) {
+                        return $this->fcBuildFirstTwoHtml($chunk[$i]['uid'], $form, $fontFaceCss, $fontFamilyCss);
+                    },
+                    $concurrency,
+                    $work
+                );
+
+                foreach ($pdfPaths as $i => $pdfPath) {
+                    if ($pdfPath !== null && is_file($pdfPath) && @filesize($pdfPath) > 0) {
+                        $zip->addFromString($chunk[$i]['entry'], (string) file_get_contents($pdfPath));
+                        $added++;
+                        if ($added % 100 === 0) {
+                            $flush();
+                        }
+                    } else {
+                        // Parallel render failed (e.g. Chrome killed under load) → retry later.
+                        $failed[] = $chunk[$i];
+                    }
+                    if ($pdfPath !== null) {
+                        @unlink($pdfPath);
+                    }
+                }
+            }
+
+            // Sequential retry for any parallel failures so the ZIP is always complete.
+            foreach ($failed as $stu) {
+                $bytes = $this->fcStudentRegistrationPdfBytes($stu['uid'], self::FIRST_TWO_STEP_LIMIT);
+                if ($bytes === null) {
+                    continue;
+                }
+                $zip->addFromString($stu['entry'], $bytes);
+                $added++;
+                if ($added % 100 === 0) {
+                    $flush();
+                }
+            }
+        } else {
+            // Fallback (no Chrome): sequential Dompdf render.
+            foreach ($students as $stu) {
+                $bytes = $this->fcStudentRegistrationPdfBytes($stu['uid'], self::FIRST_TWO_STEP_LIMIT);
+                if ($bytes === null) {
+                    continue;
+                }
+                $zip->addFromString($stu['entry'], $bytes);
+                $added++;
+                if ($added % 100 === 0) {
+                    $flush();
+                }
+            }
+        }
+
+        $zip->close();
+
+        if ($added === 0) {
+            @unlink($tmpPath);
+            return back()->with('error', 'Could not generate any PDFs. Nothing to export.');
+        }
+
+        $filename = $folder . '_descriptive_roll_' . now()->format('Ymd_His') . '.zip';
+
+        return response()->download($tmpPath, $filename, [
+            'Content-Type' => 'application/zip',
+        ])->deleteFileAfterSend(true);
+    }
+
+    private function fcBuildFirstTwoHtml(string $username, ?FcForm $form, string $fontFaceCss, string $fontFamilyCss): ?string
+    {
+        $data = $this->fcStudentPdfViewData($username, self::FIRST_TWO_STEP_LIMIT, $form);
+        if ($data === null) {
+            return null;
+        }
+
+        return view('fc.report.student-detail-pdf', array_merge($data, [
+            'pdfFontFaceCss'   => $fontFaceCss,
+            'pdfFontFamilyCss' => $fontFamilyCss,
+        ]))->render();
+    }
+
+    private function fcRenderPdfFilesBatchChrome(array $keys, callable $htmlProducer, int $concurrency, string $work): array
+    {
+        $bin = $this->fcRegistrationChromeBinary();
+        if ($bin === null) {
+            return [];
+        }
+
+        $results = [];
+        $running = [];   // key => ['proc'=>Process,'html'=>path,'pdf'=>path]  |  null (produced-but-not-started)
+        $pending = array_values($keys);
+        $idx = 0;
+        $total = count($pending);
+
+        $startOne = function ($key) use (&$running, $htmlProducer, $bin, $work) {
+            $html = $htmlProducer($key);
+            if (! is_string($html) || $html === '') {
+                $running[$key] = null;
+                return;
+            }
+            $id = uniqid('fcreg_', true);
+            $htmlPath = $work . '/' . $id . '.html';
+            $pdfPath  = $work . '/' . $id . '.pdf';
+            $profDir  = $work . '/' . $id . '_prof';
+            if (@file_put_contents($htmlPath, $html) === false) {
+                $running[$key] = null;
+                return;
+            }
+            $cmd = [
+                $bin,
+                '--headless=new',
+                '--disable-gpu',
+                '--no-sandbox',
+                '--disable-dev-shm-usage',
+                // A UNIQUE profile dir per process — parallel Chrome instances sharing the
+                // default profile deadlock on its SingletonLock.
+                '--user-data-dir=' . $profDir,
+                '--no-first-run',
+                '--no-default-browser-check',
+                '--disable-extensions',
+                '--disable-background-networking',
+                '--disable-sync',
+                '--disable-crash-reporter',
+                '--no-pdf-header-footer',
+                '--virtual-time-budget=15000',
+                '--print-to-pdf=' . $pdfPath,
+                'file://' . str_replace('\\', '/', $htmlPath),
+            ];
+            try {
+                $proc = new Process($cmd);
+                $proc->setTimeout(90);
+                // Chrome writes the PDF to a file (--print-to-pdf), so we never read its
+                // stdout/stderr. Disabling output avoids creating pipes — without this,
+                // concurrent processes inherit each other's pipe FDs and deadlock on EOF.
+                $proc->disableOutput();
+                $proc->start();
+            } catch (\Throwable $e) {
+                @unlink($htmlPath);
+                $running[$key] = null;
+                return;
+            }
+            $running[$key] = ['proc' => $proc, 'html' => $htmlPath, 'pdf' => $pdfPath, 'prof' => $profDir];
+        };
+
+        while ($idx < $total && count($running) < $concurrency) {
+            $startOne($pending[$idx++]);
+        }
+
+        while ($running !== []) {
+            foreach (array_keys($running) as $key) {
+                $info = $running[$key];
+
+                // Produced-but-not-started (empty HTML / write failure) → resolve immediately.
+                if ($info === null) {
+                    $results[$key] = null;
+                    unset($running[$key]);
+                    if ($idx < $total) {
+                        $startOne($pending[$idx++]);
+                    }
+                    continue;
+                }
+
+                // start() does not auto-enforce setTimeout — poll it so a stuck Chrome
+                // is killed instead of blocking the whole export forever.
+                try {
+                    $info['proc']->checkTimeout();
+                } catch (\Symfony\Component\Process\Exception\ProcessTimedOutException $e) {
+                    $results[$key] = null;
+                    @unlink($info['html']);
+                    if (is_file($info['pdf'])) {
+                        @unlink($info['pdf']);
+                    }
+                    $this->fcRmDirRecursive($info['prof']);
+                    unset($running[$key]);
+                    if ($idx < $total) {
+                        $startOne($pending[$idx++]);
+                    }
+                    continue;
+                }
+
+                if (! $info['proc']->isRunning()) {
+                    $ok = $info['proc']->isSuccessful() && is_file($info['pdf']) && @filesize($info['pdf']) > 0;
+                    $results[$key] = $ok ? $info['pdf'] : null;
+                    @unlink($info['html']);
+                    if (! $ok && is_file($info['pdf'])) {
+                        @unlink($info['pdf']);
+                    }
+                    $this->fcRmDirRecursive($info['prof']);
+                    unset($running[$key]);
+                    if ($idx < $total) {
+                        $startOne($pending[$idx++]);
+                    }
+                }
+            }
+
+            if ($running !== []) {
+                usleep(40000); // 40ms
+            }
+        }
+
+        return $results;
+    }
+
+    private function fcRmDirRecursive(string $dir): void
+    {
+        if ($dir === '' || ! is_dir($dir)) {
+            return;
+        }
+        $items = @scandir($dir);
+        if ($items === false) {
+            @rmdir($dir);
+            return;
+        }
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+            $path = $dir . '/' . $item;
+            if (is_dir($path) && ! is_link($path)) {
+                $this->fcRmDirRecursive($path);
+            } else {
+                @unlink($path);
+            }
+        }
+        @rmdir($dir);
+    }
+
+    private function fcStudentRegistrationPdfBytes(string $username, ?int $stepLimit = null): ?string
+    {
+        $s1Col = fc_user_col('student_master_firsts');
+        $s2Col = fc_user_col('student_master_seconds');
+        $smCol = fc_user_col('student_masters');
+        $bkCol = fc_user_col('new_registration_bank_details_masters');
+        $sqCol = fc_user_col('student_master_qualification_details');
+        $seCol = fc_user_col('student_master_employment_details');
+        $slCol = fc_user_col('student_master_language_knowns');
+
+        $step1 = StudentMasterFirst::where($s1Col, $username)
+            ->with(['session', 'service', 'allottedState'])
+            ->first();
+        if (! $step1) {
+            return null;
+        }
+
+        $step2 = StudentMasterSecond::where($s2Col, $username)
+            ->with(['category', 'religion', 'permState', 'presState', 'fatherProfession'])
+            ->first();
+        $master = StudentMaster::where($smCol, $username)->first();
+        $bank = NewRegistrationBankDetailsMaster::where($bkCol, $username)->first();
+        $qualifications = DB::table('student_master_qualification_details')
+            ->where($sqCol, $username)
+            ->get()
+            ->map(function ($row) {
+                $row->qualification_name = $this->fcResolveLookupLabel(
+                    ['qualification_masters', 'qualification_master'],
+                    ['id', 'pk'],
+                    'qualification_name',
+                    $row->qualification_id ?? null
+                );
+                $row->board_name = $this->fcResolveLookupLabel(
+                    ['board_name_masters', 'board_name_master'],
+                    ['id', 'pk'],
+                    'board_name',
+                    $row->board_id ?? null
+                );
+                return $row;
+            });
+        $employments = DB::table('student_master_employment_details')
+            ->leftJoin('job_type_masters', 'student_master_employment_details.job_type_id', '=', 'job_type_masters.id')
+            ->where("student_master_employment_details.{$seCol}", $username)
+            ->select('student_master_employment_details.*', 'job_type_masters.job_type_name')
+            ->get();
+        $languages = DB::table('student_master_language_knowns')
+            ->where($slCol, $username)
+            ->get()
+            ->map(function ($row) {
+                $row->language_name = $this->fcResolveLookupLabel(
+                    ['language_master', 'language_masters'],
+                    ['id', 'pk'],
+                    'language_name',
+                    $row->language_id ?? null
+                );
+                return $row;
+            });
+        $sections = $this->fcStudentPdfSanitizeSections(
+            app(RegistrationService::class)->buildPdfSectionsFromFormDefinition((int) $username, null, $stepLimit)
+        );
+        $printedAt = $this->fcPdfSanitizeText(now()->format('d/m/Y H:i'));
+        $photoDataUri = $this->fcRegistrationPhotoDataUri($step1->photo_path);
+
+        $pdfFontFaceCss = $this->fcRegistrationEmbeddedFontFaceCss();
+        $pdfFontFamilyCss = $pdfFontFaceCss !== ''
+            ? "'FcRegPdf', 'DejaVu Sans', sans-serif"
+            : "'DejaVu Sans', sans-serif";
+
+        $viewData = [
+            'sections'       => $sections,
+            'username'       => $this->fcPdfSanitizeText($username),
+            'userId'         => $this->fcPdfSanitizeText($username),
+            'step1'          => $step1,
+            'pdfFullName'    => $this->fcPdfSanitizeText((string) ($step1->full_name ?? '')),
+            'printedAt'      => $printedAt,
+            'photoDataUri'   => $photoDataUri,
+            'pdfFontFaceCss' => $pdfFontFaceCss,
+            'pdfFontFamilyCss' => $pdfFontFamilyCss,
+        ];
+
+        $html = view('fc.report.student-detail-pdf', $viewData)->render();
+
+        return $this->fcRenderPdfFromHtml($html, 'FC Registration - '.$username);
+    }
+
+    private function fcRenderPdfFromHtml(string $html, string $titleInfo): string
+    {
+        $engine = strtolower((string) env('FC_REGISTRATION_PDF_ENGINE', 'auto'));
+
+        if ($engine !== 'dompdf' && ($engine === 'chrome' || $engine === 'auto')) {
+            $chromePdf = $this->fcRegistrationPdfRenderChrome($html);
+            if ($chromePdf !== null) {
+                return $chromePdf;
+            }
+            Log::info('FC registration PDF: using Dompdf fallback (Chrome unavailable or failed)', [
+                'engine' => $engine,
+                'chrome_bin' => $this->fcRegistrationChromeBinary(),
+            ]);
+        }
+
+        $this->fcEnsureDompdfFontCacheDir();
+
+        return Pdf::loadHTML($html)
+            ->setOption('isRemoteEnabled', true)
+            ->setOption('isFontSubsettingEnabled', false)
+            ->setPaper('a4', 'portrait')
+            ->addInfo(['Title' => $titleInfo])
+            ->output();
+    }
+
+    private function fcStudentPdfViewData(string $username, ?int $stepLimit = null, ?FcForm $form = null): ?array
+    {
+        $s1Col = fc_user_col('student_master_firsts');
+        $step1 = StudentMasterFirst::where($s1Col, $username)->first();
+        if (! $step1) {
+            return null;
+        }
+
+        // Passing the already-resolved form avoids re-resolving it per student
+        // (2 extra queries each) — significant when exporting 1000+ profiles.
+        $sections = $this->fcStudentPdfSanitizeSections(
+            app(RegistrationService::class)->buildPdfSectionsFromFormDefinition((int) $username, $form, $stepLimit)
+        );
+
+        return [
+            'sections'     => $sections,
+            'userId'       => $this->fcPdfSanitizeText($username),
+            'pdfFullName'  => $this->fcPdfSanitizeText((string) ($step1->full_name ?? '')),
+            'printedAt'    => $this->fcPdfSanitizeText(now()->format('d/m/Y H:i')),
+            'photoDataUri' => $this->fcRegistrationPhotoDataUri($step1->photo_path),
+        ];
+    }
+
+    private function fcRegistrationChromeFontFaceCss(): string
+    {
+        $dir = resource_path('fonts/mpdf');
+        $regular = $dir . '/NotoSansDevanagari-Regular.ttf';
+        if (! is_file($regular) || ! is_readable($regular)) {
+            return '';
+        }
+        $css = "@font-face{font-family:'FcRegPdf';font-style:normal;font-weight:400;src:url(file://"
+            . str_replace('\\', '/', $regular) . ") format('truetype');}";
+        $bold = $dir . '/NotoSansDevanagari-Bold.ttf';
+        if (is_file($bold) && is_readable($bold)) {
+            $css .= "@font-face{font-family:'FcRegPdf';font-style:normal;font-weight:700;src:url(file://"
+                . str_replace('\\', '/', $bold) . ") format('truetype');}";
+        }
+
+        return $css;
+    }
+
     public function documentsExportZip(Request $request)
     {
         $scopedForm = $request->filled('form_id')
@@ -1560,49 +2166,5 @@ class ReportController extends Controller
     private function safeZipName(string $name): string
     {
         return trim(preg_replace('/[^A-Za-z0-9_\-\.]+/', '_', $name), '_');
-    }
-
-    private function exportBankCsv(Request $request): void
-    {
-        // Mirror the bank report query (bankDetails): these tables key on user_id,
-        // not "username", and the identifier column is resolved via fc_user_col().
-        $s1Col  = fc_user_col('student_master_firsts');
-        $smCol  = fc_user_col('student_masters');
-        $bCol   = fc_user_col('new_registration_bank_details_masters');
-        $hasFrm = Schema::hasTable('fc_registration_master');
-
-        $out = fopen('php://output','w');
-        fputcsv($out, ['User ID','Full Name','Service','Bank Name','IFSC','Account No','Holder Name']);
-
-        $query = DB::table('student_master_firsts as s1')
-            ->leftJoin('student_masters as sm', "sm.{$smCol}", '=', "s1.{$s1Col}")
-            ->leftJoin('new_registration_bank_details_masters as b', "b.{$bCol}", '=', "s1.{$s1Col}")
-            ->leftJoin('service_masters as svc', 's1.service_id', '=', 'svc.id');
-
-        if ($hasFrm) {
-            $query->leftJoin('fc_registration_master as frm', 'frm.pk', '=', "s1.{$s1Col}")
-                  ->leftJoin('service_master as svc_frm', DB::raw('CAST(frm.service_master_pk AS UNSIGNED)'), '=', 'svc_frm.pk');
-        }
-
-        $serviceExpr = $hasFrm
-            ? "COALESCE(NULLIF(TRIM(svc.service_code),''), NULLIF(TRIM(svc_frm.service_short_name),''), NULLIF(TRIM(svc_frm.service_name),''))"
-            : "NULLIF(TRIM(svc.service_code),'')";
-
-        $query->whereNotNull('b.account_no')
-            ->when($request->filled('form_id'), fn ($q) => $q->where('sm.form_id', (int) $request->form_id))
-            ->select([
-                DB::raw("s1.{$s1Col} as user_id"),
-                DB::raw("NULLIF(TRIM(COALESCE(NULLIF(TRIM(s1.full_name),''), CONCAT(COALESCE(s1.first_name,''),' ',COALESCE(s1.last_name,'')))), '') as full_name"),
-                DB::raw("{$serviceExpr} as service_code"),
-                'b.bank_name', 'b.ifsc_code',
-                'b.account_no', 'b.account_holder_name',
-            ])
-            ->orderBy('s1.full_name')
-            ->each(fn ($r) => fputcsv($out, [
-                $r->user_id, $r->full_name ?? '', $r->service_code ?? '',
-                $r->bank_name ?? '', $r->ifsc_code ?? '',
-                $r->account_no ?? '', $r->account_holder_name ?? '',
-            ]));
-        fclose($out);
     }
 }

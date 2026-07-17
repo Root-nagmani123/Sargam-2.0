@@ -244,10 +244,15 @@
                             </select>
                         </div>
 
+                        {{-- Looked up by name, not a hardcoded pk — master data can be re-seeded. --}}
+                        @php
+                            $oldConclusionIsDeduction = old('conclusion_type')
+                                && optional($memo_conclusion_master->firstWhere('pk', old('conclusion_type')))->discussion_name === 'Marks Deduction';
+                        @endphp
                         <!-- Mark of Deduction -->
                         <div class="col-6">
-                            <div id="deduction_div" style="{{ old('conclusion_type') == 2 ? '' : 'display:none;' }}">
-                                <label class="form-label">Mark of Deduction</label>
+                            <div id="deduction_div" style="{{ $oldConclusionIsDeduction ? '' : 'display:none;' }}">
+                                <label class="form-label">Mark of Deduction <span class="text-danger deduction-required-mark" style="display:none;">*</span></label>
                                 <input type="number" class="form-control" name="mark_of_deduction" step="0.01" min="0"
                                     value="{{ old('mark_of_deduction') }}">
                                 @error('mark_of_deduction')
@@ -411,14 +416,17 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!conclusionType) return;
 
         const selectedText = conclusionType.options[conclusionType.selectedIndex].text;
+        const input = deductionDiv.querySelector('input');
+        const requiredMark = deductionDiv.querySelector('.deduction-required-mark');
 
         if (selectedText === 'Marks Deduction') {
             deductionDiv.style.display = 'block';
+            if (input) input.required = true;
+            if (requiredMark) requiredMark.style.display = '';
         } else {
             deductionDiv.style.display = 'none';
-            if (deductionDiv.querySelector('input')) {
-                deductionDiv.querySelector('input').value = '';
-            }
+            if (input) { input.required = false; input.value = ''; }
+            if (requiredMark) requiredMark.style.display = 'none';
         }
     }
 

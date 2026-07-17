@@ -197,8 +197,13 @@
 @endsection
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-<style>.ts-dropdown { z-index: 1060 !important; }</style>
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
+<style>
+    .select2-container--open { z-index: 1060; } /* sirf khula dropdown modal ke upar; closed widget normal flow me (modal ke peeche) */
+    .select2-container--default .select2-selection--single { min-height: calc(1.5em + 0.75rem + 2px); display: flex; align-items: center; }
+    .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.5; padding-left: 0.25rem; }
+</style>
 <style>
     /* Responsive table: horizontal scroll */
     .request-for-estate-table-wrap {
@@ -290,22 +295,30 @@
         window.requestEstateLockEligibilityOnSelfScopeAdd = @json(request('scope') === 'self');
     </script>
     {!! $dataTable->scripts() !!}
-    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    {{-- Select2 JS globally footer (admin.layouts.footer) se load hoti hai; yahan include ki zaroorat nahi. --}}
     <script>
     $(function() {
         var deleteRequestEstateUrl = '';
         var $requestForEstateTable = $('#requestForEstateTable');
 
         var tsFilter = null, tsModalEmployee = null, tsModalStatus = null, tsModalEligibility = null;
-        var tsCommon = { allowEmptyOption: true, create: false, dropdownParent: 'body', maxOptions: null, hideSelected: false, onInitialize: function() { this.activeOption = null; } };
-        function getSelectVal(el) { return (el && el.tomselect) ? el.tomselect.getValue() : $(el).val(); }
+        // NOTE: ye module pehle TomSelect use karta tha; ab Select2 (baaki app ke saath consistent).
+        // ts* variables sirf state tracking ke liye hain (instance $(el).data('select2') se milta hai).
+        function isSelect2(el) { return !!(el && $(el).data('select2')); }
+        function getSelectVal(el) { var v = el ? $(el).val() : ''; return (v === null || v === undefined) ? '' : v; }
         function initTs(el, opts) {
-            if (!el || typeof TomSelect === 'undefined') return null;
-            if (el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
-            return new TomSelect(el, Object.assign({}, tsCommon, opts || {}));
+            if (!el || typeof $.fn.select2 === 'undefined') return null;
+            if (isSelect2(el)) { try { $(el).select2('destroy'); } catch (e) {} }
+            opts = opts || {};
+            var cfg = { placeholder: opts.placeholder || '', allowClear: false, width: '100%' };
+            // Modal ke andar hai to dropdownParent modal set karo (page-level filter ke liye omit).
+            var $modal = $(el).closest('.modal');
+            if ($modal.length) cfg.dropdownParent = $modal;
+            $(el).select2(cfg);
+            return el;
         }
 
-        if (typeof TomSelect !== 'undefined') {
+        if (typeof $.fn.select2 !== 'undefined') {
             var filterEl = document.getElementById('estateStatusFilter');
             if (filterEl) tsFilter = initTs(filterEl, { placeholder: 'All' });
         }
@@ -321,7 +334,8 @@
             });
             $('#estateStatusClear').on('click', function() {
                 var el = document.getElementById('estateStatusFilter');
-                if (el && el.tomselect) el.tomselect.setValue('', true); else $(el).val('');
+                // Silent set: sirf widget update, koi extra change handler fire nahi.
+                if (el) $(el).val('').trigger('change.select2');
                 if ($requestForEstateTable.DataTable) $requestForEstateTable.DataTable().ajax.reload(null, false);
             });
         }
@@ -330,7 +344,7 @@
         var deleteModalEl = document.getElementById('deleteRequestEstateModal');
         var deleteModal = deleteModalEl ? new bootstrap.Modal(deleteModalEl) : null;
 
-        if (typeof TomSelect !== 'undefined') {
+        if (typeof $.fn.select2 !== 'undefined') {
             var statusEl = document.getElementById('modal_status');
             var eligEl = document.getElementById('modal_eligibility_type_pk');
             if (statusEl) tsModalStatus = initTs(statusEl, { placeholder: 'Pending' });
@@ -344,7 +358,7 @@
             }
             var selEl = document.getElementById('modal_employee_pk');
             var $sel = $('#modal_employee_pk');
-            if (selEl && selEl.tomselect) { try { selEl.tomselect.destroy(); } catch (e) {} tsModalEmployee = null; }
+            if (selEl && isSelect2(selEl)) { try { $(selEl).select2('destroy'); } catch (e) {} tsModalEmployee = null; }
             $sel.find('option[value!=""]').remove();
             $.get(url, function(list) {
                 if (Array.isArray(list)) {
@@ -352,9 +366,10 @@
                         $sel.append($('<option></option>').attr('value', o.pk).text(o.label || (o.emp_name + ' (' + o.employee_id + ')')));
                     });
                 }
-                if (typeof TomSelect !== 'undefined' && selEl) {
+                if (typeof $.fn.select2 !== 'undefined' && selEl) {
                     tsModalEmployee = initTs(selEl, { placeholder: '— Select employee —' });
-                    if (thenSelectPk) tsModalEmployee.setValue(String(thenSelectPk), true);
+                    // Silent set: cascade/derived-fields change handler yahan fire na ho (caller onDone me manage karta hai).
+                    if (thenSelectPk) $sel.val(String(thenSelectPk)).trigger('change.select2');
                 } else if (thenSelectPk) {
                     $sel.val(thenSelectPk);
                 }
@@ -374,15 +389,10 @@
                 $sel.prop('disabled', false).attr('name', 'eligibility_type_pk');
                 $hidden.removeAttr('name');
             }
+            // disabled prop upar $sel.prop('disabled', ...) se set ho chuka; Select2 widget ko refresh karo.
             var eligNative = document.getElementById('modal_eligibility_type_pk');
-            if (eligNative && eligNative.tomselect) {
-                try {
-                    if (eligibilityLocked) {
-                        eligNative.tomselect.disable();
-                    } else {
-                        eligNative.tomselect.enable();
-                    }
-                } catch (e) {}
+            if (eligNative && isSelect2(eligNative)) {
+                try { $(eligNative).trigger('change.select2'); } catch (e) {}
             }
         }
 
@@ -393,15 +403,18 @@
             var $hidden = $('#modal_eligibility_type_pk_hidden');
             var val = (pk !== undefined && pk !== null && pk !== '') ? String(pk) : '';
             if (!val) {
-                if (selEl && selEl.tomselect) selEl.tomselect.setValue('', true); else $sel.val('').trigger('change');
+                // Silent clear (Select2 laga ho to change.select2, warna plain change).
+                if (selEl && isSelect2(selEl)) $sel.val('').trigger('change.select2'); else $sel.val('').trigger('change');
                 $hidden.val('');
                 return;
             }
             if ($sel.find('option[value="' + val + '"]').length === 0) {
                 $sel.append(new Option(label || ('Type ' + val), val, false, false));
-                if (selEl && selEl.tomselect) selEl.tomselect.addOption({ value: val, text: label || ('Type ' + val) });
+                // Select2 native <option> ko live padhta hai; naya option reflect karne ke liye widget refresh.
+                if (selEl && isSelect2(selEl)) $sel.trigger('change.select2');
             }
-            if (selEl && selEl.tomselect) selEl.tomselect.setValue(val, true); else $sel.val(val).trigger('change');
+            // Silent set: eligibility change se koi cascade fire nahi hota, sirf widget sync.
+            if (selEl && isSelect2(selEl)) $sel.val(val).trigger('change.select2'); else $sel.val(val).trigger('change');
             $hidden.val(val);
         }
 
@@ -476,7 +489,8 @@
             ensureEligibilityOptionAndSetVal(eligPk, eligLabel, true);
             var statusVal = $btn.data('status') !== undefined ? String($btn.data('status')) : '0';
             $('#modal_status').val(statusVal);
-            if (document.getElementById('modal_status').tomselect) document.getElementById('modal_status').tomselect.setValue(statusVal, true);
+            // Silent: native val upar set kar di, ab Select2 widget ko sync karo.
+            if ($('#modal_status').data('select2')) $('#modal_status').trigger('change.select2');
             $('#modal_remarks').val($btn.data('remarks') || '');
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('#addEditRequestEstateFormErrorsText').empty();
             $('#formAddEditRequestEstate').find('.field-error').empty().end().find('.is-invalid').removeClass('is-invalid');

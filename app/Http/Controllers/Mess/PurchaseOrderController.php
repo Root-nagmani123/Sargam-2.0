@@ -192,7 +192,7 @@ class PurchaseOrderController extends Controller
                 '<span class="fw-semibold text-body">' . e($po->po_number) . '</span>',
                 '<span class="text-body-secondary">' . e(optional($po->vendor)->name ?? 'N/A') . '</span>',
                 '<span class="text-body-secondary">' . e(optional($po->store)->store_name ?? 'N/A') . '</span>',
-                '<span class="badge rounded-pill ' . $statusBadgeClass . ' px-3 py-1 fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.02em;">' . e(ucfirst($po->status)) . '</span>',
+                '<span class="badge rounded-1 ' . $statusBadgeClass . ' px-3 py-1 fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.02em;">' . e(ucfirst($po->status)) . '</span>',
             ];
 
             if (! $forPrint) {

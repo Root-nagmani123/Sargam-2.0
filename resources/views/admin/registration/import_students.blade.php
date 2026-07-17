@@ -262,23 +262,23 @@
             <div class="card-body">
                 <ul class="nav nav-tabs mb-3" id="fcMigrateTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="tab-migrated" data-bs-toggle="tab"
+                        <button class="nav-link" id="tab-migrated" data-bs-toggle="tab"
                             data-bs-target="#pane-migrated" type="button" role="tab"
-                            aria-controls="pane-migrated" aria-selected="true">
+                            aria-controls="pane-migrated" aria-selected="false">
                             Migrated
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="tab-migrate" data-bs-toggle="tab"
+                        <button class="nav-link active" id="tab-migrate" data-bs-toggle="tab"
                             data-bs-target="#pane-migrate" type="button" role="tab"
-                            aria-controls="pane-migrate" aria-selected="false">
+                            aria-controls="pane-migrate" aria-selected="true">
                             Ready to migrate
                         </button>
                     </li>
                 </ul>
 
                 <div class="tab-content" id="fcMigrateTabContent">
-                    <div class="tab-pane fade show active" id="pane-migrated" role="tabpanel"
+                    <div class="tab-pane fade" id="pane-migrated" role="tabpanel"
                         aria-labelledby="tab-migrated" tabindex="0">
                         <p class="text-muted small mb-3">
                             Roster rows already linked to <strong>user_credentials</strong>
@@ -292,7 +292,7 @@
                         </div>
                     </div>
 
-                    <div class="tab-pane fade" id="pane-migrate" role="tabpanel"
+                    <div class="tab-pane fade show active" id="pane-migrate" role="tabpanel"
                         aria-labelledby="tab-migrate" tabindex="0">
                         <form method="POST" action="{{ route('admin.migrate.fc') }}" id="migrateForm">
                             @csrf
@@ -424,6 +424,13 @@
                     $paneMigrate.removeClass('show active');
                     $paneMigrated.addClass('show active');
                 }
+
+                // Hard-hide the inactive list's whole DataTables wrapper (table + info +
+                // pagination). Bootstrap's .show toggle on the panes is not enough here:
+                // a DataTables redraw can disturb it, leaving the other list's pagination
+                // (e.g. the 473-row Migrated pager) rendered under the active list.
+                $('#fcMigratedRosterTable').closest('.dataTables_wrapper').toggle(!eligibleOn);
+                $('#fcMigrateStudentsTable').closest('.dataTables_wrapper').toggle(eligibleOn);
             }
 
             function enforceFcMigrateTabs() {
@@ -433,7 +440,7 @@
             var initialMigrateTab = @json(
                 session('success')
                     ? 'migrated'
-                    : (request()->query('tab') === 'eligible' ? 'eligible' : 'migrated')
+                    : (request()->query('tab') === 'migrated' ? 'migrated' : 'eligible')
             );
             setFcMigrateActiveTab(initialMigrateTab);
 
@@ -556,13 +563,17 @@
                     }
                     return;
                 }
+                // resetPaging = true: the eligible table carries deferLoading:1, so its
+                // pre-ajax paging state is a placeholder. Its first real load must land
+                // on page 1 with pagination rebuilt from the true recordsTotal, otherwise
+                // a stale/placeholder page count survives the first draw.
                 migrateTable.ajax.reload(function () {
                     eligibleTableBootstrapped = true;
                     syncMigrateCheckboxState();
                     if (typeof done === 'function') {
                         done();
                     }
-                }, false);
+                }, true);
             }
 
             function reloadTables() {
@@ -585,10 +596,13 @@
 
                 if (migrateActive) {
                     if (eligibleTableBootstrapped) {
+                        // resetPaging = true: a filter/search/reset must jump back to
+                        // page 1, otherwise a stale page (e.g. page 17) survives when
+                        // the result set shrinks to a single page.
                         migrateTable.ajax.reload(function () {
                             syncMigrateCheckboxState();
                             afterReload();
-                        }, false);
+                        }, true);
                     } else {
                         bootstrapEligibleTableIfNeeded(afterReload);
                     }
@@ -599,7 +613,7 @@
                     migratedTable.ajax.reload(function () {
                         syncMigratedRecordCount();
                         afterReload();
-                    }, false);
+                    }, true);
                 }
             }
 

@@ -32,11 +32,17 @@ class FeedbackDatabaseDataTable extends DataTable
                 return '<small class="text-truncate d-block" style="max-width:200px;" title="' . $topic . '">' . $topic . '</small>';
             })
             ->editColumn('avg_content_percent', function ($row) {
+                if ($row->avg_content_percent === null) {
+                    return '<span class="text-muted" title="Remark-only feedback — no rating collected">N/A</span>';
+                }
                 $val = floatval($row->avg_content_percent);
                 $class = $val >= 90 ? 'percentage-excellent' : ($val >= 80 ? 'percentage-good' : 'percentage-average');
                 return '<span class="percentage-badge ' . $class . '">' . number_format($val, 2) . '%</span>';
             })
             ->editColumn('avg_presentation_percent', function ($row) {
+                if ($row->avg_presentation_percent === null) {
+                    return '<span class="text-muted" title="Remark-only feedback — no rating collected">N/A</span>';
+                }
                 $val = floatval($row->avg_presentation_percent);
                 $class = $val >= 90 ? 'percentage-excellent' : ($val >= 80 ? 'percentage-good' : 'percentage-average');
                 return '<span class="percentage-badge ' . $class . '">' . number_format($val, 2) . '%</span>';
@@ -98,8 +104,9 @@ class FeedbackDatabaseDataTable extends DataTable
                 DB::raw('IFNULL(f.Permanent_Address, "N/A") as faculty_address'),
                 'c.course_name',
                 't.subject_topic',
-                DB::raw('ROUND(AVG(tf.content) * 20, 2) as avg_content_percent'),
-                DB::raw('ROUND(AVG(tf.presentation) * 20, 2) as avg_presentation_percent'),
+                // NULLIF so blank ratings never count as 0; remark-only groups average to NULL → shown as N/A.
+                DB::raw('ROUND(AVG(NULLIF(tf.content, "")) * 20, 2) as avg_content_percent'),
+                DB::raw('ROUND(AVG(NULLIF(tf.presentation, "")) * 20, 2) as avg_presentation_percent'),
                 DB::raw('COUNT(DISTINCT tf.student_master_pk) as participant_count'),
                 DB::raw('DATE(t.START_DATE) as session_date'),
                 DB::raw('GROUP_CONCAT(DISTINCT CASE WHEN tf.remark IS NOT NULL AND TRIM(tf.remark) != "" THEN tf.remark ELSE NULL END SEPARATOR " | ") as all_comments'),
@@ -109,10 +116,14 @@ class FeedbackDatabaseDataTable extends DataTable
             ->join('faculty_master as f', 'tf.faculty_pk', '=', 'f.pk')
             ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
             ->where('tf.is_submitted', 1)
-            ->whereNotNull('tf.content')
-            ->whereNotNull('tf.presentation')
-            ->where('tf.content', '!=', '')
-            ->where('tf.presentation', '!=', '')
+            // Include remark-only feedback: sessions whose per-faculty feedback mode is
+            // "remark" store NULL content/presentation by design (see studentFeedback).
+            // Qualify a row if it has any rating OR a non-empty remark.
+            ->where(function ($q) {
+                $q->whereRaw("(tf.content IS NOT NULL AND tf.content <> '')")
+                  ->orWhereRaw("(tf.presentation IS NOT NULL AND tf.presentation <> '')")
+                  ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
+            })
             ->groupBy(
                 'f.pk',
                 'f.full_name',

@@ -48,9 +48,9 @@
 
                         <div class="col-md-6">
                             <label for="smeExemptionCategory" class="form-label cgt-field-label mb-2">
-                                Exemption Category <span class="text-danger">*</span>
+                                Exemption Category
                             </label>
-                            <select name="exemption_category_master_pk" id="smeExemptionCategory" class="form-select rounded-3" required>
+                            <select name="exemption_category_master_pk" id="smeExemptionCategory" class="form-select rounded-3">
                                 <option value="">Select Category</option>
                                 @foreach($categories ?? [] as $cat)
                                 <option value="{{ $cat->pk }}">{{ $cat->exemp_category_name }}</option>

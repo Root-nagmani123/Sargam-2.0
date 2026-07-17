@@ -281,6 +281,18 @@ width: 170px;
                         {{ $sectorName ?? '-' }}
                     </div>
                 </div>
+
+                <div class="col-md-4">
+                    <div class="label-sm">Service</div>
+                    <div class="data-line">
+                        @php
+                            $serviceName = \Illuminate\Support\Facades\DB::table('service_master')
+                                ->where('pk', $faculty->service_master_pk)
+                                ->value('service_name');
+                        @endphp
+                        {{ $serviceName ?? '-' }}
+                    </div>
+                </div>
             </div>
         </div>
 

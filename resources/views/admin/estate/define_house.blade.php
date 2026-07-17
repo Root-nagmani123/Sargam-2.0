@@ -208,8 +208,13 @@
 @endsection
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-<style>.ts-dropdown { z-index: 1060 !important; }</style>
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
+<style>
+    .select2-container--open { z-index: 1060; } /* sirf khula dropdown modal ke upar; closed widget normal flow me (modal ke peeche) */
+    .select2-container--default .select2-selection--single { min-height: calc(1.5em + 0.75rem + 2px); display: flex; align-items: center; }
+    .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.5; padding-left: 0.25rem; }
+</style>
 <style>
 @media print {
     @page { size: A4 landscape; margin: 8mm; }
@@ -233,7 +238,7 @@
 @endpush
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+{{-- Select2 JS globally footer (admin.layouts.footer) se load hoti hai; yahan include ki zaroorat nahi. --}}
 <script>
 $(document).ready(function() {
     const blocksUrl = "{{ route('admin.estate.define-house.blocks') }}";
@@ -287,13 +292,19 @@ $(document).ready(function() {
         }
     });
 
-    var estateTsOpts = { allowEmptyOption: true, create: false, dropdownParent: 'body', maxOptions: null, hideSelected: false, placeholder: '--Select--', onInitialize: function() { this.activeOption = null; } };
     function initDefineHouseTs(el, placeholder) {
-        if (!el || typeof TomSelect === 'undefined') return null;
-        if (el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
-        return new TomSelect(el, $.extend(true, {}, estateTsOpts, { placeholder: placeholder || '--Select--' }));
+        if (!el || typeof $.fn.select2 === 'undefined') return null;
+        if ($(el).data('select2')) { try { $(el).select2('destroy'); } catch (e) {} }
+        var $modal = $('#addEstateHouseModal');
+        $(el).select2({
+            placeholder: placeholder || '--Select--',
+            allowClear: false,
+            width: '100%',
+            dropdownParent: $modal.length ? $modal : $(document.body)
+        });
+        return $(el);
     }
-    function getSelVal(el) { return (el && el.tomselect) ? el.tomselect.getValue() : $(el).val(); }
+    function getSelVal(el) { var v = el ? $(el).val() : ''; return (v === null || v === undefined) ? '' : v; }
 
     var tsCampus = null, tsUnitType = null, tsBlock = null, tsUnitSub = null;
     var elCampus = document.getElementById('estate_campus_master_pk');
@@ -309,7 +320,7 @@ $(document).ready(function() {
     $(document).on('change', '#estate_campus_master_pk', function() {
         var campusId = getSelVal(this);
         var buildingEl = document.getElementById('estate_block_master_pk');
-        if (tsBlock) { try { tsBlock.destroy(); } catch (e) {} tsBlock = null; }
+        if (tsBlock) { try { $(buildingEl).select2('destroy'); } catch (e) {} tsBlock = null; }
         $(buildingEl).html('<option value="">--Select--</option>');
         if (!campusId) {
             if (buildingEl) tsBlock = initDefineHouseTs(buildingEl, '--Select--');
@@ -569,10 +580,10 @@ $(document).ready(function() {
         $('#addHouseRowBtn, #removeHouseRowBtn').show();
         $('#addEstateHouseForm')[0].reset();
         $('#water_charge, #electric_charge').val('0.00');
-        if (tsCampus) tsCampus.setValue('', true);
-        if (tsUnitType) tsUnitType.setValue('', true);
-        if (tsUnitSub) tsUnitSub.setValue('', true);
-        if (tsBlock) { try { tsBlock.destroy(); } catch (e) {} tsBlock = null; }
+        if (tsCampus) $('#estate_campus_master_pk').val('').trigger('change.select2');
+        if (tsUnitType) $('#estate_unit_type_master_pk').val('').trigger('change.select2');
+        if (tsUnitSub) $('#estate_unit_sub_type_master_pk').val('').trigger('change.select2');
+        if (tsBlock) { try { $('#estate_block_master_pk').select2('destroy'); } catch (e) {} tsBlock = null; }
         $('#estate_block_master_pk').html('<option value="">--Select--</option>');
         if (elBlock) tsBlock = initDefineHouseTs(elBlock, '--Select--');
         $('#houseRowsContainer .house-row:gt(0)').remove();
@@ -662,15 +673,15 @@ $(document).ready(function() {
             if (!res || !res.pk) { showPageAlert('danger', 'Could not load house.'); return; }
             $('#edit_house_pk').val(res.pk);
             $('#addEstateHouseModalLabel').text('Edit Estate House');
-            if (tsCampus) tsCampus.setValue(String(res.estate_campus_master_pk || ''), true);
+            if (tsCampus) $('#estate_campus_master_pk').val(String(res.estate_campus_master_pk || '')).trigger('change.select2');
             else $('#estate_campus_master_pk').val(res.estate_campus_master_pk);
-            if (tsUnitType) tsUnitType.setValue(String(res.estate_unit_master_pk || ''), true);
+            if (tsUnitType) $('#estate_unit_type_master_pk').val(String(res.estate_unit_master_pk || '')).trigger('change.select2');
             else $('#estate_unit_type_master_pk').val(res.estate_unit_master_pk);
-            if (tsBlock) { try { tsBlock.destroy(); } catch (e) {} tsBlock = null; }
+            if (tsBlock) { try { $('#estate_block_master_pk').select2('destroy'); } catch (e) {} tsBlock = null; }
             $('#estate_block_master_pk').html('<option value="">--Select--</option><option value="'+res.estate_block_master_pk+'" selected>'+escapeHtml(res.building_name || '')+'</option>');
             if (elBlock) tsBlock = initDefineHouseTs(elBlock, '--Select--');
-            if (tsBlock) tsBlock.setValue(String(res.estate_block_master_pk || ''), true);
-            if (tsUnitSub) tsUnitSub.setValue(String(res.estate_unit_sub_type_master_pk || ''), true);
+            if (tsBlock) $('#estate_block_master_pk').val(String(res.estate_block_master_pk || '')).trigger('change.select2');
+            if (tsUnitSub) $('#estate_unit_sub_type_master_pk').val(String(res.estate_unit_sub_type_master_pk || '')).trigger('change.select2');
             else $('#estate_unit_sub_type_master_pk').val(res.estate_unit_sub_type_master_pk);
             $('#water_charge').val(res.water_charge);
             $('#electric_charge').val(res.electric_charge);

@@ -91,7 +91,7 @@
                                     $categoryTabHash = $category->slug === 'home'
                                         ? '#home'
                                         : '#tab-' . $category->slug;
-                                    $tabId = $category->slug === 'home' ? 'home-tab' : 'tab-' . $category->slug;
+                                    $tabId = $category->slug === 'home' ? 'home-tab' : $category->slug . '-tab';
                                     $isActive = ($activeNavTab ?? '') === $categoryTabHash;
                                 @endphp
                                 <li class="nav-item" role="none">
@@ -141,7 +141,7 @@
             </i>
 
             @if($unreadCount > 0)
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-1 bg-danger notification-badge">
                     {{ $unreadCount > 99 ? '99+' : $unreadCount }}
                 </span>
             @endif
@@ -210,7 +210,7 @@
                 title="Pending Feedback" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="material-icons material-symbols-rounded" style="font-size:20px">pending_actions</i>
             <span id="facultyFeedbackBadge"
-                  class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge"
+                  class="position-absolute top-0 start-100 translate-middle badge rounded-1 bg-danger notification-badge"
                   style="display:none"></span>
         </button>
         <div class="dropdown-menu dropdown-menu-end shadow border-0 p-0"
@@ -402,7 +402,7 @@
                             @endphp
                             <i class="material-icons material-symbols-rounded header-notification-bell {{ $unreadCountMobile > 0 ? 'header-notification-bell--ring' : '' }}" aria-hidden="true">notifications_active</i>
                             @if($unreadCountMobile > 0)
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge-mobile" style="font-size: 9px;">
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-1 bg-danger notification-badge-mobile" style="font-size: 9px;">
                                 {{ $unreadCountMobile > 99 ? '99+' : $unreadCountMobile }}
                             </span>
                             @endif
@@ -1689,7 +1689,7 @@
                         var label = count > 99 ? '99+' : String(count);
                         if (!badge) {
                             badge = document.createElement('span');
-                            badge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger ' + badgeClass;
+                            badge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-1 bg-danger ' + badgeClass;
                             if (badgeClass === 'notification-badge-mobile') { badge.style.fontSize = '9px'; }
                             btn.appendChild(badge);
                         }
@@ -1815,7 +1815,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const panes = document.querySelectorAll('#mainNavbarContent .tab-pane');
+    const panes = document.querySelectorAll('#mainNavbarContent > .tab-pane');
 
     function getMainContentPaneId(targetId) {
         const map = {
@@ -1826,6 +1826,11 @@ document.addEventListener('DOMContentLoaded', function() {
             '#tab-material-management': 'tab-material-management'
         };
         return map[targetId] || null;
+    }
+
+    function getMainContentPane(paneId) {
+        if (!paneId) return null;
+        return document.querySelector('#mainNavbarContent > #' + paneId + '.tab-pane');
     }
 
     function paneHasContent(pane) {
@@ -1845,7 +1850,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function isMainContentPaneEmpty(targetId) {
         const pid = getMainContentPaneId(targetId);
         if (!pid) return true;
-        return !paneHasContent(document.getElementById(pid));
+        return !paneHasContent(getMainContentPane(pid));
     }
 
     function showPane(targetId, options) {
@@ -1853,7 +1858,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!targetId || targetId === '#') return;
 
         const targetPaneId = getMainContentPaneId(targetId);
-        const targetPane = targetPaneId ? document.getElementById(targetPaneId) : null;
+        const targetPane = getMainContentPane(targetPaneId);
         const canSwitchBodyPane = paneHasContent(targetPane);
         const keepPageContent = options.keepPageContent === true;
 
