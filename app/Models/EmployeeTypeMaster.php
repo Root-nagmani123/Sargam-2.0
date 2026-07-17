@@ -9,9 +9,13 @@ class EmployeeTypeMaster extends Model
 {
     protected $table = 'employee_type_master';
     protected $primaryKey = 'pk';
-    public $timestamps = false;
-    public $created_at = 'created_date';
-    public $updated_at = 'modified_date';
+
+    // Unlike the sibling masters, employee_type_master.created_date is NOT NULL
+    // with no DB default, so an insert that omits it fails under strict mode.
+    // Let Eloquent populate it — $created_at/$updated_at properties do nothing.
+    public $timestamps = true;
+    const CREATED_AT = 'created_date';
+    const UPDATED_AT = 'modified_date';
 
     public function scopeActive($query)
     {

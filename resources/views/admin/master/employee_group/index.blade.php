@@ -22,7 +22,15 @@
     <div class="card egm-dt-card shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3 p-md-4">
             <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-end gap-3 mb-4">
-                <div id="egmDtSearch" class="programme-dt-search ms-lg-auto" data-dt-search-for="employeegroupmaster-table"></div>
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="btnEgmColumns"
+                        data-bs-toggle="modal" data-bs-target="#egmColumnVisibilityModal"
+                        title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div id="egmDtSearch" class="programme-dt-search" data-dt-search-for="employeegroupmaster-table"></div>
+                </div>
             </div>
 
             <div class="programme-dt-panel egm-dt-panel">
@@ -32,6 +40,24 @@
                 <div id="egmDtFooter"
                     class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
                     data-dt-footer-for="employeegroupmaster-table"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="egmColumnVisibilityModal" tabindex="-1" aria-labelledby="egmColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="egmColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="egmColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -80,6 +106,7 @@
     var tableSelector = '#employeegroupmaster-table';
     var storeUrl = "{{ route('master.employee.group.store') }}";
     var csrfToken = "{{ csrf_token() }}";
+    var colStorageKey = 'egm_hidden_columns_v1';
     var egmModalMode = 'add';
 
     var egmModalEl = document.getElementById('egmGroupModal');
@@ -135,147 +162,151 @@
         }, 200);
     }
 
-    function extractEncryptedPkFromUrl(url) {
-        if (!url) {
-            return '';
+    function getEgmTable() {
+        if (typeof jQuery === 'undefined' || !jQuery.fn.DataTable || !jQuery.fn.DataTable.isDataTable(tableSelector)) {
+            return null;
         }
-        var parts = String(url).replace(/\/+$/, '').split('/');
-        return parts[parts.length - 1] || '';
+        return jQuery(tableSelector).DataTable();
     }
 
     function reloadEgmTable() {
-        if (typeof jQuery !== 'undefined' && jQuery.fn.DataTable && jQuery.fn.DataTable.isDataTable(tableSelector)) {
-            jQuery(tableSelector).DataTable().ajax.reload(null, false);
+        var dt = getEgmTable();
+        if (dt) {
+            dt.ajax.reload(null, false);
         }
     }
 
-    function iconOnlyLink($link, iconClass, extraClass, label) {
-        $link.removeClass('btn btn-sm btn-primary btn-success btn-danger');
-        $link.addClass('egm-action-btn ' + (extraClass || ''));
-        $link.attr('aria-label', label || $link.text().trim());
-        $link.empty().append('<i class="bi ' + iconClass + '" aria-hidden="true"></i>');
+    function egmGetHiddenCols() {
+        try {
+            var raw = JSON.parse(localStorage.getItem(colStorageKey));
+            return Array.isArray(raw) ? raw : [];
+        } catch (e) {
+            return [];
+        }
     }
 
-    function swapEgmHeaders() {
-        var $wrapper = jQuery('#employeegroupmaster-table_wrapper');
-        if ($wrapper.data('egm-headers-swapped')) {
-            return;
-        }
-
-        var $ths = $wrapper.find('.dataTables_scrollHead thead tr th');
-        if ($ths.length < 4) {
-            $ths = jQuery(tableSelector).find('thead tr th');
-        }
-        if ($ths.length < 4) {
-            return;
-        }
-
-        $ths.eq(3).insertBefore($ths.eq(2));
-
-        var $firstTh = $wrapper.find('.dataTables_scrollHead thead tr th').first();
-        if (!$firstTh.length) {
-            $firstTh = jQuery(tableSelector).find('thead tr th').first();
-        }
-        if ($firstTh.length && $firstTh.text().trim().replace(/\s+/g, '') === 'S.No.') {
-            $firstTh.text('S. No.');
-        }
-
-        $wrapper.data('egm-headers-swapped', true);
+    function egmPersistHiddenCols(arr) {
+        try {
+            localStorage.setItem(colStorageKey, JSON.stringify(arr));
+        } catch (e) { /* storage unavailable — visibility just won't persist */ }
     }
 
-    function swapEgmRowColumns($row) {
-        if ($row.hasClass('egm-cols-swapped')) {
+    function setupEgmColumns(dt) {
+        var $grid = jQuery('#egmColumnToggleGrid');
+        if (!dt || !$grid.length || $grid.data('egm-colvis-ready')) {
             return;
         }
-        var $cells = $row.find('td');
-        if ($cells.length < 4) {
-            return;
-        }
-        $cells.eq(3).insertBefore($cells.eq(2));
-        $row.addClass('egm-cols-swapped');
-    }
 
-    function updateEgmStatusBadge($toggle, isActive) {
-        var $badge = $toggle.closest('tr').find('.egm-status-badge');
-        if (!$badge.length) {
-            return;
-        }
-        $badge
-            .removeClass('programme-status-badge--active programme-status-badge--inactive')
-            .addClass(isActive ? 'programme-status-badge--active' : 'programme-status-badge--inactive')
-            .text(isActive ? 'Active' : 'Inactive');
-    }
+        var hidden = egmGetHiddenCols();
 
-    function bindEgmEditClicks($editLink, $row) {
-        $editLink.off('click.egmEdit').on('click.egmEdit', function (e) {
-            e.preventDefault();
-            var $cells = $row.find('td');
-            openEgmModal('edit', {
-                pk: extractEncryptedPkFromUrl(jQuery(this).attr('href')),
-                name: $cells.eq(1).text().trim()
-            });
+        dt.columns().every(function () {
+            this.visible(hidden.indexOf(this.index()) === -1, false);
         });
+        dt.columns.adjust();
+
+        $grid.empty();
+
+        dt.columns().every(function () {
+            var idx = this.index();
+            var title = jQuery(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (!title) {
+                return;
+            }
+
+            var inputId = 'egmcolvis_' + idx;
+            var $cell = jQuery('<div class="col-12 col-sm-6 col-md-4"></div>');
+            var $label = jQuery('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                .attr('for', inputId);
+            var $cb = jQuery('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .prop('checked', hidden.indexOf(idx) === -1);
+
+            $cb.on('change', function () {
+                var h = egmGetHiddenCols();
+                var pos = h.indexOf(idx);
+                if (this.checked) {
+                    if (pos !== -1) h.splice(pos, 1);
+                } else if (pos === -1) {
+                    h.push(idx);
+                }
+                egmPersistHiddenCols(h);
+                dt.column(idx).visible(this.checked, false);
+                dt.columns.adjust();
+            });
+
+            $label.append($cb).append(jQuery('<span></span>').text(title));
+            $grid.append($cell.append($label));
+        });
+
+        $grid.data('egm-colvis-ready', true);
     }
 
-    function decorateEgmRows() {
-        swapEgmHeaders();
+    function deleteEgmGroup($btn) {
+        var url = $btn.data('url');
+        var name = $btn.data('name') || 'this employee group';
+        if (!url) {
+            return;
+        }
 
-        jQuery(tableSelector + ' tbody tr').each(function () {
-            var $row = jQuery(this);
-            swapEgmRowColumns($row);
+        function performDelete() {
+            jQuery.ajax({
+                url: url,
+                method: 'POST',
+                data: { _token: csrfToken, _method: 'DELETE' },
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                success: function (response) {
+                    reloadEgmTable();
+                    var message = (response && response.message) || 'Employee Group deleted successfully.';
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Deleted!',
+                            text: message,
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    } else if (typeof toastr !== 'undefined') {
+                        toastr.success(message);
+                    }
+                },
+                error: function (xhr) {
+                    var message = (xhr.responseJSON && xhr.responseJSON.message)
+                        ? xhr.responseJSON.message
+                        : 'Unable to delete this Employee Group. Please try again.';
 
-            if ($row.hasClass('egm-row-decorated')) {
-                return;
-            }
-
-            var $cells = $row.find('td');
-            if ($cells.length < 4) {
-                return;
-            }
-
-            var $statusCell = $cells.eq(2);
-            var $actionCell = $cells.eq(3);
-            var $toggleWrap = $statusCell.find('.form-check').first();
-            var $toggle = $toggleWrap.find('.status-toggle').first();
-
-            if ($toggle.length) {
-                var isActive = $toggle.is(':checked');
-                var badgeClass = isActive ? 'programme-status-badge--active' : 'programme-status-badge--inactive';
-                var label = isActive ? 'Active' : 'Inactive';
-
-                $toggleWrap.detach();
-                $statusCell.empty().append(
-                    jQuery('<span>', {
-                        class: 'badge rounded-pill programme-status-badge egm-status-badge ' + badgeClass,
-                        text: label
-                    })
-                );
-
-                var $editLink = $actionCell.find('a').first().detach();
-                var $group = jQuery('<div>', {
-                    class: 'egm-group-actions',
-                    role: 'group',
-                    'aria-label': 'Employee group actions'
-                });
-
-                if ($editLink.length) {
-                    iconOnlyLink($editLink, 'bi-pencil', 'egm-action-edit', 'Edit employee group');
-                    bindEgmEditClicks($editLink, $row);
-                    $group.append($editLink);
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'error', title: 'Error', text: message });
+                    } else if (typeof toastr !== 'undefined') {
+                        toastr.error(message);
+                    }
                 }
+            });
+        }
 
-                $toggleWrap.addClass('egm-action-switch-wrap mb-0');
-                $group.append($toggleWrap);
-                $actionCell.empty().append($group);
-            } else {
-                var $editOnly = $actionCell.find('a').first();
-                if ($editOnly.length) {
-                    iconOnlyLink($editOnly, 'bi-pencil', 'egm-action-edit', 'Edit employee group');
-                    bindEgmEditClicks($editOnly, $row);
-                }
+        var confirmText = 'Are you sure you want to delete "' + name + '"? This cannot be undone.';
+
+        if (typeof Swal === 'undefined' || typeof Swal.fire !== 'function') {
+            if (window.confirm(confirmText)) {
+                performDelete();
             }
+            return;
+        }
 
-            $row.addClass('egm-row-decorated');
+        Swal.fire({
+            title: 'Are you sure?',
+            text: confirmText,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                performDelete();
+            }
         });
     }
 
@@ -373,22 +404,25 @@
             submitEgmForm();
         });
 
-        jQuery(tableSelector).on('draw.dt init.dt', function () {
-            jQuery('#employeegroupmaster-table_wrapper').data('egm-headers-swapped', false);
-            jQuery(tableSelector + ' tbody tr').removeClass('egm-cols-swapped egm-row-decorated');
-            decorateEgmRows();
+        jQuery(document).on('click', tableSelector + ' .egm-edit-btn', function (e) {
+            e.preventDefault();
+            var $btn = jQuery(this);
+            openEgmModal('edit', {
+                pk: $btn.data('pk'),
+                name: $btn.data('name')
+            });
         });
 
-        jQuery(document).on('change', tableSelector + ' .status-toggle', function () {
-            var $toggle = jQuery(this);
-            window.setTimeout(function () {
-                updateEgmStatusBadge($toggle, $toggle.is(':checked'));
-            }, 0);
+        jQuery(document).on('click', tableSelector + ' .egm-delete-btn', function (e) {
+            e.preventDefault();
+            deleteEgmGroup(jQuery(this));
         });
 
-        if (jQuery.fn.DataTable.isDataTable(tableSelector)) {
-            decorateEgmRows();
-        }
+        // init.dt may already have fired by the time this runs, so cover both cases.
+        jQuery(tableSelector).on('init.dt', function (e, settings) {
+            setupEgmColumns(new jQuery.fn.dataTable.Api(settings));
+        });
+        setupEgmColumns(getEgmTable());
 
         var params = new URLSearchParams(window.location.search);
         if (params.get('open_egm_modal') === 'add') {

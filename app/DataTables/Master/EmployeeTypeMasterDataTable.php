@@ -50,17 +50,44 @@ class EmployeeTypeMasterDataTable extends DataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->addColumn('category_type_name', fn($row) => $row->category_type_name ?? '-')
-            ->addColumn('action', function ($row) {
-                $editUrl = route('master.employee.type.edit', ['id' => encrypt($row->pk)]);
-                return '<a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>';
-            })
+            ->addColumn('category_type_name', fn($row) => e($row->category_type_name ?? '-'))
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return '<div class="form-check form-switch d-inline-block ms-2">
-                <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                    data-table="employee_type_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
-            </div>';
+                $isActive = (int) $row->active_inactive === 1;
+
+                return '<span class="badge rounded-1 programme-status-badge etm-status-badge '
+                    . ($isActive ? 'programme-status-badge--active">Active' : 'programme-status-badge--inactive">Inactive')
+                    . '</span>';
+            })
+            ->addColumn('action', function ($row) {
+                $isActive = (int) $row->active_inactive === 1;
+                $name = e($row->category_type_name ?? '');
+                $encryptedPk = encrypt($row->pk);
+
+                $editBtn = '<button type="button" class="etm-action-btn etm-action-edit etm-edit-btn"'
+                    . ' aria-label="Edit employee type"'
+                    . ' data-pk="' . e($encryptedPk) . '" data-name="' . $name . '">'
+                    . '<i class="bi bi-pencil" aria-hidden="true"></i>'
+                    . '</button>';
+
+                $toggle = '<div class="form-check form-switch etm-action-switch-wrap mb-0">'
+                    . '<input class="form-check-input status-toggle" type="checkbox" role="switch"'
+                    . ' data-table="employee_type_master" data-column="active_inactive"'
+                    . ' data-id="' . $row->pk . '" ' . ($isActive ? 'checked' : '') . '>'
+                    . '</div>';
+
+                // Active rows are delete-guarded, matching the other master screens.
+                $deleteBtn = '<button type="button" class="etm-action-btn etm-action-delete etm-delete-btn"'
+                    . ' aria-label="Delete employee type"'
+                    . ' data-url="' . e(route('master.employee.type.delete', ['id' => $encryptedPk])) . '"'
+                    . ' data-name="' . $name . '"'
+                    . ($isActive ? ' disabled aria-disabled="true" title="Deactivate this employee type before deleting it"' : '')
+                    . '>'
+                    . '<i class="bi bi-trash3" aria-hidden="true"></i>'
+                    . '</button>';
+
+                return '<div class="etm-type-actions" role="group" aria-label="Employee type actions">'
+                    . $editBtn . $toggle . $deleteBtn
+                    . '</div>';
             })
 
             ->setRowId('pk')
@@ -93,8 +120,8 @@ class EmployeeTypeMasterDataTable extends DataTable
             ->setTableId('employeetypemaster-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            ->dom('frtip')
-            // ->orderBy(1)
+            // No ->dom(): the global datatable-global-ui.js default renders the
+            // length element the footer needs for "Showing [N] of M items".
             ->selectStyleSingle()
             ->parameters([
                 'responsive' => true,
@@ -115,10 +142,10 @@ class EmployeeTypeMasterDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::make('category_type_name')->title('Category Type Name')->orderable(false)->addClass('text-center'),
-            Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center')
+            Column::computed('DT_RowIndex')->title('S. No.')->searchable(false)->orderable(false)->addClass('etm-col-sno'),
+            Column::make('category_type_name')->title('Category Type Name')->orderable(false)->addClass('etm-col-name'),
+            Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('etm-col-status'),
+            Column::computed('action')->title('Action')->searchable(false)->orderable(false)->addClass('etm-col-action'),
         ];
     }
 

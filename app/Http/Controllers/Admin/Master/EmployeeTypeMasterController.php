@@ -78,9 +78,36 @@ class EmployeeTypeMasterController extends Controller
                 ->with('error', 'Failed to edit employee type: ' . $e->getMessage());
         }
     }
-    // function delete($id)
-    // {
-    //     // Logic to delete department by ID
-    //     return redirect()->route('master.department.index')->with('success', 'Department deleted successfully.');
-    // }
+    function delete(Request $request, $id)
+    {
+        try {
+            $employeeType = EmployeeTypeMaster::findOrFail(decrypt($id));
+        } catch (\Exception $e) {
+            return $this->deleteResponse($request, false, 'Employee Type not found.', 404);
+        }
+
+        if ((int) $employeeType->active_inactive === 1) {
+            return $this->deleteResponse($request, false, 'Deactivate this Employee Type before deleting it.', 422);
+        }
+
+        try {
+            $employeeType->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            return $this->deleteResponse($request, false, 'This Employee Type is in use and cannot be deleted.', 409);
+        }
+
+        EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
+
+        return $this->deleteResponse($request, true, 'Employee Type deleted successfully.');
+    }
+
+    private function deleteResponse(Request $request, bool $success, string $message, int $status = 200)
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['success' => $success, 'message' => $message], $status);
+        }
+
+        return redirect()->route('master.employee.type.index')
+            ->with($success ? 'success' : 'error', $message);
+    }
 }

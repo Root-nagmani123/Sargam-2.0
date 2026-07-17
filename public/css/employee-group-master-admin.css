@@ -68,29 +68,27 @@
     background-color: #fafbfc;
 }
 
-.egm-master-page #employeegroupmaster-table_wrapper .dataTables_scrollHead thead th:first-child,
-.egm-master-page #employeegroupmaster-table thead th:first-child,
-.egm-master-page #employeegroupmaster-table tbody td:first-child {
+/* Alignment keys off the per-column classes, not nth-child, so hiding a
+   column via Column Visibility can't shift every other column's alignment. */
+.egm-master-page #employeegroupmaster-table th.egm-col-sno,
+.egm-master-page #employeegroupmaster-table td.egm-col-sno {
     text-align: left !important;
     color: var(--egm-muted);
     font-weight: 500;
     width: 5.5rem;
 }
 
-.egm-master-page #employeegroupmaster-table_wrapper .dataTables_scrollHead thead th:nth-child(2),
-.egm-master-page #employeegroupmaster-table thead th:nth-child(2),
-.egm-master-page #employeegroupmaster-table tbody td:nth-child(2) {
+.egm-master-page #employeegroupmaster-table th.egm-col-name,
+.egm-master-page #employeegroupmaster-table td.egm-col-name {
     text-align: center !important;
     font-weight: 500;
     color: var(--egm-heading);
 }
 
-.egm-master-page #employeegroupmaster-table_wrapper .dataTables_scrollHead thead th:nth-child(3),
-.egm-master-page #employeegroupmaster-table_wrapper .dataTables_scrollHead thead th:nth-child(4),
-.egm-master-page #employeegroupmaster-table thead th:nth-child(3),
-.egm-master-page #employeegroupmaster-table thead th:nth-child(4),
-.egm-master-page #employeegroupmaster-table tbody td:nth-child(3),
-.egm-master-page #employeegroupmaster-table tbody td:nth-child(4) {
+.egm-master-page #employeegroupmaster-table th.egm-col-status,
+.egm-master-page #employeegroupmaster-table td.egm-col-status,
+.egm-master-page #employeegroupmaster-table th.egm-col-action,
+.egm-master-page #employeegroupmaster-table td.egm-col-action {
     text-align: center !important;
 }
 
@@ -156,6 +154,25 @@
 .egm-master-page .egm-action-edit:hover {
     background: #f0f6fc;
     color: var(--egm-primary-dark);
+}
+
+.egm-master-page .egm-action-delete {
+    color: #d92d20;
+}
+
+.egm-master-page .egm-action-delete:hover:not(:disabled) {
+    background: #fef3f2;
+    color: #b42318;
+}
+
+.egm-master-page .egm-action-delete:disabled {
+    color: #d0d5dd;
+    cursor: not-allowed;
+}
+
+.egm-master-page .egm-action-delete:disabled:hover {
+    transform: none;
+    background: transparent;
 }
 
 .egm-master-page .egm-action-switch-wrap .form-check-input {

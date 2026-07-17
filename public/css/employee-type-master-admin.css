@@ -55,29 +55,30 @@
     background-color: #fafbfc;
 }
 
-.etm-master-page #employeetypemaster-table tbody td:first-child {
+/* Alignment keys off the per-column classes, not nth-child, so hiding a
+   column via Column Visibility can't shift every other column's alignment. */
+.etm-master-page #employeetypemaster-table tbody td.etm-col-sno {
     color: var(--etm-muted);
     font-weight: 500;
     width: 5.5rem;
 }
 
-.etm-master-page #employeetypemaster-table tbody td:nth-child(2) {
+.etm-master-page #employeetypemaster-table tbody td.etm-col-name {
     font-weight: 500;
     color: var(--etm-heading);
+}
+
+.etm-master-page #employeetypemaster-table th.etm-col-name,
+.etm-master-page #employeetypemaster-table td.etm-col-name {
     text-align: left !important;
 }
 
-.etm-master-page #employeetypemaster-table_wrapper .dataTables_scrollHead thead th:nth-child(2),
-.etm-master-page #employeetypemaster-table thead th:nth-child(2) {
-    text-align: left !important;
-}
-
-.etm-master-page #employeetypemaster-table_wrapper .dataTables_scrollHead thead th:nth-child(3),
-.etm-master-page #employeetypemaster-table_wrapper .dataTables_scrollHead thead th:nth-child(4),
-.etm-master-page #employeetypemaster-table thead th:nth-child(3),
-.etm-master-page #employeetypemaster-table thead th:nth-child(4),
-.etm-master-page #employeetypemaster-table tbody td:nth-child(3),
-.etm-master-page #employeetypemaster-table tbody td:nth-child(4) {
+.etm-master-page #employeetypemaster-table th.etm-col-sno,
+.etm-master-page #employeetypemaster-table td.etm-col-sno,
+.etm-master-page #employeetypemaster-table th.etm-col-status,
+.etm-master-page #employeetypemaster-table td.etm-col-status,
+.etm-master-page #employeetypemaster-table th.etm-col-action,
+.etm-master-page #employeetypemaster-table td.etm-col-action {
     text-align: center !important;
 }
 
@@ -123,6 +124,25 @@
 .etm-master-page .etm-action-edit:hover {
     background: #f0f6fc;
     color: var(--etm-primary-dark);
+}
+
+.etm-master-page .etm-action-delete {
+    color: #d92d20;
+}
+
+.etm-master-page .etm-action-delete:hover:not(:disabled) {
+    background: #fef3f2;
+    color: #b42318;
+}
+
+.etm-master-page .etm-action-delete:disabled {
+    color: #d0d5dd;
+    cursor: not-allowed;
+}
+
+.etm-master-page .etm-action-delete:disabled:hover {
+    transform: none;
+    background: transparent;
 }
 
 .etm-master-page .etm-action-switch-wrap .form-check-input {
@@ -233,14 +253,6 @@
     background: #f0f6fc;
     color: var(--etm-primary-dark);
     border-color: var(--etm-primary-dark);
-}
-
-.etm-form-modal .btn-primary {
-    background: var(--etm-primary);
-    border-color: var(--etm-primary);
-    font-weight: 600;
-    min-height: 44px;
-    padding-inline: 1.25rem;
 }
 
 .etm-form-modal .btn-primary:hover {

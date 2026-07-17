@@ -8,7 +8,7 @@
 
 @section('setup_content')
 <div class="container-fluid etm-master-page">
-    <x-breadcrum title="Employee Type Master">
+    <x-breadcrum title="Employee Type Master" :showBack="false">
         <button type="button"
             class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-2 fw-semibold text-nowrap shadow-sm etm-open-add-btn"
             aria-controls="etmTypeModal">
@@ -22,7 +22,15 @@
     <div class="card etm-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3 p-md-4">
             <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-end gap-3 mb-4">
-                <div id="etmDtSearch" class="programme-dt-search ms-lg-auto" data-dt-search-for="employeetypemaster-table"></div>
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="btnEtmColumns"
+                        data-bs-toggle="modal" data-bs-target="#etmColumnVisibilityModal"
+                        title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div id="etmDtSearch" class="programme-dt-search" data-dt-search-for="employeetypemaster-table"></div>
+                </div>
             </div>
 
             <div class="programme-dt-panel etm-dt-panel">
@@ -32,6 +40,24 @@
                 <div id="etmDtFooter"
                     class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
                     data-dt-footer-for="employeetypemaster-table"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="etmColumnVisibilityModal" tabindex="-1" aria-labelledby="etmColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="etmColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="etmColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -80,6 +106,7 @@
     var tableSelector = '#employeetypemaster-table';
     var storeUrl = "{{ route('master.employee.type.store') }}";
     var csrfToken = "{{ csrf_token() }}";
+    var colStorageKey = 'etm_hidden_columns_v1';
     var etmModalMode = 'add';
 
     var etmModalEl = document.getElementById('etmTypeModal');
@@ -135,138 +162,151 @@
         }, 200);
     }
 
-    function extractEncryptedPkFromUrl(url) {
-        if (!url) {
-            return '';
+    function getEtmTable() {
+        if (typeof jQuery === 'undefined' || !jQuery.fn.DataTable || !jQuery.fn.DataTable.isDataTable(tableSelector)) {
+            return null;
         }
-        var parts = String(url).replace(/\/+$/, '').split('/');
-        return parts[parts.length - 1] || '';
+        return jQuery(tableSelector).DataTable();
     }
 
     function reloadEtmTable() {
-        if (typeof jQuery !== 'undefined' && jQuery.fn.DataTable && jQuery.fn.DataTable.isDataTable(tableSelector)) {
-            jQuery(tableSelector).DataTable().ajax.reload(null, false);
+        var dt = getEtmTable();
+        if (dt) {
+            dt.ajax.reload(null, false);
         }
     }
 
-    function iconOnlyLink($link, iconClass, extraClass, label) {
-        $link.removeClass('btn btn-sm btn-primary btn-success btn-danger');
-        $link.addClass('etm-action-btn ' + (extraClass || ''));
-        $link.attr('aria-label', label || $link.text().trim());
-        $link.empty().append('<i class="bi ' + iconClass + '" aria-hidden="true"></i>');
+    function etmGetHiddenCols() {
+        try {
+            var raw = JSON.parse(localStorage.getItem(colStorageKey));
+            return Array.isArray(raw) ? raw : [];
+        } catch (e) {
+            return [];
+        }
     }
 
-    function swapEtmHeaders() {
-        var $wrapper = jQuery('#employeetypemaster-table_wrapper');
-        if ($wrapper.data('etm-headers-swapped')) {
-            return;
-        }
-
-        var $ths = $wrapper.find('.dataTables_scrollHead thead tr th');
-        if ($ths.length < 4) {
-            $ths = jQuery(tableSelector).find('thead tr th');
-        }
-        if ($ths.length < 4) {
-            return;
-        }
-
-        $ths.eq(3).insertBefore($ths.eq(2));
-        $wrapper.data('etm-headers-swapped', true);
+    function etmPersistHiddenCols(arr) {
+        try {
+            localStorage.setItem(colStorageKey, JSON.stringify(arr));
+        } catch (e) { /* storage unavailable — visibility just won't persist */ }
     }
 
-    function swapEtmRowColumns($row) {
-        if ($row.hasClass('etm-cols-swapped')) {
+    function setupEtmColumns(dt) {
+        var $grid = jQuery('#etmColumnToggleGrid');
+        if (!dt || !$grid.length || $grid.data('etm-colvis-ready')) {
             return;
         }
-        var $cells = $row.find('td');
-        if ($cells.length < 4) {
-            return;
-        }
-        $cells.eq(3).insertBefore($cells.eq(2));
-        $row.addClass('etm-cols-swapped');
-    }
 
-    function updateEtmStatusBadge($toggle, isActive) {
-        var $badge = $toggle.closest('tr').find('.etm-status-badge');
-        if (!$badge.length) {
-            return;
-        }
-        $badge
-            .removeClass('programme-status-badge--active programme-status-badge--inactive')
-            .addClass(isActive ? 'programme-status-badge--active' : 'programme-status-badge--inactive')
-            .text(isActive ? 'Active' : 'Inactive');
-    }
+        var hidden = etmGetHiddenCols();
 
-    function bindEtmEditClicks($editLink, $row) {
-        $editLink.off('click.etmEdit').on('click.etmEdit', function (e) {
-            e.preventDefault();
-            var $cells = $row.find('td');
-            openEtmModal('edit', {
-                pk: extractEncryptedPkFromUrl(jQuery(this).attr('href')),
-                name: $cells.eq(1).text().trim()
-            });
+        dt.columns().every(function () {
+            this.visible(hidden.indexOf(this.index()) === -1, false);
         });
+        dt.columns.adjust();
+
+        $grid.empty();
+
+        dt.columns().every(function () {
+            var idx = this.index();
+            var title = jQuery(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (!title) {
+                return;
+            }
+
+            var inputId = 'etmcolvis_' + idx;
+            var $cell = jQuery('<div class="col-12 col-sm-6 col-md-4"></div>');
+            var $label = jQuery('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                .attr('for', inputId);
+            var $cb = jQuery('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .prop('checked', hidden.indexOf(idx) === -1);
+
+            $cb.on('change', function () {
+                var h = etmGetHiddenCols();
+                var pos = h.indexOf(idx);
+                if (this.checked) {
+                    if (pos !== -1) h.splice(pos, 1);
+                } else if (pos === -1) {
+                    h.push(idx);
+                }
+                etmPersistHiddenCols(h);
+                dt.column(idx).visible(this.checked, false);
+                dt.columns.adjust();
+            });
+
+            $label.append($cb).append(jQuery('<span></span>').text(title));
+            $grid.append($cell.append($label));
+        });
+
+        $grid.data('etm-colvis-ready', true);
     }
 
-    function decorateEtmRows() {
-        swapEtmHeaders();
+    function deleteEtmType($btn) {
+        var url = $btn.data('url');
+        var name = $btn.data('name') || 'this employee type';
+        if (!url) {
+            return;
+        }
 
-        jQuery(tableSelector + ' tbody tr').each(function () {
-            var $row = jQuery(this);
-            swapEtmRowColumns($row);
+        function performDelete() {
+            jQuery.ajax({
+                url: url,
+                method: 'POST',
+                data: { _token: csrfToken, _method: 'DELETE' },
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                success: function (response) {
+                    reloadEtmTable();
+                    var message = (response && response.message) || 'Employee Type deleted successfully.';
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Deleted!',
+                            text: message,
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    } else if (typeof toastr !== 'undefined') {
+                        toastr.success(message);
+                    }
+                },
+                error: function (xhr) {
+                    var message = (xhr.responseJSON && xhr.responseJSON.message)
+                        ? xhr.responseJSON.message
+                        : 'Unable to delete this Employee Type. Please try again.';
 
-            if ($row.hasClass('etm-row-decorated')) {
-                return;
-            }
-
-            var $cells = $row.find('td');
-            if ($cells.length < 4) {
-                return;
-            }
-
-            var $statusCell = $cells.eq(2);
-            var $actionCell = $cells.eq(3);
-            var $toggleWrap = $statusCell.find('.form-check').first();
-            var $toggle = $toggleWrap.find('.status-toggle').first();
-
-            if ($toggle.length) {
-                var isActive = $toggle.is(':checked');
-                var badgeClass = isActive ? 'programme-status-badge--active' : 'programme-status-badge--inactive';
-                var label = isActive ? 'Active' : 'Inactive';
-
-                $toggleWrap.detach();
-                $statusCell.empty().append(
-                    jQuery('<span>', {
-                        class: 'badge rounded-pill programme-status-badge etm-status-badge ' + badgeClass,
-                        text: label
-                    })
-                );
-
-                var $editLink = $actionCell.find('a').first().detach();
-                var $group = jQuery('<div>', {
-                    class: 'etm-type-actions',
-                    role: 'group',
-                    'aria-label': 'Employee type actions'
-                });
-
-                if ($editLink.length) {
-                    iconOnlyLink($editLink, 'bi-pencil', 'etm-action-edit', 'Edit employee type');
-                    bindEtmEditClicks($editLink, $row);
-                    $group.append($editLink);
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'error', title: 'Error', text: message });
+                    } else if (typeof toastr !== 'undefined') {
+                        toastr.error(message);
+                    }
                 }
+            });
+        }
 
-                $toggleWrap.addClass('etm-action-switch-wrap mb-0');
-                $group.append($toggleWrap);
-                $actionCell.empty().append($group);
-            } else {
-                var $editOnly = $actionCell.find('a').first();
-                if ($editOnly.length) {
-                    iconOnlyLink($editOnly, 'bi-pencil', 'etm-action-edit', 'Edit employee type');
-                    bindEtmEditClicks($editOnly, $row);
-                }
+        var confirmText = 'Are you sure you want to delete "' + name + '"? This cannot be undone.';
+
+        if (typeof Swal === 'undefined' || typeof Swal.fire !== 'function') {
+            if (window.confirm(confirmText)) {
+                performDelete();
             }
+            return;
+        }
 
-            $row.addClass('etm-row-decorated');
+        Swal.fire({
+            title: 'Are you sure?',
+            text: confirmText,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                performDelete();
+            }
         });
     }
 
@@ -364,22 +404,25 @@
             submitEtmForm();
         });
 
-        jQuery(tableSelector).on('draw.dt init.dt', function () {
-            jQuery('#employeetypemaster-table_wrapper').data('etm-headers-swapped', false);
-            jQuery(tableSelector + ' tbody tr').removeClass('etm-cols-swapped etm-row-decorated');
-            decorateEtmRows();
+        jQuery(document).on('click', tableSelector + ' .etm-edit-btn', function (e) {
+            e.preventDefault();
+            var $btn = jQuery(this);
+            openEtmModal('edit', {
+                pk: $btn.data('pk'),
+                name: $btn.data('name')
+            });
         });
 
-        jQuery(document).on('change', tableSelector + ' .status-toggle', function () {
-            var $toggle = jQuery(this);
-            window.setTimeout(function () {
-                updateEtmStatusBadge($toggle, $toggle.is(':checked'));
-            }, 0);
+        jQuery(document).on('click', tableSelector + ' .etm-delete-btn', function (e) {
+            e.preventDefault();
+            deleteEtmType(jQuery(this));
         });
 
-        if (jQuery.fn.DataTable.isDataTable(tableSelector)) {
-            decorateEtmRows();
-        }
+        // init.dt may already have fired by the time this runs, so cover both cases.
+        jQuery(tableSelector).on('init.dt', function (e, settings) {
+            setupEtmColumns(new jQuery.fn.dataTable.Api(settings));
+        });
+        setupEtmColumns(getEtmTable());
 
         var params = new URLSearchParams(window.location.search);
         if (params.get('open_etm_modal') === 'add') {

@@ -23,17 +23,44 @@ class EmployeeGroupMasterDataTable extends DataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->addColumn('emp_group_name', fn($row) => $row->emp_group_name ?? '-')
-            ->addColumn('action', function ($row) {
-                $editUrl = route('master.employee.group.edit', ['id' => encrypt($row->pk)]);
-                return '<a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>';
-            })
+            ->addColumn('emp_group_name', fn($row) => e($row->emp_group_name ?? '-'))
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return '<div class="form-check form-switch d-inline-block ms-2">
-                <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                    data-table="employee_group_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
-            </div>';
+                $isActive = (int) $row->active_inactive === 1;
+
+                return '<span class="badge rounded-1 programme-status-badge egm-status-badge '
+                    . ($isActive ? 'programme-status-badge--active">Active' : 'programme-status-badge--inactive">Inactive')
+                    . '</span>';
+            })
+            ->addColumn('action', function ($row) {
+                $isActive = (int) $row->active_inactive === 1;
+                $name = e($row->emp_group_name ?? '');
+                $encryptedPk = encrypt($row->pk);
+
+                $editBtn = '<button type="button" class="egm-action-btn egm-action-edit egm-edit-btn"'
+                    . ' aria-label="Edit employee group"'
+                    . ' data-pk="' . e($encryptedPk) . '" data-name="' . $name . '">'
+                    . '<i class="bi bi-pencil" aria-hidden="true"></i>'
+                    . '</button>';
+
+                $toggle = '<div class="form-check form-switch egm-action-switch-wrap mb-0">'
+                    . '<input class="form-check-input status-toggle" type="checkbox" role="switch"'
+                    . ' data-table="employee_group_master" data-column="active_inactive"'
+                    . ' data-id="' . $row->pk . '" ' . ($isActive ? 'checked' : '') . '>'
+                    . '</div>';
+
+                // Active rows are delete-guarded, matching the other master screens.
+                $deleteBtn = '<button type="button" class="egm-action-btn egm-action-delete egm-delete-btn"'
+                    . ' aria-label="Delete employee group"'
+                    . ' data-url="' . e(route('master.employee.group.delete', ['id' => $encryptedPk])) . '"'
+                    . ' data-name="' . $name . '"'
+                    . ($isActive ? ' disabled aria-disabled="true" title="Deactivate this employee group before deleting it"' : '')
+                    . '>'
+                    . '<i class="bi bi-trash3" aria-hidden="true"></i>'
+                    . '</button>';
+
+                return '<div class="egm-group-actions" role="group" aria-label="Employee group actions">'
+                    . $editBtn . $toggle . $deleteBtn
+                    . '</div>';
             })
 
             ->setRowId('pk')
@@ -66,8 +93,8 @@ class EmployeeGroupMasterDataTable extends DataTable
             ->setTableId('employeegroupmaster-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            ->dom('frtip')
-            // ->orderBy(1)
+            // No ->dom(): the global datatable-global-ui.js default renders the
+            // length element the footer needs for "Showing [N] of M items".
             ->selectStyleSingle()
             ->parameters([
                 'responsive' => true,
@@ -88,10 +115,10 @@ class EmployeeGroupMasterDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false),
-            Column::make('emp_group_name')->title('Employee Group Name')->orderable(false),
-            Column::make('action')->title('Action')->searchable(false)->orderable(false),
-            Column::computed('status')->title('Status')->searchable(false)->orderable(false)
+            Column::computed('DT_RowIndex')->title('S. No.')->searchable(false)->orderable(false)->addClass('egm-col-sno'),
+            Column::make('emp_group_name')->title('Employee Group Name')->orderable(false)->addClass('egm-col-name'),
+            Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('egm-col-status'),
+            Column::computed('action')->title('Action')->searchable(false)->orderable(false)->addClass('egm-col-action'),
         ];
     }
 

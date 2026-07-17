@@ -28,7 +28,7 @@ class EmployeeGroupMasterController extends Controller
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('employee_group_master', 'group_name')->ignore($id, 'pk'),
+                Rule::unique('employee_group_master', 'emp_group_name')->ignore($id, 'pk'),
             ],
         ];
 
@@ -44,7 +44,7 @@ class EmployeeGroupMasterController extends Controller
             return redirect()->back()->with('error', 'Employee Group not found.');
         }
 
-        $employeeGroup->group_name = $request->group_name;
+        $employeeGroup->emp_group_name = $request->group_name;
         $employeeGroup->save();
 
         $message = $id ? 'Employee Group updated successfully.' : 'Employee Group created successfully.';
@@ -72,6 +72,37 @@ class EmployeeGroupMasterController extends Controller
             return redirect()->route('master.employee.group.index')
                 ->with('error', 'Failed to edit employee group: ' . $e->getMessage());
         }
+    }
+
+    public function delete(Request $request, $id)
+    {
+        try {
+            $employeeGroup = EmployeeGroupMaster::findOrFail(decrypt($id));
+        } catch (\Exception $e) {
+            return $this->deleteResponse($request, false, 'Employee Group not found.', 404);
+        }
+
+        if ((int) $employeeGroup->active_inactive === 1) {
+            return $this->deleteResponse($request, false, 'Deactivate this Employee Group before deleting it.', 422);
+        }
+
+        try {
+            $employeeGroup->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            return $this->deleteResponse($request, false, 'This Employee Group is in use and cannot be deleted.', 409);
+        }
+
+        return $this->deleteResponse($request, true, 'Employee Group deleted successfully.');
+    }
+
+    private function deleteResponse(Request $request, bool $success, string $message, int $status = 200)
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['success' => $success, 'message' => $message], $status);
+        }
+
+        return redirect()->route('master.employee.group.index')
+            ->with($success ? 'success' : 'error', $message);
     }
 
     public function update(Request $request, $id)
