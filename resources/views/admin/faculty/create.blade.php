@@ -56,13 +56,29 @@ input.is-invalid {
 }
 
 </style>
-<div class="container-fluid" id="printFacultyFormData">
-    <x-breadcrum title="Faculty" />
+<div class="container-fluid faculty-wizard-page" id="printFacultyFormData">
+    <x-breadcrum title="Add Faculty">
+        <a href="{{ route('faculty.printBlank') }}" target="_blank" rel="noopener"
+           class="btn programme-dt-btn-columns border-0 text-primary" title="Download Form">
+            <i class="bi bi-download" aria-hidden="true"></i>
+            <span>Download Form</span>
+        </a>
+    </x-breadcrum>
     <x-session_message />
-    <!-- start Vertical Steps Example -->
+
+    <div class="row g-4">
+        {{-- Step rail --}}
+        <div class="col-12 col-lg-3">
+            @include('admin.faculty.partials.wizard-stepper')
+        </div>
+
+        {{-- Step panes --}}
+        <div class="col-12 col-lg-9">
         <form class="facultyForm">
 			  @csrf
 			  <input type="hidden" name="faculty_id" id="faculty_id" value="">
+
+                <div class="ds-wizard-pane is-active" data-step="1">
                 <div class="card">
                     <div class="card-body">
                         <h4 class="card-title">Personal Information</h4>
@@ -433,6 +449,13 @@ input.is-invalid {
                     </div>
                 </div>
 
+                <div class="d-flex justify-content-end align-items-center gap-2 mb-3 faculty-wizard-actions">
+                    <button type="button" class="btn btn-outline-primary rounded-1 px-4 fw-semibold faculty-wizard-cancel">Cancel</button>
+                    <button type="button" class="btn btn-primary rounded-1 px-4 fw-semibold faculty-wizard-next">Save &amp; Next</button>
+                </div>
+                </div>{{-- /step 1 --}}
+
+                <div class="ds-wizard-pane" data-step="2">
                 <div class="card">
                     <div class="card-body">
                         <div>
@@ -507,6 +530,13 @@ input.is-invalid {
                         </div>
                     </div>
                 </div>
+                <div class="d-flex justify-content-end align-items-center gap-2 mb-3 faculty-wizard-actions">
+                    <button type="button" class="btn btn-outline-primary rounded-1 px-4 fw-semibold faculty-wizard-cancel">Cancel</button>
+                    <button type="button" class="btn btn-primary rounded-1 px-4 fw-semibold faculty-wizard-next">Save &amp; Next</button>
+                </div>
+                </div>{{-- /step 2 --}}
+
+                <div class="ds-wizard-pane" data-step="3">
                 <div class="card">
                     <div class="card-body">
                         <h4 class="card-title">Experience Details</h4>
@@ -579,6 +609,13 @@ input.is-invalid {
                     </div>
                 </div>
 
+                <div class="d-flex justify-content-end align-items-center gap-2 mb-3 faculty-wizard-actions">
+                    <button type="button" class="btn btn-outline-primary rounded-1 px-4 fw-semibold faculty-wizard-cancel">Cancel</button>
+                    <button type="button" class="btn btn-primary rounded-1 px-4 fw-semibold faculty-wizard-next">Save &amp; Next</button>
+                </div>
+                </div>{{-- /step 3 --}}
+
+                <div class="ds-wizard-pane" data-step="4">
                 <div class="card">
                     <div class="card-body">
 
@@ -631,6 +668,13 @@ input.is-invalid {
                         </div>
                     </div>
                 </div>
+                <div class="d-flex justify-content-end align-items-center gap-2 mb-3 faculty-wizard-actions">
+                    <button type="button" class="btn btn-outline-primary rounded-1 px-4 fw-semibold faculty-wizard-cancel">Cancel</button>
+                    <button type="button" class="btn btn-primary rounded-1 px-4 fw-semibold faculty-wizard-next">Save &amp; Next</button>
+                </div>
+                </div>{{-- /step 4 --}}
+
+                <div class="ds-wizard-pane" data-step="5">
                 <div class="card">
                     <div class="card-body">
                         <div>
@@ -740,34 +784,28 @@ input.is-invalid {
                                 </div>
                             </div>
                         </div>
-                        <hr>
-		<div class="d-flex justify-content-end align-items-center gap-2 mb-3">
-		<button class="btn btn-primary d-flex align-items-center gap-2" type="button" id="saveFacultyForm">
-			<i class="material-icons menu-icon">save</i>
-			Save
-		</button>
-			<a href="{{ route('faculty.index') }}" class="btn btn-secondary d-flex align-items-center gap-2">
-				<i class="material-icons menu-icon">arrow_back</i>
-				Back
-			</a>
-
-		</div>
-
-
-
                     </div>
                 </div>
 
+                {{-- Final step: the button keeps id="saveFacultyForm" so the existing
+                     custom.js submit handler stays wired to it. --}}
+                <div class="d-flex justify-content-end align-items-center gap-2 mb-3 faculty-wizard-actions">
+                    <button type="button" class="btn btn-outline-primary rounded-1 px-4 fw-semibold faculty-wizard-cancel">Cancel</button>
+                    <button type="button" class="btn btn-primary rounded-1 px-4 fw-semibold" id="saveFacultyForm">Add Faculty</button>
+                </div>
+                </div>{{-- /step 5 --}}
+
             </form>
-        {{-- </div>
-    </div> --}}
-    <!-- end Vertical Steps Example -->
+        </div>
+    </div>
 </div>
 
+@include('admin.faculty.partials.wizard-leave-modal')
 
 @endsection
 
 @section('scripts')
+@include('admin.faculty.partials.wizard-scripts')
 <script>
 // Show/Hide Faculty (PA) field based on Faculty Type
 $(document).ready(function() {

@@ -350,6 +350,97 @@ a.dropdown-item:focus-visible {
     color: #fff;
 }
 
+/* Wizard variant: circular indices, connector rail, green completed steps.
+   Used by the Faculty add/edit wizard. */
+.ds-stepper--wizard {
+    gap: 0;
+}
+.ds-stepper--wizard .ds-step {
+    position: relative;
+    align-items: center;
+    gap: var(--ds-space-3);
+    padding-bottom: var(--ds-space-5);
+}
+.ds-stepper--wizard .ds-step:last-child {
+    padding-bottom: 0;
+}
+/* Connector rail runs from each index down to the next one. */
+.ds-stepper--wizard .ds-step:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: 0.875rem;
+    top: 1.75rem;
+    bottom: 0;
+    width: 2px;
+    background: var(--ds-line);
+    transform: translateX(-1px);
+}
+.ds-stepper--wizard .ds-step.is-done:not(:last-child)::before {
+    background: #027a48;
+}
+.ds-stepper--wizard .ds-step-index {
+    border-radius: 50%;
+    position: relative;
+    z-index: 1;
+}
+.ds-stepper--wizard .ds-step.is-done .ds-step-index {
+    background: #027a48;
+    border-color: #027a48;
+}
+/* Completed steps swap their number for a tick. */
+.ds-stepper--wizard .ds-step.is-done .ds-step-num {
+    display: none;
+}
+.ds-stepper--wizard .ds-step-check {
+    display: none;
+    font-size: 0.875rem;
+    line-height: 1;
+}
+.ds-stepper--wizard .ds-step.is-done .ds-step-check {
+    display: inline-block;
+}
+.ds-stepper--wizard .ds-step-label {
+    font-size: 0.875rem;
+    color: var(--ds-ink-muted);
+    line-height: 1.2;
+}
+.ds-stepper--wizard .ds-step.is-active .ds-step-label {
+    color: var(--ds-ink);
+    font-weight: 600;
+}
+.ds-stepper--wizard .ds-step.is-done .ds-step-label {
+    color: var(--ds-ink);
+}
+
+/* Wizard step panes — only the active one is rendered. */
+.ds-wizard-pane {
+    display: none;
+}
+.ds-wizard-pane.is-active {
+    display: block;
+}
+
+@media (max-width: 991.98px) {
+    /* Collapse the rail to a horizontal strip on small screens. */
+    .ds-stepper--wizard {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: var(--ds-space-3);
+    }
+    .ds-stepper--wizard .ds-step {
+        padding-bottom: 0;
+    }
+    .ds-stepper--wizard .ds-step:not(:last-child)::before {
+        display: none;
+    }
+    .ds-stepper--wizard .ds-step-label {
+        display: none;
+    }
+    .ds-stepper--wizard .ds-step.is-active .ds-step-label {
+        display: inline;
+    }
+}
+
 /* --- Empty state ------------------------------------------------ */
 .ds-empty-state {
     text-align: center;

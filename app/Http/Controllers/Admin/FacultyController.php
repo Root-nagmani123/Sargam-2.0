@@ -857,9 +857,13 @@ class FacultyController extends Controller
         $faculty->faculty_code = $facultyCode;
     }
 
-    function show(String $id)
+    /**
+     * Shared by the on-screen detail view and the print sheet so the two can never
+     * drift apart. Returns null when the id doesn't resolve to a faculty.
+     */
+    private function findFacultyForDetails(String $id): ?FacultyMaster
     {
-        $faculty = FacultyMaster::with([
+        return FacultyMaster::with([
             'cityMaster:pk,city_name',
             'stateMaster:Pk,state_name',
             'countryMaster:pk,country_name',
@@ -870,11 +874,33 @@ class FacultyController extends Controller
             'facultyExperienceMap:pk,Years_Of_Experience,Specialization,pre_Institutions,Position_hold,duration,Nature_of_Work,faculty_master_pk',
             'facultyQualificationMap:faculty_master_pk,Degree_name,University_Institution_Name,Year_of_passing,Percentage_CGPA,Certifcates_upload_path'
         ])->find(decrypt($id));
+    }
+
+    function show(String $id)
+    {
+        $faculty = $this->findFacultyForDetails($id);
 
         if (!$faculty) {
             return redirect()->route('faculty.index')->with('error', 'Faculty not found');
         }
         return view('admin.faculty.show', compact('faculty'));
+    }
+
+    /**
+     * Standalone print sheet (standard LBSNAA report layout).
+     */
+    function printDetails(String $id)
+    {
+        $faculty = $this->findFacultyForDetails($id);
+
+        if (!$faculty) {
+            return redirect()->route('faculty.index')->with('error', 'Faculty not found');
+        }
+
+        return view('admin.faculty.details_print', [
+            'faculty' => $faculty,
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ]);
     }
 
     function excelExportFaculty()

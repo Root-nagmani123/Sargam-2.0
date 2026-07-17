@@ -1,19 +1,37 @@
-{{-- Faculty details BLANK form (print to fill in by hand).
-     Deliberately mirrors admin/faculty/details_print.blade.php section-for-section
-     and column-for-column, so the blank sheet and a filled record print alike.
-     Standard print layout: standalone page + LBSNAA official header + report
-     title block + floating toolbar + auto-print. --}}
+{{-- Faculty details print sheet.
+     Follows the standard print layout (see admin/dashboard/export/student_list_print):
+     standalone page + LBSNAA official header + report title block + floating
+     toolbar + auto-print, so it matches every other Print in the app. --}}
 @php
     $printedOn = $generatedAt ?? now()->format('d M Y, h:i A');
-    $qualificationRows = $qualificationRows ?? 3;
-    $experienceRows = $experienceRows ?? 3;
+
+    // Mappings can point at expertise rows that no longer exist — drop those.
+    $expertiseNames = $faculty->facultyExpertiseMap
+        ->map(fn ($area) => $area->facultyExpertise?->expertise_name)
+        ->filter()
+        ->values();
+
+    $sectorName = \Illuminate\Support\Facades\DB::table('faculty_sector_master')
+        ->where('pk', $faculty->faculty_sector)
+        ->value('name');
+
+    $serviceName = \Illuminate\Support\Facades\DB::table('service_master')
+        ->where('pk', $faculty->service_master_pk)
+        ->value('service_name');
+
+    $address = collect([
+        $faculty->countryMaster->country_name ?? null,
+        $faculty->stateMaster->state_name ?? null,
+        $faculty->districtMaster->district_name ?? null,
+        $faculty->cityMaster->city_name ?? null,
+    ])->filter()->implode(', ');
 @endphp
 <!doctype html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Faculty Details (Blank Form) - LBSNAA MUSSOORIE</title>
+    <title>Faculty Details - LBSNAA MUSSOORIE</title>
     <style>
         @page { size: A4 portrait; margin: 12mm 10mm; }
         * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
@@ -65,22 +83,16 @@
         .identity { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
         .identity td { border: 0; padding: 0; vertical-align: middle; }
         .identity .photo-cell { width: 110px; }
-        .identity .photo-box {
+        .identity .photo {
             width: 100px;
             height: 100px;
+            object-fit: cover;
             border: 1px solid #d0d5dd;
             border-radius: 4px;
-            background: #f9fafb;
-            text-align: center;
-            font-size: 9px;
-            color: #98a2b3;
-            line-height: 100px;
         }
         .identity .who { padding-left: 12px; }
-        .identity .who table { width: 100%; border-collapse: collapse; }
-        .identity .who td { padding: 0 0 10px 0; }
-        .identity .k-inline { font-size: 10px; font-weight: bold; color: #344054; width: 90px; }
-        .identity .fill-line { border-bottom: 1px solid #98a2b3; height: 18px; }
+        .identity .who-name { font-size: 14px; font-weight: 700; color: #0f172a; }
+        .identity .who-meta { font-size: 11px; color: #555; margin-top: 3px; }
 
         /* Section band — matches the blue band used across the standard reports. */
         .section-band {
@@ -125,9 +137,7 @@
             color: #344054;
         }
 
-        /* Empty cells need room to write in. */
-        .blank { height: 24px; }
-        table.data-table tbody td.blank { height: 26px; }
+        .empty { text-align: center; padding: 12px; color: #6b7280; font-size: 10px; border: 1px solid #e5e7eb; border-top: 0; }
 
         /* Floating toolbar — never printed. */
         .print-toolbar {
@@ -168,31 +178,29 @@
         @include('admin.partials.pdf_lbsnaa_official_header')
 
         <div class="report-title-block">
-            <h1 class="report-title">Faculty Details &ndash; Blank Form</h1>
-            <div class="report-meta">Generated: {{ $printedOn }}</div>
+            <h1 class="report-title">Faculty Details</h1>
+            <div class="report-meta">
+                Generated: {{ $printedOn }}
+                &nbsp;|&nbsp; Faculty Code: {{ $faculty->faculty_code ?: '-' }}
+            </div>
         </div>
 
         {{-- Identity --}}
         <table class="identity">
             <tr>
                 <td class="photo-cell">
-                    <div class="photo-box">Photo</div>
+                    <img class="photo"
+                         src="{{ $faculty->photo_uplode_path ? asset('storage/'.$faculty->photo_uplode_path) : asset('images/dummypic.jpeg') }}"
+                         alt="Faculty Photo">
                 </td>
                 <td class="who">
-                    <table>
-                        <tr>
-                            <td class="k-inline">Full Name</td>
-                            <td class="fill-line"></td>
-                        </tr>
-                        <tr>
-                            <td class="k-inline">Faculty Code</td>
-                            <td class="fill-line"></td>
-                        </tr>
-                        <tr>
-                            <td class="k-inline">Faculty Type</td>
-                            <td class="fill-line"></td>
-                        </tr>
-                    </table>
+                    <div class="who-name">{{ $faculty->full_name }}</div>
+                    <div class="who-meta">
+                        {{ $faculty->facultyTypeMaster->faculty_type_name ?? '-' }}
+                        @if($faculty->faculty_type == '1' && $faculty->faculty_pa)
+                            &nbsp;|&nbsp; Faculty (PA): {{ $faculty->faculty_pa }}
+                        @endif
+                    </div>
                 </td>
             </tr>
         </table>
@@ -202,21 +210,21 @@
         <table class="kv">
             <tr>
                 <td class="k">Gender</td>
-                <td class="blank"></td>
+                <td>{{ $faculty->gender ?: '-' }}</td>
                 <td class="k">Mobile Number</td>
-                <td class="blank"></td>
+                <td>{{ $faculty->mobile_no ?: '-' }}</td>
             </tr>
             <tr>
                 <td class="k">Email ID</td>
-                <td class="blank"></td>
+                <td>{{ $faculty->email_id ?: '-' }}</td>
                 <td class="k">Current Designation</td>
-                <td class="blank"></td>
+                <td>{{ $faculty->current_designation ?: '-' }}</td>
             </tr>
             <tr>
                 <td class="k">Current Department</td>
-                <td class="blank"></td>
+                <td>{{ $faculty->current_department ?: '-' }}</td>
                 <td class="k">Address</td>
-                <td class="blank"></td>
+                <td>{{ $address ?: '-' }}</td>
             </tr>
         </table>
 
@@ -233,15 +241,17 @@
                 </tr>
             </thead>
             <tbody>
-                @for($i = 1; $i <= $qualificationRows; $i++)
+                @forelse($faculty->facultyQualificationMap as $i => $q)
                 <tr>
-                    <td>{{ $i }}</td>
-                    <td class="blank"></td>
-                    <td class="blank"></td>
-                    <td class="blank"></td>
-                    <td class="blank"></td>
+                    <td>{{ $i + 1 }}</td>
+                    <td>{{ $q->Degree_name ?: '-' }}</td>
+                    <td>{{ $q->University_Institution_Name ?: '-' }}</td>
+                    <td>{{ $q->Year_of_passing ?: '-' }}</td>
+                    <td>{{ $q->Percentage_CGPA ?: '-' }}</td>
                 </tr>
-                @endfor
+                @empty
+                <tr><td class="empty" colspan="5">No qualification details recorded.</td></tr>
+                @endforelse
             </tbody>
         </table>
 
@@ -258,15 +268,17 @@
                 </tr>
             </thead>
             <tbody>
-                @for($i = 1; $i <= $experienceRows; $i++)
+                @forelse($faculty->facultyExperienceMap as $i => $exp)
                 <tr>
-                    <td>{{ $i }}</td>
-                    <td class="blank"></td>
-                    <td class="blank"></td>
-                    <td class="blank"></td>
-                    <td class="blank"></td>
+                    <td>{{ $i + 1 }}</td>
+                    <td>{{ $exp->Years_Of_Experience ?: '-' }}</td>
+                    <td>{{ $exp->Specialization ?: '-' }}</td>
+                    <td>{{ $exp->pre_Institutions ?: '-' }}</td>
+                    <td>{{ $exp->Position_hold ?: '-' }}</td>
                 </tr>
-                @endfor
+                @empty
+                <tr><td class="empty" colspan="5">No experience details recorded.</td></tr>
+                @endforelse
             </tbody>
         </table>
 
@@ -275,13 +287,13 @@
         <table class="kv">
             <tr>
                 <td class="k">Bank Name</td>
-                <td class="blank"></td>
+                <td>{{ $faculty->bank_name ?: '-' }}</td>
                 <td class="k">Account Number</td>
-                <td class="blank"></td>
+                <td>{{ $faculty->Account_No ?: '-' }}</td>
             </tr>
             <tr>
                 <td class="k">IFSC Code</td>
-                <td class="blank"></td>
+                <td>{{ $faculty->IFSC_Code ?: '-' }}</td>
                 <td class="k"></td>
                 <td></td>
             </tr>
@@ -292,11 +304,7 @@
         <table class="kv">
             <tr>
                 <td class="k">Expertise</td>
-                <td class="blank"></td>
-            </tr>
-            <tr>
-                <td class="k"></td>
-                <td class="blank"></td>
+                <td>{{ $expertiseNames->isNotEmpty() ? $expertiseNames->implode(', ') : '-' }}</td>
             </tr>
         </table>
 
@@ -305,13 +313,13 @@
         <table class="kv">
             <tr>
                 <td class="k">Joining Date</td>
-                <td class="blank"></td>
+                <td>{{ $faculty->joining_date ? format_date($faculty->joining_date) : '-' }}</td>
                 <td class="k">Current Sector</td>
-                <td class="blank"></td>
+                <td>{{ $sectorName ?: '-' }}</td>
             </tr>
             <tr>
                 <td class="k">Service</td>
-                <td class="blank"></td>
+                <td>{{ $serviceName ?: '-' }}</td>
                 <td class="k"></td>
                 <td></td>
             </tr>
@@ -319,7 +327,7 @@
     </div>
 
     <script>
-        // Open the print dialog automatically once the form has rendered.
+        // Open the print dialog automatically once the report has rendered.
         window.addEventListener('load', function () {
             window.focus();
             window.setTimeout(function () { window.print(); }, 250);

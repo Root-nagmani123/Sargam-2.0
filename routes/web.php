@@ -393,6 +393,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('edit/{id}',  'edit')->name('edit');
         Route::post('update',  'update')->name('update');
         Route::get('show/{id}',  'show')->name('show');
+        Route::get('print/{id}',  'printDetails')->name('print');
         Route::delete('delete/{id}',  'destroy')->name('destroy');
         Route::get('excel-export',  'excelExportFaculty')->name('excel.export');
         Route::post('check-unique', 'checkUnique')->name('checkUnique');

@@ -4,54 +4,97 @@
 
 @section('setup_content')
 
-<div class="container-fluid">
-    <x-breadcrum title="Faculty" />
+<div class="container-fluid faculty-wizard-page">
+    <x-breadcrum title="Edit Faculty">
+        <a href="{{ route('faculty.printBlank') }}" target="_blank" rel="noopener"
+           class="btn programme-dt-btn-columns border-0 text-primary" title="Download Form">
+            <i class="bi bi-download" aria-hidden="true"></i>
+            <span>Download Form</span>
+        </a>
+    </x-breadcrum>
 
-    <!-- start Vertical Steps Example -->
     {{-- id="facultyForm" data-store-url="{{ route('faculty.update') }}"
         data-index-url="{{ route('faculty.index') }} --}}
 
+    <div class="row g-4">
+        {{-- Step rail --}}
+        <div class="col-12 col-lg-3">
+            @include('admin.faculty.partials.wizard-stepper')
+        </div>
+
+        {{-- Step panes --}}
+        <div class="col-12 col-lg-9">
         <form class="facultyForm">
-            <div class="card">
-                <div class="card-body">
-                    <h4 class="card-title">Personal Information</h4>
-                    <hr>
-                    <input type="hidden" name="faculty_id" value="{{ $faculty->pk }}">
-                    @include('admin.faculty.components.basicInfo')
+
+            <div class="ds-wizard-pane is-active" data-step="1">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title">Personal Information</h4>
+                        <hr>
+                        <input type="hidden" name="faculty_id" value="{{ $faculty->pk }}">
+                        @include('admin.faculty.components.basicInfo')
+                    </div>
                 </div>
-            </div>
-            <div class="card">
-                <div class="card-body">
-                    <h4 class="card-title">Qualification Details</h4>
-                    <hr>
-                    @include('admin.faculty.components.degree')
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-body">
-                    <h4 class="card-title">Experience Details</h4>
-                    <hr>
-                    @include('admin.faculty.components.experienceDetails')
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-body">
-                    <h4 class="card-title">Bank Details</h4>
-                    <hr>
-                    @include('admin.faculty.components.bankDetails')
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-body">
-                    <h4 class="card-title">Other information</h4>
-                    <hr>
-                    @include('admin.faculty.components.researchPublication')
+                <div class="d-flex justify-content-end align-items-center gap-2 mb-3 faculty-wizard-actions">
+                    <button type="button" class="btn btn-outline-primary rounded-1 px-4 fw-semibold faculty-wizard-cancel">Cancel</button>
+                    <button type="button" class="btn btn-primary rounded-1 px-4 fw-semibold faculty-wizard-next">Save &amp; Next</button>
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-body">
-                    <div class="row">
+            <div class="ds-wizard-pane" data-step="2">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title">Qualification Details</h4>
+                        <hr>
+                        @include('admin.faculty.components.degree')
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end align-items-center gap-2 mb-3 faculty-wizard-actions">
+                    <button type="button" class="btn btn-outline-primary rounded-1 px-4 fw-semibold faculty-wizard-cancel">Cancel</button>
+                    <button type="button" class="btn btn-primary rounded-1 px-4 fw-semibold faculty-wizard-next">Save &amp; Next</button>
+                </div>
+            </div>
+
+            <div class="ds-wizard-pane" data-step="3">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title">Experience Details</h4>
+                        <hr>
+                        @include('admin.faculty.components.experienceDetails')
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end align-items-center gap-2 mb-3 faculty-wizard-actions">
+                    <button type="button" class="btn btn-outline-primary rounded-1 px-4 fw-semibold faculty-wizard-cancel">Cancel</button>
+                    <button type="button" class="btn btn-primary rounded-1 px-4 fw-semibold faculty-wizard-next">Save &amp; Next</button>
+                </div>
+            </div>
+
+            <div class="ds-wizard-pane" data-step="4">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title">Bank Details</h4>
+                        <hr>
+                        @include('admin.faculty.components.bankDetails')
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end align-items-center gap-2 mb-3 faculty-wizard-actions">
+                    <button type="button" class="btn btn-outline-primary rounded-1 px-4 fw-semibold faculty-wizard-cancel">Cancel</button>
+                    <button type="button" class="btn btn-primary rounded-1 px-4 fw-semibold faculty-wizard-next">Save &amp; Next</button>
+                </div>
+            </div>
+
+            <div class="ds-wizard-pane" data-step="5">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title">Other information</h4>
+                        <hr>
+                        @include('admin.faculty.components.researchPublication')
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
                             <div class="col-12 col-md-6">
                                 <div class="mb-3">
                                     <x-select
@@ -94,27 +137,28 @@
                                 </div>
                             </div>
                         </div>
-                        <hr>
-                        <div class="mb-3">
-                            <button class="btn btn-primary hstack gap-6 float-end" type="button" id="saveFacultyForm">
-                                <i class="material-icons menu-icon">save</i>
-                                Update
-                            </button>
-                            <a href="{{ route('faculty.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
-                                <i class="material-icons menu-icon">arrow_back</i>
-                                Back
-                            </a>
-                        </div>
+                    </div>
+                </div>
+
+                {{-- Final step: the button keeps id="saveFacultyForm" so the existing
+                     custom.js submit handler stays wired to it. --}}
+                <div class="d-flex justify-content-end align-items-center gap-2 mb-3 faculty-wizard-actions">
+                    <button type="button" class="btn btn-outline-primary rounded-1 px-4 fw-semibold faculty-wizard-cancel">Cancel</button>
+                    <button type="button" class="btn btn-primary rounded-1 px-4 fw-semibold" id="saveFacultyForm">Update</button>
                 </div>
             </div>
+
         </form>
-    <!-- end Vertical Steps Example -->
+        </div>
+    </div>
 </div>
 
+@include('admin.faculty.partials.wizard-leave-modal')
 
 @endsection
 
 @section('scripts')
+@include('admin.faculty.partials.wizard-scripts')
 <script>
 // Show/Hide Faculty (PA) field based on Faculty Type
 $(document).ready(function() {

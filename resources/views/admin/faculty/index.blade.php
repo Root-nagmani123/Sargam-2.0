@@ -3,92 +3,91 @@
 @section('title', 'Faculty')
 
 @push('styles')
-    <style>
-        .faculty-index-page .card-faculty-accent {
-            border-left: 4px solid #004a93;
-        }
-        @media (min-width: 768px) {
-            .faculty-index-page .faculty-actions .btn {
-                white-space: nowrap;
-            }
-        }
-        .btn-faculty-export {
-            border-color: #004a93;
-            color: #004a93;
-        }
-        .btn-faculty-export:hover,
-        .btn-faculty-export:focus,
-        .btn-faculty-export:active {
-            background-color: #004a93;
-            border-color: #004a93;
-            color: #fff !important;
-        }
-    </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 @endpush
 
 @section('setup_content')
-<div class="container-fluid">
-<x-breadcrum title="Faculty"></x-breadcrum>
-    <!--<x-session_message />-->
+<div class="container-fluid faculty-index-page">
+    <x-breadcrum title="Faculty">
+        <a href="{{ route('faculty.create') }}"
+           class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
+           aria-label="Add New Faculty">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+            <span>Add Faculty</span>
+        </a>
+    </x-breadcrum>
+
     <div id="status-msg"></div>
 
-    <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card" style="border-left:4px solid #004a93;">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
-                            <h4 class="fw-semibold text-primary mb-0" style="color:#004a93 !important;">
-                                Faculty
-                            </h4>
-                        </div>
+    {{-- Secondary actions (Print / Download) --}}
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
+        <a href="{{ route('faculty.printBlank') }}" target="_blank" rel="noopener" class="btn programme-dt-btn-columns border-0 text-primary" title="Print Blank Form">
+            <i class="bi bi-printer" aria-hidden="true"></i>
+            <span>Print Blank Form</span>
+        </a>
+        <a href="{{ route('faculty.excel.export') }}" class="btn programme-dt-btn-columns border-0 text-primary" title="Download">
+            <i class="bi bi-download" aria-hidden="true"></i>
+            <span>Download</span>
+        </a>
+    </div>
 
-                        <div class="col-6">
-                            <div class="d-flex justify-content-end align-items-center gap-3">
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
 
-                                <!-- Add Faculty -->
-                                <a href="{{ route('faculty.create') }}"
-                                    class="btn btn-primary d-flex align-items-center gap-1 shadow-sm"
-                                    style="background-color:#004a93; border-color:#004a93;"
-                                    aria-label="Add New Faculty">
-                                    <span class="material-symbols-rounded fs-5">add</span>
-                                    Add Faculty
-                                </a>
-
-                                <!-- Export Excel -->
-                                <a href="{{ route('faculty.excel.export') }}"
-                                    class="btn btn-outline-primary btn-faculty-export d-flex align-items-center gap-1 shadow-sm"
-                                    aria-label="Export Faculty Excel">
-                                    <span class="material-symbols-rounded fs-5">export_notes</span>
-                                    Export Excel
-                                </a>
-                                <a href="{{ route('faculty.printBlank') }}"  class="btn btn-outline-success">
-									<i class="material-icons">print</i> Print Blank Form
-								</a>
-
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr>
-                    {!! $dataTable->table(['class' => 'table', 'data-sargam-dt-ui' => 'false']) !!}
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="facultyBtnColumns"
+                        data-bs-toggle="modal" data-bs-target="#facultyColumnVisibilityModal"
+                        title="Show / hide columns">
+                        <span>Columns</span><i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div id="facultyDtSearch" class="programme-dt-search" data-dt-search-for="faculty-table"></div>
                 </div>
+            </div>
+
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
+                </div>
+                <div id="facultyDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                     data-dt-footer-for="faculty-table"></div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="facultyColumnVisibilityModal" tabindex="-1" aria-labelledby="facultyColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="facultyColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="facultyColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
+</div>
 @endsection
 
 @push('scripts')
-    {!! $dataTable->scripts() !!}
+{!! $dataTable->scripts() !!}
 
 <script>
-// Move the Yajra DataTable's search / pagination / length / count into the
-// programme-dt-* slots so they render (the table's DOM routes them into hidden
-// rows by default). Mirrors the programme / course-group-type index pattern.
 $(function () {
+    var TABLE_ID = '#faculty-table';
+    var table;
+
+    /* ---- Relocate search + build footer (pagination + count) ---- */
     function enhanceFacultyDtControls() {
-        var $wrapper = $('#faculty-table_wrapper');
+        var $wrapper = $(TABLE_ID + '_wrapper');
         if (!$wrapper.length) { return; }
 
         var $searchSlot = $('#facultyDtSearch');
@@ -108,8 +107,10 @@ $(function () {
             }
         }
 
-        if ($footer.data('dtReady')) { updateFacultyDtCount(); return; }
         if (!$footer.length) { return; }
+
+        if ($footer.data('dtReady')) { updateFacultyDtCount(); return; }
+
         // If the global DataTable UI already populated this footer, don't duplicate it.
         if ($footer.find('.dataTables_info, .dataTables_paginate, .dataTables_length').length) {
             $footer.data('dtReady', true);
@@ -120,6 +121,8 @@ $(function () {
         var $paginate = $wrapper.find('.dataTables_paginate').first();
         var $length = $wrapper.find('.dataTables_length').first();
         var $info = $wrapper.find('.dataTables_info').first();
+
+        if (!$paginate.length && !$length.length) { return; }
 
         var $pagCol = $('<div class="programme-dt-pagination"></div>');
         var $countCol = $('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>');
@@ -147,27 +150,94 @@ $(function () {
 
         $footer.append($pagCol).append($countCol);
         $footer.data('dtReady', true);
+        updateFacultyDtCount();
     }
 
     function updateFacultyDtCount() {
-        if (!$.fn.DataTable.isDataTable('#faculty-table')) { return; }
-        var info = $('#faculty-table').DataTable().page.info();
+        if (!$.fn.DataTable.isDataTable(TABLE_ID)) { return; }
+        var info = $(TABLE_ID).DataTable().page.info();
         var $info = $('#facultyDtFooter .dataTables_info');
         if ($info.length && info && info.recordsDisplay !== undefined) {
             $info.text('of ' + info.recordsDisplay.toLocaleString() + ' items');
         }
     }
 
+    /* ---- Column show / hide (DataTables API) ---- */
+    var facultyColStorageKey = 'facultyGrid:hiddenColumns:v1';
+
+    function facultyGetHiddenCols() {
+        try {
+            var raw = localStorage.getItem(facultyColStorageKey);
+            var arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function facultyPersistHiddenCols(arr) {
+        try { localStorage.setItem(facultyColStorageKey, JSON.stringify(arr)); } catch (e) {}
+    }
+
+    function setupFacultyColumns(dt) {
+        if (!dt) { return; }
+        var hidden = facultyGetHiddenCols();
+
+        dt.columns().every(function () {
+            var idx = this.index();
+            this.visible(hidden.indexOf(idx) === -1, false);
+        });
+        dt.columns.adjust();
+
+        var $grid = $('#facultyColumnToggleGrid');
+        if (!$grid.length) { return; }
+        $grid.empty();
+
+        dt.columns().every(function () {
+            var idx = this.index();
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (!title) { return; }
+
+            var inputId = 'facultycolvis_' + idx;
+            var $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
+            var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                .attr('for', inputId);
+            var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .prop('checked', hidden.indexOf(idx) === -1);
+
+            $cb.on('change', function () {
+                var h = facultyGetHiddenCols();
+                var pos = h.indexOf(idx);
+                if (this.checked) {
+                    if (pos !== -1) h.splice(pos, 1);
+                } else {
+                    if (pos === -1) h.push(idx);
+                }
+                facultyPersistHiddenCols(h);
+                dt.column(idx).visible(this.checked, false);
+                dt.columns.adjust();
+            });
+
+            $label.append($cb).append($('<span></span>').text(title));
+            $cell.append($label);
+            $grid.append($cell);
+        });
+    }
+
     // Yajra initialises the table itself; wait for it, then wire up the slots.
     var facultyInitTimer = setInterval(function () {
-        if (!$.fn.DataTable.isDataTable('#faculty-table')) { return; }
+        if (!$.fn.DataTable.isDataTable(TABLE_ID)) { return; }
         clearInterval(facultyInitTimer);
 
-        var $wrapper = $('#faculty-table_wrapper');
+        table = $(TABLE_ID).DataTable();
+
         enhanceFacultyDtControls();
         updateFacultyDtCount();
+        setupFacultyColumns(table);
 
-        $('#faculty-table').on('draw.dt', function () {
+        var $wrapper = $(TABLE_ID + '_wrapper');
+        $(TABLE_ID).on('draw.dt', function () {
             if ($wrapper.find('.dataTables_paginate').length && !$('#facultyDtFooter .dataTables_paginate').length) {
                 $('#facultyDtFooter').empty().data('dtReady', false);
                 enhanceFacultyDtControls();
@@ -184,6 +254,8 @@ $(function () {
 // Delete Faculty with SweetAlert Confirmation
 $(document).on('click', '.delete-faculty-btn', function(e) {
     e.preventDefault();
+
+    if (this.disabled) { return; }
 
     var deleteUrl = $(this).data('url');
     var facultyName = $(this).data('name');

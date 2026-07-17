@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers\Admin\Master;
 
+use App\DataTables\Master\FacultyExpertiseMasterDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\FacultyExpertiseMaster;
 use App\Support\DataTableRedisCache;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class FacultyExpertiseMasterController extends Controller
 {
-    private const LIST_CACHE_EPOCH_KEY = 'master_faculty_expertise_list_epoch';
+    /** Shared with {@see FacultyExpertiseMasterDataTable} so both cache layers invalidate together. */
+    public const LIST_CACHE_EPOCH_KEY = 'master_faculty_expertise_list_epoch';
 
     /**
      * Same Redis store / TTL pattern as other master listings (see {@see DataTableRedisCache}).
@@ -19,23 +22,10 @@ class FacultyExpertiseMasterController extends Controller
         DataTableRedisCache::bumpListEpoch(self::LIST_CACHE_EPOCH_KEY, 'FacultyExpertiseMasterController');
     }
 
-    public function index(Request $request)
+    public function index()
     {
-        $epoch = DataTableRedisCache::readListEpoch(self::LIST_CACHE_EPOCH_KEY);
-        $page = max(1, (int) $request->query('page', 1));
-        $cacheKey = 'master_fac_exp_list:v1:' . md5(json_encode(['epoch' => $epoch, 'page' => $page]));
-
-        $faculties = DataTableRedisCache::remember(
-            $cacheKey,
-            [
-                'enabled' => 'FACULTY_EXPERTISE_MASTER_LIST_CACHE_ENABLED',
-                'seconds' => 'FACULTY_EXPERTISE_MASTER_LIST_CACHE_SECONDS',
-            ],
-            'FacultyExpertiseMasterController@index',
-            fn () => FacultyExpertiseMaster::latest('pk')->paginate(10)
-        );
-
-        return view('admin.master.faculty_expertise_master.index', compact('faculties'));
+        // Listing is cached inside the DataTable's ajax(), keyed off the same epoch.
+        return (new FacultyExpertiseMasterDataTable())->render('admin.master.faculty_expertise_master.index');
     }
 
     public function create() {
@@ -43,28 +33,50 @@ class FacultyExpertiseMasterController extends Controller
     }
 
     public function store(Request $request) {
+        $id = $request->id ? decrypt($request->id) : null;
+
         $request->validate([
-            'expertise_name' => 'required|string|max:255|unique:faculty_expertise_master,expertise_name',
-        ]);
+            'expertise_name' => [
+                'required',
+                'string',
+                // expertise_name is varchar(50) — keep in sync with the column.
+                'max:50',
+                // Must ignore the row being edited, else re-saving it collides with itself.
+                Rule::unique('faculty_expertise_master', 'expertise_name')->ignore($id, 'pk'),
+            ],
+        ], [], ['expertise_name' => 'expertise name']);
 
-        if( $request->id ) {
-
+        if( $id ) {
             // Update existing record
-            $id = decrypt($request->id);
             $expertise = FacultyExpertiseMaster::find($id);
+
+            if( !$expertise ) {
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['status' => 'error', 'message' => 'Expertise not found.'], 404);
+                }
+
+                return redirect()->route('master.faculty.expertise.index')->with('error', 'Expertise not found.');
+            }
         }
         else {
             // Create new record
             $expertise = new FacultyExpertiseMaster();
             $expertise->created_date = now();
+            $expertise->created_by = auth()->id();
+            $expertise->active_inactive = 1;
         }
         $expertise->expertise_name = $request->expertise_name;
-        $expertise->created_by = auth()->user()->id;
         $expertise->save();
 
         self::bumpListCacheEpoch();
 
-        return redirect()->route('master.faculty.expertise.index')->with('success', 'Expertise saved successfully.');
+        $message = $id ? 'Expertise updated successfully.' : 'Expertise created successfully.';
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['status' => 'success', 'message' => $message]);
+        }
+
+        return redirect()->route('master.faculty.expertise.index')->with('success', $message);
     }
 
     public function edit(string $id) {
