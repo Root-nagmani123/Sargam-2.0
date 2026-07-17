@@ -40,56 +40,7 @@
                 @endif
 
                 <div class="table-responsive datatables">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th width="5%">ID</th>
-                                <th width="20%">Priority Name</th>
-                                <th width="35%">Description</th>
-                                <th width="10%">Status</th>
-                                <th width="20%">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($priorities as $priority)
-                            <tr>
-                                <td>{{ $priority->pk }}</td>
-                                <td>{{ $priority->priority }}</td>
-                                <td>{{ $priority->description ?? '-' }}</td>
-                                <td>
-                                    @if($priority->status == 1)
-                                        <span class="badge bg-success">Active</span>
-                                    @else
-                                        <span class="badge bg-danger">Inactive</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-warning"
-                                            onclick="editPriority({{ $priority->pk }}, {{ json_encode($priority->priority) }}, {{ json_encode($priority->description ?? '') }}, {{ $priority->status }})">
-                                        <iconify-icon icon="solar:pen-bold"></iconify-icon> Edit
-                                    </button>
-                                    <form action="{{ route('admin.issue-priorities.destroy', $priority->pk) }}"
-                                          method="POST" class="d-inline"
-                                          onsubmit="return confirm('Are you sure you want to delete this priority?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger">
-                                            <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon> Delete
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="5" class="text-center">No priorities found.</td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="mt-3">
-                    {{ $priorities->links() }}
+                    {!! $dataTable->table(['class' => 'table']) !!}
                 </div>
             </div>
         </div>
@@ -172,6 +123,7 @@
 @endsection
 
 @section('scripts')
+{!! $dataTable->scripts() !!}
 <script>
 function editPriority(id, name, description, status) {
     document.getElementById('edit_priority').value = name || '';

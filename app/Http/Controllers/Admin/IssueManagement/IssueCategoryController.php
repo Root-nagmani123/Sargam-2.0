@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\IssueManagement;
 
+use App\DataTables\IssueCategoryDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\{
     IssueCategoryMaster,
@@ -11,18 +12,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class IssueCategoryController extends Controller
-{ 
+{
     /**
      * Display a listing of issue categories.
      */
-    public function index()
+    public function index(IssueCategoryDataTable $dataTable)
     {
-        $categories = IssueCategoryMaster::with('subCategories')
-            ->orderBy('issue_category')
-            ->paginate(20)
-            ->withQueryString();
-
-        return view('admin.issue_management.categories.index', compact('categories'));
+        return $dataTable->render('admin.issue_management.categories.index');
     }
 
     /**

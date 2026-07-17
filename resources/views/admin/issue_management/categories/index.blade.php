@@ -355,71 +355,8 @@
                 @endif
 
                 <div class="table-responsive rounded-3 border">
-                    <table class="table text-nowrap mb-0">
-                        <thead>
-                            <tr>
-                                <th class="text-nowrap">#</th>
-                                <th class="text-nowrap">Category Name</th>
-                                <th class="text-nowrap">Description</th>
-                                <th class="text-nowrap">Sub-Categories</th>
-                                <th class="text-nowrap">Status</th>
-                                <th class="text-nowrap">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($categories as $category)
-                            <tr>
-                                <td>{{ $categories->firstItem() + $loop->index }}</td>
-                                <td>{{ $category->issue_category }}</td>
-                                <td>{{ Str::limit($category->description ?? 'No description', 50) }}</td>
-                                <td>{{ $category->subCategories->count() }}</td>
-                                <td>
-                                    <div class="form-check form-switch d-inline-flex justify-content-center">
-                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                            data-table="issue_category_master" data-column="status" data-id="{{ $category->pk }}" 
-                                            {{ $category->status == 1 ? 'checked' : '' }}>
-                                    </div>
-                                <td>
-                                    <div class="btn-action-group justify-content-center">
-                                        <a href="javascript:void(0)" class="text-primary" onclick="editCategory({{ $category->pk }}, '{{ addslashes($category->issue_category) }}', '{{ addslashes($category->description) }}', {{ $category->status }})" title="Edit Category">
-                                            <i class="material-icons material-symbols-rounded">edit</i>
-                                        </a>
-                                        <form action="{{ route('admin.issue-categories.destroy', $category->pk) }}" 
-                                              method="POST" class="d-inline" 
-                                              onsubmit="return confirm('Are you sure you want to delete this category?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <a class="text-primary" title="Delete Category">
-                                                <i class="material-icons material-symbols-rounded">delete</i>
-                                            </a>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="6" class="empty-state">
-                                    <div class="empty-state-icon">
-                                        <iconify-icon icon="solar:folder-off-bold-duotone"></iconify-icon>
-                                    </div>
-                                    <h5 class="fw-semibold mb-2">No Categories Found</h5>
-                                    <p class="text-muted mb-3">Get started by creating your first complaint category.</p>
-                                    <button type="button" class="btn btn-primary btn-modern" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
-                                        <iconify-icon icon="solar:add-circle-bold"></iconify-icon>
-                                        Add Your First Category
-                                    </button>
-                                </td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                    {!! $dataTable->table(['class' => 'table text-nowrap mb-0']) !!}
                 </div>
-
-                @if($categories->hasPages())
-                <div class="d-flex justify-content-center mt-4">
-                    {{ $categories->links() }}
-                </div>
-                @endif
             </div>
         </div>
     </div>
@@ -573,42 +510,8 @@
 @endsection
 
 @section('scripts')
+{!! $dataTable->scripts() !!}
 <script>
-(function() {
-    'use strict';
-    document.addEventListener('DOMContentLoaded', function() {
-        var $ = window.jQuery;
-        if (!$ || !$.fn.DataTable) return;
-        var $table = $('#categoriesTable');
-        if (!$table.length) return;
-        var hasDataRows = $table.find('tbody tr').filter(function() { return $(this).find('td[colspan]').length === 0; }).length > 0;
-        if (!hasDataRows) return;
-        if ($.fn.DataTable.isDataTable($table)) return;
-        $table.DataTable({
-            order: [[1, 'asc']],
-            pageLength: 10,
-            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-            columnDefs: [
-                { orderable: false, targets: [0, 4, 5] }
-            ],
-            language: {
-                search: 'Search categories:',
-                lengthMenu: 'Show _MENU_ entries',
-                info: 'Showing _START_ to _END_ of _TOTAL_ categories',
-                infoEmpty: 'No categories',
-                infoFiltered: '(filtered from _MAX_ total)',
-                zeroRecords: 'No matching categories found',
-                paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
-            },
-            drawCallback: function() {
-                if (typeof window.adjustAllDataTables === 'function') {
-                    try { window.adjustAllDataTables(); } catch (e) {}
-                }
-            }
-        });
-    });
-})();
-
 function editCategory(id, name, description, status) {
     document.getElementById('edit_issue_category').value = name;
     document.getElementById('edit_description').value = description || '';
