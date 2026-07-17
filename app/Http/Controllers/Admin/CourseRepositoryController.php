@@ -156,6 +156,11 @@ class CourseRepositoryController extends Controller
                     return;
                 }
                 $keywordParts = array_map('trim', explode(',', (string) $detail->keyword));
+                // course_master_pk itself is sometimes a meaningless numeric id from the
+                // source system rather than a name — prefer the keyword's batch segment
+                // (index 0) when present, same as the other fields below, before falling
+                // back to that raw id.
+                $doc->fallback_course = $detail->course?->course_name ?: ($keywordParts[0] ?? null) ?: $detail->course_master_pk;
                 $doc->fallback_subject = $detail->subject?->subject_name ?: ($keywordParts[1] ?? null) ?: $detail->subject_pk;
                 $doc->fallback_topic = $detail->topic?->subject_topic ?: ($keywordParts[2] ?? null) ?: $detail->topic_pk;
                 $doc->fallback_author = $detail->author?->full_name ?: ($keywordParts[4] ?? null) ?: $detail->author_name;
@@ -581,6 +586,39 @@ class CourseRepositoryController extends Controller
             $typeMap = ['CO' => 'Course', 'OT' => 'Other', 'IN' => 'Institutional'];
             $category = $detail ? ($typeMap[$detail->type] ?? 'Course') : 'Course';
 
+            // Legacy imported rows store subject/topic/author foreign keys from the
+            // source system rather than local master pks, so the relations above
+            // resolve to null. The keyword column was populated at import time as
+            // "batch,subject,topic,date,author" — fall back to it when the relation
+            // doesn't resolve, same as the documents list (show()/userShow()) already
+            // does. Without this the edit modal showed blank Subject/Topic/Author
+            // fields for those rows even though the list displayed them correctly.
+            $keywordParts = $detail ? array_map('trim', explode(',', (string) $detail->keyword)) : [];
+
+            $courseResolved = $detail ? (bool) $detail->course : false;
+
+            $subjectResolved = $detail ? (bool) $detail->subject : false;
+            $subjectName = $detail
+                ? (optional($detail->subject)->subject_name ?: ($keywordParts[1] ?? null))
+                : null;
+
+            $topicResolved = $detail ? (bool) $detail->topic : false;
+            $topicName = $detail
+                ? ((optional($detail->topic)->subject_topic ?? optional($detail->topic)->course_repo_topic)
+                    ?: ($keywordParts[2] ?? null))
+                : null;
+
+            $authorResolved = $detail ? (bool) $detail->author : false;
+            $authorLabel = $detail
+                ? (optional($detail->author)->full_name ?: ($keywordParts[4] ?? null))
+                : null;
+            // Value the <select> uses: prefer the real faculty pk, else fall back to the
+            // keyword-derived name itself so the front-end has something non-empty to
+            // inject as an option (the raw author_name column is null on these rows).
+            $authorValue = $detail ? ($detail->author_name ?: $authorLabel) : null;
+
+            $ministryResolved = $detail ? (bool) $detail->ministry : false;
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -595,20 +633,24 @@ class CourseRepositoryController extends Controller
                     'detail' => $detail ? [
                         'course_master_pk' => $detail->course_master_pk,
                         'course_name' => optional($detail->course)->course_name,
+                        'course_resolved' => $courseResolved,
                         'subject_pk' => $detail->subject_pk,
-                        'subject_name' => optional($detail->subject)->subject_name,
+                        'subject_name' => $subjectName,
+                        'subject_resolved' => $subjectResolved,
                         'topic_pk' => $detail->topic_pk,
-                        'topic_name' => optional($detail->topic)->subject_topic
-                            ?? optional($detail->topic)->course_repo_topic,
+                        'topic_name' => $topicName,
+                        'topic_resolved' => $topicResolved,
                         'session_date' => $detail->session_date
                             ? $detail->session_date->format('Y-m-d')
                             : null,
-                        'author_name' => $detail->author_name,
-                        'author_label' => optional($detail->author)->full_name,
+                        'author_name' => $authorValue,
+                        'author_label' => $authorLabel,
+                        'author_resolved' => $authorResolved,
                         'sector_master_pk' => $detail->sector_master_pk,
                         'sector_name' => optional($detail->sector)->sector_name,
                         'ministry_master_pk' => $detail->ministry_master_pk,
                         'ministry_name' => optional($detail->ministry)->ministry_name,
+                        'ministry_resolved' => $ministryResolved,
                         'keyword' => $detail->keyword,
                         'videolink' => $detail->videolink,
                     ] : null,
@@ -1530,6 +1572,10 @@ class CourseRepositoryController extends Controller
                 $detail = $doc->detail;
                 if ($detail) {
                     $keywordParts = array_map('trim', explode(',', (string) $detail->keyword));
+                    // course_master_pk itself is sometimes a meaningless numeric id from
+                    // the source system rather than a name — prefer the keyword's batch
+                    // segment (index 0) when present, same as the fields below.
+                    $doc->fallback_course = $detail->course?->course_name ?: ($keywordParts[0] ?? null);
                     $doc->fallback_subject = $detail->subject?->subject_name ?: ($keywordParts[1] ?? null);
                     $doc->fallback_topic = $detail->topic?->subject_topic ?: ($keywordParts[2] ?? null);
                     $doc->fallback_author = $detail->author?->full_name ?: ($keywordParts[4] ?? null);

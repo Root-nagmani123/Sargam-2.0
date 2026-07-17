@@ -312,14 +312,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </td>
                                 <td class="cru-col-filetitle">{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
                                 <td class="cru-col-coursename">
-                                    @if($doc->detail)
-                                    @if($doc->detail->course)
-                                    {{ $doc->detail->course->course_name }}
-                                    @elseif($doc->detail->course_master_pk)
-                                    {{ $doc->detail->course_master_pk }}
+                                    @if($doc->fallback_course)
+                                    {{ $doc->fallback_course }}
                                     @else
                                     N/A
-                                    @endif
                                     @endif
                                 </td>
                                 <td class="text-center cru-col-subject">
@@ -1736,17 +1732,42 @@ window.crDocEdit = (function() {
         if (el) el.value = (value === null || value === undefined) ? '' : value;
     }
 
+    // Like selectWhenReady, but skips the poll-for-up-to-3.5s wait when the backend
+    // already told us (via the *_resolved flag) that no matching master record exists —
+    // e.g. a legacy imported document whose subject/topic/ministry foreign keys don't
+    // match a local row, so the AJAX-loaded option was never going to appear. Waiting
+    // out the full timeout per field made editing such documents take several seconds.
+    //
+    // Deliberately does NOT fireChange in the unresolved case: the next cascade level
+    // (e.g. subject -> topics, topic -> session date/author) would fetch against this
+    // fabricated id, get an empty result, and its handler resets the downstream <select>
+    // to a bare "Select" placeholder. If that fetch resolves after we've already
+    // prefilled the downstream field from saved data, it silently wipes it back to
+    // empty — which is why Author Name (etc.) came back blank for these documents even
+    // though the value was set correctly moments earlier.
+    function selectFast(selectId, value, label, resolved, timeoutMs) {
+        if (resolved === false) {
+            setSelectValue(selectId, value, label);
+            return Promise.resolve(false);
+        }
+        return selectWhenReady(selectId, value, label, timeoutMs);
+    }
+
     // Pre-fill the Course-category section (cascading dropdowns).
     function prefillCourse(d) {
         var courseSel = setSelectValue('course_name', d.course_master_pk, d.course_name);
         syncCourseChoiceForEdit(d.course_master_pk, d.course_name); // keep Choices UI in sync
-        fireChange(courseSel); // -> loads subjects
+        // Same reasoning as selectFast: when the saved course doesn't match a local
+        // record, loading subjects for it is pointless AND dangerous — that fetch
+        // resolves during the wait(450) below and would wipe the subject/topic values
+        // we're about to fast-fill from saved data.
+        if (d.course_resolved !== false) fireChange(courseSel); // -> loads subjects
         return Promise.resolve()
             .then(function() {
-                return selectWhenReady('subject_name', d.subject_pk, d.subject_name);
+                return selectFast('subject_name', d.subject_pk, d.subject_name, d.subject_resolved);
             }) // -> loads topics
             .then(function() {
-                return selectWhenReady('timetable_name', d.topic_pk, d.topic_name);
+                return selectFast('timetable_name', d.topic_pk, d.topic_name, d.topic_resolved);
             }) // -> loads session/author
             .then(function() {
                 return wait(450);
@@ -1756,7 +1777,7 @@ window.crDocEdit = (function() {
                 setSelectValue('author_name', d.author_name, d.author_label);
                 var sectorSel = setSelectValue('sector_master', d.sector_master_pk, d.sector_name);
                 fireChange(sectorSel); // -> loads ministries
-                return selectWhenReady('ministry_master', d.ministry_master_pk, d.ministry_name);
+                return selectFast('ministry_master', d.ministry_master_pk, d.ministry_name, d.ministry_resolved);
             })
             .then(function() {
                 // keywords + video LAST — cascade change handlers overwrite keywords
@@ -1775,7 +1796,7 @@ window.crDocEdit = (function() {
         setVal('author_name_other', d.author_name);
         var sectorSel = setSelectValue('sector_master_other', d.sector_master_pk, d.sector_name);
         fireChange(sectorSel); // -> loads ministries (Other)
-        return selectWhenReady('ministry_master_other', d.ministry_master_pk, d.ministry_name)
+        return selectFast('ministry_master_other', d.ministry_master_pk, d.ministry_name, d.ministry_resolved)
             .then(function() {
                 setVal('keywords_other', d.keyword);
                 setVal('video_link_other', d.videolink);
@@ -1787,7 +1808,7 @@ window.crDocEdit = (function() {
         setVal('Key_words_institutional', d.keyword);
         var sectorSel = setSelectValue('sector_master_institutional', d.sector_master_pk, d.sector_name);
         fireChange(sectorSel);
-        return selectWhenReady('ministry_master_institutional', d.ministry_master_pk, d.ministry_name);
+        return selectFast('ministry_master_institutional', d.ministry_master_pk, d.ministry_name, d.ministry_resolved);
     }
 
     // Put the document title into the first attachment row of the active category.
@@ -3252,115 +3273,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Basic function to clear and populate dropdown
-    function populateDropdown(selectId, data, valueKey, textKey) {
-        try {
-            const selectElement = document.getElementById(selectId);
-            if (!selectElement) {
-                console.warn('Select element not found:', selectId);
-                return;
-            }
-
-            // Clear existing options
-            selectElement.innerHTML = '<option value="">-- Select --</option>';
-
-            if (data && data.length > 0) {
-                data.forEach(function(item) {
-                    const option = document.createElement('option');
-                    option.value = item[valueKey] || '';
-                    option.textContent = typeof textKey === 'function' ? textKey(item) : item[
-                        textKey] || '';
-                    selectElement.appendChild(option);
-                });
-            }
-        } catch (error) {
-            console.warn('Populate dropdown error:', error);
-        }
-    }
-    // Step 1: Course changes -> Load Groups
-    function onCourseChange(courseSelectId, groupSelectId) {
-
-        let coursePk = $('#' + courseSelectId).val();
-        let $group = $('#' + groupSelectId);
-
-        $group.empty().append('<option value="">-- Select --</option>');
-
-        if (!coursePk) return;
-
-        $.ajax({
-            url: "{{ route('course-repository.groups') }}",
-            type: "GET",
-            data: {
-                course_pk: coursePk
-            },
-
-            // 🔥 THESE 3 LINES FIX 302
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-
-            success: function(response) {
-                if (response.success) {
-                    $.each(response.data, function(i, group) {
-                        $group.append(
-                            `<option value="${group.pk}">
-                            ${group.subject_name}
-                        </option>`
-                        );
-                    });
-                }
-            },
-
-            error: function(xhr) {
-                if (xhr.status === 401) {
-                    Swal.fire('Session Expired', 'Please login again', 'warning');
-                } else {
-                    console.error(xhr.responseText);
-                }
-            }
-        });
-    }
-
-
-    // Step 2: Group changes -> Load Timetables
-    function onGroupChange(groupSelectId, timetableSelectId) {
-        var groupPk = $('#' + groupSelectId).val();
-        var course_master_pk = $('#course_name').val();
-
-        // Clear timetable dropdown
-        populateDropdown(timetableSelectId, [], 'pk', function(t) {
-            return '';
-        });
-
-        if (!groupPk) return;
-        console.log('Selected Group PK:', groupPk);
-
-        // AJAX call to get timetables
-        $.ajax({
-            url: '/course-repository/timetables',
-            type: 'GET',
-            data: {
-                group_pk: groupPk,
-                course_master_pk: course_master_pk
-            },
-            dataType: 'json',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            success: function(response) {
-                if (response.success) {
-                    populateDropdown(timetableSelectId, response.data, 'pk', function(t) {
-                        return t.subject_topic;
-                    });
-                }
-            },
-            error: function(xhr, status, error) {
-                console.log('Error loading timetables:', error);
-            }
-        });
-    }
-
     // Category radio button change handler
     document.querySelectorAll('.category-radio').forEach(radio => {
         radio.addEventListener('change', function() {
@@ -3514,90 +3426,32 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Bind cascading change events for Course -> Group -> Timetable
-    $('#course_name').on('change', function() {
-        onCourseChange('course_name', 'subject_name');
-        updateKeywords();
-    });
-
-    $('#subject_name').on('change', function() {
-        onGroupChange('subject_name', 'timetable_name');
-        updateKeywords();
-    });
+    // NOTE: Course -> Subject and Subject -> Topic cascading used to be bound a SECOND
+    // time here (onCourseChange/onGroupChange, via the groups/timetables endpoints),
+    // duplicating the courseSelect/subjectSelect addEventListener blocks above (which use
+    // the purpose-built subjects/{coursePk} and topics/{subjectPk} endpoints). Both
+    // handlers fired on every change and independently replaced the same <select>'s
+    // innerHTML, so whichever AJAX call resolved last "won" — and since replacing a
+    // <select>'s innerHTML drops whatever was selected, a value the first handler (or the
+    // edit-prefill flow) had just set could get silently reset to the placeholder by the
+    // second handler resolving late. Same root cause as the session-date bug noted below,
+    // one cascade level up. Removed rather than reconciled, since the addEventListener
+    // versions already implement the same behavior correctly.
 
     // Update keywords for Other category - COMMENTED OUT (using the main function defined above)
     // This prevents duplicate function definitions that override the correct version
 
-    // Handle timetable selection to populate session date and author
-    $('#timetable_name').on('change', function() {
-        const timetablePk = $(this).val();
-        const $sessionDate = $('#session_date');
-        const $authorName = $('#author_name');
-
-        // Clear the dropdowns
-        $sessionDate.html('<option value="">-- Select --</option>');
-        $authorName.html('<option value="">-- Select --</option>');
-
-        if (!timetablePk) return;
-
-        // Get the full timetable data to extract date and faculty
-        $.ajax({
-            url: "{{ route('course-repository.timetables') }}",
-            type: "GET",
-            data: {
-                group_pk: $('#subject_name').val(),
-                course_master_pk: $('#course_name').val()
-            },
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            success: function(response) {
-                if (response.success) {
-                    // Find the selected timetable in the response
-                    const selectedTimetable = response.data.find(t => t.pk == timetablePk);
-                    if (selectedTimetable) {
-                        // Format date as dd-mm-yyyy for display
-                        const dateFormatted = selectedTimetable.START_DATE ?
-                            new Date(selectedTimetable.START_DATE).toLocaleDateString(
-                                'en-GB', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric'
-                                }).replace(/\//g, '-') :
-                            '';
-
-                        // Populate session date using jQuery for better compatibility
-                        $sessionDate.empty().append(
-                            $('<option></option>').val(dateFormatted).text(
-                                dateFormatted)
-                        ).val(dateFormatted);
-
-                        // Populate author/faculty name if exists
-                        if (selectedTimetable.faculty_name && selectedTimetable.faculty_name
-                            .trim()) {
-                            $authorName.empty().append(
-                                $('<option></option>').val(selectedTimetable.pk).text(
-                                    selectedTimetable.faculty_name)
-                            ).val(selectedTimetable.pk);
-                        } else {
-                            // If no faculty name, show empty option
-                            $authorName.html('<option value="">-- Select --</option>');
-                        }
-
-                        // Auto-update keywords after loading date and author
-                        setTimeout(function() {
-                            updateKeywords();
-                        }, 100);
-                    }
-                }
-            },
-            error: function(xhr, status, error) {
-                console.log('Error loading timetable details:', error);
-            }
-        });
-    });
+    // NOTE: Session date + author auto-fill on topic change is handled by the
+    // topicSelect.addEventListener('change', ...) block above (fetches
+    // /course-repository/session-dates and /course-repository/authors-by-topic, and
+    // writes session_date in the Y-m-d format the native <input type="date"> requires).
+    // A second, duplicate jQuery handler used to be bound here too, fetching the same
+    // data via a different endpoint and writing the date as dd-mm-yyyy. Both handlers
+    // fired on every topic change; whichever AJAX call resolved last won. Since
+    // dd-mm-yyyy is invalid for <input type="date">, when the duplicate handler resolved
+    // last it silently cleared the field the other handler had just filled in correctly
+    // — the "session date appears then disappears" bug. Removed rather than reformatted,
+    // since the other handler already covers the same behavior correctly.
 
     // Bind keyword update to dropdown changes for Course category
     $('#course_name').on('change', updateKeywords);
@@ -3608,48 +3462,12 @@ document.addEventListener('DOMContentLoaded', function() {
     $('#sector_master').on('change', updateKeywords);
     $('#ministry_master').on('change', updateKeywords);
 
-    // Sector change handler -> Load Ministries
-    $('#sector_master').on('change', function() {
-        const sectorPk = $(this).val();
-        const $ministrySelect = $('#ministry_master');
-
-        if (!sectorPk) {
-            // Reset ministry dropdown
-            $ministrySelect.html('<option value="">-- Select --</option>').val('');
-            return;
-        }
-
-        // Fetch ministries for selected sector
-        $.ajax({
-            url: '{{ route("course-repository.ministries-by-sector") }}',
-            type: 'GET',
-            data: {
-                sector_pk: sectorPk
-            },
-            success: function(response) {
-                if (response.success) {
-                    $ministrySelect.html('<option value="">-- Select --</option>');
-
-                    response.data.forEach(function(ministry) {
-                        $ministrySelect.append(
-                            $('<option></option>')
-                            .val(ministry.pk)
-                            .text(ministry.ministry_name)
-                        );
-                    });
-
-                    // Clear ministry selection and update keywords
-                    $ministrySelect.val('');
-                    updateKeywords();
-                } else {
-                    console.log('Error:', response.message);
-                }
-            },
-            error: function(xhr, status, error) {
-                console.log('Error loading ministries:', error);
-            }
-        });
-    });
+    // NOTE: Sector -> Ministry (Course category) used to be bound a SECOND time here too,
+    // hitting the SAME ministries-by-sector endpoint as the sectorSelect
+    // addEventListener block above and then unconditionally calling
+    // $ministrySelect.val('') afterward — clearing the selection every time, including a
+    // value the edit-prefill flow had just set moments earlier. Same duplicate-handler
+    // bug as the Course/Subject cascades noted above; removed for the same reason.
 
     // Bind keyword update to fields for Other category (on keyup and change)
     $('#course_name_other').on('change', updateKeywordsOther);

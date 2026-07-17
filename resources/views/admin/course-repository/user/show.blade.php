@@ -142,8 +142,8 @@ $documentCount = $documents->count();
                                     <td class="cru-col-file_title">{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
                                     <td class="cru-col-course">
                                         <small>
-                                            @if($doc->detail && $doc->detail->course)
-                                            {{ $doc->detail->course->course_name }}
+                                            @if($doc->fallback_course)
+                                            {{ $doc->fallback_course }}
                                             @else
                                             N/A
                                             @endif
