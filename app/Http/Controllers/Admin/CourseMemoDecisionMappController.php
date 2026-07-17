@@ -84,13 +84,20 @@ class CourseMemoDecisionMappController extends Controller
                     $editUrl   = route('course.memo.decision.edit', encrypt($row->pk));
                     $deleteUrl = route('course.memo.decision.delete', encrypt($row->pk));
 
+                    // The edit modal's dropdowns only carry running courses / active memo
+                    // types, so an Archived-tab row has no matching <option> and the field
+                    // would open blank. The names ride along so the modal can restore the
+                    // saved value as a labelled option.
                     $editBtn = '
                 <a href="javascript:void(0)"
                     class="btn btn-sm btn-outline-warning d-flex align-items-center gap-1 editConclusion"
                     data-id="' . $row->pk . '"
                     data-course="' . $row->course_master_pk . '"
+                    data-course-name="' . e($row->course->course_name ?? '') . '"
                     data-memo="' . $row->memo_type_master_pk . '"
+                    data-memo-name="' . e($row->memo->memo_type_name ?? '') . '"
                     data-conclusion="' . $row->memo_conclusion_master_pk . '"
+                    data-conclusion-name="' . e($row->memoConclusion->discussion_name ?? '') . '"
                     data-status="' . $row->active_inactive . '">
                     <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
                     <span class="d-none d-md-inline">Edit</span>

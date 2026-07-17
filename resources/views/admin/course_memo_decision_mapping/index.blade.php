@@ -723,12 +723,41 @@
                 });
         });
 
+        // These dropdowns are rendered with running courses / active memo types only.
+        // A row from the Archived tab (or one whose memo type was later disabled) has
+        // no matching <option>, so .val() silently left the field blank — the course
+        // "disappeared", and Update then failed its required validation or forced the
+        // user to reassign the mapping to a different course. Put the saved value back
+        // as a labelled option so the row edits exactly as it was saved.
+        function cmdmRestoreSavedOption($sel, value, label, suffix) {
+            $sel.find('option[data-cmdm-restored]').remove();
+            if (value === undefined || value === null || value === '') return;
+
+            const exists = $sel.find('option').filter(function() {
+                return String(this.value) === String(value);
+            }).length > 0;
+            if (exists) return;
+
+            $sel.append($('<option>', {
+                value: value,
+                text: (label && label.length ? label : '#' + value) + ' ' + suffix,
+                'data-cmdm-restored': '1'
+            }));
+        }
+
         $(document).on('click', '.editConclusion', function() {
             const id = $(this).data('id');
             const course = $(this).data('course');
             const memo = $(this).data('memo');
             const conclusion = $(this).data('conclusion');
             const status = $(this).data('status');
+
+            cmdmRestoreSavedOption($('#edit_course_master_pk'), course,
+                $(this).attr('data-course-name'), '(Archived)');
+            cmdmRestoreSavedOption($('#edit_memo_type_master_pk'), memo,
+                $(this).attr('data-memo-name'), '(Inactive)');
+            cmdmRestoreSavedOption($('#edit_memo_conclusion_master_pk'), conclusion,
+                $(this).attr('data-conclusion-name'), '(Inactive)');
 
             $('#edit_id').val(id);
             $('#edit_course_master_pk').val(course).trigger('change');
