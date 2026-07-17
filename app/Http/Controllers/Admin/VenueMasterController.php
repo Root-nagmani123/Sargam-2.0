@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\{VenueMaster};
 use App\Support\DataTableRedisCache;
+use App\DataTables\Master\VenueMasterDataTable;
 
 class VenueMasterController extends Controller
 {
@@ -16,54 +17,9 @@ class VenueMasterController extends Controller
         DataTableRedisCache::bumpListEpoch(self::INDEX_LIST_EPOCH_KEY, 'VenueMasterController');
     }
 
-    public function index(Request $request)
+    public function index(VenueMasterDataTable $dataTable)
     {
-        $perPage = 10;
-
-        $epoch = DataTableRedisCache::readListEpoch(self::INDEX_LIST_EPOCH_KEY);
-        $cacheKey = 'venue_master_index:v1:' . md5(json_encode([
-            'epoch' => $epoch,
-            'page' => (int) $request->input('page', 1),
-            'per_page' => $perPage,
-        ]));
-
-        $cached = DataTableRedisCache::remember(
-            $cacheKey,
-            [
-                'enabled' => 'VENUE_MASTER_INDEX_CACHE_ENABLED',
-                'seconds' => 'VENUE_MASTER_INDEX_CACHE_SECONDS',
-            ],
-            'VenueMasterController@index',
-            fn () => $this->buildVenueMasterIndexPaginator($request, $perPage)
-        );
-
-        $venues = new \Illuminate\Pagination\LengthAwarePaginator(
-            $cached['items'],
-            $cached['total'],
-            $cached['perPage'],
-            $cached['currentPage'],
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
-
-        return view('admin.venueMaster.index', compact('venues'));
-    }
-
-    /**
-     * @return array{items: array<int, mixed>, total: int, perPage: int, currentPage: int}
-     */
-    private function buildVenueMasterIndexPaginator(Request $request, int $perPage): array
-    {
-        $paginator = VenueMaster::query()
-            ->orderBy('venue_id', 'desc')
-            ->paginate($perPage)
-            ->withQueryString();
-
-        return [
-            'items' => $paginator->items(),
-            'total' => $paginator->total(),
-            'perPage' => $paginator->perPage(),
-            'currentPage' => $paginator->currentPage(),
-        ];
+        return $dataTable->render('admin.venueMaster.index');
     }
 
     public function create() {

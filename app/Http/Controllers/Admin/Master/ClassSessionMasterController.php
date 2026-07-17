@@ -6,13 +6,12 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\ClassSessionMaster;
 use App\Http\Requests\ClassSessionMasterRequest;
+use App\DataTables\Master\ClassSessionMasterDataTable;
 
 class ClassSessionMasterController extends Controller
 {
-    function index() {
-
-        $classSessionMaster = ClassSessionMaster::paginate(10);
-        return view('admin.master.class_session_master.index', compact('classSessionMaster'));
+    function index(ClassSessionMasterDataTable $dataTable) {
+        return $dataTable->render('admin.master.class_session_master.index');
     }
     function create() {
         return view('admin.master.class_session_master.create');
