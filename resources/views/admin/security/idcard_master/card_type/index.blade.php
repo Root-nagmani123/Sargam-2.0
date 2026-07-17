@@ -3,16 +3,14 @@
 
 @section('setup_content')
 <div class="container-fluid">
-    @include('components.breadcrum', ['title' => 'ID Card - Card Types'])
-    <div class="card" style="border-left:4px solid #004a93;">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">Card Type Master</h4>
-                <a href="{{ route('admin.security.idcard_card_type.create') }}" class="btn btn-primary" id="openCreateCardType">
+    <x-breadcrum title="ID Card - Card Types">
+        <a href="{{ route('admin.security.idcard_card_type.create') }}" class="btn btn-primary" id="openCreateCardType">
                     <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">add</i>
                     Add Card Type
                 </a>
-            </div>
+    </x-breadcrum>
+    <div class="card">
+        <div class="card-body">
 
             @if(session('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">

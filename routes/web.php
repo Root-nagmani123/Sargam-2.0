@@ -686,6 +686,7 @@ Route::middleware(['auth'])->group(function () {
     // Duplicate Vehicle Pass Application Routes
     Route::prefix('security/duplicate-vehicle-pass')->name('admin.security.duplicate_vehicle_pass.')->controller(\App\Http\Controllers\Admin\Security\DuplicateVehiclePassController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/export', 'export')->name('export');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/show/{id}', 'show')->name('show');
