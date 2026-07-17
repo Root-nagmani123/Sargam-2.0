@@ -34,13 +34,22 @@ class CourseMemoDecisionMappController extends Controller
 
             $data_course_id = get_Role_by_course();
 
-            //$query = CourseMemoDecisionMapp::with(['course', 'memo', 'memoConclusion'])->get();
+            // Active tab = mappings of active (running/upcoming) courses; Archived
+            // tab = mappings of ended courses. Split is by the COURSE lifecycle
+            // (same rule as Course Master), not the mapping's own active_inactive.
+            $statusFilter = $request->input('status_filter') === 'archive' ? 'archive' : 'active';
 
             $query = CourseMemoDecisionMapp::with(['course', 'memo', 'memoConclusion'])
-    ->orderBy('course_memo_decision_mapp.created_date', 'desc');
+                ->orderBy('course_memo_decision_mapp.created_date', 'desc');
+            $this->applyCourseStatusScope($query, $statusFilter);
 
             if (!empty($data_course_id)) {
                 $query->whereIn('course_master_pk', $data_course_id);
+            }
+
+            // Course filter (works within the currently selected tab)
+            if ($request->filled('course_filter')) {
+                $query->where('course_master_pk', $request->input('course_filter'));
             }
 
             return DataTables::of($query)
@@ -75,13 +84,20 @@ class CourseMemoDecisionMappController extends Controller
                     $editUrl   = route('course.memo.decision.edit', encrypt($row->pk));
                     $deleteUrl = route('course.memo.decision.delete', encrypt($row->pk));
 
+                    // The edit modal's dropdowns only carry running courses / active memo
+                    // types, so an Archived-tab row has no matching <option> and the field
+                    // would open blank. The names ride along so the modal can restore the
+                    // saved value as a labelled option.
                     $editBtn = '
                 <a href="javascript:void(0)"
                     class="btn btn-sm btn-outline-warning d-flex align-items-center gap-1 editConclusion"
                     data-id="' . $row->pk . '"
                     data-course="' . $row->course_master_pk . '"
+                    data-course-name="' . e($row->course->course_name ?? '') . '"
                     data-memo="' . $row->memo_type_master_pk . '"
+                    data-memo-name="' . e($row->memo->memo_type_name ?? '') . '"
                     data-conclusion="' . $row->memo_conclusion_master_pk . '"
+                    data-conclusion-name="' . e($row->memoConclusion->discussion_name ?? '') . '"
                     data-status="' . $row->active_inactive . '">
                     <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
                     <span class="d-none d-md-inline">Edit</span>
@@ -113,7 +129,70 @@ class CourseMemoDecisionMappController extends Controller
                 ->make(true);
         }
 
-        return view('admin.course_memo_decision_mapping.index', compact('mappings', 'CourseMaster', 'MemoTypeMaster', 'MemoConclusionMaster'));
+        // Courses present in the default (Active) tab, for the course filter dropdown
+        $filterCourses = $this->coursesForStatus('active');
+
+        return view('admin.course_memo_decision_mapping.index', compact('mappings', 'CourseMaster', 'MemoTypeMaster', 'MemoConclusionMaster', 'filterCourses'));
+    }
+
+    /**
+     * Distinct courses that have mappings under the given tab (active|archive),
+     * respecting role-based course scoping. Returns [pk => course_name].
+     */
+    private function coursesForStatus($status)
+    {
+        $data_course_id = get_Role_by_course();
+
+        $query = CourseMemoDecisionMapp::with('course');
+        $this->applyCourseStatusScope($query, $status);
+
+        if (!empty($data_course_id)) {
+            $query->whereIn('course_master_pk', $data_course_id);
+        }
+
+        return $query->get()
+            ->pluck('course.course_name', 'course_master_pk')
+            ->filter()
+            ->toArray();
+    }
+
+    /**
+     * Scope a CourseMemoDecisionMapp query to its related course's lifecycle:
+     *   active  = course is active_inactive 1 AND running/upcoming (end date null or today+)
+     *   archive = course is active_inactive 1 AND already ended (end date before today)
+     * Mirrors the Active/Archived split used by Course Master.
+     */
+    private function applyCourseStatusScope($query, $status)
+    {
+        $isArchive = $status === 'archive';
+        $today = today();
+
+        $query->whereHas('course', function ($q) use ($isArchive, $today) {
+            $q->where('active_inactive', 1);
+
+            if ($isArchive) {
+                $q->whereNotNull('end_date')
+                    ->whereDate('end_date', '<', $today);
+            } else {
+                $q->where(function ($qq) use ($today) {
+                    $qq->whereNull('end_date')
+                        ->orWhereDate('end_date', '>=', $today);
+                });
+            }
+        });
+
+        return $query;
+    }
+
+    /**
+     * AJAX: return the course filter options for the selected tab.
+     */
+    public function getCoursesByStatus(Request $request)
+    {
+        return response()->json([
+            'success' => true,
+            'courses' => $this->coursesForStatus($request->input('status', 'active')),
+        ]);
     }
 
 
