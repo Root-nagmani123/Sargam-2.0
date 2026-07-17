@@ -1205,6 +1205,7 @@
 
 /* Notifications panel - ringing bell + item design */
 .dashboard-notification-item {
+    position: relative;
     display: flex;
     align-items: flex-start;
     gap: 0.75rem;
@@ -1215,13 +1216,80 @@
     border: 1px solid #e2e8f0;
     background: #fff;
     text-align: left;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    overflow: hidden;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease,
+        background 0.25s ease, padding-left 0.25s ease;
     cursor: pointer;
 }
 
-.dashboard-notification-item:hover {
-    border-color: #cbd5e1;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+/* Navy rail that wipes down the left edge on hover — the "opening" cue. Drawn as a
+   pseudo-element so it costs no layout and can animate on its own. */
+.dashboard-notification-item::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--dashboard-feed-navy, #004a8f), #1273d1);
+    transform: scaleY(0);
+    transform-origin: top center;
+    transition: transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* Hover/focus marks which row is being previewed; the reading happens in the peek
+   card beside it. Deliberately restrained (rail + tint, no lift) so the row does not
+   compete with the floating card. focus-visible is included so it is reachable by
+   keyboard, since the item is a real button. */
+.dashboard-notification-item:hover,
+.dashboard-notification-item:focus-visible {
+    border-color: rgba(0, 74, 143, 0.32);
+    background: linear-gradient(90deg, rgba(0, 74, 143, 0.06) 0%, #fff 55%);
+    padding-left: 1.375rem;
+}
+
+.dashboard-notification-item:hover::before,
+.dashboard-notification-item:focus-visible::before {
+    transform: scaleY(1);
+}
+
+.dashboard-notification-item:focus-visible {
+    outline: 2px solid rgba(0, 74, 143, 0.35);
+    outline-offset: 2px;
+}
+
+/* The bell wakes up with the card. */
+.dashboard-notification-item .notification-icon-wrap {
+    transition: background 0.25s ease, color 0.25s ease, transform 0.25s ease;
+}
+
+.dashboard-notification-item:hover .notification-icon-wrap,
+.dashboard-notification-item:focus-visible .notification-icon-wrap {
+    background: var(--dashboard-feed-navy, #004a8f);
+    color: #fff;
+    transform: scale(1.08) rotate(-8deg);
+}
+
+.dashboard-notification-item:hover .dashboard-notification-title,
+.dashboard-notification-item:focus-visible .dashboard-notification-title {
+    color: var(--dashboard-feed-navy, #004a8f);
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .dashboard-notification-item,
+    .dashboard-notification-item::before,
+    .dashboard-notification-item .notification-icon-wrap {
+        transition: none;
+    }
+
+    .dashboard-notification-item:hover,
+    .dashboard-notification-item:focus-visible {
+        transform: none;
+    }
+
+    .dashboard-notification-item:hover .notification-icon-wrap,
+    .dashboard-notification-item:focus-visible .notification-icon-wrap {
+        transform: none;
+    }
 }
 
 .dashboard-notification-item-unread {
@@ -1316,11 +1384,135 @@
     display: block;
 }
 
+/* Collapsed to two lines with an ellipsis; hovering (or keyboard-focusing) the
+   item reveals the whole message in place. The text is always in the DOM, so this
+   is pure CSS — no tooltip to position and nothing to clip inside the scroll area. */
 .dashboard-notification-message {
     font-size: 0.8125rem;
     color: #475569;
     margin: 0.5rem 0 0;
     line-height: 1.5;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
+/* The rows stay clamped at all times — the full text is read in the floating peek
+   card (.dashboard-notification-peek), so the list itself never reflows on hover. */
+
+/* ===== Floating peek card =====
+   Hovering a notification floats the full text beside the list instead of expanding
+   the row. It lives on <body> and is position:fixed on purpose: the panel is an
+   overflow:auto scroller (.dashboard-list-scroll), which would clip an absolutely
+   positioned child. pointer-events:none keeps it from stealing the click that marks
+   the notification read, and stops the hover flickering when the card lands under
+   the cursor. Positioned by JS in dashboard.blade.php. */
+.dashboard-notification-peek {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1080;
+    width: 20rem;
+    max-width: calc(100vw - 1.5rem);
+    padding: 0.875rem 1rem;
+    border-radius: 0.625rem;
+    border: 1px solid rgba(0, 74, 143, 0.16);
+    border-left: 3px solid var(--dashboard-feed-navy, #004a8f);
+    background: #fff;
+    box-shadow: 0 18px 42px -12px rgba(15, 23, 42, 0.38);
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(-8px);
+    transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s;
+}
+
+.dashboard-notification-peek.is-visible {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+}
+
+/* Flipped to the other side when there is no room on the right. */
+.dashboard-notification-peek--left {
+    transform: translateX(8px);
+}
+
+/* Caret pointing back at the row being previewed; --peek-caret-top is set by JS. */
+.dashboard-notification-peek::before {
+    content: '';
+    position: absolute;
+    top: var(--peek-caret-top, 1.25rem);
+    width: 0.625rem;
+    height: 0.625rem;
+    background: #fff;
+    border: 1px solid rgba(0, 74, 143, 0.16);
+    transform: rotate(45deg);
+}
+
+.dashboard-notification-peek--right::before {
+    left: -0.375rem;
+    border-right: 0;
+    border-top: 0;
+}
+
+.dashboard-notification-peek--left::before {
+    right: -0.375rem;
+    border-left: 0;
+    border-bottom: 0;
+}
+
+.dashboard-notification-peek__title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--dashboard-feed-navy, #004a8f);
+    line-height: 1.35;
+    display: block;
+}
+
+.dashboard-notification-peek__meta {
+    font-size: 0.6875rem;
+    color: #94a3b8;
+    margin-top: 0.125rem;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.dashboard-notification-peek__new {
+    font-size: 0.5625rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--bs-danger, #dc3545);
+    border-radius: 999px;
+    padding: 0.15em 0.5em;
+}
+
+.dashboard-notification-peek__message {
+    font-size: 0.8125rem;
+    color: #334155;
+    line-height: 1.55;
+    margin: 0.5rem 0 0;
+    overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-notification-peek {
+        transition: none;
+        transform: none;
+    }
+}
+
+/* Touch/coarse pointers have no hover — the peek would either never show or stick. */
+@media (hover: none) {
+    .dashboard-notification-peek {
+        display: none;
+    }
 }
 
 .dashboard-notification-time {

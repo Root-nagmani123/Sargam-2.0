@@ -172,9 +172,12 @@
                 @if($notifications->count() > 0)
                     @foreach($notifications as $notification)
                         <li class="px-2 py-2">
+                            {{-- No title="": that renders the browser's own grey tooltip, which
+                                 cannot be styled at all. The full text is carried in
+                                 data-peek-message and shown in the styled peek card instead. --}}
                             <a class="dropdown-item notification-item {{ $notification->is_read ? '' : 'unread' }}"
                                href="javascript:void(0)"
-                               title="{{ $notification->title ?? 'Notification' }}&#10;&#10;{{ $notification->message ?? '' }}"
+                               data-peek-message="{{ $notification->message ?? '' }}"
                                onclick="markAsRead({{ $notification->pk }})">
 
                                 <div class="notification-title">
@@ -437,9 +440,11 @@
                         @endphp
                         @if($notificationsMobile->count() > 0)
                         @foreach($notificationsMobile as $notification)
+                        {{-- Same as the desktop list: no native title tooltip, the styled peek
+                             card reads from data-peek-message. --}}
                         <a class="notification-item text-decoration-none {{ $notification->is_read ? '' : 'unread' }}"
                             href="javascript:void(0)"
-                            title="{{ $notification->title ?? 'Notification' }}&#10;&#10;{{ $notification->message ?? '' }}"
+                            data-peek-message="{{ $notification->message ?? '' }}"
                             onclick="markAsRead({{ $notification->pk }})">
                             <div class="notification-title">{{ $notification->title ?? 'Notification' }}</div>
                             <div class="notification-message mt-1">{{ Str::limit($notification->message ?? '', 100) }}</div>
@@ -564,6 +569,120 @@
 .notification-time {
     color: #9ca3af;
     font-size: 0.75rem;
+}
+
+/* Hovered row: indigo rail + tint, marking which one the peek card is showing. */
+.notification-item {
+    position: relative;
+    overflow: hidden;
+}
+.notification-item::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: linear-gradient(180deg, #312e81, #4f46e5);
+    transform: scaleY(0);
+    transform-origin: top center;
+    transition: transform 0.25s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.notification-item:hover::before,
+.notification-item:focus-visible::before {
+    transform: scaleY(1);
+}
+
+/* ===== Notification hover peek card =====
+   Replaces the browser's native title="" tooltip, which is unstyleable. Lives on
+   <body> and is position:fixed because .notification-list / the offcanvas are
+   overflow:auto scrollers that would clip it. pointer-events:none so it never
+   swallows the click that marks a notification read. Positioned by JS below. */
+.notification-peek {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 2000;
+    width: 21rem;
+    max-width: calc(100vw - 1.5rem);
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    border-left: 3px solid #312e81;
+    background: #fff;
+    box-shadow: 0 18px 42px -12px rgba(49, 46, 129, 0.35);
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(-8px);
+    transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s;
+}
+.notification-peek.is-visible {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+}
+.notification-peek--left {
+    transform: translateX(8px);
+}
+.notification-peek::before {
+    content: '';
+    position: absolute;
+    top: var(--peek-caret-top, 18px);
+    width: 10px;
+    height: 10px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    transform: rotate(45deg);
+}
+.notification-peek--right::before {
+    left: -6px;
+    border-right: 0;
+    border-top: 0;
+}
+.notification-peek--left::before {
+    right: -6px;
+    border-left: 0;
+    border-bottom: 0;
+}
+.notification-peek__title {
+    color: #312e81;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    line-height: 1.3;
+    display: block;
+}
+.notification-peek__meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+    color: #9ca3af;
+    font-size: 0.6875rem;
+}
+.notification-peek__new {
+    background: #dc3545;
+    color: #fff;
+    border-radius: 999px;
+    padding: 1px 7px;
+    font-size: 0.5625rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.notification-peek__message {
+    color: #374151;
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    margin: 8px 0 0;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+@media (prefers-reduced-motion: reduce) {
+    .notification-peek { transition: none; transform: none; }
+    .notification-item::before { transition: none; }
+}
+/* Touch pointers have no hover — the card would never show or would stick. */
+@media (hover: none) {
+    .notification-peek { display: none; }
 }
 
 /* Skip to content link */
@@ -1852,6 +1971,128 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     if (document.readyState !== 'loading') initProfileHover();
     else document.addEventListener('DOMContentLoaded', initProfileHover);
+})();
+</script>
+<script>
+/* ===== Notification hover peek =====
+   Hovering a notification floats the full text beside the dropdown, replacing the
+   browser's native title="" tooltip (which cannot be styled). The card is appended
+   to <body> and positioned with fixed coordinates because .notification-list is an
+   overflow:auto scroller inside a 360px dropdown — anything absolutely positioned
+   inside it gets clipped. Text is written with textContent: notification bodies are
+   user data. */
+(function () {
+    var peek = null;
+    var current = null;
+    var GAP = 12;
+
+    function build() {
+        if (peek) return peek;
+        peek = document.createElement('div');
+        peek.className = 'notification-peek';
+        peek.setAttribute('role', 'tooltip');
+        peek.setAttribute('aria-hidden', 'true');
+        peek.innerHTML =
+            '<span class="notification-peek__title"></span>' +
+            '<span class="notification-peek__meta"><span class="notification-peek__time"></span></span>' +
+            '<p class="notification-peek__message"></p>';
+        document.body.appendChild(peek);
+        return peek;
+    }
+
+    function place(item) {
+        var r = item.getBoundingClientRect();
+        var w = peek.offsetWidth;
+        var h = peek.offsetHeight;
+
+        // The dropdown hugs the right edge, so the card normally sits to its left.
+        var toLeft = r.right + GAP + w > window.innerWidth - 8;
+        var left = toLeft ? r.left - GAP - w : r.right + GAP;
+        left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+        var top = Math.max(8, Math.min(r.top, window.innerHeight - h - 8));
+
+        peek.classList.toggle('notification-peek--left', toLeft);
+        peek.classList.toggle('notification-peek--right', !toLeft);
+        peek.style.left = left + 'px';
+        peek.style.top = top + 'px';
+
+        var caret = Math.max(10, Math.min(r.top + r.height / 2 - top, h - 18));
+        peek.style.setProperty('--peek-caret-top', caret + 'px');
+    }
+
+    function show(item) {
+        var text = (item.getAttribute('data-peek-message') || '').trim();
+        if (!text) return;
+
+        build();
+        current = item;
+
+        var title = item.querySelector('.notification-title');
+        var time = item.querySelector('.notification-time');
+        peek.querySelector('.notification-peek__title').textContent =
+            title ? title.textContent.trim() : 'Notification';
+        peek.querySelector('.notification-peek__time').textContent =
+            time ? time.textContent.trim() : '';
+        peek.querySelector('.notification-peek__message').textContent = text;
+
+        var meta = peek.querySelector('.notification-peek__meta');
+        var old = meta.querySelector('.notification-peek__new');
+        if (old) old.remove();
+        if (item.classList.contains('unread')) {
+            var tag = document.createElement('span');
+            tag.className = 'notification-peek__new';
+            tag.textContent = 'New';
+            meta.appendChild(tag);
+        }
+
+        place(item);
+        peek.classList.add('is-visible');
+        peek.setAttribute('aria-hidden', 'false');
+    }
+
+    function hide() {
+        current = null;
+        if (!peek) return;
+        peek.classList.remove('is-visible');
+        peek.setAttribute('aria-hidden', 'true');
+    }
+
+    function itemFrom(e) {
+        return e.target && e.target.closest ?
+            e.target.closest('.notification-item[data-peek-message]') : null;
+    }
+
+    document.addEventListener('mouseover', function (e) {
+        var item = itemFrom(e);
+        if (item && item !== current) show(item);
+        else if (!item && current) hide();
+    });
+
+    document.addEventListener('mouseout', function (e) {
+        var item = itemFrom(e);
+        if (!item) return;
+        if (e.relatedTarget && item.contains(e.relatedTarget)) return; // moving within the row
+        hide();
+    });
+
+    // Keyboard parity: the rows are links, so Tab must peek too.
+    document.addEventListener('focusin', function (e) {
+        var item = itemFrom(e);
+        if (item) show(item);
+    });
+    document.addEventListener('focusout', function (e) {
+        if (itemFrom(e)) hide();
+    });
+
+    // The list scrolls under the card, and closing the dropdown must take it away.
+    window.addEventListener('scroll', function () {
+        if (current) {
+            if (current.isConnected && current.offsetParent !== null) place(current);
+            else hide();
+        }
+    }, true);
+    window.addEventListener('resize', hide);
+    document.addEventListener('hide.bs.dropdown', hide);
 })();
 </script>
 <!-- 🌟 Header End -->
