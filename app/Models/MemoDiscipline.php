@@ -20,6 +20,7 @@ class MemoDiscipline extends Model
         'date',
         'mark_deduction_submit',
         'final_mark_deduction',
+        'minor_major',
         'remarks',
         'status',
         'conclusion_type_pk',

@@ -1258,6 +1258,919 @@ body.custom-loaded {
     font-weight: 500;
 }
 
+/* ── Exemption Category Master (DataTable) ── */
+.eccm-master-page .eccm-dt-card {
+    border: 1px solid #e4e7ec;
+}
+
+.eccm-master-page #exceptiongetcategory tbody td .d-inline-flex[role="group"] {
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.eccm-master-page #exceptiongetcategory .edit-btn,
+.eccm-master-page #exceptiongetcategory .delete-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #004a93;
+    line-height: 1;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.eccm-master-page #exceptiongetcategory .edit-btn:hover,
+.eccm-master-page #exceptiongetcategory .delete-btn:hover:not([aria-disabled="true"]) {
+    opacity: 0.72;
+    transform: translateY(-1px);
+    color: #004a93;
+}
+
+.eccm-master-page #exceptiongetcategory .delete-btn {
+    color: #d92d20;
+}
+
+.eccm-master-page #exceptiongetcategory .delete-btn:hover:not([aria-disabled="true"]) {
+    color: #b42318;
+}
+
+.eccm-master-page #exceptiongetcategory .delete-btn[aria-disabled="true"],
+.eccm-master-page #exceptiongetcategory .delete-btn.disabled {
+    opacity: 0.38;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.eccm-master-page #exceptiongetcategory .edit-btn .material-icons,
+.eccm-master-page #exceptiongetcategory .delete-btn .material-icons {
+    display: none !important;
+}
+
+.eccm-master-page #exceptiongetcategory .edit-btn .bi,
+.eccm-master-page #exceptiongetcategory .delete-btn .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.eccm-master-page #exceptiongetcategory .programme-action-switch .form-check-input {
+    width: 2.25rem;
+    height: 1.125rem;
+    margin: 0;
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.eccm-master-page #exceptiongetcategory .programme-action-switch .form-check-input:checked {
+    background-color: #12b76a;
+    border-color: #12b76a;
+}
+
+.eccm-master-page #exceptiongetcategory .programme-action-switch .form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(18, 183, 106, 0.2);
+}
+
+.eccm-master-page #exceptiongetcategory tbody td:nth-child(4),
+.eccm-master-page #exceptiongetcategory tbody td:nth-child(5) {
+    text-align: center;
+}
+
+.eccm-master-page #exceptiongetcategory tbody td:nth-child(3) {
+    color: #475467;
+}
+
+.eccm-master-page .dataTables_processing {
+    border: 0 !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    box-shadow: none !important;
+    color: #667085 !important;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* ── Exemption Medical Speciality Master (DataTable) ── */
+.ems-master-page .ems-dt-card {
+    border: 1px solid #e4e7ec;
+}
+
+.ems-master-page #exemptionMedicalSpecialityTable tbody td .d-inline-flex[role="group"] {
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: nowrap;
+}
+
+.ems-master-page #exemptionMedicalSpecialityTable .edit-btn,
+.ems-master-page #exemptionMedicalSpecialityTable .delete-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #004a93;
+    line-height: 1;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.ems-master-page #exemptionMedicalSpecialityTable .edit-btn:hover,
+.ems-master-page #exemptionMedicalSpecialityTable .delete-btn:hover:not([aria-disabled="true"]) {
+    opacity: 0.72;
+    transform: translateY(-1px);
+    color: #004a93;
+}
+
+.ems-master-page #exemptionMedicalSpecialityTable .delete-btn {
+    color: #d92d20;
+}
+
+.ems-master-page #exemptionMedicalSpecialityTable .delete-btn:hover:not([aria-disabled="true"]) {
+    color: #b42318;
+}
+
+.ems-master-page #exemptionMedicalSpecialityTable .delete-btn[aria-disabled="true"],
+.ems-master-page #exemptionMedicalSpecialityTable .delete-btn.disabled {
+    opacity: 0.38;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.ems-master-page #exemptionMedicalSpecialityTable .edit-btn .material-icons,
+.ems-master-page #exemptionMedicalSpecialityTable .delete-btn .material-icons {
+    display: none !important;
+}
+
+.ems-master-page #exemptionMedicalSpecialityTable .edit-btn .bi,
+.ems-master-page #exemptionMedicalSpecialityTable .delete-btn .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.ems-master-page #exemptionMedicalSpecialityTable .programme-action-switch .form-check-input {
+    width: 2.25rem;
+    height: 1.125rem;
+    margin: 0;
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.ems-master-page #exemptionMedicalSpecialityTable .programme-action-switch .form-check-input:checked {
+    background-color: #12b76a;
+    border-color: #12b76a;
+}
+
+.ems-master-page #exemptionMedicalSpecialityTable .programme-action-switch .form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(18, 183, 106, 0.2);
+}
+
+.ems-master-page #exemptionMedicalSpecialityTable tbody td:nth-child(3),
+.ems-master-page #exemptionMedicalSpecialityTable tbody td:nth-child(4),
+.ems-master-page #exemptionMedicalSpecialityTable tbody td:nth-child(5) {
+    text-align: center;
+}
+
+.ems-master-page #exemptionMedicalSpecialityTable tbody td:nth-child(3) {
+    color: #475467;
+}
+
+.ems-master-page .dataTables_processing {
+    border: 0 !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    box-shadow: none !important;
+    color: #667085 !important;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* ── MDO Duty Type Master (DataTable) ── */
+.mdt-master-page .mdt-dt-card {
+    border: 1px solid #e4e7ec;
+}
+
+/* Single header — hide duplicate thead from DataTables scrollX clone */
+.mdt-master-page #mdodutytypemaster-table_wrapper .dataTables_scrollBody thead,
+.mdt-master-page #mdodutytypemaster-table_wrapper .dataTables_scrollBody thead tr {
+    display: none !important;
+}
+
+.mdt-master-page #mdodutytypemaster-table_wrapper .dataTables_scrollHead thead th {
+    background: #f2f4f7 !important;
+    color: #475467 !important;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.875rem 1rem !important;
+    border-bottom: 1px solid #e4e7ec !important;
+}
+
+.mdt-master-page #mdodutytypemaster-table_wrapper .dt-buttons {
+    display: none !important;
+}
+
+.mdt-master-page #mdodutytypemaster-table tbody td .d-inline-flex[role="group"] {
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: nowrap;
+}
+
+.mdt-master-page #mdodutytypemaster-table .edit-btn,
+.mdt-master-page #mdodutytypemaster-table .delete-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #004a93;
+    line-height: 1;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.mdt-master-page #mdodutytypemaster-table .edit-btn:hover,
+.mdt-master-page #mdodutytypemaster-table .delete-btn:hover:not([aria-disabled="true"]):not(.disabled) {
+    opacity: 0.72;
+    transform: translateY(-1px);
+    color: #004a93;
+}
+
+.mdt-master-page #mdodutytypemaster-table .delete-btn {
+    color: #d92d20;
+}
+
+.mdt-master-page #mdodutytypemaster-table .delete-btn:hover:not([aria-disabled="true"]):not(.disabled) {
+    color: #b42318;
+}
+
+.mdt-master-page #mdodutytypemaster-table .delete-btn[aria-disabled="true"],
+.mdt-master-page #mdodutytypemaster-table .delete-btn.disabled {
+    opacity: 0.38;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.mdt-master-page #mdodutytypemaster-table .edit-btn .material-icons,
+.mdt-master-page #mdodutytypemaster-table .delete-btn .material-icons {
+    display: none !important;
+}
+
+.mdt-master-page #mdodutytypemaster-table .edit-btn .bi,
+.mdt-master-page #mdodutytypemaster-table .delete-btn .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.mdt-master-page #mdodutytypemaster-table .programme-action-switch .form-check-input {
+    width: 2.25rem;
+    height: 1.125rem;
+    margin: 0;
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.mdt-master-page #mdodutytypemaster-table .programme-action-switch .form-check-input:checked {
+    background-color: #12b76a;
+    border-color: #12b76a;
+}
+
+.mdt-master-page #mdodutytypemaster-table .programme-action-switch .form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(18, 183, 106, 0.2);
+}
+
+.mdt-master-page #mdodutytypemaster-table tbody td:nth-child(1) label,
+.mdt-master-page #mdodutytypemaster-table tbody td:nth-child(2) {
+    font-weight: 500;
+    color: #101828;
+}
+
+.mdt-master-page #mdodutytypemaster-table tbody td:nth-child(3),
+.mdt-master-page #mdodutytypemaster-table tbody td:nth-child(4) {
+    text-align: center;
+}
+
+.mdt-master-page .dataTables_processing {
+    border: 0 !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    box-shadow: none !important;
+    color: #667085 !important;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* ── Memo Type Master (DataTable) ── */
+.mmt-master-page .mmt-dt-card {
+    border: 1px solid #e4e7ec;
+}
+
+.mmt-master-page #memotypemaster-table_wrapper .dataTables_scrollBody thead,
+.mmt-master-page #memotypemaster-table_wrapper .dataTables_scrollBody thead tr {
+    display: none !important;
+}
+
+.mmt-master-page #memotypemaster-table_wrapper .dataTables_scrollHead thead th,
+.mmt-master-page #memotypemaster-table thead th {
+    background: #f2f4f7 !important;
+    color: #475467 !important;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.875rem 1rem !important;
+    border-bottom: 1px solid #e4e7ec !important;
+    border-top: 0 !important;
+    vertical-align: middle;
+}
+
+.mmt-master-page #memotypemaster-table tbody td {
+    padding: 1rem !important;
+    font-size: 0.875rem;
+    color: #344054;
+    border-bottom: 1px solid #eef2f6 !important;
+    vertical-align: middle;
+}
+
+.mmt-master-page #memotypemaster-table tbody tr:hover td {
+    background: rgba(0, 74, 147, 0.03);
+}
+
+.mmt-master-page #memotypemaster-table tbody td:first-child {
+    color: #667085;
+    font-weight: 500;
+    text-align: center;
+}
+
+.mmt-master-page #memotypemaster-table tbody td:nth-child(2) {
+    font-weight: 500;
+    color: #101828;
+    text-align: left;
+}
+
+.mmt-master-page #memotypemaster-table tbody td:nth-child(3),
+.mmt-master-page #memotypemaster-table tbody td:nth-child(4),
+.mmt-master-page #memotypemaster-table tbody td:nth-child(5) {
+    text-align: center;
+}
+
+.mmt-doc-text {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.mmt-doc-text--available {
+    color: #344054;
+}
+
+.mmt-doc-text--na {
+    color: #667085;
+}
+
+.mmt-master-page #memotypemaster-table .programme-action-group {
+    gap: 0.875rem;
+    justify-content: center;
+    flex-wrap: nowrap;
+}
+
+.mmt-master-page #memotypemaster-table .editMemo,
+.mmt-master-page #memotypemaster-table .deleteBtn,
+.mmt-master-page #memotypemaster-table .mmt-view-doc {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.125rem;
+    min-height: 1.125rem;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #004a93;
+    line-height: 1;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.mmt-master-page #memotypemaster-table .editMemo:hover,
+.mmt-master-page #memotypemaster-table .mmt-view-doc:not(.is-disabled):hover {
+    opacity: 0.72;
+    transform: translateY(-1px);
+    color: #004a93;
+}
+
+.mmt-master-page #memotypemaster-table .mmt-view-doc.is-disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.mmt-master-page #memotypemaster-table .deleteBtn,
+.mmt-master-page #memotypemaster-table .programme-action-btn--danger {
+    color: #d92d20;
+}
+
+.mmt-master-page #memotypemaster-table .deleteBtn:hover:not(:disabled):not(.is-disabled),
+.mmt-master-page #memotypemaster-table .programme-action-btn--danger:hover:not(:disabled):not(.is-disabled) {
+    color: #b42318;
+    opacity: 0.72;
+    transform: translateY(-1px);
+}
+
+.mmt-master-page #memotypemaster-table .programme-action-btn--danger.is-disabled,
+.mmt-master-page #memotypemaster-table .deleteBtn:disabled {
+    opacity: 0.35;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.mmt-master-page #memotypemaster-table .editMemo .bi,
+.mmt-master-page #memotypemaster-table .deleteBtn .bi,
+.mmt-master-page #memotypemaster-table .mmt-view-doc .bi {
+    font-size: 1.125rem;
+    line-height: 1;
+}
+
+.mmt-master-page #memotypemaster-table .programme-action-toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    line-height: 1;
+    margin: 0;
+    position: relative;
+}
+
+.mmt-master-page #memotypemaster-table .mmt-status-toggle-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.mmt-master-page #memotypemaster-table .mmt-toggle-icon {
+    font-size: 1.35rem;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.mmt-master-page #memotypemaster-table .mmt-toggle-icon--on {
+    display: none;
+    color: #d4a012;
+}
+
+.mmt-master-page #memotypemaster-table .mmt-toggle-icon--off {
+    display: inline-flex;
+    color: #12b76a;
+}
+
+.mmt-master-page #memotypemaster-table .mmt-status-toggle-input:checked ~ .mmt-toggle-icon--on {
+    display: inline-flex;
+}
+
+.mmt-master-page #memotypemaster-table .mmt-status-toggle-input:checked ~ .mmt-toggle-icon--off {
+    display: none;
+}
+
+.mmt-master-page #memotypemaster-table .programme-action-toggle-icon:hover .mmt-toggle-icon--on {
+    color: #b8860b;
+}
+
+.mmt-master-page #memotypemaster-table .programme-action-toggle-icon:hover .mmt-toggle-icon--off {
+    color: #027a48;
+}
+
+.mmt-modal-dialog {
+    max-width: 28rem;
+}
+
+.mmt-file-upload {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid #d0d5dd;
+    background: #fff;
+    overflow: hidden;
+    min-height: 2.75rem;
+}
+
+.mmt-file-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.625rem 1rem;
+    background: #f2f4f7;
+    color: #344054;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-right: 1px solid #d0d5dd;
+    cursor: pointer;
+    white-space: nowrap;
+    margin: 0;
+}
+
+.mmt-file-upload-name {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    padding: 0.625rem 1rem;
+    color: #667085;
+    font-size: 0.875rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mmt-file-upload-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.mmt-master-page .mmt-file-upload {
+    position: relative;
+}
+
+.mmt-master-page .dataTables_processing {
+    border: 0 !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    box-shadow: none !important;
+    color: #667085 !important;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* ── Memo Conclusion Master (DataTable) ── */
+.mcm-master-page .mcm-dt-card {
+    border: 1px solid #e4e7ec;
+}
+
+.mcm-master-page #memoconclusionmaster-table_wrapper .dataTables_scrollBody thead,
+.mcm-master-page #memoconclusionmaster-table_wrapper .dataTables_scrollBody thead tr {
+    display: none !important;
+}
+
+.mcm-master-page #memoconclusionmaster-table_wrapper .dataTables_scrollHead thead th,
+.mcm-master-page #memoconclusionmaster-table thead th {
+    background: #f2f4f7 !important;
+    color: #475467 !important;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.875rem 1rem !important;
+    border-bottom: 1px solid #e4e7ec !important;
+    border-top: 0 !important;
+    vertical-align: middle;
+}
+
+.mcm-master-page #memoconclusionmaster-table tbody td {
+    padding: 1rem !important;
+    font-size: 0.875rem;
+    color: #344054;
+    border-bottom: 1px solid #eef2f6 !important;
+    vertical-align: middle;
+}
+
+.mcm-master-page #memoconclusionmaster-table tbody tr:hover td {
+    background: rgba(0, 74, 147, 0.03);
+}
+
+.mcm-master-page #memoconclusionmaster-table tbody td:first-child {
+    color: #667085;
+    font-weight: 500;
+    text-align: center;
+}
+
+.mcm-master-page #memoconclusionmaster-table tbody td.mcm-col-name {
+    font-weight: 500;
+    color: #101828;
+    text-align: left;
+}
+
+.mcm-master-page #memoconclusionmaster-table tbody td.mcm-col-pt {
+    color: #475467;
+    text-align: left;
+}
+
+.mcm-master-page #memoconclusionmaster-table tbody td:nth-child(4),
+.mcm-master-page #memoconclusionmaster-table tbody td:nth-child(5) {
+    text-align: center;
+}
+
+.mcm-master-page #memoconclusionmaster-table .programme-action-group {
+    gap: 0.875rem;
+    justify-content: center;
+    flex-wrap: nowrap;
+}
+
+.mcm-master-page #memoconclusionmaster-table .editshowConclusionAlert,
+.mcm-master-page #memoconclusionmaster-table .deleteBtn,
+.mcm-master-page #memoconclusionmaster-table .programme-action-btn--danger {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.125rem;
+    min-height: 1.125rem;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #004a93;
+    line-height: 1;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.mcm-master-page #memoconclusionmaster-table .editshowConclusionAlert:hover {
+    opacity: 0.72;
+    transform: translateY(-1px);
+    color: #004a93;
+}
+
+.mcm-master-page #memoconclusionmaster-table .deleteBtn,
+.mcm-master-page #memoconclusionmaster-table .programme-action-btn--danger {
+    color: #d92d20;
+}
+
+.mcm-master-page #memoconclusionmaster-table .deleteBtn:hover:not(:disabled):not(.is-disabled),
+.mcm-master-page #memoconclusionmaster-table .programme-action-btn--danger:hover:not(:disabled):not(.is-disabled) {
+    color: #b42318;
+    opacity: 0.72;
+    transform: translateY(-1px);
+}
+
+.mcm-master-page #memoconclusionmaster-table .programme-action-btn--danger.is-disabled,
+.mcm-master-page #memoconclusionmaster-table .deleteBtn:disabled {
+    opacity: 0.35;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.mcm-master-page #memoconclusionmaster-table .editshowConclusionAlert .bi,
+.mcm-master-page #memoconclusionmaster-table .deleteBtn .bi {
+    font-size: 1.125rem;
+    line-height: 1;
+}
+
+.mcm-master-page #memoconclusionmaster-table .programme-action-toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    line-height: 1;
+    margin: 0;
+    position: relative;
+}
+
+.mcm-master-page #memoconclusionmaster-table .mcm-status-toggle-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.mcm-master-page #memoconclusionmaster-table .mcm-toggle-icon {
+    font-size: 1.35rem;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.mcm-master-page #memoconclusionmaster-table .mcm-toggle-icon--on {
+    display: none;
+    color: #d4a012;
+}
+
+.mcm-master-page #memoconclusionmaster-table .mcm-toggle-icon--off {
+    display: inline-flex;
+    color: #12b76a;
+}
+
+.mcm-master-page #memoconclusionmaster-table .mcm-status-toggle-input:checked ~ .mcm-toggle-icon--on {
+    display: inline-flex;
+}
+
+.mcm-master-page #memoconclusionmaster-table .mcm-status-toggle-input:checked ~ .mcm-toggle-icon--off {
+    display: none;
+}
+
+.mcm-master-page #memoconclusionmaster-table .programme-action-toggle-icon:hover .mcm-toggle-icon--on {
+    color: #b8860b;
+}
+
+.mcm-master-page #memoconclusionmaster-table .programme-action-toggle-icon:hover .mcm-toggle-icon--off {
+    color: #027a48;
+}
+
+.mcm-modal-dialog {
+    max-width: 28rem;
+}
+
+.mcm-master-page .dataTables_processing {
+    border: 0 !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    box-shadow: none !important;
+    color: #667085 !important;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* ── Course Memo Decision Mapping (DataTable) ── */
+.cmdm-master-page .cmdm-dt-card {
+    border: 1px solid #e4e7ec;
+}
+
+.cmdm-master-page #memoDecisionTable_wrapper .dataTables_scrollBody thead,
+.cmdm-master-page #memoDecisionTable_wrapper .dataTables_scrollBody thead tr {
+    display: none !important;
+}
+
+.cmdm-master-page #memoDecisionTable_wrapper .dataTables_scrollHead thead th,
+.cmdm-master-page #memoDecisionTable thead th {
+    background: #f2f4f7 !important;
+    color: #475467 !important;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.875rem 1rem !important;
+    border-bottom: 1px solid #e4e7ec !important;
+    border-top: 0 !important;
+    vertical-align: middle;
+}
+
+.cmdm-master-page #memoDecisionTable tbody td {
+    padding: 1rem !important;
+    font-size: 0.875rem;
+    color: #344054;
+    border-bottom: 1px solid #eef2f6 !important;
+    vertical-align: middle;
+}
+
+.cmdm-master-page #memoDecisionTable tbody tr:hover td {
+    background: rgba(0, 74, 147, 0.03);
+}
+
+.cmdm-master-page #memoDecisionTable tbody td:first-child {
+    color: #667085;
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.cmdm-master-page #memoDecisionTable tbody td.cmdm-col-course {
+    font-weight: 500;
+    color: #101828;
+    text-align: left;
+    max-width: 22rem;
+    line-height: 1.45;
+}
+
+.cmdm-master-page #memoDecisionTable tbody td.cmdm-col-memo-decision {
+    color: #344054;
+    text-align: left;
+    text-transform: uppercase;
+    font-size: 0.8125rem;
+    letter-spacing: 0.02em;
+}
+
+.cmdm-master-page #memoDecisionTable tbody td.cmdm-col-memo-conclusion {
+    color: #475467;
+    text-align: left;
+}
+
+.cmdm-master-page #memoDecisionTable tbody td:nth-child(5),
+.cmdm-master-page #memoDecisionTable tbody td:nth-child(6) {
+    text-align: center;
+}
+
+.cmdm-master-page #memoDecisionTable .programme-action-group {
+    gap: 0.875rem;
+    justify-content: center;
+    flex-wrap: nowrap;
+}
+
+.cmdm-master-page #memoDecisionTable .editConclusion,
+.cmdm-master-page #memoDecisionTable .programme-action-btn--danger {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.125rem;
+    min-height: 1.125rem;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #004a93;
+    line-height: 1;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.cmdm-master-page #memoDecisionTable .editConclusion:hover {
+    opacity: 0.72;
+    transform: translateY(-1px);
+    color: #004a93;
+}
+
+.cmdm-master-page #memoDecisionTable .programme-action-btn--danger {
+    color: #d92d20;
+}
+
+.cmdm-master-page #memoDecisionTable .programme-action-btn--danger:hover:not(:disabled):not(.is-disabled) {
+    color: #b42318;
+    opacity: 0.72;
+    transform: translateY(-1px);
+}
+
+.cmdm-master-page #memoDecisionTable .programme-action-btn--danger.is-disabled,
+.cmdm-master-page #memoDecisionTable .programme-action-btn--danger:disabled {
+    opacity: 0.35;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.cmdm-master-page #memoDecisionTable .editConclusion .bi,
+.cmdm-master-page #memoDecisionTable .programme-action-btn--danger .bi {
+    font-size: 1.125rem;
+    line-height: 1;
+}
+
+.cmdm-master-page #memoDecisionTable .programme-action-toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    line-height: 1;
+    margin: 0;
+    position: relative;
+}
+
+.cmdm-master-page #memoDecisionTable .cmdm-status-toggle-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.cmdm-master-page #memoDecisionTable .cmdm-toggle-icon {
+    font-size: 1.35rem;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.cmdm-master-page #memoDecisionTable .cmdm-toggle-icon--on {
+    display: none;
+    color: #d4a012;
+}
+
+.cmdm-master-page #memoDecisionTable .cmdm-toggle-icon--off {
+    display: inline-flex;
+    color: #12b76a;
+}
+
+.cmdm-master-page #memoDecisionTable .cmdm-status-toggle-input:checked ~ .cmdm-toggle-icon--on {
+    display: inline-flex;
+}
+
+.cmdm-master-page #memoDecisionTable .cmdm-status-toggle-input:checked ~ .cmdm-toggle-icon--off {
+    display: none;
+}
+
+.cmdm-master-page #memoDecisionTable .programme-action-toggle-icon:hover .cmdm-toggle-icon--on {
+    color: #b8860b;
+}
+
+.cmdm-master-page #memoDecisionTable .programme-action-toggle-icon:hover .cmdm-toggle-icon--off {
+    color: #027a48;
+}
+
+.cmdm-modal-dialog {
+    max-width: 28rem;
+}
+
+.cmdm-master-page .dataTables_processing {
+    border: 0 !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    box-shadow: none !important;
+    color: #667085 !important;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
 /* ── Course Group Type — confirmation & form modals ── */
 #cgtConfirmModal .programme-confirm-title {
     color: #101828;
