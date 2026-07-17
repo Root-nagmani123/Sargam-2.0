@@ -27,6 +27,23 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
+
+    /* Edit-modal current-file preview card (thumbnail-or-icon + name + × to replace). */
+    .cr-edit-preview-thumb {
+        width: 44px;
+        height: 44px;
+        object-fit: cover;
+        background: #f8f9fa;
+    }
+    .cr-edit-preview-icon i {
+        font-size: 1.9rem;
+        line-height: 1;
+        color: #6c757d;
+    }
+    .cr-edit-preview .btn-close {
+        padding: 0.3rem;
+        background-size: 0.65em;
+    }
 </style>
 @endpush
 
@@ -75,102 +92,90 @@ document.addEventListener('DOMContentLoaded', function() {
             role="toolbar" aria-label="Repository actions">
             <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#uploadModal"
                 aria-label="Upload documents"
-                class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold text-nowrap shadow-sm">
-                <span class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">upload_file</span>
+                class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold text-nowrap shadow-sm">
+                <i class="bi bi-upload" aria-hidden="true"></i>
                 <span class="d-none d-sm-inline">Upload Documents</span>
                 <span class="d-inline d-sm-none">Upload</span>
             </a>
             <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#createModal"
                 aria-label="Add new sub category"
-                class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold text-nowrap shadow-sm">
-                <span class="material-icons material-symbols-rounded fs-6 lh-1"
-                    aria-hidden="true">create_new_folder</span>
+                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold text-nowrap shadow-sm">
+                <i class="bi bi-folder-plus" aria-hidden="true"></i>
                 <span class="d-none d-sm-inline">Add Sub Category</span>
                 <span class="d-inline d-sm-none">Add</span>
             </a>
         </div>
     </x-breadcrum>
 
-    <div class="datatables">
-        <div class="card border-0 shadow-lg modern-card">
-            <div class="card-body p-4">
-                <!-- Page Title and Actions -->
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 pb-3 border-bottom">
-                    <div class="d-flex align-items-center gap-3">
-                        <div>
-                            <h3 class="mb-0 fw-bold text-primary">{{ $repository->course_repository_name }}</h3>
-                        </div>
-                    </div>
-                    <div class="d-flex flex-wrap align-items-center gap-3">
+    {{-- Every failure path in downloadDocument() (and the create/update/delete actions)
+         does redirect()->back()->with('error', ...). Without this component that flash
+         is rendered nowhere, so a failed download just bounced the user back to this
+         page with no message — indistinguishable from "the button reloaded the page". --}}
+    <x-session_message />
 
-                        <!-- Upload Documents (Secondary Action) -->
-                        <button type="button"
-                            class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-medium shadow-sm btn-hover-lift"
-                            data-bs-toggle="modal" data-bs-target="#uploadModal">
-                            <span class="material-icons material-symbols-rounded fs-6">
-                                upload
-                            </span>
-                            <span>Upload Documents</span>
-                        </button>
-
-                        <!-- Add Category (Primary Action) -->
-                        <button type="button"
-                            class="btn btn-primary btn-sm d-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-medium shadow btn-hover-lift"
-                            data-bs-toggle="modal" data-bs-target="#createModal">
-                            <span class="material-icons material-symbols-rounded fs-6">
-                                add
-                            </span>
-                            <span>Add Category</span>
-                        </button>
-
-                    </div>
-
+    @if($repository->children->count() == 0 && $documents->count() == 0)
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
+            <div class="text-center py-5 px-3 cr-admin-empty">
+                <div
+                    class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 cr-admin-empty-icon">
+                    <i class="bi bi-folder-x display-6 text-secondary" aria-hidden="true"></i>
                 </div>
-
-                @if($repository->children->count() == 0 && $documents->count() == 0)
-                <div class="text-center py-5 px-3 cr-admin-empty">
-                    <div
-                        class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 cr-admin-empty-icon">
-                        <i class="bi bi-folder-x display-6 text-secondary" aria-hidden="true"></i>
-                    </div>
-                    <h5 class="text-secondary mb-2 fw-semibold">No Content Found</h5>
-                    <p class="text-muted mb-4 small">Start by adding a sub-category or uploading a document.</p>
-                    <div class="d-flex flex-wrap gap-2 justify-content-center">
-                        <a href="javascript:void(0)" class="btn btn-primary btn-sm rounded-1 px-3"
-                            data-bs-toggle="modal" data-bs-target="#createModal">
-                            <i class="bi bi-folder-plus me-1" aria-hidden="true"></i>Add Sub Category
-                        </a>
-                        <a href="javascript:void(0)" class="btn btn-outline-primary btn-sm rounded-1 px-3"
-                            data-bs-toggle="modal" data-bs-target="#uploadModal">
-                            <i class="bi bi-upload me-1" aria-hidden="true"></i>Upload Document
-                        </a>
-                    </div>
+                <h5 class="text-secondary mb-2 fw-semibold">No Content Found</h5>
+                <p class="text-muted mb-4 small">Start by adding a sub-category or uploading a document.</p>
+                <div class="d-flex flex-wrap gap-2 justify-content-center">
+                    <a href="javascript:void(0)" class="btn btn-primary rounded-1 px-4 fw-semibold"
+                        data-bs-toggle="modal" data-bs-target="#createModal">
+                        <i class="bi bi-folder-plus me-1" aria-hidden="true"></i>Add Sub Category
+                    </a>
+                    <a href="javascript:void(0)" class="btn btn-outline-primary rounded-1 px-4 fw-semibold"
+                        data-bs-toggle="modal" data-bs-target="#uploadModal">
+                        <i class="bi bi-upload me-1" aria-hidden="true"></i>Upload Document
+                    </a>
                 </div>
-                @else
-                <!-- Child Repositories Section -->
-                @if($repository->children->count() > 0)
-                <div class="mb-4">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0 datatable cr-admin-table"
-                            id="child_repositories" data-export="false">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th class="ps-4 fw-semibold text-secondary small">#</th>
-                                    <th class="fw-semibold text-secondary small">Category</th>
-                                    <th class="fw-semibold text-secondary small">Details</th>
-                                    <th class="fw-semibold text-secondary small">Sub-Categories</th>
-                                    <th class="fw-semibold text-secondary small">Documents</th>
-                                    <th class="text-center fw-semibold text-secondary small">Actions</th>
-                                </tr>
-                            </thead>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- Sub-Categories Section -->
+    @if($repository->children->count() > 0)
+    <div class="card overflow-hidden rounded-3 mb-4">
+        <div class="card-body p-3 p-md-4">
+
+            <div
+                class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <h2 class="cr-admin-section-title mb-0">Sub-Categories</h2>
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" data-bs-toggle="modal"
+                        data-bs-target="#childColumnVisibilityModal" title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div class="programme-dt-search" data-dt-search-for="child_repositories"></div>
+                </div>
+            </div>
+
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table"
+                        id="child_repositories">
+                        <thead>
+                            <tr>
+                                <th>S. No.</th>
+                                <th>Category</th>
+                                <th>Details</th>
+                                <th>Sub-Categories</th>
+                                <th>Documents</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
                             <tbody>
                                 @foreach ($repository->children as $index => $child)
 
-                                <tr class="border-bottom">
+                                <tr>
 
-                                    <td class="ps-4 fw-medium text-muted">
-                                        {{ $loop->iteration }}
-                                    </td>
+                                    <td>{{ $loop->iteration }}</td>
 
                                     <td>
                                         <div class="d-flex align-items-center gap-3">
@@ -179,24 +184,22 @@ document.addEventListener('DOMContentLoaded', function() {
                                             \Storage::disk('public')->exists($child->category_image))
 
                                             <img src="{{ asset('storage/' . $child->category_image) }}" alt=""
-                                                class="rounded-circle object-fit-cover shadow-sm" width="42"
-                                                height="42">
+                                                class="rounded-circle object-fit-cover flex-shrink-0" width="40"
+                                                height="40">
 
                                             @else
 
-                                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center"
-                                                style="width:42px;height:42px;">
+                                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center flex-shrink-0"
+                                                style="width:40px;height:40px;">
                                                 <i class="bi bi-image text-muted"></i>
                                             </div>
 
                                             @endif
 
-                                            <div>
-                                                <a href="{{ route('course-repository.show', $child->pk) }}"
-                                                    class="text-decoration-none text-dark fw-medium">
-                                                    {{ $child->course_repository_name }}
-                                                </a>
-                                            </div>
+                                            <a href="{{ route('course-repository.show', $child->pk) }}"
+                                                class="cr-link-category">
+                                                {{ $child->course_repository_name }}
+                                            </a>
 
                                         </div>
                                     </td>
@@ -209,40 +212,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
                                     <td>
                                         <a href="{{ route('course-repository.show', $child->pk) }}"
-                                            class="text-decoration-none fw-medium small">
+                                            class="cr-link-subcategory {{ $child->children->count() == 0 ? 'cr-link-muted' : '' }}">
                                             {{ $child->children->count() }} Sub-Categories
                                         </a>
                                     </td>
 
                                     <td>
+                                        @php $childDocCount = $child->getDocumentCount(); @endphp
                                         <a href="{{ route('course-repository.show', $child->pk) }}"
-                                            class="text-decoration-none fw-medium small">
-                                            View {{ str_pad($child->getDocumentCount(), 2, '0', STR_PAD_LEFT) }}
+                                            class="cr-link-documents {{ $childDocCount == 0 ? 'cr-link-muted' : '' }}">
+                                            View {{ str_pad($childDocCount, 2, '0', STR_PAD_LEFT) }}
                                             Attachments
                                         </a>
                                     </td>
 
-                                    <td class="text-center">
+                                    <td>
 
-                                        <div class="d-inline-flex align-items-center">
+                                        <div class="d-inline-flex align-items-center gap-2">
 
-                                            <a href="javascript:void(0)"
-                                                class="btn btn-light bg-transparent border-0 p-0 edit-repo"
+                                            <button type="button" class="programme-action-btn edit-repo"
                                                 data-pk="{{ $child->pk }}"
                                                 data-name="{{ $child->course_repository_name }}"
                                                 data-details="{{ $child->course_repository_details }}"
                                                 data-image="{{ $child->category_image }}"
-                                                data-attachment="{{ $child->category_attachment }}" title="Edit">
+                                                data-attachment="{{ $child->category_attachment }}" title="Edit"
+                                                aria-label="Edit sub-category">
+                                                <i class="bi bi-pencil" aria-hidden="true"></i>
+                                            </button>
 
-                                                <i class="bi bi-pencil text-primary"></i>
-                                            </a>
-
-                                            <a href="javascript:void(0)"
-                                                class="btn btn-light bg-transparent border-0 p-0 delete-repo"
-                                                data-pk="{{ $child->pk }}" title="Delete">
-
-                                                <i class="bi bi-trash text-danger"></i>
-                                            </a>
+                                            <button type="button"
+                                                class="programme-action-btn programme-action-btn--danger delete-repo"
+                                                data-pk="{{ $child->pk }}" title="Delete"
+                                                aria-label="Delete sub-category">
+                                                <i class="bi bi-trash" aria-hidden="true"></i>
+                                            </button>
 
                                         </div>
 
@@ -254,35 +257,50 @@ document.addEventListener('DOMContentLoaded', function() {
                             </tbody>
                         </table>
                     </div>
+                    <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                        data-dt-footer-for="child_repositories"></div>
                 </div>
-                @endif
+
             </div>
-
-            @endif
         </div>
-        @if($documents->count() > 0)
-        <div class="card">
-            <div class="card-body">
-                <!-- Documents Section -->
+        @endif
 
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 datatable cr-admin-table" id="documents"
-                        data-export="false">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="text-center cru-col-dsno" scope="col">S.No.</th>
-                                <th class="cru-col-docname" scope="col">Document Name</th>
-                                <th class="cru-col-filetitle" scope="col">File Title</th>
-                                <th class="cru-col-coursename" scope="col">Course Name</th>
-                                <th class="cru-col-subject" scope="col">Subject</th>
-                                <th class="cru-col-topic" scope="col">Topic</th>
-                                <th class="cru-col-sessiondate" scope="col">Session Date</th>
-                                <th class="cru-col-sector" scope="col">Sector</th>
-                                <th class="cru-col-ministry" scope="col">Ministry</th>
-                                <th class="cru-col-author" scope="col">Author</th>
-                                <th class="text-center cru-col-daction" scope="col">Action</th>
-                            </tr>
-                        </thead>
+        <!-- Documents Section -->
+        @if($documents->count() > 0)
+        <div class="card overflow-hidden rounded-3">
+            <div class="card-body p-3 p-md-4">
+
+                <div
+                    class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                    <h2 class="cr-admin-section-title mb-0">Documents</h2>
+                    <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                        <button type="button" class="btn programme-dt-btn-columns" data-bs-toggle="modal"
+                            data-bs-target="#documentsColumnVisibilityModal" title="Show / hide columns">
+                            <span>Columns</span>
+                            <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                        </button>
+                        <div class="programme-dt-search" data-dt-search-for="documents"></div>
+                    </div>
+                </div>
+
+                <div class="programme-dt-panel">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" id="documents">
+                            <thead>
+                                <tr>
+                                    <th scope="col">S. No.</th>
+                                    <th scope="col">Document Name</th>
+                                    <th scope="col">File Title</th>
+                                    <th scope="col">Course Name</th>
+                                    <th scope="col">Subject</th>
+                                    <th scope="col">Topic</th>
+                                    <th scope="col">Session Date</th>
+                                    <th scope="col">Sector</th>
+                                    <th scope="col">Ministry</th>
+                                    <th scope="col">Author</th>
+                                    <th scope="col">Action</th>
+                                </tr>
+                            </thead>
                         <tbody>
                             @foreach ($documents as $index => $doc)
                             <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
@@ -294,14 +312,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </td>
                                 <td class="cru-col-filetitle">{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
                                 <td class="cru-col-coursename">
-                                    @if($doc->detail)
-                                    @if($doc->detail->course)
-                                    {{ $doc->detail->course->course_name }}
-                                    @elseif($doc->detail->course_master_pk)
-                                    {{ $doc->detail->course_master_pk }}
+                                    @if($doc->fallback_course)
+                                    {{ $doc->fallback_course }}
                                     @else
                                     N/A
-                                    @endif
                                     @endif
                                 </td>
                                 <td class="text-center cru-col-subject">
@@ -370,34 +384,37 @@ document.addEventListener('DOMContentLoaded', function() {
                                         @endif
                                     </small>
                                 </td>
-                                <td class="text-center cru-col-daction">
-                                    <div class="d-inline-flex gap-1" role="group" aria-label="Document actions">
-                                        <a href="javascript:void(0)" class="cr-admin-icon-btn edit-doc"
+                                <td class="cru-col-daction">
+                                    <div class="d-inline-flex align-items-center gap-2" role="group"
+                                        aria-label="Document actions">
+                                        <button type="button" class="programme-action-btn edit-doc"
                                             data-pk="{{ $doc->pk }}" data-bs-toggle="tooltip" title="Edit"
-                                            aria-label="Edit"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+                                            aria-label="Edit"><i class="bi bi-pencil" aria-hidden="true"></i></button>
                                         <a href="{{ route('course-repository.document.download', $doc->pk) }}?file={{ urlencode($doc->upload_document) }}"
-                                            class="cr-admin-icon-btn" data-bs-toggle="tooltip" title="Download"
+                                            class="programme-action-btn" data-bs-toggle="tooltip" title="Download"
                                             aria-label="Download">
                                             <i class="bi bi-download" aria-hidden="true"></i>
                                         </a>
-                                        <a href="javascript:void(0)" class="cr-admin-icon-btn text-danger delete-doc"
+                                        <button type="button"
+                                            class="programme-action-btn programme-action-btn--danger delete-doc"
                                             data-pk="{{ $doc->pk }}" data-bs-toggle="tooltip" title="Delete"
                                             aria-label="Delete">
                                             <i class="bi bi-trash" aria-hidden="true"></i>
-                                        </a>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
                             @endforeach
                         </tbody>
                     </table>
+                    </div>
+                    <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                        data-dt-footer-for="documents"></div>
                 </div>
 
             </div>
         </div>
         @endif
-    </div>
-</div>
 </div>
 
 <!-- Create Category Modal -->
@@ -489,7 +506,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <label for="edit_course_repository_details" class="form-label">Description</label>
                         <textarea class="form-control" id="edit_course_repository_details"
                             name="course_repository_details" rows="3"
-                            placeholder="eg. Lorem ipsum dolor sit amet"></textarea>
+                            placeholder="eg. Enter description...."></textarea>
                     </div>
                     <div class="mb-0">
                         <label class="form-label d-flex align-items-center gap-1">
@@ -513,23 +530,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             <img id="preview_edit_show" src="" alt="Preview" class="img-thumbnail rounded-1 shadow-sm"
                                 style="max-width: 120px; display: none;">
                         </div>
-                    </div>
-
-                    <div class="mb-0">
-                        <label class="form-label">Attachment</label>
-                        <div id="current_attachment_container_show" class="mb-2" style="display: none;">
-                            <p class="text-muted mb-1 small">Current attachment</p>
-                            <a id="current_attachment_show" href="#" target="_blank" rel="noopener"
-                                class="d-inline-flex align-items-center gap-1 small">
-                                <i class="bi bi-paperclip"></i><span>View current file</span>
-                            </a>
-                        </div>
-                        @include('admin.course-repository.partials.cr-design-file', [
-                        'inputId' => 'category_attachment_edit',
-                        'inputName' => 'category_attachment',
-                        'accept' => '.jpeg,.png,.jpg,.gif,.pdf,.doc,.docx,.xls,.xlsx',
-                        ])
-                        <div class="form-text small text-muted mt-1">JPG, PNG, GIF, PDF, DOC, XLS (Max 5MB)</div>
                     </div>
                 </div>
                 <div class="modal-footer cr-admin-modal-footer d-flex justify-content-end gap-2">
@@ -555,9 +555,57 @@ document.addEventListener('DOMContentLoaded', function() {
                 <input type="hidden" name="upload_edit_pk" id="upload_edit_pk" value="">
                 <div id="uploadFormErrors" class="alert alert-danger d-none mx-3 mt-3 mb-0" role="alert"></div>
                 <div id="uploadEditNotice" class="alert alert-info d-none mx-3 mt-3 mb-0 py-2 small" role="status">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Editing existing document. Current file: <span id="uploadEditCurrentFile" class="fw-semibold"></span>.
-                    Choose a new file only if you want to replace it.
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <span>
+                            <i class="bi bi-info-circle me-1"></i>
+                            Current file:
+                            <a id="uploadEditCurrentFile" class="fw-semibold text-decoration-underline" href="#"
+                                target="_blank" rel="noopener" style="color:#0d6efd;"></a>
+                        </span>
+                        {{-- A real, labelled button (not a bare btn-link glyph, which was there
+                             but invisible against the notice text). type="button" because this
+                             sits inside #uploadForm and a default submit button would submit the
+                             form instead of deleting. Reuses the existing .delete-doc delegated
+                             handler (document-level); its data-pk is filled by setEditChrome() on
+                             edit-open and cleared on reset so a stray click never targets pk "". --}}
+                        <button type="button" id="uploadEditDeleteBtn"
+                            class="delete-doc btn btn-sm btn-danger d-inline-flex align-items-center gap-1"
+                            data-pk="" title="Delete this document" aria-label="Delete this document">
+                            <i class="bi bi-trash" aria-hidden="true"></i> Delete
+                        </button>
+                    </div>
+
+                    {{-- Preview of the currently-uploaded file with a × to clear it. The ×
+                         does NOT delete anything server-side — it swaps the UI into "pick a
+                         new file" mode and focuses the file input; the replacement is
+                         committed on save once a new file is chosen. (The red Delete button
+                         above is the separate "remove this document entirely" action.)
+                         Populated by setEditChrome(); img falls back to a type icon when the
+                         file isn't an image or can't load (e.g. file missing from storage). --}}
+                    <div id="uploadEditPreview"
+                        class="cr-edit-preview d-none position-relative d-inline-flex align-items-center gap-2 mt-2 p-2 pe-4 bg-white border rounded">
+                        <img id="uploadEditPreviewImg" src="" alt="Current file preview"
+                            class="cr-edit-preview-thumb rounded border d-none"
+                            onerror="this.classList.add('d-none');var ic=document.getElementById('uploadEditPreviewIcon');if(ic)ic.classList.remove('d-none');">
+                        <span id="uploadEditPreviewIcon" class="cr-edit-preview-icon d-none">
+                            <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                        </span>
+                        <span id="uploadEditPreviewName" class="text-truncate" style="max-width:260px;"></span>
+                        <button type="button" id="uploadEditPreviewClear"
+                            class="btn-close position-absolute top-0 end-0 m-1"
+                            aria-label="Remove current file and upload a new one"
+                            title="Remove — then choose a new file below"></button>
+                    </div>
+                    <div id="uploadEditReplacingHint" class="text-success mt-2 d-none">
+                        <i class="bi bi-check-circle me-1"></i>
+                        Current file removed. Choose a new file in the "Document Upload" box below to replace it.
+                    </div>
+
+                    <div class="mt-1">
+                        Choose a new file only if you want to replace it. The "Document Upload" box below only
+                        shows a file once you pick a <em>new</em> one to replace it with — browsers can't
+                        pre-fill a file input with the existing file's name.
+                    </div>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
@@ -1192,274 +1240,38 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
-<!-- Column Visibility — Sub-Categories & Documents tables (DataTables) -->
-<script>
-(function() {
-    'use strict';
-
-    // Per-table column config. idx = DataTables column index. locked columns stay visible.
-    var TABLES = {
-        'child_repositories': {
-            storageKey: 'cru-columns-child_repositories',
-            columns: [{
-                    idx: 0,
-                    label: '#',
-                    locked: true
-                },
-                {
-                    idx: 1,
-                    label: 'Image'
-                },
-                {
-                    idx: 2,
-                    label: 'Sub Category Name'
-                },
-                {
-                    idx: 3,
-                    label: 'Details'
-                },
-                {
-                    idx: 4,
-                    label: 'Sub-Categories'
-                },
-                {
-                    idx: 5,
-                    label: 'Documents'
-                },
-                {
-                    idx: 6,
-                    label: 'Actions',
-                    locked: true
-                }
-            ]
-        },
-        'documents': {
-            storageKey: 'cru-columns-documents',
-            columns: [{
-                    idx: 0,
-                    label: 'S.No.',
-                    locked: true
-                },
-                {
-                    idx: 1,
-                    label: 'Document Name'
-                },
-                {
-                    idx: 2,
-                    label: 'File Title'
-                },
-                {
-                    idx: 3,
-                    label: 'Course Name'
-                },
-                {
-                    idx: 4,
-                    label: 'Subject'
-                },
-                {
-                    idx: 5,
-                    label: 'Topic'
-                },
-                {
-                    idx: 6,
-                    label: 'Session Date'
-                },
-                {
-                    idx: 7,
-                    label: 'Sector'
-                },
-                {
-                    idx: 8,
-                    label: 'Ministry'
-                },
-                {
-                    idx: 9,
-                    label: 'Author'
-                },
-                {
-                    idx: 10,
-                    label: 'Action',
-                    locked: true
-                }
-            ]
-        }
-    };
-
-    function toggleable(cfg) {
-        return cfg.columns.filter(function(c) {
-            return !c.locked;
-        });
-    }
-
-    function defaults(cfg) {
-        var s = {};
-        toggleable(cfg).forEach(function(c) {
-            s[c.idx] = true;
-        });
-        return s;
-    }
-
-    function loadState(cfg) {
-        try {
-            var raw = localStorage.getItem(cfg.storageKey);
-            if (!raw) return defaults(cfg);
-            var parsed = JSON.parse(raw);
-            if (!parsed || typeof parsed !== 'object') return defaults(cfg);
-            var base = defaults(cfg);
-            Object.keys(base).forEach(function(k) {
-                if (typeof parsed[k] === 'boolean') base[k] = parsed[k];
-            });
-            return base;
-        } catch (e) {
-            return defaults(cfg);
-        }
-    }
-
-    function saveState(cfg, state) {
-        try {
-            localStorage.setItem(cfg.storageKey, JSON.stringify(state));
-        } catch (e) {}
-    }
-
-    function buildModal(tableId, cfg) {
-        var modalId = 'cruColVisModal-' + tableId;
-        if (document.getElementById(modalId)) return;
-
-        var chips = cfg.columns.map(function(c) {
-            if (c.locked) {
-                return '<div class="col">' +
-                    '<label class="cru-colvis-chip cru-colvis-chip-locked d-flex align-items-center gap-2 mb-0" title="Always visible">' +
-                    '<input type="checkbox" class="form-check-input m-0" checked disabled>' +
-                    '<span class="text-truncate">' + c.label + '</span>' +
-                    '</label></div>';
-            }
-            return '<div class="col">' +
-                '<label class="cru-colvis-chip d-flex align-items-center gap-2 mb-0">' +
-                '<input type="checkbox" class="form-check-input m-0 cru-col-toggle-checkbox" data-table="' +
-                tableId + '" data-col="' + c.idx + '" checked>' +
-                '<span class="text-truncate">' + c.label + '</span>' +
-                '</label></div>';
-        }).join('');
-
-        var html =
-            '<div class="modal fade cru-colvis-modal" id="' + modalId + '" tabindex="-1" aria-labelledby="' +
-            modalId + '-label" aria-hidden="true">' +
-            '<div class="modal-dialog modal-dialog-centered modal-lg">' +
-            '<div class="modal-content border-0 rounded-4 shadow">' +
-            '<div class="modal-header border-0 pb-2 px-4 pt-4">' +
-            '<h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="' + modalId + '-label">' +
-            '<i class="bi bi-sliders2 text-primary" aria-hidden="true"></i> Column Visibility' +
-            '</h5>' +
-            '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
-            '</div>' +
-            '<hr class="cru-colvis-divider mx-4 my-0">' +
-            '<div class="modal-body px-4 py-4">' +
-            '<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">' + chips + '</div>' +
-            '</div>' +
-            '<div class="modal-footer border-0 px-4 pb-4 pt-0 d-flex justify-content-between">' +
-            '<button type="button" class="btn btn-link btn-sm text-decoration-none p-0 d-inline-flex align-items-center gap-1 cru-col-toggle-reset" data-table="' +
-            tableId + '">' +
-            '<i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset to default' +
-            '</button>' +
-            '<button type="button" class="btn btn-outline-primary btn-sm px-4 fw-semibold" data-bs-dismiss="modal">Close</button>' +
-            '</div>' +
-            '</div>' +
-            '</div>' +
-            '</div>';
-        document.body.insertAdjacentHTML('beforeend', html);
-    }
-
-    function buildTrigger(tableId, wrapper) {
-        var trigger =
-            '<span class="cru-column-toggle d-inline-flex align-items-center ms-2">' +
-            '<button type="button" class="btn btn-light border btn-sm d-inline-flex align-items-center gap-2 fw-semibold cru-colvis-trigger" ' +
-            'data-bs-toggle="modal" data-bs-target="#cruColVisModal-' + tableId + '" title="Show / hide columns">' +
-            '<i class="bi bi-layout-three-columns" aria-hidden="true"></i>' +
-            '<span class="d-none d-sm-inline">Columns</span>' +
-            '</button>' +
-            '</span>';
-        var filter = wrapper.querySelector('.dataTables_filter');
-        var searchInput = filter ? filter.querySelector('input') : null;
-        if (searchInput) {
-            searchInput.insertAdjacentHTML('afterend', trigger);
-        } else if (filter) {
-            filter.insertAdjacentHTML('beforeend', trigger);
-        } else {
-            wrapper.insertAdjacentHTML('afterbegin', trigger);
-        }
-    }
-
-    function buildTable(tableId, cfg) {
-        if (!(window.jQuery && jQuery.fn && jQuery.fn.dataTable)) return false;
-        var el = document.getElementById(tableId);
-        if (!el || !jQuery.fn.dataTable.isDataTable(el)) return false;
-
-        var api = jQuery(el).DataTable();
-        var wrapper = el.closest('.dataTables_wrapper');
-        if (!wrapper) return false;
-        if (wrapper.querySelector('.cru-column-toggle')) return true; // already built
-
-        buildModal(tableId, cfg);
-        buildTrigger(tableId, wrapper);
-
-        function applyState(state) {
-            toggleable(cfg).forEach(function(c) {
-                var vis = state[c.idx] !== false;
-                api.column(c.idx).visible(vis, false);
-                var cb = document.querySelector('.cru-col-toggle-checkbox[data-table="' + tableId +
-                    '"][data-col="' + c.idx + '"]');
-                if (cb) cb.checked = vis;
-            });
-            api.columns.adjust();
-        }
-
-        applyState(loadState(cfg));
-
-        document.querySelectorAll('.cru-col-toggle-checkbox[data-table="' + tableId + '"]').forEach(function(cb) {
-            cb.addEventListener('change', function() {
-                var idx = parseInt(this.getAttribute('data-col'), 10);
-                var next = loadState(cfg);
-                if (!this.checked) {
-                    var visibleCount = toggleable(cfg).filter(function(c) {
-                        return next[c.idx] !== false;
-                    }).length;
-                    if (visibleCount <= 1) {
-                        this.checked = true;
-                        return;
-                    }
-                }
-                next[idx] = this.checked;
-                api.column(idx).visible(this.checked);
-                saveState(cfg, next);
-            });
-        });
-
-        document.querySelectorAll('.cru-col-toggle-reset[data-table="' + tableId + '"]').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                try {
-                    localStorage.removeItem(cfg.storageKey);
-                } catch (e) {}
-                applyState(defaults(cfg));
-            });
-        });
-        return true;
-    }
-
-    // The global DataTables init runs on DOMContentLoaded; retry briefly until each table exists.
-    Object.keys(TABLES).forEach(function(tableId) {
-        if (!document.getElementById(tableId)) return; // section not rendered
-        var tries = 0;
-        (function attempt() {
-            if (buildTable(tableId, TABLES[tableId])) return;
-            if (tries++ < 40) setTimeout(attempt, 100);
-        })();
-    });
-})();
-</script>
+<!-- Column Visibility — Sub-Categories & Documents tables -->
+@foreach ([
+    ['id' => 'childColumnVisibilityModal', 'grid' => 'childColumnToggleGrid', 'label' => 'Sub-Categories'],
+    ['id' => 'documentsColumnVisibilityModal', 'grid' => 'documentsColumnToggleGrid', 'label' => 'Documents'],
+] as $colvis)
+<div class="modal fade" id="{{ $colvis['id'] }}" tabindex="-1" aria-labelledby="{{ $colvis['id'] }}Label"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="{{ $colvis['id'] }}Label">
+                    Column Visibility — {{ $colvis['label'] }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="{{ $colvis['grid'] }}"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4"
+                    data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endforeach
 
 @include('admin.course-repository.partials.single-click-links')
 @endsection
 
+@section('scripts')
 <script>
 // ===== UPLOAD FORM SUBMIT - EVENT DELEGATION (runs first, always attached) =====
 document.addEventListener('submit', function uploadFormSubmitHandler(e) {
@@ -1769,12 +1581,77 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
     }
 });
 
+// ===== Course Name -> Choices.js (searchable, fixed width, wraps long names) =====
+// Choices owns the rendered dropdown, so the native data-status show/hide trick no
+// longer works; we keep a canonical snapshot of every course and rebuild the
+// Choices list (filtered by Active/Archived) on demand instead.
+//
+// These MUST stay at script scope, NOT inside the crDocEdit IIFE below. Two separate
+// scopes use them: the IIFE (edit/prefill, via syncCourseChoiceForEdit) and the
+// DOMContentLoaded block further down (Choices init + the Active/Archived radio
+// handler). While they were declared inside the IIFE, `var` made them private to it,
+// so the DOMContentLoaded block threw "courseChoices is not defined" on first touch —
+// which aborted that whole callback, and every handler it had yet to register
+// (including the Active/Archived radios) silently never bound.
+var courseChoices = null;
+var courseOptionsAll = []; // [{ value, label, status }]
+
+function getCheckedCourseStatus() {
+    var checked = document.querySelector('input[name="course_status"]:checked');
+    return checked ? checked.value : 'active';
+}
+
+// Rebuild the Course Name choices to only those matching `status`.
+// When `keepValue` is passed, that course is re-selected after the rebuild.
+function applyCourseStatusChoices(status, keepValue) {
+    if (!courseChoices) return;
+    var list = [{ value: '', label: 'Select', placeholder: true, selected: !keepValue }];
+    courseOptionsAll.forEach(function (o) {
+        if (o.status === status) {
+            list.push({ value: o.value, label: o.label });
+        }
+    });
+    courseChoices.setChoices(list, 'value', 'label', true); // replace existing
+    if (keepValue !== undefined && keepValue !== null && keepValue !== '') {
+        try { courseChoices.setChoiceByValue(String(keepValue)); } catch (e) { /* ignore */ }
+    }
+}
+
+// Used by the edit/prefill flow: make sure the saved course is present and selected,
+// syncing the Active/Archived radio so the visible list matches.
+function syncCourseChoiceForEdit(pk, label) {
+    if (!courseChoices || pk === null || pk === undefined || pk === '') return;
+    pk = String(pk);
+    var found = null;
+    for (var i = 0; i < courseOptionsAll.length; i++) {
+        if (String(courseOptionsAll[i].value) === pk) { found = courseOptionsAll[i]; break; }
+    }
+    var status = found ? found.status : getCheckedCourseStatus();
+    if (!found) {
+        courseOptionsAll.push({ value: pk, label: label || pk, status: status });
+    }
+    var radio = document.querySelector('input[name="course_status"][value="' + status + '"]');
+    if (radio && !radio.checked) radio.checked = true;
+    applyCourseStatusChoices(status, pk);
+}
+
 // ===== DOCUMENT EDIT MODE — reuses the Upload modal so the form looks identical to "Add" =====
 window.crDocEdit = (function() {
     'use strict';
 
     function $id(id) {
         return document.getElementById(id);
+    }
+
+    // Attachment rows can repeat (name="attachments[]" etc.) when added via the
+    // "+" button, so pick the input that actually has a file selected rather
+    // than assuming it's always the first one in DOM order.
+    function findFileInput(name) {
+        var inputs = document.querySelectorAll('#uploadForm input[name="' + name + '"]');
+        for (var i = 0; i < inputs.length; i++) {
+            if (inputs[i].files && inputs[i].files.length > 0) return inputs[i];
+        }
+        return inputs[0] || null;
     }
 
     function wait(ms) {
@@ -1789,51 +1666,10 @@ window.crDocEdit = (function() {
         }));
     }
 
-    // ===== Course Name -> Choices.js (searchable, fixed width, wraps long names) =====
-    // Choices owns the rendered dropdown, so the native data-status show/hide trick no
-    // longer works; we keep a canonical snapshot of every course and rebuild the
-    // Choices list (filtered by Active/Archived) on demand instead.
-    var courseChoices = null;
-    var courseOptionsAll = []; // [{ value, label, status }]
-
-    function getCheckedCourseStatus() {
-        var checked = document.querySelector('input[name="course_status"]:checked');
-        return checked ? checked.value : 'active';
-    }
-
-    // Rebuild the Course Name choices to only those matching `status`.
-    // When `keepValue` is passed, that course is re-selected after the rebuild.
-    function applyCourseStatusChoices(status, keepValue) {
-        if (!courseChoices) return;
-        var list = [{ value: '', label: 'Select', placeholder: true, selected: !keepValue }];
-        courseOptionsAll.forEach(function (o) {
-            if (o.status === status) {
-                list.push({ value: o.value, label: o.label });
-            }
-        });
-        courseChoices.setChoices(list, 'value', 'label', true); // replace existing
-        if (keepValue !== undefined && keepValue !== null && keepValue !== '') {
-            try { courseChoices.setChoiceByValue(String(keepValue)); } catch (e) { /* ignore */ }
-        }
-    }
-
-    // Used by the edit/prefill flow: make sure the saved course is present and selected,
-    // syncing the Active/Archived radio so the visible list matches.
-    function syncCourseChoiceForEdit(pk, label) {
-        if (!courseChoices || pk === null || pk === undefined || pk === '') return;
-        pk = String(pk);
-        var found = null;
-        for (var i = 0; i < courseOptionsAll.length; i++) {
-            if (String(courseOptionsAll[i].value) === pk) { found = courseOptionsAll[i]; break; }
-        }
-        var status = found ? found.status : getCheckedCourseStatus();
-        if (!found) {
-            courseOptionsAll.push({ value: pk, label: label || pk, status: status });
-        }
-        var radio = document.querySelector('input[name="course_status"][value="' + status + '"]');
-        if (radio && !radio.checked) radio.checked = true;
-        applyCourseStatusChoices(status, pk);
-    }
+    // NOTE: courseChoices / courseOptionsAll / getCheckedCourseStatus /
+    // applyCourseStatusChoices / syncCourseChoiceForEdit used to be declared HERE. They
+    // now live at script scope, above this IIFE, because the DOMContentLoaded block
+    // below uses them too and a `var` in here is private to this function.
 
     // Set a <select> value, injecting a labeled option if it isn't present.
     function setSelectValue(selectId, value, label) {
@@ -1896,17 +1732,42 @@ window.crDocEdit = (function() {
         if (el) el.value = (value === null || value === undefined) ? '' : value;
     }
 
+    // Like selectWhenReady, but skips the poll-for-up-to-3.5s wait when the backend
+    // already told us (via the *_resolved flag) that no matching master record exists —
+    // e.g. a legacy imported document whose subject/topic/ministry foreign keys don't
+    // match a local row, so the AJAX-loaded option was never going to appear. Waiting
+    // out the full timeout per field made editing such documents take several seconds.
+    //
+    // Deliberately does NOT fireChange in the unresolved case: the next cascade level
+    // (e.g. subject -> topics, topic -> session date/author) would fetch against this
+    // fabricated id, get an empty result, and its handler resets the downstream <select>
+    // to a bare "Select" placeholder. If that fetch resolves after we've already
+    // prefilled the downstream field from saved data, it silently wipes it back to
+    // empty — which is why Author Name (etc.) came back blank for these documents even
+    // though the value was set correctly moments earlier.
+    function selectFast(selectId, value, label, resolved, timeoutMs) {
+        if (resolved === false) {
+            setSelectValue(selectId, value, label);
+            return Promise.resolve(false);
+        }
+        return selectWhenReady(selectId, value, label, timeoutMs);
+    }
+
     // Pre-fill the Course-category section (cascading dropdowns).
     function prefillCourse(d) {
         var courseSel = setSelectValue('course_name', d.course_master_pk, d.course_name);
         syncCourseChoiceForEdit(d.course_master_pk, d.course_name); // keep Choices UI in sync
-        fireChange(courseSel); // -> loads subjects
+        // Same reasoning as selectFast: when the saved course doesn't match a local
+        // record, loading subjects for it is pointless AND dangerous — that fetch
+        // resolves during the wait(450) below and would wipe the subject/topic values
+        // we're about to fast-fill from saved data.
+        if (d.course_resolved !== false) fireChange(courseSel); // -> loads subjects
         return Promise.resolve()
             .then(function() {
-                return selectWhenReady('subject_name', d.subject_pk, d.subject_name);
+                return selectFast('subject_name', d.subject_pk, d.subject_name, d.subject_resolved);
             }) // -> loads topics
             .then(function() {
-                return selectWhenReady('timetable_name', d.topic_pk, d.topic_name);
+                return selectFast('timetable_name', d.topic_pk, d.topic_name, d.topic_resolved);
             }) // -> loads session/author
             .then(function() {
                 return wait(450);
@@ -1916,7 +1777,7 @@ window.crDocEdit = (function() {
                 setSelectValue('author_name', d.author_name, d.author_label);
                 var sectorSel = setSelectValue('sector_master', d.sector_master_pk, d.sector_name);
                 fireChange(sectorSel); // -> loads ministries
-                return selectWhenReady('ministry_master', d.ministry_master_pk, d.ministry_name);
+                return selectFast('ministry_master', d.ministry_master_pk, d.ministry_name, d.ministry_resolved);
             })
             .then(function() {
                 // keywords + video LAST — cascade change handlers overwrite keywords
@@ -1935,7 +1796,7 @@ window.crDocEdit = (function() {
         setVal('author_name_other', d.author_name);
         var sectorSel = setSelectValue('sector_master_other', d.sector_master_pk, d.sector_name);
         fireChange(sectorSel); // -> loads ministries (Other)
-        return selectWhenReady('ministry_master_other', d.ministry_master_pk, d.ministry_name)
+        return selectFast('ministry_master_other', d.ministry_master_pk, d.ministry_name, d.ministry_resolved)
             .then(function() {
                 setVal('keywords_other', d.keyword);
                 setVal('video_link_other', d.videolink);
@@ -1947,7 +1808,7 @@ window.crDocEdit = (function() {
         setVal('Key_words_institutional', d.keyword);
         var sectorSel = setSelectValue('sector_master_institutional', d.sector_master_pk, d.sector_name);
         fireChange(sectorSel);
-        return selectWhenReady('ministry_master_institutional', d.ministry_master_pk, d.ministry_name);
+        return selectFast('ministry_master_institutional', d.ministry_master_pk, d.ministry_name, d.ministry_resolved);
     }
 
     // Put the document title into the first attachment row of the active category.
@@ -1970,7 +1831,55 @@ window.crDocEdit = (function() {
         }
     }
 
-    function setEditChrome(on, currentFile) {
+    // Choose a Bootstrap-Icons file glyph from the file extension.
+    function fileIconClass(fileName) {
+        var ext = String(fileName || '').split('.').pop().toLowerCase();
+        if (ext === 'pdf') return 'bi-file-earmark-pdf';
+        if (ext === 'doc' || ext === 'docx') return 'bi-file-earmark-word';
+        if (ext === 'xls' || ext === 'xlsx' || ext === 'csv') return 'bi-file-earmark-excel';
+        if (ext === 'ppt' || ext === 'pptx') return 'bi-file-earmark-ppt';
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].indexOf(ext) !== -1) return 'bi-file-earmark-image';
+        return 'bi-file-earmark-text';
+    }
+    function isImageFile(fileName) {
+        var ext = String(fileName || '').split('.').pop().toLowerCase();
+        return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].indexOf(ext) !== -1;
+    }
+
+    // Fill (or clear) the current-file preview card: thumbnail for images, type icon
+    // otherwise. Cleared in create mode. The "replacing" hint is reset every time so a
+    // reopened modal never shows a stale "file removed" message.
+    function setEditFilePreview(on, fileName, fileUrl) {
+        var wrap = $id('uploadEditPreview');
+        var img = $id('uploadEditPreviewImg');
+        var icon = $id('uploadEditPreviewIcon');
+        var nameEl = $id('uploadEditPreviewName');
+        var hint = $id('uploadEditReplacingHint');
+
+        if (hint) hint.classList.add('d-none');
+        if (wrap) wrap.classList.toggle('d-none', !on);
+        if (nameEl) nameEl.textContent = on ? (fileName || '') : '';
+
+        if (!on) {
+            if (img) { img.classList.add('d-none'); img.removeAttribute('src'); }
+            if (icon) icon.classList.add('d-none');
+            return;
+        }
+        if (icon) {
+            var i = icon.querySelector('i');
+            if (i) i.className = 'bi ' + fileIconClass(fileName);
+        }
+        if (isImageFile(fileName) && fileUrl && img && icon) {
+            img.src = fileUrl;              // onerror in markup falls back to the icon
+            img.classList.remove('d-none');
+            icon.classList.add('d-none');
+        } else {
+            if (img) { img.classList.add('d-none'); img.removeAttribute('src'); }
+            if (icon) icon.classList.remove('d-none');
+        }
+    }
+
+    function setEditChrome(on, currentFile, pk, fileUrl) {
         var title = $id('uploadModalLabel');
         if (title) title.textContent = on ? 'Edit Document' : 'Upload Document';
         var btn = $id('uploadBtn');
@@ -1978,7 +1887,32 @@ window.crDocEdit = (function() {
         var notice = $id('uploadEditNotice');
         if (notice) notice.classList.toggle('d-none', !on);
         var cur = $id('uploadEditCurrentFile');
-        if (cur) cur.textContent = currentFile || '';
+        if (cur) {
+            cur.textContent = currentFile || '';
+            cur.href = (on && pk) ? ('/course-repository/document/' + pk + '/download') : '#';
+        }
+        // Point the inline delete icon at THIS document. Cleared in "create" mode so
+        // the shared .delete-doc handler (which bails on an empty data-pk) can't fire.
+        var del = $id('uploadEditDeleteBtn');
+        if (del) del.setAttribute('data-pk', (on && pk) ? pk : '');
+        setEditFilePreview(on, currentFile, fileUrl);
+
+        // A document being edited has exactly one file. The "Add More Attachment"
+        // (+) rows exist only for the bulk "Add Document" flow — if left visible
+        // during edit, a file picked into row 2+ is silently ignored by submit()
+        // (which only reads the first attachments[] input), so the update
+        // "succeeds" without the new file ever reaching the server. Collapse any
+        // leftover extra rows and hide "add row" while editing.
+        ['course_attachments_tbody', 'other_attachments_tbody'].forEach(function(tbodyId) {
+            var tbody = $id(tbodyId);
+            if (!tbody) return;
+            var rows = tbody.querySelectorAll('.attachment-row');
+            for (var i = 1; i < rows.length; i++) rows[i].remove();
+        });
+        Array.prototype.forEach.call(
+            document.querySelectorAll('.add-attachment-course, .add-attachment-other'),
+            function(b) { b.style.display = on ? 'none' : ''; }
+        );
     }
 
     // Reset the upload modal back to "create" mode.
@@ -1997,6 +1931,12 @@ window.crDocEdit = (function() {
             try {
                 form.reset();
             } catch (e) {}
+            // Same reason as the show.bs.modal handler: form.reset() empties the Course
+            // Name Choices list. Rebuild it before prefilling, so editing an Other /
+            // Institutional document (neither re-syncs it) still leaves a populated
+            // dropdown behind the Course radio. prefillCourse() re-applies it with the
+            // saved course selected.
+            applyCourseStatusChoices(getCheckedCourseStatus());
             form.dataset.currentFileTitle = data.file_title || '';
         }
         var pkEl = $id('upload_edit_pk');
@@ -2004,7 +1944,7 @@ window.crDocEdit = (function() {
 
         var category = data.category || 'Course';
         selectCategory(category);
-        setEditChrome(true, data.upload_document || '');
+        setEditChrome(true, data.upload_document || '', data.pk, data.file_url || '');
         setTitleRow(category, data.file_title);
 
         var d = data.detail || {};
@@ -2055,7 +1995,7 @@ window.crDocEdit = (function() {
             fd.append('video_link', (($id('video_link_course') || {}).value) || '');
             var t1 = document.querySelector('#uploadForm input[name="attachment_titles[]"]');
             fileTitle = t1 ? t1.value : '';
-            fileInput = document.querySelector('#uploadForm input[name="attachments[]"]');
+            fileInput = findFileInput('attachments[]');
         } else if (category === 'Other') {
             fd.append('course_name', (($id('course_name_other') || {}).value) || '');
             fd.append('subject_name', (($id('major_subject_other') || {}).value) || '');
@@ -2068,7 +2008,7 @@ window.crDocEdit = (function() {
             fd.append('video_link', (($id('video_link_other') || {}).value) || '');
             var t2 = document.querySelector('#uploadForm input[name="attachment_titles_other[]"]');
             fileTitle = t2 ? t2.value : '';
-            fileInput = document.querySelector('#uploadForm input[name="attachments_other[]"]');
+            fileInput = findFileInput('attachments_other[]');
         } else {
             fd.append('keywords', (($id('Key_words_institutional') || {}).value) || '');
             fd.append('sector_master', (($id('sector_master_institutional') || {}).value) || '');
@@ -2221,6 +2161,30 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             return;
         }
+        // "×" on the current-file preview: switch to "pick a new file" mode. This is a
+        // client-side affordance only — nothing is deleted server-side. The old file is
+        // kept unless the user actually chooses a new one before saving, which is why the
+        // hint tells them to pick a file below.
+        const clearPreviewBtn = e.target.closest('#uploadEditPreviewClear');
+        if (clearPreviewBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            var preview = document.getElementById('uploadEditPreview');
+            if (preview) preview.classList.add('d-none');
+            var hint = document.getElementById('uploadEditReplacingHint');
+            if (hint) hint.classList.remove('d-none');
+            // Focus + reveal the first VISIBLE file input (the active category's row).
+            var fileInputs = document.querySelectorAll('#uploadForm input[type="file"]');
+            for (var fi = 0; fi < fileInputs.length; fi++) {
+                if (fileInputs[fi].offsetParent !== null) { // visible
+                    try { fileInputs[fi].scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e2) {}
+                    fileInputs[fi].focus();
+                    break;
+                }
+            }
+            return;
+        }
+
         const editDocBtn = e.target.closest('.edit-doc');
         if (editDocBtn) {
             e.preventDefault();
@@ -3309,115 +3273,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Basic function to clear and populate dropdown
-    function populateDropdown(selectId, data, valueKey, textKey) {
-        try {
-            const selectElement = document.getElementById(selectId);
-            if (!selectElement) {
-                console.warn('Select element not found:', selectId);
-                return;
-            }
-
-            // Clear existing options
-            selectElement.innerHTML = '<option value="">-- Select --</option>';
-
-            if (data && data.length > 0) {
-                data.forEach(function(item) {
-                    const option = document.createElement('option');
-                    option.value = item[valueKey] || '';
-                    option.textContent = typeof textKey === 'function' ? textKey(item) : item[
-                        textKey] || '';
-                    selectElement.appendChild(option);
-                });
-            }
-        } catch (error) {
-            console.warn('Populate dropdown error:', error);
-        }
-    }
-    // Step 1: Course changes -> Load Groups
-    function onCourseChange(courseSelectId, groupSelectId) {
-
-        let coursePk = $('#' + courseSelectId).val();
-        let $group = $('#' + groupSelectId);
-
-        $group.empty().append('<option value="">-- Select --</option>');
-
-        if (!coursePk) return;
-
-        $.ajax({
-            url: "{{ route('course-repository.groups') }}",
-            type: "GET",
-            data: {
-                course_pk: coursePk
-            },
-
-            // 🔥 THESE 3 LINES FIX 302
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-
-            success: function(response) {
-                if (response.success) {
-                    $.each(response.data, function(i, group) {
-                        $group.append(
-                            `<option value="${group.pk}">
-                            ${group.subject_name}
-                        </option>`
-                        );
-                    });
-                }
-            },
-
-            error: function(xhr) {
-                if (xhr.status === 401) {
-                    Swal.fire('Session Expired', 'Please login again', 'warning');
-                } else {
-                    console.error(xhr.responseText);
-                }
-            }
-        });
-    }
-
-
-    // Step 2: Group changes -> Load Timetables
-    function onGroupChange(groupSelectId, timetableSelectId) {
-        var groupPk = $('#' + groupSelectId).val();
-        var course_master_pk = $('#course_name').val();
-
-        // Clear timetable dropdown
-        populateDropdown(timetableSelectId, [], 'pk', function(t) {
-            return '';
-        });
-
-        if (!groupPk) return;
-        console.log('Selected Group PK:', groupPk);
-
-        // AJAX call to get timetables
-        $.ajax({
-            url: '/course-repository/timetables',
-            type: 'GET',
-            data: {
-                group_pk: groupPk,
-                course_master_pk: course_master_pk
-            },
-            dataType: 'json',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            success: function(response) {
-                if (response.success) {
-                    populateDropdown(timetableSelectId, response.data, 'pk', function(t) {
-                        return t.subject_topic;
-                    });
-                }
-            },
-            error: function(xhr, status, error) {
-                console.log('Error loading timetables:', error);
-            }
-        });
-    }
-
     // Category radio button change handler
     document.querySelectorAll('.category-radio').forEach(radio => {
         radio.addEventListener('change', function() {
@@ -3571,90 +3426,32 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Bind cascading change events for Course -> Group -> Timetable
-    $('#course_name').on('change', function() {
-        onCourseChange('course_name', 'subject_name');
-        updateKeywords();
-    });
-
-    $('#subject_name').on('change', function() {
-        onGroupChange('subject_name', 'timetable_name');
-        updateKeywords();
-    });
+    // NOTE: Course -> Subject and Subject -> Topic cascading used to be bound a SECOND
+    // time here (onCourseChange/onGroupChange, via the groups/timetables endpoints),
+    // duplicating the courseSelect/subjectSelect addEventListener blocks above (which use
+    // the purpose-built subjects/{coursePk} and topics/{subjectPk} endpoints). Both
+    // handlers fired on every change and independently replaced the same <select>'s
+    // innerHTML, so whichever AJAX call resolved last "won" — and since replacing a
+    // <select>'s innerHTML drops whatever was selected, a value the first handler (or the
+    // edit-prefill flow) had just set could get silently reset to the placeholder by the
+    // second handler resolving late. Same root cause as the session-date bug noted below,
+    // one cascade level up. Removed rather than reconciled, since the addEventListener
+    // versions already implement the same behavior correctly.
 
     // Update keywords for Other category - COMMENTED OUT (using the main function defined above)
     // This prevents duplicate function definitions that override the correct version
 
-    // Handle timetable selection to populate session date and author
-    $('#timetable_name').on('change', function() {
-        const timetablePk = $(this).val();
-        const $sessionDate = $('#session_date');
-        const $authorName = $('#author_name');
-
-        // Clear the dropdowns
-        $sessionDate.html('<option value="">-- Select --</option>');
-        $authorName.html('<option value="">-- Select --</option>');
-
-        if (!timetablePk) return;
-
-        // Get the full timetable data to extract date and faculty
-        $.ajax({
-            url: "{{ route('course-repository.timetables') }}",
-            type: "GET",
-            data: {
-                group_pk: $('#subject_name').val(),
-                course_master_pk: $('#course_name').val()
-            },
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            success: function(response) {
-                if (response.success) {
-                    // Find the selected timetable in the response
-                    const selectedTimetable = response.data.find(t => t.pk == timetablePk);
-                    if (selectedTimetable) {
-                        // Format date as dd-mm-yyyy for display
-                        const dateFormatted = selectedTimetable.START_DATE ?
-                            new Date(selectedTimetable.START_DATE).toLocaleDateString(
-                                'en-GB', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric'
-                                }).replace(/\//g, '-') :
-                            '';
-
-                        // Populate session date using jQuery for better compatibility
-                        $sessionDate.empty().append(
-                            $('<option></option>').val(dateFormatted).text(
-                                dateFormatted)
-                        ).val(dateFormatted);
-
-                        // Populate author/faculty name if exists
-                        if (selectedTimetable.faculty_name && selectedTimetable.faculty_name
-                            .trim()) {
-                            $authorName.empty().append(
-                                $('<option></option>').val(selectedTimetable.pk).text(
-                                    selectedTimetable.faculty_name)
-                            ).val(selectedTimetable.pk);
-                        } else {
-                            // If no faculty name, show empty option
-                            $authorName.html('<option value="">-- Select --</option>');
-                        }
-
-                        // Auto-update keywords after loading date and author
-                        setTimeout(function() {
-                            updateKeywords();
-                        }, 100);
-                    }
-                }
-            },
-            error: function(xhr, status, error) {
-                console.log('Error loading timetable details:', error);
-            }
-        });
-    });
+    // NOTE: Session date + author auto-fill on topic change is handled by the
+    // topicSelect.addEventListener('change', ...) block above (fetches
+    // /course-repository/session-dates and /course-repository/authors-by-topic, and
+    // writes session_date in the Y-m-d format the native <input type="date"> requires).
+    // A second, duplicate jQuery handler used to be bound here too, fetching the same
+    // data via a different endpoint and writing the date as dd-mm-yyyy. Both handlers
+    // fired on every topic change; whichever AJAX call resolved last won. Since
+    // dd-mm-yyyy is invalid for <input type="date">, when the duplicate handler resolved
+    // last it silently cleared the field the other handler had just filled in correctly
+    // — the "session date appears then disappears" bug. Removed rather than reformatted,
+    // since the other handler already covers the same behavior correctly.
 
     // Bind keyword update to dropdown changes for Course category
     $('#course_name').on('change', updateKeywords);
@@ -3665,48 +3462,12 @@ document.addEventListener('DOMContentLoaded', function() {
     $('#sector_master').on('change', updateKeywords);
     $('#ministry_master').on('change', updateKeywords);
 
-    // Sector change handler -> Load Ministries
-    $('#sector_master').on('change', function() {
-        const sectorPk = $(this).val();
-        const $ministrySelect = $('#ministry_master');
-
-        if (!sectorPk) {
-            // Reset ministry dropdown
-            $ministrySelect.html('<option value="">-- Select --</option>').val('');
-            return;
-        }
-
-        // Fetch ministries for selected sector
-        $.ajax({
-            url: '{{ route("course-repository.ministries-by-sector") }}',
-            type: 'GET',
-            data: {
-                sector_pk: sectorPk
-            },
-            success: function(response) {
-                if (response.success) {
-                    $ministrySelect.html('<option value="">-- Select --</option>');
-
-                    response.data.forEach(function(ministry) {
-                        $ministrySelect.append(
-                            $('<option></option>')
-                            .val(ministry.pk)
-                            .text(ministry.ministry_name)
-                        );
-                    });
-
-                    // Clear ministry selection and update keywords
-                    $ministrySelect.val('');
-                    updateKeywords();
-                } else {
-                    console.log('Error:', response.message);
-                }
-            },
-            error: function(xhr, status, error) {
-                console.log('Error loading ministries:', error);
-            }
-        });
-    });
+    // NOTE: Sector -> Ministry (Course category) used to be bound a SECOND time here too,
+    // hitting the SAME ministries-by-sector endpoint as the sectorSelect
+    // addEventListener block above and then unconditionally calling
+    // $ministrySelect.val('') afterward — clearing the selection every time, including a
+    // value the edit-prefill flow had just set moments earlier. Same duplicate-handler
+    // bug as the Course/Subject cascades noted above; removed for the same reason.
 
     // Bind keyword update to fields for Other category (on keyup and change)
     $('#course_name_other').on('change', updateKeywordsOther);
@@ -3731,6 +3492,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     try {
                         f.reset();
                     } catch (e) {}
+                    // Choices listens for the form's reset event and restores the store it
+                    // captured before we filled it, so f.reset() leaves Course Name with
+                    // nothing but the placeholder — the list only came back once an
+                    // Active/Archived click rebuilt it. Rebuild it here instead, for the
+                    // status the radios were just reset to (Active).
+                    applyCourseStatusChoices(getCheckedCourseStatus());
                 }
             }
         });
@@ -4204,3 +3971,124 @@ document.addEventListener('click', function(e) {
 });
 </script>
 @include('admin.course-repository.partials.cr-design-scripts')
+
+{{-- Sub-Categories + Documents lists: client-side DataTables on the shared
+     programme-dt design system. The global enhancer (js/datatable-global-ui.js)
+     moves each table's search box and pagination into the matching
+     [data-dt-search-for] / [data-dt-footer-for] slots. --}}
+<script>
+$(function() {
+    var TABLES = [{
+            id: 'child_repositories',
+            grid: '#childColumnToggleGrid',
+            storageKey: 'courseRepositoryShow:hiddenColumns:child:v1'
+        },
+        {
+            id: 'documents',
+            grid: '#documentsColumnToggleGrid',
+            storageKey: 'courseRepositoryShow:hiddenColumns:documents:v1'
+        }
+    ];
+
+    function getHidden(key) {
+        try {
+            var arr = JSON.parse(localStorage.getItem(key) || '[]');
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function persistHidden(key, arr) {
+        try {
+            localStorage.setItem(key, JSON.stringify(arr));
+        } catch (e) {}
+    }
+
+    TABLES.forEach(function(cfg) {
+        var $table = $('#' + cfg.id);
+        if (!$table.length || $.fn.dataTable.isDataTable($table)) {
+            return;
+        }
+
+        var dt = $table.DataTable({
+            responsive: true,
+            autoWidth: false,
+            pageLength: 10,
+            lengthMenu: [
+                [10, 25, 50, 100, -1],
+                [10, 25, 50, 100, 'All']
+            ],
+            order: [],
+            columnDefs: [{
+                    targets: 0,
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    targets: -1,
+                    orderable: false,
+                    searchable: false
+                }
+            ]
+        });
+
+        // Server order is preserved, so S. No. must follow the visible page.
+        dt.on('draw.dt', function() {
+            var start = dt.page.info().start;
+            dt.column(0, {
+                page: 'current'
+            }).nodes().each(function(cell, i) {
+                cell.innerHTML = start + i + 1;
+            });
+        });
+
+        var hidden = getHidden(cfg.storageKey);
+        dt.columns().every(function() {
+            this.visible(hidden.indexOf(this.index()) === -1, false);
+        });
+        dt.columns.adjust();
+
+        var $grid = $(cfg.grid).empty();
+        if (!$grid.length) {
+            return;
+        }
+
+        dt.columns().every(function() {
+            var idx = this.index();
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (!title) {
+                return;
+            }
+
+            var inputId = 'colvis_' + cfg.id + '_' + idx;
+            var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .prop('checked', hidden.indexOf(idx) === -1);
+
+            $cb.on('change', function() {
+                var h = getHidden(cfg.storageKey);
+                var pos = h.indexOf(idx);
+                if (this.checked) {
+                    if (pos !== -1) h.splice(pos, 1);
+                } else if (pos === -1) {
+                    h.push(idx);
+                }
+                persistHidden(cfg.storageKey, h);
+                dt.column(idx).visible(this.checked, false);
+                dt.columns.adjust();
+            });
+
+            $('<div class="col-12 col-sm-6 col-md-4"></div>')
+                .append(
+                    $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                    .attr('for', inputId)
+                    .append($cb)
+                    .append($('<span></span>').text(title))
+                )
+                .appendTo($grid);
+        });
+    });
+});
+</script>
+@endsection
