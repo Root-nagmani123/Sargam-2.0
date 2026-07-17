@@ -811,6 +811,8 @@
     <script src="{{ asset('admin_assets/js/nav-state.js') }}"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Global success toast (styles every icon:'success' Swal alike; see public/js/sargam-success-toast.js) -->
+    <script src="{{ asset('js/sargam-success-toast.js') }}?v={{ @filemtime(public_path('js/sargam-success-toast.js')) ?: time() }}"></script>
     @if(request()->routeIs('admin.mess.*'))
         @include('admin.mess.partials.smooth-scroll')
         @include('admin.mess.partials.column-manager-auto-init')
