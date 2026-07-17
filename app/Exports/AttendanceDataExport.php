@@ -159,7 +159,7 @@ class AttendanceDataExport implements FromArray, WithColumnWidths, WithEvents, W
                 $attendanceStatus = 'Not Marked';
             } elseif ($hasMdoDuty) {
                 $attendanceStatus = 'Not Marked';
-                $mdoDuty = 'Yes';
+                $mdoDuty = 'MDO Duty';
             } elseif ($hasEscortDuty) {
                 $attendanceStatus = 'Not Marked';
                 $escortDuty = 'Yes';
@@ -185,7 +185,7 @@ class AttendanceDataExport implements FromArray, WithColumnWidths, WithEvents, W
                             break;
                         case 4:
                             $attendanceStatus = 'Not Marked'; // MDO Duty
-                            $mdoDuty = 'Yes';
+                            $mdoDuty = 'MDO Duty';
                             break;
                         case 5:
                             $attendanceStatus = 'Not Marked'; // Escort Duty
@@ -486,9 +486,12 @@ class AttendanceDataExport implements FromArray, WithColumnWidths, WithEvents, W
                                 ->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('EEF2F8');
                         }
 
-                        // Highlight "Yes" in the duty columns (E = MDO, F = Escort).
+                        // Highlight the duty columns (E = MDO, F = Escort) whenever a duty
+                        // is set. Matches on "not No" rather than a specific label, so the
+                        // fill survives the cell text changing.
                         foreach (['E', 'F'] as $letter) {
-                            if (strtoupper(trim((string) $sheet->getCell($letter . $r)->getValue())) === 'YES') {
+                            $dutyValue = strtoupper(trim((string) $sheet->getCell($letter . $r)->getValue()));
+                            if ($dutyValue !== '' && $dutyValue !== 'NO') {
                                 $sheet->getStyle($letter . $r)->getFill()
                                     ->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('90EE90');
                             }

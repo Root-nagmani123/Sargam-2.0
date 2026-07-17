@@ -154,7 +154,8 @@ class StudentAttendanceListDataTable extends DataTable
     {
         $pk = $row->studentsMaster->pk;
         if ($this->hasMdoDuty($pk)) {
-            return '<span class="text-info fw-semibold">Yes</span>';
+            // Mirrors the escort column, which names the duty rather than saying "Yes".
+            return '<span class="text-info fw-semibold">MDO Duty</span>';
         }
 
         // An MDO record exists for the session date but doesn't overlap its time → "No".
