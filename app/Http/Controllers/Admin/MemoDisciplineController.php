@@ -8,7 +8,12 @@ use App\Models\MemoNoticeTemplate;
 use App\Models\CourseMaster;
 use App\Models\MemoDiscipline;
 use App\Models\DisciplineMaster;
+use App\Models\StudentMaster;
 use App\Services\NotificationService;
+use App\Services\NotificationReceiverService;
+use App\Exports\DisciplineMemoExport;
+use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -49,6 +54,7 @@ class MemoDisciplineController extends Controller
     $statusFilter        = $request->status;
     $searchFilter        = $request->search;
     $disciplineFilter    = $request->discipline_master_pk;
+    $categoryFilter      = $request->minor_major;
 
     // First load (no date params in URL) = show today's data; Clear Filters (empty date params) = show all data
     if (!$request->has('from_date') && !$request->has('to_date')) {
@@ -66,11 +72,15 @@ class MemoDisciplineController extends Controller
         ->get();
 
     // Page size (design-system footer "Showing [N] of M items" dropdown).
-    $allowedPerPage = [10, 25, 50, 100, 200];
-    $perPage = (int) $request->get('per_page', 10);
-    if (!in_array($perPage, $allowedPerPage, true)) {
-        $perPage = 10;
+    // "all" is kept in the URL/dropdown as-is, but the actual paginate() call needs
+    // a real integer — a large cap works fine since paginate() runs its own COUNT
+    // query regardless, so it never returns more rows than actually match.
+    $allowedPerPage = ['10', '25', '50', '100', '200', 'all'];
+    $perPageParam = (string) $request->get('per_page', '10');
+    if (!in_array($perPageParam, $allowedPerPage, true)) {
+        $perPageParam = '10';
     }
+    $perPage = $perPageParam === 'all' ? 100000 : (int) $perPageParam;
 
     $memos = MemoDiscipline::with([
             'course:pk,course_name',
@@ -94,6 +104,9 @@ class MemoDisciplineController extends Controller
         })
         ->when($disciplineFilter, function ($q) use ($disciplineFilter) {
             $q->whereHas('discipline', fn($d) => $d->where('discipline_name', $disciplineFilter));
+        })
+        ->when($categoryFilter !== null && $categoryFilter !== '', function ($q) use ($categoryFilter) {
+            $q->where('minor_major', $categoryFilter);
         })
         ->when($searchFilter, function ($q) use ($searchFilter) {
             $q->where(function ($sub) use ($searchFilter) {
@@ -131,10 +144,11 @@ class MemoDisciplineController extends Controller
             'program_name'         => $programNameFilter ?? '',
             'discipline_master_pk' => $disciplineFilter ?? '',
             'status'               => $statusFilter ?? '',
+            'minor_major'          => $categoryFilter ?? '',
             'search'               => $searchFilter ?? '',
             'from_date'            => $fromDateFilter ?? '',
             'to_date'              => $toDateFilter ?? '',
-            'per_page'             => $perPage,
+            'per_page'             => $perPageParam,
         ]);
 
     // Optional Session/Venue selects shown in the Generate Discipline Memo modal.
@@ -148,6 +162,7 @@ class MemoDisciplineController extends Controller
         'programNameFilter',
         'statusFilter',
         'disciplineFilter',
+        'categoryFilter',
         'searchFilter',
         'fromDateFilter',
         'toDateFilter',
@@ -176,6 +191,7 @@ public function otIndex(Request $request)
     $statusFilter      = $request->status;
     $searchFilter      = $request->search;
     $disciplineFilter  = $request->discipline_master_pk;
+    $categoryFilter    = $request->minor_major;
 
     // OT page defaults to their full history (no implicit "today" restriction).
     $fromDateFilter = $request->get('from_date') ?: null;
@@ -208,6 +224,9 @@ public function otIndex(Request $request)
         ->when($disciplineFilter, function ($q) use ($disciplineFilter) {
             $q->whereHas('discipline', fn($d) => $d->where('discipline_name', $disciplineFilter));
         })
+        ->when($categoryFilter !== null && $categoryFilter !== '', function ($q) use ($categoryFilter) {
+            $q->where('minor_major', $categoryFilter);
+        })
         ->when($searchFilter, function ($q) use ($searchFilter) {
             $q->where(function ($sub) use ($searchFilter) {
                 $sub->whereHas('course', function ($c) use ($searchFilter) {
@@ -237,6 +256,7 @@ public function otIndex(Request $request)
             'program_name'         => $programNameFilter ?? '',
             'discipline_master_pk' => $disciplineFilter ?? '',
             'status'               => $statusFilter ?? '',
+            'minor_major'          => $categoryFilter ?? '',
             'search'               => $searchFilter ?? '',
             'from_date'            => $fromDateFilter ?? '',
             'to_date'              => $toDateFilter ?? '',
@@ -249,6 +269,7 @@ public function otIndex(Request $request)
         'disciplines',
         'programNameFilter',
         'statusFilter',
+        'categoryFilter',
         'disciplineFilter',
         'searchFilter',
         'fromDateFilter',
@@ -258,6 +279,7 @@ public function otIndex(Request $request)
 
 /**
  * Hard-delete a discipline memo along with its conversation messages and uploaded files.
+ * OT is notified when a Recorded (1) or Memo Sent (2) memo is deleted.
  */
 public function destroy($id)
 {
@@ -266,10 +288,23 @@ public function destroy($id)
         return response()->json(['success' => false, 'message' => 'You are not authorized to delete this record.'], 403);
     }
 
-    $memo = MemoDiscipline::find($id);
+    $memo = MemoDiscipline::with([
+        'course:pk,course_name',
+        'discipline:pk,discipline_name',
+    ])->find($id);
+
     if (! $memo) {
         return response()->json(['success' => false, 'message' => 'Discipline memo not found.'], 404);
     }
+
+    $notifyOt = in_array((int) $memo->status, [1, 2], true);
+    $memoPk = (int) $memo->pk;
+    $studentPk = (int) $memo->student_master_pk;
+    $courseName = $memo->course->course_name ?? 'your course';
+    $disciplineName = $memo->discipline->discipline_name ?? 'discipline';
+    $memoDate = $memo->date
+        ? Carbon::parse($memo->date)->format('d M Y')
+        : now()->format('d M Y');
 
     try {
         DB::transaction(function () use ($id) {
@@ -287,6 +322,24 @@ public function destroy($id)
             DB::table('discipline_memo_status')->where('pk', $id)->delete();
         });
 
+        if ($notifyOt) {
+            try {
+                $receiverUserId = app(NotificationReceiverService::class)->getStudentUserId($studentPk);
+                if ($receiverUserId) {
+                    app(NotificationService::class)->create(
+                        (int) $receiverUserId,
+                        'memo',
+                        'MemoDiscipline',
+                        $memoPk,
+                        'Discipline Memo Deleted',
+                        "A discipline memo for \"{$disciplineName}\" for {$courseName} dated {$memoDate} has been deleted."
+                    );
+                }
+            } catch (\Exception $e) {
+                \Log::error('Failed to send discipline memo delete notification: ' . $e->getMessage());
+            }
+        }
+
         return response()->json(['success' => true, 'message' => 'Discipline memo deleted successfully.']);
     } catch (\Exception $e) {
         return response()->json(['success' => false, 'message' => 'Failed to delete the discipline memo. Please try again.'], 500);
@@ -294,11 +347,251 @@ public function destroy($id)
 }
 
 /**
- * Download the Send Discipline Memo listing as a CSV.
- * Same filters/dataset as index() (minus pagination), in the mess-style layout:
- * a title block (report name + applied filters), then the column-header row, then data rows.
+ * Which columns an export should emit.
+ *
+ * The index page's Column Visibility modal puts ?cols=<slug,...> on the Download
+ * links, naming the columns STILL VISIBLE in the table — so a column hidden on
+ * screen is left out of the Excel/PDF too.
+ *
+ * Absent or empty => every column. That one rule covers three cases: a plain
+ * Download with nothing hidden, an older/bookmarked link that predates ?cols=,
+ * and the degenerate "user unticked everything" case (a column-less sheet would
+ * be useless, so fall back to the full set rather than emit nothing).
+ *
+ * @return array{cols: string[], showSerial: bool}
+ */
+private function resolveDisciplineExportCols(Request $request): array
+{
+    $known = array_keys(DisciplineMemoExport::columnDefs());
+    $raw = trim((string) $request->get('cols', ''));
+
+    if ($raw === '') {
+        return ['cols' => $known, 'showSerial' => true];
+    }
+
+    $wanted = array_filter(array_map('trim', explode(',', $raw)));
+
+    // Intersect against $known rather than trusting $wanted: this keeps the
+    // canonical column ORDER and silently drops anything unrecognised, so a
+    // hand-edited ?cols= can't reorder the report or inject a column.
+    $cols = array_values(array_intersect($known, $wanted));
+
+    if (empty($cols)) {
+        return ['cols' => $known, 'showSerial' => true];
+    }
+
+    // 'sno' isn't a data column — it drives the Excel '#'/PDF serial only.
+    return ['cols' => $cols, 'showSerial' => in_array('sno', $wanted, true)];
+}
+
+/**
+ * Download the Send Discipline Memo listing as a styled Excel report.
+ * Same filters/sort/dataset as index() (minus pagination), and the same columns
+ * currently visible in the table.
  */
 public function exportCsv(Request $request)
+{
+    ['memos' => $memos, 'filters' => $filters] = $this->buildDisciplineExportData($request);
+    ['cols' => $cols, 'showSerial' => $showSerial] = $this->resolveDisciplineExportCols($request);
+
+    $fileName = 'send-discipline-memo-' . now()->format('Y-m-d_His') . '.xlsx';
+
+    return Excel::download(
+        new DisciplineMemoExport($memos, $filters, now()->format('d-m-Y H:i:s'), $cols, $showSerial),
+        $fileName
+    );
+}
+
+/**
+ * Download the same listing as a PDF, using the same LBSNAA-branded layout as the Excel export.
+ */
+public function exportPdf(Request $request)
+{
+    ['memos' => $memos, 'filters' => $filters] = $this->buildDisciplineExportData($request);
+    ['cols' => $cols, 'showSerial' => $showSerial] = $this->resolveDisciplineExportCols($request);
+
+    @ini_set('memory_limit', '256M');
+    @set_time_limit(120);
+
+    $logoPath = public_path('images/lbsnaa_logo.jpg');
+    $logo = (is_file($logoPath) && is_readable($logoPath))
+        ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoPath))
+        : null;
+
+    // Columns/headings/values all come from the Excel export's columnDefs(), so the
+    // PDF and the sheet stay identical in column set, order and wording. The blade
+    // renders whatever it's handed and keys each cell by column key.
+    $defs = DisciplineMemoExport::columnDefs();
+    $columns = array_map(fn ($key) => [
+        'key'     => $key,
+        'heading' => $defs[$key]['heading'],
+        'class'   => $defs[$key]['pdfClass'],
+    ], $cols);
+
+    $rows = $memos->map(function ($memo) use ($cols, $defs) {
+        $row = [];
+        foreach ($cols as $key) {
+            $row[$key] = ($defs[$key]['value'])($memo);
+        }
+
+        return $row;
+    });
+
+    $filterLine = 'Program: ' . $filters['program']
+        . '  |  Discipline: ' . $filters['discipline']
+        . '  |  Status: ' . $filters['status']
+        . '  |  Category: ' . $filters['category']
+        . '  |  Period: ' . $filters['period'];
+
+    $pdf = Pdf::loadView('admin.memo_discipline.export_pdf', [
+        'columns'     => $columns,
+        'showSerial'  => $showSerial,
+        'rows'        => $rows,
+        'filterLine'  => $filterLine,
+        'printedOn'   => now()->format('d-m-Y H:i'),
+        'reportTitle' => 'Discipline Memo Report',
+        'logo'        => $logo,
+    ])
+        ->setPaper('a4', 'landscape')
+        ->setOptions([
+            'defaultFont' => 'DejaVu Sans',
+            'isHtml5ParserEnabled' => true,
+            'isRemoteEnabled' => true,
+            'isPhpEnabled' => true,
+            'dpi' => 96,
+        ]);
+
+    return $pdf->download('send-discipline-memo-' . now()->format('Y-m-d_His') . '.pdf');
+}
+
+/**
+ * Bulk-download one PDF per selected memo — same content as memo_show() (template +
+ * conversation thread) — bundled into a single ZIP so each student stays a separate file.
+ */
+public function exportPdfZip(Request $request)
+{
+    $ids = array_values(array_filter((array) $request->input('ids', []), fn ($id) => is_numeric($id)));
+    if (empty($ids)) {
+        return back()->with('error', 'No records selected.');
+    }
+
+    @ini_set('memory_limit', '512M');
+    @set_time_limit(300);
+
+    $logoPath = public_path('images/lbsnaa_logo.jpg');
+    $logo = (is_file($logoPath) && is_readable($logoPath))
+        ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoPath))
+        : null;
+
+    $memos = MemoDiscipline::with([
+        'course:pk,course_name',
+        'discipline:pk,discipline_name',
+        'student:pk,display_name,generated_OT_code',
+        'messages',
+        'template',
+        'chosenTemplate',
+    ])->whereIn('pk', $ids)->get();
+
+    if ($memos->isEmpty()) {
+        return back()->with('error', 'No matching records found.');
+    }
+
+    $tmpPath = tempnam(sys_get_temp_dir(), 'disc_memo_pdf_zip_');
+    $zip = new \ZipArchive();
+    if ($zip->open($tmpPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+        return back()->with('error', 'Could not create ZIP archive.');
+    }
+
+    $usedNames = [];
+    $added = 0;
+
+    foreach ($memos as $memo) {
+        $template = null;
+        if ($memo->template_snapshot) {
+            $snapshot = json_decode($memo->template_snapshot, true);
+            if (is_array($snapshot)) {
+                $template = (object) $snapshot;
+            }
+        }
+        if (!$template) {
+            $template = $memo->chosenTemplate ?: $memo->template;
+        }
+
+        $conclusionTypeName = null;
+        if ($memo->conclusion_type_pk) {
+            $conclusionTypeName = DB::table('memo_conclusion_master')
+                ->where('pk', $memo->conclusion_type_pk)->value('discussion_name');
+        }
+
+        foreach ($memo->messages as $message) {
+            $identity = resolve_chat_sender_identity($message->created_by, $message->role_type);
+            $message->display_name = $identity['display_name'];
+            $message->role_name = $identity['role_name'];
+        }
+
+        $signature = null;
+        if ($template && !empty($template->signature_image)) {
+            $sigPath = public_path('storage/' . $template->signature_image);
+            if (is_file($sigPath) && is_readable($sigPath)) {
+                $ext = strtolower(pathinfo($sigPath, PATHINFO_EXTENSION));
+                $mime = $ext === 'png' ? 'image/png' : 'image/jpeg';
+                $signature = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($sigPath));
+            }
+        }
+
+        $html = view('admin.memo_discipline.memo_show_pdf', [
+            'memo'                 => $memo,
+            'template'             => $template,
+            'conclusion_type_name' => $conclusionTypeName,
+            'logo'                 => $logo,
+            'signature'            => $signature,
+        ])->render();
+
+        $bytes = Pdf::loadHTML($html)
+            ->setPaper('a4', 'portrait')
+            ->setOptions([
+                'defaultFont' => 'DejaVu Sans',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'dpi' => 96,
+            ])
+            ->output();
+
+        // Name + date of infraction, so a batch of downloaded PDFs is identifiable at a
+        // glance in the file explorer without opening each one.
+        $namePart = trim((string) preg_replace('/[^A-Za-z0-9_\-]+/', '_', $memo->student->display_name ?? ''), '_');
+        $datePart = $memo->date ? Carbon::parse($memo->date)->format('d-M-Y') : '';
+        $baseName = trim($namePart . ($datePart ? '_' . $datePart : ''), '_');
+        $baseName = $baseName !== '' ? $baseName : ('memo_' . $memo->pk);
+        $name = $baseName;
+        $suffix = 1;
+        while (isset($usedNames[$name])) {
+            $name = $baseName . '_' . (++$suffix);
+        }
+        $usedNames[$name] = true;
+
+        $zip->addFromString($name . '.pdf', $bytes);
+        $added++;
+    }
+
+    $zip->close();
+
+    if ($added === 0) {
+        @unlink($tmpPath);
+        return back()->with('error', 'Could not generate any PDFs.');
+    }
+
+    $filename = 'discipline-memos-' . now()->format('Y-m-d_His') . '.zip';
+
+    return response()->download($tmpPath, $filename, ['Content-Type' => 'application/zip'])
+        ->deleteFileAfterSend(true);
+}
+
+/**
+ * Shared filtered/sorted dataset for the discipline memo exports (Excel + PDF) —
+ * same filters and sort as index(), just unpaginated.
+ */
+private function buildDisciplineExportData(Request $request): array
 {
     $data_course_id = get_Role_by_course();
 
@@ -307,6 +600,7 @@ public function exportCsv(Request $request)
     $statusFilter      = $request->status;
     $searchFilter      = $request->search;
     $disciplineFilter  = $request->discipline_master_pk;
+    $categoryFilter    = $request->minor_major;
 
     if (!$request->has('from_date') && !$request->has('to_date')) {
         $fromDateFilter = Carbon::today()->toDateString();
@@ -322,6 +616,34 @@ public function exportCsv(Request $request)
             ->where('student_master_pk', Auth::user()->user_id)
             ->pluck('course_master_pk');
     }
+
+    // Export order must match whatever order the list page is showing on screen
+    // (the "Download" link carries sort_col/sort_dir from the DataTable's current
+    // sort — see index.blade.php). Related-table columns sort via a scalar
+    // subquery so the base query stays a plain, non-joined MemoDiscipline query.
+    $sortCol = $request->get('sort_col');
+    $sortDir = strtolower((string) $request->get('sort_dir')) === 'desc' ? 'desc' : 'asc';
+    $sortableColumns = [
+        'name' => fn () => StudentMaster::select('display_name')
+            ->whereColumn('pk', 'discipline_memo_status.student_master_pk')->limit(1),
+        'program' => fn () => CourseMaster::select('course_name')
+            ->whereColumn('pk', 'discipline_memo_status.course_master_pk')->limit(1),
+        'ot_code' => fn () => StudentMaster::select('generated_OT_code')
+            ->whereColumn('pk', 'discipline_memo_status.student_master_pk')->limit(1),
+        'cadre' => fn () => DB::table('student_master as sm')
+            ->join('cadre_master as cm', 'cm.pk', '=', 'sm.cadre_master_pk')
+            ->whereColumn('sm.pk', 'discipline_memo_status.student_master_pk')
+            ->select('cm.cadre_name')->limit(1),
+        'infraction' => fn () => DisciplineMaster::select('discipline_name')
+            ->whereColumn('pk', 'discipline_memo_status.discipline_master_pk')->limit(1),
+        'date'              => 'date',
+        'submitted'         => 'mark_deduction_submit',
+        'final'             => 'final_mark_deduction',
+        'remarks'           => 'remarks',
+        'conclusion_remark' => 'conclusion_remark',
+        'created_date'      => 'created_date',
+        'status'            => 'status',
+    ];
 
     $memos = MemoDiscipline::with([
             'course:pk,course_name',
@@ -344,6 +666,9 @@ public function exportCsv(Request $request)
         })
         ->when($disciplineFilter, function ($q) use ($disciplineFilter) {
             $q->whereHas('discipline', fn($d) => $d->where('discipline_name', $disciplineFilter));
+        })
+        ->when($categoryFilter !== null && $categoryFilter !== '', function ($q) use ($categoryFilter) {
+            $q->where('minor_major', $categoryFilter);
         })
         ->when($searchFilter, function ($q) use ($searchFilter) {
             $q->where(function ($sub) use ($searchFilter) {
@@ -372,63 +697,30 @@ public function exportCsv(Request $request)
         ->whereHas('discipline', function ($q) {
             $q->where('active_inactive', 1);
         })
-        ->orderBy('pk', 'desc')
+        ->when($sortCol && array_key_exists($sortCol, $sortableColumns), function ($q) use ($sortableColumns, $sortCol, $sortDir) {
+            $column = $sortableColumns[$sortCol];
+            $q->orderBy(is_callable($column) ? $column() : $column, $sortDir);
+        }, function ($q) {
+            $q->orderBy('pk', 'desc');
+        })
         ->get();
 
     $courseName = $programNameFilter ? (optional(CourseMaster::find($programNameFilter))->course_name ?? 'All') : 'All';
     $dateRange = ($fromDateFilter || $toDateFilter)
         ? (($fromDateFilter ? Carbon::parse($fromDateFilter)->format('d-m-Y') : '—') . ' to ' . ($toDateFilter ? Carbon::parse($toDateFilter)->format('d-m-Y') : '—'))
         : 'All Dates';
+    $statusLabels = ['1' => 'Recorded', '2' => 'Memo Sent', '3' => 'Closed'];
+    $categoryLabels = ['1' => 'Minor', '2' => 'Major'];
 
-    $headers = ['Name', 'OT/Participant Code', 'Cadre', 'Infraction', 'Date of Infraction', 'Submitted Marks', 'Final Marks', 'Remarks'];
-
-    $rows = [];
-    foreach ($memos as $memo) {
-        $rows[] = [
-            $memo->student->display_name ?? 'N/A',
-            $memo->student->generated_OT_code ?? 'N/A',
-            $memo->student->cadre->cadre_name ?? 'N/A',
-            $memo->discipline->discipline_name ?? 'N/A',
-            $memo->date ? Carbon::parse($memo->date)->format('d M Y') : 'N/A',
-            $memo->mark_deduction_submit ?? '',
-            $memo->final_mark_deduction ?? '',
-            $memo->remarks ?? '',
-        ];
-    }
-
-    $titleBlock = [
-        ['Discipline Memo'],
-        ['Date Range', $dateRange, 'Program', $courseName],
-        ['Generated On', now()->format('d-m-Y H:i:s')],
-        [],
+    $filters = [
+        'program'    => $courseName,
+        'discipline' => $disciplineFilter ?: 'All',
+        'status'     => $statusLabels[$statusFilter] ?? 'All',
+        'category'   => $categoryLabels[$categoryFilter] ?? 'All',
+        'period'     => $dateRange,
     ];
 
-    $fileName = 'send-discipline-memo-' . now()->format('Y-m-d_His') . '.csv';
-
-    return $this->streamCsv($fileName, $titleBlock, $headers, $rows);
-}
-
-/**
- * Stream a CSV download in the mess-style layout: title/meta rows, a header row, then data rows.
- * A UTF-8 BOM is prepended so Excel renders names/diacritics correctly.
- */
-private function streamCsv(string $fileName, array $titleBlock, array $headers, array $rows)
-{
-    return response()->streamDownload(function () use ($titleBlock, $headers, $rows) {
-        $out = fopen('php://output', 'w');
-        fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM for Excel
-
-        foreach ($titleBlock as $line) {
-            fputcsv($out, $line);
-        }
-        fputcsv($out, $headers);
-        foreach ($rows as $row) {
-            fputcsv($out, $row);
-        }
-        fclose($out);
-    }, $fileName, [
-        'Content-Type' => 'text/csv; charset=UTF-8',
-    ]);
+    return ['memos' => $memos, 'filters' => $filters];
 }
 
     public function create()
@@ -484,13 +776,25 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
 
               $discipline_master_data  = DB::table('discipline_master')->where('course_master_pk', $courseId)->where('active_inactive', 1)->get();
 
+        // Prior major/minor tally per student for this course, so the picker can
+        // surface each defaulter's discipline history while selecting them.
+        $majorMinorCounts = DB::table('discipline_memo_status')
+            ->where('course_master_pk', $courseId)
+            ->whereIn('student_master_pk', $attendance->pluck('student_pk'))
+            ->selectRaw('student_master_pk, SUM(CASE WHEN minor_major = 2 THEN 1 ELSE 0 END) as major_count, SUM(CASE WHEN minor_major = 1 THEN 1 ELSE 0 END) as minor_count')
+            ->groupBy('student_master_pk')
+            ->get()
+            ->keyBy('student_master_pk');
 
         // Format the attendance data
-        $students = $attendance->map(function ($student) {
+        $students = $attendance->map(function ($student) use ($majorMinorCounts) {
+            $counts = $majorMinorCounts->get($student->student_pk);
             return [
                 'pk' => (int) $student->student_pk,
                 'display_name' => $student->display_name,
                 'generated_OT_code' => $student->generated_OT_code,
+                'major_count' => $counts ? (int) $counts->major_count : 0,
+                'minor_count' => $counts ? (int) $counts->minor_count : 0,
             ];
         })->values();
 
@@ -583,9 +887,17 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
                 ?: resolve_default_discipline_memo_template_pk($request->course_master_pk, $request->discipline_master_pk);
             $templateSnapshot = build_memo_notice_template_snapshot($templatePk);
 
+            $courseName = optional(CourseMaster::find($request->course_master_pk))->course_name ?? 'your course';
+            $disciplineName = optional(DisciplineMaster::find($request->discipline_master_pk))->discipline_name ?? 'discipline';
+            $memoDate = $request->date_of_memo
+                ? Carbon::parse($request->date_of_memo)->format('d M Y')
+                : now()->format('d M Y');
+            $receiverService = app(NotificationReceiverService::class);
+            $notificationService = app(NotificationService::class);
+
             foreach($request->selected_student_list as $student_pk){
                 // Insert memo record for each student
-                DB::table('discipline_memo_status')->insert([
+                $memoPk = DB::table('discipline_memo_status')->insertGetId([
                     'course_master_pk' => $request->course_master_pk,
                     'discipline_master_pk' => $request->discipline_master_pk,
                     'memo_notice_template_pk' => $templatePk,
@@ -593,8 +905,25 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
                     'student_master_pk' => $student_pk,
                     'date' => $request->date_of_memo,
                     'mark_deduction_submit' => $request->discipline_marks,
+                    'minor_major' => 1, // defaults to Minor until an incharge marks it Major during edit
                     'remarks' => $request->Remark,
-                ]);
+                ], 'pk');
+
+                try {
+                    $receiverUserId = $receiverService->getStudentUserId((int) $student_pk);
+                    if ($receiverUserId) {
+                        $notificationService->create(
+                            (int) $receiverUserId,
+                            'memo',
+                            'MemoDiscipline',
+                            (int) $memoPk,
+                            'Discipline Memo Recorded',
+                            "A discipline memo for \"{$disciplineName}\" has been recorded for {$courseName} on {$memoDate}. Please review and respond."
+                        );
+                    }
+                } catch (\Exception $e) {
+                    \Log::error('Failed to send discipline memo notification: ' . $e->getMessage());
+                }
             }
             return redirect()->route('memo.discipline.index')->with('success', 'Discipline memo(s) generated successfully.');
          }else{
@@ -606,47 +935,57 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
             'discipline_pk' => 'required|exists:discipline_memo_status,pk',
         ]);
 
-        if ($validated) {
-            $memo = MemoDiscipline::find($request->discipline_pk);
-            if ($memo && $memo->status != 2) {
-                $memo->status = 2;
-                $memo->modified_date = now();
-                $memo->save();
-
-                // Notify the OT student
-                $credential = DB::table('user_credentials')
-                    ->where('user_id', $memo->student_master_pk)
-                    ->where('user_category', 'S')
-                    ->first();
-
-                if ($credential) {
-                    app(NotificationService::class)->create(
-                        $credential->pk,
-                        'memo',
-                        'MemoDiscipline',
-                        $memo->pk,
-                        'Discipline Memo Generated',
-                        'A discipline memo has been issued to you. Please review and respond.'
-                    );
-                }
-
-                return response()->json([
-                    'status' => true,
-                    'message' => 'Memo sent successfully.'
-                ]);
-
-            } else {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Memo not found or already sent.'
-                ]);
-            }
-        } else {
+        if (!$validated) {
             return response()->json([
                 'status' => false,
                 'message' => 'Validation failed.'
             ]);
         }
+
+        $memo = MemoDiscipline::with([
+            'course:pk,course_name',
+            'discipline:pk,discipline_name',
+        ])->find($request->discipline_pk);
+
+        if (!$memo || $memo->status == 2) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Memo not found or already sent.'
+            ]);
+        }
+
+        $memo->status = 2;
+        $memo->modified_date = now();
+        $memo->save();
+
+        try {
+            $receiverService = app(NotificationReceiverService::class);
+            $receiverUserId = $receiverService->getStudentUserId((int) $memo->student_master_pk);
+
+            if ($receiverUserId) {
+                $courseName = $memo->course->course_name ?? 'your course';
+                $disciplineName = $memo->discipline->discipline_name ?? 'discipline';
+                $memoDate = $memo->date
+                    ? Carbon::parse($memo->date)->format('d M Y')
+                    : now()->format('d M Y');
+
+                app(NotificationService::class)->create(
+                    (int) $receiverUserId,
+                    'memo',
+                    'MemoDiscipline',
+                    (int) $memo->pk,
+                    'Discipline Memo Issued',
+                    "A discipline memo for \"{$disciplineName}\" has been issued for {$courseName} on {$memoDate}. Please review and respond."
+                );
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to send discipline memo notification: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Memo sent successfully.'
+        ]);
     }
     function getConversationModel(Request $request, $memoId,$type){
         // $memo = MemoDiscipline::with([
@@ -734,42 +1073,49 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
         $memo = MemoDiscipline::find($request->memo_discipline_id);
         if ($memo) {
             if ($request->role_type === 's') {
-                // OT sent a message → notify admins (sender_user_id = current OT credential pk)
-                // Find admin users who manage this course — notify a general admin channel via reference
-                // For now: notify the sender's counterpart (incharge) — stored as Admin role users
-                // We create a notification for the Admin group using receiver_user_id = 0 as broadcast placeholder
-                // Better approach: notify all active admin users watching this memo
-                $adminCredentials = DB::table('user_credentials')
-                    ->where('user_category', '!=', 'S')
-                    ->whereIn('user_category', ['F', 'A'])
-                    ->limit(20)
-                    ->pluck('pk')
-                    ->toArray();
-                if (!empty($adminCredentials)) {
-                    app(NotificationService::class)->createMultiple(
-                        $adminCredentials,
-                        'memo',
-                        'MemoDiscipline',
-                        $memo->pk,
-                        'OT Replied to Discipline Memo',
-                        'A student has replied to a discipline memo.'
-                    );
+                // OT sent a message → notify Super Admin / Training Induction / prior thread admins.
+                // (Old query used user_category F/A which does not exist in this DB — notifications never fired.)
+                try {
+                    $adminUserIds = app(NotificationReceiverService::class)
+                        ->getDisciplineMemoAdminReceivers((int) $memo->pk, (int) $memo->course_master_pk);
+                    $preview = mb_substr((string) $request->student_decip_incharge_msg, 0, 100);
+                    $message = $preview !== ''
+                        ? "OT replied to a discipline memo: \"{$preview}\""
+                        : 'A student has replied to a discipline memo.';
+
+                    if (!empty($adminUserIds)) {
+                        app(NotificationService::class)->createMultiple(
+                            $adminUserIds,
+                            'memo',
+                            'MemoDiscipline',
+                            (int) $memo->pk,
+                            'OT Replied to Discipline Memo',
+                            $message
+                        );
+                    }
+                } catch (\Exception $e) {
+                    \Log::error('Failed to send discipline memo OT chat notification: ' . $e->getMessage());
                 }
             } else {
-                // Admin/Faculty sent a message → notify the OT student
-                $credential = DB::table('user_credentials')
-                    ->where('user_id', $memo->student_master_pk)
-                    ->where('user_category', 'S')
-                    ->first();
-                if ($credential) {
-                    app(NotificationService::class)->create(
-                        $credential->pk,
-                        'memo',
-                        'MemoDiscipline',
-                        $memo->pk,
-                        'New Message on Your Discipline Memo',
-                        'The incharge has replied to your discipline memo.'
-                    );
+                // Admin/Faculty sent a message → notify the OT student (skip if closing — close notification sent below)
+                if ((int) $request->status !== 2) {
+                    $receiverUserId = app(NotificationReceiverService::class)
+                        ->getStudentUserId((int) $memo->student_master_pk);
+                    if ($receiverUserId) {
+                        $senderIdentity = resolve_chat_sender_identity(Auth::user()->user_id, $request->role_type);
+                        $senderName = $senderIdentity['display_name'] ?? 'The incharge';
+                        $senderRole = $senderIdentity['role_name'] ?? null;
+                        $senderLabel = $senderRole ? "{$senderName} ({$senderRole})" : $senderName;
+
+                        app(NotificationService::class)->create(
+                            (int) $receiverUserId,
+                            'memo',
+                            'MemoDiscipline',
+                            (int) $memo->pk,
+                            'New Message on Your Discipline Memo',
+                            "{$senderLabel} has replied to your discipline memo."
+                        );
+                    }
                 }
             }
         }
@@ -783,6 +1129,49 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
                 'conclusion_type_pk' => $request->conclusion_type,
                 'modified_date' => now(),
             ]);
+
+            try {
+                $closedMemo = MemoDiscipline::with([
+                    'course:pk,course_name',
+                    'discipline:pk,discipline_name',
+                ])->find($request->memo_discipline_id);
+
+                if ($closedMemo) {
+                    $receiverUserId = app(NotificationReceiverService::class)
+                        ->getStudentUserId((int) $closedMemo->student_master_pk);
+
+                    if ($receiverUserId) {
+                        $courseName = $closedMemo->course->course_name ?? 'your course';
+                        $disciplineName = $closedMemo->discipline->discipline_name ?? 'discipline';
+                        $conclusionName = DB::table('memo_conclusion_master')
+                            ->where('pk', $request->conclusion_type)
+                            ->value('discussion_name');
+                        $finalMarks = $request->mark_of_deduction;
+
+                        $message = "Your discipline memo for \"{$disciplineName}\" ({$courseName}) has been closed.";
+                        if ($conclusionName) {
+                            $message .= " Conclusion: {$conclusionName}.";
+                        }
+                        if ($finalMarks !== null && $finalMarks !== '') {
+                            $message .= " Final mark deduction: {$finalMarks}.";
+                        }
+                        if (!empty($request->conclusion_remark)) {
+                            $message .= ' Remark: ' . $request->conclusion_remark;
+                        }
+
+                        app(NotificationService::class)->create(
+                            (int) $receiverUserId,
+                            'memo',
+                            'MemoDiscipline',
+                            (int) $closedMemo->pk,
+                            'Discipline Memo Closed',
+                            $message
+                        );
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::error('Failed to send discipline memo close notification: ' . $e->getMessage());
+            }
         }
 
         DB::commit();
@@ -824,6 +1213,18 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
             ->orderBy('discipline_name')
             ->get(['pk', 'discipline_name', 'mark_deduction']);
 
+        // Prior major/minor tally for this participant WITHIN this course (excluding the
+        // memo being edited itself), so the incharge can see their history on this
+        // program while deciding the category for this memo.
+        $majorCount = MemoDiscipline::where('student_master_pk', $memo->student_master_pk)
+            ->where('course_master_pk', $memo->course_master_pk)
+            ->where('pk', '!=', $memo->pk)
+            ->where('minor_major', 2)->count();
+        $minorCount = MemoDiscipline::where('student_master_pk', $memo->student_master_pk)
+            ->where('course_master_pk', $memo->course_master_pk)
+            ->where('pk', '!=', $memo->pk)
+            ->where('minor_major', 1)->count();
+
         return response()->json([
             'pk'                      => $memo->pk,
             'course_master_pk'        => $memo->course_master_pk,
@@ -832,9 +1233,12 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
             'date'                    => $memo->date,
             'discipline_master_pk'    => $memo->discipline_master_pk,
             'mark_deduction_submit'   => $memo->mark_deduction_submit,
+            'minor_major'             => $memo->minor_major,
             'remarks'                 => $memo->remarks ?? '',
             'memo_notice_template_pk' => $memo->memo_notice_template_pk,
             'disciplines'             => $disciplines,
+            'major_count'             => $majorCount,
+            'minor_count'             => $minorCount,
         ]);
     }
 
@@ -850,6 +1254,7 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
             'date'                    => 'required|date',
             'discipline_master_pk'    => 'required|exists:discipline_master,pk',
             'mark_deduction_submit'   => 'required|numeric|min:0',
+            'minor_major'             => 'required|in:1,2',
             'remarks'                 => 'nullable|string|max:500',
             'memo_notice_template_pk' => 'nullable|exists:memo_notice_templates,pk',
         ]);
@@ -882,12 +1287,38 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
             'date'                    => $validated['date'],
             'discipline_master_pk'    => $validated['discipline_master_pk'],
             'mark_deduction_submit'   => $validated['mark_deduction_submit'],
+            'minor_major'             => $validated['minor_major'],
             'remarks'                 => $validated['remarks'] ?? null,
             'memo_notice_template_pk' => $templatePk,
             // Re-pinning the template also re-freezes its content as of now.
             'template_snapshot'       => build_memo_notice_template_snapshot($templatePk),
             'modified_date'           => now(),
         ]);
+
+        try {
+            $memo->load(['course:pk,course_name', 'discipline:pk,discipline_name']);
+            $receiverUserId = app(NotificationReceiverService::class)
+                ->getStudentUserId((int) $memo->student_master_pk);
+
+            if ($receiverUserId) {
+                $courseName = $memo->course->course_name ?? 'your course';
+                $disciplineName = $memo->discipline->discipline_name ?? 'discipline';
+                $memoDate = $memo->date
+                    ? Carbon::parse($memo->date)->format('d M Y')
+                    : now()->format('d M Y');
+
+                app(NotificationService::class)->create(
+                    (int) $receiverUserId,
+                    'memo',
+                    'MemoDiscipline',
+                    (int) $memo->pk,
+                    'Discipline Memo Updated',
+                    "A discipline memo for \"{$disciplineName}\" has been updated for {$courseName} on {$memoDate}. Please review."
+                );
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to send discipline memo update notification: ' . $e->getMessage());
+        }
 
         return response()->json(['success' => true, 'message' => 'Discipline memo updated successfully.']);
     }

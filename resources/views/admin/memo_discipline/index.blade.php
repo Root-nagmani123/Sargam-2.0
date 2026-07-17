@@ -4,6 +4,8 @@
 @section('title', 'Discipline Memo')
 
 @section('setup_content')
+{{-- flatpickr: same pinned version the feedback pages already use for their range pickers. --}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
 <link rel="stylesheet" href="{{ asset('css/notice-memo-discipline.css') }}?v={{ @filemtime(public_path('css/notice-memo-discipline.css')) ?: time() }}">
 <div class="container-fluid disc-page">
     <x-breadcrum title="Send Discipline Memo">
@@ -185,18 +187,27 @@
             // date filter is active — exportCsv() then reads that as "brand new request,
             // default to today-only", silently downloading the wrong (empty) dataset.
             // http_build_query() with real '' strings guarantees the keys stay present.
-            $discDownloadUrl = route('memo.discipline.export_csv') . '?' . http_build_query([
+            $discExportParams = [
                 'program_name' => $programNameFilter ?? '',
                 'discipline_master_pk' => $disciplineFilter ?? '',
                 'status' => $statusFilter ?? '',
+                'minor_major' => $categoryFilter ?? '',
                 'from_date' => $fromDateFilter ?? '',
                 'to_date' => $toDateFilter ?? '',
                 'search' => $searchFilter ?? '',
-            ]);
+            ];
+            $discDownloadUrl = route('memo.discipline.export_csv') . '?' . http_build_query($discExportParams);
+            $discDownloadPdfUrl = route('memo.discipline.export_pdf') . '?' . http_build_query($discExportParams);
         @endphp
-        <a href="{{ $discDownloadUrl }}" id="discDownloadLink" class="disc-download">
-            <i class="bi bi-download"></i> Download
-        </a>
+        <div class="dropdown">
+            <button type="button" id="discDownloadToggle" class="disc-download dropdown-toggle border-0" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-download"></i> Download
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="discDownloadToggle">
+                <li><a href="{{ $discDownloadUrl }}" id="discDownloadLink" class="dropdown-item"><i class="bi bi-file-earmark-excel me-1"></i> Excel (.xlsx)</a></li>
+                <li><a href="{{ $discDownloadPdfUrl }}" id="discDownloadPdfLink" class="dropdown-item"><i class="bi bi-file-earmark-pdf me-1"></i> PDF</a></li>
+            </ul>
+        </div>
     </div>
 
     <!-- start Zero Configuration -->
@@ -204,8 +215,6 @@
         <div class="card-body">
             @php
             $today = \Carbon\Carbon::today()->toDateString();
-            $isToday = $fromDateFilter === $today && $toDateFilter === $today;
-            $hasRange = ($fromDateFilter || $toDateFilter) && !$isToday;
             @endphp
             <form method="GET" action="{{ route('memo.discipline.index') }}" id="filterForm">
                 <div class="disc-filter-bar mb-3">
@@ -236,17 +245,31 @@
                         <option value="3" {{ $statusFilter == '3' ? 'selected' : '' }}>Closed</option>
                     </select>
 
-                    <select class="form-select" id="discTimePeriod" aria-label="Time Period">
-                        <option value="all">All</option>
-                        <option value="today" {{ $isToday ? 'selected' : '' }}>Today</option>
-                        <option value="week">This Week</option>
-                        <option value="month">This Month</option>
-                        <option value="custom" {{ $hasRange ? 'selected' : '' }}>Custom Range</option>
+                    <select class="form-select" id="minor_major" name="minor_major" aria-label="Category">
+                        <option value="">Category</option>
+                        <option value="2" {{ (string)$categoryFilter === '2' ? 'selected' : '' }}>Major</option>
+                        <option value="1" {{ (string)$categoryFilter === '1' ? 'selected' : '' }}>Minor</option>
                     </select>
-                    <input type="date" class="form-control {{ $hasRange ? '' : 'd-none' }}" id="from_date"
-                        name="from_date" value="{{ $fromDateFilter }}" max="{{ $today }}" style="max-width:160px;">
-                    <input type="date" class="form-control {{ $hasRange ? '' : 'd-none' }}" id="to_date" name="to_date"
-                        value="{{ $toDateFilter }}" max="{{ $today }}" style="max-width:160px;">
+
+                    {{-- Date range (flatpickr, two months side by side).
+                         #from_date / #to_date are the REAL filter fields — they carry the names
+                         the controller reads and are what FormData submits; the visible input is
+                         just the picker's display. They must stay in the form even when empty:
+                         the controller treats "from_date absent" as first load (=> today only)
+                         but "from_date present and empty" as no date filter (=> all dates), which
+                         is what the removed "All" preset used to produce. --}}
+                    <div class="disc-daterange-wrap">
+                        <i class="bi bi-calendar3 disc-daterange-icon"></i>
+                        <input type="text" class="form-control disc-daterange-input" id="discDateRange"
+                            placeholder="All dates" autocomplete="off" aria-label="Filter by date range">
+                        <button type="button" class="disc-daterange-clear" id="discDateRangeClear"
+                            aria-label="Clear date range" title="Clear date range"
+                            {{ ($fromDateFilter || $toDateFilter) ? '' : 'hidden' }}>
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <input type="hidden" id="from_date" name="from_date" value="{{ $fromDateFilter }}">
+                    <input type="hidden" id="to_date" name="to_date" value="{{ $toDateFilter }}">
 
                     <a href="{{ route('memo.discipline.index') }}" class="disc-reset">Reset Filters</a>
 
@@ -328,17 +351,21 @@
                             window.history.replaceState({}, '', url);
                             updateFilterCount();
 
-                            // The Download link is a static server-rendered href from page
-                            // load — without this, it would keep pointing at whatever
+                            // The Download links are static server-rendered hrefs from page
+                            // load — without this, they'd keep pointing at whatever
                             // filters were active on that initial load (e.g. today-only)
                             // even after AJAX-applying different filters, silently
                             // exporting the wrong/empty dataset. Reuse this fetch's own
                             // query string (minus per_page, which the export doesn't use).
-                            const downloadLink = document.getElementById('discDownloadLink');
-                            if (downloadLink) {
-                                const listParams = new URLSearchParams(url.split('?')[1] || '');
-                                listParams.delete('per_page');
-                                downloadLink.href = "{{ route('memo.discipline.export_csv') }}" + '?' + listParams.toString();
+                            const listParams = new URLSearchParams(url.split('?')[1] || '');
+                            listParams.delete('per_page');
+                            const excelLink = document.getElementById('discDownloadLink');
+                            if (excelLink) {
+                                excelLink.href = "{{ route('memo.discipline.export_csv') }}" + '?' + listParams.toString();
+                            }
+                            const pdfLink = document.getElementById('discDownloadPdfLink');
+                            if (pdfLink) {
+                                pdfLink.href = "{{ route('memo.discipline.export_pdf') }}" + '?' + listParams.toString();
                             }
                         })
                         .catch(function() {
@@ -459,14 +486,25 @@
             </script>
 
             <hr class="my-3">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <button type="button" class="btn btn-sm btn-outline-primary" id="discBulkPdfBtn" disabled>
+                    <i class="bi bi-file-earmark-pdf"></i> Download Selected as PDF (ZIP)<span id="discBulkCount"></span>
+                </button>
+            </div>
             <div id="memoDisciplineListContainer">
                 <div class="table-responsive">
                     {{-- data-sargam-dt-ui="false": this page uses server-side Laravel
                          pagination with its own .programme-dt-footer below. Opt out of the
                          global DataTables UI enhancer so it doesn't hijack + empty that footer. --}}
-                    <table id="discTable" class="table align-middle mb-0 text-nowrap" data-sargam-dt-ui="false">
+                    {{-- data-first-item: the S. No. this page starts at. discRenumberSerial()
+                         re-reads it from the DOM on every draw rather than closing over a
+                         page-load value, because an AJAX filter swaps a fresh table in here
+                         (and always resets to page 1). --}}
+                    <table id="discTable" class="table align-middle mb-0 text-nowrap" data-sargam-dt-ui="false"
+                        data-first-item="{{ $memos->firstItem() ?? 1 }}">
                         <thead>
                             <tr>
+                                <th><input type="checkbox" class="form-check-input" id="discSelectAll" aria-label="Select all"></th>
                                 <th>S. No.</th>
                                 <th>Program Name</th>
                                 <th>Name</th>
@@ -474,117 +512,134 @@
                                 <th>Cadre</th>
                                 <th>Date of Infraction</th>
                                 <th>Infraction</th>
-                                <th class="text-center">Submitted</th>
-                                <th class="text-center">Final</th>
+                                <th>Category</th>
+                                {{-- Every column here is left-aligned in BOTH the header and its
+                                     cell. Adding text-center/text-end to one without the other is
+                                     what puts a label on the opposite edge from the values it
+                                     labels. --}}
+                                <th>Submitted</th>
+                                <th>Final</th>
                                 <th>Remarks</th>
+                                <th>Conclusion Remark</th>
                                 <th>Created Date</th>
                                 <th>Status</th>
                                 @if(! hasRole('Officer Trainee'))
-                                <th class="text-end">Action</th>
+                                <th>Action</th>
                                 @endif
                             </tr>
                         </thead>
 
                         <tbody>
+                            @php
+                                // Which side of the conversation the current user sees. Depends only
+                                // on the viewer's role, not on the row, so it's resolved once here
+                                // instead of re-running five hasRole() lookups per rendered row.
+                                $discChatType = (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin')
+                                    || hasRole('Training Induction Admin') || hasRole('Training-Induction')) ? 'admin' : 'OT';
+                            @endphp
                             @forelse ($memos as $index => $memo)
                             <tr>
+                                <td><input type="checkbox" class="form-check-input disc-row-check" value="{{ $memo->pk }}" aria-label="Select record"></td>
                                 <td class="fw-semibold text-muted">{{ $memos->firstItem() + $index }}</td>
                                 <td class="fw-semibold">{{ $memo->course->course_name ?? 'N/A' }}</td>
-                                <td class="fw-semibold">{{ $memo->student->display_name ?? 'N/A' }}</td>
+                                <td class="fw-semibold disc-nowrap">{{ $memo->student->display_name ?? 'N/A' }}</td>
                                 <td class="text-muted">{{ $memo->student->generated_OT_code ?? 'N/A' }}</td>
-                                <td class="text-muted">{{ $memo->student->cadre->cadre_name ?? 'N/A' }}</td>
+                                <td class="text-muted disc-nowrap">{{ $memo->student->cadre->cadre_name ?? 'N/A' }}</td>
                                 <td class="text-muted">{{ $memo->date ? \Carbon\Carbon::parse($memo->date)->format('d M Y') : 'N/A' }}</td>
                                 <td><span class="badge bg-info-subtle text-info">{{ $memo->discipline->discipline_name ?? 'N/A' }}</span></td>
-                                <td class="text-center fw-semibold text-warning">{{ $memo->mark_deduction_submit }}</td>
-                                <td class="text-center fw-semibold text-danger">{{ $memo->final_mark_deduction }}</td>
+                                <td>
+                                    @if($memo->minor_major == 2)
+                                    <span class="badge bg-danger-subtle text-danger">Major</span>
+                                    @elseif($memo->minor_major == 1)
+                                    <span class="badge bg-secondary-subtle text-secondary">Minor</span>
+                                    @else
+                                    <span class="text-muted">—</span>
+                                    @endif
+                                </td>
+                                <td class="fw-semibold text-warning">{{ $memo->mark_deduction_submit }}</td>
+                                <td class="fw-semibold text-danger">{{ $memo->final_mark_deduction }}</td>
                                 <td class="text-muted">{{ $memo->remarks ?? '—' }}</td>
+                                <td class="text-muted">{{ $memo->conclusion_remark ?? '—' }}</td>
                                 <td class="text-muted">{{ !empty($memo->created_date) ? \Carbon\Carbon::parse($memo->created_date)->format('d M Y') : 'N/A' }}</td>
 
                                 <!-- Status -->
-                                <td>
-                                    @if ($memo->status == 1)
-                                    <span class="badge bg-success-subtle text-success">
-                                        <i class="bi bi-check-circle me-1"></i> Recorded
+                                @php
+                                    // One source of truth for the three status presentations. They
+                                    // were three near-identical branches whose only real differences
+                                    // are these four values — everything else was copy-pasted, so the
+                                    // markup could drift apart per status (and had).
+                                    // Keys match the Status filter dropdown: 1 Recorded, 2 Memo Sent, 3 Closed.
+                                    $discStatus = match ((int) $memo->status) {
+                                        1 => ['class' => 'bg-success-subtle text-success', 'icon' => 'bi-check-circle', 'label' => 'Recorded', 'chat' => false],
+                                        2 => ['class' => 'bg-warning-subtle text-warning', 'icon' => 'bi-envelope', 'label' => 'Memo Sent', 'chat' => true],
+                                        default => ['class' => 'bg-secondary-subtle text-secondary', 'icon' => 'bi-lock', 'label' => 'Closed', 'chat' => true],
+                                    };
+                                @endphp
+                                <td class="disc-status-cell">
+                                    <span class="badge disc-status {{ $discStatus['class'] }}">
+                                        <i class="bi {{ $discStatus['icon'] }}"></i> {{ $discStatus['label'] }}
                                     </span>
-                                    <div class="mt-1 d-flex gap-2">
+                                    {{-- .disc-status-links centres the text link against the taller
+                                         Material chat icon and owns the spacing via gap. --}}
+                                    <div class="disc-status-links">
                                         <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
-                                            class="link-primary small fw-medium">
-                                            View Memo
-                                        </a>
-                                    </div>
-                                    @elseif ($memo->status == 2)
-                                    <span class="badge bg-warning-subtle text-warning">
-                                        <i class="bi bi-envelope me-1"></i> Memo Sent
-                                    </span>
-                                    <div class="mt-1 d-flex gap-2">
-                                        <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
-                                            class="link-primary small fw-medium">
-                                            View Memo
-                                        </a>
+                                            class="link-primary small fw-medium">View Memo</a>
+                                        @if($discStatus['chat'])
                                         <a class="text-success view-conversation" data-bs-toggle="offcanvas"
                                             data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
-                                            data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction')) ? 'admin' : 'OT' }}">
-                                            <i class="material-icons material-symbols-rounded fs-5">chat</i>
+                                            data-type="{{ $discChatType }}" title="Open chat">
+                                            <i class="material-icons material-symbols-rounded">chat</i>
                                         </a>
+                                        @endif
                                     </div>
-                                    @else
-                                    <span class="badge bg-secondary-subtle text-secondary">
-                                        <i class="bi bi-lock me-1"></i> Closed
-                                    </span>
-                                    <div class="mt-1 d-flex gap-2">
-                                        <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
-                                            class="link-primary small fw-medium">
-                                            View Memo
-                                        </a>
-                                        <a class="text-success view-conversation" data-bs-toggle="offcanvas"
-                                            data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
-                                            data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction')) ? 'admin' : 'OT' }}">
-                                            <i class="material-icons material-symbols-rounded fs-5">chat</i>
-                                        </a>
-                                    </div>
-                                    @endif
                                 </td>
 
                                 <!-- Action -->
                                 @if(! hasRole('Officer Trainee'))
-                                <td class="text-end">
-                                    @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction'))
-                                    @if($memo->status == 1)
-                                    <button class="btn btn-sm btn-outline-secondary btn-edit-memo me-1"
-                                        data-id="{{ $memo->pk }}" title="Edit">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-primary border-0 bg-transparent text-primary" data-discipline="{{ $memo->pk }}"
-                                        id="sendMemoBtn">
-                                        <i class="material-icons material-symbols-rounded fs-5">send</i>
-                                    </button>
-                                    @elseif($memo->status == 2)
-                                    <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
-                                        class="btn btn-sm btn-outline-danger border-0 bg-transparent text-primary">
-                                        <i class="material-icons material-symbols-rounded fs-5">close</i> Close
-                                    </a>
-                                    @else
-                                    <span class="text-muted small">—</span>
-                                    @endif
-                                    {{-- Delete: admins/faculty only, hard-deletes the discipline memo + its chat.
-                                         Active only while the memo is open (Recorded/Memo Sent); disabled once closed. --}}
-                                    @php $isMemoClosed = !in_array($memo->status, [1, 2]); @endphp
-                                    <a href="javascript:void(0)"
-                                        class="btn btn-sm btn-outline-danger discipline-delete-record ms-1 border-0 bg-transparent text-primary {{ $isMemoClosed ? 'disabled' : '' }}"
-                                        data-id="{{ $memo->pk }}"
-                                        title="{{ $isMemoClosed ? 'Cannot delete a closed memo' : 'Delete' }}"
-                                        @if($isMemoClosed) aria-disabled="true" tabindex="-1" style="pointer-events:none;opacity:.45;" @endif>
-                                        <i class="material-icons material-symbols-rounded fs-5">delete</i>
-                                    </a>
-                                    @else
-                                    <span class="text-muted small">—</span>
-                                    @endif
+                                <td class="disc-action-cell">
+                                    {{-- .disc-actions is a flex row: it puts every control on one
+                                         shared centre line regardless of whether it's a bordered
+                                         button, a borderless icon or the "—" placeholder, and owns
+                                         the spacing via gap (no per-button me-*/ms-* margins). --}}
+                                    <div class="disc-actions">
+                                        @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction'))
+                                        @if($memo->status == 1)
+                                        <button class="btn btn-sm btn-outline-secondary btn-edit-memo border-0"
+                                            data-id="{{ $memo->pk }}" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-primary border-0 bg-transparent text-primary" data-discipline="{{ $memo->pk }}"
+                                            id="sendMemoBtn" title="Send Memo">
+                                            <i class="material-icons material-symbols-rounded">send</i>
+                                        </button>
+                                        @elseif($memo->status == 2)
+                                        <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
+                                            class="btn btn-sm btn-outline-danger border-0 bg-transparent text-primary" title="Close Memo">
+                                            <i class="material-icons material-symbols-rounded">close</i> Close
+                                        </a>
+                                        @else
+                                        <span class="text-muted small">—</span>
+                                        @endif
+                                        {{-- Delete: admins/faculty only, hard-deletes the discipline memo + its chat.
+                                             Active only while the memo is open (Recorded/Memo Sent); disabled once closed. --}}
+                                        @php $isMemoClosed = !in_array($memo->status, [1, 2]); @endphp
+                                        <a href="javascript:void(0)"
+                                            class="btn btn-sm btn-outline-danger discipline-delete-record border-0 bg-transparent text-primary {{ $isMemoClosed ? 'disabled' : '' }}"
+                                            data-id="{{ $memo->pk }}"
+                                            title="{{ $isMemoClosed ? 'Cannot delete a closed memo' : 'Delete' }}"
+                                            @if($isMemoClosed) aria-disabled="true" tabindex="-1" @endif>
+                                            <i class="material-icons material-symbols-rounded">delete</i>
+                                        </a>
+                                        @else
+                                        <span class="text-muted small">—</span>
+                                        @endif
+                                    </div>
                                 </td>
                                 @endif
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="{{ hasRole('Officer Trainee') ? 12 : 13 }}" class="text-center py-5 text-muted">
+                                <td colspan="{{ hasRole('Officer Trainee') ? 15 : 16 }}" class="text-center py-5 text-muted">
                                     <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                                     <span class="fw-medium">No memo records available</span>
                                 </td>
@@ -595,8 +650,8 @@
                 </div>
                 <!-- Pagination (design-system footer: numbered pages + "Showing [N] of M items") -->
                 @php
-                    $discPerPage = (int) request('per_page', 10);
-                    if (!in_array($discPerPage, [10, 25, 50, 100, 200], true)) $discPerPage = 10;
+                    $discPerPage = (string) request('per_page', '10');
+                    if (!in_array($discPerPage, ['10', '25', '50', '100', '200', 'all'], true)) $discPerPage = '10';
                 @endphp
                 <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
                     <div class="programme-dt-pagination">
@@ -606,8 +661,8 @@
                         <div class="dataTables_length">
                             <label class="mb-0">Showing
                                 <select id="discPerPage" class="form-select form-select-sm" aria-label="Rows per page">
-                                    @foreach([10, 25, 50, 100, 200] as $pp)
-                                    <option value="{{ $pp }}" {{ $discPerPage === $pp ? 'selected' : '' }}>{{ $pp }}</option>
+                                    @foreach(['10' => '10', '25' => '25', '50' => '50', '100' => '100', '200' => '200', 'all' => 'All'] as $ppValue => $ppLabel)
+                                    <option value="{{ $ppValue }}" {{ $discPerPage === $ppValue ? 'selected' : '' }}>{{ $ppLabel }}</option>
                                     @endforeach
                                 </select>
                             </label>
@@ -632,6 +687,10 @@
                     @csrf
                     <input type="hidden" id="editMemoPk">
                     <div class="modal-body">
+                        <div class="alert alert-info d-flex align-items-center gap-2 py-2 mb-3" id="editMemoCategoryBanner">
+                            <i class="bi bi-info-circle"></i>
+                            <span id="editMemoCategoryBannerText"></span>
+                        </div>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Course</label>
@@ -654,6 +713,19 @@
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Discipline Marks <span class="text-danger">*</span></label>
                                 <input type="number" step="0.01" min="0" id="editMemoMarks" name="mark_deduction_submit" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold d-block">Category <span class="text-danger">*</span></label>
+                                <div class="d-flex gap-3 pt-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="minor_major" id="editMemoMajor" value="2" required>
+                                        <label class="form-check-label" for="editMemoMajor">Major</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="minor_major" id="editMemoMinor" value="1" required>
+                                        <label class="form-check-label" for="editMemoMinor">Minor</label>
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Template</label>
@@ -732,30 +804,282 @@
 </div>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13"></script>
 
 @push('scripts')
 <script>
 $(document).ready(function() {
 
     @php
-        $discActionTargets = hasRole('Officer Trainee') ? '[0]' : '[0, -1]';
+        // Column 0 is the select checkbox, column 1 is S. No. — neither is orderable.
+        $discActionTargets = hasRole('Officer Trainee') ? '[0, 1]' : '[0, 1, -1]';
     @endphp
+
+    // Maps #discTable header column index -> the sort key exportCsv() understands.
+    // Must stay in the same order as the <th> cells. Blank entries (checkbox, S. No.,
+    // Action) are not orderable, so they never produce a sort key.
+    var DISC_COLUMN_SORT_KEYS = ['', '', 'program', 'name', 'ot_code', 'cadre', 'date',
+        'infraction', '', 'submitted', 'final', 'remarks', 'conclusion_remark',
+        'created_date', 'status', ''
+    ];
+
+    // Maps #discTable header column index -> the export column key the server's
+    // ?cols= filter understands. Must stay in the same order as the <th> cells.
+    // null = a column that isn't in the Excel/PDF at all (the select box, Category,
+    // Action), so hiding those changes nothing in a download.
+    var DISC_EXPORT_COLUMN_KEYS = ['', 'sno', 'program', 'name', 'ot_code', 'cadre',
+        'date', 'infraction', '', 'submitted', 'final', 'remarks', 'conclusion_remark',
+        'created_date', 'status', ''
+    ];
+    var DISC_EXPORT_COL_COUNT = DISC_EXPORT_COLUMN_KEYS.filter(Boolean).length;
+
+    // Keep the Download links' (Excel + PDF) ?cols= in sync with the Column
+    // Visibility modal, so a column hidden on screen is left out of the download
+    // too. The checkboxes are the source of truth, not the DOM: the table markup
+    // is replaced wholesale on every AJAX filter, which resets the cells' inline
+    // display, while the modal lives outside that container and keeps its state.
+    window.discUpdateDownloadCols = function () {
+        var toggles = document.querySelectorAll('.disc-col-toggle');
+        var keys = [];
+        toggles.forEach(function (cb) {
+            var key = DISC_EXPORT_COLUMN_KEYS[parseInt(cb.dataset.col, 10)];
+            if (key && cb.checked) keys.push(key);
+        });
+
+        ['discDownloadLink', 'discDownloadPdfLink'].forEach(function (id) {
+            var link = document.getElementById(id);
+            if (!link) return;
+            var base = link.href.split('?')[0];
+            var params = new URLSearchParams(link.href.split('?')[1] || '');
+            params.delete('cols');
+            // Omit ?cols= entirely while nothing is hidden (and before the modal has
+            // been built) — the server reads "no cols" as "every column", so the
+            // common case keeps a clean URL and the original behaviour.
+            if (toggles.length && keys.length !== DISC_EXPORT_COL_COUNT) {
+                params.set('cols', keys.join(','));
+            }
+            link.href = base + '?' + params.toString();
+        });
+    };
+
+    // Re-apply the modal's column choices to a freshly rendered table. Without this
+    // an AJAX filter would bring hidden columns back on screen while their
+    // checkboxes still read as unticked (and the export would then disagree).
+    window.discApplyColumnVisibility = function () {
+        document.querySelectorAll('.disc-col-toggle').forEach(function (cb) {
+            var nth = parseInt(cb.dataset.col, 10) + 1;
+            $('#discTable tr').each(function () {
+                $(this).children(':nth-child(' + nth + ')').toggle(cb.checked);
+            });
+        });
+    };
+
+    // Keep the Download links' (Excel + PDF) sort_col/sort_dir in sync with however
+    // the table is currently sorted on screen — whatever order the data is in on
+    // the page is the order it should download in.
+    window.discUpdateDownloadSort = function () {
+        ['discDownloadLink', 'discDownloadPdfLink'].forEach(function (id) {
+            var link = document.getElementById(id);
+            if (!link) return;
+            var base = link.href.split('?')[0];
+            var params = new URLSearchParams(link.href.split('?')[1] || '');
+            params.delete('sort_col');
+            params.delete('sort_dir');
+            if (window.discSortCol) {
+                params.set('sort_col', window.discSortCol);
+                params.set('sort_dir', window.discSortDir || 'asc');
+            }
+            link.href = base + '?' + params.toString();
+        });
+    };
+
+    $(document).on('order.dt', '#discTable', function () {
+        var order = $('#discTable').DataTable().order();
+        var key = order && order.length ? DISC_COLUMN_SORT_KEYS[order[0][0]] : '';
+        window.discSortCol = key || null;
+        window.discSortDir = key ? order[0][1] : null;
+        window.discUpdateDownloadSort();
+    });
+
+    // ── Bulk "Download Selected as PDF (ZIP)" ──
+    // Checkboxes live inside #memoDisciplineListContainer, which gets replaced
+    // wholesale on every AJAX filter/reinit — delegate from a stable ancestor
+    // instead of binding to the checkboxes directly.
+    window.discUpdateBulkPdfState = function () {
+        var checked = document.querySelectorAll('.disc-row-check:checked');
+        var btn = document.getElementById('discBulkPdfBtn');
+        var countEl = document.getElementById('discBulkCount');
+        if (btn) btn.disabled = checked.length === 0;
+        if (countEl) countEl.textContent = checked.length ? ' (' + checked.length + ')' : '';
+
+        var selectAll = document.getElementById('discSelectAll');
+        var all = document.querySelectorAll('.disc-row-check');
+        if (selectAll) selectAll.checked = all.length > 0 && checked.length === all.length;
+    };
+
+    $(document).on('change', '#discSelectAll', function () {
+        var checked = this.checked;
+        document.querySelectorAll('.disc-row-check').forEach(function (cb) { cb.checked = checked; });
+        window.discUpdateBulkPdfState();
+    });
+
+    $(document).on('change', '.disc-row-check', function () {
+        window.discUpdateBulkPdfState();
+    });
+
+    $(document).on('click', '#discBulkPdfBtn', function () {
+        var ids = Array.from(document.querySelectorAll('.disc-row-check:checked')).map(function (cb) { return cb.value; });
+        if (!ids.length) return;
+
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{{ route('memo.discipline.export_pdf_zip') }}";
+        form.style.display = 'none';
+
+        var csrf = document.createElement('input');
+        csrf.type = 'hidden';
+        csrf.name = '_token';
+        csrf.value = "{{ csrf_token() }}";
+        form.appendChild(csrf);
+
+        ids.forEach(function (id) {
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids[]';
+            input.value = id;
+            form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+        form.remove();
+    });
+
+    // ── S. No. is a display counter, not data ──
+    // The server prints each row's position in the UNSORTED page. DataTables sorts
+    // client-side by moving the <tr>s, so each number would travel with its row and
+    // the column would read 7, 3, 10, 1... after sorting. Renumber in display order
+    // after every draw. (The downloads were never affected: they send sort_col to
+    // the server, which re-sorts and re-numbers the rows itself.)
+    var DISC_SERIAL_COL = 1; // header index of "S. No."
+
+    window.discRenumberSerial = function () {
+        var table = document.getElementById('discTable');
+        if (!table) return;
+
+        var n = parseInt(table.dataset.firstItem, 10);
+        if (isNaN(n)) n = 1;
+
+        table.querySelectorAll('tbody > tr').forEach(function (row) {
+            // The empty-state row is one colspan cell — nothing to number.
+            if (row.children.length <= DISC_SERIAL_COL) return;
+            row.children[DISC_SERIAL_COL].textContent = n++;
+        });
+    };
+
+    // ── Freeze the leading columns while the table scrolls horizontally ──
+    // Each pinned column's `left` is the summed width of the pinned columns
+    // before it. Those widths depend on content, sort, the Columns modal and the
+    // viewport, so they're measured here rather than hard-coded in CSS.
+    var DISC_FROZEN_COLS = 4; // select, S. No., Program Name, Name
+
+    window.discFreezeColumns = function () {
+        var table = document.getElementById('discTable');
+        var scroller = table ? table.closest('.table-responsive') : null;
+        if (!table || !scroller) return;
+
+        // Re-runs on sort/filter/resize/colvis, so always start from a clean slate.
+        table.querySelectorAll('.disc-sticky').forEach(function (cell) {
+            cell.classList.remove('disc-sticky', 'disc-sticky-edge');
+            cell.style.left = '';
+        });
+
+        var headCells = table.querySelectorAll('thead > tr > th');
+        if (headCells.length < DISC_FROZEN_COLS) return;
+
+        // Measure from the header: it's the one row guaranteed to hold exactly one
+        // cell per column. Columns hidden via the Columns modal have no width and
+        // must not be pinned, but the ones after them still shift left.
+        var offsets = [], running = 0, lastVisible = -1;
+        for (var i = 0; i < DISC_FROZEN_COLS; i++) {
+            if (window.getComputedStyle(headCells[i]).display === 'none') {
+                offsets.push(null);
+                continue;
+            }
+            offsets.push(running);
+            running += headCells[i].getBoundingClientRect().width;
+            lastVisible = i;
+        }
+        if (lastVisible === -1) return;
+
+        // Pinning only helps while there's still room to read the rest. On a narrow
+        // viewport four frozen columns would swallow the scrollable area, so leave
+        // the table alone and let it scroll normally.
+        if (running > scroller.clientWidth * 0.6) return;
+
+        table.querySelectorAll('thead > tr, tbody > tr').forEach(function (row) {
+            // The empty-state row is a single colspan cell — nothing to pin.
+            if (row.children.length < headCells.length) return;
+            for (var i = 0; i < DISC_FROZEN_COLS; i++) {
+                if (offsets[i] === null) continue;
+                var cell = row.children[i];
+                cell.classList.add('disc-sticky');
+                cell.style.left = offsets[i] + 'px';
+                if (i === lastVisible) cell.classList.add('disc-sticky-edge');
+            }
+        });
+    };
+
+    // Sorting rebuilds the rows: renumber S. No. into the new display order, then
+    // re-measure the frozen columns (the redraw drops their inline offsets).
+    $(document).on('draw.dt', '#discTable', function () {
+        window.discRenumberSerial();
+        window.discFreezeColumns();
+    });
+
+    var discResizeTimer = null;
+    $(window).on('resize', function () {
+        clearTimeout(discResizeTimer);
+        discResizeTimer = setTimeout(window.discFreezeColumns, 150);
+    });
 
     window.reinitDiscTable = function () {
         if ($.fn.DataTable.isDataTable('#discTable')) {
             $('#discTable').DataTable().destroy();
         }
+        // A fresh (re)load always starts from the server's own order (pk desc),
+        // so the download link's sort should reset to match — until the user
+        // clicks a column header again.
+        window.discSortCol = null;
+        window.discSortDir = null;
+        window.discUpdateDownloadSort();
+        window.discUpdateBulkPdfState();
+        // The table markup is brand new after an AJAX filter — re-apply the hidden
+        // columns to it, and re-stamp ?cols= onto the rebuilt Download links.
+        window.discApplyColumnVisibility();
+        window.discUpdateDownloadCols();
         if ($('#discTable tbody tr td[colspan]').length === 0) {
             $('#discTable').DataTable({
                 paging: false,
                 searching: false,
                 ordering: true,
                 info: false,
+                order: [],
+                // The app-wide DataTables default turns this on, which makes DataTables
+                // treat column 0 (the select checkbox) as its "responsive control" column
+                // — clicking the checkbox then also toggles a child detail row. This table
+                // already handles overflow via its own horizontal scroll, so responsive
+                // column-collapsing isn't needed here.
+                responsive: false,
                 columnDefs: [
                     { orderable: false, targets: {!! $discActionTargets !!} }
                 ]
             });
         }
+        // After init (and on the empty-state path, where no DataTable is created
+        // and so no draw.dt ever fires).
+        window.discRenumberSerial();
+        window.discFreezeColumns();
     };
 
     window.reinitDiscTable();
@@ -766,7 +1090,7 @@ $(document).ready(function() {
 @push('scripts')
 <script>
 $(document).ready(function() {
-    const disciplineChoicesIds = ['program_name', 'discipline_master_pk', 'status', 'discTimePeriod'];
+    const disciplineChoicesIds = ['program_name', 'discipline_master_pk', 'status', 'minor_major'];
 
     function initDisciplineChoices() {
         if (typeof window.Choices === 'undefined') return;
@@ -818,36 +1142,65 @@ $(document).ready(function() {
         }
     }
 
-    $('#program_name, #discipline_master_pk, #status, #from_date, #to_date').on('change', discRunFilter);
+    // #from_date/#to_date are hidden and written by the picker below, so they never
+    // fire a change event of their own — the picker calls discRunFilter() directly.
+    $('#program_name, #discipline_master_pk, #status, #minor_major').on('change', discRunFilter);
 
-    /* ── Time Period presets → from/to dates ── */
+    /* ── Date range picker (two months, like a range calendar) ── */
+    // Local Y-m-d. NOT toISOString(), which converts to UTC first and so reports the
+    // previous day for any date picked while east of UTC (IST is +5:30).
     function discFmt(d) {
-        return d.toISOString().split('T')[0];
+        var m = String(d.getMonth() + 1).padStart(2, '0');
+        var day = String(d.getDate()).padStart(2, '0');
+        return d.getFullYear() + '-' + m + '-' + day;
     }
-    $('#discTimePeriod').on('change', function() {
-        var v = $(this).val();
-        var today = new Date();
-        $('#from_date, #to_date').addClass('d-none');
-        if (v === 'custom') {
-            $('#from_date, #to_date').removeClass('d-none');
-            return;
-        }
-        var from = '',
-            to = '';
-        if (v === 'today') {
-            from = to = discFmt(today);
-        } else if (v === 'week') {
-            var ws = new Date(today);
-            ws.setDate(today.getDate() - today.getDay());
-            from = discFmt(ws);
-            to = discFmt(today);
-        } else if (v === 'month') {
-            from = discFmt(new Date(today.getFullYear(), today.getMonth(), 1));
-            to = discFmt(today);
-        }
-        // v === 'all' → leave both empty (controller returns all when params present but empty)
-        $('#from_date').val(from);
-        $('#to_date').val(to);
+
+    var discFrom = document.getElementById('from_date');
+    var discTo = document.getElementById('to_date');
+    var discClearBtn = document.getElementById('discDateRangeClear');
+
+    function discSyncClearBtn() {
+        if (discClearBtn) discClearBtn.hidden = !(discFrom.value || discTo.value);
+    }
+
+    var discRangePicker = null;
+    if (window.flatpickr) {
+        discRangePicker = flatpickr('#discDateRange', {
+            mode: 'range',
+            showMonths: 2,
+            dateFormat: 'Y-m-d',
+            maxDate: "{{ $today }}",
+            defaultDate: [discFrom.value, discTo.value].filter(Boolean),
+            onReady: function(selectedDates, dateStr, inst) {
+                inst.calendarContainer.classList.add('disc-flatpickr');
+            },
+            onChange: function(selectedDates) {
+                // Range mode fires once on the first click too. Wait for both ends,
+                // otherwise every range would filter twice — once as a bogus
+                // single-day range on the way to the real one.
+                if (selectedDates.length === 1) return;
+                if (selectedDates.length === 2) {
+                    discFrom.value = discFmt(selectedDates[0]);
+                    discTo.value = discFmt(selectedDates[1]);
+                } else {
+                    discFrom.value = '';
+                    discTo.value = '';
+                }
+                discSyncClearBtn();
+                discRunFilter();
+            }
+        });
+    }
+
+    // Clearing = submit both dates present but EMPTY, which the controller reads as
+    // "no date filter" (all dates) rather than as a first load (today only).
+    $('#discDateRangeClear').on('click', function() {
+        // clear(false): don't fire onChange, or the filter would run twice — once
+        // from the picker's own change and again from this handler.
+        if (discRangePicker) discRangePicker.clear(false);
+        discFrom.value = '';
+        discTo.value = '';
+        discSyncClearBtn();
         discRunFilter();
     });
 
@@ -885,7 +1238,13 @@ $(document).ready(function() {
     /* ── Column Visibility modal (built from the actual header cells) ── */
     var $discGrid = $('#discColumnGrid');
     $('#discTable thead th').each(function(i) {
-        var label = $(this).text().trim() || ('Column ' + (i + 1));
+        // Header cells with no text aren't real, nameable columns — the only one is
+        // the row-select checkbox column, which held the select-all box and so used
+        // to be listed as a meaningless "Column 1" chip that let you hide the row
+        // checkboxes. No label, no chip.
+        var label = $(this).text().trim();
+        if (!label) return;
+
         var id = 'discCol' + i;
         $discGrid.append(
             '<label class="sn-colvis-chip" for="' + id + '" title="' + label + '">' +
@@ -900,7 +1259,23 @@ $(document).ready(function() {
         $('#discTable tr').each(function() {
             $(this).children(':nth-child(' + nth + ')').toggle(show);
         });
+        // Hiding/showing a column changes the width every frozen column to its
+        // right is offset by, so the pinned offsets have to be re-measured.
+        if (typeof window.discFreezeColumns === 'function') {
+            window.discFreezeColumns();
+        }
+        // Whatever is hidden on screen must also be left out of the downloads.
+        if (typeof window.discUpdateDownloadCols === 'function') {
+            window.discUpdateDownloadCols();
+        }
     });
+
+    // The grid above is built from the header cells on ready, i.e. AFTER the first
+    // reinitDiscTable() ran with no checkboxes to read. Stamp the links once now
+    // that they exist.
+    if (typeof window.discUpdateDownloadCols === 'function') {
+        window.discUpdateDownloadCols();
+    }
 
     /* ── Guarantee a full page reload when switching tabs ── */
     $(document).on('click', '.js-nav-tab', function(e) {
@@ -1112,7 +1487,12 @@ $(function () {
         $.get(routeStudents, { course_id: courseId }).done(function (res) {
             if (res && res.status) {
                 gmDefaulters = (res.students || []).map(function (s) {
-                    return { pk: String(s.pk), name: s.display_name + (s.generated_OT_code ? ' (' + s.generated_OT_code + ')' : '') };
+                    return {
+                        pk: String(s.pk),
+                        name: s.display_name + (s.generated_OT_code ? ' (' + s.generated_OT_code + ')' : ''),
+                        majorCount: s.major_count || 0,
+                        minorCount: s.minor_count || 0
+                    };
                 });
                 (res.discipline_master_data || []).forEach(function (d) {
                     $('#gmDiscipline').append($('<option>').val(d.pk).text(d.discipline_name));
@@ -1180,18 +1560,25 @@ $(function () {
     });
 
     // ── Student picker ──
-    function pickerItem(pk, name) {
-        return $('<label class="an-item">')
+    function pickerItem(pk, name, majorCount, minorCount) {
+        var $item = $('<label class="an-item">')
             .attr('data-pk', pk)
             .attr('data-search', name.toLowerCase())
             .append($('<input type="checkbox" class="form-check-input an-check">'))
-            .append($('<span>').text(name));
+            .append($('<span class="flex-grow-1">').text(name));
+        if (majorCount) {
+            $item.append($('<span class="badge bg-danger-subtle text-danger">').text(majorCount + ' Major'));
+        }
+        if (minorCount) {
+            $item.append($('<span class="badge bg-warning-subtle text-warning">').text(minorCount + ' Minor'));
+        }
+        return $item;
     }
     function renderPicker() {
         var $av = $('#spAvailable').empty();
         var $sel = $('#spSelected').empty();
         gmDefaulters.forEach(function (d) {
-            (gmSelected.indexOf(d.pk) > -1 ? $sel : $av).append(pickerItem(d.pk, d.name));
+            (gmSelected.indexOf(d.pk) > -1 ? $sel : $av).append(pickerItem(d.pk, d.name, d.majorCount, d.minorCount));
         });
         if (!$av.children('.an-item').length) $av.append('<div class="an-empty text-muted">No students.</div>');
         if (!$sel.children('.an-item').length) $sel.append('<div class="an-empty text-muted">No students selected.</div>');
@@ -1379,6 +1766,7 @@ $(function () {
         $('#editMemoPk').val('');
         $('#editMemoDiscipline').html('<option value="">Loading…</option>');
         $('#editMemoTemplate').html('<option value="">Select Discipline first</option>');
+        $('#editMemoCategoryBannerText').text('Loading history…');
         $('#editMemoSaveBtn').prop('disabled', true);
         // Reset the preview for the freshly opened memo.
         emTemplateMap = {}; emSelectedTplPk = null; editCoursePk = null;
@@ -1392,6 +1780,15 @@ $(function () {
             $('#editMemoStudent').val(data.student_name);
             $('#editMemoDate').val(data.date);
             $('#editMemoMarks').val(data.mark_deduction_submit);
+            // Defaults to Minor when this memo has no category yet.
+            $('input[name="minor_major"][value="' + (data.minor_major || 1) + '"]').prop('checked', true);
+            var majorCount = data.major_count || 0;
+            var minorCount = data.minor_count || 0;
+            $('#editMemoCategoryBannerText').text(
+                (majorCount || minorCount)
+                    ? ('This participant already has ' + majorCount + ' Major and ' + minorCount + ' Minor memo(s) in this course.')
+                    : 'This is the first memo for this participant in this course.'
+            );
             $('#editMemoRemarks').val(data.remarks);
             editMemoCourseId = data.course_master_pk;
 
@@ -1450,6 +1847,7 @@ $(function () {
                 date:                      $('#editMemoDate').val(),
                 discipline_master_pk:      $('#editMemoDiscipline').val(),
                 mark_deduction_submit:     $('#editMemoMarks').val(),
+                minor_major:               $('input[name="minor_major"]:checked').val(),
                 remarks:                   $('#editMemoRemarks').val(),
                 memo_notice_template_pk:   $('#editMemoTemplate').val(),
             },

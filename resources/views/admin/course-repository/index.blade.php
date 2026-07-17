@@ -2,21 +2,24 @@
 
 @section('title', 'Course Repositories | Lal Bahadur')
 
-@section('setup_content')
+@push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="{{ asset('css/course-repository-admin.css') }}">
+@endpush
+
+@section('setup_content')
 <div class="container-fluid cr-admin pb-3">
     <!-- Breadcrumb -->
-    <x-breadcrum title="Course Repository">
+    <x-breadcrum title="Course Repository" :showBack="false">
         <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#createModal"
-                    aria-label="Add new category"
-                    class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold text-nowrap shadow-sm">
-                    <i class="bi bi-plus" aria-hidden="true"></i>
-                    <span>Add Category</span>
-                </a>
+            aria-label="Add new category"
+            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <span>Add Category</span>
+        </a>
     </x-breadcrum>
 
-    <div class="card border-0 cr-admin-card overflow-hidden">
+    <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
             @if ($repositories->isEmpty())
             <div class="text-center py-5 px-3 cr-admin-empty">
@@ -26,375 +29,136 @@
                 </div>
                 <p class="text-secondary mb-2 fw-semibold">No categories yet</p>
                 <p class="text-muted small mb-3">Get started by creating your first category.</p>
-                <a href="javascript:void(0)" class="btn btn-primary rounded-2 px-3" data-bs-toggle="modal"
-                    data-bs-target="#createModal">
-                    <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>Create Category
+                <a href="javascript:void(0)" class="btn btn-primary rounded-1 px-4 fw-semibold"
+                    data-bs-toggle="modal" data-bs-target="#createModal">
+                    <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Create Category
                 </a>
             </div>
             @else
-            <div class="table-responsive">
-                <table id="crCategoriesTable" class="table datatable" data-export="false">
-                    <thead>
-                        <tr>
-                            <th>S. No.</th>
-                            <th>Category</th>
-                            <th>Sub-Category</th>
-                            <th>Attachment</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($repositories as $key => $repo)
+            <div
+                class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="btnCrColumns"
+                        data-bs-toggle="modal" data-bs-target="#crColumnVisibilityModal"
+                        title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div id="crDtSearch" class="programme-dt-search" data-dt-search-for="crCategoriesTable"></div>
+                </div>
+            </div>
 
-                        @php
-                        $subCount = $repo->children->count();
-                        $docCount = $repo->getDocumentCount();
-                        @endphp
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    <table id="crCategoriesTable" class="table table-hover align-middle mb-0 w-100 programme-dt-table">
+                        <thead>
+                            <tr>
+                                <th>S. No.</th>
+                                <th>Category</th>
+                                <th>Sub-Category</th>
+                                <th>Attachment</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($repositories as $key => $repo)
 
-                        <tr class="border-bottom">
-                            <td class="ps-4 fw-medium">
-                                {{ $repositories->firstItem() + $key }}
-                            </td>
+                            @php
+                            $subCount = $repo->children->count();
+                            $docCount = $repo->getDocumentCount();
+                            @endphp
 
-                            <td>
-                                <div class="d-flex align-items-center gap-3">
+                            <tr>
+                                <td>{{ $key + 1 }}</td>
 
-                                    @if(filled($repo->category_image) &&
-                                    \Storage::disk('public')->exists($repo->category_image))
-                                    <img src="{{ asset('storage/' . $repo->category_image) }}"
-                                        class="rounded-circle object-fit-cover" width="40" height="40" alt="">
-                                    @else
-                                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center"
-                                        style="width:40px;height:40px;">
-                                        <i class="bi bi-image text-muted"></i>
-                                    </div>
-                                    @endif
+                                <td>
+                                    <div class="d-flex align-items-center gap-3">
 
-                                    <div>
+                                        @if(filled($repo->category_image) &&
+                                        \Storage::disk('public')->exists($repo->category_image))
+                                        <img src="{{ asset('storage/' . $repo->category_image) }}"
+                                            class="rounded-circle object-fit-cover flex-shrink-0" width="40"
+                                            height="40" alt="">
+                                        @else
+                                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center flex-shrink-0"
+                                            style="width:40px;height:40px;">
+                                            <i class="bi bi-image text-muted"></i>
+                                        </div>
+                                        @endif
+
                                         <a href="{{ route('course-repository.show', $repo->pk) }}"
-                                            class="text-decoration-none text-dark fw-medium">
+                                            class="cr-link-category">
                                             {{ $repo->course_repository_name }}
                                         </a>
+
                                     </div>
+                                </td>
 
-                                </div>
-                            </td>
-
-                            <td>
-                                <a href="{{ route('course-repository.show', $repo->pk) }}"
-                                    class="text-decoration-none small fw-medium {{ $subCount == 0 ? 'text-secondary' : '' }}">
-                                    {{ $subCount }} Sub-Category
-                                </a>
-                            </td>
-
-                            <td>
-                                <a href="{{ route('course-repository.show', $repo->pk) }}"
-                                    class="text-decoration-none small fw-medium {{ $docCount == 0 ? 'text-secondary' : '' }}">
-                                    See {{ str_pad($docCount, 2, '0', STR_PAD_LEFT) }} Attachment
-                                </a>
-                            </td>
-
-                            <td class="text-center">
-                                <div class="d-inline-flex align-items-center">
-
-                                    <a href="javascript:void(0)"
-                                        class="btn btn-sm btn-light edit-repo bg-transparent border-0 p-0"
-                                        data-pk="{{ $repo->pk }}" data-name="{{ $repo->course_repository_name }}"
-                                        data-details="{{ $repo->course_repository_details }}"
-                                        data-image="{{ $repo->category_image }}" title="Edit">
-
-                                        <i class="bi bi-pencil text-primary"></i>
+                                <td>
+                                    <a href="{{ route('course-repository.show', $repo->pk) }}"
+                                        class="cr-link-subcategory {{ $subCount == 0 ? 'cr-link-muted' : '' }}">
+                                        {{ $subCount }} Sub-Category
                                     </a>
+                                </td>
 
-                                    <a href="javascript:void(0)"
-                                        class="btn btn-sm btn-light delete-repo bg-transparent border-0 p-0"
-                                        data-pk="{{ $repo->pk }}" title="Delete">
-
-                                        <i class="bi bi-trash text-danger"></i>
+                                <td>
+                                    <a href="{{ route('course-repository.show', $repo->pk) }}"
+                                        class="cr-link-documents {{ $docCount == 0 ? 'cr-link-muted' : '' }}">
+                                        See {{ str_pad($docCount, 2, '0', STR_PAD_LEFT) }} Attachment
                                     </a>
+                                </td>
 
-                                </div>
-                            </td>
-                        </tr>
+                                <td>
+                                    <div class="d-inline-flex align-items-center gap-2">
 
-                        @endforeach
-                    </tbody>
-                </table>
+                                        <button type="button" class="programme-action-btn edit-repo"
+                                            data-pk="{{ $repo->pk }}"
+                                            data-name="{{ $repo->course_repository_name }}"
+                                            data-details="{{ $repo->course_repository_details }}"
+                                            data-image="{{ $repo->category_image }}" title="Edit"
+                                            aria-label="Edit category">
+                                            <i class="bi bi-pencil" aria-hidden="true"></i>
+                                        </button>
+
+                                        <button type="button"
+                                            class="programme-action-btn programme-action-btn--danger delete-repo"
+                                            data-pk="{{ $repo->pk }}" title="Delete" aria-label="Delete category">
+                                            <i class="bi bi-trash" aria-hidden="true"></i>
+                                        </button>
+
+                                    </div>
+                                </td>
+                            </tr>
+
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <div id="crDtFooter"
+                    class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                    data-dt-footer-for="crCategoriesTable"></div>
             </div>
-            <script>
-            document.getElementById('per_page')?.addEventListener('change', function() {
-                const url = new URL(window.location.href);
-                url.searchParams.set('per_page', this.value);
-                url.searchParams.set('page', '1');
-                window.location.href = url.toString();
-            });
-
-            // —— Columns show/hide (modal design — matches Course Repository user module) ——
-            (function initColumnToggle() {
-                var TABLE_ID = 'crCategoriesTable';
-                var STORAGE_KEY = 'cru-columns-' + TABLE_ID;
-                var MODAL_ID = 'cruColVisModal-' + TABLE_ID;
-
-                // DataTables column index → label. locked columns stay always visible.
-                var COLUMNS = [{
-                        idx: 0,
-                        label: 'S. No.',
-                        locked: true
-                    },
-                    {
-                        idx: 1,
-                        label: 'Image'
-                    },
-                    {
-                        idx: 2,
-                        label: 'Category'
-                    },
-                    {
-                        idx: 3,
-                        label: 'Sub-Category'
-                    },
-                    {
-                        idx: 4,
-                        label: 'Attachment'
-                    },
-                    {
-                        idx: 5,
-                        label: 'Actions',
-                        locked: true
-                    }
-                ];
-                var TOGGLEABLE = COLUMNS.filter(function(c) {
-                    return !c.locked;
-                });
-
-                function defaults() {
-                    var s = {};
-                    TOGGLEABLE.forEach(function(c) {
-                        s[c.idx] = true;
-                    });
-                    return s;
-                }
-
-                function loadState() {
-                    try {
-                        var raw = localStorage.getItem(STORAGE_KEY);
-                        if (!raw) return defaults();
-                        var parsed = JSON.parse(raw);
-                        if (!parsed || typeof parsed !== 'object') return defaults();
-                        var base = defaults();
-                        Object.keys(base).forEach(function(k) {
-                            if (typeof parsed[k] === 'boolean') base[k] = parsed[k];
-                        });
-                        return base;
-                    } catch (e) {
-                        return defaults();
-                    }
-                }
-
-                function saveState(state) {
-                    try {
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-                    } catch (e) {}
-                }
-
-                function chips() {
-                    var locked = COLUMNS.filter(function(c) {
-                        return c.locked;
-                    }).map(function(c) {
-                        return '<div class="col">' +
-                            '<label class="cru-colvis-chip cru-colvis-chip-locked d-flex align-items-center gap-2 mb-0" title="Always visible">' +
-                            '<input type="checkbox" class="form-check-input m-0" checked disabled>' +
-                            '<span class="text-truncate">' + c.label + '</span>' +
-                            '</label></div>';
-                    }).join('');
-                    var toggleable = TOGGLEABLE.map(function(c) {
-                        return '<div class="col">' +
-                            '<label class="cru-colvis-chip d-flex align-items-center gap-2 mb-0">' +
-                            '<input type="checkbox" class="form-check-input m-0 cru-col-toggle-checkbox" data-col="' +
-                            c.idx + '" checked>' +
-                            '<span class="text-truncate">' + c.label + '</span>' +
-                            '</label></div>';
-                    }).join('');
-                    return locked + toggleable;
-                }
-
-                function buildModal() {
-                    if (document.getElementById(MODAL_ID)) return;
-                    var html =
-                        '<div class="modal fade cru-colvis-modal" id="' + MODAL_ID +
-                        '" tabindex="-1" aria-labelledby="' + MODAL_ID + '-label" aria-hidden="true">' +
-                        '<div class="modal-dialog modal-dialog-centered modal-lg">' +
-                        '<div class="modal-content border-0 rounded-4 shadow">' +
-                        '<div class="modal-header border-0 pb-2 px-4 pt-4">' +
-                        '<h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="' + MODAL_ID +
-                        '-label">' +
-                        '<i class="bi bi-sliders2 text-primary" aria-hidden="true"></i> Column Visibility' +
-                        '</h5>' +
-                        '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
-                        '</div>' +
-                        '<hr class="cru-colvis-divider mx-4 my-0">' +
-                        '<div class="modal-body px-4 py-4">' +
-                        '<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">' + chips() + '</div>' +
-                        '</div>' +
-                        '<div class="modal-footer border-0 px-4 pb-4 pt-0 d-flex justify-content-between">' +
-                        '<button type="button" class="btn btn-link btn-sm text-decoration-none p-0 d-inline-flex align-items-center gap-1 cru-col-toggle-reset">' +
-                        '<i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset to default' +
-                        '</button>' +
-                        '<button type="button" class="btn btn-outline-primary btn-sm px-4 fw-semibold" data-bs-dismiss="modal">Close</button>' +
-                        '</div>' +
-                        '</div>' +
-                        '</div>' +
-                        '</div>';
-                    document.body.insertAdjacentHTML('beforeend', html);
-                }
-
-                function build() {
-                    if (!(window.jQuery && jQuery.fn && jQuery.fn.dataTable)) return false;
-                    var el = document.getElementById(TABLE_ID);
-                    if (!el || !jQuery.fn.dataTable.isDataTable(el)) return false;
-
-                    var api = jQuery(el).DataTable();
-                    var wrapper = el.closest('.dataTables_wrapper');
-                    if (!wrapper) return false;
-                    if (wrapper.querySelector('.cru-column-toggle')) return true; // already built
-
-                    buildModal();
-
-                    // Trigger button placed after the search input.
-                    var trigger =
-                        '<span class="cru-column-toggle d-inline-flex align-items-center ms-2">' +
-                        '<button type="button" class="btn btn-light border btn-sm d-inline-flex align-items-center gap-2 fw-semibold cru-colvis-trigger" ' +
-                        'data-bs-toggle="modal" data-bs-target="#' + MODAL_ID + '" title="Show / hide columns">' +
-                        '<i class="bi bi-layout-three-columns" aria-hidden="true"></i>' +
-                        '<span class="d-none d-sm-inline">Columns</span>' +
-                        '</button>' +
-                        '</span>';
-                    var filter = wrapper.querySelector('.dataTables_filter');
-                    var searchInput = filter ? filter.querySelector('input') : null;
-                    if (searchInput) {
-                        searchInput.insertAdjacentHTML('afterend', trigger);
-                    } else if (filter) {
-                        filter.insertAdjacentHTML('beforeend', trigger);
-                    } else {
-                        wrapper.insertAdjacentHTML('afterbegin', trigger);
-                    }
-
-                    function applyState(state) {
-                        TOGGLEABLE.forEach(function(c) {
-                            var vis = state[c.idx] !== false;
-                            api.column(c.idx).visible(vis, false);
-                            var cb = document.querySelector('.cru-col-toggle-checkbox[data-col="' + c.idx +
-                                '"]');
-                            if (cb) cb.checked = vis;
-                        });
-                        api.columns.adjust();
-                    }
-
-                    applyState(loadState());
-
-                    document.querySelectorAll('.cru-col-toggle-checkbox').forEach(function(cb) {
-                        cb.addEventListener('change', function() {
-                            var idx = parseInt(this.getAttribute('data-col'), 10);
-                            var next = loadState();
-                            // Keep at least one toggleable column visible.
-                            if (!this.checked) {
-                                var visibleCount = TOGGLEABLE.filter(function(c) {
-                                    return next[c.idx] !== false;
-                                }).length;
-                                if (visibleCount <= 1) {
-                                    this.checked = true;
-                                    return;
-                                }
-                            }
-                            next[idx] = this.checked;
-                            api.column(idx).visible(this.checked);
-                            saveState(next);
-                        });
-                    });
-
-                    var resetBtn = document.querySelector('.cru-col-toggle-reset');
-                    if (resetBtn) {
-                        resetBtn.addEventListener('click', function() {
-                            try {
-                                localStorage.removeItem(STORAGE_KEY);
-                            } catch (e) {}
-                            applyState(defaults());
-                        });
-                    }
-                    return true;
-                }
-
-                // The global init runs on DOMContentLoaded; retry briefly until the DataTable exists.
-                var tries = 0;
-                (function attempt() {
-                    if (build()) return;
-                    if (tries++ < 40) setTimeout(attempt, 100);
-                })();
-            })();
-
-            // —— Footer: "Showing [N] of {total} items" (page-scoped; reshapes this table only) ——
-            (function initFooterLayout() {
-                var TABLE_ID = 'crCategoriesTable';
-
-                function build() {
-                    if (!(window.jQuery && jQuery.fn && jQuery.fn.dataTable)) return false;
-                    var el = document.getElementById(TABLE_ID);
-                    if (!el || !jQuery.fn.dataTable.isDataTable(el)) return false;
-
-                    var api = jQuery(el).DataTable();
-                    var wrapper = el.closest('.dataTables_wrapper');
-                    if (!wrapper) return false;
-                    if (wrapper.classList.contains('cr-footer-ready')) return true;
-
-                    var lengthWrap = wrapper.querySelector('.dataTables_length');
-                    var select = lengthWrap ? lengthWrap.querySelector('select') : null;
-                    var info = wrapper.querySelector('.dataTables_info');
-                    if (!select || !info) {
-                        wrapper.classList.add('cr-footer-ready');
-                        return true;
-                    }
-
-                    // Hide the default top "Show N entries" control.
-                    lengthWrap.classList.add('d-none');
-
-                    // The global init may have injected its own "Showing" label and
-                    // moved the length select; this page owns the footer, so strip
-                    // that duplicate before building our own layout.
-                    var strayLabel = wrapper.querySelector('.dt-showing-label');
-                    if (strayLabel) strayLabel.remove();
-
-                    function render() {
-                        var total = api.page.info().recordsTotal;
-                        info.innerHTML = '';
-                        info.classList.add('cr-footer-info', 'd-flex', 'align-items-center',
-                            'justify-content-md-end', 'gap-2', 'flex-wrap');
-                        var pre = document.createElement('span');
-                        pre.textContent = 'Showing';
-                        var post = document.createElement('span');
-                        post.textContent = 'of ' + total.toLocaleString() + ' items';
-                        info.appendChild(pre);
-                        info.appendChild(select);
-                        info.appendChild(post);
-                        select.classList.add('cr-footer-select');
-                    }
-
-                    render();
-                    api.on('draw', function() {
-                        if (select.parentNode !== info) render();
-                    });
-
-                    wrapper.classList.add('cr-footer-ready');
-                    return true;
-                }
-
-                var tries = 0;
-                (function attempt() {
-                    if (build()) return;
-                    if (tries++ < 40) setTimeout(attempt, 100);
-                })();
-            })();
-            </script>
             @endif
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="crColumnVisibilityModal" tabindex="-1" aria-labelledby="crColumnVisibilityLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="crColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="crColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
         </div>
     </div>
 </div>
@@ -597,10 +361,6 @@
     </div>
 </div>
 
-
-
-
-
 @endsection
 
 @section('scripts')
@@ -616,6 +376,112 @@
         return courseRepoDestroyUrlTemplate.replace('___PK___', pk);
     };
 })();
+
+/* ── Category list: client-side DataTable on the shared programme-dt design system.
+      The global enhancer (js/datatable-global-ui.js) moves the search box and the
+      pagination/length/info into #crDtSearch / #crDtFooter. ── */
+$(function() {
+    var $table = $('#crCategoriesTable');
+    if (!$table.length || $.fn.dataTable.isDataTable($table)) {
+        return;
+    }
+
+    var crTable = $table.DataTable({
+        responsive: true,
+        autoWidth: false,
+        pageLength: 10,
+        lengthMenu: [
+            [10, 25, 50, 100, -1],
+            [10, 25, 50, 100, 'All']
+        ],
+        order: [],
+        columnDefs: [{
+                targets: 0,
+                orderable: false,
+                searchable: false
+            },
+            {
+                targets: -1,
+                orderable: false,
+                searchable: false
+            }
+        ]
+    });
+
+    // Server order is preserved, so S. No. must follow the visible page.
+    crTable.on('draw.dt', function() {
+        var start = crTable.page.info().start;
+        crTable.column(0, {
+            page: 'current'
+        }).nodes().each(function(cell, i) {
+            cell.innerHTML = start + i + 1;
+        });
+    });
+
+    /* ── Column show / hide ── */
+    var crColStorageKey = 'courseRepositoryGrid:hiddenColumns:v1';
+
+    function crGetHiddenCols() {
+        try {
+            var raw = localStorage.getItem(crColStorageKey);
+            var arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function crPersistHiddenCols(arr) {
+        try {
+            localStorage.setItem(crColStorageKey, JSON.stringify(arr));
+        } catch (e) {}
+    }
+
+    var hidden = crGetHiddenCols();
+
+    crTable.columns().every(function() {
+        this.visible(hidden.indexOf(this.index()) === -1, false);
+    });
+    crTable.columns.adjust();
+
+    var $grid = $('#crColumnToggleGrid').empty();
+
+    crTable.columns().every(function() {
+        var idx = this.index();
+        var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+        if (!title) {
+            return;
+        }
+
+        var inputId = 'crcolvis_' + idx;
+        var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+            .attr('id', inputId)
+            .prop('checked', hidden.indexOf(idx) === -1);
+
+        $cb.on('change', function() {
+            var h = crGetHiddenCols();
+            var pos = h.indexOf(idx);
+            if (this.checked) {
+                if (pos !== -1) h.splice(pos, 1);
+            } else if (pos === -1) {
+                h.push(idx);
+            }
+            crPersistHiddenCols(h);
+            crTable.column(idx).visible(this.checked, false);
+            crTable.columns.adjust();
+        });
+
+        $('<div class="col-12 col-sm-6 col-md-4"></div>')
+            .append(
+                $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                .attr('for', inputId)
+                .append($cb)
+                .append($('<span></span>').text(title))
+            )
+            .appendTo($grid);
+    });
+});
+
 document.addEventListener('DOMContentLoaded', function() {
 
     // Image preview for create modal
@@ -653,42 +519,42 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Edit button functionality
-    document.querySelectorAll('.edit-repo').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const pk = this.getAttribute('data-pk');
-            const name = this.getAttribute('data-name');
-            const details = this.getAttribute('data-details');
-            const image = this.getAttribute('data-image');
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.edit-repo');
+        if (!btn) {
+            return;
+        }
+        e.preventDefault();
 
-            // Clear any previous image
-            document.getElementById('preview_edit').style.display = 'none';
-            document.getElementById('edit_category_image').value = '';
+        const pk = btn.getAttribute('data-pk');
+        const name = btn.getAttribute('data-name');
+        const details = btn.getAttribute('data-details');
+        const image = btn.getAttribute('data-image');
 
-            // Populate edit form
-            document.getElementById('edit_course_repository_name').value = name;
-            document.getElementById('edit_course_repository_details').value = details || '';
+        // Clear any previous image
+        document.getElementById('preview_edit').classList.add('d-none');
+        document.getElementById('edit_category_image').value = '';
 
-            // Show current image if exists
-            const currentImageContainer = document.getElementById('current_image_container');
-            const currentImageEl = document.getElementById('current_image');
-            if (currentImageContainer && currentImageEl) {
-                if (image && image.trim() !== '') {
-                    currentImageEl.src = '/storage/' + image;
-                    currentImageContainer.style.display = 'block';
-                } else {
-                    currentImageContainer.style.display = 'none';
-                }
+        // Populate edit form
+        document.getElementById('edit_course_repository_name').value = name;
+        document.getElementById('edit_course_repository_details').value = details || '';
+
+        // Show current image if exists
+        const currentImageContainer = document.getElementById('current_image_container');
+        const currentImageEl = document.getElementById('current_image');
+        if (currentImageContainer && currentImageEl) {
+            if (image && image.trim() !== '') {
+                currentImageEl.src = '/storage/' + image;
+                currentImageContainer.style.display = 'block';
+            } else {
+                currentImageContainer.style.display = 'none';
             }
+        }
 
-            // Update form action (use Laravel route so URL is correct)
-            const editForm = document.getElementById('editForm');
-            editForm.action = window.getCourseRepoUpdateUrl(pk);
+        // Update form action (use Laravel route so URL is correct)
+        document.getElementById('editForm').action = window.getCourseRepoUpdateUrl(pk);
 
-            // Show modal
-            const editModal = new bootstrap.Modal(document.getElementById('editModal'));
-            editModal.show();
-        });
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('editModal')).show();
     });
 
 
@@ -835,46 +701,49 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Delete button functionality with SweetAlert
-    document.querySelectorAll('.delete-repo').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const pk = this.getAttribute('data-pk');
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.delete-repo');
+        if (!btn) {
+            return;
+        }
+        e.preventDefault();
 
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "You won't be able to revert this!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Create a form and submit it (use Laravel route so URL is correct)
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = window.getCourseRepoDestroyUrl(pk);
+        const pk = btn.getAttribute('data-pk');
 
-                    var csrfToken = (document.querySelector(
-                        'meta[name="csrf-token"]') && document.querySelector(
-                            'meta[name="csrf-token"]').getAttribute('content')) || (
-                        document.querySelector('[name="_token"]') && document
-                        .querySelector('[name="_token"]').value);
-                    if (!csrfToken) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'Security token missing. Please refresh the page.'
-                        });
-                        return;
-                    }
-                    form.innerHTML = '<input type="hidden" name="_token" value="' +
-                        csrfToken +
-                        '"><input type="hidden" name="_method" value="DELETE">';
-                    document.body.appendChild(form);
-                    form.submit();
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Create a form and submit it (use Laravel route so URL is correct)
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = window.getCourseRepoDestroyUrl(pk);
+
+                var csrfToken = (document.querySelector(
+                    'meta[name="csrf-token"]') && document.querySelector(
+                        'meta[name="csrf-token"]').getAttribute('content')) || (
+                    document.querySelector('[name="_token"]') && document
+                    .querySelector('[name="_token"]').value);
+                if (!csrfToken) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Security token missing. Please refresh the page.'
+                    });
+                    return;
                 }
-            });
+                form.innerHTML = '<input type="hidden" name="_token" value="' +
+                    csrfToken +
+                    '"><input type="hidden" name="_method" value="DELETE">';
+                document.body.appendChild(form);
+                form.submit();
+            }
         });
     });
 

@@ -827,6 +827,8 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     Route::prefix('attendance')->name('attendance.')->controller(AttendanceController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/get-attendance-list', 'getAttendanceList')->name('get.attendance.list');
+        Route::get('/filter-options', 'attendanceFilterOptions')->name('filter_options');
+        Route::get('/export-list', 'exportAttendanceList')->name('export_list');
         Route::get('/create', 'create')->name('create');
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::get('/mark/{group_pk}/{course_pk}/{timetable_pk}', 'markAttendanceView')->name('mark');
@@ -1015,6 +1017,8 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
         Route::get('/my-memos', [MemoDisciplineController::class, 'otIndex'])->name('ot_index');
         Route::delete('/delete/{id}', [MemoDisciplineController::class, 'destroy'])->name('destroy');
         Route::get('/export-csv', [MemoDisciplineController::class, 'exportCsv'])->name('export_csv');
+        Route::get('/export-pdf', [MemoDisciplineController::class, 'exportPdf'])->name('export_pdf');
+        Route::post('/export-pdf-zip', [MemoDisciplineController::class, 'exportPdfZip'])->name('export_pdf_zip');
         Route::get('create', [MemoDisciplineController::class, 'create'])->name('create');
         Route::get('edit/{id}', [MemoDisciplineController::class, 'edit'])->name('edit');
         Route::post('update/{id}', [MemoDisciplineController::class, 'update'])->name('update');

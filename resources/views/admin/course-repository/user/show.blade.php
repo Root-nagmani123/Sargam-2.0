@@ -27,6 +27,8 @@ $documentCount = $documents->count();
     <div class="container-fluid px-3 px-md-4 py-4" id="cru-user-main">
         <x-breadcrum :title="$repository->course_repository_name" :items="$crumbItems" />
 
+        @include('admin.course-repository.user.partials.flash-alert')
+
         <div id="cruFilterResults">
             @if($childCount === 0 && $documentCount === 0)
             <div class="card border-0 shadow-sm rounded-4 text-center py-5 px-3">
@@ -56,24 +58,6 @@ $documentCount = $documents->count();
                 @include('admin.course-repository.user.partials.page-toolbar', ['showViewToggle' => true])
             </div>
 
-            {{-- Shared filter toolbar (with inline column show/hide) — stays visible across both card and grid views --}}
-            @if(isset($courses) && isset($subjects) && isset($faculties))
-            @include('admin.course-repository.user.partials.filter-card', [
-            'route' => route('admin.course-repository.user.show', $repository->pk),
-            'courses' => $courses,
-            'subjects' => $subjects,
-            'faculties' => $faculties,
-            'sectors' => $sectors ?? collect(),
-            'ministries' => $ministries ?? collect(),
-            'filters' => $filters ?? [],
-            'columnToggle' => [
-                'tableId' => $cruGridListTableId,
-                'storageKey' => $cruGridColumnStorageKey,
-                'columns' => $cruGridColumns,
-            ],
-            ])
-            @endif
-
             <div class="course-cards-grid mb-4 mb-md-5" id="courseCardsGrid">
                 <div class="cru-view-cards card card-body">
                     <div class="row g-3 g-md-4">
@@ -98,52 +82,74 @@ $documentCount = $documents->count();
 
             <!-- Documents Section -->
             @if($documents->count() > 0)
+            @php
+                // One definition of the documents table's columns, shared by the
+                // Column-Visibility control (table-column-toggle) and the toggle script.
+                // Keys must match the cru-col-<key> classes on the <th>/<td> cells below.
+                $cruDocsTableId = 'cruUserDocsTable';
+                $cruDocsColumnStorageKey = 'cru-user-show-docs-columns';
+                $cruDocColumns = [
+                    ['key' => 'sno', 'label' => 'S.No.', 'locked' => true],
+                    ['key' => 'document_name', 'label' => 'Document Name', 'default' => true],
+                    ['key' => 'file_title', 'label' => 'File Title', 'default' => true],
+                    ['key' => 'course', 'label' => 'Course', 'default' => true],
+                    ['key' => 'subject', 'label' => 'Subject', 'default' => true],
+                    ['key' => 'topic', 'label' => 'Topic', 'default' => true],
+                    ['key' => 'session_date', 'label' => 'Session Date', 'default' => true],
+                    ['key' => 'author', 'label' => 'Author', 'default' => true],
+                    ['key' => 'action', 'label' => 'Action', 'locked' => true],
+                ];
+            @endphp
             <div class="card shadow-sm">
-                <div class="card-header bg-light">
+                <div class="card-header bg-light d-flex flex-wrap align-items-center justify-content-between gap-2">
                     <h5 class="mb-0 fw-bold">Documents ({{ $documents->count() }})</h5>
+                    {{-- Column show/hide control (module's own, CSS-class based). Kept
+                         separate from the DataTable's paging/search so the two don't fight. --}}
+                    @include('admin.course-repository.user.partials.table-column-toggle', [
+                        'cruTableId' => $cruDocsTableId,
+                        'cruColumnStorageKey' => $cruDocsColumnStorageKey,
+                        'cruColumns' => $cruDocColumns,
+                    ])
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0 align-middle">
-                            <thead class="table-light">
+                        {{-- Client-side DataTable (see @push('scripts') below): the global
+                             enhancer adds the search box + length menu ("Showing …") +
+                             pagination on init. Each cell carries cru-col-<key> so the
+                             Column-Visibility control can hide columns independently. --}}
+                        <table id="{{ $cruDocsTableId }}" class="table table-hover mb-0 align-middle w-100">
+                            <thead>
                                 <tr>
-                                    <th class="text-center fw-bold">S.No.</th>
-                                    <th class="fw-bold">Document Name</th>
-                                    <th class="fw-bold">File Title</th>
-                                    <th class="fw-bold">Course</th>
-                                    <th class="fw-bold">Subject</th>
-                                    <th class="fw-bold">Topic</th>
-                                    <th class="fw-bold">Session Date</th>
-                                    <th class="fw-bold">Author</th>
-                                    <th class="text-center fw-bold">Action</th>
+                                    <th data-col="sno" class="cru-col-sno text-center fw-bold">S.No.</th>
+                                    <th data-col="document_name" class="cru-col-document_name fw-bold">Document Name</th>
+                                    <th data-col="file_title" class="cru-col-file_title fw-bold">File Title</th>
+                                    <th data-col="course" class="cru-col-course fw-bold">Course</th>
+                                    <th data-col="subject" class="cru-col-subject fw-bold">Subject</th>
+                                    <th data-col="topic" class="cru-col-topic fw-bold">Topic</th>
+                                    <th data-col="session_date" class="cru-col-session_date fw-bold">Session Date</th>
+                                    <th data-col="author" class="cru-col-author fw-bold">Author</th>
+                                    <th data-col="action" class="cru-col-action text-center fw-bold">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($documents as $index => $doc)
-                                @php
-                                    $fileUrl = $doc->resolved_file_url;
-                                    $videoLink = trim((string) ($doc->detail->videolink ?? ''));
-                                    $hasVideo = $videoLink !== '';
-                                    $videoDetailPk = $doc->detail->pk ?? null;
-                                    $isDirectVideoFile = $hasVideo && preg_match('/\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i', $videoLink);
-                                @endphp
-                              <tr class="{{ $loop->odd ? 'table-light' : '' }}">
-                                    <td class="text-center">{{ $loop->iteration }}</td>
-                                    <td>
+                                <tr>
+                                    <td class="cru-col-sno text-center">{{ $loop->iteration }}</td>
+                                    <td class="cru-col-document_name">
                                         <span
                                             class="material-icons material-symbols-rounded text-danger">picture_as_pdf</span>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}
                                     </td>
-                                    <td>{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
-                                    <td>
+                                    <td class="cru-col-file_title">{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
+                                    <td class="cru-col-course">
                                         <small>
-                                            @if($doc->detail && $doc->detail->course)
-                                            {{ $doc->detail->course->course_name }}
+                                            @if($doc->fallback_course)
+                                            {{ $doc->fallback_course }}
                                             @else
                                             N/A
                                             @endif
                                         </small>
                                     </td>
-                                    <td>
+                                    <td class="cru-col-subject">
                                         <small>
                                             @if($doc->fallback_subject)
                                             {{ Str::limit($doc->fallback_subject, 20) }}
@@ -152,7 +158,7 @@ $documentCount = $documents->count();
                                             @endif
                                         </small>
                                     </td>
-                                    <td>
+                                    <td class="cru-col-topic">
                                         <small>
                                             @if($doc->fallback_topic)
                                             {{ Str::limit($doc->fallback_topic, 15) }}
@@ -161,7 +167,7 @@ $documentCount = $documents->count();
                                             @endif
                                         </small>
                                     </td>
-                                    <td>
+                                    <td class="cru-col-session_date">
                                         <small>
                                             @if($doc->detail && $doc->detail->session_date)
                                             {{ $doc->detail->session_date->format('d-m-Y') }}
@@ -170,7 +176,7 @@ $documentCount = $documents->count();
                                             @endif
                                         </small>
                                     </td>
-                                    <td>
+                                    <td class="cru-col-author">
                                         <small>
                                             @if($doc->fallback_author)
                                             {{ Str::limit($doc->fallback_author, 15) }}
@@ -179,40 +185,15 @@ $documentCount = $documents->count();
                                             @endif
                                         </small>
                                     </td>
-                                    <td class="text-center">
-                                        <div class="d-inline-flex align-items-center justify-content-center gap-2">
-                                            @if($fileUrl)
-                                                <a href="{{ $fileUrl }}" target="_blank"
-                                                    class="btn btn-link btn-sm text-primary p-0" onclick="event.stopPropagation();"
-                                                    title="View document" aria-label="View document">
-                                                    <i class="bi bi-eye fs-5" aria-hidden="true"></i>
-                                                </a>
-                                                <a href="{{ $fileUrl }}" download="{{ $doc->upload_document }}"
-                                                    class="btn btn-link btn-sm text-primary p-0" onclick="event.stopPropagation();"
-                                                    title="Download document" aria-label="Download document">
-                                                    <i class="bi bi-download fs-5" aria-hidden="true"></i>
-                                                </a>
-                                            @endif
-                                            @if($hasVideo)
-                                                @if($videoDetailPk)
-                                                <a href="{{ route('admin.course-repository.user.document-video', $videoDetailPk) }}"
-                                                    class="btn btn-link btn-sm text-danger p-0" onclick="event.stopPropagation();"
-                                                    title="View video" aria-label="View video">
-                                                    <i class="bi bi-play-btn fs-5" aria-hidden="true"></i>
-                                                </a>
-                                                @endif
-                                                <a href="{{ $videoLink }}" target="_blank" rel="noopener noreferrer"
-                                                    @if($isDirectVideoFile) download @endif
-                                                    class="btn btn-link btn-sm text-danger p-0" onclick="event.stopPropagation();"
-                                                    title="{{ $isDirectVideoFile ? 'Download video' : 'Open video link' }}"
-                                                    aria-label="{{ $isDirectVideoFile ? 'Download video' : 'Open video link' }}">
-                                                    <i class="bi bi-download fs-5" aria-hidden="true"></i>
-                                                </a>
-                                            @endif
-                                            @if(!$fileUrl && !$hasVideo)
-                                                <span class="text-muted small">N/A</span>
-                                            @endif
-                                        </div>
+                                    {{-- Shared action partial (same as documents-table / week-detail).
+                                         Gates on the document's pk/detail, not physical file presence,
+                                         so the buttons always show. --}}
+                                    <td class="cru-col-action text-center">
+                                        @include('admin.course-repository.user.partials.document-actions', [
+                                            'detailPk' => $doc->detail?->pk ?? $doc->course_repository_details_pk,
+                                            'detail' => $doc->detail,
+                                            'fileDoc' => $doc,
+                                        ])
                                     </td>
                                 </tr>
                                 @endforeach
@@ -221,6 +202,63 @@ $documentCount = $documents->count();
                     </div>
                 </div>
             </div>
+
+            @push('scripts')
+            <script>
+            (function () {
+                function initCruDocsTable() {
+                    if (!(window.jQuery && $.fn && $.fn.dataTable)) return;
+                    var el = document.getElementById(@json($cruDocsTableId));
+                    if (!el || $.fn.dataTable.isDataTable(el)) return;
+                    if (el.querySelectorAll('tbody tr').length === 0) return; // nothing to page
+
+                    var dt = $(el).DataTable({
+                        paging: true,
+                        pageLength: 10,
+                        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+                        searching: true,
+                        ordering: true,
+                        info: true,
+                        // responsive:false so the extension's own column collapsing can't
+                        // fight the CSS-based Column-Visibility control.
+                        responsive: false,
+                        autoWidth: false,
+                        order: [], // keep the server order (pk desc)
+                        columnDefs: [
+                            // S.No is a display counter and Action is just icons — neither sorts.
+                            { orderable: false, targets: [0, -1] }
+                        ],
+                        pagingType: 'full_numbers'
+                    });
+
+                    // Renumber S.No in the CURRENT display order after every draw, so it stays
+                    // sequential (1..N, continuous across pages) through sort/search/paging —
+                    // otherwise each row keeps the number it was printed with server-side.
+                    function renumber() {
+                        var start = dt.page.info().start;
+                        dt.rows({ page: 'current', order: 'applied', search: 'applied' })
+                          .every(function (rowIdx, tableLoop, rowLoop) {
+                              var cell = this.node().querySelector('.cru-col-sno');
+                              if (cell) cell.textContent = start + rowLoop + 1;
+                          });
+                    }
+                    dt.on('draw', renumber);
+                    renumber();
+                }
+
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', initCruDocsTable);
+                } else {
+                    initCruDocsTable();
+                }
+            })();
+            </script>
+            @include('admin.course-repository.user.partials.column-toggle-script', [
+                'cruTableId' => $cruDocsTableId,
+                'cruColumnStorageKey' => $cruDocsColumnStorageKey,
+                'cruColumns' => $cruDocColumns,
+            ])
+            @endpush
             @endif
             @endif
         </div>
