@@ -3032,10 +3032,18 @@ class UserController extends Controller
                 // Attendance status; for an absent student the reason (Stationed
                 // Leave / PT Exemption / Medical Exemption, when one covers the day)
                 // is shown right below the "Absent" badge so it's visible in the list.
-                'status' => (function () use ($studentMap, $isAbsent, $absentReasons, $idx) {
+                'status' => (function () use ($studentMap, $statusCode, $isAbsent, $absentReasons, $idx) {
                     $present = ($studentMap->attendance_present ?? true);
-                    $html = '<span class="sl-status-badge ' . ($present ? 'sl-status-present' : 'sl-status-absent')
-                        . '">' . ($present ? 'Present' : 'Absent') . '</span>';
+                    // "Late" (status 2) is an attended-but-late state — the Present
+                    // bucket already keeps it (status !== 3), so it appears in both
+                    // the All and Present views. Show a distinct amber "Late" badge
+                    // instead of the generic green "Present" so it's called out.
+                    if ($statusCode === 2) {
+                        $html = '<span class="sl-status-badge sl-status-late">Late</span>';
+                    } else {
+                        $html = '<span class="sl-status-badge ' . ($present ? 'sl-status-present' : 'sl-status-absent')
+                            . '">' . ($present ? 'Present' : 'Absent') . '</span>';
+                    }
                     $reason = $isAbsent ? ($absentReasons[$idx] ?? '-') : '-';
                     if ($isAbsent && $reason !== '-') {
                         $html .= '<div class="text-muted small mt-1">' . e($reason) . '</div>';
@@ -3434,10 +3442,10 @@ class UserController extends Controller
             $statusCode = (int) ($studentMap->attendance_status ?? 0);
             $isAbsent = ($studentMap->attendance_present ?? true) === false;
 
-            // Attendance status text: Present / Absent, with the leave-based reason
-            // (PT Exemption / Stationed Leave) appended for an absent row — matching
-            // the reason subtitle shown under the on-screen "Absent" badge.
-            $statusText = $isAbsent ? 'Absent' : 'Present';
+            // Attendance status text: Present / Late / Absent, with the leave-based
+            // reason (PT Exemption / Stationed Leave) appended for an absent row —
+            // matching the on-screen badge (Late = status 2 attended-but-late).
+            $statusText = $isAbsent ? 'Absent' : ($statusCode === 2 ? 'Late' : 'Present');
             if ($isAbsent) {
                 $reason = $absentReasons[$index] ?? '-';
                 if ($reason !== '-') {

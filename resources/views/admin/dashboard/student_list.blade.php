@@ -220,6 +220,7 @@
     }
     .student-list-page .sl-status-absent { color: #b42318; background: #fef3f2; }
     .student-list-page .sl-status-present { color: #027a48; background: #ecfdf3; }
+    .student-list-page .sl-status-late { color: #b54708; background: #fffaeb; }
 
     /* Wide table with frozen first three columns (S.No., OT Code, Name). */
     .student-list-page .programme-dt-table { width: 100% !important; }
