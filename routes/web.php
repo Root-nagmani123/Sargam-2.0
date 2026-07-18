@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\{
     MDOEscrotExemptionController,
     AttendanceController,
     StudentMedicalExemptionController,
+    MedicalExemptionReportController,
     CourseMemoDecisionMappController,
     CourseAttendanceNoticeMapController,
     HostelBuildingFloorMappingController,
@@ -825,6 +826,8 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     Route::prefix('attendance')->name('attendance.')->controller(AttendanceController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/get-attendance-list', 'getAttendanceList')->name('get.attendance.list');
+        Route::get('/filter-options', 'attendanceFilterOptions')->name('filter_options');
+        Route::get('/export-list', 'exportAttendanceList')->name('export_list');
         Route::get('/create', 'create')->name('create');
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::get('/mark/{group_pk}/{course_pk}/{timetable_pk}', 'markAttendanceView')->name('mark');
@@ -849,6 +852,14 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         Route::get('/export', 'export')->name('export');
 
         Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+
+    // Medical Exemption Report — per-OT summary + drill-down (read-only report)
+    Route::prefix('medical-exemption-report')->name('medical.exemption.report.')->controller(MedicalExemptionReportController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/export', 'export')->name('export');
+        Route::get('/detail/{student}/{course}', 'detail')->name('detail');
+        Route::get('/detail/{student}/{course}/export', 'detailExport')->name('detail.export');
     });
 
     // PT Exemption Master (Leave Management)
@@ -922,6 +933,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         ->controller(CourseMemoDecisionMappController::class)
         ->group(function () {
             Route::get('/', 'index')->name('index');
+            Route::get('/get-courses-by-status', 'getCoursesByStatus')->name('get.courses.by.status');
             Route::get('/create', 'create')->name('create');
             Route::post('/store', 'store')->name('store');
             Route::get('/edit/{id}', 'edit')->name('edit');
@@ -1004,6 +1016,8 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
         Route::get('/my-memos', [MemoDisciplineController::class, 'otIndex'])->name('ot_index');
         Route::delete('/delete/{id}', [MemoDisciplineController::class, 'destroy'])->name('destroy');
         Route::get('/export-csv', [MemoDisciplineController::class, 'exportCsv'])->name('export_csv');
+        Route::get('/export-pdf', [MemoDisciplineController::class, 'exportPdf'])->name('export_pdf');
+        Route::post('/export-pdf-zip', [MemoDisciplineController::class, 'exportPdfZip'])->name('export_pdf_zip');
         Route::get('create', [MemoDisciplineController::class, 'create'])->name('create');
         Route::get('edit/{id}', [MemoDisciplineController::class, 'edit'])->name('edit');
         Route::post('update/{id}', [MemoDisciplineController::class, 'update'])->name('update');

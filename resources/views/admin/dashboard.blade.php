@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-calendar.css') }}?v=4">
 <link rel="stylesheet" href="{{ asset('css/dashboard-stat-cards.css') }}?v=2">
-<link rel="stylesheet" href="{{ asset('css/dashboard-main.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('css/dashboard-main.css') }}?v=4">
 
 @php
 $user = Auth::user();
@@ -150,7 +150,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     <i class="bi bi-balloon-heart-fill" aria-hidden="true"></i>
                 </span>
                 <h5 class="mb-0 fw-semibold">Birthday Wishes Received</h5>
-                <span class="badge rounded-pill text-bg-primary">{{ $myBirthdayWishCount }}</span>
+                <span class="badge rounded-1 text-bg-primary">{{ $myBirthdayWishCount }}</span>
                 <button type="button"
                     class="btn btn-sm btn-outline-primary rounded-pill ms-auto d-none d-md-inline-flex align-items-center gap-1"
                     data-bs-toggle="collapse" data-bs-target="#dashboard-birthday-wishes-collapse" aria-expanded="false"
@@ -390,8 +390,12 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                         </div>
                                         <span
                                             class="dashboard-notification-time">{{ isset($notification->created_at) ? \Carbon\Carbon::parse($notification->created_at)->diffForHumans() : '—' }}</span>
+                                        {{-- Full message, not Str::limit(): the CSS clamps it to two
+                                             lines and hover/focus reveals the rest, so the text has to
+                                             be in the DOM. Longest message in the data is ~180 chars,
+                                             i.e. a line or two more when expanded. --}}
                                         <p class="dashboard-notification-message mb-0">
-                                            {{ Str::limit(\App\Services\NotificationService::stripMessCombinedReceiptPayloadForDisplay($notification->message ?? ''), 120) }}
+                                            {{ \App\Services\NotificationService::stripMessCombinedReceiptPayloadForDisplay($notification->message ?? '') }}
                                         </p>
                                     </div>
                                 </button>
@@ -532,7 +536,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                             {{ $employee->designation_name }}</p>
                                         @if($wishCount > 0)
                                         <span
-                                            class="badge rounded-pill bg-success-subtle text-success border border-success-subtle dashboard-birthday-badge mt-1"
+                                            class="badge rounded-1 bg-success-subtle text-success border border-success-subtle dashboard-birthday-badge mt-1"
                                             title="{{ $wishCount }} wishes sent">🎁 {{ $wishCount }}</span>
                                         @endif
                                     </div>
@@ -947,6 +951,126 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
         if (!id) return;
         window.markAsReadDashboard(id, btn);
     });
+
+    /* ===== Notification hover peek =====
+       Hovering a row floats the full notification beside the list. The card is
+       appended to <body> and positioned with fixed coordinates because the panel is
+       an overflow:auto scroller, which clips anything absolutely positioned inside
+       it. Text is written with textContent — notification bodies are user data. */
+    (function() {
+        var peek = null;
+        var current = null;
+        var GAP = 12;
+
+        function build() {
+            if (peek) return peek;
+            peek = document.createElement('div');
+            peek.className = 'dashboard-notification-peek';
+            peek.setAttribute('role', 'tooltip');
+            peek.setAttribute('aria-hidden', 'true');
+            peek.innerHTML =
+                '<span class="dashboard-notification-peek__title"></span>' +
+                '<span class="dashboard-notification-peek__meta">' +
+                '<span class="dashboard-notification-peek__time"></span>' +
+                '</span>' +
+                '<p class="dashboard-notification-peek__message"></p>';
+            document.body.appendChild(peek);
+            return peek;
+        }
+
+        function place(item) {
+            var r = item.getBoundingClientRect();
+            var w = peek.offsetWidth;
+            var h = peek.offsetHeight;
+
+            // Prefer the right of the row; flip left when it would run off-screen.
+            var toLeft = r.right + GAP + w > window.innerWidth - 8;
+            var left = toLeft ? r.left - GAP - w : r.right + GAP;
+            left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+
+            var top = Math.max(8, Math.min(r.top, window.innerHeight - h - 8));
+
+            peek.classList.toggle('dashboard-notification-peek--left', toLeft);
+            peek.classList.toggle('dashboard-notification-peek--right', !toLeft);
+            peek.style.left = left + 'px';
+            peek.style.top = top + 'px';
+
+            // Keep the caret pointing at the row even when the card is clamped.
+            var caret = Math.max(10, Math.min(r.top + r.height / 2 - top, h - 18));
+            peek.style.setProperty('--peek-caret-top', caret + 'px');
+        }
+
+        function show(item) {
+            var message = item.querySelector('.dashboard-notification-message');
+            var text = message ? message.textContent.trim() : '';
+            if (!text) return; // nothing more to reveal than the row already shows
+
+            build();
+            current = item;
+
+            var title = item.querySelector('.dashboard-notification-title');
+            var time = item.querySelector('.dashboard-notification-time');
+            peek.querySelector('.dashboard-notification-peek__title').textContent =
+                title ? title.textContent.trim() : 'Notification';
+            peek.querySelector('.dashboard-notification-peek__time').textContent =
+                time ? time.textContent.trim() : '';
+            peek.querySelector('.dashboard-notification-peek__message').textContent = text;
+
+            var meta = peek.querySelector('.dashboard-notification-peek__meta');
+            var existingTag = meta.querySelector('.dashboard-notification-peek__new');
+            if (existingTag) existingTag.remove();
+            if (item.classList.contains('dashboard-notification-item-unread')) {
+                var tag = document.createElement('span');
+                tag.className = 'dashboard-notification-peek__new';
+                tag.textContent = 'New';
+                meta.appendChild(tag);
+            }
+
+            place(item);
+            peek.classList.add('is-visible');
+            peek.setAttribute('aria-hidden', 'false');
+        }
+
+        function hide() {
+            current = null;
+            if (!peek) return;
+            peek.classList.remove('is-visible');
+            peek.setAttribute('aria-hidden', 'true');
+        }
+
+        function itemFrom(e) {
+            return e.target && e.target.closest ?
+                e.target.closest('.dashboard-notification-item') : null;
+        }
+
+        document.addEventListener('mouseover', function(e) {
+            var item = itemFrom(e);
+            if (item && item !== current) show(item);
+        });
+
+        document.addEventListener('mouseout', function(e) {
+            var item = itemFrom(e);
+            if (!item) return;
+            // Ignore moves between children of the same row.
+            if (e.relatedTarget && item.contains(e.relatedTarget)) return;
+            hide();
+        });
+
+        // Keyboard parity: the row is a real button, so Tab must peek too.
+        document.addEventListener('focusin', function(e) {
+            var item = itemFrom(e);
+            if (item) show(item);
+        });
+        document.addEventListener('focusout', function(e) {
+            if (itemFrom(e)) hide();
+        });
+
+        // The list scrolls under the card, so re-anchor (or drop) it as things move.
+        window.addEventListener('scroll', function() {
+            if (current) place(current);
+        }, true);
+        window.addEventListener('resize', hide);
+    })();
 
     document.addEventListener('click', function(e) {
         const tabBtn = e.target && e.target.closest ? e.target.closest(

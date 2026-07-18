@@ -78,7 +78,7 @@
     font-weight: 600;
 }
 
-/* Download link */
+/* Download link (also used as a <button class="dropdown-toggle"> on the discipline page) */
 .mnm-page .mnm-download,
 .disc-page .disc-download {
     background: #fff;
@@ -91,6 +91,8 @@
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
+    border: 1px solid #dee2e6;
+    cursor: pointer;
 }
 
 .mnm-page .mnm-download:hover,
@@ -220,6 +222,49 @@
     font-size: 0.875rem;
     color: #344054;
     vertical-align: middle;
+    white-space: nowrap;
+}
+
+.disc-page table#discTable tbody td {
+    max-width: 220px;
+}
+
+/* Force a visible, working horizontal scrollbar on these wide tables — some
+   browser/OS combos render the default Bootstrap .table-responsive scrollbar
+   as a thin overlay that's easy to miss, making the last columns (e.g.
+   Remarks, Conclusion Remark) look "missing" when they're just off-screen. */
+.send-notice-page .table-responsive,
+.mnm-page .table-responsive,
+.disc-page .table-responsive {
+    overflow-x: auto !important;
+    scrollbar-width: auto;
+    scrollbar-color: #98a2b3 #f2f4f7;
+}
+
+.send-notice-page .table-responsive::-webkit-scrollbar,
+.mnm-page .table-responsive::-webkit-scrollbar,
+.disc-page .table-responsive::-webkit-scrollbar {
+    height: 12px;
+}
+
+.send-notice-page .table-responsive::-webkit-scrollbar-track,
+.mnm-page .table-responsive::-webkit-scrollbar-track,
+.disc-page .table-responsive::-webkit-scrollbar-track {
+    background: #f2f4f7;
+    border-radius: 6px;
+}
+
+.send-notice-page .table-responsive::-webkit-scrollbar-thumb,
+.mnm-page .table-responsive::-webkit-scrollbar-thumb,
+.disc-page .table-responsive::-webkit-scrollbar-thumb {
+    background: #98a2b3;
+    border-radius: 6px;
+}
+
+.send-notice-page .table-responsive::-webkit-scrollbar-thumb:hover,
+.mnm-page .table-responsive::-webkit-scrollbar-thumb:hover,
+.disc-page .table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #667085;
 }
 
 /* DataTables current page button */
@@ -272,6 +317,22 @@
     box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
 }
 
+/* An open filter dropdown must sit ABOVE the frozen table columns. Those cells are
+   position:sticky with z-index 2 (body) / 3 (header), which without this would cover
+   the leftmost filters' dropdowns (Program Name, Discipline) as they open over the
+   table. Raising the open Choices container creates a stacking context above them. */
+.disc-page .choices.is-open,
+.mnm-page .choices.is-open,
+.send-notice-page .choices.is-open {
+    position: relative;
+    z-index: 30;
+}
+.disc-page .choices__list--dropdown,
+.mnm-page .choices__list--dropdown,
+.send-notice-page .choices__list--dropdown {
+    z-index: 30;
+}
+
 .send-notice-page .choices__list--single,
 .mnm-page .choices__list--single,
 .disc-page .choices__list--single {
@@ -321,6 +382,258 @@
 .mnm-page .mnm-action .mnm-dot {
     position: absolute; top: -3px; right: 6px; width: 8px; height: 8px;
     background: #f04438; border-radius: 50%; border: 1px solid #fff;
+}
+
+/* ── Date range picker (Send Discipline Memo) ──
+   Replaces the old Time Period preset select + two bare date inputs with one
+   flatpickr range field showing two months at once. The visible input is display
+   only; #from_date/#to_date (hidden) are the fields that actually submit. */
+.disc-page .disc-daterange-wrap {
+    position: relative;
+    display: inline-block;
+}
+
+.disc-page .disc-daterange-icon {
+    position: absolute;
+    left: 0.7rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #667085;
+    font-size: 0.9rem;
+    pointer-events: none;
+}
+
+.disc-page .disc-daterange-input {
+    /* 40px + this border/radius/type scale = the Choices filter controls above,
+       so the picker sits level with them in the flex filter bar. */
+    min-height: 40px;
+    min-width: 215px;
+    width: auto;
+    padding: 0.4rem 1.9rem 0.4rem 2.1rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background-color: #fff;
+    font-size: 0.875rem;
+    color: #344054;
+    cursor: pointer;
+}
+
+.disc-page .disc-daterange-input:focus {
+    border-color: #004a93;
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+}
+
+.disc-page .disc-daterange-clear {
+    position: absolute;
+    right: 0.45rem;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 0;
+    background: transparent;
+    color: #94a3b8;
+    line-height: 1;
+    padding: 0.15rem;
+    cursor: pointer;
+}
+
+.disc-page .disc-daterange-clear:hover {
+    color: #475467;
+}
+
+.disc-page .disc-daterange-clear[hidden] {
+    display: none;
+}
+
+/* Calendar theme. flatpickr appends the calendar to <body>, i.e. OUTSIDE
+   .disc-page — so these cannot be nested under it. The .disc-flatpickr class is
+   added in the picker's onReady, which is what keeps the reach narrow.
+   Accent is the app's brand blue rather than any one mockup's colour. */
+.flatpickr-calendar.disc-flatpickr {
+    box-shadow: 0 0.5rem 1.75rem rgba(16, 42, 76, 0.18);
+    border-radius: 0.75rem;
+}
+
+.disc-flatpickr .flatpickr-day.selected,
+.disc-flatpickr .flatpickr-day.startRange,
+.disc-flatpickr .flatpickr-day.endRange {
+    background: #004a93;
+    border-color: #004a93;
+    color: #fff;
+}
+
+.disc-flatpickr .flatpickr-day.inRange {
+    background: #e7f0fa;
+    border-color: #e7f0fa;
+    box-shadow: -5px 0 0 #e7f0fa, 5px 0 0 #e7f0fa;
+}
+
+.disc-flatpickr .flatpickr-day.today {
+    border-color: #004a93;
+}
+
+.disc-flatpickr .flatpickr-day:hover {
+    background: #eef3f9;
+}
+
+/* ── Frozen first columns (Send Discipline Memo) ──
+   #discTable scrolls horizontally inside .table-responsive. The leading identity
+   columns (select, S. No., Program Name, Name) stay pinned to the left edge so a
+   row is still identifiable once the later columns are scrolled into view.
+
+   border-collapse MUST be separate here. The reboot's default `collapse` hands
+   ownership of the borders to the table rather than the cell, so they don't
+   travel with a sticky cell and the row line tears as you scroll. Bootstrap
+   draws its row lines from each cell's OWN border-bottom (reboot gives tr/td/th
+   border-style:solid + border-width:0, then .table sets border-bottom-width on
+   every cell), so they survive this switch unchanged; border-spacing:0 keeps the
+   cells flush, exactly as collapse had them.
+
+   The per-column `left` offsets depend on the rendered widths of the columns to
+   their left — CSS can't compute those, so discFreezeColumns() measures and
+   applies them. */
+.disc-page table#discTable {
+    border-collapse: separate;
+    border-spacing: 0;
+    /* The admin theme (admin_assets/css/styles.css) sets `overflow: hidden` on
+       EVERY .table, so its border-radius clips. Harmless on a normal table — but
+       overflow:hidden makes the <table> its own scroll container, and a sticky
+       cell anchors to its NEAREST scrollport. That would be the table itself, not
+       .table-responsive, so the frozen cells would ride along with the table and
+       never appear to freeze at all. Opting this one table out is what makes the
+       frozen columns work; there's no border-radius on it to lose. Scoped to
+       #discTable — the theme rule is shared by ~295 views. */
+    overflow: visible;
+}
+
+.disc-page table#discTable th.disc-sticky,
+.disc-page table#discTable td.disc-sticky {
+    position: sticky;
+    z-index: 2;
+    /* Table cells are transparent in some Bootstrap 5 builds. Without an opaque
+       background the scrolling columns would show through the frozen ones. */
+    background: #fff;
+}
+
+.disc-page table#discTable thead th.disc-sticky {
+    /* Above the frozen body cells, so the header wins where they overlap. */
+    z-index: 3;
+    background: #f2f4f7;
+}
+
+/* Marks where the frozen block ends. A pseudo-element rather than border-right:
+   it can't be disturbed by the cell border rules above, and it lets the shadow
+   sit outside the cell. */
+.disc-page table#discTable .disc-sticky-edge::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 1px;
+    background: #e4e7ec;
+    box-shadow: 2px 0 5px rgba(16, 24, 40, 0.08);
+    pointer-events: none;
+}
+
+/* ── Single-line cells (Send Discipline Memo) ──
+   Name / Cadre hold one short value each and should read as a single line. The
+   shared tbody td rule near the top of this file caps every cell at 220px with
+   white-space:normal + word-break:break-word — correct for the free-text columns
+   (Remarks, Conclusion Remark), but it wraps a person's name mid-word.
+   NOTE: .text-nowrap on the <table> can't fix this. white-space inherits, and a
+   rule that matches the td directly always beats an inherited value — the
+   !important on .text-nowrap doesn't enter into it. The override has to target
+   the cell, which is what this does. */
+.disc-page table#discTable tbody td.disc-nowrap {
+    white-space: nowrap;
+    word-break: normal;
+    max-width: none;
+}
+
+/* ── Action cell (Send Discipline Memo) ──
+   The cell mixes a bordered button (Edit), borderless Material-icon buttons
+   (Send/Close/Delete) and a "—" placeholder. As inline-blocks they'd each sit
+   on the text baseline, and the taller Material icons would drag their buttons
+   out of line with the rest. A flex row puts them all on one centre line and
+   owns the spacing, so no button needs its own margin.
+   Column is left-aligned: the <th> and this cell must agree, or the label and
+   the buttons it labels sit on opposite edges of the column. */
+.disc-page table#discTable tbody td.disc-action-cell {
+    /* Overrides the .disc-page td max-width/word-break above, which would
+       otherwise wrap the "Close" button's label onto a second line. */
+    max-width: none;
+    white-space: nowrap;
+}
+
+.disc-page .disc-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    gap: 0.25rem;
+}
+
+.disc-page .disc-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    line-height: 1;
+}
+
+/* Normalise the two icon sets (Bootstrap Icons + Material Symbols) to one size,
+   so every control in the row has the same optical height. */
+.disc-page .disc-actions .btn i {
+    font-size: 1.15rem;
+    line-height: 1;
+}
+
+.disc-page .disc-actions .btn.disabled {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+/* ── Status cell (Send Discipline Memo) ──
+   Same alignment problem as the action cell: the badge pairs a Bootstrap icon
+   with text, and the links row pairs a small text link with a taller Material
+   chat icon. Bootstrap's .d-flex defaults to align-items:stretch, so the link
+   and the icon never shared a centre line. */
+.disc-page table#discTable tbody td.disc-status-cell {
+    max-width: none;
+    white-space: nowrap;
+}
+
+.disc-page .disc-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-weight: 600;
+}
+
+.disc-page .disc-status-links {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+.disc-page .disc-status-links a {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+}
+
+/* The chat link is icon-only, and Material icons are ligature TEXT — the default
+   link underline draws straight through the glyph. "View Memo" keeps its
+   underline; only the icon opts out. */
+.disc-page .disc-status-links a.view-conversation {
+    text-decoration: none;
+}
+
+/* Match the action cell's icon size so both columns read as one system. */
+.disc-page .disc-status-links i {
+    font-size: 1.15rem;
+    line-height: 1;
 }
 
 /* ============================================================

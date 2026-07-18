@@ -285,7 +285,7 @@
                     data-bs-toggle="dropdown" aria-expanded="false" style="color:#475569">
                 <i class="material-icons material-symbols-rounded" style="font-size:28px">notifications</i>
                 <span id="facultyFeedbackBadge"
-                      class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                      class="position-absolute top-0 start-100 translate-middle badge rounded-1 bg-danger"
                       style="font-size:10px;display:none"></span>
             </button>
             <div class="dropdown-menu dropdown-menu-end shadow border-0 p-0"

@@ -100,7 +100,7 @@
                                     <div class="flex-grow-1 min-w-0">
                                         <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                                             <p class="text-body-secondary small text-uppercase fw-semibold mb-0 lh-sm">Paid</p>
-                                            <span class="badge rounded-pill bg-success-subtle text-success-emphasis border border-success-subtle" id="process-mess-stats-paid-pct">{{ $statsPaidPct }}% cleared</span>
+                                            <span class="badge rounded-1 bg-success-subtle text-success-emphasis border border-success-subtle" id="process-mess-stats-paid-pct">{{ $statsPaidPct }}% cleared</span>
                                         </div>
                                         <p class="fs-3 fw-bold text-success mb-0 lh-1 tabular-nums" id="process-mess-stats-paid">{{ number_format($stats['paid_count']) }}</p>
                                     </div>
@@ -324,11 +324,11 @@
                                 <td>{{ $cb->payment_type ?? '—' }}</td>
                                 <td>
                                     @if(($cb->status ?? 0) == 2)
-                                        <span class="badge rounded-pill text-bg-success shadow-sm px-3 py-2">✓ Paid</span>
+                                        <span class="badge rounded-1 text-bg-success shadow-sm px-3 py-2">✓ Paid</span>
                                     @elseif(($cb->status ?? 0) == 1)
-                                        <span class="badge rounded-pill text-bg-warning text-dark shadow-sm px-3 py-2">⏱ Partial</span>
+                                        <span class="badge rounded-1 text-bg-warning text-dark shadow-sm px-3 py-2">⏱ Partial</span>
                                     @else
-                                        <span class="badge rounded-pill text-bg-secondary shadow-sm px-3 py-2">○ Unpaid</span>
+                                        <span class="badge rounded-1 text-bg-secondary shadow-sm px-3 py-2">○ Unpaid</span>
                                     @endif
                                 </td>
                                 <td class="text-center no-print">
@@ -1666,16 +1666,16 @@ document.addEventListener('DOMContentLoaded', function() {
             return '<span class="text-muted small">—</span>';
         }
         var readBadge = b.invoice_notification_read
-            ? '<span class="badge rounded-pill bg-info-subtle text-info border border-info-subtle fw-semibold">Read</span>'
-            : '<span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle fw-semibold">Unread</span>';
+            ? '<span class="badge rounded-1 bg-info-subtle text-info border border-info-subtle fw-semibold">Read</span>'
+            : '<span class="badge rounded-1 bg-warning-subtle text-warning border border-warning-subtle fw-semibold">Unread</span>';
         var partialBadge = b.invoice_notification_partial
-            ? '<span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle fw-semibold">New items (' + (b.invoice_notification_pending_count || 0) + ')</span>'
+            ? '<span class="badge rounded-1 bg-primary-subtle text-primary border border-primary-subtle fw-semibold">New items (' + (b.invoice_notification_pending_count || 0) + ')</span>'
             : '';
         var sentLabel = b.invoice_notification_fully_sent
             ? 'Invoice Sent'
             : 'Invoice Sent (partial)';
         return '<div class="d-flex flex-column align-items-center gap-1">' +
-            '<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle fw-semibold">' + sentLabel + '</span>' +
+            '<span class="badge rounded-1 bg-success-subtle text-success border border-success-subtle fw-semibold">' + sentLabel + '</span>' +
             partialBadge +
             readBadge +
             '</div>';

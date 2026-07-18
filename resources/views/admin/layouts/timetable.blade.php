@@ -117,7 +117,7 @@
                                         style="color:#333">
                                     <i class="bi bi-bell-fill" style="font-size:20px"></i>
                                     <span id="facultyFeedbackBadge"
-                                          class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                          class="position-absolute top-0 start-100 translate-middle badge rounded-1 bg-danger"
                                           style="font-size:10px;display:none"></span>
                                 </button>
                                 <div class="dropdown-menu dropdown-menu-end shadow border-0 p-0"

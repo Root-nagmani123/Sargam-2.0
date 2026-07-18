@@ -15,7 +15,7 @@
     }
 
     $subCategoryCount = $repository->children->count() ?? 0;
-    $attachmentCount = $documentCounts[$repository->pk] ?? $repository->getTotalDocumentCount();
+    $attachmentCount = $documentCounts[$repository->pk] ?? $repository->getDocumentCount();
     $subCategoryText = $subCategoryCount . ' ' . Str::plural('Sub-category', $subCategoryCount);
     $attachmentText = $attachmentCount . ' ' . Str::plural('Attachment', $attachmentCount);
 @endphp

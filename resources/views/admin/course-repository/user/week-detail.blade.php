@@ -10,6 +10,8 @@
     <!-- Main Content -->
     <main class="flex-grow-1">
         <div class="container-fluid px-4 py-4" id="main-content">
+            @include('admin.course-repository.user.partials.flash-alert')
+
             <!-- Title Section with Back Button -->
             <div class="title-section mb-4">
                 <div class="d-flex align-items-center gap-3">

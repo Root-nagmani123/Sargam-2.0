@@ -87,19 +87,27 @@ class CourseAttendanceNoticeMapController extends Controller
 
     if ($typeFilter !== null && $typeFilter !== '') {
         if ($typeFilter == '1') {
-            // Notice: get notices that haven't been converted to memos
-            $noticesQuery->where('sns.notice_memo', 1)->where('sns.status', '!=', 2);
+            // Notice: get notices that haven't been converted to a Memo. A closed
+            // Notice (status == 2) can mean either "closed directly as a Notice" or
+            // "converted to a Memo" — those are indistinguishable from status alone,
+            // so check for the absence of a student_memo_status row instead.
+            $noticesQuery->where('sns.notice_memo', 1)
+                ->whereNotExists(function ($q) {
+                    $q->select(DB::raw(1))
+                        ->from('student_memo_status')
+                        ->whereColumn('student_memo_status.student_notice_status_pk', 'sns.pk');
+                });
         }
         // if $typeFilter == '0' (memo), we'll fetch memos separately later
     }
 
-    if ($statusFilter !== null && $statusFilter !== '') {
-        if ($statusFilter == '1') {
-            $noticesQuery->where('sns.status', 1);
-        } elseif ($statusFilter == '0') {
-            $noticesQuery->where('sns.status', 2);
-        }
-    }
+    // Status filter is intentionally NOT applied here. A notice with sns.status == 2
+    // may either be a Notice closed directly, or a Notice converted to a Memo whose
+    // own open/closed state lives in student_memo_status — the two are indistinguishable
+    // from sns.status alone. Filtering here would also conflict with the "not converted
+    // to memo" condition above (sns.status != 2) when Type=Notice + Status=Close is
+    // selected together, always returning zero rows. The collection-level filter below
+    // (after memo substitution) applies status correctly against the resolved item.
 
     // Apply date range filter — use session date for attendance-based, notice date for direct
     if ($fromDateFilter) {
@@ -473,17 +481,26 @@ $noticeCount = $memos->groupBy(function($item) {
 
         if ($typeFilter !== null && $typeFilter !== '') {
             if ($typeFilter == '1') {
-                $noticesQuery->where('sns.notice_memo', 1)->where('sns.status', '!=', 2);
+                // Notice: get notices that haven't been converted to a Memo. A closed
+                // Notice (status == 2) can mean either "closed directly as a Notice" or
+                // "converted to a Memo" — those are indistinguishable from status alone,
+                // so check for the absence of a student_memo_status row instead.
+                $noticesQuery->where('sns.notice_memo', 1)
+                    ->whereNotExists(function ($q) {
+                        $q->select(DB::raw(1))
+                            ->from('student_memo_status')
+                            ->whereColumn('student_memo_status.student_notice_status_pk', 'sns.pk');
+                    });
             }
         }
 
-        if ($statusFilter !== null && $statusFilter !== '') {
-            if ($statusFilter == '1') {
-                $noticesQuery->where('sns.status', 1);
-            } elseif ($statusFilter == '0') {
-                $noticesQuery->where('sns.status', 2);
-            }
-        }
+        // Status filter is intentionally NOT applied here. A notice with sns.status == 2
+        // may either be a Notice closed directly, or a Notice converted to a Memo whose
+        // own open/closed state lives in student_memo_status — the two are indistinguishable
+        // from sns.status alone. Filtering here would also conflict with the "not converted
+        // to memo" condition above (sns.status != 2) when Type=Notice + Status=Close is
+        // selected together, always returning zero rows. The collection-level filter below
+        // (after memo substitution) applies status correctly against the resolved item.
 
         // Apply date range filter by session date
         if ($fromDateFilter) {
@@ -1521,6 +1538,18 @@ public function destroyRecord($id, $type)
 
     $type = $type === 'memo' ? 'memo' : 'notice';
 
+    // Capture record before hard-delete so the OT can still be notified.
+    $noticeForNotify = null;
+    $memoForNotify = null;
+    if ($type === 'notice') {
+        $noticeForNotify = DB::table('student_notice_status')->where('pk', $id)->first();
+        if ($noticeForNotify && empty($noticeForNotify->student_pk)) {
+            $noticeForNotify->student_pk = $this->resolveNoticeStudentPk((int) $id);
+        }
+    } else {
+        $memoForNotify = DB::table('student_memo_status')->where('pk', $id)->first();
+    }
+
     try {
         DB::transaction(function () use ($id, $type) {
             if ($type === 'memo') {
@@ -1539,6 +1568,26 @@ public function destroyRecord($id, $type)
                 DB::table('student_notice_status')->where('pk', $id)->delete();
             }
         });
+
+        if ($noticeForNotify) {
+            $this->notifyStudentAboutNotice(
+                $noticeForNotify,
+                'Notice Deleted',
+                'has been deleted'
+            );
+        }
+
+        if ($memoForNotify) {
+            $this->notifyStudentAboutMemo(
+                (int) $memoForNotify->pk,
+                (int) $memoForNotify->student_pk,
+                (int) $memoForNotify->course_master_pk,
+                (int) $memoForNotify->student_notice_status_pk,
+                (string) ($memoForNotify->date ?? now()->format('Y-m-d')),
+                'Memo Deleted',
+                'has been deleted'
+            );
+        }
 
         return response()->json(['success' => true, 'message' => ucfirst($type) . ' deleted successfully.']);
     } catch (\Exception $e) {
@@ -1644,6 +1693,12 @@ public function updateNoticeTemplate(Request $request, $id)
         'template_snapshot'       => build_memo_notice_template_snapshot($validated['memo_notice_template_pk']),
     ]);
 
+    $this->notifyStudentAboutNotice(
+        $notice,
+        'Notice Updated',
+        'has been updated. Please review'
+    );
+
     return response()->json(['success' => true, 'message' => 'Notice updated successfully.']);
 }
 public function memo_notice_conversation(Request $request)
@@ -1743,6 +1798,34 @@ public function memo_notice_conversation(Request $request)
             $query->update([
                 'status' => 2
             ]);
+        }
+
+        // Notify the OT that the memo/notice conversation has been closed.
+        if ($type === 'memo') {
+            $memoForNotify = DB::table('student_memo_status')->where('pk', $validated['memo_notice_id'])->first();
+            if ($memoForNotify) {
+                $this->notifyStudentAboutMemo(
+                    (int) $memoForNotify->pk,
+                    (int) $memoForNotify->student_pk,
+                    (int) $memoForNotify->course_master_pk,
+                    (int) $memoForNotify->student_notice_status_pk,
+                    (string) ($memoForNotify->date ?? now()->format('Y-m-d')),
+                    'Memo Closed',
+                    'has been closed'
+                );
+            }
+        } else {
+            $noticeForNotify = DB::table('student_notice_status')->where('pk', $validated['memo_notice_id'])->first();
+            if ($noticeForNotify) {
+                if (empty($noticeForNotify->student_pk)) {
+                    $noticeForNotify->student_pk = $this->resolveNoticeStudentPk((int) $validated['memo_notice_id']);
+                }
+                $this->notifyStudentAboutNotice(
+                    $noticeForNotify,
+                    'Notice Closed',
+                    'has been closed'
+                );
+            }
         }
     }
 
@@ -2393,6 +2476,117 @@ private function sendIssuedMemoNotification(
 }
 
 /**
+ * Notify the OT about a memo lifecycle change (issued / updated).
+ */
+private function notifyStudentAboutMemo(
+    int $memoPk,
+    int $studentPk,
+    int $coursePk,
+    int $noticeStatusPk,
+    string $memoDate,
+    string $title,
+    string $actionPhrase
+): void {
+    try {
+        $receiverUserId = app(NotificationReceiverService::class)->getStudentUserId($studentPk);
+        if (!$receiverUserId) {
+            return;
+        }
+
+        $courseName = CourseMaster::where('pk', $coursePk)->value('course_name') ?? 'Course';
+
+        $notice = DB::table('student_notice_status as sns')
+            ->leftJoin('subject_master as sm', 'sns.subject_master_pk', '=', 'sm.pk')
+            ->where('sns.pk', $noticeStatusPk)
+            ->select('sns.subject_topic', 'sm.subject_name')
+            ->first();
+
+        $subjectName = $notice->subject_name ?? 'Subject';
+        $topicName = 'Topic';
+        if (!empty($notice->subject_topic)) {
+            $topicName = DB::table('timetable')->where('pk', $notice->subject_topic)->value('subject_topic') ?? 'Topic';
+        }
+
+        $dateLabel = date('d M Y', strtotime($memoDate));
+
+        app(NotificationService::class)->create(
+            (int) $receiverUserId,
+            'memo_notice',
+            'Memo',
+            $memoPk,
+            $title,
+            "A Memo for {$courseName} - {$subjectName} ({$topicName}) on {$dateLabel} {$actionPhrase}."
+        );
+    } catch (\Exception $e) {
+        \Log::error("Failed to send memo notification ({$title}): " . $e->getMessage());
+    }
+}
+
+/**
+ * Notify the OT about a notice lifecycle change (updated / closed / deleted).
+ *
+ * @param  object  $notice  Row from student_notice_status
+ * @param  string  $title   Bell notification title
+ * @param  string  $actionPhrase  e.g. "has been updated. Please review"
+ */
+private function notifyStudentAboutNotice(object $notice, string $title, string $actionPhrase): void
+{
+    try {
+        $studentPk = !empty($notice->student_pk)
+            ? (int) $notice->student_pk
+            : $this->resolveNoticeStudentPk((int) $notice->pk);
+
+        if (!$studentPk) {
+            return;
+        }
+
+        $receiverUserId = app(NotificationReceiverService::class)->getStudentUserId($studentPk);
+        if (!$receiverUserId) {
+            return;
+        }
+
+        $courseName = CourseMaster::where('pk', $notice->course_master_pk)->value('course_name') ?? 'Course';
+        $subjectName = SubjectMaster::where('pk', $notice->subject_master_pk)->value('subject_name') ?? 'Subject';
+        $topicName = 'Topic';
+        if (!empty($notice->subject_topic)) {
+            $topicName = DB::table('timetable')->where('pk', $notice->subject_topic)->value('subject_topic') ?? 'Topic';
+        }
+        $dateLabel = !empty($notice->date_)
+            ? date('d M Y', strtotime((string) $notice->date_))
+            : date('d M Y');
+
+        app(NotificationService::class)->create(
+            (int) $receiverUserId,
+            'memo_notice',
+            'Notice',
+            (int) $notice->pk,
+            $title,
+            "A Notice for {$courseName} - {$subjectName} ({$topicName}) on {$dateLabel} {$actionPhrase}."
+        );
+    } catch (\Exception $e) {
+        \Log::error("Failed to send notice notification ({$title}): " . $e->getMessage());
+    }
+}
+
+/**
+ * Resolve student_pk for a notice (attendance-based or direct).
+ */
+private function resolveNoticeStudentPk(int $noticePk): ?int
+{
+    $row = DB::table('student_notice_status as sns')
+        ->leftJoin('course_student_attendance as csa', 'sns.course_student_attendance_pk', '=', 'csa.pk')
+        ->where('sns.pk', $noticePk)
+        ->select(DB::raw('COALESCE(csa.Student_master_pk, sns.student_pk) as student_pk'))
+        ->first();
+
+    if (!$row || $row->student_pk === null) {
+        return null;
+    }
+
+    return (int) $row->student_pk;
+}
+
+/**
  * Notify the other party when a new notice/memo chat message is posted.
  * Admin/faculty (role f) → OT student; OT (role s) → incharge/admin faculty.
  */
@@ -2485,44 +2679,7 @@ private function resolveMemoNoticeStudentPk(int $id, string $type): ?int
  */
 private function resolveMemoNoticeReceiverIds($id, $type): array
 {
-    if ($type === 'memo') {
-        $facultyRaw = DB::table('student_memo_status as sms')
-            ->leftJoin('student_notice_status as sns', 'sms.student_notice_status_pk', '=', 'sns.pk')
-            ->where('sms.pk', $id)
-            ->value('sns.faculty_master_pk');
-    } else {
-        $facultyRaw = DB::table('student_notice_status')
-            ->where('pk', $id)
-            ->value('faculty_master_pk');
-    }
-
-    if ($facultyRaw === null || $facultyRaw === '') {
-        return [];
-    }
-
-    // faculty_master_pk may be stored as a JSON array ("[14,9]") or as a single scalar value.
-    $trimmed = trim((string) $facultyRaw);
-    if (str_starts_with($trimmed, '[')) {
-        $decoded = json_decode($trimmed, true);
-        $facultyIds = is_array($decoded) ? $decoded : [];
-    } else {
-        $facultyIds = [$facultyRaw];
-    }
-
-    $facultyIds = array_values(array_filter(array_map('intval', $facultyIds)));
-    if (empty($facultyIds)) {
-        return [];
-    }
-
-    return DB::table('faculty_master')
-        ->whereIn('pk', $facultyIds)
-        ->whereNotNull('employee_master_pk')
-        ->pluck('employee_master_pk')
-        ->map(fn ($v) => (int) $v)
-        ->filter()
-        ->unique()
-        ->values()
-        ->all();
+    return app(NotificationReceiverService::class)->getMemoNoticeAdminReceivers((int) $id, (string) $type);
 }
 
 /**
@@ -3068,6 +3225,16 @@ public function updateMemoStatus(Request $request, $id)
         'modified_date'           => now(),
     ]);
 
+    $this->notifyStudentAboutMemo(
+        (int) $id,
+        (int) $validated['student_pk'],
+        (int) $memo->course_master_pk,
+        (int) $memo->student_notice_status_pk,
+        $validated['date_memo_notice'],
+        'Memo Updated',
+        'has been updated. Please review'
+    );
+
     return response()->json(['success' => true, 'message' => 'Memo updated successfully.']);
 }
 
@@ -3114,6 +3281,19 @@ public function endChat(Request $request)
                     'conclusion_remark'         => $validated['conclusion_remark'],
                     'modified_date'             => now(),
                 ]);
+
+            $memoForNotify = DB::table('student_memo_status')->where('pk', $validated['id'])->first();
+            if ($memoForNotify) {
+                $this->notifyStudentAboutMemo(
+                    (int) $memoForNotify->pk,
+                    (int) $memoForNotify->student_pk,
+                    (int) $memoForNotify->course_master_pk,
+                    (int) $memoForNotify->student_notice_status_pk,
+                    (string) ($memoForNotify->date ?? now()->format('Y-m-d')),
+                    'Memo Closed',
+                    'has been closed'
+                );
+            }
         } else {
             DB::table('student_notice_status')
                 ->where('pk', $validated['id'])
@@ -3123,6 +3303,18 @@ public function endChat(Request $request)
                     'mark_of_deduction'  => $validated['marks_deducted'] ?? null,
                     'conclusion_remark'  => $validated['conclusion_remark'],
                 ]);
+
+            $noticeForNotify = DB::table('student_notice_status')->where('pk', $validated['id'])->first();
+            if ($noticeForNotify) {
+                if (empty($noticeForNotify->student_pk)) {
+                    $noticeForNotify->student_pk = $this->resolveNoticeStudentPk((int) $validated['id']);
+                }
+                $this->notifyStudentAboutNotice(
+                    $noticeForNotify,
+                    'Notice Closed',
+                    'has been closed'
+                );
+            }
         }
 
         return response()->json(['success' => true, 'message' => 'Conversation ended successfully.']);

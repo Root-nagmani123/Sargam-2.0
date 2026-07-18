@@ -449,7 +449,7 @@ class LeaveApplicationController extends Controller
                 ];
                 [$label, $variant] = $map[(int) $row->status] ?? [$row->status_label, 'draft'];
 
-                return '<span class="badge rounded-pill leave-status leave-status--' . $variant . '">' . e($label) . '</span>';
+                return '<span class="badge rounded-1 leave-status leave-status--' . $variant . '">' . e($label) . '</span>';
             })
             ->addColumn('action', function ($row) {
                 $html = '<div class="d-inline-flex align-items-center justify-content-center gap-2 programme-action-group">';

@@ -19,6 +19,14 @@
                         <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ request('bill_month', date('Y-m')) }}" max="{{ date('Y-m') }}" required>
                     </div>
                 </div>
+                <div class="col-12 col-md-3">
+                    <label for="employee_type_filter" class="form-label">Employee Type</label>
+                    <select class="form-select" id="employee_type_filter" name="employee_type">
+                        <option value="all" selected>All</option>
+                        <option value="lbsnaa">LBSNAA</option>
+                        <option value="other">Other Employee</option>
+                    </select>
+                </div>
                 <div class="col-12 col-md-2">
                     <button type="submit" class="btn btn-primary rounded-1 px-3 w-100" id="btnShow">
                         <i class="bi bi-search me-1"></i> Show
@@ -232,17 +240,11 @@ $(document).ready(function() {
 
     function openPrintWindow(tableHtml) {
         var billMonth = ($('#bill_month').val() || '').trim();
-        var win = window.open('', '_blank');
-        if (!win) {
-            window.print();
-            return;
-        }
 
         var today = new Date();
         var dateStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-        win.document.open();
-        win.document.write(
+        var printHtml = (
             '<!doctype html><html><head><meta charset="utf-8">' +
             '<title>Estate Bill Report - Grid View</title>' +
             '<style>' +
@@ -282,13 +284,40 @@ $(document).ready(function() {
             '<div class="print-footer"><p>Generated on ' + today.toLocaleString() + '</p></div>' +
             '</body></html>'
         );
-        win.document.close();
 
+        // Popup windows live/gov domain par block ho jaate hain (tab window.print() poore page ko
+        // print kar deta tha). Isliye hidden iframe use karo — ye popup-blocker se affected nahi hota.
+        var existing = document.getElementById('billReportPrintFrame');
+        if (existing && existing.parentNode) { existing.parentNode.removeChild(existing); }
+        var frame = document.createElement('iframe');
+        frame.id = 'billReportPrintFrame';
+        frame.setAttribute('aria-hidden', 'true');
+        frame.style.position = 'fixed';
+        frame.style.right = '0';
+        frame.style.bottom = '0';
+        frame.style.width = '0';
+        frame.style.height = '0';
+        frame.style.border = '0';
+        document.body.appendChild(frame);
+
+        var fdoc = frame.contentWindow.document;
+        fdoc.open();
+        fdoc.write(printHtml);
+        fdoc.close();
+
+        // Images (logos) load hone ke baad print karo.
         setTimeout(function() {
-            win.focus();
-            win.print();
-            win.close();
-        }, 400);
+            try {
+                frame.contentWindow.focus();
+                frame.contentWindow.print();
+            } catch (e) {
+                window.print(); // last-resort fallback
+            }
+            // Print dialog band hone ke baad iframe cleanup.
+            setTimeout(function() {
+                if (frame && frame.parentNode) { frame.parentNode.removeChild(frame); }
+            }, 1000);
+        }, 500);
     }
 
     function initOrReloadBillReportGrid() {
@@ -299,6 +328,11 @@ $(document).ready(function() {
             billReportDt = $('#estateBillReportTable').DataTable({
                 processing: true,
                 serverSide: true,
+                // Global enhancer (datatable-global-ui.js) default me serverSide tables ka ordering OFF
+                // karke sirf visible page ko client-sort karta hai (= "pagination-wise sorting" bug).
+                // Ye opt-in DataTables ka native server ordering ON rakhta hai -> order server ko jata hai
+                // aur poore 302 records DB par sort hote hain (offset/limit uske baad).
+                sargamServerOrder: true,
                 searching: true,
                 pageLength: 10,
                 lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
@@ -307,6 +341,7 @@ $(document).ready(function() {
                     data: function (d) {
                         // Always read latest value (avoid stale closure on reload)
                         d.bill_month = $('#bill_month').val();
+                        d.employee_type = $('#employee_type_filter').val();
                     }
                 },
                 columns: [
@@ -327,7 +362,7 @@ $(document).ready(function() {
                     { data: 'water_charges', searchable: false, render: function(v){ return formatMoney(v); } },
                     { data: 'grand_total', searchable: false, render: function(v){ return formatMoney(v); } },
                 ],
-                order: [[4, 'asc'], [5, 'asc']],
+                order: [[2, 'asc']], // default: Name (A→Z) — poore 302 records par server-side sort
                 responsive: false,
                 autoWidth: false
                 // scrollX removed: it cloned the header into .dataTables_scrollHead
@@ -357,6 +392,11 @@ $(document).ready(function() {
     // Filter works independently — reload as soon as the month changes,
     // no need to press Show.
     $('#bill_month').on('change', function() {
+        initOrReloadBillReportGrid();
+    });
+
+    // Employee Type filter — reload on change (LBSNAA / Other Employee / All).
+    $('#employee_type_filter').on('change', function() {
         initOrReloadBillReportGrid();
     });
 

@@ -6719,7 +6719,8 @@ class EstateController extends Controller
                     $meterChanged = $newMeterNoDigits !== ''
                         && $oldMeterDigits !== ''
                         && $newMeterNoDigits !== $oldMeterDigits;
-                    if (! ($curr === 0 && $meterChanged)) {
+                    // Meter replaced: the new meter starts fresh, so any lower reading is valid.
+                    if (! $meterChanged) {
                         $v->errors()->add(
                             $field,
                             'New meter reading cannot be less than the saved current reading, or than the opening reading when no current reading exists yet.'
@@ -8489,7 +8490,8 @@ class EstateController extends Controller
                     $meterChanged = $newMeterNoDigits !== ''
                         && $oldMeterDigits !== ''
                         && $newMeterNoDigits !== $oldMeterDigits;
-                    if (! ($curr === 0 && $meterChanged)) {
+                    // Meter replaced: the new meter starts fresh, so any lower reading is valid.
+                    if (! $meterChanged) {
                         $house = $row->house_no ? (" (House: {$row->house_no})") : '';
                         $v->errors()->add(
                             "readings.$idx.curr_month_elec_red",
@@ -11079,19 +11081,21 @@ class EstateController extends Controller
         mixed $reqLengthRaw,
         string $searchValue,
         int $orderCol,
-        string $orderDir
+        string $orderDir,
+        string $employeeTypeFilter = 'all'
     ): string {
         $scope = [
             'fbu' => $filterByUser,
             'eids' => $employeeIdsSorted,
             'uid' => $currentUserId,
             'em' => $currentUserEmailNorm,
+            'et' => $employeeTypeFilter,
         ];
         if (! $isDataTables) {
-            return 'estate_br_grid:v1:lg:' . md5(json_encode([$normalizedBillMonth, $scope]));
+            return 'estate_br_grid:v2:lg:' . md5(json_encode([$normalizedBillMonth, $scope]));
         }
 
-        return 'estate_br_grid:v1:dt:' . md5(json_encode([
+        return 'estate_br_grid:v2:dt:' . md5(json_encode([
             'm' => $normalizedBillMonth,
             's' => $scope,
             'st' => $reqStart,
@@ -11123,7 +11127,8 @@ class EstateController extends Controller
         $lengthParam,
         string $searchValue,
         int $orderCol,
-        string $orderDir
+        string $orderDir,
+        string $employeeTypeFilter = 'all'
     ): array {
         // Build a union query so DataTables can paginate/search/order on DB side.
         $lbsnaQ = DB::table('estate_month_reading_details as emrd')
@@ -11167,7 +11172,8 @@ class EstateController extends Controller
             $lbsnaQ->whereRaw('1 = 0'); // no employee mapping: show no LBSNA rows
         }
         $lbsnaQ = $lbsnaQ->select([
-                DB::raw("COALESCE(NULLIF(TRIM(etm.category_type_name), ''), 'LBSNA Employee') as employee_type"),
+                // LBSNAA (salary se regular deduction) employees — grid me employee type "LBSNAA" dikhao.
+                DB::raw("'LBSNAA' as employee_type"),
                 'ehrd.emp_name as name',
                 // Section: same fallbacks as getReturnHouseRequestDetails — dept is often unset on employee_master.
                 DB::raw("COALESCE(NULLIF(TRIM(dm.department_name), ''), NULLIF(TRIM(d_lmr.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), ''), NULLIF(TRIM(ehrd.remarks), '')) as section"),
@@ -11241,8 +11247,15 @@ class EstateController extends Controller
                 DB::raw('IF((emro.licence_fees IS NOT NULL AND emro.licence_fees <> 0), emro.licence_fees, COALESCE(NULLIF(ehm_o.licence_fee, 0), NULLIF(ehm_o_bn.licence_fee, 0), ehm_o.licence_fee, ehm_o_bn.licence_fee, emro.licence_fees)) as licence_fees'),
             ]);
 
-        $union = $lbsnaQ->unionAll($otherQ);
-        $base = DB::query()->fromSub($union, 'u');
+        // Employee Type filter: 'lbsnaa' -> sirf LBSNAA rows, 'other' -> sirf Other Employee rows, warna dono.
+        if ($employeeTypeFilter === 'lbsnaa') {
+            $sub = $lbsnaQ;
+        } elseif ($employeeTypeFilter === 'other') {
+            $sub = $otherQ;
+        } else {
+            $sub = $lbsnaQ->unionAll($otherQ);
+        }
+        $base = DB::query()->fromSub($sub, 'u');
 
         if (! $isDataTables) {
             // Keep legacy response for any existing callers.
@@ -11318,11 +11331,23 @@ class EstateController extends Controller
             6 => 'u.from_date',
             7 => 'u.to_date',
         ];
-        $orderBy = $orderMap[$orderCol] ?? 'u.building_name';
+        $orderColName = $orderMap[$orderCol] ?? 'u.building_name';
+
+        // Text columns ko case-insensitive + trimmed sort karo. Warna mixed-case / leading-space /
+        // collation-mix ki wajah se 'AAKANKSHA KULSHRESTHA' jaise naam poore dataset me sahi alphabetical
+        // jagah pe nahi aate. NOTE: ye sorting poore filtered set par (serverSide) hoti hai — offset/limit
+        // iske BAAD lagta hai, isliye ye pura-data-wise sort hai, pagination-wise nahi.
+        // ($orderColName hardcoded map se aata hai, user input nahi — DB::raw safe hai.)
+        $textOrderCols = ['u.employee_type', 'u.name', 'u.section', 'u.building_name', 'u.house_no'];
+        $orderExpr = in_array($orderColName, $textOrderCols, true)
+            ? DB::raw('LOWER(TRIM(' . $orderColName . '))')
+            : $orderColName;
 
         $pageRows = $filteredQuery
-            ->orderBy($orderBy, $orderDir)
-            ->orderBy('u.house_no', 'asc')
+            ->orderBy($orderExpr, $orderDir)
+            // Stable tiebreaker (bhi normalized), taaki same primary value wali rows deterministic rahein.
+            ->orderBy(DB::raw('LOWER(TRIM(u.name))'), 'asc')
+            ->orderBy(DB::raw('LOWER(TRIM(u.house_no))'), 'asc')
             ->offset($effectiveStart)
             ->limit($effectiveLength)
             ->get();
@@ -11382,6 +11407,11 @@ class EstateController extends Controller
         $this->authorizeEstateMasterMeterAndReports();
 
         $billMonth = $request->get('bill_month');
+        // Employee Type filter (optional): all | lbsnaa | other.
+        $employeeTypeFilter = strtolower(trim((string) $request->get('employee_type', 'all')));
+        if (! in_array($employeeTypeFilter, ['all', 'lbsnaa', 'other'], true)) {
+            $employeeTypeFilter = 'all';
+        }
         $isDataTables = $request->has('draw');
         $draw = (int) $request->get('draw', 0);
         $start = max(0, (int) $request->get('start', 0));
@@ -11455,7 +11485,8 @@ class EstateController extends Controller
             $request->get('length', 10),
             $searchValue,
             $orderCol,
-            $orderDir
+            $orderDir,
+            $employeeTypeFilter
         );
 
         $cacheEnabled = ! in_array(strtolower((string) env('ESTATE_BILL_REPORT_GRID_CACHE_ENABLED', 'true')), ['0', 'false', 'no', 'off'], true);
@@ -11477,7 +11508,8 @@ class EstateController extends Controller
             $lengthParam,
             $searchValue,
             $orderCol,
-            $orderDir
+            $orderDir,
+            $employeeTypeFilter
         ) {
             return $this->computeBillReportGridCachedPayload(
                 $billMonthVariants,
@@ -11493,7 +11525,8 @@ class EstateController extends Controller
                 $lengthParam,
                 $searchValue,
                 $orderCol,
-                $orderDir
+                $orderDir,
+                $employeeTypeFilter
             );
         };
 
