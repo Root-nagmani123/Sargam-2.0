@@ -172,27 +172,23 @@ class StudentAttendanceListDataTable extends DataTable
             }
         }
 
-        return '<span class="text-muted">NA</span>';
-    }
+        // Medical Exemption (6) & Other Exemption (7): radio button ke bajaye text
+        // dikhao. Exemption lagu hai (checked) to label blue color me, warna N/A.
+        // Value ko save karne ke liye hidden input rakha jata hai taaki attendance
+        // status (6/7) database me persist ho — bilkul waise hi jaise MDO/Escort
+        // columns text dikhate hain.
+        if ($value === 6 || $value === 7) {
+            if ($checked) {
+                return "<span class='text-info fw-bold'>{$label}</span>
+                        <input type='hidden' name='student[{$studentId}]' value='{$value}'>";
+            }
+            return "<span class='text-muted'>N/A</span>";
+        }
 
-    protected function renderEscortCell($row): string
-    {
-        $pk = $row->studentsMaster->pk;
-        return $this->hasEscortDuty($pk)
-            ? '<span class="text-info fw-semibold">Escort/Moderator</span>'
-            : '<span class="text-muted">NA</span>';
-    }
-
-    protected function renderActionCell($row): string
-    {
-        $pk = $row->studentsMaster->pk;
-        $status = $this->getSavedStatus($pk);
-        $name = e($row->studentsMaster->display_name ?? '');
-
-        return '<button type="button" class="att-action-icon js-mark-ot" '
-            . 'data-ot="' . $pk . '" data-status="' . $status . '" data-name="' . $name . '" '
-            . 'title="Update Attendance" aria-label="Update Attendance">'
-            . '<i class="bi bi-clipboard-check"></i><span class="att-action-label">Update Attendance</span></button>';
+        return "<div class='form-check form-check-inline'>
+                    <input class='form-check-input' type='radio' name='student[{$studentId}]' value='{$value}' {$checked} id='student[{$studentId}][{$value}]'>
+                    <label class='form-check-label {$labelClass}' for='student[{$studentId}][{$value}]'>{$label}</label>
+                </div>";
     }
 
     protected function renderRadioGroup($row, string $field, array $options): string
@@ -227,12 +223,17 @@ class StudentAttendanceListDataTable extends DataTable
         } elseif ($courseStudent) {
             // If there's an existing attendance record, use its status
             $defaultCheckedValue = $courseStudent->status;
-            if( $defaultCheckedValue == 5 ){
+            // Duty/Exemption statuses (4=MDO, 5=Escort, 6=Medical, 7=Other) ke liye
+            // Attendance column me alag radio nahi hota — inko "Present" (1) dikhao
+            // taaki Attendance column me by default Present radio selected rahe.
+            if (in_array($defaultCheckedValue, [4, 5, 6, 7])) {
                 $defaultCheckedValue = 1;
             }
         } else {
-            // Nothing saved and nothing blocking → Present.
-            $defaultCheckedValue = 1;
+            // Exemption/duty lagu ho tab bhi Attendance column me "Present" radio
+            // by default selected rahega (MDO/Escort ki tarah). Medical/Other
+            // exemption ka actual status hidden input (value 6/7) se save hota hai.
+            $defaultCheckedValue = 1; // Present
         }
 
         foreach ($options as $value => $label) {

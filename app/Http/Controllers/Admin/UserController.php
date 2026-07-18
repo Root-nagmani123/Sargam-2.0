@@ -23,6 +23,7 @@ use App\Models\FacultyMaster;
 use App\Models\Holiday;
 use App\Services\NotificationService;
 use App\Exports\UsersExport;
+use App\Exports\StudentListReportExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Excel as ExcelWriter;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -256,71 +257,45 @@ class UserController extends Controller
                  // Check if faculty is CC or ACC
                  $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
 
-                 // ========== SOURCE 1: CC/ACC Courses Students ==========
-                 $source1StudentPks = collect([]);
+                 // Flag CC/ACC so the "Total Students" / "Student Details" cards
+                 // become visible for them (card visibility is unchanged).
                  if ($coordinatorCourses->isNotEmpty()) {
                      $isCCorACC = true;
-                     // Get active courses where faculty is CC/ACC
-                    $activeCourseIds = CourseMaster::whereIn('pk', $coordinatorCourses)
-                        ->where('active_inactive', 1)
-                        ->where('end_date', '>=', now())
-                        ->pluck('pk');
-
-                     // Count total students enrolled in these courses (Source 1)
-                     if ($activeCourseIds->isNotEmpty()) {
-                         $source1StudentPks = StudentMasterCourseMap::whereIn('course_master_pk', $activeCourseIds)
-                             ->where('active_inactive', 1)
-                             ->pluck('student_master_pk')
-                             ->unique();
-                     }
                  }
 
-                 // ========== SOURCE 2: Group Mappings Students ==========
-                 $source2StudentPks = collect([]);
-
-                 // Step 1: Find group mappings where faculty is assigned
-                 $groupMappings = DB::table('group_type_master_course_master_map')
-                     ->where('facility_id', $facultyPk)
+                 // "Total Students" is scoped to the viewer's COURSE ACCESS —
+                 // get_Role_by_course() maps the user's role(s) to
+                 // course_master.user_role_master_pk, the same access basis the
+                 // "My Course Participant" card uses. Empty result = no restriction
+                 // (Admin / Super Admin / PA see all); [-1] = no access → zero.
+                 // Counted as DISTINCT active enrolments so a student in several
+                 // accessible courses is not double-counted.
+                 $roleCourseIds = get_Role_by_course();
+                 $totalStudents = StudentMasterCourseMap::query()
                      ->where('active_inactive', 1)
-                     ->get();
-
-                 if ($groupMappings->isNotEmpty()) {
-                     // Step 2: Get course_name (course_pk) from group mappings
-                     $groupMapCourseIds = $groupMappings->pluck('course_name')->unique();
-
-                     // Step 3: Check in course_master if these courses are active
-                     $activeCourseIds = CourseMaster::whereIn('pk', $groupMapCourseIds)
-                         ->where('active_inactive', 1)
-                         ->where('end_date', '>=', now())
-                         ->pluck('pk');
-
-                     if ($activeCourseIds->isNotEmpty()) {
-                         // Step 4: Get group_type_master_course_master_map.pk for active courses
-                         $activeGroupMappingPks = $groupMappings
-                             ->whereIn('course_name', $activeCourseIds)
-                             ->pluck('pk')
-                             ->unique();
-
-                         // Step 5: Get students from student_course_group_map (Source 2)
-                         if ($activeGroupMappingPks->isNotEmpty()) {
-                             $source2StudentPks = StudentCourseGroupMap::whereIn('group_type_master_course_master_map_pk', $activeGroupMappingPks)
-                                 ->where('active_inactive', 1)
-                                 ->pluck('student_master_pk')
-                                 ->unique();
-                         }
-                     }
-                 }
-
-                 // ========== MERGE BOTH SOURCES ==========
-                 // Combine Source 1 and Source 2 student PKs and get unique count
-                 $allStudentPks = $source1StudentPks->merge($source2StudentPks)->unique();
-                 $totalStudents = $allStudentPks->count();
+                     ->when(! empty($roleCourseIds), fn ($q) => $q->whereIn('course_master_pk', $roleCourseIds))
+                     ->distinct('student_master_pk')
+                     ->count('student_master_pk');
              } else {
                  $totalSessions = 0;
              }
 
              // Fetch today's timetable for the logged-in faculty
              $todayTimetable = $this->getTodayTimetableForFaculty($userId);
+        }
+
+        // Super Admin / PA / Admin also see the "Total Students" / "Student Details"
+        // cards, but they are NOT faculty-portal users, so the block above skips them
+        // and $totalStudents stayed 0. Compute it here, scoped by the viewer's course
+        // access — get_Role_by_course(): empty = all (Super Admin/PA), [-1] = none →
+        // whereIn([-1]) yields 0. Same DISTINCT-enrolment basis as the faculty branch.
+        if (! hasRole('Student-OT') && ! is_faculty_portal_user()) {
+            $roleCourseIds = get_Role_by_course();
+            $totalStudents = StudentMasterCourseMap::query()
+                ->where('active_inactive', 1)
+                ->when(! empty($roleCourseIds), fn ($q) => $q->whereIn('course_master_pk', $roleCourseIds))
+                ->distinct('student_master_pk')
+                ->count('student_master_pk');
         }
 
         if ($request->boolean('calendar_only')) {
@@ -1048,6 +1023,15 @@ class UserController extends Controller
      */
     public function studentList(Request $request)
     {
+        // Default the Time Period filter to TODAY on a fresh load (no date params at
+        // all) so the list opens scoped to the current date. A present-but-empty
+        // param means the user deliberately cleared the filter, so it's left alone;
+        // the Present/Absent cards and manual picker pass explicit dates as usual.
+        if (! $request->has('from_date') && ! $request->has('to_date')) {
+            $today = now()->toDateString();
+            $request->merge(['from_date' => $today, 'to_date' => $today]);
+        }
+
         $payload = $this->resolveDashboardStudentListPayload($request);
         $students = $payload['students'];
         $availableCourses = $payload['availableCourses'];
@@ -1055,6 +1039,56 @@ class UserController extends Controller
 
         if ($request->ajax() && $request->has('draw')) {
             return $this->dashboardStudentListDataTableResponse($request, $students);
+        }
+
+        // Attendance summary cards (top of page) reflect TODAY's actual marked
+        // attendance only — distinct students marked in a session dated today —
+        // independent of the table's live filters. A student with no session
+        // marked today is simply not counted here (unlike the per-row roster
+        // default further down, which shows unmarked students as "Present").
+        $todayStr = now()->toDateString();
+        $scopePks = $students->pluck('student_master_pk')->filter()->unique()->values()->all();
+        $cardCounts = [
+            'total' => count($scopePks),
+            'present_today' => 0,
+            'absent_today' => 0,
+        ];
+        // The Present/Absent cards reflect the CURRENT date (the list opens scoped
+        // to today). On an off-day with no marked session the counts simply read 0.
+        $snapshotDate = $todayStr;
+        if (! empty($scopePks)) {
+            $dayAttendance = DB::table('course_student_attendance as a')
+                ->join('timetable as t', 'a.timetable_pk', '=', 't.pk')
+                ->whereIn('a.Student_master_pk', $scopePks)
+                ->whereDate('t.START_DATE', $snapshotDate)
+                ->get(['a.Student_master_pk as spk', 'a.status']);
+
+            // Count per distinct student (a student can have several sessions that
+            // day). Only genuinely MARKED sessions count (status 0 = not marked is
+            // ignored). Present = attended any non-absent session; Absent = had any
+            // Absent (status 3) session. A student with both counts in BOTH — mirrors
+            // the Present/Absent tabs (see collapseDateScopedAttendance()).
+            $presentSpks = [];
+            $absentSpks = [];
+            foreach ($dayAttendance->groupBy('spk') as $spk => $rows) {
+                $marked = $rows->filter(fn ($r) => (int) $r->status !== 0);
+                if ($marked->isEmpty()) {
+                    continue;
+                }
+                if ($marked->contains(fn ($r) => (int) $r->status !== 3)) {
+                    $presentSpks[$spk] = true;
+                }
+                if ($marked->contains(fn ($r) => (int) $r->status === 3)) {
+                    $absentSpks[$spk] = true;
+                }
+            }
+            // Students on PT Exemption / Stationed Leave today are absent-with-reason
+            // even without an attendance record — mirror the Absent list.
+            foreach ($this->leaveBasedAbsentees($scopePks, $snapshotDate, $snapshotDate) as $spk => $d) {
+                $absentSpks[$spk] = true;
+            }
+            $cardCounts['present_today'] = count($presentSpks);
+            $cardCounts['absent_today'] = count($absentSpks);
         }
 
         // Get counsellor type names and courses from group_type_master_course_master_map
@@ -1182,16 +1216,67 @@ class UserController extends Controller
             ->map(fn ($m) => $m->house_name ?? null)
             ->filter()->unique()->sort()->values();
 
-        // Server-side filters (Course / ACC / Group / Cadre / House) + Present-Absent attendance tab.
+        // Session / Topic options cascade off the selected Time Period:
+        // date range → Session (scoped to range) → Topic (scoped to range + Session).
+        // See dashboardStudentListFilterOptions(). No date range → both empty.
+        $scopedStudentPks = $students->pluck('student_master_pk')->filter()->unique()->values()->all();
+        [$sessionOptions, $topicOptions] = $this->dashboardStudentListFilterOptions(
+            $scopedStudentPks,
+            $request->input('from_date') ?: null,
+            $request->input('to_date') ?: null,
+            (string) $request->input('session', '')
+        );
+
+        // OT / Participant options (each distinct student) for that filter dropdown.
+        $participantOptions = $students
+            ->map(function ($m) {
+                $s = $m->studentMaster;
+                if (! $s) {
+                    return null;
+                }
+                $name = $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''));
+                $code = $s->generated_OT_code ?? '';
+                return (object) [
+                    'pk' => (string) $s->pk,
+                    'label' => trim(($code !== '' ? $code . ' — ' : '') . $name),
+                ];
+            })
+            ->filter()->unique('pk')->sortBy('label')->values();
+
+        // Server-side filters (Course / ACC / Group / Cadre / House / Session / Participant).
         $students = $this->applyDashboardStudentListFilters($students, $request);
 
-        // Split into both tabs so the view can render both panels and switch
-        // between them client-side (no page reload on tab change).
-        $presentStudents = $students->filter(fn ($m) => ($m->attendance_present ?? true) === true)->values();
-        $absentStudents = $students->filter(fn ($m) => ($m->attendance_present ?? true) === false)->values();
+        // Tab counts (All / Present / Absent) for the initial render; the DataTable
+        // response refreshes them live on every filter change. A date range
+        // (Present/Absent Today cards, or Time Period filter) switches Present/Absent
+        // to one-row-per-student, marked-only buckets matching the dashboard cards.
+        if ($request->filled('from_date') || $request->filled('to_date')) {
+            [$presentStudents, $absentStudents] = $this->collapseDateScopedAttendance($students);
+        } else {
+            // Present/Absent details require a date; without one these tabs are empty.
+            $presentStudents = collect();
+            $absentStudents = collect();
+        }
 
-        $attendance = $request->input('attendance', 'present');
-        $students = $attendance === 'absent' ? $absentStudents : $presentStudents;
+        $tabCounts = [
+            'all' => $students->count(),
+            'present' => $presentStudents->count(),
+            'absent' => $absentStudents->count(),
+        ];
+
+        $attendance = $request->input('attendance', 'all');
+        $students = $attendance === 'present'
+            ? $presentStudents
+            : ($attendance === 'absent' ? $absentStudents : $students->values());
+
+        // Title bar: the selected course's name, else a generic heading.
+        $listTitle = 'Student List';
+        if ($request->filled('course_id')) {
+            $selected = $availableCourses->firstWhere('pk', $request->input('course_id'));
+            if ($selected) {
+                $listTitle = (is_array($selected) ? ($selected['course_name'] ?? '') : ($selected->course_name ?? '')) ?: $listTitle;
+            }
+        }
 
         $dutyTypes = DB::table('mdo_duty_type_master')
             ->where('active_inactive', 1)
@@ -1206,13 +1291,444 @@ class UserController extends Controller
             'duty_type' => (string) $request->input('duty_type', ''),
             'from_date' => (string) $request->input('from_date', ''),
             'to_date' => (string) $request->input('to_date', ''),
-            'attendance' => (string) $request->input('attendance', 'present'),
+            'attendance' => (string) $request->input('attendance', 'all'),
             'cadre' => (string) $request->input('cadre', ''),
             'house' => (string) $request->input('house', ''),
             'counsellor_faculty' => (string) $request->input('counsellor_faculty', ''),
+            'session' => (string) $request->input('session', ''),
+            'topic' => (string) $request->input('topic', ''),
+            'participant' => (string) $request->input('participant', ''),
         ];
 
-        return view('admin.dashboard.student_list', compact('students', 'presentStudents', 'absentStudents', 'availableCourses', 'counsellorTypes', 'counsellorFaculties', 'groupNames', 'dutyTypes', 'filters', 'cadreOptions', 'houseOptions'));
+        return view('admin.dashboard.student_list', compact('students', 'presentStudents', 'absentStudents', 'availableCourses', 'counsellorTypes', 'counsellorFaculties', 'groupNames', 'dutyTypes', 'filters', 'cadreOptions', 'houseOptions', 'sessionOptions', 'topicOptions', 'participantOptions', 'tabCounts', 'cardCounts', 'snapshotDate', 'listTitle'));
+    }
+
+    /**
+     * OT / Participants List — the drill-down opened from the "OT/ Participants
+     * Attendance" dashboard card. One row per participant (not per session),
+     * split into Present / Absent tabs, with per-student Medical Exemption,
+     * PT Exception and Stationed Leave counts.
+     */
+    public function otParticipantsList(Request $request)
+    {
+        // Skip the payload's per-student total_* / notice-memo N+1 loop — this page
+        // computes its counts separately via otParticipantsRowMeta (batched).
+        $payload = $this->resolveDashboardStudentListPayload($request, false);
+        $availableCourses = $payload['availableCourses'];
+
+        // Apply the shared filters to the session rows, then collapse to one row
+        // per participant — every student of the selected course is listed. The
+        // Time Period filter here only scopes the count columns (see $rowMeta
+        // below), so pass false to keep all students visible regardless of dates.
+        $sessionRows = $this->applyDashboardStudentListFilters($payload['students'], $request, false);
+
+        $byStudent = [];
+        foreach ($sessionRows as $m) {
+            $spk = $m->student_master_pk;
+            if (! $spk) {
+                continue;
+            }
+            if (! isset($byStudent[$spk])) {
+                $byStudent[$spk] = (object) [
+                    'student_master_pk' => $spk,
+                    'studentMaster' => $m->studentMaster,
+                    'house_name' => $m->house_name ?? null,
+                ];
+            }
+            if (empty($byStudent[$spk]->house_name) && ! empty($m->house_name)) {
+                $byStudent[$spk]->house_name = $m->house_name;
+            }
+        }
+        $participants = collect(array_values($byStudent));
+
+        // Show every student of the selected course — no Present/Absent split.
+        $rows = $participants;
+        $totalParticipants = $participants->count();
+
+        // Time Period scopes the count columns only (all students stay visible).
+        $rowMeta = $this->otParticipantsRowMeta(
+            $participants->pluck('student_master_pk')->all(),
+            $request->input('from_date') ?: null,
+            $request->input('to_date') ?: null
+        );
+
+        if ($request->ajax() && $request->has('draw')) {
+            return $this->otParticipantsDataTableResponse($request, $rows, $rowMeta, $totalParticipants);
+        }
+
+        // Filter option lists (mirrors the student list page).
+        $students = $payload['students'];
+        $cadreOptions = $students
+            ->map(fn ($m) => $m->studentMaster->cadre->cadre_name ?? null)
+            ->filter()->unique()->sort()->values();
+        $houseOptions = $students
+            ->map(fn ($m) => $m->house_name ?? null)
+            ->filter()->unique()->sort()->values();
+        // Session options are independent of the Time Period — see resolveScopedSessionOptions().
+        $sessionOptions = $this->resolveScopedSessionOptions(
+            $students->pluck('student_master_pk')->filter()->unique()->values()->all()
+        );
+        $participantOptions = $students
+            ->map(function ($m) {
+                $s = $m->studentMaster;
+                if (! $s) {
+                    return null;
+                }
+                $name = $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''));
+                $code = $s->generated_OT_code ?? '';
+                return (object) [
+                    'pk' => (string) $s->pk,
+                    'label' => trim(($code !== '' ? $code . ' — ' : '') . $name),
+                ];
+            })
+            ->filter()->unique('pk')->sortBy('label')->values();
+
+        $status = $request->input('status') === 'archive' ? 'archive' : 'active';
+
+        $filters = [
+            'from_date' => (string) $request->input('from_date', ''),
+            'to_date' => (string) $request->input('to_date', ''),
+            'session' => (string) $request->input('session', ''),
+            'participant' => (string) $request->input('participant', ''),
+            'course_id' => (string) $request->input('course_id', ''),
+            'cadre' => (string) $request->input('cadre', ''),
+            'status' => $status,
+        ];
+
+        // Course filter scope: Super Admin / Admin / PA can pick ANY course for the
+        // current tab (active = not yet ended, archive = ended); a CC/ACC only sees
+        // THEIR OWN courses (already scoped to the tab by the payload's $availableCourses).
+        $courseDateOp = $status === 'archive' ? '<' : '>=';
+        if (hasRole('Super Admin') || hasRole('Admin') || hasRole('PA')) {
+            $courseOptions = CourseMaster::where('active_inactive', '1')
+                ->where('end_date', $courseDateOp, now())
+                ->orderBy('course_name')
+                ->get(['pk', 'course_name', 'couse_short_name', 'start_year', 'end_date']);
+        } else {
+            $courseOptions = collect($availableCourses)
+                ->map(fn ($c) => (object) [
+                    'pk' => is_array($c) ? ($c['pk'] ?? null) : ($c->pk ?? null),
+                    'course_name' => is_array($c) ? ($c['course_name'] ?? '') : ($c->course_name ?? ''),
+                    'couse_short_name' => is_array($c) ? ($c['couse_short_name'] ?? null) : ($c->couse_short_name ?? null),
+                    'start_year' => is_array($c) ? ($c['start_year'] ?? null) : ($c->start_year ?? null),
+                    'end_date' => is_array($c) ? ($c['end_date'] ?? null) : ($c->end_date ?? null),
+                ])
+                ->filter(fn ($c) => ! empty($c->pk))
+                ->unique('pk')
+                ->sortBy('course_name')
+                ->values();
+        }
+
+        return view('admin.dashboard.ot_participants_list', compact(
+            'availableCourses', 'courseOptions', 'filters', 'cadreOptions', 'houseOptions',
+            'sessionOptions', 'participantOptions'
+        ));
+    }
+
+    /**
+     * Per-student meta for the OT participants list, batched for the whole set:
+     *   medical         → student_medical_exemption rows (active)
+     *   pt              → leave_application rows, leave_type = PT_EXEMPTION
+     *   stationed       → leave_application rows, leave_type = STATIONED_LEAVE
+     *   duty_count/type → mdo_escot_duty_map rows (type from mdo_duty_type_master)
+     *   notice_memo     → student_memo_status memo_count (OT-portal memos)
+     *   discipline_memo → discipline_memo_status rows
+     *
+     * When a Time Period ($fromDate/$toDate, Y-m-d) is supplied, every count is
+     * scoped to rows whose own date column falls inside that range:
+     *   medical/pt/stationed → from_date, duty → mdo_date, memos → date.
+     *
+     * @param  array<int, int>  $studentPks
+     * @return array<int, array{medical:int,pt:int,stationed:int,duty_count:int,duty_type:string,notice_memo:int,discipline_memo:int}>
+     */
+    private function otParticipantsRowMeta(array $studentPks, ?string $fromDate = null, ?string $toDate = null): array
+    {
+        $out = [];
+        if (empty($studentPks)) {
+            return $out;
+        }
+        foreach ($studentPks as $pk) {
+            $out[$pk] = [
+                'medical' => 0, 'pt' => 0, 'stationed' => 0,
+                'duty_count' => 0, 'duty_type' => '-',
+                'notice_memo' => 0, 'discipline_memo' => 0,
+            ];
+        }
+
+        $medical = DB::table('student_medical_exemption')
+            ->whereIn('student_master_pk', $studentPks)
+            ->where('active_inactive', 1)
+            ->when($fromDate, fn ($q) => $q->whereDate('from_date', '>=', $fromDate))
+            ->when($toDate, fn ($q) => $q->whereDate('from_date', '<=', $toDate))
+            ->selectRaw('student_master_pk, COUNT(*) c')
+            ->groupBy('student_master_pk')
+            ->pluck('c', 'student_master_pk');
+        foreach ($medical as $pk => $c) {
+            if (isset($out[$pk])) {
+                $out[$pk]['medical'] = (int) $c;
+            }
+        }
+
+        // PT / Stationed leaves are reported as the NUMBER OF DAYS. When a Time
+        // Period is selected, only the days that fall inside that window count —
+        // e.g. a 13–18 leave filtered to 13 counts as 1 day. So we pull any leave
+        // that OVERLAPS the window, then clip each range to it before counting.
+        $leaveRows = DB::table('leave_application')
+            ->whereIn('student_master_pk', $studentPks)
+            ->where('active_inactive', 1)
+            ->whereIn('leave_type', ['PT_EXEMPTION', 'STATIONED_LEAVE'])
+            // Overlap: leave ends on/after the window start AND starts on/before its end.
+            ->when($fromDate, fn ($q) => $q->whereRaw('DATE(COALESCE(to_date, from_date)) >= ?', [$fromDate]))
+            ->when($toDate, fn ($q) => $q->whereDate('from_date', '<=', $toDate))
+            ->orderBy('from_date')
+            ->get(['student_master_pk', 'leave_type', 'from_date', 'to_date']);
+
+        $rangesByKey = []; // "studentPk|leaveType" => [[fromYmd, toYmd], ...]
+        foreach ($leaveRows as $r) {
+            if (! isset($out[$r->student_master_pk]) || empty($r->from_date)) {
+                continue;
+            }
+            $from = substr((string) $r->from_date, 0, 10);
+            $to = ! empty($r->to_date) ? substr((string) $r->to_date, 0, 10) : $from;
+            if ($to < $from) {
+                $to = $from;
+            }
+            // Clip the leave to the selected Time Period so only in-window days count.
+            if ($fromDate && $from < $fromDate) {
+                $from = $fromDate;
+            }
+            if ($toDate && $to > $toDate) {
+                $to = $toDate;
+            }
+            if ($to < $from) {
+                continue; // no overlap with the filter window
+            }
+            $rangesByKey[$r->student_master_pk . '|' . $r->leave_type][] = [$from, $to];
+        }
+
+        foreach ($rangesByKey as $key => $ranges) {
+            usort($ranges, fn ($a, $b) => strcmp($a[0], $b[0]));
+            // totalDays = distinct calendar days covered. Both PT Exemption and
+            // Stationed Leave show the number of days (contiguous/overlapping day
+            // rows of one request are merged first, so days are never double-counted).
+            $totalDays = 0;
+            $currentStart = null;
+            $currentEnd = null;
+            foreach ($ranges as [$from, $to]) {
+                // Merge into the running span while ranges stay contiguous/overlapping;
+                // a real gap (>1 day) closes the current span and opens a new one.
+                if ($currentEnd === null || $from > Carbon::parse($currentEnd)->addDay()->toDateString()) {
+                    if ($currentStart !== null) {
+                        $totalDays += Carbon::parse($currentStart)->diffInDays(Carbon::parse($currentEnd)) + 1;
+                    }
+                    $currentStart = $from;
+                    $currentEnd = $to;
+                } elseif ($to > $currentEnd) {
+                    $currentEnd = $to;
+                }
+            }
+            if ($currentStart !== null) {
+                $totalDays += Carbon::parse($currentStart)->diffInDays(Carbon::parse($currentEnd)) + 1;
+            }
+            [$pk, $leaveType] = explode('|', $key, 2);
+            if ($leaveType === 'PT_EXEMPTION') {
+                $out[$pk]['pt'] = $totalDays;
+            } elseif ($leaveType === 'STATIONED_LEAVE') {
+                $out[$pk]['stationed'] = $totalDays;
+            }
+        }
+
+        // Duty count + type. selected_student_list carries the assigned OT pk;
+        // count all duties for a student and list every DISTINCT duty type they
+        // hold (a student with multiple duties can span multiple types).
+        $duties = DB::table('mdo_escot_duty_map as d')
+            ->leftJoin('mdo_duty_type_master as m', 'd.mdo_duty_type_master_pk', '=', 'm.pk')
+            ->whereIn('d.selected_student_list', $studentPks)
+            ->when($fromDate, fn ($q) => $q->whereDate('d.mdo_date', '>=', $fromDate))
+            ->when($toDate, fn ($q) => $q->whereDate('d.mdo_date', '<=', $toDate))
+            ->get(['d.selected_student_list as spk', 'm.mdo_duty_type_name as type']);
+        $dutyTypes = []; // pk => [distinct type names, in first-seen order]
+        foreach ($duties as $r) {
+            $pk = (int) $r->spk;
+            if (! isset($out[$pk])) {
+                continue;
+            }
+            $out[$pk]['duty_count']++;
+            $type = trim((string) ($r->type ?? ''));
+            if ($type !== '' && ! in_array($type, $dutyTypes[$pk] ?? [], true)) {
+                $dutyTypes[$pk][] = $type;
+            }
+        }
+        foreach ($dutyTypes as $pk => $types) {
+            if (isset($out[$pk]) && ! empty($types)) {
+                $out[$pk]['duty_type'] = implode(', ', $types);
+            }
+        }
+
+        // Notice / Memo (OT-portal): sum of memo_count per student.
+        $memo = DB::table('student_memo_status')
+            ->whereIn('student_pk', $studentPks)
+            ->when($fromDate, fn ($q) => $q->whereDate('date', '>=', $fromDate))
+            ->when($toDate, fn ($q) => $q->whereDate('date', '<=', $toDate))
+            ->selectRaw('student_pk, COALESCE(SUM(memo_count), COUNT(*)) c')
+            ->groupBy('student_pk')
+            ->pluck('c', 'student_pk');
+        foreach ($memo as $pk => $c) {
+            if (isset($out[$pk])) {
+                $out[$pk]['notice_memo'] = (int) $c;
+            }
+        }
+
+        // Discipline memos.
+        $disc = DB::table('discipline_memo_status')
+            ->whereIn('student_master_pk', $studentPks)
+            ->when($fromDate, fn ($q) => $q->whereDate('date', '>=', $fromDate))
+            ->when($toDate, fn ($q) => $q->whereDate('date', '<=', $toDate))
+            ->selectRaw('student_master_pk, COUNT(*) c')
+            ->groupBy('student_master_pk')
+            ->pluck('c', 'student_master_pk');
+        foreach ($disc as $pk => $c) {
+            if (isset($out[$pk])) {
+                $out[$pk]['discipline_memo'] = (int) $c;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Server-side JSON for the OT / Participants List DataTable.
+     */
+    private function otParticipantsDataTableResponse(Request $request, $rows, array $rowMeta, int $totalParticipants)
+    {
+        $searchInput = $request->input('search');
+        $search = strtolower(trim((string) (is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput)));
+        if ($search !== '') {
+            $rows = $rows->filter(function ($p) use ($search, $rowMeta) {
+                $s = $p->studentMaster;
+                if (! $s) {
+                    return false;
+                }
+                $meta = $rowMeta[$p->student_master_pk] ?? [];
+                // Zero-padded count strings so "02" and "2" both match, alongside
+                // the raw numbers.
+                $pad = fn ($n) => str_pad((string) (int) $n, 2, '0', STR_PAD_LEFT);
+                $countFields = ['duty_count', 'medical', 'pt', 'stationed', 'notice_memo', 'discipline_memo'];
+                $counts = [];
+                foreach ($countFields as $f) {
+                    $n = (int) ($meta[$f] ?? 0);
+                    $counts[] = (string) $n;
+                    $counts[] = $pad($n);
+                }
+                // A single haystack of every column's displayed value.
+                $haystack = strtolower(implode(' ', array_filter([
+                    $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? '')),
+                    $s->generated_OT_code ?? '',
+                    $s->email ?? '',
+                    $s->cadre->cadre_name ?? '',
+                    $p->house_name ?? '',
+                    $p->topic ?? '',
+                    $meta['duty_type'] ?? '',
+                    implode(' ', $counts),
+                ], fn ($v) => trim((string) $v) !== '')));
+                return str_contains($haystack, $search);
+            })->values();
+        }
+
+        $recordsTotal = $totalParticipants;
+        $recordsFiltered = $rows->count();
+
+        // Sorting (S.No / OT Code / Name / Email / Cadre / House).
+        $columnMap = [1 => 'ot_code', 2 => 'name', 3 => 'email', 4 => 'cadre', 5 => 'house'];
+        $orderCol = (int) $request->input('order.0.column', 0);
+        $orderDir = strtolower((string) $request->input('order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+        $sortKey = $columnMap[$orderCol] ?? null;
+        if ($sortKey !== null) {
+            $rows = $rows->sortBy(function ($p) use ($sortKey) {
+                $s = $p->studentMaster;
+                return match ($sortKey) {
+                    'ot_code' => (string) ($s->generated_OT_code ?? ''),
+                    'name' => (string) ($s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''))),
+                    'email' => (string) ($s->email ?? ''),
+                    'cadre' => (string) ($s->cadre->cadre_name ?? ''),
+                    'house' => (string) ($p->house_name ?? ''),
+                    default => '',
+                };
+            }, SORT_NATURAL | SORT_FLAG_CASE, $orderDir === 'desc')->values();
+        }
+
+        $start = max(0, (int) $request->input('start', 0));
+        $length = (int) $request->input('length', 10);
+        $paged = $length < 0 ? $rows->slice($start)->values() : $rows->slice($start, $length)->values();
+
+        // Carry the Time Period filter into the detail-page count links so the
+        // opened section shows the same date-scoped data.
+        $linkDateQs = '';
+        $fdParam = (string) $request->input('from_date', '');
+        $tdParam = (string) $request->input('to_date', '');
+        if ($fdParam !== '') {
+            $linkDateQs .= '&from_date=' . urlencode($fdParam);
+        }
+        if ($tdParam !== '') {
+            $linkDateQs .= '&to_date=' . urlencode($tdParam);
+        }
+
+        $data = [];
+        foreach ($paged as $idx => $p) {
+            $s = $p->studentMaster;
+            if (! $s) {
+                continue;
+            }
+            $meta = $rowMeta[$p->student_master_pk] ?? [
+                'medical' => 0, 'pt' => 0, 'stationed' => 0,
+                'duty_count' => 0, 'duty_type' => '-', 'notice_memo' => 0, 'discipline_memo' => 0,
+            ];
+            $detailUrl = route('admin.dashboard.students.detail', encrypt($s->pk));
+            $name = $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''));
+
+            $data[] = [
+                's_no' => $start + $idx + 1,
+                'ot_code' => e($s->generated_OT_code ?? 'N/A'),
+                'name' => '<a href="' . e($detailUrl) . '" class="sl-count">' . e($name) . '</a>',
+                'email' => e($s->email ?? 'N/A'),
+                'cadre' => e($s->cadre->cadre_name ?? 'N/A'),
+                'house' => e($p->house_name ?: 'N/A'),
+                'duty_count' => $this->otCountCell($meta['duty_count'], $detailUrl . '?section=dutiesSection' . $linkDateQs),
+                'duty_type' => e($meta['duty_type'] ?: '-'),
+                'medical' => $this->otCountCell($meta['medical'], $detailUrl . '?section=medicalExceptionsSection' . $linkDateQs),
+                'pt' => $this->otCountCell($meta['pt'], $detailUrl . '?section=ptExemptionsSection' . $linkDateQs),
+                'stationed' => $this->otCountCell($meta['stationed'], $detailUrl . '?section=stationedLeavesSection' . $linkDateQs),
+                'notice_memo' => $this->otCountCell($meta['notice_memo'], $detailUrl . '?section=noticesSection' . $linkDateQs),
+                'discipline_memo' => $this->otCountCell($meta['discipline_memo'], $detailUrl . '?section=memosSection' . $linkDateQs),
+            ];
+        }
+
+        return response()->json([
+            'draw' => (int) $request->input('draw', 1),
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+        ]);
+    }
+
+    /**
+     * A zero-padded count cell for the OT participants list. Blank counts render
+     * as a muted dash; non-zero counts render as a blue badge-style number that,
+     * when $url is given, links to the relevant section of the student detail page.
+     */
+    private function otCountCell(int $n, ?string $url = null): string
+    {
+        if ($n <= 0) {
+            return '<span class="text-muted">-</span>';
+        }
+
+        $label = str_pad((string) $n, 2, '0', STR_PAD_LEFT);
+
+        if ($url) {
+            return '<a href="' . e($url) . '" class="sl-count">' . $label . '</a>';
+        }
+
+        return '<span class="sl-count">' . $label . '</span>';
     }
 
     /**
@@ -1224,52 +1740,145 @@ class UserController extends Controller
             abort(404);
         }
 
-        if (! is_faculty_portal_user() && ! hasRole('Super Admin')) {
+        // Anyone who can VIEW the list may export it. Mirror the data-visibility
+        // guard in resolveDashboardStudentListPayload(): Super Admin, a standard
+        // faculty-portal user, OR a coordinator/ACC reached via their faculty pk
+        // (login role need not be a standard faculty-portal role). Otherwise the
+        // export 403s for users who see the on-screen table fine.
+        $exportFacultyPk = get_auth_faculty_master_pk();
+        if (! hasRole('Super Admin')
+            && ! is_faculty_portal_user()
+            && ! ($exportFacultyPk && ! hasRole('Student-OT'))) {
             abort(403, 'You are not authorized to export the student list.');
         }
 
+        // Match the on-screen table exactly: same filters, same attendance tab, and
+        // the same date-scoped Present/Absent split (incl. PT/Stationed-leave absentees).
         $payload = $this->resolveDashboardStudentListPayload($request);
-        $students = $this->applyDashboardStudentListFilters($payload['students'], $request);
-        $exportData = $this->dashboardStudentListExportData($students);
+        [$filteredAll, $presentAll, $absentAll] = $this->dashboardStudentListTabSets($request, $payload['students']);
+        $attendance = (string) $request->input('attendance', 'all');
+        $students = $attendance === 'present'
+            ? $presentAll
+            : ($attendance === 'absent' ? $absentAll : $filteredAll);
+        $exportData = $this->dashboardStudentListExportData($students, $attendance);
 
         $timestamp = now()->format('Ymd_His');
         $fileBase = "student_list_{$timestamp}";
 
+        $reportTitle = 'Student List';
+        $filterSummary = $this->dashboardStudentListFilterSummary($request);
+        $header = $this->buildStudentListExportHeaderData($request);
+
         // Browser-printable report: same clean layout as the PDF, rendered as
         // HTML in a new tab that auto-opens the print dialog.
         if ($format === 'print') {
-            return view('admin.dashboard.export.student_list_print', [
+            return view('admin.dashboard.export.student_list_print', array_merge([
                 'headings' => $exportData['headings'],
                 'rows' => $exportData['rows'],
                 'generatedAt' => now()->format('d-m-Y H:i'),
-                'filterSummary' => $this->dashboardStudentListFilterSummary($request),
-            ]);
+                'filterSummary' => $filterSummary,
+                'reportTitle' => $reportTitle,
+            ], $header));
         }
 
         if ($format === 'pdf') {
             ini_set('memory_limit', '512M');
 
-            $pdf = Pdf::loadView('admin.dashboard.export.student_list_pdf', [
+            $pdf = Pdf::loadView('admin.dashboard.export.student_list_pdf', array_merge([
                 'headings' => $exportData['headings'],
                 'rows' => $exportData['rows'],
                 'generatedAt' => now()->format('d-m-Y H:i'),
-                'filterSummary' => $this->dashboardStudentListFilterSummary($request),
-            ])->setPaper('a4', 'landscape');
+                'filterSummary' => $filterSummary,
+                'reportTitle' => $reportTitle,
+            ], $header))
+                ->setPaper('a4', 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'isPhpEnabled' => true,
+                    'dpi' => 96,
+                ]);
 
             return $pdf->download("{$fileBase}.pdf");
         }
 
+        // "CSV" download is delivered as a branded .xlsx: a plain CSV cannot carry
+        // the logos, blue title band or centred/merged academy titles, so — like
+        // the other report exports in this app — it is a styled workbook that
+        // visually mirrors the Print/PDF header (institution → course → report
+        // title → column band), not a flat comma file.
         return Excel::download(
-            new UsersExport($exportData['headings'], $exportData['rows']),
-            "{$fileBase}.csv",
-            ExcelWriter::CSV
+            new StudentListReportExport(
+                $exportData['headings'],
+                $exportData['rows'],
+                $reportTitle,
+                (string) ($header['courseName'] ?? ''),
+                (string) ($header['courseDuration'] ?? ''),
+                $filterSummary,
+                now()->format('d-m-Y H:i'),
+                count($exportData['rows']),
+            ),
+            "{$fileBase}.xlsx",
+            ExcelWriter::XLSX
         );
+    }
+
+    /**
+     * Branded LBSNAA header assets for the student-list exports — the same
+     * emblem / Hindi title / 75-years logo and course line used by the official
+     * Student Medical Exemption report layout.
+     *
+     * @return array{logoLeft:?string,logoRight:?string,titleHindi:?string,courseName:string,courseDuration:string}
+     */
+    private function buildStudentListExportHeaderData(Request $request): array
+    {
+        $toDataUri = static function (string $path): ?string {
+            if (! is_file($path) || ! is_readable($path)) {
+                return null;
+            }
+            $raw = @file_get_contents($path);
+            if ($raw === false) {
+                return null;
+            }
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = match ($ext) {
+                'svg' => 'image/svg+xml',
+                'jpg', 'jpeg' => 'image/jpeg',
+                default => 'image/png',
+            };
+
+            return 'data:' . $mime . ';base64,' . base64_encode($raw);
+        };
+
+        $courseName = '';
+        $courseDuration = '';
+        if ($request->filled('course_id')) {
+            $course = CourseMaster::find($request->input('course_id'));
+            if ($course) {
+                $courseName = (string) ($course->course_name ?? '');
+                $start = ! empty($course->start_date ?? $course->start_year ?? null)
+                    ? Carbon::parse($course->start_date ?? $course->start_year)->format('j F Y') : '';
+                $end = ! empty($course->end_date)
+                    ? Carbon::parse($course->end_date)->format('j F Y') : '';
+                $courseDuration = ($start && $end) ? $start . ' to ' . $end : '';
+            }
+        }
+
+        return [
+            'logoLeft' => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
+            'logoRight' => $toDataUri(public_path('admin_assets/images/logos/constitution-75.png'))
+                ?: $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
+            'titleHindi' => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
+            'courseName' => $courseName,
+            'courseDuration' => $courseDuration,
+        ];
     }
 
     /**
      * @return array{students: \Illuminate\Support\Collection, availableCourses: \Illuminate\Support\Collection, facultyPk: int|null}
      */
-    private function resolveDashboardStudentListPayload(?Request $request = null): array
+    private function resolveDashboardStudentListPayload(?Request $request = null, bool $withTotals = true): array
     {
         $students = collect([]);
         $availableCourses = collect([]);
@@ -1277,6 +1886,12 @@ class UserController extends Controller
 
         $facultyPk = get_auth_faculty_master_pk();
         $isSuperAdmin = hasRole('Super Admin');
+
+        // Active vs Archive scope. Only the OT-participants page sends status=archive;
+        // everything else (student list, export) omits it and stays on "active".
+        // Archive = course has ended (end_date < today); Active = still running.
+        $archive = ($request?->input('status') === 'archive');
+        $dateOp = $archive ? '<' : '>=';
 
         // Super Admin sees students of every active course; faculty / CC / ACC are
         // scoped to their courses below. A coordinator/ACC is reached via their
@@ -1290,14 +1905,14 @@ class UserController extends Controller
                 // Course set feeding the primary (enrollment) student source.
                 if ($isSuperAdmin) {
                     $activeCoordinatorCourses = CourseMaster::where('active_inactive', 1)
-                        ->where('end_date', '>=', now())
+                        ->where('end_date', $dateOp, now())
                         ->pluck('pk');
                 } else {
                     $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
                     $activeCoordinatorCourses = $coordinatorCourses->isNotEmpty()
                         ? CourseMaster::whereIn('pk', $coordinatorCourses)
                             ->where('active_inactive', 1)
-                            ->where('end_date', '>=', now())
+                            ->where('end_date', $dateOp, now())
                             ->pluck('pk')
                         : collect([]);
                 }
@@ -1336,7 +1951,7 @@ class UserController extends Controller
                     $groupMapCourseIds = $groupMappings->pluck('course_name')->unique();
                     $activeCourseIds = CourseMaster::whereIn('pk', $groupMapCourseIds)
                         ->where('active_inactive', 1)
-                        ->where('end_date', '>=', now())
+                        ->where('end_date', $dateOp, now())
                         ->pluck('pk');
 
                     if ($activeCourseIds->isNotEmpty()) {
@@ -1379,10 +1994,62 @@ class UserController extends Controller
                     }
                 }
 
+                // Source 3 — students of sessions the faculty TAUGHT. A faculty is
+                // assigned to a timetable session via faculty_master / internal_faculty
+                // (JSON PK arrays). If they neither coordinate the course (source1) nor
+                // own the class group (source2), those students would otherwise be
+                // invisible — so their own sessions' attendance never shows. Pull them
+                // in here (the session-level scope in expandStudentRowsBySession then
+                // keeps only this faculty's own sessions for such non-coordinated courses).
+                $source3Students = collect([]);
+                if ($facultyPk && ! $isSuperAdmin) {
+                    $taughtRows = DB::table('course_student_attendance as a')
+                        ->join('timetable as t', 'a.timetable_pk', '=', 't.pk')
+                        ->where(function ($q) use ($facultyPk) {
+                            $q->whereRaw('JSON_CONTAINS(t.faculty_master, ?)', [json_encode((string) $facultyPk)])
+                              ->orWhereRaw('FIND_IN_SET(?, t.faculty_master)', [$facultyPk])
+                              ->orWhereRaw('JSON_CONTAINS(t.internal_faculty, ?)', [json_encode((string) $facultyPk)])
+                              ->orWhereRaw('FIND_IN_SET(?, t.internal_faculty)', [$facultyPk]);
+                        })
+                        ->distinct()
+                        ->get(['a.Student_master_pk as student_pk', 'a.course_master_pk as course_pk']);
+
+                    if ($taughtRows->isNotEmpty()) {
+                        $activeTaughtCourseIds = CourseMaster::whereIn('pk', $taughtRows->pluck('course_pk')->unique()->filter())
+                            ->where('active_inactive', 1)
+                            ->where('end_date', $dateOp, now())
+                            ->pluck('pk');
+                        $activeTaughtSet = $activeTaughtCourseIds->map(fn ($p) => (string) $p)->all();
+
+                        if (! empty($activeTaughtSet)) {
+                            $pairs = $taughtRows->filter(fn ($r) => in_array((string) $r->course_pk, $activeTaughtSet, true));
+                            $taughtStudents = \App\Models\StudentMaster::with('cadre')
+                                ->whereIn('pk', $pairs->pluck('student_pk')->unique()->filter())
+                                ->get()->keyBy(fn ($m) => (string) $m->pk);
+                            $taughtCourses = CourseMaster::whereIn('pk', $activeTaughtCourseIds)
+                                ->get()->keyBy(fn ($c) => (string) $c->pk);
+
+                            foreach ($pairs as $r) {
+                                $student = $taughtStudents->get((string) $r->student_pk);
+                                $course = $taughtCourses->get((string) $r->course_pk);
+                                if ($student && $course) {
+                                    $o = new \stdClass();
+                                    $o->student_master_pk = $r->student_pk;
+                                    $o->course_master_pk = $r->course_pk;
+                                    $o->studentMaster = $student;
+                                    $o->course = $course;
+                                    $o->source = 'session_taught';
+                                    $source3Students->push($o);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 $seenStudentCourseKeys = [];
                 $uniqueStudents = collect([]);
 
-                foreach ($source2Students->concat($source1Students) as $studentMap) {
+                foreach ($source2Students->concat($source1Students)->concat($source3Students) as $studentMap) {
                     $studentPk = $studentMap->student_master_pk;
                     $coursePk = $studentMap->course_master_pk ?? 0;
                     $studentCourseKey = $studentPk . '_' . $coursePk;
@@ -1393,7 +2060,11 @@ class UserController extends Controller
                     }
                 }
 
-                $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
+                // The per-student total_* counts + notice/memo lookups below are an
+                // N+1 that only the student-list page needs; callers that compute
+                // their own counts (e.g. the OT participants page via
+                // otParticipantsRowMeta) pass $withTotals = false to skip it.
+                $noticeMemoService = $withTotals ? app(\App\Services\OTNoticeMemoService::class) : null;
 
                 // Time Period + Duty Type filters scope the count columns.
                 $fromDate = $request?->input('from_date') ?: null;
@@ -1403,8 +2074,11 @@ class UserController extends Controller
                 // Include students who have discipline memos but were dropped from the
                 // active-course list (their course has expired or their enrolment is
                 // inactive), so their memo history still surfaces here. Scoped to what
-                // the current viewer is allowed to see.
-                $this->appendStudentsWithMemos($uniqueStudents, $seenStudentCourseKeys, $isSuperAdmin, $facultyPk);
+                // the current viewer is allowed to see. This is a student-list concern
+                // (and an N+1); skip it for callers that only want the course roster.
+                if ($withTotals) {
+                    $this->appendStudentsWithMemos($uniqueStudents, $seenStudentCourseKeys, $isSuperAdmin, $facultyPk);
+                }
 
                 // Batch-load House Name (hostel room, keyed by student_master.user_id == hostel user_name)
                 // and the latest attendance status per student (for Present/Absent).
@@ -1420,13 +2094,22 @@ class UserController extends Controller
                         ->pluck('hostel_room_name', 'user_name')
                     : collect();
 
-                // Present/Absent status per student, resolved from the most recent day
-                // that student has attendance for (Absent if absent in ANY session that day).
-                $attendanceStatus = $this->resolveStudentAttendanceStatus($studentPks);
+                // Every marked attendance session per student (one row per session is
+                // produced after this loop). Scoped to the Time Period filter, so a
+                // student with no session in range gets no session rows.
+                $attendanceSessions = $this->resolveStudentAttendanceSessions($studentPks, $fromDate, $toDate);
 
                 foreach ($uniqueStudents as $studentMap) {
                     $studentPk = $studentMap->student_master_pk;
                     $coursePk = $studentMap->course_master_pk ?? null;
+
+                    // House Name is cheap (batched above) and always needed.
+                    $uid = $studentMap->studentMaster->user_id ?? null;
+                    $studentMap->house_name = ($uid && isset($houseByUser[$uid])) ? $houseByUser[$uid] : null;
+
+                    if (! $withTotals) {
+                        continue; // caller computes its own counts / doesn't need group mapping
+                    }
 
                     if (! isset($studentMap->groupMapping) && $coursePk) {
                         $groupMap = StudentCourseGroupMap::with([
@@ -1471,32 +2154,35 @@ class UserController extends Controller
                         ->count();
 
                     $notices = $noticeMemoService->getNotices($studentPk);
-                    $memos = $noticeMemoService->getMemos($studentPk);
+                    $memos = $noticeMemoService->getDisciplineMemos($studentPk);
                     $studentMap->total_notice_count = $notices->count();
                     $studentMap->total_memo_count = $memos->count();
-
-                    $uid = $studentMap->studentMaster->user_id ?? null;
-                    $studentMap->house_name = ($uid && isset($houseByUser[$uid])) ? $houseByUser[$uid] : null;
-                    // Absent if absent in any session on their most recent attendance day.
-                    $att = $attendanceStatus[$studentPk] ?? null;
-                    $studentMap->attendance_present = $att['present'] ?? true;
-                    // Session (date / time / topic) shown for that day.
-                    $studentMap->session_date = $att['session_date'] ?? null;
-                    $studentMap->session_time = $att['session_time'] ?? null;
-                    $studentMap->session_topic = $att['session_topic'] ?? null;
                 }
+
+                // Faculty session scope: a plain session-teacher sees only the
+                // sessions THEY conducted; a CC/ACC sees all sessions of the courses
+                // they coordinate. Super Admin (even with a faculty pk) is unscoped.
+                $sessionFacultyScope = $isSuperAdmin ? null : $facultyPk;
+                $coordinatorCourseIds = $sessionFacultyScope
+                    ? $this->getCoordinatorCourseIds($sessionFacultyScope)->map(fn ($id) => (string) $id)->values()->all()
+                    : [];
+
+                // One row per marked attendance session (student totals repeat per row).
+                $uniqueStudents = $this->expandStudentRowsBySession($uniqueStudents, $attendanceSessions, $sessionFacultyScope, $coordinatorCourseIds);
 
                 $students = $uniqueStudents->filter(function ($studentMap) {
                     return ! empty($studentMap->studentMaster);
                 })->values();
 
                 $availableCourses = $students->pluck('course')
-                    ->filter(function ($course) {
+                    ->filter(function ($course) use ($archive) {
                         return $course
                             && isset($course->active_inactive)
                             && $course->active_inactive == 1
                             && isset($course->end_date)
-                            && Carbon::parse($course->end_date)->gte(now());
+                            && ($archive
+                                ? Carbon::parse($course->end_date)->lt(now())
+                                : Carbon::parse($course->end_date)->gte(now()));
                     })
                     ->unique('pk')
                     ->map(function ($course) {
@@ -1510,7 +2196,7 @@ class UserController extends Controller
             }
         } elseif (hasRole('Super Admin')) {
             $activeCourseIds = CourseMaster::where('active_inactive', 1)
-                ->where('end_date', '>=', now())
+                ->where('end_date', $dateOp, now())
                 ->pluck('pk');
 
             $superAdminStudentMaps = StudentMasterCourseMap::with([
@@ -1539,17 +2225,19 @@ class UserController extends Controller
                 }
             }
 
-            $this->augmentStudentListEntries($uniqueStudents, $request);
+            $uniqueStudents = $this->augmentStudentListEntries($uniqueStudents, $request);
 
             $students = $uniqueStudents->filter(fn ($m) => ! empty($m->studentMaster))->values();
 
             $availableCourses = $students->pluck('course')
-                ->filter(function ($course) {
+                ->filter(function ($course) use ($archive) {
                     return $course
                         && isset($course->active_inactive)
                         && $course->active_inactive == 1
                         && isset($course->end_date)
-                        && Carbon::parse($course->end_date)->gte(now());
+                        && ($archive
+                            ? Carbon::parse($course->end_date)->lt(now())
+                            : Carbon::parse($course->end_date)->gte(now()));
                 })
                 ->unique('pk')
                 ->map(fn ($c) => ['pk' => $c->pk, 'course_name' => $c->course_name])
@@ -1575,9 +2263,13 @@ class UserController extends Controller
      */
     private function appendStudentsWithMemos(\Illuminate\Support\Collection $uniqueStudents, array &$seenStudentCourseKeys, bool $isSuperAdmin, $facultyPk): void
     {
-        $memoStudentPks = DB::table('student_memo_status')
+        // Students carrying discipline memos (discipline_memo_status), scoped to
+        // active disciplines — same source as /memo/discipline and the memo counts.
+        $memoStudentPks = DB::table('discipline_memo_status as dms')
+            ->join('discipline_master as dm', 'dms.discipline_master_pk', '=', 'dm.pk')
+            ->where('dm.active_inactive', 1)
             ->distinct()
-            ->pluck('student_pk')
+            ->pluck('dms.student_master_pk')
             ->filter()
             ->map(fn ($v) => (int) $v)
             ->unique()
@@ -1632,7 +2324,7 @@ class UserController extends Controller
         }
     }
 
-    private function augmentStudentListEntries(\Illuminate\Support\Collection $uniqueStudents, ?Request $request = null): void
+    private function augmentStudentListEntries(\Illuminate\Support\Collection $uniqueStudents, ?Request $request = null): \Illuminate\Support\Collection
     {
         $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
 
@@ -1652,9 +2344,9 @@ class UserController extends Controller
                 ->pluck('hostel_room_name', 'user_name')
             : collect();
 
-        // Present/Absent status per student, resolved from the most recent day that
-        // student has attendance for (Absent if absent in ANY session that day).
-        $attendanceStatus = $this->resolveStudentAttendanceStatus($studentPks);
+        // Every marked attendance session per student (one row per session is
+        // produced below). Scoped to the Time Period filter.
+        $attendanceSessions = $this->resolveStudentAttendanceSessions($studentPks, $fromDate, $toDate);
 
         foreach ($uniqueStudents as $studentMap) {
             $studentPk = $studentMap->student_master_pk;
@@ -1703,86 +2395,296 @@ class UserController extends Controller
                 ->count();
 
             $notices = $noticeMemoService->getNotices($studentPk);
-            $memos = $noticeMemoService->getMemos($studentPk);
+            $memos = $noticeMemoService->getDisciplineMemos($studentPk);
             $studentMap->total_notice_count = $notices->count();
             $studentMap->total_memo_count = $memos->count();
 
             $uid = $studentMap->studentMaster->user_id ?? null;
             $studentMap->house_name = ($uid && isset($houseByUser[$uid])) ? $houseByUser[$uid] : null;
-            $att = $attendanceStatus[$studentPk] ?? null;
-            $studentMap->attendance_present = $att['present'] ?? true;
-            $studentMap->session_date = $att['session_date'] ?? null;
-            $studentMap->session_time = $att['session_time'] ?? null;
-            $studentMap->session_topic = $att['session_topic'] ?? null;
         }
+
+        // One row per marked attendance session (student totals repeat per row).
+        return $this->expandStudentRowsBySession($uniqueStudents, $attendanceSessions);
     }
 
     /**
-     * Resolve each student's Present/Absent status from their most recent session.
-     * Rule: a student is ABSENT if that single latest session is marked Absent
-     * (status 3); otherwise Present. Also returns that session's details
-     * (date/time/topic) for display, so the status always matches the shown session.
+     * Cascading Session / Topic dropdown options for the student list filter panel.
+     *
+     * The filters cascade off the selected Time Period: first a date range is
+     * picked, then the Session dropdown is scoped to that range, then the Topic
+     * dropdown is scoped to the range AND the chosen Session. With no date range
+     * selected there is nothing to cascade from, so both come back empty. Row-level
+     * scope (faculty / course / date) is still enforced when a filter is applied.
      *
      * @param  array<int, int>  $studentPks
-     * @return array<int, array{present: bool, session_date: ?string, session_time: ?string, session_topic: ?string}>
+     * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection}  [sessionOptions, topicOptions]
      */
-    private function resolveStudentAttendanceStatus(array $studentPks): array
+    private function dashboardStudentListFilterOptions(array $studentPks, ?string $fromDate, ?string $toDate, string $sessionValue = ''): array
+    {
+        // No date range → nothing to map. Keep both dropdowns empty.
+        if (! $fromDate || ! $toDate) {
+            return [collect(), collect()];
+        }
+
+        $sessionOptions = $this->resolveScopedSessionOptions($studentPks, $fromDate, $toDate);
+        $topicOptions = $this->resolveScopedTopicOptions(
+            $studentPks,
+            $fromDate,
+            $toDate,
+            $sessionValue !== '' ? $sessionValue : null
+        );
+
+        return [$sessionOptions, $topicOptions];
+    }
+
+    /**
+     * Distinct class-session time slots for the given students within the selected
+     * Time Period (Session filter dropdown). Scoped to [$fromDate, $toDate].
+     *
+     * @param  array<int, int>  $studentPks
+     */
+    private function resolveScopedSessionOptions(array $studentPks, ?string $fromDate = null, ?string $toDate = null): \Illuminate\Support\Collection
+    {
+        return $this->resolveScopedTimetableOptions($studentPks, 'class_session', $fromDate, $toDate);
+    }
+
+    /**
+     * Distinct session topics for the given students within the selected Time
+     * Period, optionally narrowed to a single Session (class_session). Backs the
+     * Topic filter dropdown, which cascades off date range → session.
+     *
+     * @param  array<int, int>  $studentPks
+     */
+    private function resolveScopedTopicOptions(array $studentPks, ?string $fromDate = null, ?string $toDate = null, ?string $sessionValue = null): \Illuminate\Support\Collection
+    {
+        return $this->resolveScopedTimetableOptions($studentPks, 'subject_topic', $fromDate, $toDate, $sessionValue);
+    }
+
+    /**
+     * Distinct non-empty values of a timetable column for the sessions the given
+     * students have attendance for, scoped to a date range (and optionally a single
+     * class_session). Backs the cascading Session / Topic filter dropdowns.
+     *
+     * @param  array<int, int>  $studentPks
+     */
+    private function resolveScopedTimetableOptions(array $studentPks, string $column, ?string $fromDate = null, ?string $toDate = null, ?string $sessionValue = null): \Illuminate\Support\Collection
+    {
+        if (empty($studentPks)) {
+            return collect();
+        }
+
+        return DB::table('course_student_attendance as a')
+            ->join('timetable as t', 'a.timetable_pk', '=', 't.pk')
+            ->whereIn('a.Student_master_pk', $studentPks)
+            ->whereNotNull("t.$column")
+            ->where("t.$column", '<>', '')
+            ->when($fromDate, fn ($q) => $q->whereDate('t.START_DATE', '>=', $fromDate))
+            ->when($toDate, fn ($q) => $q->whereDate('t.START_DATE', '<=', $toDate))
+            ->when(
+                $sessionValue !== null && $sessionValue !== '',
+                fn ($q) => $q->where('t.class_session', $sessionValue)
+            )
+            ->distinct()
+            ->orderBy("t.$column")
+            ->pluck("t.$column")
+            ->values();
+    }
+
+    /**
+     * Resolve every marked attendance session per student, newest first.
+     *
+     * Attendance is recorded per timetable session (course_student_attendance,
+     * keyed by timetable_pk), so a student can have many sessions. Each entry
+     * carries that session's date/time/topic, its raw status code and a derived
+     * present flag (Absent only when status == 3). The dashboard student list
+     * renders ONE ROW PER SESSION, so every session the student was marked in is
+     * shown — not just the latest.
+     *
+     * When a date range is supplied, only sessions whose timetable START_DATE
+     * falls within [$fromDate, $toDate] are returned (Time Period filter).
+     *
+     * @param  array<int, int>  $studentPks
+     * @return array<int, array<int, array<string, mixed>>>  spk => list of sessions
+     */
+    private function resolveStudentAttendanceSessions(array $studentPks, ?string $fromDate = null, ?string $toDate = null): array
     {
         if (empty($studentPks)) {
             return [];
         }
 
-        // All attendance rows for these students, joined to their timetable session
-        // (date / time / topic). Newest-first so the first row of a day is its latest.
-        $rowsByStudent = DB::table('course_student_attendance as a')
+        // Every attendance row for these students, joined to its timetable session
+        // (date / time / topic). Newest session first. Scoped to the selected
+        // Time Period (event date) when one is active.
+        return DB::table('course_student_attendance as a')
             ->join('timetable as t', 'a.timetable_pk', '=', 't.pk')
             ->whereIn('a.Student_master_pk', $studentPks)
+            ->when($fromDate, fn ($q) => $q->whereDate('t.START_DATE', '>=', $fromDate))
+            ->when($toDate, fn ($q) => $q->whereDate('t.START_DATE', '<=', $toDate))
+            ->orderByDesc('t.START_DATE')
             ->orderByDesc('a.pk')
             ->get([
                 'a.Student_master_pk as spk',
+                'a.pk as attendance_pk',
                 'a.status',
+                'a.timetable_pk',
+                'a.course_master_pk',
                 't.START_DATE as session_date',
                 't.class_session as session_time',
                 't.subject_topic as session_topic',
+                't.faculty_master as session_faculty_master',
+                't.internal_faculty as session_internal_faculty',
             ])
-            ->groupBy('spk');
-
-        $result = [];
-        foreach ($rowsByStudent as $spk => $sessions) {
-            // The student's most recent attendance day (by session date, not row id).
-            $latestDay = $sessions
-                ->map(fn ($r) => $r->session_date ? Carbon::parse($r->session_date)->toDateString() : null)
-                ->filter()
-                ->sort()
-                ->last();
-
-            if (! $latestDay) {
-                continue;
-            }
-
-            // Present/Absent is decided by the single most recent session (not by
-            // aggregating the whole day). Rows are pk-desc, so the first row of the
-            // latest day is that day's latest session — the one shown in the list.
-            $latest = $sessions->first(
-                fn ($r) => $r->session_date && Carbon::parse($r->session_date)->toDateString() === $latestDay
-            );
-
-            if (! $latest) {
-                continue;
-            }
-
-            $result[(int) $spk] = [
-                'present' => (int) $latest->status !== 3,
-                'session_date' => $latest->session_date ?? null,
-                'session_time' => $latest->session_time ?? null,
-                'session_topic' => $latest->session_topic ?? null,
-            ];
-        }
-
-        return $result;
+            ->groupBy('spk')
+            ->map(function ($sessions) {
+                return $sessions->map(fn ($r) => [
+                    'attendance_pk' => (int) $r->attendance_pk,
+                    'timetable_pk' => $r->timetable_pk,
+                    'course_master_pk' => $r->course_master_pk,
+                    'status' => $r->status,
+                    'present' => (int) $r->status !== 3,
+                    'session_date' => $r->session_date ?? null,
+                    'session_time' => $r->session_time ?? null,
+                    'session_topic' => $r->session_topic ?? null,
+                    'session_faculty_master' => $r->session_faculty_master ?? null,
+                    'session_internal_faculty' => $r->session_internal_faculty ?? null,
+                ])->values()->all();
+            })
+            ->all();
     }
 
-    private function applyDashboardStudentListFilters($students, Request $request)
+    /**
+     * Expand one-row-per-student into one-row-per-session.
+     *
+     * Every student/course entry is cloned once per marked attendance session
+     * (scoped to that entry's own course), carrying the session's date/time/topic
+     * and status; the per-student totals (duty / medical / PT / stationed / notice
+     * / memo) simply repeat on each of that student's session rows. A student with
+     * no marked session keeps a single roster row (present by default) and is
+     * flagged has_session_in_range = false so the Time Period filter drops it.
+     *
+     * @param  \Illuminate\Support\Collection  $uniqueStudents
+     * @param  array<int, array<int, array<string, mixed>>>  $attendanceSessions
+     * @return \Illuminate\Support\Collection
+     */
+    private function expandStudentRowsBySession(\Illuminate\Support\Collection $uniqueStudents, array $attendanceSessions, $facultyScopePk = null, array $coordinatorCourseIds = []): \Illuminate\Support\Collection
+    {
+        $expanded = collect();
+
+        // Tracks which attendance sessions have already been rendered for each
+        // student, so the same session never repeats across two of that
+        // student's roster rows once the course fallback below kicks in.
+        $emittedByStudent = [];
+
+        foreach ($uniqueStudents as $studentMap) {
+            $studentPk = $studentMap->student_master_pk;
+            $coursePk = $studentMap->course_master_pk ?? null;
+
+            $sessions = $attendanceSessions[$studentPk] ?? [];
+
+            // Prefer this enrolment row's own course so a student enrolled in
+            // several courses shows each course's sessions on its own row. But
+            // the enrolment course and the course attendance was actually marked
+            // under do NOT always match in the data — so when this row's course
+            // has no sessions of its own, fall back to the student's remaining
+            // sessions instead of dropping them. Dropping them wrongly showed the
+            // student as an unmarked "Present" default with empty
+            // Session / Topic / Faculty (the N/A rows).
+            if ($coursePk !== null && (int) $coursePk !== 0) {
+                $courseSessions = array_values(array_filter($sessions, function ($s) use ($coursePk) {
+                    return (string) ($s['course_master_pk'] ?? '') === (string) $coursePk;
+                }));
+                if (! empty($courseSessions)) {
+                    $sessions = $courseSessions;
+                }
+            }
+
+            // Never render a session already shown on an earlier row for this
+            // student (guards the fallback above against duplicating sessions
+            // across a multi-course student's rows).
+            $already = $emittedByStudent[$studentPk] ?? [];
+            if (! empty($already)) {
+                $sessions = array_values(array_filter($sessions, function ($s) use ($already) {
+                    return ! in_array((int) ($s['attendance_pk'] ?? 0), $already, true);
+                }));
+            }
+
+            // Faculty session scope: for a course the faculty only TEACHES (not
+            // CC/ACC), keep just the sessions they themselves conducted. For
+            // courses they coordinate (CC/ACC) — and for Super Admin
+            // ($facultyScopePk null) — all sessions stay.
+            if ($facultyScopePk !== null) {
+                $isCoordinatedCourse = $coursePk !== null
+                    && in_array((string) $coursePk, $coordinatorCourseIds, true);
+                if (! $isCoordinatedCourse) {
+                    $sessions = array_values(array_filter($sessions, function ($s) use ($facultyScopePk) {
+                        return $this->sessionHasFaculty($s, $facultyScopePk);
+                    }));
+                }
+            }
+
+            if (empty($sessions)) {
+                $studentMap->attendance_present = true;
+                $studentMap->attendance_status = null;
+                $studentMap->session_date = null;
+                $studentMap->session_time = null;
+                $studentMap->session_topic = null;
+                $studentMap->session_faculty_master = null;
+                $studentMap->session_internal_faculty = null;
+                $studentMap->has_session_in_range = false;
+                $expanded->push($studentMap);
+                continue;
+            }
+
+            foreach ($sessions as $session) {
+                $row = clone $studentMap;
+                $row->attendance_present = $session['present'];
+                $row->attendance_status = $session['status'];
+                $row->session_date = $session['session_date'];
+                $row->session_time = $session['session_time'];
+                $row->session_topic = $session['session_topic'];
+                $row->session_faculty_master = $session['session_faculty_master'] ?? null;
+                $row->session_internal_faculty = $session['session_internal_faculty'] ?? null;
+                $row->has_session_in_range = true;
+                $expanded->push($row);
+                $emittedByStudent[$studentPk][] = (int) ($session['attendance_pk'] ?? 0);
+            }
+        }
+
+        return $expanded;
+    }
+
+    /**
+     * Does a resolved session belong to the given faculty? Checks the timetable's
+     * faculty_master / internal_faculty JSON PK arrays carried on the session.
+     */
+    private function sessionHasFaculty(array $session, $facultyPk): bool
+    {
+        $pk = (int) $facultyPk;
+        if ($pk === 0) {
+            return false;
+        }
+
+        foreach (['session_faculty_master', 'session_internal_faculty'] as $key) {
+            $raw = $session[$key] ?? null;
+            if ($raw === null || $raw === '') {
+                continue;
+            }
+            $decoded = is_array($raw) ? $raw : json_decode((string) $raw, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                foreach ($decoded as $id) {
+                    if (is_numeric($id) && (int) $id === $pk) {
+                        return true;
+                    }
+                }
+            } elseif (is_numeric($raw) && (int) $raw === $pk) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function applyDashboardStudentListFilters($students, Request $request, bool $applySessionDateFilter = true)
     {
         $courseId = $request->input('course_id');
         $roleFilter = $request->input('role_filter');
@@ -1790,17 +2692,47 @@ class UserController extends Controller
         $groupPk = $request->input('group_pk');
         $cadre = $request->input('cadre');
         $house = $request->input('house');
+        $session = (string) $request->input('session', '');
+        $topic = (string) $request->input('topic', '');
+        $participant = (string) $request->input('participant', '');
         $searchInput = $request->input('search', '');
         $searchValue = is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput;
         $search = strtolower(trim((string) $searchValue));
 
-        return $students->filter(function ($studentMap) use ($courseId, $roleFilter, $counsellorFaculty, $groupPk, $cadre, $house, $search) {
+        // Time Period (event date) filter: when a range is selected, only students who
+        // have a timetable session/event within that range are kept. If no event exists
+        // on the chosen day(s), the list ends up empty ("Data not found.").
+        // Callers that only want the Time Period to scope count columns (not drop
+        // students) pass $applySessionDateFilter = false.
+        $hasSessionDateFilter = $applySessionDateFilter
+            && $request->filled('from_date') && $request->filled('to_date');
+
+        return $students->filter(function ($studentMap) use ($courseId, $roleFilter, $counsellorFaculty, $groupPk, $cadre, $house, $session, $topic, $participant, $search, $hasSessionDateFilter) {
             $student = $studentMap->studentMaster;
             $course = $studentMap->course;
             $counsellorTypePk = (string) ($studentMap->groupMapping->groupTypeMasterCourseMasterMap->type_name ?? '');
             $rowFacilityId = (string) ($studentMap->groupMapping->groupTypeMasterCourseMasterMap->facility_id ?? '');
             $rowGroupPk = (string) ($studentMap->groupMapping->groupTypeMasterCourseMasterMap->pk ?? '');
             $rowCourseId = (string) ($course->pk ?? '');
+
+            if ($hasSessionDateFilter && ! ($studentMap->has_session_in_range ?? false)) {
+                return false;
+            }
+
+            // Session (class-session time slot) filter.
+            if ($session !== '' && (string) ($studentMap->session_time ?? '') !== $session) {
+                return false;
+            }
+
+            // Topic (session subject/topic) filter.
+            if ($topic !== '' && (string) ($studentMap->session_topic ?? '') !== $topic) {
+                return false;
+            }
+
+            // OT / Participant filter (a specific student).
+            if ($participant !== '' && (string) ($student->pk ?? '') !== $participant) {
+                return false;
+            }
 
             if ($courseId && $rowCourseId !== (string) $courseId) {
                 return false;
@@ -1855,67 +2787,213 @@ class UserController extends Controller
     }
 
     /**
+     * Collapse the per-session rows into ONE ROW PER STUDENT (per tab) for a
+     * date-scoped attendance view (the Present/Absent Today cards, or any Time
+     * Period filter). Only students GENUINELY MARKED (status != 0) within range are
+     * counted; no-session default rows are dropped (not treated as "Present").
+     *   - Present = attended any NON-absent marked session in range
+     *   - Absent  = had ANY absent (status 3) marked session in range
+     * A student can therefore appear in BOTH tabs (present in some sessions, absent
+     * in others). The absent row carries its absent session's date so the Absent
+     * Reason resolves against that day.
+     *
+     * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection} [present, absent]
+     */
+    private function collapseDateScopedAttendance($rows): array
+    {
+        $present = collect();
+        $absent = collect();
+
+        foreach ($rows->groupBy('student_master_pk') as $spk => $group) {
+            if (empty($spk)) {
+                continue;
+            }
+            // Genuinely marked sessions in range for this student (status 0 = not
+            // marked, and no-session default rows, are excluded).
+            $marked = $group->filter(function ($m) {
+                return ($m->has_session_in_range ?? false) === true
+                    && $m->attendance_status !== null
+                    && (int) $m->attendance_status !== 0;
+            });
+            if ($marked->isEmpty()) {
+                continue;
+            }
+
+            // Present bucket: any non-absent marked session.
+            $presentRow = $marked->first(fn ($m) => (int) $m->attendance_status !== 3);
+            if ($presentRow) {
+                $presentRow->attendance_present = true;
+                $present->push($presentRow);
+            }
+
+            // Absent bucket: any absent (status 3) marked session. Use that session
+            // as the row so its date drives the Absent Reason lookup.
+            $absentRow = $marked->first(fn ($m) => (int) $m->attendance_status === 3);
+            if ($absentRow) {
+                $absentRow->attendance_present = false;
+                $absent->push($absentRow);
+            }
+        }
+
+        return [$present->values(), $absent->values()];
+    }
+
+    /**
+     * Resolve the three attendance tab sets (All / Present / Absent) for the current
+     * filters, applying the date-scoped one-row-per-student collapse and appending
+     * PT/Stationed-leave absentees — the single source of truth shared by the live
+     * DataTable and the export/report so both stay in sync with the on-screen view.
+     *
+     * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection, 2: \Illuminate\Support\Collection} [all, present, absent]
+     */
+    private function dashboardStudentListTabSets(Request $request, $students): array
+    {
+        // Apply the shared filters ONCE to the full set, then split for the tabs.
+        $filteredAll = $this->applyDashboardStudentListFilters($students, $request)->values();
+
+        // A date range (Present/Absent Today cards, or Time Period filter) switches
+        // the Present/Absent tabs to one-row-per-student, marked-only buckets that
+        // match the dashboard cards. Without dates the tabs stay empty (a date is
+        // required for Present/Absent details).
+        $dateScoped = $request->filled('from_date') || $request->filled('to_date');
+        if (! $dateScoped) {
+            return [$filteredAll, collect(), collect()];
+        }
+
+        [$presentAll, $absentAll] = $this->collapseDateScopedAttendance($filteredAll);
+
+        // Students on PT Exemption / Stationed Leave during the window are absent
+        // WITH a reason even when no attendance session was marked for them — add
+        // them to the Absent list so the leave surfaces (one row per student).
+        // Source them from the roster WITHOUT the session-date drop (but with all
+        // other filters), since a leave student has no session in range.
+        $rosterAll = $this->applyDashboardStudentListFilters($students, $request, false);
+        $byStudent = [];
+        foreach ($rosterAll as $m) {
+            $spk = (int) ($m->student_master_pk ?? 0);
+            if ($spk && ! isset($byStudent[$spk])) {
+                $byStudent[$spk] = $m;
+            }
+        }
+        $alreadyAbsent = [];
+        foreach ($absentAll as $m) {
+            $alreadyAbsent[(int) ($m->student_master_pk ?? 0)] = true;
+        }
+        $leaveAbsentees = $this->leaveBasedAbsentees(
+            array_keys($byStudent),
+            $request->input('from_date') ?: null,
+            $request->input('to_date') ?: null
+        );
+        foreach ($leaveAbsentees as $spk => $coverDate) {
+            if (isset($alreadyAbsent[$spk]) || ! isset($byStudent[$spk])) {
+                continue;
+            }
+            $row = clone $byStudent[$spk];
+            $row->attendance_present = false;
+            $row->attendance_status = 3; // display as Absent
+            $row->session_date = $coverDate;
+            $row->session_time = null;
+            $row->session_topic = null;
+            $row->session_faculty_master = null;
+            $row->session_internal_faculty = null;
+            $row->has_session_in_range = true;
+            $absentAll->push($row);
+        }
+
+        return [$filteredAll, $presentAll->values(), $absentAll->values()];
+    }
+
+    /**
      * Server-side JSON for dashboard student list DataTables.
      */
     private function dashboardStudentListDataTableResponse(Request $request, $students)
     {
-        $attendance = (string) $request->input('attendance', 'present');
-        $attendanceStudents = $attendance === 'absent'
-            ? $students->filter(fn ($m) => ($m->attendance_present ?? true) === false)->values()
-            : $students->filter(fn ($m) => ($m->attendance_present ?? true) === true)->values();
+        $attendance = (string) $request->input('attendance', 'all');
 
-        $recordsTotal = $attendanceStudents->count();
-        $filteredStudents = $this->applyDashboardStudentListFilters($attendanceStudents, $request)->values();
-        $recordsFiltered = $filteredStudents->count();
+        // Cascading Session / Topic dropdown options for the CURRENT date range and
+        // selected session, so the front-end can rebuild the dropdowns on every
+        // filter change (the dropdowns are otherwise only rendered at page load).
+        $scopedStudentPks = $students->pluck('student_master_pk')->filter()->unique()->values()->all();
+        [$sessionOptions, $topicOptions] = $this->dashboardStudentListFilterOptions(
+            $scopedStudentPks,
+            $request->input('from_date') ?: null,
+            $request->input('to_date') ?: null,
+            (string) $request->input('session', '')
+        );
 
-        $columnMap = $attendance === 'absent'
-            ? [
-                0 => 'serial_no',
-                1 => 'ot_code',
-                2 => 'name',
-                3 => 'email',
-                4 => 'cadre',
-                5 => 'status',
-                6 => 'session',
-                7 => 'topic',
-                8 => 'duty',
-                9 => 'pt',
-                10 => 'stationed',
-            ]
-            : [
-                0 => 'serial_no',
-                1 => 'ot_code',
-                2 => 'name',
-                3 => 'email',
-                4 => 'cadre',
-                5 => 'status',
-                6 => 'session',
-                7 => 'topic',
-                8 => 'house',
-                9 => 'duty',
-                10 => 'medical',
-                11 => 'pt',
-                12 => 'stationed',
-                13 => 'notice',
-                14 => 'memo',
-            ];
+        [$filteredAll, $presentAll, $absentAll] = $this->dashboardStudentListTabSets($request, $students);
+
+        $counts = [
+            'all' => $filteredAll->count(),
+            'present' => $presentAll->count(),
+            'absent' => $absentAll->count(),
+        ];
+
+        $rows = $attendance === 'present'
+            ? $presentAll
+            : ($attendance === 'absent' ? $absentAll : $filteredAll);
+
+        // recordsTotal = attendance-tab size before the DataTables search box;
+        // recordsFiltered = after all filters (search included above).
+        $recordsTotal = $counts[$attendance] ?? $counts['all'];
+        $recordsFiltered = $rows->count();
+
+        // Column layout (DataTable column index → sort key).
+        $columnMap = [
+            0 => 'serial_no',
+            1 => 'ot_code',
+            2 => 'name',
+            3 => 'username',
+            4 => 'cadre',
+            5 => 'date',
+            6 => 'session',
+            7 => 'topic',
+            8 => 'faculty',
+            // 9 => absent_reason (not sortable)
+            10 => 'status',
+            11 => 'mdo',
+            12 => 'escort',
+            13 => 'other_exempt',
+        ];
 
         $orderCol = (int) $request->input('order.0.column', 0);
         $orderDir = strtolower((string) $request->input('order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
         $sortKey = $columnMap[$orderCol] ?? 'serial_no';
 
         if ($sortKey !== 'serial_no') {
-            $filteredStudents = $filteredStudents->sortBy(function ($studentMap) use ($sortKey) {
+            $rows = $rows->sortBy(function ($studentMap) use ($sortKey) {
                 return $this->dashboardStudentListSortValue($studentMap, $sortKey);
             }, SORT_NATURAL | SORT_FLAG_CASE, $orderDir === 'desc')->values();
         }
 
         $start = max(0, (int) $request->input('start', 0));
         $length = (int) $request->input('length', 10);
-        if ($length < 0) {
-            $pagedStudents = $filteredStudents->slice($start)->values();
-        } else {
-            $pagedStudents = $filteredStudents->slice($start, $length)->values();
+        $pagedStudents = $length < 0
+            ? $rows->slice($start)->values()
+            : $rows->slice($start, $length)->values();
+
+        // Absent Reason (shown only on the Absent tab): attendance stores no reason
+        // field, so derive it from a leave / medical exemption that overlaps the
+        // absent session's date. Batched for the current page.
+        $absentReasons = $this->dashboardAbsentReasons($pagedStudents);
+
+        // MDO / Escort / Medical / Other flags, mapped from the duty + medical tables
+        // by student + session date. The attendance status code (4/5/6/7) alone does
+        // not reflect a duty/exemption created separately (mdo_escot_duty_map), so we
+        // cross-reference the source tables here. Batched for the current page.
+        $dutyExemptionFlags = $this->dashboardDutyExemptionFlags($pagedStudents);
+
+        // Carry the Time Period filter into the detail-page section links so the
+        // opened section (MDO/Escort duty, Medical exemption) shows the same
+        // date-scoped data as the list row.
+        $linkDateQs = '';
+        $fdParam = (string) $request->input('from_date', '');
+        $tdParam = (string) $request->input('to_date', '');
+        if ($fdParam !== '') {
+            $linkDateQs .= '&from_date=' . urlencode($fdParam);
+        }
+        if ($tdParam !== '') {
+            $linkDateQs .= '&to_date=' . urlencode($tdParam);
         }
 
         $data = [];
@@ -1927,43 +3005,66 @@ class UserController extends Controller
 
             $detailUrl = route('admin.dashboard.students.detail', encrypt($student->pk));
             $displayName = $student->display_name ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
-            $sessionDate = $studentMap->session_date ? Carbon::parse($studentMap->session_date)->format('d-m-Y') : 'N/A';
-            $sessionTime = $studentMap->session_time ?? '';
-            $sessionHtml = '<div class="fw-medium">' . e($sessionDate) . '</div>'
-                . ($sessionTime !== '' ? '<div class="small text-muted">' . e($sessionTime) . '</div>' : '');
+            $statusCode = (int) ($studentMap->attendance_status ?? 0);
+            $isAbsent = ($studentMap->attendance_present ?? true) === false;
 
-            $baseRow = [
+            // Show the column when EITHER the attendance status code marks it, OR a
+            // matching duty / medical exemption is mapped for this student + date.
+            $flags = $dutyExemptionFlags[$idx] ?? ['mdo' => false, 'escort' => false, 'medical' => false, 'other' => false];
+            $showMdo = $statusCode === 4 || $flags['mdo'];
+            $showEscort = $statusCode === 5 || $flags['escort'];
+            $showMedical = $statusCode === 6 || $flags['medical'];
+            $showOther = $statusCode === 7 || $flags['other'];
+
+            $data[] = [
                 's_no' => $start + $idx + 1,
                 'ot_code' => $student->generated_OT_code ?? 'N/A',
                 'name' => '<a href="' . e($detailUrl) . '" class="sl-count">' . e($displayName) . '</a>',
-                'email' => $student->email ?? 'N/A',
-                'cadre' => $student->cadre->cadre_name ?? 'N/A',
-                'status' => ($studentMap->attendance_present ?? true)
-                    ? '<span class="sl-status-badge sl-status-present">Present</span>'
-                    : '<span class="sl-status-badge sl-status-absent">Absent</span>',
-                'date_session' => $sessionHtml,
-                'topic' => $studentMap->session_topic ?: 'N/A',
-            ];
-
-            $sectionUrl = fn ($section) => $detailUrl . '?section=' . $section;
-
-            if ($attendance === 'absent') {
-                $data[] = $baseRow + [
-                    'total_duty_count' => '<a href="' . e($sectionUrl('dutiesSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_duty_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
-                    'total_pt_exemption_count' => '<a href="' . e($sectionUrl('ptExemptionsSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_pt_exemption_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
-                    'total_stationed_leave_count' => '<a href="' . e($sectionUrl('stationedLeavesSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_stationed_leave_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
-                ];
-                continue;
-            }
-
-            $data[] = $baseRow + [
-                'house_name' => $studentMap->house_name ?? 'N/A',
-                'total_duty_count' => '<a href="' . e($sectionUrl('dutiesSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_duty_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
-                'total_medical_exception_count' => '<a href="' . e($sectionUrl('medicalExceptionsSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_medical_exception_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
-                'total_pt_exemption_count' => '<a href="' . e($sectionUrl('ptExemptionsSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_pt_exemption_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
-                'total_stationed_leave_count' => '<a href="' . e($sectionUrl('stationedLeavesSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_stationed_leave_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
-                'total_notice_count' => '<a href="' . e($sectionUrl('noticesSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_notice_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
-                'total_memo_count' => '<a href="' . e($sectionUrl('memosSection')) . '" class="sl-count">' . str_pad((string) ($studentMap->total_memo_count ?? 0), 2, '0', STR_PAD_LEFT) . '</a>',
+                'username' => e($student->email ?? 'N/A'),
+                'cadre' => e($student->cadre->cadre_name ?? 'N/A'),
+                'date' => e($studentMap->session_date ? \Illuminate\Support\Carbon::parse($studentMap->session_date)->format('d M Y') : 'N/A'),
+                'session' => e($studentMap->session_time ?: 'N/A'),
+                'topic' => e($studentMap->session_topic ?: 'N/A'),
+                'faculty' => e($this->dashboardResolveSessionFaculty(
+                    $studentMap->session_faculty_master ?? null,
+                    $studentMap->session_internal_faculty ?? null
+                )),
+                // Attendance status; for an absent student the reason (Stationed
+                // Leave / PT Exemption / Medical Exemption, when one covers the day)
+                // is shown right below the "Absent" badge so it's visible in the list.
+                'status' => (function () use ($studentMap, $statusCode, $isAbsent, $absentReasons, $idx) {
+                    $present = ($studentMap->attendance_present ?? true);
+                    // "Late" (status 2) is an attended-but-late state — the Present
+                    // bucket already keeps it (status !== 3), so it appears in both
+                    // the All and Present views. Show a distinct amber "Late" badge
+                    // instead of the generic green "Present" so it's called out.
+                    if ($statusCode === 2) {
+                        $html = '<span class="sl-status-badge sl-status-late">Late</span>';
+                    } else {
+                        $html = '<span class="sl-status-badge ' . ($present ? 'sl-status-present' : 'sl-status-absent')
+                            . '">' . ($present ? 'Present' : 'Absent') . '</span>';
+                    }
+                    $reason = $isAbsent ? ($absentReasons[$idx] ?? '-') : '-';
+                    if ($isAbsent && $reason !== '-') {
+                        $html .= '<div class="text-muted small mt-1">' . e($reason) . '</div>';
+                    }
+                    return $html;
+                })(),
+                // MDO / Escort duties and Medical exemptions are clickable and open
+                // the relevant section of the student's detail page (date-scoped).
+                // "Other" (status 7) has no dedicated section, so it links to the
+                // full detail page.
+                'mdo' => $showMdo
+                    ? '<a href="' . e($detailUrl . '?section=dutiesSection' . $linkDateQs) . '" class="sl-count">MDO</a>'
+                    : '-',
+                'escort' => $showEscort
+                    ? '<a href="' . e($detailUrl . '?section=dutiesSection' . $linkDateQs) . '" class="sl-count">Escort</a>'
+                    : '-',
+                'other_exempt' => $showMedical
+                    ? '<a href="' . e($detailUrl . '?section=medicalExceptionsSection' . $linkDateQs) . '" class="sl-count">Medical</a>'
+                    : ($showOther
+                        ? '<a href="' . e($detailUrl . ($linkDateQs !== '' ? '?' . ltrim($linkDateQs, '&') : '')) . '" class="sl-count">Other</a>'
+                        : '-'),
             ];
         }
 
@@ -1971,8 +3072,304 @@ class UserController extends Controller
             'draw' => (int) $request->input('draw', 1),
             'recordsTotal' => $recordsTotal,
             'recordsFiltered' => $recordsFiltered,
+            'counts' => $counts,
+            // Fresh cascading dropdown options for the current date range + session.
+            'filterOptions' => [
+                'session' => $sessionOptions->values()->all(),
+                'topic' => $topicOptions->values()->all(),
+            ],
             'data' => $data,
         ]);
+    }
+
+    /**
+     * Derive an "Absent Reason" for each row on the current page. Attendance
+     * itself records no reason, so we look for a PT Exemption / Stationed Leave
+     * that covers the absent session's own date. Returns a label per row index
+     * ("PT Exemption" / "Stationed Leave"), or "-" when nothing overlaps.
+     * Medical Exemption is deliberately excluded — it has its own "Other
+     * Exemptions" column, so showing it here too was redundant. Only absent rows
+     * are considered.
+     *
+     * @param  \Illuminate\Support\Collection  $pagedStudents
+     * @return array<int, string>
+     */
+    /**
+     * Roster students who are on a PT Exemption / Stationed Leave that overlaps the
+     * given window. Such a student is "absent with reason" for that day even when no
+     * attendance session was marked for them, so they must still surface on the
+     * Absent list. Returns [studentPk => a covered date (Y-m-d) inside the window],
+     * which the Absent Reason lookup then resolves to "PT Exemption" / "Stationed Leave".
+     *
+     * @param  array<int, int>  $studentPks
+     * @return array<int, string>
+     */
+    private function leaveBasedAbsentees(array $studentPks, ?string $fromDate, ?string $toDate): array
+    {
+        if (empty($studentPks) || (! $fromDate && ! $toDate)) {
+            return [];
+        }
+        $from = $fromDate ?: $toDate;
+        $to = $toDate ?: $fromDate;
+
+        $rows = DB::table('leave_application')
+            ->whereIn('student_master_pk', $studentPks)
+            ->where('active_inactive', 1)
+            ->whereIn('leave_type', ['PT_EXEMPTION', 'STATIONED_LEAVE'])
+            // Overlap: leave starts on/before the window end AND ends on/after its start.
+            ->whereDate('from_date', '<=', $to)
+            ->where(function ($q) use ($from) {
+                $q->whereNull('to_date')->orWhereDate('to_date', '>=', $from);
+            })
+            ->orderBy('from_date')
+            ->get(['student_master_pk', 'from_date']);
+
+        $out = [];
+        foreach ($rows as $r) {
+            $spk = (int) $r->student_master_pk;
+            if (isset($out[$spk])) {
+                continue;
+            }
+            $leaveFrom = substr((string) $r->from_date, 0, 10);
+            // A date inside the window that the leave covers (for the reason lookup).
+            $out[$spk] = $leaveFrom >= $from ? $leaveFrom : $from;
+        }
+
+        return $out;
+    }
+
+    private function dashboardAbsentReasons(\Illuminate\Support\Collection $pagedStudents): array
+    {
+        $reasons = [];
+
+        $pks = [];
+        foreach ($pagedStudents as $idx => $m) {
+            if (($m->attendance_present ?? true) === false && ! empty($m->student_master_pk)) {
+                $pks[] = (int) $m->student_master_pk;
+            }
+        }
+        $pks = array_values(array_unique($pks));
+        if (empty($pks)) {
+            return $reasons;
+        }
+
+        $leaves = DB::table('leave_application')
+            ->whereIn('student_master_pk', $pks)
+            ->where('active_inactive', 1)
+            ->get(['student_master_pk', 'leave_type', 'from_date', 'to_date'])
+            ->groupBy('student_master_pk');
+
+        $covers = function ($from, $to, string $date): bool {
+            if (empty($from)) {
+                return false;
+            }
+            $f = \Illuminate\Support\Carbon::parse($from)->toDateString();
+            if ($f > $date) {
+                return false;
+            }
+            if (empty($to)) {
+                return true; // open-ended
+            }
+            return \Illuminate\Support\Carbon::parse($to)->toDateString() >= $date;
+        };
+
+        foreach ($pagedStudents as $idx => $m) {
+            if (($m->attendance_present ?? true) !== false) {
+                continue;
+            }
+            $spk = (int) ($m->student_master_pk ?? 0);
+            $date = ! empty($m->session_date) ? \Illuminate\Support\Carbon::parse($m->session_date)->toDateString() : null;
+            $reason = '-';
+
+            if ($spk && $date) {
+                // Medical Exemption is intentionally NOT surfaced here — it already has
+                // its own "Other Exemptions" column ("Medical"), so repeating it under
+                // the Absent badge was redundant. Only leave-based reasons (PT Exemption
+                // / Stationed Leave), which have no dedicated column, get a subtitle.
+                foreach ($leaves[$spk] ?? [] as $r) {
+                    if ($covers($r->from_date, $r->to_date, $date)) {
+                        $reason = $r->leave_type === 'PT_EXEMPTION' ? 'PT Exemption'
+                            : ($r->leave_type === 'STATIONED_LEAVE' ? 'Stationed Leave' : 'Leave');
+                        break;
+                    }
+                }
+            }
+
+            $reasons[$idx] = $reason;
+        }
+
+        return $reasons;
+    }
+
+    /**
+     * Per-row MDO / Escort / Medical / Other flags for the current page, mapped from
+     * the duty and medical tables by student + session date.
+     *
+     * The dashboard's attendance status code (4/5/6/7) is only set when attendance
+     * is marked with that status; a duty/exemption created separately via
+     * mdo-escrot-exemption (mdo_escot_duty_map) or a medical exemption
+     * (student_medical_exemption) is NOT reflected in that code. So we cross-reference
+     * both source tables here, keyed by student pk + date, and OR the result into the
+     * columns. Duty type (mdo_duty_type_master.name) decides MDO vs Escort vs Other.
+     *
+     * @param  \Illuminate\Support\Collection  $pagedStudents
+     * @return array<int, array{mdo: bool, escort: bool, medical: bool, other: bool}>
+     */
+    private function dashboardDutyExemptionFlags(\Illuminate\Support\Collection $pagedStudents): array
+    {
+        $flags = [];
+
+        // Students on the current page that have a session date to match against.
+        $pks = [];
+        foreach ($pagedStudents as $m) {
+            if (! empty($m->student_master_pk) && ! empty($m->session_date)) {
+                $pks[] = (int) $m->student_master_pk;
+            }
+        }
+        $pks = array_values(array_unique($pks));
+        if (empty($pks)) {
+            return $flags;
+        }
+
+        // MDO / Escort / Other duties for these students, keyed by "spk|Y-m-d".
+        // selected_student_list carries the assigned OT pk; mdo_date is the duty day.
+        $duties = DB::table('mdo_escot_duty_map as d')
+            ->leftJoin('mdo_duty_type_master as m', 'd.mdo_duty_type_master_pk', '=', 'm.pk')
+            ->whereIn('d.selected_student_list', $pks)
+            ->whereNotNull('d.mdo_date')
+            ->get(['d.selected_student_list as spk', 'd.mdo_date', 'm.mdo_duty_type_name as type']);
+
+        $dutyMap = []; // "spk|date" => ['mdo'=>bool,'escort'=>bool,'other'=>bool]
+        foreach ($duties as $r) {
+            $date = substr((string) $r->mdo_date, 0, 10);
+            $key = ((int) $r->spk) . '|' . $date;
+            if (! isset($dutyMap[$key])) {
+                $dutyMap[$key] = ['mdo' => false, 'escort' => false, 'other' => false];
+            }
+            $type = strtolower(trim((string) ($r->type ?? '')));
+            if ($type === 'mdo') {
+                $dutyMap[$key]['mdo'] = true;
+            } elseif ($type === 'escort') {
+                $dutyMap[$key]['escort'] = true;
+            } else {
+                // "Other" duty type (or any type that isn't MDO/Escort) → Other column.
+                $dutyMap[$key]['other'] = true;
+            }
+        }
+
+        // Medical exemptions (date-range) → Medical in the Other Exemptions column.
+        $medical = DB::table('student_medical_exemption')
+            ->whereIn('student_master_pk', $pks)
+            ->where('active_inactive', 1)
+            ->get(['student_master_pk', 'from_date', 'to_date'])
+            ->groupBy('student_master_pk');
+
+        $covers = function ($from, $to, string $date): bool {
+            if (empty($from)) {
+                return false;
+            }
+            $f = \Illuminate\Support\Carbon::parse($from)->toDateString();
+            if ($f > $date) {
+                return false;
+            }
+            if (empty($to)) {
+                return true; // open-ended
+            }
+            return \Illuminate\Support\Carbon::parse($to)->toDateString() >= $date;
+        };
+
+        foreach ($pagedStudents as $idx => $m) {
+            $spk = (int) ($m->student_master_pk ?? 0);
+            $date = ! empty($m->session_date) ? \Illuminate\Support\Carbon::parse($m->session_date)->toDateString() : null;
+            $entry = ['mdo' => false, 'escort' => false, 'medical' => false, 'other' => false];
+
+            if ($spk && $date) {
+                if ($d = ($dutyMap[$spk . '|' . $date] ?? null)) {
+                    $entry['mdo'] = $d['mdo'];
+                    $entry['escort'] = $d['escort'];
+                    $entry['other'] = $d['other'];
+                }
+                foreach ($medical[$spk] ?? [] as $r) {
+                    if ($covers($r->from_date, $r->to_date, $date)) {
+                        $entry['medical'] = true;
+                        break;
+                    }
+                }
+            }
+
+            $flags[$idx] = $entry;
+        }
+
+        return $flags;
+    }
+
+    /**
+     * Human label for a session row's attendance status code
+     * (1 Present, 2 Late, 3 Absent, 4 MDO, 5 Escort, 6 Medical Exempt,
+     * 7 Other Exempt; 0/blank falls back to the present/absent flag).
+     */
+    private function dashboardAttendanceStatusLabel($studentMap): string
+    {
+        $status = $studentMap->attendance_status ?? null;
+        $present = ($studentMap->attendance_present ?? true) ? 'Present' : 'Absent';
+
+        if ($status === null || (int) $status === 0) {
+            return $present;
+        }
+
+        return match ((int) $status) {
+            1 => 'Present',
+            2 => 'Late',
+            3 => 'Absent',
+            4 => 'MDO',
+            5 => 'Escort',
+            6 => 'Medical Exempt',
+            7 => 'Other Exempt',
+            default => $present,
+        };
+    }
+
+    /**
+     * Resolve the faculty name(s) for a session row from the timetable's
+     * faculty_master / internal_faculty JSON PK arrays. Cached per PK-set.
+     */
+    private function dashboardResolveSessionFaculty($facultyMasterRaw, $internalFacultyRaw): string
+    {
+        static $cache = [];
+
+        $ids = [];
+        foreach ([$facultyMasterRaw, $internalFacultyRaw] as $raw) {
+            if ($raw === null || $raw === '') {
+                continue;
+            }
+            $decoded = is_array($raw) ? $raw : json_decode((string) $raw, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                foreach ($decoded as $id) {
+                    if (is_numeric($id)) {
+                        $ids[] = (int) $id;
+                    }
+                }
+            } elseif (is_numeric($raw)) {
+                $ids[] = (int) $raw;
+            }
+        }
+
+        $ids = array_values(array_unique(array_filter($ids)));
+        if (empty($ids)) {
+            return 'N/A';
+        }
+        sort($ids);
+        $cacheKey = implode(',', $ids);
+
+        if (! array_key_exists($cacheKey, $cache)) {
+            $names = \App\Models\FacultyMaster::whereIn('pk', $ids)
+                ->pluck('full_name')
+                ->filter(static fn ($n) => $n !== null && trim((string) $n) !== '')
+                ->values();
+            $cache[$cacheKey] = $names->isNotEmpty() ? $names->implode(', ') : 'N/A';
+        }
+
+        return $cache[$cacheKey];
     }
 
     private function dashboardStudentListSortValue($studentMap, string $sortKey)
@@ -1982,11 +3379,16 @@ class UserController extends Controller
         return match ($sortKey) {
             'ot_code' => strtolower((string) ($student->generated_OT_code ?? '')),
             'name' => strtolower(trim((string) (($student->display_name ?? '') ?: trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''))))),
-            'email' => strtolower((string) ($student->email ?? '')),
+            'username', 'email' => strtolower((string) ($student->email ?? '')),
             'cadre' => strtolower((string) ($student->cadre->cadre_name ?? '')),
             'status' => (int) ($studentMap->attendance_present ?? true),
-            'session' => (string) ($studentMap->session_date ?? ''),
+            'date' => (string) ($studentMap->session_date ?? ''),
+            'session' => (string) ($studentMap->session_time ?? ''),
             'topic' => strtolower((string) ($studentMap->session_topic ?? '')),
+            'faculty' => strtolower((string) $this->dashboardResolveSessionFaculty($studentMap->session_faculty_master ?? null, $studentMap->session_internal_faculty ?? null)),
+            'mdo' => (int) ($studentMap->attendance_status ?? 0) === 4 ? 1 : 0,
+            'escort' => (int) ($studentMap->attendance_status ?? 0) === 5 ? 1 : 0,
+            'other_exempt' => in_array((int) ($studentMap->attendance_status ?? 0), [6, 7], true) ? 1 : 0,
             'house' => strtolower((string) ($studentMap->house_name ?? '')),
             'duty' => (int) ($studentMap->total_duty_count ?? 0),
             'medical' => (int) ($studentMap->total_medical_exception_count ?? 0),
@@ -2001,43 +3403,82 @@ class UserController extends Controller
     /**
      * @return array{headings: array<int, string>, rows: array<int, array<int, mixed>>}
      */
-    private function dashboardStudentListExportData($students): array
+    private function dashboardStudentListExportData($students, string $attendance = 'all'): array
     {
+        $students = ($students instanceof \Illuminate\Support\Collection ? $students : collect($students))->values();
+
+        // Mirror the on-screen Student List exactly: the export must show the SAME
+        // per-session columns a viewer sees in the table (Date / Session / Topic /
+        // Faculty / Attendance Status and the MDO / Escort / Other-Exemption flags),
+        // not lifetime aggregate counts. These lookups reproduce the table's
+        // dashboardStudentListDataTableResponse() logic, keyed by row position.
+        $absentReasons = $this->dashboardAbsentReasons($students);
+        $dutyExemptionFlags = $this->dashboardDutyExemptionFlags($students);
+
         $headings = [
-            'Sl. No.',
-            'Student Name',
+            'S. No.',
             'OT Code',
-            'Email',
+            'Name',
+            'User Name',
             'Cadre',
-            'Course',
-            'Total Duty (Count)',
-            'Total Medical Exception (Count)',
-            'Total PT Exemption (Count)',
-            'Total Station Leave (Count)',
-            'Total Memo',
-            'Notice (Count)',
+            'Date',
+            'Session',
+            'Topic',
+            'Faculty',
+            'Attendance Status',
+            'MDO',
+            'Escort/Moderator Duty',
+            'Other Exemptions',
         ];
 
         $rows = [];
         foreach ($students as $index => $studentMap) {
             $student = $studentMap->studentMaster;
-            $course = $studentMap->course;
-            $groupName = $studentMap->groupMapping->groupTypeMasterCourseMasterMap->group_name ?? null;
-            $displayName = $groupName ?: ($student->cadre->cadre_name ?? 'N/A');
+            if (! $student) {
+                continue;
+            }
+
+            $displayName = $student->display_name ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
+            $statusCode = (int) ($studentMap->attendance_status ?? 0);
+            $isAbsent = ($studentMap->attendance_present ?? true) === false;
+
+            // Attendance status text: Present / Late / Absent, with the leave-based
+            // reason (PT Exemption / Stationed Leave) appended for an absent row —
+            // matching the on-screen badge (Late = status 2 attended-but-late).
+            $statusText = $isAbsent ? 'Absent' : ($statusCode === 2 ? 'Late' : 'Present');
+            if ($isAbsent) {
+                $reason = $absentReasons[$index] ?? '-';
+                if ($reason !== '-') {
+                    $statusText .= ' (' . $reason . ')';
+                }
+            }
+
+            // MDO / Escort / Medical / Other: shown when the attendance status code
+            // marks it OR a separately-created duty / medical exemption maps to this
+            // student + session date (same rule as the on-screen columns).
+            $flags = $dutyExemptionFlags[$index] ?? ['mdo' => false, 'escort' => false, 'medical' => false, 'other' => false];
+            $showMdo = $statusCode === 4 || $flags['mdo'];
+            $showEscort = $statusCode === 5 || $flags['escort'];
+            $showMedical = $statusCode === 6 || $flags['medical'];
+            $showOther = $statusCode === 7 || $flags['other'];
 
             $rows[] = [
                 $index + 1,
-                $student->display_name ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')),
                 $student->generated_OT_code ?? 'N/A',
-                $student->email ?? 'N/A',
                 $displayName,
-                $course->course_name ?? 'N/A',
-                $studentMap->total_duty_count ?? 0,
-                $studentMap->total_medical_exception_count ?? 0,
-                $studentMap->total_pt_exemption_count ?? 0,
-                $studentMap->total_stationed_leave_count ?? 0,
-                $studentMap->total_memo_count ?? 0,
-                $studentMap->total_notice_count ?? 0,
+                $student->email ?? 'N/A',
+                $student->cadre->cadre_name ?? 'N/A',
+                $studentMap->session_date ? Carbon::parse($studentMap->session_date)->format('d M Y') : 'N/A',
+                $studentMap->session_time ?: 'N/A',
+                $studentMap->session_topic ?: 'N/A',
+                $this->dashboardResolveSessionFaculty(
+                    $studentMap->session_faculty_master ?? null,
+                    $studentMap->session_internal_faculty ?? null
+                ),
+                $statusText,
+                $showMdo ? 'MDO' : '-',
+                $showEscort ? 'Escort' : '-',
+                $showMedical ? 'Medical' : ($showOther ? 'Other' : '-'),
             ];
         }
 
@@ -2148,13 +3589,15 @@ class UserController extends Controller
                 $course = CourseMaster::find($coursePk);
             }
 
-            // Attendance % for this student in this course (present + late) / total
+            // Attendance % for this student in this course (present + late) / total.
+            // status is ENUM('0'..'7'); compare to quoted strings so buckets aren't
+            // shifted by MySQL's enum-ordinal comparison (see studentDetail summary).
             $att = CourseStudentAttendance::where('Student_master_pk', $studentPk)
                 ->when($coursePk > 0, fn ($q) => $q->where('course_master_pk', $coursePk))
-                ->selectRaw('COUNT(*) as total_sessions,
-                    COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) as present_count,
-                    COALESCE(SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END), 0) as late_count
-                ')
+                ->selectRaw("COUNT(*) as total_sessions,
+                    COALESCE(SUM(CASE WHEN status = '1' THEN 1 ELSE 0 END), 0) as present_count,
+                    COALESCE(SUM(CASE WHEN status = '2' THEN 1 ELSE 0 END), 0) as late_count
+                ")
                 ->first();
             $totalSessions = (int) ($att->total_sessions ?? 0);
             $present = (int) ($att->present_count ?? 0);
@@ -2164,7 +3607,7 @@ class UserController extends Controller
             $exemptionsCount = StudentMedicalExemption::where('student_master_pk', $studentPk)
                 ->where('active_inactive', 1)
                 ->count();
-            $memosCount = $noticeMemoService->getMemos($studentPk)->count();
+            $memosCount = $noticeMemoService->getDisciplineMemos($studentPk)->count();
 
             // Phase list: use active enrolled courses as “completed/active” sequence
             $courseMaps = StudentMasterCourseMap::with('course')
@@ -2257,10 +3700,18 @@ class UserController extends Controller
             }
         }
 
+        // Time Period filter carried over from the OT/Participants list, so a
+        // clicked section shows only the data within that window. Leaves /
+        // exemptions are matched by date-range OVERLAP; duties by their mdo_date.
+        $fromDate = request('from_date') ?: null;
+        $toDate = request('to_date') ?: null;
+
         // Get medical exceptions
         $medicalExemptions = StudentMedicalExemption::with(['course', 'category', 'speciality', 'employee'])
             ->where('student_master_pk', $studentPk)
             ->where('active_inactive', 1)
+            ->when($fromDate, fn ($q) => $q->whereRaw('DATE(COALESCE(to_date, from_date)) >= ?', [$fromDate]))
+            ->when($toDate, fn ($q) => $q->whereDate('from_date', '<=', $toDate))
             ->orderBy('from_date', 'desc')
             ->get();
 
@@ -2269,6 +3720,8 @@ class UserController extends Controller
             ->where('leave_type', LeaveApplication::TYPE_PT_EXEMPTION)
             ->where('active_inactive', 1)
             ->where('status', LeaveApplication::STATUS_APPROVED)
+            ->when($fromDate, fn ($q) => $q->whereRaw('DATE(COALESCE(to_date, from_date)) >= ?', [$fromDate]))
+            ->when($toDate, fn ($q) => $q->whereDate('from_date', '<=', $toDate))
             ->orderBy('from_date', 'desc')
             ->get();
 
@@ -2280,19 +3733,114 @@ class UserController extends Controller
                 LeaveApplication::STATUS_APPROVED,
                 LeaveApplication::STATUS_PENDING,
             ])
+            ->when($fromDate, fn ($q) => $q->whereRaw('DATE(COALESCE(to_date, from_date)) >= ?', [$fromDate]))
+            ->when($toDate, fn ($q) => $q->whereDate('from_date', '<=', $toDate))
             ->orderBy('from_date', 'desc')
             ->get();
+
+        // When a Time Period is active, show only the portion of each leave/exemption
+        // that falls INSIDE the window ("date wise"), not the whole record. The
+        // displayed From/To dates are clipped to the window and total_days recomputed
+        // for that clipped span, so the detail page matches the list's day counts
+        // (a 13–17 Jul PT Exemption filtered to 13–15 shows 13–15 = 3 days).
+        if ($fromDate || $toDate) {
+            $clipToWindow = function ($row, bool $clipDays) use ($fromDate, $toDate) {
+                if (empty($row->from_date)) {
+                    return;
+                }
+                $from = substr((string) $row->from_date, 0, 10);
+                $to = ! empty($row->to_date) ? substr((string) $row->to_date, 0, 10) : $from;
+                if ($to < $from) {
+                    $to = $from;
+                }
+                if ($fromDate && $from < $fromDate) {
+                    $from = $fromDate;
+                }
+                if ($toDate && $to > $toDate) {
+                    $to = $toDate;
+                }
+                if ($to < $from) {
+                    if ($clipDays) {
+                        $row->total_days = 0;
+                    }
+                    return;
+                }
+                // Clip the displayed dates to the window.
+                $row->from_date = Carbon::parse($from);
+                $row->to_date = Carbon::parse($to);
+                if ($clipDays) {
+                    $row->total_days = Carbon::parse($from)->diffInDays(Carbon::parse($to)) + 1;
+                }
+            };
+            $medicalExemptions->each(fn ($r) => $clipToWindow($r, false));
+            $ptExemptions->each(fn ($r) => $clipToWindow($r, true));
+            $stationedLeaves->each(fn ($r) => $clipToWindow($r, true));
+        }
+
+        // Show PT Exemption / Station Leave DATE-WISE: a multi-day leave is expanded
+        // into one row per day (From = To = that day, Total Days = 1) instead of a
+        // single ranged row. The header still sums total_days, so the overall count is
+        // unchanged (a 2-day leave → 2 rows, header count still 2). Respects the Time
+        // Period window because the dates were already clipped above.
+        $expandLeavesByDay = function (\Illuminate\Support\Collection $leaves): \Illuminate\Support\Collection {
+            $expanded = collect();
+            foreach ($leaves as $leave) {
+                if (empty($leave->from_date)) {
+                    $expanded->push($leave);
+                    continue;
+                }
+                $start = Carbon::parse($leave->from_date)->startOfDay();
+                $end = ! empty($leave->to_date) ? Carbon::parse($leave->to_date)->startOfDay() : $start->copy();
+                if ($end->lt($start)) {
+                    $end = $start->copy();
+                }
+                for ($day = $start->copy(); $day->lte($end); $day->addDay()) {
+                    $row = clone $leave;
+                    $row->from_date = $day->copy();
+                    $row->to_date = $day->copy();
+                    $row->total_days = 1;
+                    $expanded->push($row);
+                }
+            }
+            return $expanded;
+        };
+        $ptExemptions = $expandLeavesByDay($ptExemptions);
+        $stationedLeaves = $expandLeavesByDay($stationedLeaves);
 
         // Get MDO/Escort duties
         $duties = MDOEscotDutyMap::with(['courseMaster', 'mdoDutyTypeMaster', 'facultyMaster'])
             ->where('selected_student_list', $studentPk)
+            ->when($fromDate, fn ($q) => $q->whereDate('mdo_date', '>=', $fromDate))
+            ->when($toDate, fn ($q) => $q->whereDate('mdo_date', '<=', $toDate))
             ->orderBy('mdo_date', 'desc')
             ->get();
 
-        // Get notices using OTNoticeMemoService
+        // Get notices using OTNoticeMemoService; memos come from the Discipline Memo
+        // module's source (discipline_memo_status) so the detail view matches
+        // /memo/discipline and the list "Total Memo" count.
         $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
         $notices = $noticeMemoService->getNotices($studentPk);
-        $memos = $noticeMemoService->getMemos($studentPk);
+        $memos = $noticeMemoService->getDisciplineMemos($studentPk);
+
+        // Scope notices/memos to the same Time Period window (by their session date).
+        if ($fromDate || $toDate) {
+            $inDateWindow = function ($item) use ($fromDate, $toDate) {
+                $d = $item->session_date ?? null;
+                if (! $d) {
+                    return false;
+                }
+                $d = substr((string) $d, 0, 10);
+                if ($fromDate && $d < $fromDate) {
+                    return false;
+                }
+                if ($toDate && $d > $toDate) {
+                    return false;
+                }
+                return true;
+            };
+            $notices = $notices->filter($inDateWindow)->values();
+            $memos = $memos->filter($inDateWindow)->values();
+        }
 
         // Get enrolled courses
         $enrolledCourses = StudentMasterCourseMap::with('course')
@@ -2300,19 +3848,23 @@ class UserController extends Controller
             ->where('active_inactive', 1)
             ->get();
 
-        // Get attendance records summary
+        // Get attendance records summary.
+        // NOTE: course_student_attendance.status is an ENUM('0'..'7'); comparing it to
+        // an INTEGER makes MySQL match by enum ordinal (1-indexed), shifting every
+        // bucket by one. Compare against the quoted string values so the mapping is
+        // correct (1 Present, 2 Late, 3 Absent, 4 MDO, 5 Escort, 6 Medical, 7 Other).
         $attendanceSummary = CourseStudentAttendance::where('Student_master_pk', $studentPk)
-            ->selectRaw('
+            ->selectRaw("
                 COUNT(*) as total_sessions,
-                SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as present_count,
-                SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) as late_count,
-                SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) as absent_count,
-                SUM(CASE WHEN status = 4 THEN 1 ELSE 0 END) as mdo_count,
-                SUM(CASE WHEN status = 5 THEN 1 ELSE 0 END) as escort_count,
-                SUM(CASE WHEN status = 6 THEN 1 ELSE 0 END) as medical_exempt_count,
-                SUM(CASE WHEN status = 7 THEN 1 ELSE 0 END) as other_exempt_count,
-                SUM(CASE WHEN status = 0 OR status IS NULL THEN 1 ELSE 0 END) as not_marked_count
-            ')
+                SUM(CASE WHEN status = '1' THEN 1 ELSE 0 END) as present_count,
+                SUM(CASE WHEN status = '2' THEN 1 ELSE 0 END) as late_count,
+                SUM(CASE WHEN status = '3' THEN 1 ELSE 0 END) as absent_count,
+                SUM(CASE WHEN status = '4' THEN 1 ELSE 0 END) as mdo_count,
+                SUM(CASE WHEN status = '5' THEN 1 ELSE 0 END) as escort_count,
+                SUM(CASE WHEN status = '6' THEN 1 ELSE 0 END) as medical_exempt_count,
+                SUM(CASE WHEN status = '7' THEN 1 ELSE 0 END) as other_exempt_count,
+                SUM(CASE WHEN status = '0' OR status IS NULL THEN 1 ELSE 0 END) as not_marked_count
+            ")
             ->first();
 
         // Calculate total expected sessions (timetables) for student's course groups
@@ -2323,16 +3875,27 @@ class UserController extends Controller
 
         $totalExpectedSessions = 0;
         if (!empty($studentGroupPks)) {
-            $result = CourseGroupTimetableMapping::whereIn('group_pk', $studentGroupPks)
-                ->selectRaw('COUNT(DISTINCT timetable_pk) as count')
+            // Count only timetables that actually EXIST and are active. The mapping
+            // table keeps rows for timetables that were later deleted (orphans) and
+            // for cancelled/inactive sessions; counting those inflated Total Sessions
+            // and Not Marked. Future-dated sessions are excluded too — a class that
+            // hasn't happened yet cannot be "not marked".
+            $result = DB::table('course_group_timetable_mapping as m')
+                ->join('timetable as t', 't.pk', '=', 'm.timetable_pk')
+                ->whereIn('m.group_pk', $studentGroupPks)
+                ->where('t.active_inactive', 1)
+                ->whereDate('t.START_DATE', '<=', now()->toDateString())
+                ->selectRaw('COUNT(DISTINCT m.timetable_pk) as count')
                 ->first();
-            $totalExpectedSessions = $result ? (int)$result->count : 0;
+            $totalExpectedSessions = $result ? (int) $result->count : 0;
         }
 
-        // Calculate not marked count: sessions without attendance records or with status 0/NULL
+        // Calculate not marked count: sessions without attendance records or with status 0/NULL.
+        // status is an ENUM('0'..'7') — compare against the string '0' (not integer 0,
+        // which MySQL would treat as the enum's 0th/invalid index and never exclude '0').
         $markedResult = CourseStudentAttendance::where('Student_master_pk', $studentPk)
             ->whereNotNull('status')
-            ->where('status', '!=', 0)
+            ->where('status', '!=', '0')
             ->selectRaw('COUNT(DISTINCT timetable_pk) as count')
             ->first();
         $markedSessions = $markedResult ? (int)$markedResult->count : 0;
@@ -2346,8 +3909,8 @@ class UserController extends Controller
         }
 
         $fcRegUsername = trim((string) ($student->user_id ?? ''));
-        $fcJoiningDocuments = $fcRegUsername !== ''
-            ? app(RegistrationService::class)->joiningDocumentChecklistForDisplay($fcRegUsername)
+        $fcJoiningDocuments = ($fcRegUsername !== '' && is_numeric($fcRegUsername))
+            ? app(RegistrationService::class)->joiningDocumentChecklistForDisplay((int) $fcRegUsername)
             : collect();
 
         return view('admin.dashboard.student_detail', compact(
