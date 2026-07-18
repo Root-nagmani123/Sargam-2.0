@@ -476,7 +476,8 @@ $(document).ready(function() {
         if (currReading === null || isNaN(currReading)) return false;
         const minAllowed = getCurrInputMinAllowed($inp);
         if (minAllowed === null || currReading >= minAllowed) return false;
-        if (currReading === 0 && isOtherMeterNoChangedForReading($inp)) return false;
+        // Meter replaced: the new meter starts fresh, so any lower reading is valid.
+        if (isOtherMeterNoChangedForReading($inp)) return false;
         return true;
     }
 
