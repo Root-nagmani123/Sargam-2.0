@@ -1,106 +1,159 @@
 @extends('admin.layouts.master')
 @section('title', 'Employee ID Card List')
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<style>
+/* --- "Time Period" dual-month range calendar (ported from Medical Exemption Report) --- */
+.idcp-toggle { min-width: 150px; }
+.idcp-toggle.dropdown-toggle::after { margin-left: auto; }
+.idcp-menu { min-width: auto; }
+.idcp-cal { padding: var(--ds-space-3); }
+.idcp-cal-months { display: flex; gap: var(--ds-space-4); }
+@media (max-width: 575.98px) { .idcp-cal-months { flex-direction: column; gap: var(--ds-space-3); } }
+.idcp-cal-month { width: 232px; }
+.idcp-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--ds-space-2); }
+.idcp-cal-title { font-weight: 600; font-size: 0.875rem; color: var(--ds-ink); }
+.idcp-cal-nav {
+    border: 0; background: transparent; width: 28px; height: 28px; border-radius: var(--ds-radius-1);
+    color: var(--ds-ink-muted); display: inline-flex; align-items: center; justify-content: center;
+}
+.idcp-cal-nav:hover { background: var(--ds-surface-2); color: var(--ds-ink); }
+.idcp-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.idcp-cal-dow { text-align: center; font-size: 0.7rem; font-weight: 600; color: var(--ds-ink-muted); padding: 4px 0; }
+.idcp-cal-day {
+    aspect-ratio: 1 / 1; border: 0; background: transparent; border-radius: var(--ds-radius-1);
+    font-size: 0.8125rem; color: var(--ds-ink); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.idcp-cal-day:hover { background: rgba(var(--bs-primary-rgb, 0 74 147), 0.1); }
+.idcp-cal-day.in-range { background: rgba(var(--bs-primary-rgb, 0 74 147), 0.12); border-radius: 0; }
+.idcp-cal-day.is-start, .idcp-cal-day.is-end { background: var(--bs-primary); color: #fff; }
+.idcp-cal-day.is-start { border-radius: var(--ds-radius-1) 0 0 var(--ds-radius-1); }
+.idcp-cal-day.is-end { border-radius: 0 var(--ds-radius-1) var(--ds-radius-1) 0; }
+.idcp-cal-day.is-start.is-end { border-radius: var(--ds-radius-1); }
+.idcp-cal-footer {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--ds-space-2);
+    margin-top: var(--ds-space-3); padding-top: var(--ds-space-3); border-top: 1px solid var(--ds-line);
+}
+.idcp-cal-range { font-size: 0.8125rem; color: var(--ds-ink-muted); }
+</style>
+@endpush
+
 @section('content')
 <div class="container-fluid idcard-index-page">
-    <!-- Breadcrumb + Search (reference: Setup > User Management, search icon right) -->
-    <x-breadcrum title="Employee ID Card List"></x-breadcrum>
+    <x-breadcrum title="Employee ID Card List">
+        <a href="{{ route('admin.employee_idcard.create') }}"
+           class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+            <span>Add New ID card</span>
+        </a>
+    </x-breadcrum>
     <x-session_message />
 
-    <div class="card border border-body-secondary rounded-4 shadow-sm idcard-index-card overflow-hidden">
-        <div class="card-body">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 p-3 p-md-4 border border-body-secondary rounded-4 bg-body shadow-sm">
-        
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            @php
-                $exportParams = array_filter([
-                    'search' => $search ?? '',
-                    'date_from' => $dateFrom ?? '',
-                    'date_to' => $dateTo ?? '',
-                    'list_status' => ($list_status ?? 'all') !== 'all' ? ($list_status ?? '') : '',
-                ]);
-            @endphp
-            <div class="dropdown">
-                <button class="btn btn-success-subtle border border-success-subtle text-success-emphasis dropdown-toggle d-flex align-items-center gap-2 px-4 py-2 rounded-3 shadow-sm focus-ring" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="material-icons material-symbols-rounded fs-5">download</i>
-                    Export
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 py-2 dropdown-menu-lg-end" aria-labelledby="exportDropdown">
-                    <li>
-                        <h6 id="exportHeaderLabel" class="dropdown-header text-body-secondary small text-uppercase fw-semibold">
-                            Active (with current filter)
-                        </h6>
-                    </li>
-                    <li>
-                        <a  href="#"
-                            class="dropdown-item d-flex align-items-center gap-2 py-2 export-link"
-                            data-format="xlsx"
-                            data-base-url="{{ route('admin.employee_idcard.export', array_merge(['format' => 'xlsx'], $exportParams)) }}">
-                            <i class="material-icons material-symbols-rounded text-success fs-6">table_chart</i>
-                            Excel
-                        </a>
-                    </li>
-                    <li>
-                        <a  href="#"
-                            class="dropdown-item d-flex align-items-center gap-2 py-2 export-link"
-                            data-format="pdf"
-                            data-base-url="{{ route('admin.employee_idcard.export', array_merge(['format' => 'pdf'], $exportParams)) }}">
-                            <i class="material-icons material-symbols-rounded text-danger fs-6">picture_as_pdf</i>
-                            PDF
-                        </a>
-                    </li>
-                </ul>
-            </div>
-            <a href="{{ route('admin.employee_idcard.create') }}" class="btn btn-primary px-4 py-2 rounded-3 d-flex align-items-center gap-2 shadow-sm focus-ring">
-               
-                Add New ID card
-            </a>
-        </div>
-    </div>
+    @php
+        $exportParams = array_filter([
+            'search' => $search ?? '',
+            'date_from' => $dateFrom ?? '',
+            'date_to' => $dateTo ?? '',
+            'list_status' => ($list_status ?? 'all') !== 'all' ? ($list_status ?? '') : '',
+        ]);
+    @endphp
 
-    <!-- Filter & Search -->
-    <div class="card border border-body-secondary rounded-4 shadow-sm mb-3">
-        <div class="card-body py-3">
-            <form method="GET" action="{{ route('admin.employee_idcard.index') }}" class="row g-3 align-items-end" id="idcardFilterForm">
-               @if(hasRole('Super Admin'))
-                <div class="col-12 col-md-3">
-                    <label for="idcardSearch" class="form-label small text-muted mb-0">Search by Name</label>
-                    <input type="search" name="search" id="idcardSearch" class="form-control " placeholder="Employee name..." value="{{ old('search', $search ?? '') }}">
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
+
+            {{-- Toolbar: filters (left) · print/download/columns/search (right) --}}
+            <div class="d-flex flex-column flex-xl-row align-items-xl-end justify-content-between gap-3 mb-4">
+
+                {{-- Filters (applied instantly in-browser — no page reload) --}}
+                <div id="idcardFilterForm" class="d-flex flex-wrap align-items-end gap-2">
+                    <div>
+                        <label for="listStatus" class="form-label small text-muted mb-1">Approval status</label>
+                        @php $ls = old('list_status', $list_status ?? 'all'); @endphp
+                        <select id="listStatus" class="form-select">
+                            <option value="all" {{ $ls === 'all' ? 'selected' : '' }}>All</option>
+                            <option value="pending" {{ $ls === 'pending' ? 'selected' : '' }}>Pending</option>
+                            <option value="approved" {{ $ls === 'approved' ? 'selected' : '' }}>Approved</option>
+                            <option value="rejected" {{ $ls === 'rejected' ? 'selected' : '' }}>Rejected</option>
+                            <option value="issued" {{ $ls === 'issued' ? 'selected' : '' }}>Issued</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label small text-muted mb-1">Time Period</label>
+                        <div class="dropdown">
+                            <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 idcp-toggle dropdown-toggle"
+                                    id="idcardTimePeriodToggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                                <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">calendar_month</i>
+                                <span id="idcardTimePeriodLabel">Time Period</span>
+                            </button>
+                            <div class="dropdown-menu p-0 idcp-menu">
+                                <div class="idcp-cal" id="idcardCalendar">
+                                    <div class="idcp-cal-months">
+                                        <div class="idcp-cal-month" data-month="0"></div>
+                                        <div class="idcp-cal-month" data-month="1"></div>
+                                    </div>
+                                    <div class="idcp-cal-footer">
+                                        <span class="idcp-cal-range" id="idcardCalRange">Select a date range</span>
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" id="idcardClearPeriod">Clear</button>
+                                            <button type="button" class="btn btn-sm btn-primary" id="idcardApplyPeriod">Apply</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {{-- Hidden inputs keep the existing filter/export logic (which reads date_from / date_to) working. --}}
+                        <input type="hidden" id="dateFrom" value="{{ old('date_from', $dateFrom ?? '') }}">
+                        <input type="hidden" id="dateTo" value="{{ old('date_to', $dateTo ?? '') }}">
+                    </div>
+                    <div>
+                        <button type="button" id="idcardClearFilters" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-x-circle" aria-hidden="true"></i> Clear
+                        </button>
+                    </div>
                 </div>
-                @endif
-                <div class="col-12 col-md-2">
-                    <label for="listStatus" class="form-label small text-muted mb-0">Approval status</label>
-                    @php $ls = old('list_status', $list_status ?? 'all'); @endphp
-                    <select name="list_status" id="listStatus" class="form-select">
-                        <option value="all" {{ $ls === 'all' ? 'selected' : '' }}>All</option>
-                        <option value="pending" {{ $ls === 'pending' ? 'selected' : '' }}>Pending</option>
-                        <option value="approved" {{ $ls === 'approved' ? 'selected' : '' }}>Approved</option>
-                        <option value="rejected" {{ $ls === 'rejected' ? 'selected' : '' }}>Rejected</option>
-                    </select>
-                </div>
-                <div class="col-12 col-md-2">
-                    <label for="dateFrom" class="form-label small text-muted mb-0">Date From</label>
-                    <input type="date" name="date_from" id="dateFrom" class="form-control " value="{{ old('date_from', $dateFrom ?? '') }}">
-                </div>
-                <div class="col-12 col-md-2">
-                    <label for="dateTo" class="form-label small text-muted mb-0">Date To</label>
-                    <input type="date" name="date_to" id="dateTo" class="form-control " value="{{ old('date_to', $dateTo ?? '') }}">
-                </div>
-                <div class="col-12 col-md-auto d-flex gap-2">
-                    <button type="submit" class="btn btn-primary btn-sm">
-                        <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">filter_list</i> Apply Filter
+
+                {{-- Print · Download · Columns · Search --}}
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <button type="button" class="btn programme-dt-btn-columns" id="idcardPrintBtn" title="Print">
+                        <i class="bi bi-printer" aria-hidden="true"></i> <span>Print</span>
                     </button>
-                    <a href="{{ route('admin.employee_idcard.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
+                    <div class="dropdown">
+                        <button type="button" class="btn programme-dt-btn-columns dropdown-toggle" id="idcardDownloadBtn"
+                            data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                            <i class="bi bi-download" aria-hidden="true"></i> <span>Download</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 py-2" aria-labelledby="idcardDownloadBtn">
+                            <li>
+                                <a href="#" class="dropdown-item d-flex align-items-center gap-2 py-2 export-link"
+                                   data-format="pdf"
+                                   data-base-url="{{ route('admin.employee_idcard.export', array_merge(['format' => 'pdf'], $exportParams)) }}">
+                                    <i class="bi bi-file-earmark-pdf text-danger" aria-hidden="true"></i> Download PDF
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" class="dropdown-item d-flex align-items-center gap-2 py-2 export-link"
+                                   data-format="xlsx"
+                                   data-base-url="{{ route('admin.employee_idcard.export', array_merge(['format' => 'xlsx'], $exportParams)) }}">
+                                    <i class="bi bi-file-earmark-spreadsheet text-success" aria-hidden="true"></i> Download Excel
+                                </a>
+                            </li>
+                        </ul>
+                        <span id="exportHeaderLabel" class="d-none">Active (with current filter)</span>
+                    </div>
+                    <button type="button" class="btn programme-dt-btn-columns" id="idcardBtnColumns"
+                        data-bs-toggle="modal" data-bs-target="#idcardColumnVisibilityModal" title="Show / hide columns">
+                        <span>Columns</span><i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div id="idcardDtSearch" class="programme-dt-search" data-dt-search-for="activeIdcardTable"></div>
                 </div>
-            </form>
-        </div>
-    </div>
+            </div>
 
-    <div class="card border border-body-secondary rounded-4 shadow-sm idcard-index-card overflow-hidden">
-        <div class="card-body p-0">
-            <div>
+            <div class="programme-dt-panel">
                 <div id="active-panel">
                     <div class="table-responsive">
-                        <table class="table text-nowrap align-middle idcard-index-table" id="activeIdcardTable">
+                        <table class="table text-nowrap align-middle idcard-index-table programme-dt-table" id="activeIdcardTable">
                             <thead>
                                 <tr>
                                     <th>S.No.</th>
@@ -114,13 +167,16 @@
                                     <th>Extension</th> --}}
                                     <th>Valid Upto</th>
                                     <th>Status</th>
-                                    <th>Actions</th>
+                                    <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse($allRequests as $index => $request)
-                                    <tr data-request-id="{{ $request->id }}" class="align-middle">
-                                        <td class="fw-medium ps-4">{{ ($allRequests->currentPage() - 1) * $allRequests->perPage() + $loop->iteration }}</td>
+                                    <tr data-request-id="{{ $request->id }}"
+                                        data-status="{{ $request->status ?? '' }}"
+                                        data-ts="{{ $request->created_at ? $request->created_at->timestamp : 0 }}"
+                                        class="align-middle">
+                                        <td class="fw-medium ps-4">{{ $loop->iteration }}</td>
                                         <td>
                                             @php
                                                 $photoExists = $request->photo && \Storage::disk('public')->exists($request->photo);
@@ -133,7 +189,7 @@
                                                 <img src="{{ asset('images/dummypic.jpeg') }}" alt="ID Card" class="rounded-2 object-fit-cover" style="width:40px;height:50px;">
                                             @endif
                                         </td>
-                                        <td>{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td>
+                                        <td data-order="{{ $request->created_at ? $request->created_at->timestamp : 0 }}">{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td>
                                         <td>{{ $request->name }}</td>
                                         <td>{{ $request->designation ?? '--' }}</td>
                                         <td>{{ $request->card_type ?? '--' }}</td>
@@ -160,25 +216,25 @@
                                                 {{ $request->status ?? '--' }}
                                             </span>
                                         </td>
-                                        <td class="text-end pe-4">
+                                        <td class="text-center">
                                             @php $canApplicantEdit = $request->user_may_edit_request ?? false; @endphp
-                                            <div class="btn-group btn-group-sm" role="group">
-                                                <a href="{{ route('admin.employee_idcard.show', $request->id) }}" 
-                                                   class="text-primary {{ $canApplicantEdit ? 'rounded-start-2' : 'rounded-2' }} view-details-btn d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details" data-request-id="{{ $request->id }}" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '--' }}" data-extension="{{ $request->id_card_valid_upto ?? '--' }}" data-valid-from="{{ $request->id_card_valid_from ?? '' }}" data-id-number="{{ $request->id_card_number ?? '' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
-                                                    <i class="material-icons material-symbols-rounded">visibility</i>
+                                            <div class="d-inline-flex align-items-center justify-content-center programme-action-group" role="group" aria-label="Row actions">
+                                                <a href="{{ route('admin.employee_idcard.show', $request->id) }}"
+                                                   class="programme-action-btn view-details-btn" title="View Details" data-request-id="{{ $request->id }}" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '--' }}" data-extension="{{ $request->id_card_valid_upto ?? '--' }}" data-valid-from="{{ $request->id_card_valid_from ?? '' }}" data-id-number="{{ $request->id_card_number ?? '' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
+                                                    <i class="bi bi-eye" aria-hidden="true"></i>
                                                 </a>
                                                 @if($canApplicantEdit)
-                                                <a href="{{ route('admin.employee_idcard.edit', $request->id) }}" 
-                                                   class="text-primary rounded-0 d-inline-flex align-items-center gap-1 px-2 py-1" title="Edit" data-bs-toggle="tooltip" data-bs-placement="top">
-                                                    <i class="material-icons material-symbols-rounded">edit</i>
+                                                <a href="{{ route('admin.employee_idcard.edit', $request->id) }}"
+                                                   class="programme-action-btn" title="Edit" data-bs-toggle="tooltip" data-bs-placement="top">
+                                                    <i class="bi bi-pencil" aria-hidden="true"></i>
                                                 </a>
-                                                <form action="{{ route('admin.employee_idcard.destroy', $request->id) }}" 
-                                                      method="POST" class="d-inline" 
+                                                <form action="{{ route('admin.employee_idcard.destroy', $request->id) }}"
+                                                      method="POST" class="d-inline"
                                                       onsubmit="return confirm('Are you sure you want to archive this request?');">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button type="submit" class="text-primary border-0 bg-transparent rounded-end-2 px-2 py-1" title="Archive">
-                                                        <i class="material-icons material-symbols-rounded">delete</i>
+                                                    <button type="submit" class="programme-action-btn programme-action-btn--danger" title="Archive">
+                                                        <i class="bi bi-trash3" aria-hidden="true"></i>
                                                     </button>
                                                 </form>
                                                 @endif
@@ -203,457 +259,32 @@
                             </tbody>
                         </table>
                     </div>
-                    @if($allRequests->hasPages())
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-3 py-2 border-top bg-body-tertiary">
-                            <small class="text-body-secondary">Showing {{ $allRequests->firstItem() ?? 0 }} to {{ $allRequests->lastItem() ?? 0 }} of {{ $allRequests->total() }} entries</small>
-                            {{ $allRequests->links() }}
-                        </div>
-                    @endif
-                </div>
-
-                <div class="tab-pane fade" id="duplication-panel" role="tabpanel" aria-labelledby="duplication-tab">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-striped table-borderless mb-0 align-middle idcard-index-table" id="duplicationIdcardTable">
-                            <thead class="table-light text-body-secondary border-bottom border-2">
-                                <tr>
-                                    <th class="text-nowrap py-3 ps-4">S.No.</th>
-                                    <th class="py-3">ID Card</th>
-                                    <th class="py-3">Request date</th>
-                                    <th class="py-3">Employee Name</th>
-                                    <th class="py-3">Designation</th>
-                                    <th class="py-3">Duplication</th>
-                                    <th class="py-3">Extension</th>
-                                    <th class="py-3">Valid Upto</th>
-                                    <th class="py-3">Status</th>
-                                    <th class="text-end py-3 pe-4">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="table-group-divider">
-                                @forelse($duplicationRequests as $index => $request)
-                                    <tr data-request-id="{{ $request->id }}" class="align-middle">
-                                        <td class="fw-medium ps-4">{{ ($duplicationRequests->currentPage() - 1) * $duplicationRequests->perPage() + $loop->iteration }}</td>
-                                        <td>
-                                            @php
-                                                $photoExists = $request->photo && \Storage::disk('public')->exists($request->photo);
-                                                $photoUrl = $photoExists ? asset('storage/' . $request->photo) : asset('images/dummypic.jpeg');
-                                            @endphp
-                                            <a href="{{ $photoUrl }}" target="_blank" class="d-inline-block rounded-2 overflow-hidden shadow-sm">
-                                                <img src="{{ $photoUrl }}" alt="ID Card" class="rounded-2 object-fit-cover" style="width:40px;height:50px;">
-                                            </a>
-                                        </td>
-                                        <td>{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td>
-                                        <td class="fw-medium text-body-emphasis">{{ $request->name }}</td>
-                                        <td class="text-body-secondary">{{ $request->designation ?? '--' }}</td>
-                                        <td>
-                                            @php $dupBadge = match($request->duplication_reason ?? '') { 'Lost' => 'danger', 'Damage' => 'warning', 'Expired Card' => 'info', default => 'secondary' }; @endphp
-                                            <span class="badge bg-{{ $dupBadge }} text-dark">
-                                                {{ $request->duplication_reason ?? '--' }}
-                                            </span>
-                                        </td>
-                                        <td><span class="text-body-tertiary">--</span></td>
-                                        <td>{{ $request->id_card_valid_upto ?? '--' }}</td>
-                                        <td>
-                                            @php
-                                                $statusClass = match($request->status ?? '') {
-                                                    'Pending' => 'warning',
-                                                    'Approved' => 'success',
-                                                    'Rejected' => 'danger',
-                                                    'Issued' => 'primary',
-                                                    default => 'secondary'
-                                                };
-                                                $statusTooltip = match ($request->status ?? '') {
-                                                    'Pending' => $request->pending_status_tooltip ?? 'Pending',
-                                                    'Approved' => 'Please collect your ID card from security section',
-                                                    default => null,
-                                                };
-                                            @endphp
-                                            <span class="badge rounded-1 bg-{{ $statusClass }}"
-                                                  @if($statusTooltip) data-bs-toggle="tooltip" data-bs-placement="top" title="{{ e($statusTooltip) }}" @endif>
-                                                {{ $request->status ?? '--' }}
-                                            </span>
-                                        </td>
-                                        <td class="text-end pe-4">
-                                            @php $canApplicantEditDup = $request->user_may_edit_request ?? false; @endphp
-                                            <div class="btn-group btn-group-sm" role="group">
-                                                <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="btn btn-outline-primary {{ $canApplicantEditDup ? 'rounded-start-2' : 'rounded-2' }} view-details-btn d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '--' }}" data-extension="{{ $request->request_for == 'Extension' ? ($request->id_card_valid_upto ?? '--') : '--' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
-                                                </a>
-                                                @if($canApplicantEditDup)
-                                                <a href="{{ route('admin.employee_idcard.edit', $request->id) }}" class="btn btn-outline-secondary rounded-0 d-inline-flex align-items-center gap-1 px-2 py-1" title="Edit">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
-                                                </a>
-                                                <form action="{{ route('admin.employee_idcard.destroy', $request->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to archive this request?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-outline-danger rounded-end-2 px-2 py-1" title="Archive">
-                                                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                                                    </button>
-                                                </form>
-                                                @endif
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="10" class="text-center py-5">
-                                            <div class="d-inline-flex flex-column align-items-center p-5 bg-body-tertiary rounded-4 border border-body-secondary">
-                                                <i class="material-icons material-symbols-rounded mb-3 text-body-tertiary" style="font-size:56px;">content_copy</i>
-                                                <p class="mb-1 fw-semibold text-body-emphasis">No ID card duplication requests found.</p>
-                                                <small class="text-body-secondary mb-4 text-center">Duplication requests (Lost/Damage) will appear here when request for is "Replacement" or "Duplication".</small>
-                                                <a href="{{ route('admin.duplicate_idcard.create') }}" class="btn btn-warning rounded-3 px-4 py-2">
-                                                    <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">add</i>
-                                                    Request Duplication
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                    @if($duplicationRequests->hasPages())
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-3 py-2 border-top bg-body-tertiary">
-                            <small class="text-body-secondary">Showing {{ $duplicationRequests->firstItem() ?? 0 }} to {{ $duplicationRequests->lastItem() ?? 0 }} of {{ $duplicationRequests->total() }} entries</small>
-                            {{ $duplicationRequests->links() }}
-                        </div>
-                    @endif
-                </div>
-
-
-                <div class="tab-pane fade" id="archive-panel" role="tabpanel" aria-labelledby="archive-tab">
-                    <div class="table-responsive">
-                        <table class="table text-nowrap mb-0 align-middle idcard-index-table table-striped" id="archiveIdcardTable">
-                            <thead>
-                                <tr>
-                                    <th class="text-nowrap py-3 ps-4">S.No.</th>
-                                    <th class="py-3">ID Card</th>
-                                    <th class="py-3">Request date</th>
-                                    <th class="py-3">Employee Name</th>
-                                    <th class="py-3">Designation</th>
-                                    {{--<th class="py-3">Duplication</th>
-                                    <th class="py-3">Extension</th>--}}
-                                    <th class="py-3">Status</th>
-                                    <th class="text-end py-3 pe-4">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="table-group-divider">
-                                @forelse($archivedRequests as $index => $request)
-                                    <tr data-request-id="{{ $request->id }}" class="align-middle">
-                                        <td class="fw-medium ps-4">{{ ($archivedRequests->currentPage() - 1) * $archivedRequests->perPage() + $loop->iteration }}</td>
-                                        <td>
-                                            @php
-                                                $photoExists = $request->photo && \Storage::disk('public')->exists($request->photo);
-                                                $photoUrl = $photoExists ? asset('storage/' . $request->photo) : asset('images/dummypic.jpeg');
-                                            @endphp
-                                            <a href="{{ $photoUrl }}" target="_blank" class="d-inline-block rounded-2 overflow-hidden shadow-sm">
-                                                <img src="{{ $photoUrl }}" alt="ID Card" class="rounded-2 object-fit-cover" style="width:40px;height:50px;">
-                                            </a>
-                                        </td>
-                                        <td>{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td>
-                                        <td class="fw-medium text-body-emphasis">{{ $request->name }}</td>
-                                        <td class="text-body-secondary">{{ $request->designation ?? '--' }}</td>
-                                        @php
-                                            $isPermanent = !str_starts_with((string)($request->id ?? ''), 'c-');
-                                            $validFromYmd = isset($request->card_valid_from) && $request->card_valid_from ? \Carbon\Carbon::parse($request->card_valid_from)->format('Y-m-d') : '';
-                                            $validUptoYmd = isset($request->card_valid_to) && $request->card_valid_to ? \Carbon\Carbon::parse($request->card_valid_to)->format('Y-m-d') : '';
-                                        @endphp
-                                        {{--<td class="text-center">
-                                            @if($request->status === 'Approved' && $isPermanent)
-                                                <button type="button"
-                                                        class="btn btn-sm btn-outline-info idcard-archive-ext-btn"
-                                                        style="cursor:pointer;"
-                                                        title="Request Extension"
-                                                        data-request-id="{{ $request->id }}"
-                                                        data-name="{{ $request->name }}"
-                                                        data-designation="{{ $request->designation ?? '--' }}"
-                                                        data-valid-upto="{{ $request->id_card_valid_upto ?? '' }}"
-                                                        data-valid-from="{{ $validFromYmd }}"
-                                                        data-id-number="{{ $request->id_card_number ?? '' }}"
-                                                        data-request-for="{{ $request->request_for ?? 'Own ID Card' }}"
-                                                        data-duplication=""
-                                                        data-status="{{ $request->status ?? '--' }}"
-                                                        data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}"
-                                                        data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;pointer-events:none;">hourglass_bottom</i>
-                                                </button>
-                                            @else
-                                                <span class="text-body-tertiary">--</span>
-                                            @endif
-                                        </td>
-                                        <td class="text-center">
-                                            @if($request->status === 'Approved' && $isPermanent)
-                                                <button type="button"
-                                                        class="btn btn-sm btn-outline-warning idcard-archive-dup-btn"
-                                                        style="cursor:pointer;"
-                                                        title="Request Duplicate"
-                                                        data-request-id="{{ $request->id }}"
-                                                        data-name="{{ $request->name }}"
-                                                        data-designation="{{ $request->designation ?? '--' }}"
-                                                        data-valid-upto="{{ $request->id_card_valid_upto ?? '' }}"
-                                                        data-valid-from="{{ $validFromYmd }}"
-                                                        data-id-number="{{ $request->id_card_number ?? '' }}"
-                                                        data-request-for="{{ $request->request_for ?? 'Own ID Card' }}"
-                                                        data-duplication=""
-                                                        data-status="{{ $request->status ?? '--' }}"
-                                                        data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}"
-                                                        data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;pointer-events:none;">content_copy</i>
-                                                </button>
-                                            @else
-                                                <span class="text-body-tertiary">--</span>
-                                            @endif
-                                        </td>--}}
-
-                                        <td>
-                                            @php
-                                                $statusClass = match($request->status) {
-                                                    'Pending' => 'warning',
-                                                    'Approved' => 'success',
-                                                    'Rejected' => 'danger',
-                                                    'Issued' => 'primary',
-                                                    default => 'secondary'
-                                                };
-                                                $statusIcon = match($request->status) {
-                                                    'Pending' => 'schedule',
-                                                    'Approved' => 'check_circle',
-                                                    'Rejected' => 'cancel',
-                                                    'Issued' => 'card_giftcard',
-                                                    default => 'help'
-                                                };
-                                                $statusTooltip = match ($request->status ?? '') {
-                                                    'Pending' => $request->pending_status_tooltip ?? 'Pending',
-                                                    'Approved' => 'Please collect your ID card from security section',
-                                                    default => null,
-                                                };
-                                            @endphp
-                                            <span class="badge rounded-1 bg-{{ $statusClass }}"
-                                                  @if($statusTooltip) data-bs-toggle="tooltip" data-bs-placement="top" title="{{ e($statusTooltip) }}" @endif>
-                                                <i class="material-icons material-symbols-rounded" style="font-size:12px;">{{ $statusIcon }}</i>
-                                                {{ $request->status }}
-                                            </span>
-                                        </td>
-                                        <td class="text-end pe-4">
-                                            <div class="btn-group btn-group-sm" role="group">
-                                                <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="btn btn-outline-primary {{ $request->status === 'Approved' ? 'rounded-2' : 'rounded-start-2' }} d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
-                                                </a>
-                                                @if($request->status !== 'Approved')
-                                                    <form action="{{ route('admin.employee_idcard.restore', $request->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Restore this request?');">
-                                                        @csrf
-                                                        <button type="submit" class="btn btn-outline-success rounded-0 px-2 py-1" title="Restore">
-                                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">restore</i>
-                                                        </button>
-                                                    </form>
-                                                    <form action="{{ route('admin.employee_idcard.forceDelete', $request->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Permanently delete this request? This action cannot be undone.');">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="btn btn-outline-danger rounded-end-2 px-2 py-1" title="Delete Permanently">
-                                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete_forever</i>
-                                                        </button>
-                                                    </form>
-                                                @endif
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="7" class="text-center py-5">
-                                            <div class="d-inline-flex flex-column align-items-center p-5 bg-body-tertiary rounded-4 border border-body-secondary">
-                                                <i class="material-icons material-symbols-rounded mb-3 text-body-tertiary" style="font-size:56px;">archive</i>
-                                                <p class="mb-1 fw-semibold text-body-emphasis">No archived ID card requests found.</p>
-                                                <small class="text-body-secondary">Deleted records will appear here.</small>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                    @if($archivedRequests->hasPages())
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-3 py-2 border-top bg-body-tertiary">
-                            <small class="text-body-secondary">Showing {{ $archivedRequests->firstItem() ?? 0 }} to {{ $archivedRequests->lastItem() ?? 0 }} of {{ $archivedRequests->total() }} entries</small>
-                            {{ $archivedRequests->links() }}
-                        </div>
-                    @endif
+                    <div id="idcardDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                         data-dt-footer-for="activeIdcardTable"></div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- View Details + Amend Duplication/Extension Modal (Bootstrap 5.3 + GIGW compliant) -->
-<div class="modal fade" id="viewDetailsModal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="viewDetailsModalLabel" aria-describedby="viewDetailsModalDesc" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
-        <div class="modal-content border-0 shadow-lg idcard-view-modal rounded-4 overflow-hidden">
-            <div class="modal-header idcard-modal-header py-3 px-4 border-0">
-                <h2 class="modal-title h5 fw-bold mb-0" id="viewDetailsModalLabel">
-                    <span class="material-icons material-symbols-rounded align-middle me-2" aria-hidden="true">badge</span>
-                    ID Card Request Details
-                </h2>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close modal"></button>
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="idcardColumnVisibilityModal" tabindex="-1" aria-labelledby="idcardColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="idcardColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-4 bg-body" id="viewDetailsModalDesc">
-                <!-- View Section -->
-                <section class="mb-4" aria-labelledby="viewDetailsHeading">
-                    <h3 id="viewDetailsHeading" class="h6 fw-bold text-uppercase text-body-secondary mb-3 d-flex align-items-center">
-                        <span class="material-icons material-symbols-rounded me-2" aria-hidden="true">info</span>
-                        Request Summary
-                    </h3>
-                    <div class="card border border-body-secondary bg-body-tertiary rounded-4 overflow-hidden">
-                        <div class="card-body p-0">
-                            <div class="row g-0">
-                                <div class="col-12 col-md-6">
-                                    <div class="idcard-modal-item p-3 border-end border-bottom border-body-secondary border-bottom-md-0 border-end-md-0">
-                                        <span class="idcard-modal-label d-block small text-body-secondary mb-1">Employee Name</span>
-                                        <span class="idcard-modal-value fw-semibold text-body-emphasis" id="modalName">--</span>
-                                    </div>
-                                </div>
-                                <div class="col-12 col-md-6">
-                                    <div class="idcard-modal-item p-3 border-bottom border-body-secondary border-bottom-md-0">
-                                        <span class="idcard-modal-label d-block small text-body-secondary mb-1">Designation</span>
-                                        <span class="idcard-modal-value fw-semibold text-body-emphasis" id="modalDesignation">--</span>
-                                    </div>
-                                </div>
-                                <div class="col-12 col-md-6">
-                                    <div class="idcard-modal-item p-3 border-end border-bottom border-body-secondary border-bottom-md-0 border-end-md-0">
-                                        <span class="idcard-modal-label d-block small text-body-secondary mb-1">Request For</span>
-                                        <span class="idcard-modal-value fw-semibold text-body-emphasis" id="modalRequestFor">--</span>
-                                    </div>
-                                </div>
-                                <div class="col-12 col-md-6">
-                                    <div class="idcard-modal-item p-3 border-bottom border-body-secondary border-bottom-md-0">
-                                        <span class="idcard-modal-label d-block small text-body-secondary mb-1">Request Date</span>
-                                        <span class="idcard-modal-value fw-semibold text-body-emphasis" id="modalCreated">--</span>
-                                    </div>
-                                </div>
-                                <div class="col-12 col-md-6">
-                                    <div class="idcard-modal-item p-3 border-end border-bottom border-body-secondary border-bottom-md-0 border-end-md-0">
-                                        <span class="idcard-modal-label d-block small text-body-secondary mb-1">Duplication</span>
-                                        <span class="idcard-modal-value fw-semibold text-body-emphasis" id="modalDuplication">--</span>
-                                    </div>
-                                </div>
-                                <div class="col-12 col-md-6">
-                                    <div class="idcard-modal-item p-3 border-bottom border-body-secondary border-bottom-md-0">
-                                        <span class="idcard-modal-label d-block small text-body-secondary mb-1">Extension</span>
-                                        <span class="idcard-modal-value fw-semibold text-body-emphasis" id="modalExtension">--</span>
-                                    </div>
-                                </div>
-                                <div class="col-12 col-md-6">
-                                    <div class="idcard-modal-item p-3 border-end border-body-secondary border-end-md-0">
-                                        <span class="idcard-modal-label d-block small text-body-secondary mb-1">Valid Upto</span>
-                                        <span class="idcard-modal-value fw-semibold text-body-emphasis" id="modalValidUpto">--</span>
-                                    </div>
-                                </div>
-                                <div class="col-12 col-md-6">
-                                    <div class="idcard-modal-item p-3">
-                                        <span class="idcard-modal-label d-block small text-body-secondary mb-1">Status</span>
-                                        <span class="idcard-modal-value" id="modalStatus">--</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Amend Duplication/Extension Section -->
-                <section class="idcard-amend-section" aria-labelledby="amendSectionHeading">
-                    <h3 id="amendSectionHeading" class="h6 fw-bold text-uppercase text-body-secondary mb-3 d-flex align-items-center">
-                        <span class="material-icons material-symbols-rounded me-2" aria-hidden="true">edit_note</span>
-                        Amend Duplication / Extension
-                    </h3>
-                    <div class="card border border-body-secondary rounded-4 shadow-sm">
-                        <div class="card-body p-4">
-                            <form id="amendDupExtForm" method="POST" enctype="multipart/form-data" novalidate>
-                                @csrf
-                                @method('PATCH')
-                                <div class="row g-3">
-                                    <div class="col-12 col-md-6" id="amendDupReasonField">
-                                        <label for="amend_duplication_reason" class="form-label fw-medium text-body-emphasis">Reason for Duplicate Card</label>
-                                        <select name="duplication_reason" id="amend_duplication_reason" class="form-select rounded-3" aria-describedby="amend_duplication_reason_help">
-                                            <option value="">Select Reason</option>
-                                            <option value="Expired Card">Expired Card</option>
-                                            <option value="Lost">Card Lost</option>
-                                            <option value="Damage">Card Damaged</option>
-                                        </select>
-                                        <span id="amend_duplication_reason_help" class="visually-hidden">Choose the reason for requesting a duplicate ID card</span>
-                                    </div>
-                                    <div class="col-12 col-md-6">
-                                        <label for="amend_id_card_number" class="form-label fw-medium text-body-emphasis">ID Card Number</label>
-                                        <input type="text" name="id_card_number" id="amend_id_card_number" class="form-control rounded-3" placeholder="e.g. NOP00148" autocomplete="off" aria-describedby="amend_id_card_number_help" readonly>
-                                        <span id="amend_id_card_number_help" class="small text-body-secondary">Auto-filled from existing ID card; cannot be changed here.</span>
-                                    </div>
-                                    <div class="col-12 col-md-6">
-                                        <label for="amend_id_card_valid_from" class="form-label fw-medium text-body-emphasis">ID Card Valid From</label>
-                                        <input type="date" name="id_card_valid_from" id="amend_id_card_valid_from" class="form-control rounded-3" placeholder="DD/MM/YYYY" autocomplete="off" aria-describedby="amend_id_card_valid_from_help" readonly>
-                                        <span id="amend_id_card_valid_from_help" class="small text-body-secondary">Auto-filled from existing ID card; cannot be changed here.</span>
-                                    </div>
-                                    <div class="col-12 col-md-6">
-                                        <label for="amend_id_card_valid_upto" class="form-label fw-medium text-body-emphasis">ID Card Valid Upto</label>
-                                        <input type="date" name="id_card_valid_upto" id="amend_id_card_valid_upto" class="form-control rounded-3" placeholder="DD/MM/YYYY" autocomplete="off" aria-describedby="amend_id_card_valid_upto_help" readonly>
-                                        <span id="amend_id_card_valid_upto_help" class="small text-body-secondary">Auto-filled from existing ID card; cannot be changed here.</span>
-                                    </div>
-                                    <div class="col-12 col-md-6" id="amendFirReceiptField" style="display:none;">
-                                        <label for="amend_fir_receipt" class="form-label fw-medium text-body-emphasis">Upload FIR (First Information Report) <span class="text-danger" aria-hidden="true">*</span></label>
-                                        <input type="file" name="fir_receipt" id="amend_fir_receipt" class="form-control rounded-3" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png" aria-describedby="amend_fir_receipt_help">
-                                        <span id="amend_fir_receipt_help" class="form-text text-body-secondary">Required when card is lost. Allowed:  JPG, PNG. Max size: 1 MB</span>
-                                    </div>
-                                    <div class="col-12 col-md-6" id="amendReasonDocField">
-                                        <label for="amend_payment_receipt" id="amendReasonDocLabel" class="form-label fw-medium text-body-emphasis">Upload Document</label>
-                                        <input type="file" name="payment_receipt" id="amend_payment_receipt" class="form-control rounded-3" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png" aria-describedby="amend_reason_doc_help">
-                                        <span id="amend_reason_doc_help" class="form-text text-body-secondary">Select reason above. Allowed:  JPG, PNG. Max size: 5 MB</span>
-                                    </div>
-                                   {{-- <div class="col-12 col-md-6">
-                                        <label for="amend_supporting_document" class="form-label fw-medium text-body-emphasis">Upload supporting document <span class="text-body-secondary fw-normal">(optional)</span></label>
-                                        <input type="file" name="supporting_document" id="amend_supporting_document" class="form-control rounded-3" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png" aria-describedby="amend_supporting_doc_help">
-                                        <span id="amend_supporting_doc_help" class="form-text text-body-secondary">Allowed: JPG, PNG. Max size: 1 MB</span>
-                                    </div> --}}
-                                    <div class="col-12" id="amendExtensionSection" style="display:none;">
-                                        <hr class="my-3">
-                                        <h6 class="text-body-emphasis mb-2">Extension</h6>
-                                        <div class="row g-3">
-                                            <div class="col-12 col-md-6">
-                                                <label for="amend_extension_reason" class="form-label fw-medium text-body-emphasis">Reason for Extension</label>
-                                                <select name="extension_reason" id="amend_extension_reason" class="form-select rounded-3" aria-describedby="amend_extension_reason_help">
-                                                    <option value="">Select Reason</option>
-                                                    <option value="Contract extended">Contract extended</option>
-                                                    <option value="Validity renewal">Validity renewal</option>
-                                                    <option value="Other">Other</option>
-                                                </select>
-                                                <span id="amend_extension_reason_help" class="form-text text-body-secondary">Reason for requesting ID card extension</span>
-                                            </div>
-                                            <div class="col-12 col-md-6">
-                                                <label for="amend_extension_document" class="form-label fw-medium text-body-emphasis">Upload Extension Document</label>
-                                                <input type="file" name="extension_document" id="amend_extension_document" class="form-control rounded-3" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png" aria-describedby="amend_extension_document_help">
-                                                <span id="amend_extension_document_help" class="form-text text-body-secondary">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div id="amendDupExtError" class="alert alert-danger mt-3 d-none d-flex align-items-center rounded-3" role="alert" aria-live="assertive">
-                                    <span class="material-icons material-symbols-rounded me-2" aria-hidden="true">error</span>
-                                    <span id="amendDupExtErrorText"></span>
-                                </div>
-                                <div id="amendDupExtSuccess" class="alert alert-success mt-3 d-none d-flex align-items-center rounded-3" role="status" aria-live="polite">
-                                    <span class="material-icons material-symbols-rounded me-2" aria-hidden="true">check_circle</span>
-                                    <span id="amendDupExtSuccessText"></span>
-                                </div>
-                                <div class="mt-4 d-flex flex-wrap gap-2">
-                                    <button type="submit" class="btn btn-primary rounded-3 px-4 focus-ring" id="amendDupExtSubmitBtn">
-                                        <span class="material-icons material-symbols-rounded align-middle me-1" aria-hidden="true" style="font-size:1.1rem;">save</span>
-                                        Save Duplication/Extension
-                                    </button>
-                                    <a href="#" id="modalViewFullLink" class="btn btn-outline-primary rounded-3 text-decoration-none">
-                                        <span class="material-icons material-symbols-rounded align-middle me-1" aria-hidden="true" style="font-size:1.1rem;">open_in_new</span>
-                                        View Full Details
-                                    </a>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </section>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="idcardColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -712,7 +343,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Handle Export click: always export only the CURRENT tab data
+    // Handle Export click: current tab + the live in-browser filters (status / date / search)
     document.querySelectorAll('.export-link').forEach(function (link) {
         link.addEventListener('click', function (e) {
             e.preventDefault();
@@ -722,6 +353,21 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 var url = new URL(baseUrl, window.location.origin);
                 url.searchParams.set('tab', getCurrentIdcardTabKey());
+
+                // Sync the export with whatever the user has filtered on-screen.
+                var statusEl = document.getElementById('listStatus');
+                var fromEl = document.getElementById('dateFrom');
+                var toEl = document.getElementById('dateTo');
+                var statusVal = statusEl ? statusEl.value : 'all';
+                var fromVal = fromEl ? fromEl.value : '';
+                var toVal = toEl ? toEl.value : '';
+                var searchVal = (typeof window.idcardCurrentSearch === 'function') ? window.idcardCurrentSearch() : '';
+
+                if (statusVal && statusVal !== 'all') { url.searchParams.set('list_status', statusVal); } else { url.searchParams.delete('list_status'); }
+                if (fromVal) { url.searchParams.set('date_from', fromVal); } else { url.searchParams.delete('date_from'); }
+                if (toVal) { url.searchParams.set('date_to', toVal); } else { url.searchParams.delete('date_to'); }
+                if (searchVal) { url.searchParams.set('search', searchVal); } else { url.searchParams.delete('search'); }
+
                 window.location.href = url.toString();
             } catch (err) {
                 // Fallback if URL API is not available
@@ -935,3 +581,241 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endsection
+
+@push('scripts')
+<script>
+    $(function () {
+        var TABLE_ID = '#activeIdcardTable';
+        var $table = $(TABLE_ID);
+
+        // No real data rows (only the empty-state CTA) -> skip DataTables so the CTA shows.
+        if (!$table.length || $table.find('tbody tr[data-request-id]').length === 0) {
+            return;
+        }
+
+        var table = $table.DataTable({
+            paging: true,
+            searching: true,
+            ordering: true,
+            info: true,
+            autoWidth: false,
+            order: [[2, 'desc']],
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+            columnDefs: [
+                { targets: [0, 1, 9], orderable: false, searchable: false }
+            ],
+            language: {
+                search: '',
+                searchPlaceholder: 'Search',
+                paginate: { previous: '‹', next: '›' },
+                lengthMenu: 'Showing _MENU_',
+                info: 'of _TOTAL_ items',
+                infoEmpty: 'of 0 items',
+                infoFiltered: 'of _MAX_ items'
+            },
+            drawCallback: function () {
+                // Renumber the S.No column for the current page order.
+                var info = this.api().page.info();
+                this.api().column(0, { page: 'current' }).nodes().each(function (cell, i) {
+                    cell.innerHTML = info.start + i + 1;
+                });
+                // Re-init tooltips for the newly drawn rows.
+                if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                    $table.find('[data-bs-toggle="tooltip"]').each(function () {
+                        try { bootstrap.Tooltip.getOrCreateInstance(this); } catch (e) {}
+                    });
+                }
+            }
+        });
+
+        /* ---- Instant client-side filters (status + date range) — no page reload.
+           Reads explicit row attributes (data-status / data-ts) so matching never
+           depends on how DataTables extracts text from the status badge. ---- */
+        $.fn.dataTable.ext.search.push(function (settings, searchData, dataIndex) {
+            if (settings.nTable.id !== 'activeIdcardTable') { return true; }
+
+            var row = settings.aoData[dataIndex] ? settings.aoData[dataIndex].nTr : null;
+            if (!row) { return true; }
+
+            // Status: exact (case-insensitive) match against the row's data-status.
+            var statusVal = ($('#listStatus').val() || 'all').toLowerCase();
+            if (statusVal !== 'all') {
+                var rowStatus = (row.getAttribute('data-status') || '').toLowerCase();
+                if (rowStatus !== statusVal) { return false; }
+            }
+
+            // Date range: compare against the row's created timestamp (seconds).
+            var from = $('#dateFrom').val();
+            var to = $('#dateTo').val();
+            if (from || to) {
+                var ts = parseInt(row.getAttribute('data-ts') || '0', 10);
+                if (!ts) { return false; }
+                if (from && ts < Math.floor(new Date(from + 'T00:00:00').getTime() / 1000)) { return false; }
+                if (to && ts > Math.floor(new Date(to + 'T23:59:59').getTime() / 1000)) { return false; }
+            }
+            return true;
+        });
+
+        $('#listStatus').on('change', function () { table.draw(); });
+
+        /* ---- "Time Period" dual-month range calendar ----
+           Writes the selected start/end into the hidden #dateFrom / #dateTo
+           inputs (Y-m-d) so the filter search + export logic keep working. ---- */
+        function updateTimePeriodLabel() {
+            var from = $('#dateFrom').val();
+            var to = $('#dateTo').val();
+            $('#idcardTimePeriodLabel').text((from || to) ? ((from || '…') + ' → ' + (to || '…')) : 'Time Period');
+        }
+
+        var idcardCal = (function initRangeCalendar() {
+            var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            var DOW = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+            var view = new Date(); view.setDate(1);
+            var startD = null, endD = null;
+
+            function pad(n){ return (n < 10 ? '0' : '') + n; }
+            function ymd(d){ return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+            function parseYmd(s){ if (!s) { return null; } var p = String(s).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+            function sameDay(a, b){ return a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
+
+            function buildMonth(base){
+                var year = base.getFullYear(), month = base.getMonth();
+                var startWeekday = (new Date(year, month, 1).getDay() + 6) % 7;
+                var daysInMonth = new Date(year, month + 1, 0).getDate();
+                var html = '<div class="idcp-cal-head">' +
+                    '<button type="button" class="idcp-cal-nav" data-nav="prev" aria-label="Previous month">&lsaquo;</button>' +
+                    '<span class="idcp-cal-title">' + MONTHS[month] + ' ' + year + '</span>' +
+                    '<button type="button" class="idcp-cal-nav" data-nav="next" aria-label="Next month">&rsaquo;</button>' +
+                    '</div><div class="idcp-cal-grid">';
+                DOW.forEach(function(d){ html += '<span class="idcp-cal-dow">' + d + '</span>'; });
+                for (var i = 0; i < startWeekday; i++) html += '<span></span>';
+                for (var day = 1; day <= daysInMonth; day++){
+                    var d = new Date(year, month, day);
+                    var cls = 'idcp-cal-day';
+                    if (startD && endD && d > startD && d < endD) cls += ' in-range';
+                    if (sameDay(d, startD)) cls += ' is-start';
+                    if (sameDay(d, endD)) cls += ' is-end';
+                    html += '<button type="button" class="' + cls + '" data-date="' + ymd(d) + '">' + day + '</button>';
+                }
+                return html + '</div>';
+            }
+
+            function render(){
+                var left = new Date(view.getFullYear(), view.getMonth(), 1);
+                var right = new Date(view.getFullYear(), view.getMonth() + 1, 1);
+                $('#idcardCalendar .idcp-cal-month[data-month="0"]').html(buildMonth(left));
+                $('#idcardCalendar .idcp-cal-month[data-month="1"]').html(buildMonth(right));
+                $('#idcardCalendar .idcp-cal-month[data-month="0"] [data-nav="next"]').css('visibility', 'hidden');
+                $('#idcardCalendar .idcp-cal-month[data-month="1"] [data-nav="prev"]').css('visibility', 'hidden');
+                var label = 'Select a date range';
+                if (startD && endD) label = ymd(startD) + '  →  ' + ymd(endD);
+                else if (startD) label = ymd(startD) + '  → …';
+                $('#idcardCalRange').text(label);
+            }
+
+            $('#idcardCalendar').on('click', '.idcp-cal-nav', function(){
+                var dir = $(this).data('nav') === 'prev' ? -1 : 1;
+                view = new Date(view.getFullYear(), view.getMonth() + dir, 1);
+                render();
+            });
+            $('#idcardCalendar').on('click', '.idcp-cal-day', function(){
+                var p = String($(this).data('date')).split('-');
+                var d = new Date(+p[0], +p[1] - 1, +p[2]);
+                if (!startD || (startD && endD)) { startD = d; endD = null; }
+                else if (d < startD) { startD = d; }
+                else { endD = d; }
+                render();
+            });
+            $('#idcardApplyPeriod').on('click', function(){
+                $('#dateFrom').val(startD ? ymd(startD) : '');
+                $('#dateTo').val(endD ? ymd(endD) : (startD ? ymd(startD) : ''));
+                updateTimePeriodLabel();
+                table.draw();
+                if (window.bootstrap) { bootstrap.Dropdown.getOrCreateInstance(document.getElementById('idcardTimePeriodToggle')).hide(); }
+            });
+            $('#idcardClearPeriod').on('click', function(){
+                startD = null; endD = null; render();
+                $('#dateFrom').val(''); $('#dateTo').val('');
+                updateTimePeriodLabel(); table.draw();
+            });
+
+            // Seed from any server-side / old() values.
+            startD = parseYmd($('#dateFrom').val());
+            endD = parseYmd($('#dateTo').val());
+            if (startD) { view = new Date(startD.getFullYear(), startD.getMonth(), 1); }
+            render();
+            updateTimePeriodLabel();
+
+            return {
+                reset: function(){ startD = null; endD = null; view = new Date(); view.setDate(1); render(); }
+            };
+        })();
+
+        $('#idcardClearFilters').on('click', function () {
+            $('#listStatus').val('all');
+            $('#dateFrom').val('');
+            $('#dateTo').val('');
+            if (idcardCal) { idcardCal.reset(); }
+            updateTimePeriodLabel();
+            table.search('').draw();
+        });
+
+        // Expose the live search term so the export handler can include it.
+        window.idcardCurrentSearch = function () { return table.search(); };
+
+        /* ---- Search relocation + footer (pagination + "Showing" count) ----
+           Handled globally by SargamDataTableUI (public/js/datatable-global-ui.js),
+           which relocates the DataTables controls into the
+           #idcardDtSearch / #idcardDtFooter slots (data-dt-search-for /
+           data-dt-footer-for). We must NOT relocate them here as well — a second
+           relocation empties the footer the global pass already populated. ---- */
+
+        /* ---- Column show / hide ---- */
+        var colKey = 'idcardGrid:hiddenColumns:v1';
+        function getHidden() { try { var a = JSON.parse(localStorage.getItem(colKey) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+        function setHidden(a) { try { localStorage.setItem(colKey, JSON.stringify(a)); } catch (e) {} }
+
+        function setupIdcardColumns(dt) {
+            var hidden = getHidden();
+            dt.columns().every(function () { var idx = this.index(); this.visible(hidden.indexOf(idx) === -1, false); });
+            dt.columns.adjust();
+
+            var $grid = $('#idcardColumnToggleGrid');
+            if (!$grid.length) { return; }
+            $grid.empty();
+            dt.columns().every(function () {
+                var idx = this.index();
+                var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+                if (!title) { return; }
+                var inputId = 'idcardcolvis_' + idx;
+                var $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
+                var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>').attr('for', inputId);
+                var $cb = $('<input type="checkbox" class="form-check-input m-0">').attr('id', inputId).prop('checked', hidden.indexOf(idx) === -1);
+                $cb.on('change', function () {
+                    var h = getHidden(); var pos = h.indexOf(idx);
+                    if (this.checked) { if (pos !== -1) h.splice(pos, 1); } else { if (pos === -1) h.push(idx); }
+                    setHidden(h); dt.column(idx).visible(this.checked, false); dt.columns.adjust();
+                });
+                $label.append($cb).append($('<span></span>').text(title));
+                $cell.append($label); $grid.append($cell);
+            });
+        }
+
+        /* ---- Print (client-side, data columns only) ---- */
+        if (typeof $.fn.dataTable.Buttons !== 'undefined') {
+            new $.fn.dataTable.Buttons(table, {
+                buttons: [{
+                    extend: 'print',
+                    className: 'idcard-btn-print',
+                    title: 'Employee ID Card Requests',
+                    exportOptions: { columns: [0, 2, 3, 4, 5, 6, 7, 8] }
+                }]
+            });
+            $('#idcardPrintBtn').on('click', function () { table.button('.idcard-btn-print').trigger(); });
+        }
+
+        setupIdcardColumns(table);
+    });
+</script>
+@endpush

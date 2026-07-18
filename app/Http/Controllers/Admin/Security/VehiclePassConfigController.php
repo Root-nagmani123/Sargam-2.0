@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Security;
 
+use App\DataTables\Security\VehiclePassConfigDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\SecVehiclePassConfig;
 use App\Models\SecVehicleType;
@@ -10,15 +11,19 @@ use Illuminate\Validation\Rule;
 
 class VehiclePassConfigController extends Controller
 {
-    public function index()
+    public function index(VehiclePassConfigDataTable $dataTable)
     {
-        $configs = SecVehiclePassConfig::with('vehicleType')->orderBy('pk', 'desc')->paginate(10);
-        return view('admin.security.vehicle_pass_config.index', compact('configs'));
+        return $dataTable->render('admin.security.vehicle_pass_config.index');
     }
 
-    public function create()
+    public function create(Request $request)
     {
         $vehicleTypes = SecVehicleType::active()->get();
+
+        if ($request->ajax()) {
+            return view('admin.security.vehicle_pass_config._form', compact('vehicleTypes'));
+        }
+
         return view('admin.security.vehicle_pass_config.create', compact('vehicleTypes'));
     }
 
@@ -38,10 +43,14 @@ class VehiclePassConfigController extends Controller
         $config->created_date = now();
         $config->save();
 
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Vehicle Pass Configuration created successfully']);
+        }
+
         return redirect()->route('admin.security.vehicle_pass_config.index')->with('success', 'Vehicle Pass Configuration created successfully');
     }
 
-    public function edit($id)
+    public function edit(Request $request, $id)
     {
         try {
             $pk = decrypt($id);
@@ -51,6 +60,11 @@ class VehiclePassConfigController extends Controller
 
         $config = SecVehiclePassConfig::findOrFail($pk);
         $vehicleTypes = SecVehicleType::active()->get();
+
+        if ($request->ajax()) {
+            return view('admin.security.vehicle_pass_config._form', compact('config', 'vehicleTypes'));
+        }
+
         return view('admin.security.vehicle_pass_config.edit', compact('config', 'vehicleTypes'));
     }
 
@@ -75,6 +89,10 @@ class VehiclePassConfigController extends Controller
         $config->start_counter = $validated['start_counter'];
         $config->modified_date = now();
         $config->save();
+
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Vehicle Pass Configuration updated successfully']);
+        }
 
         return redirect()->route('admin.security.vehicle_pass_config.index')->with('success', 'Vehicle Pass Configuration updated successfully');
     }

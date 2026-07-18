@@ -1,388 +1,346 @@
 @extends('admin.layouts.master')
+
 @section('title', 'View ID Card Request - Sargam | Lal Bahadur Shastri')
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+@endpush
+
 @section('content')
-<div class="container-fluid">
-    <x-breadcrum title="Employee ID Card Request Details"></x-breadcrum>
+<div class="container-fluid employee-idcard-show-page">
+    <x-breadcrum title="Employee ID Card Request Details">
+        <div class="d-flex flex-wrap gap-2">
+            @if($request->user_may_edit_request ?? false)
+            <a href="{{ route('admin.employee_idcard.edit', $request->id) }}"
+                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
+                <i class="bi bi-pencil" aria-hidden="true"></i> <span>Edit Request</span>
+            </a>
+            @endif
+            @if($request->user_may_edit_request ?? false)
+            <form action="{{ route('admin.employee_idcard.destroy', $request->id) }}" method="POST"
+                onsubmit="return confirm('Are you sure you want to delete this request?');">
+                @csrf
+                @method('DELETE')
+                <button type="submit"
+                    class="btn btn-outline-danger rounded-1 w-100 d-inline-flex align-items-center justify-content-center gap-2">
+                    <i class="bi bi-trash3" aria-hidden="true"></i> Delete Request
+                </button>
+            </form>
+            @endif
+        </div>
+    </x-breadcrum>
+
     <x-session_message />
-    <!-- Header Card - Bootstrap 5.3 -->
-    <div class="card border-0 shadow rounded-3 mb-4 overflow-hidden" >
-        <div class="card-body p-4 p-lg-5">
-            <div class="d-flex justify-content-between align-items-center">
+
+    @php
+    $statusClass = match($request->status) {
+    'Pending' => 'bg-warning text-dark',
+    'Approved' => 'bg-success',
+    'Rejected' => 'bg-danger',
+    'Issued' => 'bg-primary',
+    default => 'bg-secondary'
+    };
+    @endphp
+
+    {{-- Header --}}
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-body p-3 p-lg-4">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
                 <div>
-                    <h4 class="mb-1 fw-bold text-dark">
-                        <i class="material-icons material-symbols-rounded align-middle me-2" style="font-size:28px;">visibility</i>
-                        Employee ID Card Request Details
-                    </h4>
-                    <p class="text-muted mb-0">Request ID: <strong>#{{ $request->id }}</strong> | Created: <strong>{{ $request->created_at ? $request->created_at->format('d/m/Y H:i') : '--' }}</strong></p>
+                    <h5 class="mb-1 fw-semibold">Request #{{ $request->id }}</h5>
+                    <p class="text-muted small mb-0">
+                        Created: {{ $request->created_at ? $request->created_at->format('d/m/Y H:i') : '--' }}
+                    </p>
                 </div>
-                @php
-                    $statusClass = match($request->status) {
-                        'Pending' => 'warning',
-                        'Approved' => 'success',
-                        'Rejected' => 'danger',
-                        'Issued' => 'primary',
-                        default => 'secondary'
-                    };
-                    $statusIcon = match($request->status) {
-                        'Pending' => 'schedule',
-                        'Approved' => 'check_circle',
-                        'Rejected' => 'cancel',
-                        'Issued' => 'card_giftcard',
-                        default => 'help'
-                    };
-                @endphp
                 <div class="text-end">
-                    <h6 class="mb-2">Current Status</h6>
-                    <span class="badge bg-{{ $statusClass }} p-2"
-                          @if(($request->status ?? '') === 'Approved') title="Please collect your ID card from security section" @endif>
-                        <i class="material-icons material-symbols-rounded" style="font-size:16px;">{{ $statusIcon }}</i>
-                        {{ $request->status }}
+                    <div class="text-muted small mb-1">Current Status</div>
+                    <span class="badge rounded-1 px-3 py-2 {{ $statusClass }}" @if(($request->status ?? '') ===
+                        'Approved') data-bs-toggle="tooltip" title="Please collect your ID card from security section"
+                        @endif>
+                        {{ $request->status ?? '--' }}
                     </span>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row">
-        <!-- Main Content -->
+    <div class="row g-4">
+        {{-- Main content --}}
         <div class="col-lg-8">
-            <!-- Employee Type - Bootstrap 5.3 -->
-            <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden">
-                <div class="card-header bg-light border-0 rounded-top-3 p-3">
-                    <h6 class="mb-0 fw-bold">
-                        <i class="material-icons material-symbols-rounded align-middle me-2">person_badge</i>
-                        Employee Type
+
+            {{-- Employee Type --}}
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-body p-3 p-lg-4">
+                    <h6 class="text-primary fw-semibold d-flex align-items-center gap-2 mb-3">
+                        <i class="bi bi-person-vcard" aria-hidden="true"></i> Employee Type
                     </h6>
-                </div>
-                <div class="card-body p-3">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">Type</small>
-                                <strong class="text-dark d-block fs-6">{{ $request->employee_type }}</strong>
-                            </div>
+                            <div class="text-muted small mb-1">Type</div>
+                            <div class="fw-semibold">{{ $request->employee_type ?? '--' }}</div>
                         </div>
                         <div class="col-md-4">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">Card Type</small>
-                                <strong class="text-dark d-block fs-6">{{ $request->card_type ?? '--' }}</strong>
-                            </div>
+                            <div class="text-muted small mb-1">Card Type</div>
+                            <div class="fw-semibold">{{ $request->card_type ?? '--' }}</div>
                         </div>
                         <div class="col-md-4">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">Sub Type</small>
-                                <strong class="text-dark d-block fs-6">{{ $request->sub_type ?? '--' }}</strong>
-                            </div>
+                            <div class="text-muted small mb-1">Sub Type</div>
+                            <div class="fw-semibold">{{ $request->sub_type ?? '--' }}</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Personal Information - Bootstrap 5.3 -->
-            <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden">
-                <div class="card-header bg-light border-0 rounded-top-3 p-3">
-                    <h6 class="mb-0 fw-bold">
-                        <i class="material-icons material-symbols-rounded align-middle me-2">info</i>
-                        Personal Information
+            {{-- Personal Information --}}
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-body p-3 p-lg-4">
+                    <h6 class="text-primary fw-semibold d-flex align-items-center gap-2 mb-3">
+                        <i class="bi bi-info-circle" aria-hidden="true"></i> Personal Information
                     </h6>
-                </div>
-                <div class="card-body p-3">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">Full Name</small>
-                                <strong class="text-dark d-block fs-6">{{ $request->name }}</strong>
+                            <div class="text-muted small mb-1">Full Name</div>
+                            <div class="fw-semibold">{{ $request->name }}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-muted small mb-1">Designation</div>
+                            <div class="fw-semibold">{{ $request->designation ?? '--' }}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-muted small mb-1">Date of Birth</div>
+                            <div class="fw-semibold">
+                                @if($request->date_of_birth)
+                                {{ \Carbon\Carbon::parse($request->date_of_birth)->format('d M, Y') }}
+                                @else
+                                --
+                                @endif
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">Designation</small>
-                                <strong class="text-dark d-block fs-6">{{ $request->designation ?? '--' }}</strong>
+                            <div class="text-muted small mb-1">Father Name</div>
+                            <div class="fw-semibold">{{ $request->father_name ?? '--' }}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-muted small mb-1">Academy Joining Date</div>
+                            <div class="fw-semibold">
+                                @if($request->academy_joining)
+                                {{ \Carbon\Carbon::parse($request->academy_joining)->format('d M, Y') }}
+                                @else
+                                --
+                                @endif
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">Date of Birth</small>
-                                <strong class="text-dark d-block fs-6">
-                                    @if($request->date_of_birth)
-                                        {{ \Carbon\Carbon::parse($request->date_of_birth)->format('d M, Y') }}
-                                    @else
-                                        --
-                                    @endif
-                                </strong>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">Father Name</small>
-                                <strong class="text-dark d-block fs-6">{{ $request->father_name ?? '--' }}</strong>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">Academy Joining Date</small>
-                                <strong class="text-dark d-block fs-6">
-                                    @if($request->academy_joining)
-                                        {{ \Carbon\Carbon::parse($request->academy_joining)->format('d M, Y') }}
-                                    @else
-                                        --
-                                    @endif
-                                </strong>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">Blood Group</small>
-                                <strong class="text-danger d-block fs-6">{{ $request->blood_group ?? '--' }}</strong>
-                            </div>
+                            <div class="text-muted small mb-1">Blood Group</div>
+                            <div class="fw-semibold text-danger">{{ $request->blood_group ?? '--' }}</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Contact Information - Bootstrap 5.3 -->
-            <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden">
-                <div class="card-header bg-light border-0 rounded-top-3 p-3">
-                    <h6 class="mb-0 fw-bold">
-                        <i class="material-icons material-symbols-rounded align-middle me-2">phone</i>
-                        Contact Information
+            {{-- Contact Information --}}
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-body p-3 p-lg-4">
+                    <h6 class="text-primary fw-semibold d-flex align-items-center gap-2 mb-3">
+                        <i class="bi bi-telephone" aria-hidden="true"></i> Contact Information
                     </h6>
-                </div>
-                <div class="card-body p-3">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">Mobile Number</small>
-                                <strong class="text-dark d-block fs-6">{{ $request->mobile_number ?? '--' }}</strong>
-                            </div>
+                            <div class="text-muted small mb-1">Mobile Number</div>
+                            <div class="fw-semibold">{{ $request->mobile_number ?? '--' }}</div>
                         </div>
                         <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">Telephone Number</small>
-                                <strong class="text-dark d-block fs-6">{{ $request->telephone_number ?? '--' }}</strong>
-                            </div>
+                            <div class="text-muted small mb-1">Telephone Number</div>
+                            <div class="fw-semibold">{{ $request->telephone_number ?? '--' }}</div>
                         </div>
                         <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">Section</small>
-                                <strong class="text-dark d-block fs-6">{{ $request->section ?? '--' }}</strong>
-                            </div>
+                            <div class="text-muted small mb-1">Section</div>
+                            <div class="fw-semibold">{{ $request->section ?? '--' }}</div>
                         </div>
                         <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">ID Card Valid Upto</small>
-                                <strong class="text-dark d-block fs-6">{{ $request->id_card_valid_upto ?? '--' }}</strong>
-                            </div>
+                            <div class="text-muted small mb-1">ID Card Valid Upto</div>
+                            <div class="fw-semibold">{{ $request->id_card_valid_upto ?? '--' }}</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Additional Details - Bootstrap 5.3 -->
-            <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden">
-                <div class="card-header bg-light border-0 rounded-top-3 p-3">
-                    <h6 class="mb-0 fw-bold">
-                        <i class="material-icons material-symbols-rounded align-middle me-2">domain</i>
-                        Additional Details
+            {{-- Additional Details --}}
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-body p-3 p-lg-4">
+                    <h6 class="text-primary fw-semibold d-flex align-items-center gap-2 mb-3">
+                        <i class="bi bi-building" aria-hidden="true"></i> Additional Details
                     </h6>
-                </div>
-                <div class="card-body p-3">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">Approval Authority</small>
-                                <strong class="text-dark d-block fs-6">{{ $request->approval_authority_name ?? '--' }}</strong>
-                            </div>
+                            <div class="text-muted small mb-1">Approval Authority</div>
+                            <div class="fw-semibold">{{ $request->approval_authority_name ?? '--' }}</div>
                         </div>
                         <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">Vendor / Organization</small>
-                                <strong class="text-dark d-block fs-6">{{ $request->vendor_organization_name ?? '--' }}</strong>
-                            </div>
+                            <div class="text-muted small mb-1">Vendor / Organization</div>
+                            <div class="fw-semibold">{{ $request->vendor_organization_name ?? '--' }}</div>
                         </div>
                         <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">Request For</small>
-                                <strong class="text-dark d-block fs-6">{{ $request->request_for ?? '--' }}</strong>
-                            </div>
+                            <div class="text-muted small mb-1">Request For</div>
+                            <div class="fw-semibold">{{ $request->request_for ?? '--' }}</div>
                         </div>
-                        @if(in_array($request->request_for, ['Replacement', 'Duplication']) && $request->duplication_reason)
+                        @if(in_array($request->request_for, ['Replacement', 'Duplication']) &&
+                        $request->duplication_reason)
                         <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">Duplication</small>
-                                @php
-                                    $dupBadge = match($request->duplication_reason) {
-                                        'Lost' => 'danger',
-                                        'Damage' => 'warning',
-                                        'Expired Card' => 'info',
-                                        default => 'secondary'
-                                    };
-                                @endphp
-                                <span class="badge bg-{{ $dupBadge }} text-dark">{{ $request->duplication_reason }}</span>
-                            </div>
+                            <div class="text-muted small mb-1">Duplication</div>
+                            @php
+                            $dupBadge = match($request->duplication_reason) {
+                            'Lost' => 'bg-danger',
+                            'Damage' => 'bg-warning text-dark',
+                            'Expired Card' => 'bg-info',
+                            default => 'bg-secondary'
+                            };
+                            @endphp
+                            <span class="badge rounded-1 {{ $dupBadge }}">{{ $request->duplication_reason }}</span>
                         </div>
                         @endif
                         @if($request->id_card_number)
                         <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">ID Card Number</small>
-                                <strong class="text-dark d-block fs-6">{{ $request->id_card_number }}</strong>
-                            </div>
+                            <div class="text-muted small mb-1">ID Card Number</div>
+                            <div class="fw-semibold">{{ $request->id_card_number }}</div>
                         </div>
                         @endif
                         @if($request->id_card_valid_from)
                         <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">ID Card Valid From</small>
-                                <strong class="text-dark d-block fs-6">{{ $request->id_card_valid_from }}</strong>
-                            </div>
+                            <div class="text-muted small mb-1">ID Card Valid From</div>
+                            <div class="fw-semibold">{{ $request->id_card_valid_from }}</div>
                         </div>
                         @endif
                         @if($request->request_for == 'Extension')
                         <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">Extension</small>
-                                <strong class="text-dark d-block fs-6">{{ $request->id_card_valid_upto ?? '--' }}</strong>
-                            </div>
+                            <div class="text-muted small mb-1">Extension</div>
+                            <div class="fw-semibold">{{ $request->id_card_valid_upto ?? '--' }}</div>
                         </div>
                         @endif
                         <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-2">
-                                <small class="text-muted d-block mb-1">Request Date</small>
-                                <strong class="text-dark d-block fs-6">{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</strong>
-                            </div>
+                            <div class="text-muted small mb-1">Request Date</div>
+                            <div class="fw-semibold">
+                                {{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Remarks -->
+            {{-- Remarks --}}
             @if($request->remarks)
-                <div class="card border-0 shadow-sm rounded-3 mb-4">
-                    <div class="card-header bg-light border-0 rounded-top-3 p-3">
-                        <h6 class="mb-0 fw-bold">
-                            <i class="material-icons material-symbols-rounded align-middle me-2">comment</i>
-                            Remarks
-                        </h6>
-                    </div>
-                    <div class="card-body p-3">
-                        <p class="text-dark mb-0">{{ $request->remarks }}</p>
-                    </div>
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-body p-3 p-lg-4">
+                    <h6 class="text-primary fw-semibold d-flex align-items-center gap-2 mb-3">
+                        <i class="bi bi-chat-left-text" aria-hidden="true"></i> Remarks
+                    </h6>
+                    <p class="mb-0">{{ $request->remarks }}</p>
                 </div>
+            </div>
             @endif
         </div>
 
-        <!-- Sidebar -->
+        {{-- Sidebar --}}
         <div class="col-lg-4">
-            <!-- Documents Card -->
+
+            {{-- Attached Documents --}}
             <div class="card border-0 shadow-sm rounded-3 mb-4">
-                <div class="card-header bg-light border-0 rounded-top-3 p-3">
-                    <h6 class="mb-0 fw-bold">
-                        <i class="material-icons material-symbols-rounded align-middle me-2">attachment</i>
-                        Attached Documents
+                <div class="card-body p-3 p-lg-4">
+                    <h6 class="text-primary fw-semibold d-flex align-items-center gap-2 mb-3">
+                        <i class="bi bi-paperclip" aria-hidden="true"></i> Attached Documents
                     </h6>
-                </div>
-                <div class="card-body p-3">
                     <div class="row g-2">
-                        <!-- Photo -->
                         @php
-                            $photoExists = $request->photo && \Storage::disk('public')->exists($request->photo);
+                        $photoExists = $request->photo && \Storage::disk('public')->exists($request->photo);
                         @endphp
                         @if($photoExists)
-                            <div class="col-12">
-                                <div class="card border-0 bg-light rounded-2 p-3 text-center">
-                                    <i class="material-icons material-symbols-rounded text-primary" style="font-size:48px;">image</i>
-                                    <small class="d-block mt-2 text-muted">Photo</small>
-                                    <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2 w-100">
-                                        <i class="material-icons material-symbols-rounded align-middle" style="font-size:16px;">download</i>
-                                        View / Download
-                                    </a>
-                                </div>
+                        <div class="col-12">
+                            <div class="border rounded-3 p-3 text-center">
+                                <i class="bi bi-image text-primary" style="font-size:40px;"></i>
+                                <small class="d-block mt-2 text-muted">Photo</small>
+                                <a href="{{ asset('storage/' . $request->photo) }}" target="_blank"
+                                    class="btn btn-sm btn-outline-primary rounded-1 mt-2 w-100">
+                                    <i class="bi bi-download me-1" aria-hidden="true"></i> View / Download
+                                </a>
                             </div>
+                        </div>
                         @else
-                            <div class="col-12">
-                                <div class="card border-0 bg-light rounded-2 p-3 text-center">
-                                    <i class="material-icons material-symbols-rounded text-muted" style="font-size:48px; opacity: 0.5;">image</i>
-                                    <small class="d-block mt-2 text-muted">No photo uploaded</small>
-                                </div>
+                        <div class="col-12">
+                            <div class="border rounded-3 p-3 text-center">
+                                <i class="bi bi-image text-muted" style="font-size:40px; opacity:0.5;"></i>
+                                <small class="d-block mt-2 text-muted">No photo uploaded</small>
                             </div>
+                        </div>
                         @endif
 
-                        <!-- Joining letter (permanent) or supporting document (contractual: appointment / joining letter etc.) -->
                         @php
-                            $supportingPath = $request->joining_letter ?? $request->documents;
-                            $supportingExists = $supportingPath && \Storage::disk('public')->exists($supportingPath);
-                            $supportingLabel = ($request->employee_type ?? '') === 'Contractual Employee'
-                                ? 'Supporting document'
-                                : 'Joining Letter';
+                        $supportingPath = $request->joining_letter ?? $request->documents;
+                        $supportingExists = $supportingPath && \Storage::disk('public')->exists($supportingPath);
+                        $supportingLabel = ($request->employee_type ?? '') === 'Contractual Employee'
+                        ? 'Supporting document'
+                        : 'Joining Letter';
                         @endphp
                         @if($supportingExists)
-                            <div class="col-12">
-                                <div class="card border-0 bg-light rounded-2 p-3 text-center">
-                                    <i class="material-icons material-symbols-rounded text-info" style="font-size:48px;">description</i>
-                                    <small class="d-block mt-2 text-muted">{{ $supportingLabel }}</small>
-                                    <a href="{{ asset('storage/' . $supportingPath) }}" target="_blank" class="btn btn-sm btn-outline-info mt-2 w-100">
-                                        <i class="material-icons material-symbols-rounded align-middle" style="font-size:16px;">visibility</i>
-                                        View / Download
-                                    </a>
-                                </div>
+                        <div class="col-12">
+                            <div class="border rounded-3 p-3 text-center">
+                                <i class="bi bi-file-earmark-text text-info" style="font-size:40px;"></i>
+                                <small class="d-block mt-2 text-muted">{{ $supportingLabel }}</small>
+                                <a href="{{ asset('storage/' . $supportingPath) }}" target="_blank"
+                                    class="btn btn-sm btn-outline-info rounded-1 mt-2 w-100">
+                                    <i class="bi bi-eye me-1" aria-hidden="true"></i> View / Download
+                                </a>
                             </div>
+                        </div>
                         @endif
 
-                        <!-- FIR Receipt (for Lost/Damaged) -->
                         @php
-                            $firExists = $request->fir_receipt && \Storage::disk('public')->exists($request->fir_receipt);
+                        $firExists = $request->fir_receipt && \Storage::disk('public')->exists($request->fir_receipt);
                         @endphp
                         @if($firExists)
-                            <div class="col-12">
-                                <div class="card border-0 bg-light rounded-2 p-3 text-center">
-                                    <i class="material-icons material-symbols-rounded text-warning" style="font-size:48px;">gavel</i>
-                                    <small class="d-block mt-2 text-muted">FIR Receipt</small>
-                                    <a href="{{ asset('storage/' . $request->fir_receipt) }}" target="_blank" class="btn btn-sm btn-outline-warning mt-2 w-100">
-                                        <i class="material-icons material-symbols-rounded align-middle" style="font-size:16px;">visibility</i>
-                                        View / Download
-                                    </a>
-                                </div>
+                        <div class="col-12">
+                            <div class="border rounded-3 p-3 text-center">
+                                <i class="bi bi-file-earmark-medical text-warning" style="font-size:40px;"></i>
+                                <small class="d-block mt-2 text-muted">FIR Receipt</small>
+                                <a href="{{ asset('storage/' . $request->fir_receipt) }}" target="_blank"
+                                    class="btn btn-sm btn-outline-warning rounded-1 mt-2 w-100">
+                                    <i class="bi bi-eye me-1" aria-hidden="true"></i> View / Download
+                                </a>
                             </div>
+                        </div>
                         @endif
 
-                        <!-- Payment Receipt -->
                         @php
-                            $paymentExists = $request->payment_receipt && \Storage::disk('public')->exists($request->payment_receipt);
+                        $paymentExists = $request->payment_receipt &&
+                        \Storage::disk('public')->exists($request->payment_receipt);
                         @endphp
                         @if($paymentExists)
-                            <div class="col-12">
-                                <div class="card border-0 bg-light rounded-2 p-3 text-center">
-                                    <i class="material-icons material-symbols-rounded text-success" style="font-size:48px;">receipt</i>
-                                    <small class="d-block mt-2 text-muted">Payment Receipt</small>
-                                    <a href="{{ asset('storage/' . $request->payment_receipt) }}" target="_blank" class="btn btn-sm btn-outline-success mt-2 w-100">
-                                        <i class="material-icons material-symbols-rounded align-middle" style="font-size:16px;">visibility</i>
-                                        View / Download
-                                    </a>
-                                </div>
+                        <div class="col-12">
+                            <div class="border rounded-3 p-3 text-center">
+                                <i class="bi bi-receipt text-success" style="font-size:40px;"></i>
+                                <small class="d-block mt-2 text-muted">Payment Receipt</small>
+                                <a href="{{ asset('storage/' . $request->payment_receipt) }}" target="_blank"
+                                    class="btn btn-sm btn-outline-success rounded-1 mt-2 w-100">
+                                    <i class="bi bi-eye me-1" aria-hidden="true"></i> View / Download
+                                </a>
                             </div>
+                        </div>
                         @endif
-
                     </div>
                 </div>
             </div>
 
-            <!-- Quick Info Card -->
+            {{-- Quick Info --}}
             <div class="card border-0 shadow-sm rounded-3 mb-4">
-                <div class="card-header bg-light border-0 rounded-top-3 p-3">
-                    <h6 class="mb-0 fw-bold">
-                        <i class="material-icons material-symbols-rounded align-middle me-2">info</i>
-                        Quick Info
+                <div class="card-body p-3 p-lg-4">
+                    <h6 class="text-primary fw-semibold d-flex align-items-center gap-2 mb-3">
+                        <i class="bi bi-info-circle" aria-hidden="true"></i> Quick Info
                     </h6>
-                </div>
-                <div class="card-body p-3">
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Created By:</span>
-                        <strong class="text-dark">{{ $request->created_by_name ?? '--' }}</strong>
+                        <strong>{{ $request->created_by_name ?? '--' }}</strong>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Last Updated:</span>
-                        <strong class="text-dark">{{ $request->updated_at->diffForHumans() }}</strong>
+                        <strong>{{ $request->updated_at ? $request->updated_at->diffForHumans() : '--' }}</strong>
                     </div>
                     @if($request->approver1)
                     <div class="d-flex justify-content-between mb-2">
@@ -403,44 +361,11 @@
                     </div>
                     @endif
                     <hr>
-                    <div class="d-flex justify-content-between">
+                    <div class="d-flex justify-content-between align-items-center">
                         <span class="text-muted">Status:</span>
-                        <span class="badge bg-{{ $statusClass }}"
-                              @if(($request->status ?? '') === 'Approved') title="Please collect your ID card from security section" @endif>{{ $request->status }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Action Buttons - Bootstrap 5.3 -->
-            <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden">
-                <div class="card-header bg-light border-0 rounded-top-3 p-3">
-                    <h6 class="mb-0 fw-bold">
-                        <i class="material-icons material-symbols-rounded align-middle me-2">manage_accounts</i>
-                        Actions
-                    </h6>
-                </div>
-                <div class="card-body p-3">
-                    <div class="d-grid gap-2">
-                        @if($request->user_may_edit_request ?? false)
-                        <a href="{{ route('admin.employee_idcard.edit', $request->id) }}" class="btn btn-primary rounded-2">
-                            <i class="material-icons material-symbols-rounded align-middle me-2">edit</i>
-                            Edit Request
-                        </a>
-                        @endif
-                        <a href="{{ route('admin.employee_idcard.index') }}" class="btn btn-outline-secondary rounded-2">
-                            <i class="material-icons material-symbols-rounded align-middle me-2">arrow_back</i>
-                            Back to List
-                        </a>
-                        @if($request->user_may_edit_request ?? false)
-                        <form action="{{ route('admin.employee_idcard.destroy', $request->id) }}" method="POST" class="mt-2" onsubmit="return confirm('Are you sure you want to delete this request?');">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-outline-danger rounded-2 w-100">
-                                <i class="material-icons material-symbols-rounded align-middle me-2">delete</i>
-                                Delete Request
-                            </button>
-                        </form>
-                        @endif
+                        <span class="badge rounded-1 {{ $statusClass }}" @if(($request->status ?? '') === 'Approved')
+                            data-bs-toggle="tooltip" title="Please collect your ID card from security section"
+                            @endif>{{ $request->status }}</span>
                     </div>
                 </div>
             </div>
@@ -448,23 +373,17 @@
     </div>
 </div>
 
-<style>
-    .bg-light {
-        background-color: #f8f9fa !important;
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+            try {
+                bootstrap.Tooltip.getOrCreateInstance(el);
+            } catch (e) {}
+        });
     }
-
-    .card {
-        transition: box-shadow 0.3s ease;
-    }
-
-    .card:hover {
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08) !important;
-    }
-
-    .badge {
-        font-weight: 500;
-        padding: 0.4rem 0.8rem;
-        border-radius: 0.35rem;
-    }
-</style>
+});
+</script>
+@endpush
 @endsection

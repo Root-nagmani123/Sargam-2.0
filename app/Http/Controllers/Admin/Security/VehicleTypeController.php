@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Security;
 
+use App\DataTables\Security\VehicleTypeDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\SecVehicleType;
 use Illuminate\Http\Request;
@@ -9,10 +10,9 @@ use Illuminate\Validation\Rule;
 
 class VehicleTypeController extends Controller
 {
-    public function index()
+    public function index(VehicleTypeDataTable $dataTable)
     {
-        $vehicleTypes = SecVehicleType::orderBy('pk', 'desc')->paginate(10);
-        return view('admin.security.vehicle_type.index', compact('vehicleTypes'));
+        return $dataTable->render('admin.security.vehicle_type.index');
     }
 
     public function create(Request $request)

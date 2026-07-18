@@ -13,7 +13,9 @@ return new class extends Migration
     {
         Schema::create('sec_visitor_names', function (Blueprint $table) {
             $table->id('pk');
-            $table->unsignedBigInteger('sec_visitor_card_generated_pk');
+            // Match sec_visitor_card_generated.pk which is a signed INT auto_increment,
+            // otherwise MySQL rejects the FK (error 3780: incompatible columns).
+            $table->integer('sec_visitor_card_generated_pk');
             $table->string('visitor_name', 255);
             $table->timestamp('created_date')->nullable();
             
