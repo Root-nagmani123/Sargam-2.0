@@ -90,12 +90,12 @@ class FcRegistrationFlowService
     {
         $trackerTable = $form->trackerStorageTable();
         $masterRow = null;
-        $trackerIsFormScoped = Schema::hasTable($trackerTable)
-            && Schema::hasColumn($trackerTable, 'form_id');
+        $trackerIsFormScoped = fc_schema_has_table($trackerTable)
+            && fc_schema_has_column($trackerTable, 'form_id');
 
         if ($steps->contains(fn ($s) => filled($s->tracker_column))
-            && Schema::hasTable($trackerTable)
-            && Schema::hasColumn($trackerTable, fc_user_col($trackerTable))) {
+            && fc_schema_has_table($trackerTable)
+            && fc_schema_has_column($trackerTable, fc_user_col($trackerTable))) {
             $userKey = fc_user_col($trackerTable);
             $trackerQuery = DB::table($trackerTable)->where($userKey, fc_user_val($trackerTable, $userId));
             if ($trackerIsFormScoped) {

@@ -8,11 +8,13 @@ use App\Exports\FcRosterListExport;
 use App\Http\Controllers\Concerns\LbsnaaReportExport;
 use App\Http\Controllers\Controller;
 use App\Services\FC\FcMigrateStudentsExportService;
+use App\Services\OfficerTraineeRoleService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 use Maatwebsite\Excel\Facades\Excel;
@@ -21,8 +23,16 @@ class StudentImportController extends Controller
 {
     use LbsnaaReportExport;
 
-    public function __construct(private FcMigrateStudentsExportService $exports)
-    {
+    /** @var array<int, string>|null Cached list of re-key target tables (resolved once per request). */
+    private ?array $rekeyTablesResolved = null;
+
+    /** @var array{enabled: bool, pre_history: bool, ot_details: bool}|null */
+    private ?array $courseBackfillFlagsResolved = null;
+
+    public function __construct(
+        private FcMigrateStudentsExportService $exports,
+        private OfficerTraineeRoleService $officerTraineeRole,
+    ) {
     }
 
     public function index(
@@ -141,11 +151,14 @@ class StudentImportController extends Controller
             $now = Carbon::now();
             $studentMasterColumns = Schema::getColumnListing('student_master');
             $migratedCount = 0;
+            // user_credentials.pk of every migrated login — fed to the Officer Trainee role
+            // backfill after the transaction commits.
+            $affectedCredentialPks = [];
 
             $this->eligibleRosterQuery()
                 ->whereIn('r.pk', $pks)
                 ->orderBy('r.pk')
-                ->chunk($batchSize, function ($chunkedRecords) use ($now, $studentMasterColumns, &$migratedCount) {
+                ->chunk($batchSize, function ($chunkedRecords) use ($now, $studentMasterColumns, &$migratedCount, &$affectedCredentialPks) {
                     $studentsToInsert = [];
                     $studentsToUpdate = [];
                     $credentialsToInsert = [];
@@ -521,6 +534,7 @@ class StudentImportController extends Controller
                         }
 
                         if ($existingForRekey && ! empty($existingForRekey->pk)) {
+                            $affectedCredentialPks[] = (int) $existingForRekey->pk;
                             $this->rekeyFcFormUserIdFromRosterPk((int) $record->pk, (int) $existingForRekey->pk);
                         }
                     }
@@ -529,6 +543,29 @@ class StudentImportController extends Controller
                     $validCourseMaps = array_filter($courseMapsToInsert, function ($map) {
                         return isset($map['student_master_pk']) && is_numeric($map['student_master_pk']);
                     });
+
+                    // Pre-fetch the (student, course) pairs already mapped for this batch in a
+                    // single query instead of an exists() lookup per mapping. Outcome is identical
+                    // — the same existing combinations are skipped — but N SELECTs collapse to 1.
+                    $existingCourseMaps = [];
+                    if (!empty($validCourseMaps)) {
+                        $mapStudentPks = array_values(array_unique(array_map(
+                            static fn ($map) => (int) $map['student_master_pk'],
+                            $validCourseMaps
+                        )));
+                        $mapCoursePks = array_values(array_unique(array_map(
+                            static fn ($map) => (int) $map['course_master_pk'],
+                            $validCourseMaps
+                        )));
+
+                        DB::table('student_master_course__map')
+                            ->whereIn('student_master_pk', $mapStudentPks)
+                            ->whereIn('course_master_pk', $mapCoursePks)
+                            ->get(['student_master_pk', 'course_master_pk'])
+                            ->each(function ($row) use (&$existingCourseMaps) {
+                                $existingCourseMaps[$row->student_master_pk . '_' . $row->course_master_pk] = true;
+                            });
+                    }
 
                     // Remove temporary user_id field and check for duplicates
                     $finalCourseMaps = [];
@@ -542,28 +579,30 @@ class StudentImportController extends Controller
                             continue;
                         }
 
-                        // Double-check if the mapping already exists in the database
-                        $exists = DB::table('student_master_course__map')
-                            ->where('student_master_pk', $map['student_master_pk'])
-                            ->where('course_master_pk', $map['course_master_pk'])
-                            ->exists();
-
-                        // Only insert if it doesn't exist
-                        if (!$exists) {
-                            unset($map['user_id']);
-                            $finalCourseMaps[] = $map;
-                            $processedMappings[$mapKey] = true;
+                        // Skip if the mapping already exists in the database (pre-fetched above)
+                        if (isset($existingCourseMaps[$mapKey])) {
+                            continue;
                         }
+
+                        unset($map['user_id']);
+                        $finalCourseMaps[] = $map;
+                        $processedMappings[$mapKey] = true;
                     }
 
-                    // Batch insert course mappings with final duplicate check
+                    // Batch insert course mappings in a single statement; insertOrIgnore remains
+                    // the final safety net against a concurrent duplicate. If the bulk insert
+                    // fails for any reason, fall back to per-row inserts so one bad row cannot
+                    // drop the whole batch (preserving the previous behaviour).
                     if (!empty($finalCourseMaps)) {
-                        foreach ($finalCourseMaps as $mapData) {
-                            try {
-                                // Use insertOrIgnore as a final safety net
-                                DB::table('student_master_course__map')->insertOrIgnore($mapData);
-                            } catch (\Exception $e) {
-                                continue;
+                        try {
+                            DB::table('student_master_course__map')->insertOrIgnore($finalCourseMaps);
+                        } catch (\Exception $e) {
+                            foreach ($finalCourseMaps as $mapData) {
+                                try {
+                                    DB::table('student_master_course__map')->insertOrIgnore($mapData);
+                                } catch (\Exception $inner) {
+                                    continue;
+                                }
                             }
                         }
                     }
@@ -572,6 +611,20 @@ class StudentImportController extends Controller
                 });
 
             DB::commit();
+
+            // Officer Trainee role backfill for the migrated logins.
+            // Runs AFTER commit (never inside the migration transaction) and is wrapped so a
+            // role-assignment failure can never roll back an already-committed migration. The
+            // service is idempotent — it inserts into model_has_roles only for user_credentials
+            // rows of category 'S' that are missing the role — so re-runs are safe.
+            $affectedCredentialPks = array_values(array_unique(array_filter($affectedCredentialPks)));
+            if ($affectedCredentialPks !== []) {
+                try {
+                    $this->officerTraineeRole->assignToUserPks($affectedCredentialPks);
+                } catch (\Throwable $e) {
+                    Log::warning('FC migration: Officer Trainee role assignment failed: ' . $e->getMessage());
+                }
+            }
 
             if ($migratedCount === 0) {
                 return back()->with('error', 'No eligible records were migrated. Check selection and filters.');
@@ -649,7 +702,57 @@ class StudentImportController extends Controller
             return;
         }
 
-        $tables = [
+        // Schema existence is resolved once per request (see rekeyTables()), not per record,
+        // so the ~30 information_schema lookups no longer repeat for every migrated user.
+        foreach ($this->rekeyTables() as $table) {
+            try {
+                DB::table($table)->where('user_id', $rosterPk)->update(['user_id' => $credentialsPk]);
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+
+        // Populate course_master_pk (INT) on fc_pre_history and fc_ot_details rows for this user.
+        $courseFlags = $this->courseBackfillFlags();
+        if ($courseFlags['enabled']) {
+            $rosterCoursePk = (int) (DB::table('fc_registration_master')
+                ->where('pk', $rosterPk)
+                ->value('course_master_pk') ?? 0);
+
+            if ($rosterCoursePk > 0) {
+                if ($courseFlags['pre_history']) {
+                    DB::table('fc_pre_history')
+                        ->where('user_id', $credentialsPk)
+                        ->whereNull('course_master_pk')
+                        ->update(['course_master_pk' => $rosterCoursePk]);
+                }
+
+                // fc_ot_details: set course_master_pk on rows for this user that are still null
+                if ($courseFlags['ot_details']) {
+                    DB::table('fc_ot_details')
+                        ->where('user_id', $credentialsPk)
+                        ->whereNull('course_master_pk')
+                        ->update(['course_master_pk' => $rosterCoursePk]);
+                }
+            }
+        }
+    }
+
+    /**
+     * Tables whose user_id must switch from the roster pk to user_credentials.pk after migration.
+     * Existence is checked once and cached for the request lifetime (the schema never changes
+     * mid-run), replacing ~60 information_schema lookups per migrated record with a one-time cost.
+     * The candidate list and its filter rules are identical to the previous inline version.
+     *
+     * @return array<int, string>
+     */
+    private function rekeyTables(): array
+    {
+        if ($this->rekeyTablesResolved !== null) {
+            return $this->rekeyTablesResolved;
+        }
+
+        $candidates = [
             'student_masters',
             'student_master_firsts',
             'student_master_seconds',
@@ -686,42 +789,34 @@ class StudentImportController extends Controller
             'fc_path_report',
         ];
 
-        foreach ($tables as $table) {
-            if (! \Illuminate\Support\Facades\Schema::hasTable($table)
-                || ! \Illuminate\Support\Facades\Schema::hasColumn($table, 'user_id')) {
-                continue;
+        return $this->rekeyTablesResolved = array_values(array_filter(
+            $candidates,
+            static function ($table) {
+                return \Illuminate\Support\Facades\Schema::hasTable($table)
+                    && \Illuminate\Support\Facades\Schema::hasColumn($table, 'user_id');
             }
-            try {
-                DB::table($table)->where('user_id', $rosterPk)->update(['user_id' => $credentialsPk]);
-            } catch (\Exception $e) {
-                continue;
-            }
+        ));
+    }
+
+    /**
+     * Resolve (once per request) whether the course_master_pk backfill targets exist.
+     *
+     * @return array{enabled: bool, pre_history: bool, ot_details: bool}
+     */
+    private function courseBackfillFlags(): array
+    {
+        if ($this->courseBackfillFlagsResolved !== null) {
+            return $this->courseBackfillFlagsResolved;
         }
 
-        // Populate course_master_pk (INT) on fc_pre_history and fc_ot_details rows for this user.
-        if (\Illuminate\Support\Facades\Schema::hasTable('fc_registration_master')
-            && \Illuminate\Support\Facades\Schema::hasTable('course_master')) {
-            $rosterCoursePk = (int) (DB::table('fc_registration_master')
-                ->where('pk', $rosterPk)
-                ->value('course_master_pk') ?? 0);
+        $enabled = \Illuminate\Support\Facades\Schema::hasTable('fc_registration_master')
+            && \Illuminate\Support\Facades\Schema::hasTable('course_master');
 
-            if ($rosterCoursePk > 0) {
-                if (\Illuminate\Support\Facades\Schema::hasTable('fc_pre_history')) {
-                    DB::table('fc_pre_history')
-                        ->where('user_id', $credentialsPk)
-                        ->whereNull('course_master_pk')
-                        ->update(['course_master_pk' => $rosterCoursePk]);
-                }
-
-                // fc_ot_details: set course_master_pk on rows for this user that are still null
-                if (\Illuminate\Support\Facades\Schema::hasTable('fc_ot_details')) {
-                    DB::table('fc_ot_details')
-                        ->where('user_id', $credentialsPk)
-                        ->whereNull('course_master_pk')
-                        ->update(['course_master_pk' => $rosterCoursePk]);
-                }
-            }
-        }
+        return $this->courseBackfillFlagsResolved = [
+            'enabled' => $enabled,
+            'pre_history' => $enabled && \Illuminate\Support\Facades\Schema::hasTable('fc_pre_history'),
+            'ot_details' => $enabled && \Illuminate\Support\Facades\Schema::hasTable('fc_ot_details'),
+        ];
     }
 
     /**

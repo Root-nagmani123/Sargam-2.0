@@ -237,6 +237,8 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     // Individual student full profile
     Route::get('/student/{username}', [ReportController::class, 'studentDetail'])->name('student');
     Route::get('/student/{username}/pdf', [ReportController::class, 'studentDetailPdf'])->name('student.pdf');
+    // Standalone per-student document verification page
+    Route::get('/student/{username}/documents', [ReportController::class, 'studentDocuments'])->name('student.documents');
     Route::post('/student/{username}/documents/{documentMasterId}/verify', [ReportController::class, 'updateStudentDocumentVerification'])
         ->name('student.documents.verify');
     Route::post('/student/{userId}/form-documents/{formFieldId}/verify', [ReportController::class, 'updateDynamicFormDocumentVerification'])
@@ -263,6 +265,8 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     Route::get('/by-state',     [ReportController::class, 'byState'])->name('state');
     Route::get('/documents',            [ReportController::class, 'documents'])->name('documents');
     Route::get('/documents/export-zip', [ReportController::class, 'documentsExportZip'])->name('documents.export');
+    // Course-wise Document Verification report (student list → per-student verify page)
+    Route::get('/document-verification', [ReportController::class, 'documentVerificationIndex'])->name('document-verification');
     Route::get('/bank-details', [ReportController::class, 'bankDetails'])->name('bank');
 
     // CSV exports

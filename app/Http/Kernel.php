@@ -30,6 +30,9 @@ class Kernel extends HttpKernel
      */
     protected $middlewareGroups = [
         'web' => [
+            // Outermost: gzips the finished response (no-op when the web server
+            // already compressed it). FC form pages compress ~13x.
+            \App\Http\Middleware\CompressResponse::class,
             \App\Http\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,

@@ -159,7 +159,7 @@ class FcImportedProfileLockService
         if ($userId < 0) {
             $row = $query->where('pk', abs($userId))->first();
         } else {
-            $username = DB::table('user_credentials')->where('pk', $userId)->value('user_name');
+            $username = fc_user_name_for_id($userId);
             $row = ($username !== null && trim((string) $username) !== '')
                 ? $query->where('user_id', trim((string) $username))->first()
                 : null;

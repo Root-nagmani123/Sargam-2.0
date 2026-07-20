@@ -11,6 +11,7 @@ use App\Models\FC\FcPreHistory;
 use App\Models\FC\StudentMasterFirst;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -120,7 +121,7 @@ class DynamicFormService
         ?object $existingData = null
     ): array {
         if ($existingData === null && $step !== null && $userId !== null) {
-            $existingData = $this->getExistingData($step->step_slug, $userId);
+            $existingData = $this->existingDataForStepModel($step, $userId);
         }
 
         $rules = [];
@@ -297,23 +298,14 @@ class DynamicFormService
             }
 
             $table = $this->normalizeLookupTable($field->lookup_table);
-            if (! Schema::hasTable($table)) {
+            if (! fc_schema_has_table($table)) {
                 continue;
             }
 
-            $query = DB::table($table);
+            $orderColumn = $field->lookup_order_column
+                ?: ($field->lookup_label_column ?: null);
 
-            if ($table === 'state_master' && Schema::hasColumn($table, 'country_master_pk')) {
-                $query->select('*');
-            }
-
-            if ($field->lookup_order_column) {
-                $query->orderBy($field->lookup_order_column);
-            } elseif ($field->lookup_label_column) {
-                $query->orderBy($field->lookup_label_column);
-            }
-
-            $lookups[$field->field_name] = $query->get();
+            $lookups[$field->field_name] = $this->cachedLookupRows($table, $orderColumn);
         }
 
         return $lookups;
@@ -326,23 +318,41 @@ class DynamicFormService
      */
     public function getDistrictMasterOptions(): Collection
     {
-        if (! Schema::hasTable('state_district_mapping')) {
+        if (! fc_schema_has_table('state_district_mapping')) {
             return collect();
         }
 
-        $query = DB::table('state_district_mapping')
-            ->select('pk', 'district_name', 'state_master_pk', 'country_master_pk');
+        static $memo = null;
 
-        if (Schema::hasColumn('state_district_mapping', 'active_inactive')) {
-            $query->where('active_inactive', 1);
+        if ($memo === null) {
+            $fetch = static function () {
+                $query = DB::table('state_district_mapping')
+                    ->select('pk', 'district_name', 'state_master_pk', 'country_master_pk');
+
+                if (fc_schema_has_column('state_district_mapping', 'active_inactive')) {
+                    $query->where('active_inactive', 1);
+                }
+
+                return $query->orderBy('district_name')->get()->all();
+            };
+
+            $ttl = (int) config('fc.lookup_cache_ttl', 600);
+
+            try {
+                $memo = $ttl > 0
+                    ? Cache::remember($this->lookupCacheKey('districts'), $ttl, $fetch)
+                    : $fetch();
+            } catch (\Throwable $e) {
+                $memo = $fetch();
+            }
         }
 
-        return $query->orderBy('district_name')->get();
+        return collect($memo);
     }
 
     public function getExistingDataForStep(FcFormStep $step, int $userId): ?object
     {
-        return $this->getExistingData($step->step_slug, $userId);
+        return $this->existingDataForStepModel($step, $userId);
     }
 
     /**
@@ -363,19 +373,74 @@ class DynamicFormService
                 continue;
             }
 
-            $query = DB::table($table);
-
             if (property_exists($field, 'lookup_order_column') && $field->lookup_order_column) {
-                $query->orderBy($field->lookup_order_column);
+                $orderColumn = $field->lookup_order_column;
             } elseif (property_exists($field, 'lookup_label_column') && $field->lookup_label_column) {
-                $query->orderBy($field->lookup_label_column);
+                $orderColumn = $field->lookup_label_column;
             } elseif ($table === 'language_master') {
-                $query->orderBy('language_name');
+                $orderColumn = 'language_name';
+            } else {
+                $orderColumn = null;
             }
 
-            $lookups[$field->field_name] = $query->get();
+            $lookups[$field->field_name] = $this->cachedLookupRows($table, $orderColumn);
         }
         return $lookups;
+    }
+
+    /**
+     * Rows for a reference/master table, de-duplicated within the request and cached
+     * across requests.
+     *
+     * These masters (states, countries, languages, districts, cities, qualifications…)
+     * change very rarely but were re-queried once per field: a single Descriptive Roll
+     * render fetched language_master 5x, state_master 4x and country_master 2x. Under
+     * 200 concurrent users that multiplied into the dominant DB load.
+     *
+     * The per-request memo holds a plain array and a fresh Collection is handed to each
+     * caller, so no two fields can share (and accidentally mutate) one instance.
+     *
+     * @return Collection<int, object>
+     */
+    /**
+     * Cache key for a reference-table lookup, namespaced by database and by the
+     * lookup cache version so fc_flush_lookup_cache() can publish master-data
+     * edits instantly instead of waiting out the TTL.
+     */
+    private function lookupCacheKey(string $suffix): string
+    {
+        return 'fc_lookup:'.DB::getDatabaseName().':v'.fc_lookup_cache_version().':'.$suffix;
+    }
+
+    private function cachedLookupRows(string $table, ?string $orderColumn = null): Collection
+    {
+        static $memo = [];
+
+        $key = $table.'|'.($orderColumn ?? '');
+
+        if (! array_key_exists($key, $memo)) {
+            $fetch = static function () use ($table, $orderColumn) {
+                $query = DB::table($table);
+                if ($orderColumn !== null && $orderColumn !== '') {
+                    $query->orderBy($orderColumn);
+                }
+
+                return $query->get()->all();
+            };
+
+            $ttl = (int) config('fc.lookup_cache_ttl', 600);
+
+            try {
+                $memo[$key] = $ttl > 0
+                    ? Cache::remember($this->lookupCacheKey($key), $ttl, $fetch)
+                    : $fetch();
+            } catch (\Throwable $e) {
+                // Cache store unavailable — never fail a page render over a cache miss.
+                $memo[$key] = $fetch();
+            }
+        }
+
+        return collect($memo[$key]);
     }
 
     /**
@@ -401,10 +466,10 @@ class DynamicFormService
 
     private function languageMasterPrimaryKeyColumn(): string
     {
-        if (! Schema::hasTable('language_master')) {
+        if (! fc_schema_has_table('language_master')) {
             return 'id';
         }
-        $cols = Schema::getColumnListing('language_master');
+        $cols = fc_schema_columns('language_master');
         // Legacy Sargam uses pk; some DBs have both id and pk — prefer pk when present so values match seeded rows.
         if (in_array('pk', $cols, true)) {
             return 'pk';
@@ -441,6 +506,10 @@ class DynamicFormService
 
     /**
      * Get existing data for a step from its target table.
+     *
+     * Resolves the step from its slug. Callers that already hold the step model
+     * should use getExistingDataForStep() instead, which skips the extra
+     * fc_form_steps + fc_form_fields round trip.
      */
     public function getExistingData(string $stepSlug, int $userId): ?object
     {
@@ -449,6 +518,14 @@ class DynamicFormService
             return null;
         }
 
+        return $this->existingDataForStepModel($step, $userId);
+    }
+
+    /**
+     * Same as getExistingData() but for an already-loaded step model.
+     */
+    private function existingDataForStepModel(FcFormStep $step, int $userId): ?object
+    {
         // A flat step can write to several tables (e.g. Descriptive Roll →
         // student_master_firsts + student_master_seconds + knowledge_hindi).
         // Merge every table its fields target so ALL values prefill on
@@ -468,7 +545,7 @@ class DynamicFormService
 
         $rowsByTable = [];
         foreach (array_keys($tables) as $tbl) {
-            if (! Schema::hasTable($tbl)) {
+            if (! fc_schema_has_table($tbl)) {
                 continue;
             }
             $uVal = $this->userVal($tbl, $userId);
@@ -583,11 +660,9 @@ class DynamicFormService
         // This handles cases where student_master_firsts.session_id is null (e.g. pre-migration
         // staged-login users who belong to a dynamic-form course set on fc_registration_master).
         $rosterPk = $userId < 0 ? abs($userId) : null;
-        if ($rosterPk === null && \Illuminate\Support\Facades\Schema::hasTable('fc_registration_master')) {
+        if ($rosterPk === null && fc_schema_has_table('fc_registration_master')) {
             // Positive userId post-migration: find roster via user_credentials.user_name
-            $userName = \Illuminate\Support\Facades\DB::table('user_credentials')
-                ->where('pk', $userId)
-                ->value('user_name');
+            $userName = fc_user_name_for_id($userId);
             if ($userName) {
                 $rosterPk = (int) (\Illuminate\Support\Facades\DB::table('fc_registration_master')
                     ->where('user_id', $userName)
