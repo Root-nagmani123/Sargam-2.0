@@ -245,34 +245,14 @@ class VehiclePassApprovalController extends Controller
         $issuedList = $merged->filter(fn ($d) => (($d->status_int ?? 1) === 2) && (($d->has_level2 ?? false) === true))->values();
         $rejectedList = $merged->filter(fn ($d) => ($d->status_int ?? 1) === 3)->values();
 
-        $newApplications = new LengthAwarePaginator(
-            $newList->forPage($newPage, $perPage)->values(),
-            $newList->count(),
-            $perPage,
-            $newPage,
-            ['path' => $request->url(), 'pageName' => 'new_page', 'query' => $request->query()]
-        );
-        $processedApplications = new LengthAwarePaginator(
-            $processedList->forPage($forPage, $perPage)->values(),
-            $processedList->count(),
-            $perPage,
-            $forPage,
-            ['path' => $request->url(), 'pageName' => 'for_page', 'query' => $request->query()]
-        );
-        $issuedApplications = new LengthAwarePaginator(
-            $issuedList->forPage($issuedPage, $perPage)->values(),
-            $issuedList->count(),
-            $perPage,
-            $issuedPage,
-            ['path' => $request->url(), 'pageName' => 'issued_page', 'query' => $request->query()]
-        );
-        $rejectedApplications = new LengthAwarePaginator(
-            $rejectedList->forPage($rejectPage, $perPage)->values(),
-            $rejectedList->count(),
-            $perPage,
-            $rejectPage,
-            ['path' => $request->url(), 'pageName' => 'reject_page', 'query' => $request->query()]
-        );
+        // Each tab renders in full and paginates / searches / filters by date
+        // client-side (see the index view's DataTables setup). The Vehicle Type
+        // (wheeler) filter stays server-side — it selects which source tables
+        // are queried, so it can't be applied in the browser.
+        $newApplications = $newList->values();
+        $processedApplications = $processedList->values();
+        $issuedApplications = $issuedList->values();
+        $rejectedApplications = $rejectedList->values();
 
         $activeTab = $request->get('tab', 'new');
         if ($activeTab === 'archive') {
