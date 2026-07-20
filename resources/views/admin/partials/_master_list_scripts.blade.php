@@ -26,6 +26,10 @@ $(function () {
     var REPORT_TITLE = @json($reportTitle ?? 'List');
     var STORAGE_KEY = @json($storageKey ?? 'masterGrid:hiddenColumns:v1');
     var DEFAULT_ORDER = @json($defaultOrder ?? 1);
+    // Wording for the derived status column in the printed report. Pages whose
+    // data-status means something other than active/inactive override these.
+    var STATUS_HEADING = @json($statusHeading ?? 'Status');
+    var STATUS_LABELS = @json($statusLabels ?? ['Active', 'Inactive']);
 
     /* ---- Client-side Status filter ---- */
     $.fn.dataTable.ext.search.push(function (settings, searchData, dataIndex) {
@@ -94,7 +98,7 @@ $(function () {
         // status is rebuilt as text and the actions column is dropped.
         var headHtml = '<tr><th>S. No.</th>' +
             PRINT_COLUMNS.map(function (c) { return '<th>' + c.label + '</th>'; }).join('') +
-            '<th>Status</th></tr>';
+            '<th>' + STATUS_HEADING + '</th></tr>';
 
         var rowIdxs = table.rows({ search: 'applied', order: 'applied' }).indexes().toArray();
         var bodyHtml = rowIdxs.map(function (rowIdx, r) {
@@ -104,7 +108,7 @@ $(function () {
                 PRINT_COLUMNS.map(function (c) {
                     return '<td>' + cellText(table.cell(rowIdx, c.index).render('display')) + '</td>';
                 }).join('') +
-                '<td>' + (active ? 'Active' : 'Inactive') + '</td></tr>';
+                '<td>' + (active ? STATUS_LABELS[0] : STATUS_LABELS[1]) + '</td></tr>';
         }).join('');
 
         var dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });

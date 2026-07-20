@@ -1,101 +1,127 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Escalation Matrix - Sargam | Lal Bahadur')
+@section('title', 'Escalation Matrix')
 
-@section('css')
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 <style>
-.modal-body { background-color: #fff !important; color: #212529 !important; }
-.modal-content { background-color: #fff !important; }
+.master-filter-select {
+    height: 40px; width: 175px; padding: 0 2rem 0 0.875rem; font-size: 0.9375rem;
+    color: #344054; background-color: #fff; border: 1px solid #d0d5dd; border-radius: 8px;
+}
+.master-filter-select:focus { border-color: #004a93; box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12); }
+
+/* Keep the whole toolbar on one line; scroll horizontally rather than wrap. */
+.master-toolbar { flex-wrap: nowrap; overflow-x: auto; }
+.master-toolbar > * { flex: 0 0 auto; }
+.master-toolbar::-webkit-scrollbar { height: 6px; }
+.master-toolbar::-webkit-scrollbar-thumb { background: #d0d5dd; border-radius: 3px; }
+
+.programme-action-group .material-symbols-rounded { font-size: 18px; line-height: 1; }
+.escalation-level-empty { color: var(--ds-ink-muted, #98a2b3); }
 </style>
-@endsection
+@endpush
 
-@section('setup_content')
-<div class="container-fluid">
-    <x-breadcrum title="Escalation Matrix" />
-    <div class="datatables">
-        <div class="card" >
-            <div class="card-body">
-                <div class="row mb-2">
-                    <div class="col-6">
-                        <h4 class="mb-0">Escalation Matrix - 3 Level Hierarchy</h4>
-                        <p class="text-muted small mb-0 mt-1">Employees mapped with complaint category. Days define escalation timeline from Level 1 → 2 → 3.</p>
-                    </div>
-                    <div class="col-6 text-end">
-                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMatrixModal">
-                            <i class="bi bi-plus-circle-fill" aria-hidden="true"></i> Add Mapping
-                        </button>
-                    </div>
-                </div>
-                <hr>
-                @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        {{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                @endif
-                @if(session('error'))
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        {{ session('error') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                @endif
+@section('content')
+<div class="container-fluid escalation-matrix-page py-3">
+    <x-breadcrum title="Escalation Matrix">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
+                data-bs-toggle="modal" data-bs-target="#addMatrixModal">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+            <span>Add Mapping</span>
+        </button>
+    </x-breadcrum>
+    <x-session_message />
+    <div class="d-flex flex-wrap justify-content-end align-items-center gap-3 mb-3">
+        <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="masterPrintBtn" title="Print">
+            <i class="bi bi-printer" aria-hidden="true"></i> <span>Print</span>
+        </button>
+    </div>
 
+    <div class="card overflow-hidden rounded-1">
+        <div class="card-body p-3 p-md-4">
+
+            <div class="d-flex align-items-center gap-2 mb-4 programme-dt-toolbar master-toolbar">
+                <span class="programme-dt-filters-label">Filters</span>
+                {{-- This grid has no active/inactive flag; data-status carries whether
+                     all three escalation levels are mapped, so the shared filter works. --}}
+                <select id="masterStatusFilter" class="form-select master-filter-select" aria-label="Mapping">
+                    <option value="all">All Mappings</option>
+                    <option value="1">Complete (3 levels)</option>
+                    <option value="0">Incomplete</option>
+                </select>
+                <button type="button" class="btn programme-dt-btn-reset" id="masterResetFilters">Reset Filters</button>
+
+                <button type="button" class="btn programme-dt-btn-columns ms-auto" id="masterBtnColumns"
+                    data-bs-toggle="modal" data-bs-target="#masterColumnVisibilityModal" title="Show / hide columns">
+                    <span>Columns</span><i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                </button>
+                <div class="programme-dt-search" data-dt-search-for="masterTable"></div>
+            </div>
+
+            <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <table class="table">
+                    <table class="table table-hover align-middle programme-dt-table" id="masterTable">
                         <thead>
                             <tr>
-                                <th width="5%">#</th>
-                                <th width="20%">Complaint Category</th>
-                                <th width="25%">Level 1 (Employee / Days)</th>
-                                <th width="25%">Level 2 (Employee / Days)</th>
-                                <th width="25%">Level 3 (Employee / Days)</th>
-                                <th width="10%">Actions</th>
+                                <th>S. No.</th>
+                                <th>Complaint Category</th>
+                                <th>Level 1 (Employee / Days)</th>
+                                <th>Level 2 (Employee / Days)</th>
+                                <th>Level 3 (Employee / Days)</th>
+                                <th class="text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($matrix as $index => $row)
-                            <tr>
-                                <td>{{ $index + 1 }}</td>
-                                <td><strong>{{ $row['category']->issue_category }}</strong></td>
-                                <td>
-                                    @if($row['level1'])
-                                        {{ $row['level1']->employee->name ?? 'N/A' }} <span class="badge bg-info">{{ $row['level1']->days_notify }} days</span>
-                                    @else
-                                        <span class="text-muted">—</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($row['level2'])
-                                        {{ $row['level2']->employee->name ?? 'N/A' }} <span class="badge bg-info">{{ $row['level2']->days_notify }} days</span>
-                                    @else
-                                        <span class="text-muted">—</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($row['level3'])
-                                        {{ $row['level3']->employee->name ?? 'N/A' }} <span class="badge bg-info">{{ $row['level3']->days_notify }} days</span>
-                                    @else
-                                        <span class="text-muted">—</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-warning" onclick="editMatrix({{ $row['category']->pk }}, {{ json_encode($row['category']->issue_category) }}, {{ $row['level1']?->employee_master_pk ?? 'null' }}, {{ $row['level1']?->days_notify ?? 0 }}, {{ $row['level2']?->employee_master_pk ?? 'null' }}, {{ $row['level2']?->days_notify ?? 0 }}, {{ $row['level3']?->employee_master_pk ?? 'null' }}, {{ $row['level3']?->days_notify ?? 0 }})">
-                                        <iconify-icon icon="solar:pen-bold"></iconify-icon> Edit
-                                    </button>
-                                </td>
-                            </tr>
+                            @forelse($matrix as $row)
+                                @php
+                                    $isComplete = $row['level1'] && $row['level2'] && $row['level3'];
+                                @endphp
+                                <tr data-status="{{ $isComplete ? 1 : 0 }}">
+                                    <td class="fw-medium ps-3">{{ $loop->iteration }}</td>
+                                    <td class="fw-semibold">{{ $row['category']->issue_category }}</td>
+                                    @foreach(['level1', 'level2', 'level3'] as $levelKey)
+                                        <td>
+                                            @if($row[$levelKey])
+                                                {{ $row[$levelKey]->employee->name ?? 'N/A' }}
+                                                <span class="badge rounded-1 bg-info ms-1">{{ $row[$levelKey]->days_notify }} days</span>
+                                            @else
+                                                <span class="escalation-level-empty">—</span>
+                                            @endif
+                                        </td>
+                                    @endforeach
+                                    <td class="text-center">
+                                        <div class="d-inline-flex align-items-center justify-content-center programme-action-group" role="group" aria-label="Escalation actions">
+                                            <button type="button" class="programme-action-btn" title="Edit"
+                                                    onclick="editMatrix({{ $row['category']->pk }}, {{ json_encode($row['category']->issue_category) }}, {{ $row['level1']?->employee_master_pk ?? 'null' }}, {{ $row['level1']?->days_notify ?? 0 }}, {{ $row['level2']?->employee_master_pk ?? 'null' }}, {{ $row['level2']?->days_notify ?? 0 }}, {{ $row['level3']?->employee_master_pk ?? 'null' }}, {{ $row['level3']?->days_notify ?? 0 }})">
+                                                <i class="material-icons material-symbols-rounded" aria-hidden="true">edit</i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
                             @empty
-                            <tr>
-                                <td colspan="6" class="text-center">No categories found. Add mapping to get started.</td>
-                            </tr>
+                                <tr>
+                                    <td colspan="6" class="text-center py-5 table-empty-state">
+                                        <div class="d-inline-flex flex-column align-items-center p-5 bg-body-tertiary rounded-4 border border-body-secondary">
+                                            <i class="material-icons material-symbols-rounded mb-3 text-body-tertiary" style="font-size:56px;">account_tree</i>
+                                            <p class="mb-1 fw-semibold text-body-emphasis">No categories found.</p>
+                                            <small class="text-body-secondary mb-3">Add a mapping to get started.</small>
+                                            <button type="button" class="btn btn-primary rounded-1 px-4 py-2"
+                                                    data-bs-toggle="modal" data-bs-target="#addMatrixModal">Add Mapping</button>
+                                        </div>
+                                    </td>
+                                </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="masterTable"></div>
             </div>
         </div>
     </div>
 </div>
+
+@include('admin.partials._master_columns_modal')
 
 <!-- Add Mapping Modal -->
 <div class="modal fade" id="addMatrixModal" tabindex="-1" aria-labelledby="addMatrixModalLabel" aria-hidden="true" data-bs-backdrop="static">
@@ -276,4 +302,19 @@ function editMatrix(categoryId, categoryName, emp1, days1, emp2, days2, emp3, da
     new bootstrap.Modal(document.getElementById('editMatrixModal')).show();
 }
 </script>
+
+@include('admin.partials._master_list_scripts', [
+    'reportTitle'   => 'Escalation Matrix',
+    'storageKey'    => 'escalationMatrixGrid:hiddenColumns:v1',
+    'statusColumn'  => null,
+    'actionColumn'  => 5,
+    'statusHeading' => 'Mapping',
+    'statusLabels'  => ['Complete', 'Incomplete'],
+    'printColumns'  => [
+        ['label' => 'Complaint Category', 'index' => 1],
+        ['label' => 'Level 1 (Employee / Days)', 'index' => 2],
+        ['label' => 'Level 2 (Employee / Days)', 'index' => 3],
+        ['label' => 'Level 3 (Employee / Days)', 'index' => 4],
+    ],
+])
 @endsection
