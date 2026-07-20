@@ -2,126 +2,268 @@
 
 @section('title', 'Country List')
 
-@section('setup_content')
-<div class="container-fluid">
-    <x-breadcrum title="Country List" />
-    <div class="card" >
-        <div class="card-body">
-            <div class="row">
-                <div class="col-6">
-                    <h4>Country List</h4>
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<style>
+.master-filter-select {
+    height: 40px; width: 150px; padding: 0 2rem 0 0.875rem; font-size: 0.9375rem;
+    color: #344054; background-color: #fff; border: 1px solid #d0d5dd; border-radius: 8px;
+}
+.master-filter-select:focus { border-color: #004a93; box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12); }
+/* Status switch sits inside the Actions group, aligned with the icon buttons. */
+.master-action-toggle { display: inline-flex; align-items: center; margin: 0 0.25rem 0 0.15rem; }
+.master-action-toggle .form-check-input { margin: 0; cursor: pointer; }
+.programme-action-group .material-symbols-rounded { font-size: 18px; line-height: 1; }
+</style>
+@endpush
+
+@section('content')
+@php
+    // Re-open the matching modal when validation sends us back.
+    $openForm = old('_form');
+@endphp
+
+<div class="container-fluid country-index-page py-3">
+    <x-breadcrum title="Country List">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
+                data-bs-toggle="modal" data-bs-target="#countryCreateModal">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+            <span>Add Country</span>
+        </button>
+    </x-breadcrum>
+    <x-session_message />
+
+    <div class="d-flex flex-wrap justify-content-end align-items-center gap-3 mb-3">
+        <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="masterPrintBtn" title="Print">
+            <i class="bi bi-printer" aria-hidden="true"></i> <span>Print</span>
+        </button>
+    </div>
+
+    <div class="card overflow-hidden rounded-1">
+        <div class="card-body p-3 p-md-4">
+
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="programme-dt-filters-label">Filters</span>
+                    <select id="masterStatusFilter" class="form-select master-filter-select" aria-label="Status">
+                        <option value="all">All Status</option>
+                        <option value="1">Active</option>
+                        <option value="0">Inactive</option>
+                    </select>
+                    <button type="button" class="btn programme-dt-btn-reset" id="masterResetFilters">Reset Filters</button>
                 </div>
-                <div class="col-6">
-                    <div class="d-flex justify-content-end align-items-end mb-3">
-                        <div class="d-flex align-items-center gap-2">
-
-                            <!-- Add New Button -->
-                            <a href="{{ route('master.country.create') }}"
-                                class="btn btn-primary px-3 py-2 rounded-3 shadow-sm">
-                                <i class="material-icons menu-icon material-symbols-rounded"
-                                    style="font-size: 20px; vertical-align: middle;">add</i>
-                                Add Country
-                            </a>
-
-                            <!-- Export Button -->
-                            <a href="" class="px-3 py-2">
-                                <i class="material-icons menu-icon material-symbols-rounded"
-                                    style="font-size: 20px; vertical-align: middle;">search</i>
-                            </a>
-
-                        </div>
-                    </div>
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="masterBtnColumns"
+                        data-bs-toggle="modal" data-bs-target="#masterColumnVisibilityModal" title="Show / hide columns">
+                        <span>Columns</span><i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div class="programme-dt-search" data-dt-search-for="masterTable"></div>
                 </div>
             </div>
-            <hr>
-            <div class="table-responsive">
-                <table class="table w-100 text-nowrap">
-                    <thead>
-                        <tr>
-                            <th class="col">#</th>
-                            <th class="col">Country Name</th>
-                            <th class="col">Status</th>
-                            <th class="col">Actions</th>
 
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($countries as $index => $country)
-                        <tr>
-                            <td>{{ $index + 1 }}</td>
-                            <td>{{ $country->country_name }}</td>
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    <table class="table table-hover text-nowrap align-middle programme-dt-table" id="masterTable">
+                        <thead>
+                            <tr>
+                                <th>S. No.</th>
+                                <th>Country Name</th>
+                                <th>Status</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($countries as $country)
+                                @php $isActive = (int) $country->active_inactive === 1; @endphp
+                                <tr data-status="{{ $isActive ? 1 : 0 }}">
+                                    <td class="fw-medium ps-3">{{ $loop->iteration }}</td>
+                                    <td>{{ $country->country_name }}</td>
+                                    <td>
+                                        <span class="badge rounded-1 master-status-badge bg-{{ $isActive ? 'success' : 'secondary' }}">
+                                            {{ $isActive ? 'Active' : 'Inactive' }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-inline-flex align-items-center justify-content-center programme-action-group" role="group" aria-label="Country actions">
+                                            <button type="button" class="programme-action-btn master-edit-btn" title="Edit"
+                                                    data-pk="{{ $country->pk }}"
+                                                    data-name="{{ $country->country_name }}"
+                                                    data-status="{{ $isActive ? 1 : 0 }}">
+                                                <i class="material-icons material-symbols-rounded" aria-hidden="true">edit</i>
+                                            </button>
 
-                            <td>
-                                <div class="form-check form-switch d-inline-block">
-                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                        data-table="country_master" data-column="active_inactive"
-                                        data-id="{{ $country->pk }}"
-                                        {{ $country->active_inactive == 1 ? 'checked' : '' }}>
-                                </div>
-                            </td>
-                            <td class="text-center">
+                                            <span class="master-action-toggle form-check form-switch mb-0" title="Toggle status">
+                                                <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                    data-table="country_master" data-column="active_inactive"
+                                                    data-id="{{ $country->pk }}"
+                                                    {{ $isActive ? 'checked' : '' }}>
+                                            </span>
 
-                                <div class="d-inline-flex align-items-center gap-2" role="group"
-                                    aria-label="Country actions">
-
-                                    <!-- Edit -->
-                                    <a href="{{ route('master.country.edit', $country->pk) }}"
-                                        class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
-                                        aria-label="Edit country">
-                                        <span class="material-symbols-rounded fs-6" aria-hidden="true">edit</span>
-                                        <span class="d-none d-md-inline">Edit</span>
-                                    </a>
-
-                                    <!-- Delete -->
-                                    @if($country->active_inactive == 1)
-                                    <button type="button"
-                                        class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
-                                        disabled aria-disabled="true" title="Cannot delete active country">
-                                        <span class="material-symbols-rounded fs-6" aria-hidden="true">delete</span>
-                                        <span class="d-none d-md-inline">Delete</span>
-                                    </button>
-                                    @else
-                                    <form action="{{ route('master.country.delete', $country->pk) }}" method="POST"
-                                        class="d-inline"
-                                        onsubmit="return confirm('Are you sure you want to delete this?');">
-                                        @csrf
-                                        @method('DELETE')
-
-                                        <button type="submit"
-                                            class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
-                                            aria-label="Delete country">
-                                            <span class="material-symbols-rounded fs-6" aria-hidden="true">delete</span>
-                                            <span class="d-none d-md-inline">Delete</span>
-                                        </button>
-                                    </form>
-                                    @endif
-
-                                </div>
-
-
-                            </td>
-
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-
-                <!-- Pagination (if applicable) -->
-                <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
-
-                    <div class="text-muted small mb-2">
-                        Showing {{ $countries->firstItem() }}
-                        to {{ $countries->lastItem() }}
-                        of {{ $countries->total() }} items
-                    </div>
-
-                    <div>
-                        {{ $countries->links('vendor.pagination.custom') }}
-                    </div>
-
+                                            @if($isActive)
+                                                <button type="button" class="programme-action-btn" disabled aria-disabled="true"
+                                                        title="Cannot delete an active country">
+                                                    <i class="material-icons material-symbols-rounded" aria-hidden="true">delete</i>
+                                                </button>
+                                            @else
+                                                <form action="{{ route('master.country.delete', $country->pk) }}" method="POST"
+                                                      class="d-inline"
+                                                      onsubmit="return confirm('Are you sure you want to delete this?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="programme-action-btn programme-action-btn--danger" title="Delete">
+                                                        <i class="material-icons material-symbols-rounded" aria-hidden="true">delete</i>
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="text-center py-5 table-empty-state">
+                                        <div class="d-inline-flex flex-column align-items-center p-5 bg-body-tertiary rounded-4 border border-body-secondary">
+                                            <i class="material-icons material-symbols-rounded mb-3 text-body-tertiary" style="font-size:56px;">public</i>
+                                            <p class="mb-1 fw-semibold text-body-emphasis">No countries found.</p>
+                                            <button type="button" class="btn btn-primary rounded-1 px-4 py-2 mt-2"
+                                                    data-bs-toggle="modal" data-bs-target="#countryCreateModal">Add Country</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="masterTable"></div>
             </div>
         </div>
     </div>
 </div>
+
+{{-- ============ Create modal ============ --}}
+<div class="modal fade" id="countryCreateModal" tabindex="-1" aria-labelledby="countryCreateLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <form action="{{ route('master.country.store') }}" method="POST">
+                @csrf
+                <input type="hidden" name="_form" value="create">
+                <div class="modal-header border-0 pb-2">
+                    <h5 class="modal-title fw-bold" id="countryCreateLabel">Add Country</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-0">
+                    <label class="form-label">Country Name <span class="text-danger">*</span></label>
+                    <div id="countryNameRows">
+                        @php $oldNames = old('_form') === 'create' ? (array) old('country_name', ['']) : ['']; @endphp
+                        @foreach($oldNames as $i => $oldName)
+                            <div class="input-group mb-2 country-name-row">
+                                <input type="text" name="country_name[]" class="form-control" value="{{ $oldName }}"
+                                       placeholder="Enter country name" required>
+                                <button type="button" class="btn btn-outline-secondary country-name-remove" title="Remove">
+                                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        @endforeach
+                    </div>
+                    @error('country_name.*')<div class="invalid-feedback d-block mb-2">{{ $message }}</div>@enderror
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-1" id="countryAddRow">
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i> Add another
+                    </button>
+
+                    <div class="mt-3">
+                        <label class="form-label">Status <span class="text-danger">*</span></label>
+                        <select name="active_inactive" class="form-select" required>
+                            <option value="1" {{ old('active_inactive', '1') == '1' ? 'selected' : '' }}>Active</option>
+                            <option value="0" {{ old('active_inactive') === '0' ? 'selected' : '' }}>Inactive</option>
+                        </select>
+                        @error('active_inactive')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- ============ Edit modal ============ --}}
+<div class="modal fade" id="countryEditModal" tabindex="-1" aria-labelledby="countryEditLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            {{-- The country update route is PUT (unlike state/district/city). --}}
+            <form id="masterEditForm" action="" method="POST">
+                @csrf
+                @method('PUT')
+                <input type="hidden" name="_form" value="edit">
+                <input type="hidden" name="_pk" id="masterEditPk" value="{{ old('_pk') }}">
+                <div class="modal-header border-0 pb-2">
+                    <h5 class="modal-title fw-bold" id="countryEditLabel">Edit Country</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-0">
+                    <div class="mb-3">
+                        <label class="form-label">Country Name <span class="text-danger">*</span></label>
+                        <input type="text" name="country_name" id="masterEditName" class="form-control"
+                               value="{{ old('_form') === 'edit' ? old('country_name') : '' }}" required>
+                        @error('country_name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+                    <div>
+                        <label class="form-label">Status <span class="text-danger">*</span></label>
+                        <select name="active_inactive" id="masterEditStatus" class="form-select" required>
+                            <option value="1" {{ old('_form') === 'edit' && old('active_inactive') == '1' ? 'selected' : '' }}>Active</option>
+                            <option value="0" {{ old('_form') === 'edit' && old('active_inactive') === '0' ? 'selected' : '' }}>Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@include('admin.partials._master_columns_modal')
 @endsection
+
+@push('scripts')
+{{-- Create modal: repeatable "Country Name" rows (countryStore accepts an array). --}}
+<script>
+$(function () {
+    $('#countryAddRow').on('click', function () {
+        var $row = $('#countryNameRows .country-name-row').first().clone();
+        $row.find('input').val('');
+        $('#countryNameRows').append($row);
+    });
+    $('#countryNameRows').on('click', '.country-name-remove', function () {
+        if ($('#countryNameRows .country-name-row').length > 1) {
+            $(this).closest('.country-name-row').remove();
+        } else {
+            $(this).closest('.country-name-row').find('input').val('');
+        }
+    });
+});
+</script>
+
+@include('admin.partials._master_form_scripts', [
+    'updateUrl'   => route('master.country.update', ['id' => '__ID__']),
+    'createModal' => 'countryCreateModal',
+    'editModal'   => 'countryEditModal',
+    'fields'      => [
+        'name'   => '#masterEditName',
+        'status' => '#masterEditStatus',
+    ],
+])
+
+@include('admin.partials._master_list_scripts', [
+    'reportTitle'  => 'Country List',
+    'storageKey'   => 'countryGrid:hiddenColumns:v1',
+    'statusColumn' => 2,
+    'actionColumn' => 3,
+    'printColumns' => [
+        ['label' => 'Country Name', 'index' => 1],
+    ],
+])
+@endpush
