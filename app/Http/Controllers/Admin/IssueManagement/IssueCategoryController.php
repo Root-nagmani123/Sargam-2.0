@@ -17,10 +17,10 @@ class IssueCategoryController extends Controller
      */
     public function index()
     {
+        // Rendered in full; the list paginates / searches client-side (DataTables).
         $categories = IssueCategoryMaster::with('subCategories')
             ->orderBy('issue_category')
-            ->paginate(20)
-            ->withQueryString();
+            ->get();
 
         return view('admin.issue_management.categories.index', compact('categories'));
     }

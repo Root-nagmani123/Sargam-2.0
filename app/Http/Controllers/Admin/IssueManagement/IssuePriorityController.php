@@ -70,41 +70,9 @@ class IssuePriorityController extends Controller
      */
     public function index()
     {
-        $page = Paginator::resolveCurrentPage('page');
-        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_priorities_index:v1:' . md5(json_encode([
-            'epoch' => $epoch,
-            'page' => $page,
-        ]));
-
-        $snapshot = DataTableRedisCache::remember(
-            $cacheKey,
-            [
-                'enabled' => 'ISSUE_PRIORITY_INDEX_CACHE_ENABLED',
-                'seconds' => 'ISSUE_PRIORITY_INDEX_CACHE_SECONDS',
-            ],
-            'IssuePriorityController@index',
-            fn () => $this->indexPageSnapshot($page)
-        );
-
-        if (! is_array($snapshot) || ! array_key_exists('total', $snapshot) || ! array_key_exists('ids', $snapshot) || ! is_array($snapshot['ids'])) {
-            $snapshot = $this->indexPageSnapshot($page);
-        }
-
-        $total = (int) $snapshot['total'];
-        $ids = array_map('intval', $snapshot['ids']);
-        $items = $this->hydratePrioritiesByOrderedPks($ids);
-
-        $priorities = new LengthAwarePaginator(
-            $items,
-            $total,
-            self::INDEX_PER_PAGE,
-            $page,
-            [
-                'path' => Paginator::resolveCurrentPath(),
-                'pageName' => 'page',
-            ]
-        );
+        // Rendered in full; the list paginates / searches / filters client-side
+        // (DataTables), so the page-scoped snapshot cache is no longer needed.
+        $priorities = $this->indexFilteredQuery()->get();
 
         return view('admin.issue_management.priorities.index', compact('priorities'));
     }
