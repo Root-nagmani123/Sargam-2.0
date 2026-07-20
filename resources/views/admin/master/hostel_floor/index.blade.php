@@ -21,11 +21,11 @@
 
     {{-- Secondary actions (Print / Download) --}}
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
-        <button type="button" class="btn programme-dt-btn-columns" id="hfPrintBtn" title="Print">
+        <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="hfPrintBtn" title="Print">
             <i class="bi bi-printer" aria-hidden="true"></i>
             <span>Print</span>
         </button>
-        <a href="{{ route('master.hostel.floor.export') }}" class="btn programme-dt-btn-columns" title="Download">
+        <a href="{{ route('master.hostel.floor.export') }}" class="btn programme-dt-btn-columns border-0 text-primary" title="Download">
             <i class="bi bi-download" aria-hidden="true"></i>
             <span>Download</span>
         </a>
