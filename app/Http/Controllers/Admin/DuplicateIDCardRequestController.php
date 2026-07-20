@@ -37,16 +37,16 @@ class DuplicateIDCardRequestController extends Controller
             abort(403);
         }
 
-        $search = trim((string) $request->get('search', ''));
-        $perPage = (int) $request->get('per_page', 10);
-        $perPage = in_array($perPage, [10, 25, 50, 100]) ? $perPage : 10;
-        $page = (int) $request->get('page', 1);
+        // The index renders the full list and paginates / searches / filters by
+        // date entirely client-side. We only keep the requested range to seed
+        // the "Time Period" picker on load.
+        $dateFrom = trim((string) $request->get('date_from', ''));
+        $dateTo = trim((string) $request->get('date_to', ''));
 
         $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_duplicate_idcard_index:v1:' . md5(json_encode([
+        $cacheKey = 'admin_duplicate_idcard_index:v2:' . md5(json_encode([
             'epoch' => $epoch,
             'user_id' => $employeePk,
-            'search' => $search,
         ]));
 
         $items = DataTableRedisCache::remember(
@@ -56,21 +56,17 @@ class DuplicateIDCardRequestController extends Controller
                 'seconds' => 'DUPLICATE_IDCARD_INDEX_CACHE_SECONDS',
             ],
             'DuplicateIDCardRequestController@index',
-            fn () => $this->buildDuplicateIdcardIndexItems($employeePk, $search)
+            fn () => $this->buildDuplicateIdcardIndexItems($employeePk, '')
         );
         if (! $items instanceof Collection) {
             $items = collect($items);
         }
 
-        $requests = new LengthAwarePaginator(
-            $items->forPage($page, $perPage),
-            $items->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
-
-        return view('admin.duplicate_idcard.index', compact('requests'));
+        return view('admin.duplicate_idcard.index', [
+            'requests' => $items,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+        ]);
     }
 
     /**

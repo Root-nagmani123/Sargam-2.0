@@ -1,25 +1,71 @@
 @extends('admin.layouts.master')
-@section('title', 'Request For Duplicate ID Card - Sargam')
+@section('title', 'Request For Duplicate ID Card')
+
+@push('styles')
+<style>
+/* =====================================================================
+   Duplicate ID Card request form — page-scoped polish.
+   Tokens/components come from sargam-app.css (--ds-*, .ds-*).
+   ===================================================================== */
+.dupidc-section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ds-ink);
+    margin: 0 0 var(--ds-space-3);
+    padding-bottom: var(--ds-space-2);
+    border-bottom: 1px solid var(--ds-line);
+}
+.dupidc-form .form-label {
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--ds-ink);
+    margin-bottom: var(--ds-space-1);
+    line-height: 1.35;
+    display: block;
+}
+.dupidc-form .form-control,
+.dupidc-form .form-select {
+    min-height: 44px;
+    border-radius: var(--ds-radius-2);
+}
+.dupidc-form textarea.form-control { min-height: 88px; resize: vertical; line-height: 1.5; }
+.dupidc-form .form-control[readonly],
+.dupidc-form .form-select:disabled {
+    background: var(--bs-secondary-bg, #eef1f4);
+    color: var(--ds-ink);
+}
+/* Field hint text stacks tightly under its input. */
+.dupidc-form .form-hint { font-size: 0.75rem; line-height: 1.35; color: var(--ds-ink-muted, #667085); display: block; margin-top: 0.2rem; }
+.dupidc-form-footer {
+    margin-top: var(--ds-space-4);
+    padding-top: var(--ds-space-3);
+    border-top: 1px solid var(--ds-line);
+}
+</style>
+@endpush
+
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid duplicate-idcard-form-page py-3">
     <x-breadcrum title="{{ isset($edit_id) ? 'Edit Duplicate ID Card Request' : 'Request For Duplicate ID Card' }}"></x-breadcrum>
+    <x-session_message />
 
-    <form action="{{ isset($edit_id) ? route('admin.duplicate_idcard.update', $edit_id) : route('admin.duplicate_idcard.store') }}" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
-        @csrf
-        @if(isset($edit_id))
-            @method('POST')
-            <input type="hidden" id="dup_stored_payment_receipt" value="{{ !empty($existing_docs['payment_receipt'] ?? null) ? '1' : '0' }}" autocomplete="off">
-        @endif
-
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-4">
+    <div class="ds-card">
+        <div class="ds-card-body">
+            <form action="{{ isset($edit_id) ? route('admin.duplicate_idcard.update', $edit_id) : route('admin.duplicate_idcard.store') }}"
+                  method="POST" enctype="multipart/form-data" class="needs-validation dupidc-form" novalidate>
+                @csrf
                 @if(isset($edit_id))
+                    @method('POST')
+                    <input type="hidden" id="dup_stored_payment_receipt" value="{{ !empty($existing_docs['payment_receipt'] ?? null) ? '1' : '0' }}" autocomplete="off">
+
                     <div class="alert alert-info mb-4" role="alert">
                         <strong>Note:</strong> In edit mode, only "Reason for Duplicate Card" and supporting documents can be modified. Other fields are read-only.
                     </div>
                 @endif
 
-                <div class="row g-3 align-items-start">
+                {{-- ============ ID Card Details ============ --}}
+                <h6 class="dupidc-section-title">ID Card Details</h6>
+                <div class="row g-3">
                     @php
                         $lockedType = $lockedIdCardType ?? null;
                         $selectedType = old('id_card_type', $data['id_card_type'] ?? ($lockedType ?: ''));
@@ -30,10 +76,9 @@
                             <option value="" disabled>--Select--</option>
                             <option value="Permanent" {{ $selectedType==='Permanent' ? 'selected':'' }} @if($lockedType === 'Contractual') disabled @endif>Permanent</option>
                             <option value="Contractual" {{ $selectedType==='Contractual' ? 'selected':'' }} @if($lockedType === 'Permanent') disabled @endif>Contractual</option>
-                            {{--<option value="Family" {{ old('id_card_type', $data['id_card_type'] ?? '')==='Family' ? 'selected':'' }}>Family</option> --}}
                         </select>
                         @if($lockedType)
-                            <small class="text-muted d-block mt-1">Allowed type: <strong>{{ $lockedType }}</strong></small>
+                            <small class="form-hint">Allowed type: <strong>{{ $lockedType }}</strong></small>
                         @endif
                         @error('id_card_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
@@ -47,32 +92,10 @@
                             @endif
                         </div>
                         @error('id_card_number')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                        <small class="text-muted d-block">For <strong>Permanent</strong>, your current ID card number is filled automatically when on file (you can change it).</small>
-                        <small class="text-muted d-block">Otherwise enter the number and click <strong>Fetch</strong> to load details.</small>
+                        <small class="form-hint">For <strong>Permanent</strong>, your current ID card number is filled automatically when on file (you can change it). Otherwise enter the number and click <strong>Fetch</strong> to load details.</small>
                         @if(!empty($userDepartmentName))
-                            <small class="text-muted d-block mt-1">You may request a duplicate only for staff in <strong>your department</strong>: <strong>{{ $userDepartmentName }}</strong>. Another department’s card number will be rejected.</small>
+                            <small class="form-hint">You may request a duplicate only for staff in <strong>your department</strong>: <strong>{{ $userDepartmentName }}</strong>. Another department’s card number will be rejected.</small>
                         @endif
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">Upload Photo <span class="text-danger">*</span></label>
-                        @if(isset($edit_id))
-                            @php
-                                $photoPath = $data['photo_path'] ?? null;
-                                $photoExists = $photoPath && \Storage::disk('public')->exists($photoPath);
-                            @endphp
-                            @if($photoExists)
-                                <a href="{{ asset('storage/' . $photoPath) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current Photo</a>
-                            @else
-                                <div class="text-muted small mb-2">No file available in storage</div>
-                            @endif
-                            <input type="file" name="photo" class="form-control" accept=".jpeg,.jpg,.png,.gif">
-                            <small class="text-muted d-block">Leave empty to keep current. Allowed: JPG, PNG, GIF. Max size: 2 MB</small>
-                        @else
-                            <input type="file" name="photo" class="form-control" accept=".jpeg,.jpg,.png,.gif" required>
-                            <small class="text-muted d-block">Allowed: JPG, PNG, GIF. Max size: 2 MB</small>
-                        @endif
-                        @error('photo')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
                     <div class="col-md-4">
@@ -86,6 +109,27 @@
                     </div>
 
                     <div class="col-md-4">
+                        <label class="form-label">Upload Photo <span class="text-danger">*</span></label>
+                        @if(isset($edit_id))
+                            @php
+                                $photoPath = $data['photo_path'] ?? null;
+                                $photoExists = $photoPath && \Storage::disk('public')->exists($photoPath);
+                            @endphp
+                            @if($photoExists)
+                                <a href="{{ asset('storage/' . $photoPath) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current Photo</a>
+                            @else
+                                <div class="form-hint mb-2">No file available in storage</div>
+                            @endif
+                            <input type="file" name="photo" class="form-control" accept=".jpeg,.jpg,.png,.gif">
+                            <small class="form-hint">Leave empty to keep current. Allowed: JPG, PNG, GIF. Max size: 2 MB</small>
+                        @else
+                            <input type="file" name="photo" class="form-control" accept=".jpeg,.jpg,.png,.gif" required>
+                            <small class="form-hint">Allowed: JPG, PNG, GIF. Max size: 2 MB</small>
+                        @endif
+                        @error('photo')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+
+                    <div class="col-md-4">
                         <label class="form-label">Upload Aadhar Copy <span class="text-danger">*</span></label>
                         @if(isset($edit_id))
                             @php
@@ -96,22 +140,21 @@
                             @if($aadharExists)
                                 <a href="{{ asset('storage/' . $aadharPath) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current Document</a>
                             @elseif($aadharDoc)
-                                <div class="text-muted small mb-2">No file available in storage</div>
+                                <div class="form-hint mb-2">No file available in storage</div>
                             @endif
                             <input type="file" name="aadhar_doc" class="form-control" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png">
-                            <small class="text-muted d-block">Leave empty to keep current. Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
+                            <small class="form-hint">Leave empty to keep current. Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
                         @else
                             <input type="file" name="aadhar_doc" class="form-control" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png" required>
-                            <small class="text-muted d-block">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
+                            <small class="form-hint">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
                         @endif
                         @error('aadhar_doc')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
-                    <div class="col-md-4"></div>
-
                     {{-- Contractual-specific fields: Section & Approval Authority --}}
                     @php
                         $sectionStored = old('section', $data['section'] ?? $userDepartmentName ?? '');
+                        $approverStored = old('approval_authority', $data['approval_authority'] ?? '');
                     @endphp
                     <div class="col-md-4 contractual-only" style="display:none;">
                         <label class="form-label">Section</label>
@@ -129,9 +172,6 @@
                         @endif
                         @error('section')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
-                    @php
-                        $approverStored = old('approval_authority', $data['approval_authority'] ?? '');
-                    @endphp
                     <div class="col-md-4 contractual-only" style="display:none;">
                         <label class="form-label">Approval Authority <span class="text-danger">*</span></label>
                         <select id="approval_authority_contractual" class="form-select" @if(isset($edit_id)) name="" disabled @else name="approval_authority" @endif>
@@ -148,7 +188,11 @@
                         @endif
                         @error('approval_authority')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
+                </div>
 
+                {{-- ============ Employee Details ============ --}}
+                <h6 class="dupidc-section-title mt-4">Employee Details</h6>
+                <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Employee Name <span class="text-danger">*</span></label>
                         <input type="text" name="employee_name" id="employee_name" class="form-control" value="{{ old('employee_name', $data['employee_name'] ?? ($me?->first_name ? trim(($me->first_name ?? '').' '.($me->last_name ?? '')) : '')) }}" {{ isset($edit_id) ? 'readonly' : 'required' }}>
@@ -171,16 +215,10 @@
                         <label class="form-label">Blood Group</label>
                         <select name="blood_group" id="blood_group" class="form-select" {{ isset($edit_id) ? 'disabled' : 'required' }}>
                             <option value="">--Select--</option>
-                            <option value="O+ve" {{ old('blood_group', $data['blood_group'] ?? '')==='O+ve'?'selected':'' }}>O+ve</option>
-                            <option value="O+" {{ old('blood_group', $data['blood_group'] ?? '')==='O+'?'selected':'' }}>O+</option>
-                            <option value="O-" {{ old('blood_group', $data['blood_group'] ?? '')==='O-'?'selected':'' }}>O-</option>
-                            
-                            <option value="A+" {{ old('blood_group', $data['blood_group'] ?? '')==='A+'?'selected':'' }}>A+</option>
-                            <option value="A-" {{ old('blood_group', $data['blood_group'] ?? '')==='A-'?'selected':'' }}>A-</option>
-                            <option value="B+" {{ old('blood_group', $data['blood_group'] ?? '')==='B+'?'selected':'' }}>B+</option>
-                            <option value="B-" {{ old('blood_group', $data['blood_group'] ?? '')==='B-'?'selected':'' }}>B-</option>
-                            <option value="AB+" {{ old('blood_group', $data['blood_group'] ?? '')==='AB+'?'selected':'' }}>AB+</option>
-                            <option value="AB-" {{ old('blood_group', $data['blood_group'] ?? '')==='AB-'?'selected':'' }}>AB-</option>
+                            @php $selBlood = old('blood_group', $data['blood_group'] ?? ''); @endphp
+                            @foreach(['O+ve','O+','O-','A+','A-','B+','B-','AB+','AB-'] as $bg)
+                                <option value="{{ $bg }}" {{ $selBlood === $bg ? 'selected' : '' }}>{{ $bg }}</option>
+                            @endforeach
                         </select>
                         @error('blood_group')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
@@ -196,17 +234,19 @@
                         <input type="text" name="father_name" id="father_name" class="form-control" value="{{ old('father_name', $data['father_name'] ?? '') }}" {{ isset($edit_id) ? 'readonly' : '' }}>
                         @error('father_name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
+                </div>
 
+                {{-- ============ Duplicate Card Request ============ --}}
+                <h6 class="dupidc-section-title mt-4">Duplicate Card Request</h6>
+                <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Reason for Applying Duplicate Card <span class="text-danger">*</span></label>
                         <select name="card_reason" id="card_reason_select" class="form-select" required>
                             <option value="">--Select--</option>
                             @php $selReason = old('card_reason', $data['card_reason'] ?? ''); @endphp
-                            <option value="Damage Card" {{ $selReason==='Damage Card'?'selected':'' }}>Damage Card</option>
-                            <option value="Card Lost" {{ $selReason==='Card Lost'?'selected':'' }}>Card Lost</option>
-                            <option value="Service Extended" {{ $selReason==='Service Extended'?'selected':'' }}>Service Extended</option>
-                            <option value="Change in Name" {{ $selReason==='Change in Name'?'selected':'' }}>Change in Name</option>
-                            <option value="Designation Change" {{ $selReason==='Designation Change'?'selected':'' }}>Designation Change</option>
+                            @foreach(['Damage Card','Card Lost','Service Extended','Change in Name','Designation Change'] as $reasonOpt)
+                                <option value="{{ $reasonOpt }}" {{ $selReason === $reasonOpt ? 'selected' : '' }}>{{ $reasonOpt }}</option>
+                            @endforeach
                         </select>
                         @error('card_reason')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
@@ -215,7 +255,7 @@
                     <div class="col-md-6" id="damage_doc_section" style="display: none;">
                         <label class="form-label">Upload Damage Proof / Photo <span class="text-danger">*</span></label>
                         <input type="file" name="damage_doc" class="form-control" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png">
-                        <small class="text-muted d-block">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
+                        <small class="form-hint">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
                         @error('damage_doc')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
@@ -231,14 +271,14 @@
                             @if($firExists)
                                 <a href="{{ asset('storage/' . $firPath) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current FIR Document</a>
                             @elseif($firDoc)
-                                <div class="text-muted small mb-2">No file available in storage</div>
+                                <div class="form-hint mb-2">No file available in storage</div>
                             @endif
                         @endif
                         <input type="file" name="fir_doc" class="form-control" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png">
                         @if(isset($edit_id))
-                            <small class="text-muted d-block">Leave empty to keep current. Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
+                            <small class="form-hint">Leave empty to keep current. Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
                         @else
-                            <small class="text-muted d-block">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
+                            <small class="form-hint">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
                         @endif
                         @error('fir_doc')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
@@ -255,11 +295,11 @@
                             @if($payExists)
                                 <a href="{{ asset('storage/' . $payPath) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current Payment Receipt</a>
                             @elseif($payDoc)
-                                <div class="text-muted small mb-2">No file available in storage</div>
+                                <div class="form-hint mb-2">No file available in storage</div>
                             @endif
                         @endif
                         <input type="file" name="payment_receipt" class="form-control" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png">
-                        <small class="text-muted d-block">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
+                        <small class="form-hint">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
                         @error('payment_receipt')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
@@ -267,7 +307,7 @@
                     <div class="col-md-6" id="service_ext_section" style="display: none;">
                         <label class="form-label">Upload Service Extension / Renewal Proof <span class="text-danger">*</span></label>
                         <input type="file" name="service_ext" class="form-control" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png">
-                        <small class="text-muted d-block">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
+                        <small class="form-hint">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
                         @error('service_ext')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
@@ -281,7 +321,7 @@
                     <div class="col-md-6" id="name_proof_section" style="display: none;">
                         <label class="form-label">Upload Name Change Proof <span class="text-danger">*</span></label>
                         <input type="file" name="name_proof" class="form-control" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png">
-                        <small class="text-muted d-block">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
+                        <small class="form-hint">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
                         @error('name_proof')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
@@ -289,10 +329,14 @@
                     <div class="col-md-6" id="designation_order_section" style="display: none;">
                         <label class="form-label">Upload Official Order / Transfer Letter <span class="text-danger">*</span></label>
                         <input type="file" name="designation_order" class="form-control" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png">
-                        <small class="text-muted d-block">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
+                        <small class="form-hint">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
                         @error('designation_order')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
+                </div>
 
+                {{-- ============ Card Validity ============ --}}
+                <h6 class="dupidc-section-title mt-4">Card Validity</h6>
+                <div class="row g-3">
                     <div class="col-md-3">
                         <label class="form-label">ID-Card Valid From</label>
                         <input type="date" name="card_valid_from" id="card_valid_from" class="form-control" value="{{ old('card_valid_from', $data['card_valid_from'] ?? '') }}">
@@ -303,53 +347,51 @@
                         <input type="date" name="card_valid_to" id="card_valid_to" class="form-control" value="{{ old('card_valid_to', $data['card_valid_to'] ?? '') }}">
                         @error('card_valid_to')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
-
-                    <div class="col-12 mt-3">
-                        <button type="submit" class="btn btn-success">
-                            <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">save</i>
-                            {{ isset($edit_id) ? 'Update' : 'Save' }}
-                        </button>
-                        <a href="{{ route('admin.duplicate_idcard.index') }}" class="btn btn-outline-secondary ms-2">Cancel</a>
-                    </div>
                 </div>
-            </div>
+
+                <div class="dupidc-form-footer d-flex flex-wrap justify-content-end gap-2">
+                    <a href="{{ route('admin.duplicate_idcard.index') }}" class="btn btn-outline-secondary px-4">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-4 d-inline-flex align-items-center gap-2">
+                        <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">save</i>
+                        {{ isset($edit_id) ? 'Update' : 'Save' }}
+                    </button>
+                </div>
+            </form>
         </div>
-    </form>
+    </div>
 </div>
+@endsection
 
+@push('scripts')
 <script>
-    console.log('📝 Duplicate ID Card Script Loading...');
-    console.log('📝 Document Ready State:', document.readyState);
+$(function () {
+    var prefetchedPermanentCardNo = @json($prefetchedPermanentCardNo ?? null);
 
-    function initDuplicatePrefetch() {
-        const btnFetch = document.getElementById('btnFetchByCard');
-        const cardInput = document.getElementById('id_card_number');
-        const typeSelect = document.getElementById('id_card_type');
-        const prefetchedPermanentCardNo = @json($prefetchedPermanentCardNo ?? null);
-        if (!btnFetch || !cardInput || !typeSelect) {
-            return;
-        }
-        if (btnFetch.dataset.prefetchBound === '1') {
-            return;
-        }
-        btnFetch.dataset.prefetchBound = '1';
-
-        let isFetching = false;
-
-        function showToast(message, isError) {
+    function notify(message, isError) {
+        if (window.Swal) {
+            Swal.fire({ icon: isError ? 'error' : 'success', text: message });
+        } else {
             alert(message);
         }
+    }
+
+    /* ---- Fetch employee details by ID card number ---- */
+    (function initDuplicatePrefetch() {
+        var btnFetch = document.getElementById('btnFetchByCard');
+        var cardInput = document.getElementById('id_card_number');
+        var typeSelect = document.getElementById('id_card_type');
+        if (!btnFetch || !cardInput || !typeSelect) { return; }
+
+        var isFetching = false;
 
         function fetchByCardNumber(options) {
             options = options || {};
-            if (isFetching) {
-                return;
-            }
-            const cardNo = cardInput.value.trim();
-            const type = typeSelect.value || 'Permanent';
+            if (isFetching) { return; }
+            var cardNo = cardInput.value.trim();
+            var type = typeSelect.value || 'Permanent';
             if (!cardNo) {
                 if (!options.suppressCardEmptyPrompt) {
-                    showToast('Please enter ID Card Number first.', true);
+                    notify('Please enter ID Card Number first.', true);
                     cardInput.focus();
                 }
                 return;
@@ -364,16 +406,13 @@
                     isFetching = false;
                     btnFetch.disabled = false;
                     if (!result.ok || !result.data || !result.data.success) {
-                        const msg = (result.data && result.data.message) ? result.data.message : 'Could not fetch ID card details.';
-                        showToast(msg, true);
+                        notify((result.data && result.data.message) ? result.data.message : 'Could not fetch ID card details.', true);
                         return;
                     }
-                    const d = result.data.data || {};
-                    const setVal = function (id, value) {
-                        const el = document.getElementById(id);
-                        if (el && (el.tagName === 'INPUT' || el.tagName === 'SELECT')) {
-                            el.value = value || '';
-                        }
+                    var d = result.data.data || {};
+                    var setVal = function (id, value) {
+                        var el = document.getElementById(id);
+                        if (el && (el.tagName === 'INPUT' || el.tagName === 'SELECT')) { el.value = value || ''; }
                     };
                     setVal('employee_name', d.employee_name || '');
                     setVal('designation', d.designation || '');
@@ -384,239 +423,108 @@
                     setVal('card_valid_from', d.card_valid_from || '');
                     setVal('card_valid_to', d.card_valid_to || '');
                     if (!options.silentSuccess) {
-                        showToast('ID card details fetched successfully. Please select duplicate reason and upload required document.', false);
+                        notify('ID card details fetched successfully. Please select duplicate reason and upload required document.', false);
                     }
                 })
                 .catch(function () {
                     isFetching = false;
                     btnFetch.disabled = false;
-                    showToast('Error while fetching ID card details. Please try again.', true);
+                    notify('Error while fetching ID card details. Please try again.', true);
                 });
         }
 
-        /** When Permanent is chosen, put the user's approved card number on file into the field and load details via lookup. */
+        /** When Permanent is chosen, put the user's approved card number on file into the field and load details. */
         function applyPermanentIdCardPrefetch() {
-            if (typeSelect.value !== 'Permanent' || !prefetchedPermanentCardNo) {
-                return;
-            }
-            if (cardInput.value.trim() !== '') {
-                return;
-            }
+            if (typeSelect.value !== 'Permanent' || !prefetchedPermanentCardNo) { return; }
+            if (cardInput.value.trim() !== '') { return; }
             cardInput.value = prefetchedPermanentCardNo;
             fetchByCardNumber({ silentSuccess: true, suppressCardEmptyPrompt: true });
         }
 
-        function onIdCardTypeChange() {
+        $(typeSelect).on('change', function () {
             cardInput.value = '';
             applyPermanentIdCardPrefetch();
-        }
-        typeSelect.addEventListener('change', onIdCardTypeChange);
+        });
         applyPermanentIdCardPrefetch();
 
-        // Existing behaviour: user can click the fetch button.
-        btnFetch.addEventListener('click', function () {
-            fetchByCardNumber({});
-        });
-
-        // Trigger on Enter key in the input.
+        btnFetch.addEventListener('click', function () { fetchByCardNumber({}); });
         cardInput.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                fetchByCardNumber({});
-            }
+            if (e.key === 'Enter') { e.preventDefault(); fetchByCardNumber({}); }
         });
-    }
+    })();
 
-    function initContractualFieldsToggle() {
-        const typeSelect = document.getElementById('id_card_type');
-        const contractualFields = document.querySelectorAll('.contractual-only');
-        if (!typeSelect || contractualFields.length === 0) {
-            return;
-        }
+    /* ---- Contractual-only fields ---- */
+    (function initContractualFieldsToggle() {
+        var typeSelect = document.getElementById('id_card_type');
+        var $contractual = $('.contractual-only');
+        if (!typeSelect || !$contractual.length) { return; }
         function updateVisibility() {
-            const isContractual = typeSelect.value === 'Contractual';
-            contractualFields.forEach(function (el) {
-                el.style.display = isContractual ? '' : 'none';
-            });
+            $contractual.toggle(typeSelect.value === 'Contractual');
         }
-        typeSelect.addEventListener('change', updateVisibility);
-        // Initial state on page load
+        $(typeSelect).on('change', updateVisibility);
         updateVisibility();
-    }
+    })();
 
-    function initCardReasonToggle() {
-        console.log('🔧 initCardReasonToggle() called');
-        
-        const reasonSelect = document.getElementById('card_reason_select');
-        console.log('🔍 reasonSelect element found:', reasonSelect ? 'YES ✅' : 'NO ❌');
-        
-        if (!reasonSelect) {
-            console.error('❌ card_reason_select element not found!');
-            return;
-        }
+    /* ---- Reason → required supporting document ----
+       Bound through jQuery so it also fires when a select plugin sets the value
+       with .trigger('change') (a native listener alone would miss that). ---- */
+    (function initCardReasonToggle() {
+        var $reason = $('#card_reason_select');
+        if (!$reason.length) { return; }
 
-        let lastValue = '';
+        var SECTIONS = ['damage_doc_section', 'fir_doc_section', 'payment_receipt_section',
+                        'service_ext_section', 'new_name_section', 'name_proof_section',
+                        'designation_order_section'];
+        var FIELDS = ['damage_doc', 'fir_doc', 'payment_receipt', 'service_ext',
+                      'new_employee_name', 'name_proof', 'designation_order'];
+
+        function field(name) { return document.querySelector('[name="' + name + '"]'); }
+        function show(id) { var el = document.getElementById(id); if (el) { el.style.display = 'block'; } }
+        function require(name) { var el = field(name); if (el) { el.setAttribute('required', 'required'); } }
 
         function toggleDocumentSections() {
-            console.log('🔄 toggleDocumentSections() called');
-            
-            // Hide all conditional sections first
-            const sections = {
-                'damage_doc_section': null,
-                'fir_doc_section': null,
-                'payment_receipt_section': null,
-                'service_ext_section': null,
-                'new_name_section': null,
-                'name_proof_section': null,
-                'designation_order_section': null
-            };
-
-            // Hide all
-            Object.keys(sections).forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.style.display = 'none';
+            SECTIONS.forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) { el.style.display = 'none'; }
+            });
+            FIELDS.forEach(function (name) {
+                var el = field(name);
+                if (el) { el.removeAttribute('required'); }
             });
 
-            // Clear required attribute from all conditional fields
-            const damageDoc = document.querySelector('input[name="damage_doc"]');
-            const firDoc = document.querySelector('input[name="fir_doc"]');
-            const paymentReceipt = document.querySelector('input[name="payment_receipt"]');
-            const serviceExt = document.querySelector('input[name="service_ext"]');
-            const newEmpName = document.querySelector('input[name="new_employee_name"]');
-            const nameProof = document.querySelector('input[name="name_proof"]');
-            const designOrder = document.querySelector('input[name="designation_order"]');
-
-            if (damageDoc) damageDoc.removeAttribute('required');
-            if (firDoc) firDoc.removeAttribute('required');
-            if (paymentReceipt) paymentReceipt.removeAttribute('required');
-            if (serviceExt) serviceExt.removeAttribute('required');
-            if (newEmpName) newEmpName.removeAttribute('required');
-            if (nameProof) nameProof.removeAttribute('required');
-            if (designOrder) designOrder.removeAttribute('required');
-
-            // Get current value
-            const reason = reasonSelect.value;
-            console.log('✅ Selected reason:', reason);
-            
-            // Show appropriate section based on reason
-            if (reason === 'Damage Card') {
-                console.log('🔴 Showing Damage Card section');
-                const el = document.getElementById('damage_doc_section');
-                if (el) {
-                    el.style.display = 'block';
-                    console.log('✅ damage_doc_section display set to block');
-                }
-                if (damageDoc) {
-                    damageDoc.setAttribute('required', 'required');
-                    damageDoc.focus();
-                }
-            } else if (reason === 'Card Lost') {
-                console.log('🟠 Showing Card Lost section');
-                const el = document.getElementById('fir_doc_section');
-                const payEl = document.getElementById('payment_receipt_section');
-                const payStoredFlag = document.getElementById('dup_stored_payment_receipt');
-                const skipPayRequired = payStoredFlag && payStoredFlag.value === '1';
-                if (el) el.style.display = 'block';
-                if (payEl) payEl.style.display = 'block';
-                if (firDoc) firDoc.setAttribute('required', 'required');
-                if (paymentReceipt && !skipPayRequired) {
-                    paymentReceipt.setAttribute('required', 'required');
-                }
-            } else if (reason === 'Service Extended') {
-                console.log('🟡 Showing Service Extended section');
-                const el = document.getElementById('service_ext_section');
-                if (el) el.style.display = 'block';
-                if (serviceExt) serviceExt.setAttribute('required', 'required');
-            } else if (reason === 'Change in Name') {
-                console.log('🟢 Showing Change in Name section');
-                const el1 = document.getElementById('new_name_section');
-                const el2 = document.getElementById('name_proof_section');
-                if (el1) el1.style.display = 'block';
-                if (el2) el2.style.display = 'block';
-                if (newEmpName) newEmpName.setAttribute('required', 'required');
-                if (nameProof) nameProof.setAttribute('required', 'required');
-            } else if (reason === 'Designation Change') {
-                console.log('🔵 Showing Designation Change section');
-                const el = document.getElementById('designation_order_section');
-                if (el) el.style.display = 'block';
-                if (designOrder) designOrder.setAttribute('required', 'required');
-            } else {
-                console.log('⚪ No matching reason condition');
+            switch ($reason.val()) {
+                case 'Damage Card':
+                    show('damage_doc_section');
+                    require('damage_doc');
+                    break;
+                case 'Card Lost':
+                    show('fir_doc_section');
+                    show('payment_receipt_section');
+                    require('fir_doc');
+                    // On edit, a receipt already on file means a new upload isn't mandatory.
+                    var stored = document.getElementById('dup_stored_payment_receipt');
+                    if (!stored || stored.value !== '1') { require('payment_receipt'); }
+                    break;
+                case 'Service Extended':
+                    show('service_ext_section');
+                    require('service_ext');
+                    break;
+                case 'Change in Name':
+                    show('new_name_section');
+                    show('name_proof_section');
+                    require('new_employee_name');
+                    require('name_proof');
+                    break;
+                case 'Designation Change':
+                    show('designation_order_section');
+                    require('designation_order');
+                    break;
             }
         }
 
-        // Attach normal event listeners
-        reasonSelect.addEventListener('change', function(e) {
-            console.log('🎯 CHANGE EVENT FIRED!');
-            toggleDocumentSections();
-        });
-
-        reasonSelect.addEventListener('input', function(e) {
-            console.log('🎯 INPUT EVENT FIRED!');
-            toggleDocumentSections();
-        });
-
-        // POLLING APPROACH: Check for value changes every 100ms
-        // This works even if events are blocked by other libraries
-        console.log('📌 Starting polling to detect dropdown changes...');
-        setInterval(function() {
-            const currentValue = reasonSelect.value;
-            if (currentValue !== lastValue) {
-                console.log('🔄 POLLING DETECTED VALUE CHANGE:', lastValue, '→', currentValue);
-                lastValue = currentValue;
-                toggleDocumentSections();
-            }
-        }, 100);
-
-        // Also check via MutationObserver for attribute changes
-        console.log('📌 Setting up MutationObserver...');
-        const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
-                    console.log('👁️ MutationObserver detected value attribute change');
-                    toggleDocumentSections();
-                }
-            });
-        });
-
-        observer.observe(reasonSelect, {
-            attributes: true,
-            attributeFilter: ['value']
-        });
-
-        // Trigger on page load if there's a selected value
-        console.log('🔍 Checking if reason already selected on page load...');
-        if (reasonSelect.value) {
-            console.log('✅ Initial value found:', reasonSelect.value);
-            lastValue = reasonSelect.value;
-            toggleDocumentSections();
-        } else {
-            console.log('⚪ No initial value selected');
-        }
-    }
-
-    console.log('📍 Script execution point 1: registering DOMContentLoaded listener');
-    
-    // Initialize when DOM is ready
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('📍 DOMContentLoaded fired');
-        initCardReasonToggle();
-        initDuplicatePrefetch();
-        initContractualFieldsToggle();
-    });
-    
-    // Also try immediately in case DOM is already ready
-    console.log('📍 Script execution point 2: checking readyState');
-    if (document.readyState === 'loading') {
-        console.log('📍 Document still loading, waiting for DOMContentLoaded');
-    } else {
-        console.log('📍 Document already loaded, calling initCardReasonToggle / initDuplicatePrefetch / initContractualFieldsToggle immediately');
-        initCardReasonToggle();
-        initDuplicatePrefetch();
-        initContractualFieldsToggle();
-    }
-    
-    console.log('📝 Script initialization complete!');
+        $reason.on('change input', toggleDocumentSections);
+        toggleDocumentSections();
+    })();
+});
 </script>
-@endsection
-
+@endpush
