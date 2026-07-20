@@ -3,15 +3,16 @@
     $rows        = $rows ?? collect();
     $filterLine  = $filterLine ?? '';
     $printedOn   = $printedOn ?? now()->format('d-m-Y H:i');
-    $reportTitle = $reportTitle ?? 'Vehicle Pass Request';
+    $reportTitle = $reportTitle ?? 'Duplicate Vehicle Pass Request';
     $logoLeft    = $logoLeft ?? null;
     $logoRight   = $logoRight ?? null;
     $titleHindi  = $titleHindi ?? null;
     $mode        = $mode ?? 'pdf';           // 'pdf' (DomPDF) or 'print' (browser)
     $isPrint     = $mode === 'print';
+    // Browser print reads larger than the tightly-packed PDF.
     $bodyFont    = $isPrint ? 11 : 9;
     $headFont    = $isPrint ? 10 : 8;
-    $centerHeadings = ['S.No.', 'Requested Date', 'Status'];
+    $centerHeadings = ['S.No.', 'Request Date', 'Status'];
 @endphp
 <!doctype html>
 <html lang="en">
@@ -24,11 +25,13 @@
         *, *::before, *::after { box-sizing: border-box; }
         body { margin: 0; padding: {{ $isPrint ? '16px' : '0' }}; color: #1f2937; font-size: {{ $bodyFont }}px; }
 
+        /* ===== Institution header (matches the official LBSNAA report layout) ===== */
         table.pdf-hdr { width: 100%; border-collapse: collapse; margin-bottom: 2px; }
         table.pdf-hdr td { vertical-align: middle; }
         table.pdf-hdr .logo { width: {{ $isPrint ? '90px' : '78px' }}; text-align: center; }
         table.pdf-hdr .logo img { max-height: {{ $isPrint ? '60px' : '52px' }}; max-width: {{ $isPrint ? '84px' : '74px' }}; }
         table.pdf-hdr .center { text-align: center; padding: 0 6px; }
+        /* Devanagari title is a pre-shaped image — DomPDF can't shape Indic text. */
         .inst-hi-img { height: {{ $isPrint ? '18px' : '14px' }}; width: auto; margin-bottom: 1px; }
         .inst-en { font-size: {{ $isPrint ? '16px' : '12px' }}; font-weight: bold; color: #102a43; line-height: 1.25; }
 
@@ -75,7 +78,7 @@
         .col-pass { width: 15%; }
         .col-type { width: 14%; }
         .col-veh { width: 14%; }
-        .col-date { width: 14%; }
+        .col-date { width: 12%; }
         .col-status { width: 10%; }
         .cell-center { text-align: center; }
 
@@ -123,7 +126,7 @@
             'Vehicle Pass No' => 'col-pass',
             'Vehicle Type' => 'col-type',
             'Vehicle Number' => 'col-veh',
-            'Requested Date' => 'col-date',
+            'Request Date' => 'col-date',
             'Status' => 'col-status',
         ];
     @endphp

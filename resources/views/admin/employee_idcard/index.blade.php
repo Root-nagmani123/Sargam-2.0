@@ -1,16 +1,39 @@
 @extends('admin.layouts.master')
 @section('title', 'Employee ID Card List')
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+/* Time Period range filter (reference: mdo_escrot_exemption) */
+.idcard-time-period { display: inline-flex; }
+.idcard-tp-input {
+    min-width: 190px;
+    padding-left: 34px;
+    padding-right: 30px;
+    background: #fff;
+    cursor: pointer;
+}
+.idcard-tp-input::placeholder { color: #1f2937; opacity: 1; }
+.idcard-tp-ico { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #667085; font-size: 14px; pointer-events: none; }
+.idcard-tp-caret { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #667085; font-size: 11px; pointer-events: none; }
+</style>
+@endpush
+
 @section('content')
 <div class="container-fluid idcard-index-page">
     <!-- Breadcrumb + Search (reference: Setup > User Management, search icon right) -->
-    <x-breadcrum title="Employee ID Card List"></x-breadcrum>
+    <x-breadcrum title="Employee ID Card List">
+        <a href="{{ route('admin.employee_idcard.create') }}"
+           class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+            <span>Add New ID card</span>
+        </a>
+    </x-breadcrum>
     <x-session_message />
 
-    <div class="card border border-body-secondary rounded-4 shadow-sm idcard-index-card overflow-hidden">
-        <div class="card-body">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 p-3 p-md-4 border border-body-secondary rounded-4 bg-body shadow-sm">
-        
-        <div class="d-flex align-items-center gap-2 flex-wrap">
+    {{-- Status pills + Download sit ABOVE the card (new-design reference: exemption_master). --}}
+    <div class="d-flex flex-wrap align-items-end justify-content-end gap-3 mb-3">
+        <div class="d-flex align-items-end gap-2 flex-wrap">
             @php
                 $exportParams = array_filter([
                     'search' => $search ?? '',
@@ -20,9 +43,9 @@
                 ]);
             @endphp
             <div class="dropdown">
-                <button class="btn btn-success-subtle border border-success-subtle text-success-emphasis dropdown-toggle d-flex align-items-center gap-2 px-4 py-2 rounded-3 shadow-sm focus-ring" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="material-icons material-symbols-rounded fs-5">download</i>
-                    Export
+                <button class="btn programme-dt-btn-columns dropdown-toggle border-0 text-primary d-flex align-items-center gap-2" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-download" aria-hidden="true"></i>
+                    <span>Download</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 py-2 dropdown-menu-lg-end" aria-labelledby="exportDropdown">
                     <li>
@@ -50,57 +73,70 @@
                     </li>
                 </ul>
             </div>
-            <a href="{{ route('admin.employee_idcard.create') }}" class="btn btn-primary px-4 py-2 rounded-3 d-flex align-items-center gap-2 shadow-sm focus-ring">
-               
-                Add New ID card
-            </a>
         </div>
     </div>
 
-    <!-- Filter & Search -->
-    <div class="card border border-body-secondary rounded-4 shadow-sm mb-3">
-        <div class="card-body py-3">
-            <form method="GET" action="{{ route('admin.employee_idcard.index') }}" class="row g-3 align-items-end" id="idcardFilterForm">
-               @if(hasRole('Super Admin'))
-                <div class="col-12 col-md-3">
-                    <label for="idcardSearch" class="form-label small text-muted mb-0">Search by Name</label>
-                    <input type="search" name="search" id="idcardSearch" class="form-control " placeholder="Employee name..." value="{{ old('search', $search ?? '') }}">
-                </div>
-                @endif
-                <div class="col-12 col-md-2">
-                    <label for="listStatus" class="form-label small text-muted mb-0">Approval status</label>
-                    @php $ls = old('list_status', $list_status ?? 'all'); @endphp
-                    <select name="list_status" id="listStatus" class="form-select">
-                        <option value="all" {{ $ls === 'all' ? 'selected' : '' }}>All</option>
-                        <option value="pending" {{ $ls === 'pending' ? 'selected' : '' }}>Pending</option>
-                        <option value="approved" {{ $ls === 'approved' ? 'selected' : '' }}>Approved</option>
-                        <option value="rejected" {{ $ls === 'rejected' ? 'selected' : '' }}>Rejected</option>
-                    </select>
-                </div>
-                <div class="col-12 col-md-2">
-                    <label for="dateFrom" class="form-label small text-muted mb-0">Date From</label>
-                    <input type="date" name="date_from" id="dateFrom" class="form-control " value="{{ old('date_from', $dateFrom ?? '') }}">
-                </div>
-                <div class="col-12 col-md-2">
-                    <label for="dateTo" class="form-label small text-muted mb-0">Date To</label>
-                    <input type="date" name="date_to" id="dateTo" class="form-control " value="{{ old('date_to', $dateTo ?? '') }}">
-                </div>
-                <div class="col-12 col-md-auto d-flex gap-2">
-                    <button type="submit" class="btn btn-primary btn-sm">
-                        <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">filter_list</i> Apply Filter
-                    </button>
-                    <a href="{{ route('admin.employee_idcard.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
-                </div>
-            </form>
-        </div>
-    </div>
+    <div class="card border-0 shadow-sm overflow-hidden rounded-3 idcard-index-card">
+        <div class="card-body p-3 p-md-4">
 
-    <div class="card border border-body-secondary rounded-4 shadow-sm idcard-index-card overflow-hidden">
-        <div class="card-body p-0">
-            <div>
-                <div id="active-panel">
+            {{-- Filters row (reference: building_floor_room_mapping). These filters are
+                 server-side, so each control submits the form on change instead of the
+                 client-side js-* handlers the reference uses — no Apply button either way. --}}
+            @php $ls = old('list_status', $list_status ?? 'all'); @endphp
+            <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <form method="GET" action="{{ route('admin.employee_idcard.index') }}" id="idcardFilterForm"
+                      class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="programme-dt-filters-label">Filters</span>
+
+                    <div class="programme-dt-filter-select">
+                        <label for="listStatus" class="visually-hidden">Approval status</label>
+                        <select name="list_status" id="listStatus" class="form-select form-select-sm js-idcard-filter">
+                            <option value="all" {{ $ls === 'all' ? 'selected' : '' }}>Approval Status</option>
+                            <option value="pending" {{ $ls === 'pending' ? 'selected' : '' }}>Pending</option>
+                            <option value="approved" {{ $ls === 'approved' ? 'selected' : '' }}>Approved</option>
+                            <option value="rejected" {{ $ls === 'rejected' ? 'selected' : '' }}>Rejected</option>
+                        </select>
+                    </div>
+
+                    {{-- Time Period: one flatpickr range in place of the old From/To pair.
+                         The hidden inputs keep the date_from / date_to query params unchanged. --}}
+                    @php
+                        $tpFrom = old('date_from', $dateFrom ?? '');
+                        $tpTo   = old('date_to', $dateTo ?? '');
+                        $tpLabel = ($tpFrom && $tpTo)
+                            ? \Carbon\Carbon::parse($tpFrom)->format('d/m/Y') . ' - ' . \Carbon\Carbon::parse($tpTo)->format('d/m/Y')
+                            : '';
+                    @endphp
+                    <div class="programme-dt-filter-select idcard-time-period position-relative">
+                        <input type="hidden" name="date_from" id="dateFrom" value="{{ $tpFrom }}">
+                        <input type="hidden" name="date_to" id="dateTo" value="{{ $tpTo }}">
+                        <i class="bi bi-calendar3 idcard-tp-ico" aria-hidden="true"></i>
+                        <label for="idcardTimePeriod" class="visually-hidden">Time period</label>
+                        <input type="text" id="idcardTimePeriod" class="form-control form-select-sm idcard-tp-input"
+                               placeholder="Time Period" value="{{ $tpLabel }}"
+                               readonly autocomplete="off" aria-label="Filter by time period">
+                        <i class="bi bi-chevron-down idcard-tp-caret" aria-hidden="true"></i>
+                    </div>
+
+                    <a href="{{ route('admin.employee_idcard.index') }}"
+                       class="btn programme-dt-btn-reset d-inline-flex align-items-center">Reset Filters</a>
+                </form>
+
+                {{-- Columns + Search share the filters row (reference: exemption_master).
+                     MessColumnManager injects the Columns dropdown into the mount div;
+                     datatable-global-ui.js relocates the search box into the slot. --}}
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-xl-auto">
+                    <div id="messColManagerMount-activeIdcardTable"
+                         data-colvis-class="programme-dt-btn-columns"></div>
+                    <div id="activeDtSearch" class="programme-dt-search" data-dt-search-for="activeIdcardTable"></div>
+                </div>
+            </div>
+
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="active-panel" role="tabpanel" aria-labelledby="active-tab">
+                    <div class="programme-dt-panel">
                     <div class="table-responsive">
-                        <table class="table text-nowrap align-middle idcard-index-table" id="activeIdcardTable">
+                        <table class="table text-nowrap align-middle idcard-index-table programme-dt-table w-100" id="activeIdcardTable">
                             <thead>
                                 <tr>
                                     <th>S.No.</th>
@@ -203,12 +239,21 @@
                             </tbody>
                         </table>
                     </div>
+                    <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                         data-dt-footer-for="activeIdcardTable"></div>
+                    </div>
                     @include('components.mess-master-datatables', ['tableId' => 'activeIdcardTable', 'searchPlaceholder' => 'Search ID card requests...', 'orderColumn' => 0, 'actionColumnIndex' => 9, 'infoLabel' => 'requests'])
                 </div>
 
                 <div class="tab-pane fade" id="duplication-panel" role="tabpanel" aria-labelledby="duplication-tab">
+                    <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3">
+                        <div id="messColManagerMount-duplicationIdcardTable"
+                             data-colvis-class="programme-dt-btn-columns"></div>
+                        <div id="duplicationDtSearch" class="programme-dt-search" data-dt-search-for="duplicationIdcardTable"></div>
+                    </div>
+                    <div class="programme-dt-panel">
                     <div class="table-responsive">
-                        <table class="table table-hover table-striped table-borderless mb-0 align-middle idcard-index-table" id="duplicationIdcardTable">
+                        <table class="table table-hover mb-0 align-middle idcard-index-table programme-dt-table w-100" id="duplicationIdcardTable">
                             <thead class="table-light text-body-secondary border-bottom border-2">
                                 <tr>
                                     <th class="text-nowrap py-3 ps-4">S.No.</th>
@@ -306,13 +351,22 @@
                             </tbody>
                         </table>
                     </div>
+                    <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                         data-dt-footer-for="duplicationIdcardTable"></div>
+                    </div>
                     @include('components.mess-master-datatables', ['tableId' => 'duplicationIdcardTable', 'searchPlaceholder' => 'Search duplication requests...', 'orderColumn' => 0, 'actionColumnIndex' => 9, 'infoLabel' => 'requests'])
                 </div>
 
 
                 <div class="tab-pane fade" id="archive-panel" role="tabpanel" aria-labelledby="archive-tab">
+                    <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3">
+                        <div id="messColManagerMount-archiveIdcardTable"
+                             data-colvis-class="programme-dt-btn-columns"></div>
+                        <div id="archiveDtSearch" class="programme-dt-search" data-dt-search-for="archiveIdcardTable"></div>
+                    </div>
+                    <div class="programme-dt-panel">
                     <div class="table-responsive">
-                        <table class="table text-nowrap mb-0 align-middle idcard-index-table table-striped" id="archiveIdcardTable">
+                        <table class="table text-nowrap mb-0 align-middle idcard-index-table programme-dt-table w-100" id="archiveIdcardTable">
                             <thead>
                                 <tr>
                                     <th class="text-nowrap py-3 ps-4">S.No.</th>
@@ -459,9 +513,13 @@
                             </tbody>
                         </table>
                     </div>
+                    <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                         data-dt-footer-for="archiveIdcardTable"></div>
+                    </div>
                     @include('components.mess-master-datatables', ['tableId' => 'archiveIdcardTable', 'searchPlaceholder' => 'Search archived requests...', 'orderColumn' => 0, 'actionColumnIndex' => 6, 'infoLabel' => 'requests'])
                 </div>
             </div>
+
         </div>
     </div>
 </div>
@@ -640,8 +698,45 @@
         </div>
     </div>
 
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Time Period range picker — writes back into the date_from / date_to hidden
+    // inputs and submits the filter form once both ends are picked.
+    (function () {
+        var input = document.getElementById('idcardTimePeriod');
+        var form = document.getElementById('idcardFilterForm');
+        if (!input || !form || typeof flatpickr === 'undefined') return;
+
+        var fromEl = document.getElementById('dateFrom');
+        var toEl = document.getElementById('dateTo');
+        var defaults = (fromEl.value && toEl.value) ? [fromEl.value, toEl.value] : null;
+
+        flatpickr(input, {
+            mode: 'range',
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'd/m/Y',
+            // Default altInputClass is "form-control input" — restate ours or the
+            // icon padding/width on the visible input is lost.
+            altInputClass: 'form-control form-select-sm idcard-tp-input',
+            showMonths: 2,
+            defaultDate: defaults,
+            locale: { rangeSeparator: ' - ' },
+            onChange: function (selectedDates, _str, instance) {
+                if (selectedDates.length === 2) {
+                    fromEl.value = instance.formatDate(selectedDates[0], 'Y-m-d');
+                    toEl.value = instance.formatDate(selectedDates[1], 'Y-m-d');
+                    form.submit();
+                } else if (selectedDates.length === 0 && (fromEl.value || toEl.value)) {
+                    fromEl.value = '';
+                    toEl.value = '';
+                    form.submit();
+                }
+            }
+        });
+    })();
+
     // Ensure Active tab is shown on page load (default tab)
     var activeTabEl = document.getElementById('active-tab');
     if (activeTabEl && typeof bootstrap !== 'undefined') {
@@ -651,6 +746,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.location.hash) {
         history.replaceState(null, '', window.location.pathname + window.location.search);
     }
+
+    // Filters apply on change (the design has no Apply button). These are server-side
+    // filters, so "apply" means re-submitting the GET form. The name box is left out:
+    // submitting per keystroke would reload the page mid-typing — Enter submits it.
+    (function () {
+        var filterForm = document.getElementById('idcardFilterForm');
+        if (!filterForm) return;
+        filterForm.querySelectorAll('.js-idcard-filter').forEach(function (el) {
+            el.addEventListener('change', function () { filterForm.submit(); });
+        });
+    })();
 
     // ===== ID Card Export: Respect current tab (Active / Duplication / Extension / Archive) =====
     function getCurrentIdcardTabKey() {

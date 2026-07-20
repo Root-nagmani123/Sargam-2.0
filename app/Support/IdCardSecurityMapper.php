@@ -18,6 +18,38 @@ use stdClass;
 class IdCardSecurityMapper
 {
     /**
+     * Memo for the small reference rows (employees, departments, card types) that the
+     * DTO mappers look up per row. Listing ~2.7k requests re-fetched the same handful
+     * of rows ~26k times and took the index page past its 60s limit; these tables are
+     * stable for the life of a request, so resolving each key once is equivalent.
+     *
+     * @var array<string, mixed>
+     */
+    private static array $lookupMemo = [];
+
+    /**
+     * Resolve $key once per request. Null results are memoised too (a missing employee
+     * must not be re-queried for every row that references it).
+     */
+    private static function memo(string $key, callable $resolver)
+    {
+        if (! array_key_exists($key, static::$lookupMemo)) {
+            static::$lookupMemo[$key] = $resolver();
+        }
+
+        return static::$lookupMemo[$key];
+    }
+
+    /**
+     * Drop the memo. Only needed if a long-running process (queue worker, Octane) must
+     * observe writes to employee_master / department_master within the same tick.
+     */
+    public static function flushLookupMemo(): void
+    {
+        static::$lookupMemo = [];
+    }
+
+    /**
      * Format a date value (Carbon, DateTime, string, or null) to d/m/Y for display.
      */
     public static function formatDateForDisplay($value): ?string
@@ -43,18 +75,20 @@ class IdCardSecurityMapper
         if ($employeePk === null || $employeePk === '') {
             return null;
         }
-        $emp = DB::table('employee_master')
-            ->where(function ($q) use ($employeePk) {
-                $q->where('pk', $employeePk)->orWhere('pk_old', $employeePk);
-            })
-            ->select(['first_name', 'last_name'])
-            ->first();
-        if (! $emp) {
-            return null;
-        }
-        $name = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? ''));
+        return static::memo('empName:' . $employeePk, static function () use ($employeePk) {
+            $emp = DB::table('employee_master')
+                ->where(function ($q) use ($employeePk) {
+                    $q->where('pk', $employeePk)->orWhere('pk_old', $employeePk);
+                })
+                ->select(['first_name', 'last_name'])
+                ->first();
+            if (! $emp) {
+                return null;
+            }
+            $name = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? ''));
 
-        return $name !== '' ? $name : null;
+            return $name !== '' ? $name : null;
+        });
     }
 
     /**
@@ -76,14 +110,28 @@ class IdCardSecurityMapper
      */
     public static function resolveContractualBeneficiaryEmployee(object $row): ?object
     {
+        // The result depends only on these two fields, and the same pair repeats across
+        // many rows. The name match is an unindexed UPPER(CONCAT(..)) compare plus a
+        // LIKE fallback — the two most expensive queries in the listing — so resolving
+        // each distinct pair once matters.
+        $memoKey = 'beneficiary:' . ($row->created_by ?? '') . '|' . ($row->employee_name ?? '');
+
+        return static::memo($memoKey, static fn () => static::resolveContractualBeneficiaryEmployeeUncached($row));
+    }
+
+    /** @see resolveContractualBeneficiaryEmployee() — same logic, without the memo. */
+    private static function resolveContractualBeneficiaryEmployeeUncached(object $row): ?object
+    {
         $cardName = static::normalizeFullNameForMatch($row->employee_name ?? '');
 
         if (! empty($row->created_by)) {
-            $byCreator = DB::table('employee_master')
-                ->where(function ($q) use ($row) {
-                    $q->where('pk', $row->created_by)->orWhere('pk_old', $row->created_by);
-                })
-                ->first(['pk', 'first_name', 'last_name', 'doj']);
+            $byCreator = static::memo('empByCreator:' . $row->created_by, static function () use ($row) {
+                return DB::table('employee_master')
+                    ->where(function ($q) use ($row) {
+                        $q->where('pk', $row->created_by)->orWhere('pk_old', $row->created_by);
+                    })
+                    ->first(['pk', 'first_name', 'last_name', 'doj']);
+            });
             if ($byCreator) {
                 $creatorName = static::normalizeFullNameForMatch(trim(($byCreator->first_name ?? '') . ' ' . ($byCreator->last_name ?? '')));
                 if ($cardName === '' || $cardName === $creatorName) {
@@ -93,29 +141,62 @@ class IdCardSecurityMapper
         }
 
         if ($cardName !== '') {
-            $byName = DB::table('employee_master')
-                ->whereRaw(
-                    "UPPER(TRIM(CONCAT(COALESCE(TRIM(first_name),''),' ',COALESCE(TRIM(last_name),'')))) = ?",
-                    [$cardName]
-                )
-                ->orderBy('pk')
-                ->first(['pk', 'first_name', 'last_name', 'doj']);
-            if ($byName) {
-                return $byName;
+            // Matched against an in-memory index rather than per-name SQL. Both the
+            // exact (UPPER(CONCAT(..)) = ?) and the LIKE fallback are unindexed scans of
+            // employee_master, and contractual names are mostly distinct, so this ran
+            // ~3.6k scans per listing. The table is ~1.8k rows — load it once instead.
+            [$exactByName, $ordered] = static::employeeNameIndex();
+
+            if (isset($exactByName[$cardName])) {
+                return $exactByName[$cardName];
             }
+
             $needle = trim((string) ($row->employee_name ?? ''));
             if ($needle !== '') {
-                $fuzzy = DB::table('employee_master')
-                    ->where(DB::raw("CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,''))"), 'like', '%' . $needle . '%')
-                    ->orderBy('pk')
-                    ->first(['pk', 'first_name', 'last_name', 'doj']);
-                if ($fuzzy) {
-                    return $fuzzy;
+                // Mirrors LIKE '%needle%' ORDER BY pk LIMIT 1 (MySQL's default
+                // collation is case-insensitive, hence stripos).
+                foreach ($ordered as $entry) {
+                    if (stripos($entry->full_name, $needle) !== false) {
+                        return $entry->row;
+                    }
                 }
             }
         }
 
         return null;
+    }
+
+    /**
+     * employee_master name index, built once per request.
+     *
+     * @return array{0: array<string, object>, 1: list<object>} [exact normalised-name => row, rows ordered by pk]
+     */
+    private static function employeeNameIndex(): array
+    {
+        return static::memo('employeeNameIndex', static function () {
+            $exact = [];
+            $ordered = [];
+
+            DB::table('employee_master')
+                ->orderBy('pk')
+                ->select(['pk', 'first_name', 'last_name', 'doj'])
+                ->chunk(1000, function ($rows) use (&$exact, &$ordered) {
+                    foreach ($rows as $r) {
+                        // Matches the SQL's CONCAT(first,' ',last) exactly.
+                        $fullName = ($r->first_name ?? '') . ' ' . ($r->last_name ?? '');
+                        $key = static::normalizeFullNameForMatch(
+                            trim((string) ($r->first_name ?? '')) . ' ' . trim((string) ($r->last_name ?? ''))
+                        );
+                        // ORDER BY pk + first(): the lowest pk wins for duplicate names.
+                        if ($key !== '' && ! isset($exact[$key])) {
+                            $exact[$key] = $r;
+                        }
+                        $ordered[] = (object) ['full_name' => $fullName, 'row' => $r];
+                    }
+                });
+
+            return [$exact, $ordered];
+        });
     }
 
     /**
@@ -211,7 +292,7 @@ class IdCardSecurityMapper
             if ($cardLookups !== null && isset($cardLookups['masters'][$pt])) {
                 $cardTypeName = $cardLookups['masters'][$pt];
             } else {
-                $master = DB::table('sec_id_cardno_master')->where('pk', $row->permanent_type)->value('sec_card_name');
+                $master = static::memo('cardMaster:' . $row->permanent_type, static fn () => DB::table('sec_id_cardno_master')->where('pk', $row->permanent_type)->value('sec_card_name'));
                 if ($master) {
                     $cardTypeName = $master;
                 }
@@ -262,7 +343,7 @@ class IdCardSecurityMapper
             if ($cardLookups !== null && isset($cardLookups['configs'][$pst])) {
                 $subTypeName = $cardLookups['configs'][$pst];
             } else {
-                $configRow = DB::table('sec_id_cardno_config_map')->where('pk', $row->perm_sub_type)->first();
+                $configRow = static::memo('cardConfig:' . $row->perm_sub_type, static fn () => DB::table('sec_id_cardno_config_map')->where('pk', $row->perm_sub_type)->first());
                 if ($configRow && ! empty($configRow->config_name)) {
                     $subTypeName = $configRow->config_name;
                 }
@@ -286,15 +367,17 @@ class IdCardSecurityMapper
             }
         }
         if ($dto->requested_by === null && !empty($row->created_by)) {
-            $creator = DB::table('employee_master')
-                ->where(function ($q) use ($row) {
-                    $q->where('pk', $row->created_by)->orWhere('pk_old', $row->created_by);
-                })
-                ->first();
+            $creator = static::memo('empRowAny:' . $row->created_by, static function () use ($row) {
+                return DB::table('employee_master')
+                    ->where(function ($q) use ($row) {
+                        $q->where('pk', $row->created_by)->orWhere('pk_old', $row->created_by);
+                    })
+                    ->first();
+            });
             if ($creator) {
                 $dto->requested_by = trim(($creator->first_name ?? '') . ' ' . ($creator->last_name ?? ''));
                 if (!empty($creator->department_master_pk)) {
-                    $dept = DB::table('department_master')->where('pk', $creator->department_master_pk)->value('department_name');
+                    $dept = static::memo('dept:' . $creator->department_master_pk, static fn () => DB::table('department_master')->where('pk', $creator->department_master_pk)->value('department_name'));
                     $dto->requested_section = $dept;
                 }
             }
@@ -402,7 +485,7 @@ class IdCardSecurityMapper
         $dto->created_at = isset($row->created_date) ? \Carbon\Carbon::parse($row->created_date) : null;
         $cardTypeName = '--';
         if (!empty($row->permanent_type)) {
-            $master = DB::table('sec_id_cardno_master')->where('pk', $row->permanent_type)->value('sec_card_name');
+            $master = static::memo('cardMaster:' . $row->permanent_type, static fn () => DB::table('sec_id_cardno_master')->where('pk', $row->permanent_type)->value('sec_card_name'));
             if ($master) {
                 $cardTypeName = $master;
             }
@@ -461,7 +544,7 @@ class IdCardSecurityMapper
 
             // Resolve approver names from employee_master for display in "All Requests" table
             if ($dto->approved_by_a1) {
-                $emp1 = DB::table('employee_master')->where('pk', $dto->approved_by_a1)->first();
+                $emp1 = static::memo('empRow:' . $dto->approved_by_a1, static fn () => DB::table('employee_master')->where('pk', $dto->approved_by_a1)->first());
                 if ($emp1) {
                     $dto->approver1 = (object)[
                         'name' => trim(($emp1->first_name ?? '') . ' ' . ($emp1->last_name ?? '')),
@@ -469,7 +552,7 @@ class IdCardSecurityMapper
                 }
             }
             if ($dto->approved_by_a2) {
-                $emp2 = DB::table('employee_master')->where('pk', $dto->approved_by_a2)->first();
+                $emp2 = static::memo('empRow:' . $dto->approved_by_a2, static fn () => DB::table('employee_master')->where('pk', $dto->approved_by_a2)->first());
                 if ($emp2) {
                     $dto->approver2 = (object)[
                         'name' => trim(($emp2->first_name ?? '') . ' ' . ($emp2->last_name ?? '')),
@@ -477,7 +560,7 @@ class IdCardSecurityMapper
                 }
             }
             if ($dto->rejected_by) {
-                $empR = DB::table('employee_master')->where('pk', $dto->rejected_by)->first();
+                $empR = static::memo('empRow:' . $dto->rejected_by, static fn () => DB::table('employee_master')->where('pk', $dto->rejected_by)->first());
                 if ($empR) {
                     $dto->rejectedByUser = (object)[
                         'name' => trim(($empR->first_name ?? '') . ' ' . ($empR->last_name ?? '')),
@@ -490,7 +573,7 @@ class IdCardSecurityMapper
         $dto->card_valid_to = isset($row->card_valid_to) ? \Carbon\Carbon::parse($row->card_valid_to) : null;
         $subTypeName = null;
         if (!empty($row->perm_sub_type)) {
-            $configRow = DB::table('sec_id_cardno_config_map')->where('pk', $row->perm_sub_type)->first();
+            $configRow = static::memo('cardConfig:' . $row->perm_sub_type, static fn () => DB::table('sec_id_cardno_config_map')->where('pk', $row->perm_sub_type)->first());
             if ($configRow && !empty($configRow->config_name)) {
                 $subTypeName = $configRow->config_name;
             }
@@ -507,23 +590,25 @@ class IdCardSecurityMapper
         $dto->requested_by = null;
         $dto->requested_section = null;
         if (!empty($row->section)) {
-            $deptName = DB::table('department_master')->where('pk', $row->section)->value('department_name');
+            $deptName = static::memo('dept:' . $row->section, static fn () => DB::table('department_master')->where('pk', $row->section)->value('department_name'));
             $dto->section = $deptName ?? (string) $row->section;
             $dto->requested_section = $dto->section;
         }
         $dto->created_by_name = null;
         if (!empty($row->created_by)) {
-            $creator = DB::table('employee_master')
-                ->where(function ($q) use ($row) {
-                    $q->where('pk', $row->created_by)->orWhere('pk_old', $row->created_by);
-                })
-                ->first();
+            $creator = static::memo('empRowAny:' . $row->created_by, static function () use ($row) {
+                return DB::table('employee_master')
+                    ->where(function ($q) use ($row) {
+                        $q->where('pk', $row->created_by)->orWhere('pk_old', $row->created_by);
+                    })
+                    ->first();
+            });
             if ($creator) {
                 $creatorName = trim(($creator->first_name ?? '') . ' ' . ($creator->last_name ?? ''));
                 $dto->created_by_name = $creatorName !== '' ? $creatorName : null;
                 $dto->requested_by = $creatorName !== '' ? $creatorName : null;
                 if (!empty($creator->department_master_pk)) {
-                    $dto->requested_section = DB::table('department_master')->where('pk', $creator->department_master_pk)->value('department_name');
+                    $dto->requested_section = static::memo('dept:' . $creator->department_master_pk, static fn () => DB::table('department_master')->where('pk', $creator->department_master_pk)->value('department_name'));
                 }
             }
         }
@@ -533,13 +618,15 @@ class IdCardSecurityMapper
         $deptApprPk = $row->department_approval_emp_pk ?? null;
         if ($deptApprPk !== null && $deptApprPk !== '') {
             $dto->approval_authority = (int) $deptApprPk;
-            $authEmp = DB::table('employee_master as em')
-                ->leftJoin('designation_master as dm', 'em.designation_master_pk', '=', 'dm.pk')
-                ->where(function ($q) use ($deptApprPk) {
-                    $q->where('em.pk', $deptApprPk)->orWhere('em.pk_old', $deptApprPk);
-                })
-                ->select(['em.first_name', 'em.last_name', 'dm.designation_name'])
-                ->first();
+            $authEmp = static::memo('empDesig:' . $deptApprPk, static function () use ($deptApprPk) {
+                return DB::table('employee_master as em')
+                    ->leftJoin('designation_master as dm', 'em.designation_master_pk', '=', 'dm.pk')
+                    ->where(function ($q) use ($deptApprPk) {
+                        $q->where('em.pk', $deptApprPk)->orWhere('em.pk_old', $deptApprPk);
+                    })
+                    ->select(['em.first_name', 'em.last_name', 'dm.designation_name'])
+                    ->first();
+            });
             if ($authEmp) {
                 $name = trim(($authEmp->first_name ?? '') . ' ' . ($authEmp->last_name ?? ''));
                 $dto->approval_authority_name = $name !== ''

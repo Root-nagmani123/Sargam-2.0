@@ -1,250 +1,301 @@
 @extends('admin.layouts.master')
-@section('title', 'Duplicate Vehicle Pass Request - Sargam')
-@section('setup_content')
-<div class="container-fluid duplicate-vehicle-pass-print-area">
-    {{-- Print-only header: visible only when printing --}}
-    <div class="print-only-header">
-        <h5 class="mb-0">Duplicate Vehicle Pass Request - List</h5>
-        <p class="text-muted small mb-0">Printed on: {{ now()->format('d-m-Y H:i') }}</p>
-        <p class="text-muted small mb-0">Total {{ $requests->count() }} entries</p>
-    </div>
 
-    <div class="no-print mb-3">
-        <x-breadcrum title="Duplicate Vehicle Pass Request"></x-breadcrum>
-    </div>
+@section('title', 'Duplicate Vehicle Pass Request')
 
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+@endpush
 
-    <div class="card border-0 shadow-sm rounded-3">
-        <div class="card-body p-3 p-lg-4">
-            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 no-print">
-                <div>
-                    <h5 class="card-title mb-1 fw-semibold">
-                        Duplicate Vehicle Pass Request
-                    </h5>
-                    <p class="card-subtitle text-muted small mb-0">
-                        View and manage all duplicate vehicle pass requests. You can search, filter, print, and perform actions on each record.
-                    </p>
-                </div>
-            </div>
-            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 no-print">
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" id="toggleColumnsBtn" title="Show / hide document column">
-                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">view_column</i>
-                        <span class="d-none d-sm-inline">Columns</span>
+@section('content')
+<div class="container-fluid duplicate-vehicle-pass-page">
+    <x-breadcrum title="Duplicate Vehicle Pass Request">
+        <a href="{{ route('admin.security.duplicate_vehicle_pass.create') }}"
+           class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+            <span>Add New Request</span>
+        </a>
+    </x-breadcrum>
+
+    <x-session_message />
+<div class="d-flex justify-content-end align-items-center gap-2 mb-3">
+    <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="dvpPrintBtn" title="Print">
+                        <i class="bi bi-printer" aria-hidden="true"></i>
+                        <span>Print</span>
                     </button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" onclick="window.history.back()" title="Back">
-                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">arrow_back</i>
-                        <span class="d-none d-sm-inline">Back</span>
+                    <div class="dropdown">
+                        <button type="button" class="btn programme-dt-btn-columns dropdown-toggle border-0 text-primary" id="dvpDownloadBtn"
+                            data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                            <i class="bi bi-download" aria-hidden="true"></i>
+                            <span>Download</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 py-2" aria-labelledby="dvpDownloadBtn">
+                            <li>
+                                <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="dvpExportPdf">
+                                    <i class="bi bi-file-earmark-pdf text-danger" aria-hidden="true"></i> Download PDF
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="dvpExportExcel">
+                                    <i class="bi bi-file-earmark-spreadsheet text-success" aria-hidden="true"></i> Download Excel
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+</div>
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
+
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="dvpBtnColumns"
+                        data-bs-toggle="modal" data-bs-target="#dvpColumnVisibilityModal"
+                        title="Show / hide columns">
+                        <span>Columns</span><i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" onclick="window.print()" title="Print">
-                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">print</i>
-                        <span class="d-none d-sm-inline">Print</span>
-                    </button>
-                </div>
-                <div class="d-flex flex-wrap gap-2 align-items-center">
-                    <a href="{{ route('admin.security.duplicate_vehicle_pass.create') }}" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1">
-                        <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:18px;">add</i>
-                        Add New Request
-                    </a>
+                    <div id="dvpDtSearch" class="programme-dt-search" data-dt-search-for="duplicateVehPass-table"></div>
                 </div>
             </div>
 
-            <div class="table-responsive border rounded-3">
-                <table class="table table-striped table-hover align-middle mb-0" id="duplicateVehPassTable">
-                    <thead class="table-primary text-white sticky-top">
-                        <tr>
-                            <th style="width:50px">S.NO.</th>
-                            <th class="col-emp">EMPLOYEE NAME</th>
-                            <th class="col-pass">VEHICLE PASS NO</th>
-                            <th class="col-type">VEHICLE TYPE</th>
-                            <th class="col-veh">VEHICLE NUMBER</th>
-                            <th class="col-doc">UPLOADED DOCUMENT</th>
-                            <th class="col-date">REQUEST DATE</th>
-                            <th class="col-status">STATUS</th>
-                            <th class="col-action" style="width:120px">ACTIONS</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($requests as $idx => $r)
-                            <tr>
-                                <td>{{ $idx + 1 }}</td>
-                                <td class="col-emp">{{ $r->employee_name ?? '--' }}</td>
-                                <td class="col-pass">{{ $r->vehicle_pass_no ?? '--' }}</td>
-                                <td class="col-type">{{ $r->vehicleType->vehicle_type ?? '--' }}</td>
-                                <td class="col-veh">{{ $r->vehicle_no ?? '--' }}</td>
-                                <td class="col-doc">
-                                    @php
-                                        $docPath = $r->doc_upload;
-                                        $docExists = $docPath && \Storage::disk('public')->exists($docPath);
-                                    @endphp
-                                    @if($docExists)
-                                        <a href="{{ asset('storage/' . $docPath) }}" target="_blank" class="text-primary d-inline-flex align-items-center gap-1">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:20px;">description</i>
-                                            <span class="d-none d-sm-inline">Download</span>
-                                        </a>
-                                    @elseif($docPath)
-                                        <span class="text-warning small">No file available in storage</span>
-                                    @else
-                                        --
-                                    @endif
-                                </td>
-                                <td class="col-date">{{ $r->created_date ? $r->created_date->format('d-m-Y') : '--' }}</td>
-                                <td class="col-status">
-                                    @php
-                                        $badge = match($r->status_text) {
-                                            'Approved' => 'bg-success',
-                                            'Rejected' => 'bg-danger',
-                                            'Issued' => 'bg-info',
-                                            default => 'bg-warning text-dark',
-                                        };
-                                    @endphp
-                                    <span class="badge {{ $badge }}">{{ $r->status_text }}</span>
-                                </td>
-                                <td class="col-action">
-                                    <div class="d-flex align-items-center gap-1">
-                                        <a href="{{ route('admin.security.duplicate_vehicle_pass.show', encrypt($r->vehicle_tw_pk)) }}" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" title="View">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
-                                            <span class="d-none d-md-inline">View</span>
-                                        </a>
-                                        @if((int)$r->vech_card_status === 1)
-                                            <a href="{{ route('admin.security.duplicate_vehicle_pass.edit', encrypt($r->vehicle_tw_pk)) }}" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1" title="Edit">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
-                                                <span class="d-none d-md-inline">Edit</span>
-                                            </a>
-                                            <form action="{{ route('admin.security.duplicate_vehicle_pass.delete', encrypt($r->vehicle_tw_pk)) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this request?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" title="Delete">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                                                    <span class="d-none d-md-inline">Delete</span>
-                                                </button>
-                                            </form>
-                                        @else
-                                            <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" title="Edit Disabled" disabled>
-                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
-                                                <span class="d-none d-md-inline">Edit</span>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" title="Delete Disabled" disabled>
-                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                                                <span class="d-none d-md-inline">Delete</span>
-                                            </button>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="9" class="text-center text-muted py-5">
-                                    No data available in table.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
+                </div>
+                <div id="dvpDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                     data-dt-footer-for="duplicateVehPass-table"></div>
             </div>
 
         </div>
     </div>
 </div>
-@include('components.mess-master-datatables', ['tableId' => 'duplicateVehPassTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 0, 'actionColumnIndex' => 8, 'infoLabel' => 'requests'])
 
-<style>
-/* Print-only header: hidden on screen */
-.print-only-header { display: none !important; }
-
-@media print {
-    /* Dedicated print layout: only this area, no sidebar/header */
-    body * { visibility: hidden !important; }
-    .duplicate-vehicle-pass-print-area,
-    .duplicate-vehicle-pass-print-area * { visibility: visible !important; }
-    .duplicate-vehicle-pass-print-area .no-print,
-    .duplicate-vehicle-pass-print-area .no-print * { visibility: hidden !important; display: none !important; }
-    .duplicate-vehicle-pass-print-area {
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 12px !important;
-        background: #fff !important;
-    }
-    /* Show print-only header */
-    .print-only-header {
-        display: block !important;
-        visibility: visible !important;
-        margin-bottom: 12px !important;
-        padding-bottom: 8px !important;
-        border-bottom: 1px solid #333 !important;
-    }
-    .print-only-header h5 { font-size: 16px !important; }
-    .print-only-header p { font-size: 11px !important; margin: 2px 0 !important; }
-    /* Hide toolbar, buttons, forms, pagination, alerts */
-    .duplicate-vehicle-pass-print-area .d-flex.flex-wrap.gap-2.justify-content-between,
-    .duplicate-vehicle-pass-print-area .btn,
-    .duplicate-vehicle-pass-print-area form,
-    .duplicate-vehicle-pass-print-area nav[aria-label="Pagination"],
-    .duplicate-vehicle-pass-print-area .pagination,
-    .duplicate-vehicle-pass-print-area .dataTables_wrapper .row,
-    .duplicate-vehicle-pass-print-area .alert { display: none !important; visibility: hidden !important; }
-    /* Hide Actions column in print */
-    .duplicate-vehicle-pass-print-area .col-action,
-    .duplicate-vehicle-pass-print-area th.col-action { display: none !important; }
-    /* Card and table: print-friendly */
-    .duplicate-vehicle-pass-print-area .card {
-        border: 1px solid #333 !important;
-        box-shadow: none !important;
-        background: #fff !important;
-    }
-    .duplicate-vehicle-pass-print-area .table-responsive { overflow: visible !important; }
-    .duplicate-vehicle-pass-print-area #duplicateVehPassTable {
-        width: 100% !important;
-        font-size: 11px !important;
-        border-collapse: collapse !important;
-    }
-    .duplicate-vehicle-pass-print-area #duplicateVehPassTable thead {
-        display: table-header-group !important;
-    }
-    .duplicate-vehicle-pass-print-area #duplicateVehPassTable th,
-    .duplicate-vehicle-pass-print-area #duplicateVehPassTable td {
-        border: 1px solid #333 !important;
-        padding: 4px 6px !important;
-    }
-    .duplicate-vehicle-pass-print-area #duplicateVehPassTable tbody tr {
-        page-break-inside: avoid !important;
-    }
-    .duplicate-vehicle-pass-print-area #duplicateVehPassTable .table-primary {
-        background: #e9ecef !important;
-        color: #000 !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-    /* Links in table: show text only (e.g. Download) */
-    .duplicate-vehicle-pass-print-area #duplicateVehPassTable a {
-        color: #000 !important;
-        text-decoration: none !important;
-    }
-}
-</style>
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="dvpColumnVisibilityModal" tabindex="-1" aria-labelledby="dvpColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="dvpColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="dvpColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
 
 @push('scripts')
+{!! $dataTable->scripts() !!}
 <script>
-(function() {
-    document.getElementById('toggleColumnsBtn')?.addEventListener('click', function() {
-        document.querySelectorAll('#duplicateVehPassTable .col-doc').forEach(function(el) { el.classList.toggle('d-none'); });
+    $(document).ready(function () {
+        var TABLE_ID = '#duplicateVehPass-table';
+        var table;
+
+        /* ---- Relocate search + build footer (pagination + count) ---- */
+        function enhanceDvpDtControls() {
+            var $wrapper = $(TABLE_ID + '_wrapper');
+            if (!$wrapper.length) {
+                return;
+            }
+
+            var $searchSlot = $('#dvpDtSearch');
+            var $footer = $('#dvpDtFooter');
+
+            if (!$searchSlot.find('.dataTables_filter').length) {
+                var $filter = $wrapper.find('.dataTables_filter').first();
+                if ($filter.length) {
+                    $filter.find('input')
+                        .addClass('form-control shadow-none')
+                        .attr('placeholder', 'Search')
+                        .attr('aria-label', 'Search requests');
+                    $filter.find('label').contents().filter(function () {
+                        return this.nodeType === 3;
+                    }).remove();
+                    $searchSlot.append($filter);
+                }
+            }
+
+            if ($footer.data('dtReady')) {
+                updateDvpDtCount();
+                return;
+            }
+
+            var $paginate = $wrapper.find('.dataTables_paginate').first();
+            var $length = $wrapper.find('.dataTables_length').first();
+            var $info = $wrapper.find('.dataTables_info').first();
+
+            if (!$footer.length || (!$paginate.length && !$length.length)) {
+                return;
+            }
+
+            var $pagCol = $('<div class="programme-dt-pagination"></div>');
+            var $countCol = $('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>');
+
+            if ($paginate.length) {
+                $paginate.find('.pagination').addClass('mb-0');
+                $pagCol.append($paginate);
+            }
+
+            if ($length.length) {
+                var $select = $length.find('select').addClass('form-select form-select-sm').detach();
+                $length.find('label')
+                    .empty()
+                    .append(document.createTextNode('Showing '))
+                    .append($select)
+                    .append(document.createTextNode(' '));
+                $countCol.append($length);
+            }
+
+            if ($info.length) {
+                $info.addClass('mb-0');
+                $countCol.append($info);
+            }
+
+            $footer.append($pagCol).append($countCol);
+            $footer.data('dtReady', true);
+            updateDvpDtCount();
+        }
+
+        function updateDvpDtCount() {
+            if (!table) {
+                return;
+            }
+            var info = table.page.info();
+            var $info = $('#dvpDtFooter .dataTables_info');
+            if ($info.length && info && info.recordsDisplay !== undefined) {
+                $info.text('of ' + info.recordsDisplay.toLocaleString() + ' items');
+            }
+        }
+
+        /* ---- Column show / hide (DataTables API) ---- */
+        var dvpColStorageKey = 'dvpGrid:hiddenColumns:v1';
+
+        function dvpGetHiddenCols() {
+            try {
+                var raw = localStorage.getItem(dvpColStorageKey);
+                var arr = raw ? JSON.parse(raw) : [];
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function dvpPersistHiddenCols(arr) {
+            try { localStorage.setItem(dvpColStorageKey, JSON.stringify(arr)); } catch (e) {}
+        }
+
+        function setupDvpColumns(dt) {
+            if (!dt) {
+                return;
+            }
+            var hidden = dvpGetHiddenCols();
+
+            dt.columns().every(function () {
+                var idx = this.index();
+                this.visible(hidden.indexOf(idx) === -1, false);
+            });
+            dt.columns.adjust();
+
+            var $grid = $('#dvpColumnToggleGrid');
+            if (!$grid.length) {
+                return;
+            }
+            $grid.empty();
+
+            dt.columns().every(function () {
+                var idx = this.index();
+                var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+                if (!title) {
+                    return;
+                }
+
+                var inputId = 'dvpcolvis_' + idx;
+                var $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
+                var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                    .attr('for', inputId);
+                var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                    .attr('id', inputId)
+                    .prop('checked', hidden.indexOf(idx) === -1);
+
+                $cb.on('change', function () {
+                    var h = dvpGetHiddenCols();
+                    var pos = h.indexOf(idx);
+                    if (this.checked) {
+                        if (pos !== -1) h.splice(pos, 1);
+                    } else {
+                        if (pos === -1) h.push(idx);
+                    }
+                    dvpPersistHiddenCols(h);
+                    dt.column(idx).visible(this.checked, false);
+                    dt.columns.adjust();
+                });
+
+                $label.append($cb).append($('<span></span>').text(title));
+                $cell.append($label);
+                $grid.append($cell);
+            });
+        }
+
+        /* ---- Branded Print / PDF / Excel exports (server-side, honour the search) ---- */
+        function setupDvpExportButtons(dt) {
+            if (!dt || dt.dvpExportReady) {
+                return;
+            }
+            dt.dvpExportReady = true;
+
+            var exportUrl = @json(route('admin.security.duplicate_vehicle_pass.export'));
+
+            function buildUrl(format) {
+                var url = exportUrl + '?format=' + encodeURIComponent(format);
+                var term = dt.search();
+                if (term) {
+                    url += '&search=' + encodeURIComponent(term);
+                }
+                return url;
+            }
+
+            // Print opens a branded, auto-printing report in a new tab.
+            $('#dvpPrintBtn').on('click', function () {
+                window.open(buildUrl('print'), '_blank');
+            });
+            $('#dvpExportPdf').on('click', function () {
+                window.location = buildUrl('pdf');
+            });
+            $('#dvpExportExcel').on('click', function () {
+                window.location = buildUrl('excel');
+            });
+        }
+
+        /* ---- Wait for Yajra DataTable init ---- */
+        setTimeout(function () {
+            if (!$.fn.DataTable.isDataTable(TABLE_ID)) {
+                return;
+            }
+            table = $(TABLE_ID).DataTable();
+
+            enhanceDvpDtControls();
+            updateDvpDtCount();
+            setupDvpColumns(table);
+            setupDvpExportButtons(table);
+
+            var $wrapper = $(TABLE_ID + '_wrapper');
+            $(TABLE_ID).on('draw.dt', function () {
+                if ($wrapper.find('.dataTables_paginate').length && !$('#dvpDtFooter .dataTables_paginate').length) {
+                    $('#dvpDtFooter').empty().data('dtReady', false);
+                    enhanceDvpDtControls();
+                }
+                updateDvpDtCount();
+            });
+
+            setTimeout(function () {
+                enhanceDvpDtControls();
+                updateDvpDtCount();
+            }, 300);
+        }, 150);
     });
-})();
 </script>
 @endpush
-@endsection

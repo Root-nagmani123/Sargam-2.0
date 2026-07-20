@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Security;
 
+use App\DataTables\Security\CardSubTypeMasterDataTable;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -10,16 +11,9 @@ use Illuminate\Validation\Rule;
 
 class CardSubTypeMasterController extends Controller
 {
-    public function index()
+    public function index(CardSubTypeMasterDataTable $dataTable)
     {
-        $subTypes = DB::table('sec_id_cardno_config_map as m')
-            ->join('sec_id_cardno_master as t', 't.pk', '=', 'm.sec_id_cardno_master')
-            ->select('m.*', 't.sec_card_name')
-            ->orderBy('t.sec_card_name')
-            ->orderBy('m.config_name')
-            ->get();
-
-        return view('admin.security.idcard_master.sub_type.index', compact('subTypes'));
+        return $dataTable->render('admin.security.idcard_master.sub_type.index');
     }
 
     public function create(Request $request)

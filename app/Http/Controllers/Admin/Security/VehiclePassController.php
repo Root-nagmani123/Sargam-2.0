@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Security;
 
+use App\DataTables\Security\VehiclePassDataTable;
 use App\Http\Controllers\Controller;
 use App\Exports\VehiclePassExport;
 use App\Support\DataTableRedisCache;
@@ -12,6 +13,7 @@ use App\Models\SecVehicleType;
 use App\Models\EmployeeMaster;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -29,38 +31,9 @@ class VehiclePassController extends Controller
         DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'VehiclePassController@index');
     }
 
-    public function index()
+    public function index(VehiclePassDataTable $dataTable)
     {
-        $user = Auth::user();
-        $user_old_pk = EmployeeMaster::where('pk', $user->user_id)->first();
-
-        $employeePk = $user->user_id ?? null;
-        $pk_old = $user_old_pk->pk_old ?? null;
-
-        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_security_vehicle_pass_index:v1:' . md5(json_encode([
-            'epoch' => $epoch,
-            'employee_pk' => $employeePk,
-            'pk_old' => $pk_old,
-        ]));
-
-        $allPasses = DataTableRedisCache::remember(
-            $cacheKey,
-            [
-                'enabled' => 'VEHICLE_PASS_INDEX_CACHE_ENABLED',
-                'seconds' => 'VEHICLE_PASS_INDEX_CACHE_SECONDS',
-            ],
-            'VehiclePassController@index',
-            fn () => $this->buildVehiclePassIndexAllCollection($employeePk, $pk_old)
-        );
-        if (! $allPasses instanceof Collection) {
-            $allPasses = collect($allPasses);
-        }
-
-        $activePasses = $allPasses->filter(fn ($m) => (int) $m->vech_card_status === 1)->values();
-        $archivedPasses = $allPasses->filter(fn ($m) => in_array((int) $m->vech_card_status, [2, 3], true))->values();
-
-        return view('admin.security.vehicle_pass.index', compact('activePasses', 'archivedPasses'));
+        return $dataTable->render('admin.security.vehicle_pass.index');
     }
 
     /**
@@ -91,7 +64,21 @@ class VehiclePassController extends Controller
     }
 
     /**
-     * Export vehicle pass requests to Excel, CSV or PDF.
+     * Paginate a collection with a custom page name (tab-specific pagination).
+     */
+    private static function paginateCollection(Collection $collection, int $currentPage, int $perPage, string $path, string $pageName): LengthAwarePaginator
+    {
+        $currentPage = max(1, $currentPage);
+        $total = $collection->count();
+        $slice = $collection->forPage($currentPage, $perPage)->values();
+
+        return new LengthAwarePaginator($slice, $total, $perPage, $currentPage, ['path' => $path, 'pageName' => $pageName]);
+    }
+
+    /**
+     * Branded Print / PDF / Excel export of the current user's vehicle pass requests.
+     * All three share the same header block + columns as the listing.
+     * format = print (browser auto-print HTML) | pdf (DomPDF) | excel (styled .xlsx).
      */
     public function export(Request $request)
     {
@@ -99,57 +86,101 @@ class VehiclePassController extends Controller
         $employeePk = $user->user_id ?? $user->pk ?? null;
         $userOldPk = $employeePk ? EmployeeMaster::where('pk', $employeePk)->first() : null;
         $pkOld = $userOldPk->pk_old ?? null;
-        $tab = $request->get('tab', 'active');
-        $format = $request->get('format', 'xlsx');
 
-        if (! in_array($tab, ['active', 'archive', 'all'])) {
+        $tab = $request->get('tab', 'active');
+        if (! in_array($tab, ['active', 'archive', 'all'], true)) {
             $tab = 'active';
         }
+        $search = $request->get('search');
 
+        $format = strtolower((string) $request->get('format', 'excel'));
+        if (! in_array($format, ['print', 'pdf', 'excel', 'xlsx'], true)) {
+            $format = 'excel';
+        }
+
+        $export = new VehiclePassExport($tab, $employeePk, $pkOld, $search);
         $filename = 'vehicle_pass_requests_' . $tab . '_' . now()->format('Y-m-d_His');
 
-        $baseQuery = VehiclePassTWApply::with(['vehicleType', 'employee'])
-            ->where(function ($q) use ($employeePk, $pkOld) {
-                $q->where('veh_created_by', $employeePk);
-                if ($pkOld) {
-                    $q->orWhere('veh_created_by', $pkOld);
-                }
-            })
-            ->orderBy('created_date', 'desc');
+        if ($format === 'print' || $format === 'pdf') {
+            @ini_set('memory_limit', '256M');
+            @set_time_limit(120);
 
-        if ($format === 'pdf') {
-            $query = match ($tab) {
-                'archive' => (clone $baseQuery)->whereIn('vech_card_status', [2, 3]),
-                'all' => clone $baseQuery,
-                default => (clone $baseQuery)->where('vech_card_status', 1),
-            };
-            $passes = $query->get();
+            $viewData = array_merge([
+                'headings'    => $export->activeHeadings(),
+                'rows'        => $export->pdfRows(),
+                'filterLine'  => $this->buildExportFilterLine($tab, $search),
+                'printedOn'   => now()->format('d-m-Y H:i'),
+                'reportTitle' => 'Vehicle Pass Request',
+                'mode'        => $format,
+            ], $this->buildExportHeaderData());
 
-            $pdf = Pdf::loadView('admin.security.vehicle_pass.export_pdf', [
-                'passes' => $passes,
-                'tab' => $tab,
-                'export_date' => now()->format('d/m/Y H:i'),
-            ])
+            if ($format === 'print') {
+                return response()->view('admin.security.vehicle_pass.export_pdf', $viewData);
+            }
+
+            $pdf = Pdf::loadView('admin.security.vehicle_pass.export_pdf', $viewData)
                 ->setPaper('a4', 'landscape')
-                ->setOption('isHtml5ParserEnabled', true)
-                ->setOption('isRemoteEnabled', true);
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'isPhpEnabled' => true,
+                    'dpi' => 96,
+                ]);
 
             return $pdf->download($filename . '.pdf');
         }
 
-        if ($format === 'csv') {
-            return Excel::download(
-                new VehiclePassExport($tab, $employeePk, $pkOld),
-                $filename . '.csv',
-                \Maatwebsite\Excel\Excel::CSV
-            );
+        // Styled workbook (logos, blue header band, bordered zebra rows) so the
+        // download visually matches the Print / PDF layout — a plain CSV can't.
+        return Excel::download($export, $filename . '.xlsx', \Maatwebsite\Excel\Excel::XLSX);
+    }
+
+    /** Logo data-URIs for the branded export header (shared by PDF + Print). */
+    private function buildExportHeaderData(): array
+    {
+        $toDataUri = static function (string $path): ?string {
+            if (! is_file($path) || ! is_readable($path)) {
+                return null;
+            }
+            $raw = @file_get_contents($path);
+            if ($raw === false) {
+                return null;
+            }
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = match ($ext) {
+                'svg' => 'image/svg+xml',
+                'jpg', 'jpeg' => 'image/jpeg',
+                default => 'image/png',
+            };
+
+            return 'data:' . $mime . ';base64,' . base64_encode($raw);
+        };
+
+        return [
+            'logoLeft' => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
+            'logoRight' => $toDataUri(public_path('admin_assets/images/logos/constitution-75.png'))
+                ?: $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
+            'titleHindi' => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
+        ];
+    }
+
+    /** "Applied Filters: …" summary line, mirroring the export header. */
+    private function buildExportFilterLine(string $tab, ?string $search): string
+    {
+        $label = match ($tab) {
+            'archive' => 'Archived',
+            'all'     => 'All',
+            default   => 'Active',
+        };
+        $parts = ['Status: ' . $label];
+
+        $search = $search !== null ? trim($search) : '';
+        if ($search !== '') {
+            $parts[] = 'Search: ' . $search;
         }
 
-        return Excel::download(
-            new VehiclePassExport($tab, $employeePk, $pkOld),
-            $filename . '.xlsx',
-            \Maatwebsite\Excel\Excel::XLSX
-        );
+        return 'Applied Filters:   ' . implode('   |   ', $parts);
     }
 
     public function create()

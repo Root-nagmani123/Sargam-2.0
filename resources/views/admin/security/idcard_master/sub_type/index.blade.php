@@ -1,162 +1,274 @@
 @extends('admin.layouts.master')
+
 @section('title', 'Card Sub Type Master - Security')
-@section('setup_content')
-<div class="container-fluid">
-    @include('components.breadcrum', ['title' => 'ID Card - Sub Types'])
-    <div class="card" style="border-left:4px solid #004a93;">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">Sub Type & Mapping</h4>
-                <a href="{{ route('admin.security.idcard_sub_type.create') }}" class="btn btn-primary" id="openCreateSubType">
-                    <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">add</i>
-                    Add Sub Type
-                </a>
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+@endpush
+
+@section('content')
+<div class="container-fluid cardsubtype-master-page">
+    <x-breadcrum title="Card Sub Type Master">
+        <a href="{{ route('admin.security.idcard_sub_type.create') }}"
+           class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
+           id="openCreateSubType">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+            <span>Add Sub Type</span>
+        </a>
+    </x-breadcrum>
+
+    <x-session_message />
+
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
+
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="stBtnColumns"
+                        data-bs-toggle="modal" data-bs-target="#stColumnVisibilityModal"
+                        title="Show / hide columns">
+                        <span>Columns</span><i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div id="stDtSearch" class="programme-dt-search" data-dt-search-for="cardsubtypemaster-table"></div>
+                </div>
             </div>
 
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
                 </div>
-            @endif
-            @if(session('error'))
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    {{ session('error') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            @endif
-
-            <div class="table-responsive">
-                <table class="table mb-0" id="subTypeTable">
-                    <thead>
-                        <tr>
-                            <th style="width:70px;">S.No.</th>
-                            <th>Card Type</th>
-                            <th>Employee Category</th>
-                            <th>Sub Type</th>
-                            <th style="width:120px;">Status</th>
-                            <th style="width:140px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($subTypes as $index => $st)
-                            <tr>
-                                <td>{{ $index + 1 }}</td>
-                                <td>{{ $st->sec_card_name }}</td>
-                                <td>
-                                    @if($st->card_name === 'p')
-                                        <span class="badge bg-primary">Permanent</span>
-                                    @elseif($st->card_name === 'c')
-                                        <span class="badge bg-info">Contractual</span>
-                                    @else
-                                        <span class="badge bg-secondary">{{ $st->card_name }}</span>
-                                    @endif
-                                </td>
-                                <td>{{ $st->config_name }}</td>
-                                <td>
-                                    <div class="form-check form-switch d-inline-block">
-                                        <input class="form-check-input status-toggle"
-                                               type="checkbox"
-                                               role="switch"
-                                               data-table="sec_id_cardno_config_map"
-                                               data-column="active_inactive"
-                                               data-id="{{ $st->pk }}"
-                                               data-id_column="pk"
-                                               {{ ($st->active_inactive ?? 1) == 1 ? 'checked' : '' }}>
-                                    </div>
-                                </td>
-                                <td>
-                                    @php $subIsActive = (int) ($st->active_inactive ?? 1) === 1; @endphp
-                                    <div class="d-flex gap-2 align-items-center">
-                                        <a href="{{ route('admin.security.idcard_sub_type.edit', encrypt($st->pk)) }}" class="text-success openEditSubType" title="Edit">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i>
-                                        </a>
-                                        @if($subIsActive)
-                                            <button type="button"
-                                                    class="btn btn-link p-0 text-secondary"
-                                                    disabled
-                                                    aria-disabled="true"
-                                                    title="Cannot delete while active. Set status to inactive first.">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i>
-                                            </button>
-                                        @else
-                                            <form action="{{ route('admin.security.idcard_sub_type.delete', encrypt($st->pk)) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this Sub Type mapping?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-link p-0 text-danger" title="Delete">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i>
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="text-center text-muted">No Sub Types found.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                <div id="stDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                     data-dt-footer-for="cardsubtypemaster-table"></div>
             </div>
+
         </div>
     </div>
 </div>
-@include('components.mess-master-datatables', ['tableId' => 'subTypeTable', 'searchPlaceholder' => 'Search sub types...', 'orderColumn' => 0, 'actionColumnIndex' => [4, 5], 'infoLabel' => 'sub types'])
 
+<!-- Add / Edit Sub Type Modal (form loaded via AJAX) -->
 <div class="modal fade" id="subTypeModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content" id="subTypeModalContent">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4 overflow-hidden" id="subTypeModalContent">
             <!-- Loaded via AJAX -->
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="stColumnVisibilityModal" tabindex="-1" aria-labelledby="stColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="stColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="stColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
         </div>
     </div>
 </div>
 @endsection
 
 @push('scripts')
+{!! $dataTable->scripts() !!}
 <script>
-$(document).ready(function () {
-    $('#openCreateSubType').on('click', function (e) {
-        e.preventDefault();
-        $.get($(this).attr('href'), function (data) {
-            $('#subTypeModalContent').html(data);
-            $('#subTypeModal').modal('show');
-        });
-    });
+    $(document).ready(function () {
+        var TABLE_ID = '#cardsubtypemaster-table';
+        var table;
 
-    // Edit: open modal via AJAX (controller returns _form only for AJAX)
-    $(document).on('click', '.openEditSubType', function (e) {
-        e.preventDefault();
-        $.get($(this).attr('href'), function (data) {
-            $('#subTypeModalContent').html(data);
-            $('#subTypeModal').modal('show');
-        });
-    });
+        /* ---- Relocate search + build footer (pagination + count) ---- */
+        function enhanceStDtControls() {
+            var $wrapper = $(TABLE_ID + '_wrapper');
+            if (!$wrapper.length) {
+                return;
+            }
 
-    // After status toggle success (global custom.js posts to /admin/toggle-status),
-    // reload the page so Active/Inactive UI + delete restrictions match DB.
-    $(document).ajaxSuccess(function (event, xhr, settings) {
-        if (!settings || !settings.url) return;
+            var $searchSlot = $('#stDtSearch');
+            var $footer = $('#stDtFooter');
 
-        var url = String(settings.url);
-        var isToggleRequest = url.includes('toggle-status') || url.includes('toggleStatus');
-        if (!isToggleRequest) return;
+            if (!$searchSlot.find('.dataTables_filter').length) {
+                var $filter = $wrapper.find('.dataTables_filter').first();
+                if ($filter.length) {
+                    $filter.find('input')
+                        .addClass('form-control shadow-none')
+                        .attr('placeholder', 'Search')
+                        .attr('aria-label', 'Search sub types');
+                    $filter.find('label').contents().filter(function () {
+                        return this.nodeType === 3;
+                    }).remove();
+                    $searchSlot.append($filter);
+                }
+            }
 
-        var tableName = null;
-        var data = settings.data;
+            if ($footer.data('dtReady')) {
+                updateStDtCount();
+                return;
+            }
 
-        if (typeof data === 'string') {
-            var m = data.match(/[&?]table=([^&]+)/);
-            if (m && m[1]) tableName = decodeURIComponent(m[1]);
-        } else if (data && typeof data === 'object') {
-            tableName = data.table ?? null;
+            var $paginate = $wrapper.find('.dataTables_paginate').first();
+            var $length = $wrapper.find('.dataTables_length').first();
+            var $info = $wrapper.find('.dataTables_info').first();
+
+            if (!$footer.length || (!$paginate.length && !$length.length)) {
+                return;
+            }
+
+            var $pagCol = $('<div class="programme-dt-pagination"></div>');
+            var $countCol = $('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>');
+
+            if ($paginate.length) {
+                $paginate.find('.pagination').addClass('mb-0');
+                $pagCol.append($paginate);
+            }
+
+            if ($length.length) {
+                var $select = $length.find('select').addClass('form-select form-select-sm').detach();
+                $length.find('label')
+                    .empty()
+                    .append(document.createTextNode('Showing '))
+                    .append($select)
+                    .append(document.createTextNode(' '));
+                $countCol.append($length);
+            }
+
+            if ($info.length) {
+                $info.addClass('mb-0');
+                $countCol.append($info);
+            }
+
+            $footer.append($pagCol).append($countCol);
+            $footer.data('dtReady', true);
+            updateStDtCount();
         }
 
-        if (window.location.pathname.includes('idcard-sub-type') || tableName === 'sec_id_cardno_config_map') {
-            window.location.reload();
+        function updateStDtCount() {
+            if (!table) {
+                return;
+            }
+            var info = table.page.info();
+            var $info = $('#stDtFooter .dataTables_info');
+            if ($info.length && info && info.recordsDisplay !== undefined) {
+                $info.text('of ' + info.recordsDisplay.toLocaleString() + ' items');
+            }
         }
+
+        /* ---- Column show / hide (DataTables API) ---- */
+        var stColStorageKey = 'cardSubTypeGrid:hiddenColumns:v1';
+
+        function stGetHiddenCols() {
+            try {
+                var raw = localStorage.getItem(stColStorageKey);
+                var arr = raw ? JSON.parse(raw) : [];
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function stPersistHiddenCols(arr) {
+            try { localStorage.setItem(stColStorageKey, JSON.stringify(arr)); } catch (e) {}
+        }
+
+        function setupStColumns(dt) {
+            if (!dt) {
+                return;
+            }
+            var hidden = stGetHiddenCols();
+
+            dt.columns().every(function () {
+                var idx = this.index();
+                this.visible(hidden.indexOf(idx) === -1, false);
+            });
+            dt.columns.adjust();
+
+            var $grid = $('#stColumnToggleGrid');
+            if (!$grid.length) {
+                return;
+            }
+            $grid.empty();
+
+            dt.columns().every(function () {
+                var idx = this.index();
+                var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+                if (!title) {
+                    return;
+                }
+
+                var inputId = 'stcolvis_' + idx;
+                var $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
+                var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                    .attr('for', inputId);
+                var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                    .attr('id', inputId)
+                    .prop('checked', hidden.indexOf(idx) === -1);
+
+                $cb.on('change', function () {
+                    var h = stGetHiddenCols();
+                    var pos = h.indexOf(idx);
+                    if (this.checked) {
+                        if (pos !== -1) h.splice(pos, 1);
+                    } else {
+                        if (pos === -1) h.push(idx);
+                    }
+                    stPersistHiddenCols(h);
+                    dt.column(idx).visible(this.checked, false);
+                    dt.columns.adjust();
+                });
+
+                $label.append($cb).append($('<span></span>').text(title));
+                $cell.append($label);
+                $grid.append($cell);
+            });
+        }
+
+        /* ---- Wait for Yajra DataTable init ---- */
+        setTimeout(function () {
+            if (!$.fn.DataTable.isDataTable(TABLE_ID)) {
+                return;
+            }
+            table = $(TABLE_ID).DataTable();
+
+            enhanceStDtControls();
+            updateStDtCount();
+            setupStColumns(table);
+
+            var $wrapper = $(TABLE_ID + '_wrapper');
+            $(TABLE_ID).on('draw.dt', function () {
+                if ($wrapper.find('.dataTables_paginate').length && !$('#stDtFooter .dataTables_paginate').length) {
+                    $('#stDtFooter').empty().data('dtReady', false);
+                    enhanceStDtControls();
+                }
+                updateStDtCount();
+            });
+
+            setTimeout(function () {
+                enhanceStDtControls();
+                updateStDtCount();
+            }, 300);
+        }, 150);
+
+        /* ---- Add / Edit via AJAX modal (form partial returned by controller) ---- */
+        $('#openCreateSubType').on('click', function (e) {
+            e.preventDefault();
+            $.get($(this).attr('href'), function (data) {
+                $('#subTypeModalContent').html(data);
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('subTypeModal')).show();
+            });
+        });
+
+        $(document).on('click', '#cardsubtypemaster-table .openEditSubType', function (e) {
+            e.preventDefault();
+            $.get($(this).attr('href'), function (data) {
+                $('#subTypeModalContent').html(data);
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('subTypeModal')).show();
+            });
+        });
+        // Delete confirmation is handled by the form's inline onsubmit (rendered by the DataTable).
     });
-});
 </script>
 @endpush
-

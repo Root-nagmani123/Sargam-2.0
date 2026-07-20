@@ -166,7 +166,12 @@ class EmployeeIDCardRequestController extends Controller
         $permRows = $permQuery->get();
         $contRows = $contQuery->get();
 
-        $permDto = $permRows->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
+        // Resolve card-type / sub-type labels in two queries instead of two per row.
+        // prefetchCardLookupsForPermApplies() existed for this but nothing passed it,
+        // so every row silently fell back to its own pair of lookups.
+        $cardLookups = IdCardSecurityMapper::prefetchCardLookupsForPermApplies($permRows);
+
+        $permDto = $permRows->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r, $cardLookups));
         $contDto = $contRows->map(fn ($r) => IdCardSecurityMapper::toContractualRequestDto($r));
         $merged = $permDto->concat($contDto)->sortByDesc('created_at')->values();
 
@@ -200,7 +205,27 @@ class EmployeeIDCardRequestController extends Controller
             }
         }
 
-        $merged = $merged->map(function ($row) use ($approvalAuthorityNames) {
+        // Which contractual applications a security member has already cleared. Resolved
+        // in ONE query up-front; this used to be an exists() per pending contractual row.
+        $securityClearedApplyIds = [];
+        $pendingContractualIds = $merged
+            ->filter(fn ($r) => (string) ($r->status ?? '') === 'Pending'
+                && (($r->employee_type ?? '') === 'Contractual Employee')
+                && ! empty($r->emp_id_apply))
+            ->pluck('emp_id_apply')
+            ->unique()
+            ->values();
+        if ($pendingContractualIds->isNotEmpty()) {
+            $securityClearedApplyIds = DB::table('security_con_oth_id_apply_approval')
+                ->whereIn('security_parm_id_apply_pk', $pendingContractualIds->all())
+                ->where('status', 1)
+                ->where('recommend_status', 1)
+                ->pluck('security_parm_id_apply_pk')
+                ->flip()
+                ->all();
+        }
+
+        $merged = $merged->map(function ($row) use ($approvalAuthorityNames, $securityClearedApplyIds) {
             $status = (string) ($row->status ?? '');
             $row->pending_status_tooltip = null;
             if ($status !== 'Pending') {
@@ -220,12 +245,9 @@ class EmployeeIDCardRequestController extends Controller
 
             // For contractual employees: check if security member has approved (status=1, recommend_status=1)
             if ($isContractual) {
-                $contractualSecurityMemberApproved = DB::table('security_con_oth_id_apply_approval')
-                    ->where('security_parm_id_apply_pk', $row->emp_id_apply ?? null)
-                    ->where('status', 1)
-                    ->where('recommend_status', 1)
-                    ->exists();
-                
+                $contractualSecurityMemberApproved = isset($row->emp_id_apply)
+                    && isset($securityClearedApplyIds[$row->emp_id_apply]);
+
                 if ($contractualSecurityMemberApproved) {
                     $row->pending_status_tooltip = 'Pending with Security Head';
                     return $row;
@@ -1888,7 +1910,12 @@ class EmployeeIDCardRequestController extends Controller
         $permRows = $permQuery->get();
         $contRows = $contQuery->get();
 
-        $permDto = $permRows->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
+        // Resolve card-type / sub-type labels in two queries instead of two per row.
+        // prefetchCardLookupsForPermApplies() existed for this but nothing passed it,
+        // so every row silently fell back to its own pair of lookups.
+        $cardLookups = IdCardSecurityMapper::prefetchCardLookupsForPermApplies($permRows);
+
+        $permDto = $permRows->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r, $cardLookups));
         $contDto = $contRows->map(fn ($r) => IdCardSecurityMapper::toContractualRequestDto($r));
         $merged = $permDto->concat($contDto)->sortByDesc('created_at')->values();
 

@@ -330,9 +330,18 @@
 
         var menuId = 'messColManagerMenu-' + this.tableId;
         var tag = 'div';
+
+        // A page can place the Columns control itself by rendering
+        // <div id="messColManagerMount-<tableId>">, optionally with
+        // data-colvis-class to match that page's toolbar buttons. An explicit
+        // mount wins over the default .dataTables_filter placement.
+        var mountEl = document.getElementById('messColManagerMount-' + this.tableId);
+        var btnClass = (mountEl && mountEl.getAttribute('data-colvis-class')) ||
+            'btn-outline-secondary btn-sm rounded-1';
+
         var $dropdown = $(
             '<' + tag + ' class="dropdown d-inline-block mess-col-manager-dropdown no-print" data-bs-auto-close="outside">' +
-                '<button class="btn btn-outline-secondary btn-sm rounded-1 dropdown-toggle d-inline-flex align-items-center" type="button" ' +
+                '<button class="btn ' + btnClass + ' dropdown-toggle d-inline-flex align-items-center" type="button" ' +
                     'id="' + dropdownId + '" data-bs-toggle="dropdown" aria-expanded="false" title="Show / hide columns">' +
                     '<i class="material-icons material-symbols-rounded me-1" style="font-size:18px;line-height:1">view_column</i>' +
                     'Columns' +
@@ -340,6 +349,12 @@
                 '<ul class="dropdown-menu dropdown-menu-end py-2 mess-col-manager-menu" id="' + menuId + '" aria-labelledby="' + dropdownId + '"></ul>' +
             '</' + tag + '>'
         );
+
+        if (mountEl) {
+            mountEl.innerHTML = '';
+            mountEl.appendChild($dropdown[0]);
+            return;
+        }
 
         if (this.mode === 'datatable' && this.dt) {
             var $wrapper = this.$table.closest('.dataTables_wrapper');
@@ -349,13 +364,6 @@
                 $filter.append($dropdown);
                 return;
             }
-        }
-
-        var mountEl = document.getElementById('messColManagerMount-' + this.tableId);
-        if (mountEl) {
-            mountEl.innerHTML = '';
-            mountEl.appendChild($dropdown[0]);
-            return;
         }
 
         var toolbarId = 'messColManagerToolbar-' + this.tableId;

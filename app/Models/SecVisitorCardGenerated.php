@@ -39,14 +39,19 @@ class SecVisitorCardGenerated extends Model
         'modified_date' => 'datetime',
     ];
 
+    /**
+     * These columns hold LEGACY employee ids, so they join employee_master.pk_old —
+     * not .pk. Joining on pk matched 0 of 192,974 rows (the host/created-by name
+     * silently rendered blank everywhere); pk_old resolves 49,140 and 192,898.
+     */
     public function employee()
     {
-        return $this->belongsTo(EmployeeMaster::class, 'employee_master_pk', 'pk');
+        return $this->belongsTo(EmployeeMaster::class, 'employee_master_pk', 'pk_old');
     }
 
     public function createdBy()
     {
-        return $this->belongsTo(EmployeeMaster::class, 'created_by', 'pk');
+        return $this->belongsTo(EmployeeMaster::class, 'created_by', 'pk_old');
     }
 
     public function visitorNames()
