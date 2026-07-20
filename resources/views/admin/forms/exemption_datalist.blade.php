@@ -71,7 +71,7 @@
 
                     </form>
                     <div class="table-responsive">
-                        <table class="table text-nowrap w-100">
+                        <table class="table text-nowrap w-100" id="exemptionDatalistTable">
                                 <thead>
                                     <tr>
                                         <th>S.No</th>
@@ -85,59 +85,6 @@
                                         <th>Submitted On</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    @forelse ($submissions as $index => $data)
-                                        <tr>
-                                            <td>{{ $index + 1 }}</td>
-                                            <td>
-                                                {{ $data->username ?? trim(($data->first_name ?? '') . ' ' . ($data->middle_name ?? '') . ' ' . ($data->last_name ?? '')) ?: 'N/A' }}
-                                            </td>
-                                            <td>{{ $data->contact_no }}</td>
-                                            <td>{{ $data->web_auth }}</td>
-                                            <td>
-                                                @if ($data->application_type == 2)
-                                                    {{ $data->Exemption_name ?? 'N/A' }}
-                                                @else
-                                                    <span class="text-muted">N/A</span>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                @if ($data->application_type == 2)
-                                                    @if ($data->medical_exemption_doc)
-                                                        <a href="{{ asset('storage/' . $data->medical_exemption_doc) }}"
-                                                            target="_blank" class="btn btn-sm btn-info">View</a>
-                                                    @else
-                                                        <span class="text-muted">No Document</span>
-                                                    @endif
-                                                @else
-                                                    <span class="text-muted">N/A</span>
-                                                @endif
-                                            </td>
-
-                                            <td>
-                                                @if ($data->application_type == 1)
-                                                    Registration
-                                                @elseif ($data->application_type == 2)
-                                                    Exemption
-                                                @else
-                                                    N/A
-                                                @endif
-                                            </td>
-                                            <td>
-                                                @if ($data->exemption_count)
-                                                    {{ $data->exemption_count }}
-                                                @else
-                                                    <span class="text-muted">0</span>
-                                                @endif
-                                            </td>
-                                            <td>{{ \Carbon\Carbon::parse($data->created_date)->format('d-m-Y') }}</td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="8" class="text-center text-muted">No data found.</td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
                             </table>
                     </div>
                 </div>
@@ -145,3 +92,44 @@
     </div>
 
 @endsection
+
+@push('scripts')
+<script>
+$(function () {
+    $('#exemptionDatalistTable').DataTable({
+        processing: true,
+        serverSide: true,
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+        order: [],
+        ajax: {
+            url: "{{ route('exemptions.datalist') }}",
+            data: function (d) {
+                d.exemption_category = @json(request('exemption_category'));
+                d.application_type = @json(request('application_type'));
+            }
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'user_name', name: 'user_name', orderable: false, searchable: false },
+            { data: 'contact_no', name: 'r.contact_no' },
+            { data: 'web_auth', name: 'r.web_auth' },
+            { data: 'exemption_category', name: 'exemption_category', orderable: false, searchable: false },
+            { data: 'medical_document', name: 'medical_document', orderable: false, searchable: false },
+            { data: 'type', name: 'type', orderable: false, searchable: false },
+            { data: 'exemption_count', name: 'r.exemption_count' },
+            { data: 'created_date', name: 'r.created_date' }
+        ],
+        language: {
+            search: 'Search:',
+            lengthMenu: 'Show _MENU_ entries',
+            info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+            infoEmpty: 'No entries found',
+            infoFiltered: '(filtered from _MAX_ total)',
+            zeroRecords: 'No data found.',
+            paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+        }
+    });
+});
+</script>
+@endpush
