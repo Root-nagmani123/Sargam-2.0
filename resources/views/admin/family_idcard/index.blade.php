@@ -5,8 +5,14 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 <style>
 /* --- "Time Period" dual-month range calendar --- */
-.idcp-toggle { min-width: 150px; }
-.idcp-toggle.dropdown-toggle::after { margin-left: auto; }
+.idcp-toggle {
+    height: 40px; min-width: 170px;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0 0.875rem; font-size: 0.9375rem; font-weight: 400;
+    color: #344054; background: #fff; border: 1px solid #d0d5dd; border-radius: 8px;
+}
+.idcp-toggle:hover { border-color: #004a93; color: #344054; }
+.idcp-toggle.dropdown-toggle::after { margin-left: auto; color: #667085; }
 .idcp-menu { min-width: auto; }
 .idcp-cal { padding: var(--ds-space-3, 1rem); }
 .idcp-cal-months { display: flex; gap: var(--ds-space-4, 1.5rem); }
@@ -38,15 +44,14 @@
 }
 .idcp-cal-range { font-size: 0.8125rem; color: var(--ds-ink-muted, #6c757d); }
 
-/* --- Active / Archive tab pills --- */
-.family-idcard-tabs .nav-link { border-radius: 8px; color: #6c757d; font-weight: 500; padding: 0.5rem 1.1rem; }
-.family-idcard-tabs .nav-link.active { background-color: var(--bs-primary, #004a93); color: #fff; }
-.family-idcard-tabs .nav-link:hover:not(.active) { color: var(--bs-primary, #004a93); }
+/* --- Download button (matches programme-dt outlined controls) --- */
+.family-download-btn { height: 40px; }
+.family-download-btn.dropdown-toggle::after { margin-left: 0.4rem; }
 </style>
 @endpush
 
 @section('content')
-<div class="container-fluid family-idcard-index-page">
+<div class="container-fluid family-idcard-index-page py-3">
     <x-breadcrum title="Request For Family Id Card">
         <a href="{{ route('admin.family_idcard.create') }}"
            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
@@ -56,112 +61,114 @@
     </x-breadcrum>
     <x-session_message />
 
+    {{-- Active / Archive tabs (left) · Download (right) — above the card --}}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill active"
+                        id="active-tab" data-bs-toggle="tab" data-bs-target="#active-panel" type="button" role="tab" aria-controls="active-panel" aria-selected="true">
+                    Active
+                    @if($activeRequests->count() > 0)
+                        <span class="badge bg-white text-primary ms-1">{{ $activeRequests->count() }}</span>
+                    @endif
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill"
+                        id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-panel" type="button" role="tab" aria-controls="archive-panel" aria-selected="false">
+                    Archive
+                    @if($archivedRequests->count() > 0)
+                        <span class="badge bg-secondary ms-1">{{ $archivedRequests->count() }}</span>
+                    @endif
+                </button>
+            </li>
+        </ul>
+        <div class="dropdown">
+            <button type="button" class="btn programme-dt-btn-columns family-download-btn dropdown-toggle" id="familyDownloadBtn"
+                data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                <i class="bi bi-download" aria-hidden="true"></i> <span>Download</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-1 py-2" aria-labelledby="familyDownloadBtn">
+                <li>
+                    <a href="#" class="dropdown-item d-flex align-items-center gap-2 py-2" id="familyPrintBtn">
+                        <i class="bi bi-printer" aria-hidden="true"></i> Print
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider my-1"></li>
+                <li>
+                    <a href="#" class="dropdown-item d-flex align-items-center gap-2 py-2 export-link"
+                       data-format="pdf"
+                       data-base-url="{{ route('admin.family_idcard.export', ['format' => 'pdf']) }}">
+                        <i class="bi bi-file-earmark-pdf text-danger" aria-hidden="true"></i> Download PDF
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="dropdown-item d-flex align-items-center gap-2 py-2 export-link"
+                       data-format="xlsx"
+                       data-base-url="{{ route('admin.family_idcard.export', ['format' => 'xlsx']) }}">
+                        <i class="bi bi-file-earmark-spreadsheet text-success" aria-hidden="true"></i> Download Excel
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
     <div class="card overflow-hidden rounded-1">
         <div class="card-body p-3 p-md-4">
 
-            {{-- Toolbar: filters (left) · print/download/columns (right) --}}
-            <div class="d-flex flex-column flex-xl-row align-items-xl-end justify-content-between gap-3 mb-3">
+            {{-- Filter toolbar (programme-dt design system) --}}
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="programme-dt-filters-label">Filters</span>
 
-                {{-- Filters (applied instantly in-browser — no page reload) --}}
-                <div class="d-flex flex-wrap align-items-end gap-2">
-                    <div>
-                        <label class="form-label small text-muted mb-1">Time Period</label>
-                        <div class="dropdown">
-                            <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 idcp-toggle dropdown-toggle"
-                                    id="familyTimePeriodToggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-                                <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">calendar_month</i>
-                                <span id="familyTimePeriodLabel">Time Period</span>
-                            </button>
-                            <div class="dropdown-menu p-0 idcp-menu">
-                                <div class="idcp-cal" id="familyCalendar">
-                                    <div class="idcp-cal-months">
-                                        <div class="idcp-cal-month" data-month="0"></div>
-                                        <div class="idcp-cal-month" data-month="1"></div>
-                                    </div>
-                                    <div class="idcp-cal-footer">
-                                        <span class="idcp-cal-range" id="familyCalRange">Select a date range</span>
-                                        <div class="d-flex gap-2">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" id="familyClearPeriod">Clear</button>
-                                            <button type="button" class="btn btn-sm btn-primary" id="familyApplyPeriod">Apply</button>
-                                        </div>
+                    {{-- Time Period (dual-month range calendar) --}}
+                    <div class="dropdown">
+                        <button type="button" class="idcp-toggle dropdown-toggle"
+                                id="familyTimePeriodToggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">calendar_month</i>
+                            <span id="familyTimePeriodLabel">Time Period</span>
+                        </button>
+                        <div class="dropdown-menu p-0 idcp-menu">
+                            <div class="idcp-cal" id="familyCalendar">
+                                <div class="idcp-cal-months">
+                                    <div class="idcp-cal-month" data-month="0"></div>
+                                    <div class="idcp-cal-month" data-month="1"></div>
+                                </div>
+                                <div class="idcp-cal-footer">
+                                    <span class="idcp-cal-range" id="familyCalRange">Select a date range</span>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="familyClearPeriod">Clear</button>
+                                        <button type="button" class="btn btn-sm btn-primary" id="familyApplyPeriod">Apply</button>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        {{-- Hidden inputs drive the client-side date filter + export URLs. --}}
-                        <input type="hidden" id="familyDateFrom" value="{{ $dateFrom ?? request('date_from', '') }}">
-                        <input type="hidden" id="familyDateTo" value="{{ $dateTo ?? request('date_to', '') }}">
                     </div>
-                    <div>
-                        <button type="button" id="familyClearFilters" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
-                            <i class="bi bi-x-circle" aria-hidden="true"></i> Clear
-                        </button>
-                    </div>
+
+                    <button type="button" class="btn programme-dt-btn-reset" id="familyClearFilters">Reset Filters</button>
+
+                    {{-- Hidden inputs drive the client-side date filter + export URLs. --}}
+                    <input type="hidden" id="familyDateFrom" value="{{ $dateFrom ?? request('date_from', '') }}">
+                    <input type="hidden" id="familyDateTo" value="{{ $dateTo ?? request('date_to', '') }}">
                 </div>
 
-                {{-- Print · Download · Columns --}}
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                    <button type="button" class="btn programme-dt-btn-columns" id="familyPrintBtn" title="Print">
-                        <i class="bi bi-printer" aria-hidden="true"></i> <span>Print</span>
-                    </button>
-                    <div class="dropdown">
-                        <button type="button" class="btn programme-dt-btn-columns dropdown-toggle" id="familyDownloadBtn"
-                            data-bs-toggle="dropdown" aria-expanded="false" title="Download">
-                            <i class="bi bi-download" aria-hidden="true"></i> <span>Download</span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-1 py-2" aria-labelledby="familyDownloadBtn">
-                            <li>
-                                <a href="#" class="dropdown-item d-flex align-items-center gap-2 py-2 export-link"
-                                   data-format="pdf"
-                                   data-base-url="{{ route('admin.family_idcard.export', ['format' => 'pdf']) }}">
-                                    <i class="bi bi-file-earmark-pdf text-danger" aria-hidden="true"></i> Download PDF
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#" class="dropdown-item d-flex align-items-center gap-2 py-2 export-link"
-                                   data-format="xlsx"
-                                   data-base-url="{{ route('admin.family_idcard.export', ['format' => 'xlsx']) }}">
-                                    <i class="bi bi-file-earmark-spreadsheet text-success" aria-hidden="true"></i> Download Excel
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
                     <button type="button" class="btn programme-dt-btn-columns" id="familyBtnColumns"
                         data-bs-toggle="modal" data-bs-target="#familyColumnVisibilityModal" title="Show / hide columns">
                         <span>Columns</span><i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
+                    {{-- One search slot per table; only the active tab's is visible. --}}
+                    <div id="familyActiveSearch" class="programme-dt-search" data-dt-search-for="familyActiveTable"></div>
+                    <div id="familyArchiveSearch" class="programme-dt-search d-none" data-dt-search-for="familyArchiveTable"></div>
                 </div>
             </div>
-
-            {{-- Active / Archive tabs --}}
-            <ul class="nav nav-pills family-idcard-tabs gap-2 mb-3" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-panel" type="button" role="tab" aria-controls="active-panel" aria-selected="true">
-                        Active
-                        @if($activeRequests->count() > 0)
-                            <span class="badge bg-white text-primary ms-1">{{ $activeRequests->count() }}</span>
-                        @endif
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-panel" type="button" role="tab" aria-controls="archive-panel" aria-selected="false">
-                        Archive
-                        @if($archivedRequests->count() > 0)
-                            <span class="badge bg-secondary ms-1">{{ $archivedRequests->count() }}</span>
-                        @endif
-                    </button>
-                </li>
-            </ul>
 
             <div class="tab-content">
                 {{-- Active Tab --}}
                 <div class="tab-pane show active" id="active-panel" role="tabpanel" aria-labelledby="active-tab">
                     <div class="programme-dt-panel">
-                        <div class="d-flex justify-content-end mb-2">
-                            <div class="programme-dt-search" data-dt-search-for="familyActiveTable"></div>
-                        </div>
                         <div class="table-responsive">
-                            <table class="table text-nowrap align-middle programme-dt-table" id="familyActiveTable">
+                            <table class="table table-hover text-nowrap align-middle programme-dt-table" id="familyActiveTable">
                                 <thead>
                                     <tr>
                                         <th>S.No.</th>
@@ -222,11 +229,8 @@
                 {{-- Archive Tab --}}
                 <div class="tab-pane fade" id="archive-panel" role="tabpanel" aria-labelledby="archive-tab">
                     <div class="programme-dt-panel">
-                        <div class="d-flex justify-content-end mb-2">
-                            <div class="programme-dt-search" data-dt-search-for="familyArchiveTable"></div>
-                        </div>
                         <div class="table-responsive">
-                            <table class="table text-nowrap align-middle programme-dt-table" id="familyArchiveTable">
+                            <table class="table table-hover text-nowrap align-middle programme-dt-table" id="familyArchiveTable">
                                 <thead>
                                     <tr>
                                         <th>S.No.</th>
@@ -486,7 +490,8 @@ $(function () {
     });
 
     /* ---- Print (active tab) ---- */
-    $('#familyPrintBtn').on('click', function () {
+    $('#familyPrintBtn').on('click', function (e) {
+        e.preventDefault();
         var dt = currentDt();
         if (dt) { dt.button('.family-btn-print').trigger(); }
     });
@@ -554,9 +559,11 @@ $(function () {
     applyStoredColumns(TABLES.archive.dt, TABLES.archive.id);
     $('#familyColumnVisibilityModal').on('show.bs.modal', buildColumnsModal);
 
-    /* ---- Tab change: track active tab + fix column widths of the shown table ---- */
+    /* ---- Tab change: track active tab, swap search box + fix column widths ---- */
     $('#active-tab, #archive-tab').on('shown.bs.tab', function () {
         currentTab = (this.id === 'archive-tab') ? 'archive' : 'active';
+        $('#familyActiveSearch').toggleClass('d-none', currentTab !== 'active');
+        $('#familyArchiveSearch').toggleClass('d-none', currentTab !== 'archive');
         var dt = currentDt();
         if (dt) { dt.columns.adjust(); }
     });

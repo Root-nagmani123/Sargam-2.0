@@ -1,18 +1,22 @@
 @extends('admin.layouts.master')
-@section('title', 'List of Family Members - Sargam | Lal Bahadur Shastri')
+@section('title', 'List of Family Members')
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<style>
+/* Photo "DOWNLOAD" links inside the grid */
+.family-members-page .grid-download-link { font-weight: 600; font-size: 0.8125rem; text-decoration: none; }
+.family-members-page .grid-download-link:hover { text-decoration: underline; }
+@media print {
+    .btn, .breadcrumb, .programme-dt-toolbar, .programme-dt-footer { display: none !important; }
+}
+</style>
+@endpush
+
 @section('content')
-<div class="container-fluid family-members-page">
-    <x-breadcrum title="List of Family Members"></x-breadcrum>
-
-    <h5 class="fw-bold mb-1">List of Family Members</h5>
-    <p class="text-muted small mb-4">This page displays all family members for this request (Parent ID: {{ $parentId ?? '--' }}), and provide options to manage records such as edit, delete, excel upload, excel download, print etc.</p>
-
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
+<div class="container-fluid family-members-page py-3">
+    <x-breadcrum title="List of Family Members — Parent ID: {{ $parentId ?? '--' }}"></x-breadcrum>
+    <x-session_message />
 
     @php
         // Where approvers came from (query ?from=...) — avoid sending them to user "Request Family ID Card" by mistake.
@@ -38,181 +42,225 @@
             ],
         };
     @endphp
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-        <a href="{{ $membersBack['url'] }}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
-            <i class="material-icons material-symbols-rounded" style="font-size:20px;">arrow_back</i>
-            {{ $membersBack['label'] }}
-        </a>
+
+    {{-- Back (left) · Print (right) — above the card --}}
+    <div class="d-flex flex-wrap justify-content-end align-items-end gap-3 mb-3">
+        <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="membersPrintBtn" title="Print">
+            <i class="bi bi-printer" aria-hidden="true"></i> <span>Print</span>
+        </button>
     </div>
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-body p-0">
-            <div class="d-flex flex-wrap align-items-center gap-3 px-3 py-2 border-bottom bg-light">
-                <label class="mb-0 small text-muted">Show</label>
-                <select class="form-select form-select-sm" style="width:auto;" id="membersPerPage">
-                    @foreach([10, 25, 50, 100] as $n)
-                        <option value="{{ $n }}">{{ $n }} entries</option>
-                    @endforeach
-                </select>
-                <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
-                    <div class="dropdown">
-                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="showHideColsMembers" data-bs-toggle="dropdown" aria-expanded="false">Show / hide columns</button>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="showHideColsMembers">
-                            <li class="dropdown-item-text small text-muted">Toggle column visibility</li>
-                            @foreach(['sno','request_date','guardians','id_number','name','relation','dob','individual_photo','valid_from','valid_to','family_photo','status','duplicate'] as $col)
-                                <li><label class="dropdown-item d-flex align-items-center gap-2 mb-0 cursor-pointer"><input type="checkbox" class="form-check-input col-toggle-m" data-col="{{ $col }}" checked> <span class="text-capitalize">{{ str_replace('_', ' ', $col) }}</span></label></li>
-                            @endforeach
-                        </ul>
-                    </div>
-                    <label class="mb-0 small text-muted">Search with in table:</label>
-                    <input type="search" class="form-control " id="membersTableSearch" placeholder="Search..." style="max-width:200px;">
+    <div class="card overflow-hidden rounded-1">
+        <div class="card-body p-3 p-md-4">
+
+            {{-- Toolbar (programme-dt design system) --}}
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="membersBtnColumns"
+                        data-bs-toggle="modal" data-bs-target="#membersColumnVisibilityModal" title="Show / hide columns">
+                        <span>Columns</span><i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div id="membersDtSearch" class="programme-dt-search" data-dt-search-for="familyMembersTable"></div>
                 </div>
             </div>
 
-            <div class="table-responsive">
-                <table class="table table-hover mb-0 align-middle family-members-table" id="familyMembersTable">
-                    <thead>
-                        <tr class="table-primary">
-                            <th class="col-sno">S.NO.</th>
-                            <th class="col-request_date">REQUEST DATE</th>
-                            <th class="col-guardians">GUARDIANS DETAILS</th>
-                            <th class="col-id_number">ID NUMBER</th>
-                            <th class="col-name">NAME</th>
-                            <th class="col-relation">RELATION</th>
-                            <th class="col-dob">DATE OF BIRTHDAY</th>
-                            <th class="col-individual_photo">INDIVIDUAL PHOTO</th>
-                            <th class="col-valid_from">VALID FROM</th>
-                            <th class="col-valid_to">VALID TO</th>
-                            <th class="col-family_photo">FAMILY PHOTO</th>
-                            <th class="col-status">STATUS</th>
-                           
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($members as $index => $member)
-                            <tr class="member-row" data-search="{{ strtolower(($member->name ?? '') . ' ' . ($member->relation ?? '') . ' ' . ($member->employee_id ?? '') . ' ' . ($member->family_member_id ?? '') . ' ' . ($member->status_label ?? '')) }}">
-                                <td class="fw-medium col-sno">{{ $index + 1 }}</td>
-                                <td class="col-request_date">{{ $member->created_at ? \Carbon\Carbon::parse($member->created_at)->format('d-m-Y') : '--' }}</td>
-                                <td class="col-guardians">
-                                    @if(!empty($member->guardian_name))
-                                        <strong>{{ $member->guardian_name }}</strong>
-                                        @if(!empty($member->guardian_designation))
-                                            <br><small class="text-muted">{{ $member->guardian_designation }}</small>
-                                        @endif
-                                    @else
-                                        --
-                                    @endif
-                                </td>
-                                <td class="col-id_number">{{ $parentId ?? '--' }} / {{ $member->id ?? $member->fml_id_apply ?? '--' }}</td>
-                                <td class="col-name">{{ $member->name ?? '--' }}</td>
-                                <td class="col-relation">{{ $member->relation ?? '--' }}</td>
-                                <td class="col-dob">{{ $member->dob ? \Carbon\Carbon::parse($member->dob)->format('d-m-Y') : '--' }}</td>
-                                <td class="col-individual_photo">
-                                    @php
-                                        $indPath = $member->id_photo_path ?: $member->family_photo;
-                                        $indExists = $indPath && \Storage::disk('public')->exists($indPath);
-                                    @endphp
-                                    @if($indExists)
-                                        <a href="{{ asset('storage/' . $indPath) }}" target="_blank" class="btn btn-link btn-sm p-0">DOWNLOAD</a>
-                                    @elseif($indPath)
-                                        <span class="text-warning small">No file available in storage</span>
-                                    @else
-                                        --
-                                    @endif
-                                </td>
-                                <td class="col-valid_from">{{ $member->valid_from ? \Carbon\Carbon::parse($member->valid_from)->format('d-m-Y') : '--' }}</td>
-                                <td class="col-valid_to">{{ $member->valid_to ? \Carbon\Carbon::parse($member->valid_to)->format('d-m-Y') : '--' }}</td>
-                                <td class="col-family_photo">
-                                    @php
-                                        $famPath = $member->family_photo;
-                                        $famExists = $famPath && \Storage::disk('public')->exists($famPath);
-                                    @endphp
-                                    @if($famExists)
-                                        <a href="{{ asset('storage/' . $famPath) }}" target="_blank" class="btn btn-link btn-sm p-0">DOWNLOAD</a>
-                                    @elseif($famPath)
-                                        <span class="text-warning small">No file available in storage</span>
-                                    @else
-                                        --
-                                    @endif
-                                </td>
-                                <td class="col-status">{{ $member->status_label ?? 'Pending' }}</td>
-                               
-                            </tr>
-                        @empty
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    <table class="table table-hover text-nowrap align-middle programme-dt-table" id="familyMembersTable">
+                        <thead>
                             <tr>
-                                <td colspan="13" class="text-center py-5 text-muted">
-                                    <i class="material-icons material-symbols-rounded d-block mb-2" style="font-size:48px; opacity:0.4;">group</i>
-                                    <p class="mb-1">No family members found for this request.</p>
-                                    <a href="{{ route('admin.family_idcard.index') }}" class="btn btn-primary btn-sm mt-2">Back to List</a>
-                                </td>
+                                <th>S.No.</th>
+                                <th>Request Date</th>
+                                <th>Guardians Details</th>
+                                <th>ID Number</th>
+                                <th>Name</th>
+                                <th>Relation</th>
+                                <th>Date of Birth</th>
+                                <th>Individual Photo</th>
+                                <th>Valid From</th>
+                                <th>Valid To</th>
+                                <th>Family Photo</th>
+                                <th>Status</th>
                             </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            @if($members->isNotEmpty())
-                <div class="d-flex justify-content-between align-items-center px-3 py-3 border-top flex-wrap gap-2">
-                    <div class="small text-muted">
-                        Showing <strong>1</strong> to <strong>{{ $members->count() }}</strong> of <strong>{{ $members->count() }}</strong> entries
-                    </div>
+                        </thead>
+                        <tbody>
+                            @forelse($members as $index => $member)
+                                @php
+                                    $reqTs = $member->created_at ? \Carbon\Carbon::parse($member->created_at)->timestamp : 0;
+                                    $dobTs = $member->dob ? \Carbon\Carbon::parse($member->dob)->timestamp : 0;
+                                    $vfTs = $member->valid_from ? \Carbon\Carbon::parse($member->valid_from)->timestamp : 0;
+                                    $vtTs = $member->valid_to ? \Carbon\Carbon::parse($member->valid_to)->timestamp : 0;
+                                @endphp
+                                <tr class="member-row">
+                                    <td class="fw-medium ps-3">{{ $index + 1 }}</td>
+                                    <td data-order="{{ $reqTs }}">{{ $member->created_at ? \Carbon\Carbon::parse($member->created_at)->format('d-m-Y') : '--' }}</td>
+                                    <td>
+                                        @if(!empty($member->guardian_name))
+                                            <strong>{{ $member->guardian_name }}</strong>
+                                            @if(!empty($member->guardian_designation))
+                                                <br><small class="text-muted">{{ $member->guardian_designation }}</small>
+                                            @endif
+                                        @else
+                                            --
+                                        @endif
+                                    </td>
+                                    <td>{{ $parentId ?? '--' }} / {{ $member->id ?? $member->fml_id_apply ?? '--' }}</td>
+                                    <td>{{ $member->name ?? '--' }}</td>
+                                    <td>{{ $member->relation ?? '--' }}</td>
+                                    <td data-order="{{ $dobTs }}">{{ $member->dob ? \Carbon\Carbon::parse($member->dob)->format('d-m-Y') : '--' }}</td>
+                                    <td>
+                                        @php
+                                            $indPath = $member->id_photo_path ?: $member->family_photo;
+                                            $indExists = $indPath && \Storage::disk('public')->exists($indPath);
+                                        @endphp
+                                        @if($indExists)
+                                            <a href="{{ asset('storage/' . $indPath) }}" target="_blank" class="grid-download-link text-primary">DOWNLOAD</a>
+                                        @elseif($indPath)
+                                            <span class="text-warning small">No file available</span>
+                                        @else
+                                            --
+                                        @endif
+                                    </td>
+                                    <td data-order="{{ $vfTs }}">{{ $member->valid_from ? \Carbon\Carbon::parse($member->valid_from)->format('d-m-Y') : '--' }}</td>
+                                    <td data-order="{{ $vtTs }}">{{ $member->valid_to ? \Carbon\Carbon::parse($member->valid_to)->format('d-m-Y') : '--' }}</td>
+                                    <td>
+                                        @php
+                                            $famPath = $member->family_photo;
+                                            $famExists = $famPath && \Storage::disk('public')->exists($famPath);
+                                        @endphp
+                                        @if($famExists)
+                                            <a href="{{ asset('storage/' . $famPath) }}" target="_blank" class="grid-download-link text-primary">DOWNLOAD</a>
+                                        @elseif($famPath)
+                                            <span class="text-warning small">No file available</span>
+                                        @else
+                                            --
+                                        @endif
+                                    </td>
+                                    <td>{{ $member->status_label ?? 'Pending' }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="12" class="text-center py-5 table-empty-state">
+                                        <div class="d-inline-flex flex-column align-items-center p-5 bg-body-tertiary rounded-4 border border-body-secondary">
+                                            <i class="material-icons material-symbols-rounded mb-3 text-body-tertiary" style="font-size:56px;">group</i>
+                                            <p class="mb-1 fw-semibold text-body-emphasis">No family members found for this request.</p>
+                                            <a href="{{ route('admin.family_idcard.index') }}" class="btn btn-primary rounded-1 px-4 py-2 mt-2">Back to List</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
-            @endif
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="familyMembersTable"></div>
+            </div>
         </div>
     </div>
+</div>
 
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="membersColumnVisibilityModal" tabindex="-1" aria-labelledby="membersColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="membersColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="membersColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
 
-<style>
-.family-members-page .card { border-radius: 0.5rem; overflow: hidden; }
-.family-members-table thead tr.table-primary { background: #004a93 !important; color: #fff; border: none; }
-.family-members-table thead th { font-weight: 700; font-size: 0.75rem; padding: 0.75rem 0.5rem; border: none; text-align: left; }
-.family-members-table tbody td { padding: 0.65rem 0.5rem; vertical-align: middle; border-bottom: 1px solid #eee; font-size: 0.875rem; }
-.family-members-table tbody tr:hover { background: #f8fafc; }
-@media print {
-    .btn, .breadcrumb, .family-members-page .d-flex.border-bottom, #membersTableSearch, #showHideColsMembers, .col-duplicate { display: none !important; }
-}
-</style>
+@push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    var searchInput = document.getElementById('membersTableSearch');
-    var table = document.getElementById('familyMembersTable');
-    if (searchInput && table) {
-        searchInput.addEventListener('input', function() {
-            var q = this.value.trim().toLowerCase();
-            var rows = table.querySelectorAll('tbody tr.member-row');
-            rows.forEach(function(row) {
-                var text = row.getAttribute('data-search') || '';
-                row.style.display = q === '' || text.indexOf(q) !== -1 ? '' : 'none';
+$(function () {
+    var TABLE_ID = '#familyMembersTable';
+    var $table = $(TABLE_ID);
+
+    // No real data rows (only the empty-state) -> skip DataTables so the CTA shows.
+    if (!$table.length || $table.find('tbody tr.member-row').length === 0) { return; }
+
+    var table = $table.DataTable({
+        paging: true,
+        searching: true,
+        ordering: true,
+        info: true,
+        autoWidth: false,
+        order: [],
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+        columnDefs: [
+            { targets: [0, 7, 10], orderable: false, searchable: false }
+        ],
+        language: {
+            search: '',
+            searchPlaceholder: 'Search',
+            paginate: { previous: '‹', next: '›' },
+            lengthMenu: 'Showing _MENU_',
+            info: 'of _TOTAL_ items',
+            infoEmpty: 'of 0 items',
+            infoFiltered: 'of _MAX_ items'
+        },
+        drawCallback: function () {
+            var info = this.api().page.info();
+            this.api().column(0, { page: 'current' }).nodes().each(function (cell, i) {
+                cell.innerHTML = info.start + i + 1;
             });
-        });
-    }
-    document.querySelectorAll('.col-toggle-m').forEach(function(cb) {
-        cb.addEventListener('change', function() {
-            var col = this.getAttribute('data-col');
-            var show = this.checked;
-            document.querySelectorAll('.col-' + col).forEach(function(el) { el.style.display = show ? '' : 'none'; });
-        });
+        }
     });
 
-    var duplicateModal = document.getElementById('duplicateModal');
-    var duplicateForm = document.getElementById('duplicateForm');
-    var duplicateFamilyName = document.getElementById('duplicateFamilyName');
-    var duplicateUrlTemplate = '{{ route("admin.family_idcard.duplicate", ["id" => "__ID__"]) }}';
-    if (duplicateModal && duplicateForm) {
-        document.querySelectorAll('.duplicate-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var memberId = this.getAttribute('data-member-id');
-                var memberName = this.getAttribute('data-member-name') || '--';
-                duplicateForm.action = duplicateUrlTemplate.replace('__ID__', memberId);
-                duplicateFamilyName.value = memberName;
-                duplicateForm.querySelector('[name="duplicate_reason"]').value = '';
-                document.getElementById('duplicateFromDate').value = '';
-                document.getElementById('duplicateToDate').value = '';
-                duplicateForm.querySelector('[name="dup_doc"]').value = '';
-                var modal = new bootstrap.Modal(duplicateModal);
-                modal.show();
+    /* ---- Print (client-side) ---- */
+    if (typeof $.fn.dataTable.Buttons !== 'undefined') {
+        new $.fn.dataTable.Buttons(table, {
+            buttons: [{
+                extend: 'print',
+                className: 'members-btn-print',
+                title: 'Family Members (Parent ID: {{ $parentId ?? '--' }})',
+                exportOptions: { columns: [0, 1, 2, 3, 4, 5, 6, 8, 9, 11] }
+            }]
+        });
+        $('#membersPrintBtn').on('click', function () { table.button('.members-btn-print').trigger(); });
+    }
+
+    /* ---- Column show / hide ---- */
+    var colKey = 'familyMembersGrid:hiddenColumns:v1';
+    function getHidden() { try { var a = JSON.parse(localStorage.getItem(colKey) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+    function setHidden(a) { try { localStorage.setItem(colKey, JSON.stringify(a)); } catch (e) {} }
+
+    function setupColumns(dt) {
+        var hidden = getHidden();
+        dt.columns().every(function () { var idx = this.index(); this.visible(hidden.indexOf(idx) === -1, false); });
+        dt.columns.adjust();
+
+        var $grid = $('#membersColumnToggleGrid');
+        if (!$grid.length) { return; }
+        $grid.empty();
+        dt.columns().every(function () {
+            var idx = this.index();
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (!title) { return; }
+            var inputId = 'memberscolvis_' + idx;
+            var $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
+            var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>').attr('for', inputId);
+            var $cb = $('<input type="checkbox" class="form-check-input m-0">').attr('id', inputId).prop('checked', hidden.indexOf(idx) === -1);
+            $cb.on('change', function () {
+                var h = getHidden(); var pos = h.indexOf(idx);
+                if (this.checked) { if (pos !== -1) h.splice(pos, 1); } else { if (pos === -1) h.push(idx); }
+                setHidden(h); dt.column(idx).visible(this.checked, false); dt.columns.adjust();
             });
+            $label.append($cb).append($('<span></span>').text(title));
+            $cell.append($label); $grid.append($cell);
         });
     }
+
+    setupColumns(table);
 });
 </script>
-@endsection
+@endpush
