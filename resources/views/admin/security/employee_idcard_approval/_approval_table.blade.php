@@ -1,9 +1,13 @@
-{{-- Shared table for Approval I and Approval II - same columns and layout --}}
+{{-- Shared table for Approval I / II / III - same columns and layout.
+     @include vars: requests, approvalStage, and optionally tableId (pass a unique
+     id when several copies appear on one page, e.g. the Approval II tabs). --}}
 @props(['requests', 'approvalStage' => 1])
+@php $approvalTableId = $tableId ?? 'approvalTable'; @endphp
 
+<div class="programme-dt-panel">
 <div class="table-responsive">
-    <table class="table text-nowrap align-middle mb-0" id="approvalTable">
-        <thead class="table-primary">
+    <table class="table table-hover text-nowrap align-middle mb-0 programme-dt-table" id="{{ $approvalTableId }}">
+        <thead>
             <tr>
                 <th style="width:50px;" class="text-center">S.No.</th>
                 
@@ -179,6 +183,11 @@
             @endforelse
         </tbody>
     </table>
+</div>
+@isset($tableId)
+    {{-- Footer slot for the client-side DataTable (pagination + item count). --}}
+    <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="{{ $approvalTableId }}"></div>
+@endisset
 </div>
 
 @once

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Security;
 
+use App\Exports\EmployeeIdcardApprovalExport;
 use App\Http\Controllers\Admin\DuplicateIDCardRequestController;
 use App\Http\Controllers\Admin\EmployeeIDCardRequestController;
 use App\Http\Controllers\Controller;
@@ -563,20 +564,11 @@ class EmployeeIDCardApprovalController extends Controller
                 || $status !== 'Pending';
         })->values();
 
-        $newRequests = new LengthAwarePaginator(
-            $newRows->forPage($newPage, $perPage)->values(),
-            $newRows->count(),
-            $perPage,
-            $newPage,
-            ['path' => $request->url(), 'pageName' => 'new_page', 'query' => $request->query()]
-        );
-        $forApprovalRequests = new LengthAwarePaginator(
-            $forApprovalRows->forPage($forApprovalPage, $perPage)->values(),
-            $forApprovalRows->count(),
-            $perPage,
-            $forApprovalPage,
-            ['path' => $request->url(), 'pageName' => 'for_page', 'query' => $request->query()]
-        );
+        // Approval II renders each tab in full and paginates / searches client-side.
+        // The result set stays bounded by the Request Date filter (which defaults
+        // to DEFAULT_REQUEST_DATE_FROM), so this is not an unbounded render.
+        $newRequests = $newRows->values();
+        $forApprovalRequests = $forApprovalRows->values();
 
         // ── Issued tab ─────────────────────────────────────────────────────────
         // All approved records (id_status = 2). Card print still sets id_card_generate_date when present.
@@ -713,13 +705,7 @@ class EmployeeIDCardApprovalController extends Controller
             $issuedMerged = $issuedMerged->filter(fn ($d) => $this->approval2MatchesGlobalSearch($needle, $d))->values();
         }
 
-        $issuedRequests = new LengthAwarePaginator(
-            $issuedMerged->forPage($issuedPage, $perPage)->values(),
-            $issuedMerged->count(),
-            $perPage,
-            $issuedPage,
-            ['path' => $request->url(), 'pageName' => 'issued_page', 'query' => $request->query()]
-        );
+        $issuedRequests = $issuedMerged->values();
 
         // ── Rejected tab ───────────────────────────────────────────────────────
         // id_status = 3 only (same scope as contractual dup: Approval II reachable rows).
@@ -838,13 +824,7 @@ class EmployeeIDCardApprovalController extends Controller
             $rejectedMerged = $rejectedMerged->filter(fn ($d) => $this->approval2MatchesGlobalSearch($needle, $d))->values();
         }
 
-        $rejectedRequests = new LengthAwarePaginator(
-            $rejectedMerged->forPage($rejectPage, $perPage)->values(),
-            $rejectedMerged->count(),
-            $perPage,
-            $rejectPage,
-            ['path' => $request->url(), 'pageName' => 'reject_page', 'query' => $request->query()]
-        );
+        $rejectedRequests = $rejectedMerged->values();
         // ──────────────────────────────────────────────────────────────────────
 
         $activeTab = $request->get('tab', 'new');
@@ -2592,7 +2572,13 @@ class EmployeeIDCardApprovalController extends Controller
 
         $data = array_merge($contData, $dupContData);
 
-        return $this->outputExport($data, 'Approval_I_' . now()->format('Y-m-d'), $format);
+        return $this->outputExport(
+            $data,
+            'Approval_I_' . now()->format('Y-m-d'),
+            $format,
+            'Requested ID Card — Approval I',
+            $this->buildExportFilterLine($search, $cardType, $dateFrom, $dateTo)
+        );
     }
 
     private function exportApproval2($search, $cardType, $dateFrom, $dateTo, $format, $perPage)
@@ -2756,7 +2742,13 @@ class EmployeeIDCardApprovalController extends Controller
             ->values()
             ->all();
 
-        return $this->outputExport($data, 'Approval_II_' . now()->format('Y-m-d'), $format);
+        return $this->outputExport(
+            $data,
+            'Approval_II_' . now()->format('Y-m-d'),
+            $format,
+            'Requested ID Card — Approval II',
+            $this->buildExportFilterLine($search, $cardType, $dateFrom, $dateTo)
+        );
     }
 
     /**
@@ -2951,64 +2943,109 @@ class EmployeeIDCardApprovalController extends Controller
         return $labels;
     }
 
-    private function outputExport($data, $filename, $format)
+    /**
+     * Render one export in the requested format.
+     *
+     * Print, PDF and Excel all present the SAME branded layout (LBSNAA header,
+     * blue title band, blue column header, bordered zebra rows) and the same
+     * columns — Print/PDF via the shared `export_pdf` view, Excel via the
+     * styled workbook in {@see EmployeeIdcardApprovalExport}. A plain CSV can't
+     * carry that styling, which is why the download is a real .xlsx.
+     */
+    private function outputExport($data, $filename, $format, string $reportTitle = 'Requested ID Card', string $filterLine = '')
     {
-        if ($format === 'pdf') {
-            return $this->exportPdf($data, $filename);
-        } else {
-            return $this->exportExcel($data, $filename);
+        $format = strtolower((string) $format);
+        if (! in_array($format, ['print', 'pdf', 'excel', 'xlsx', 'csv'], true)) {
+            $format = 'xlsx';
         }
+
+        $export = new EmployeeIdcardApprovalExport($data, $reportTitle, $filterLine);
+
+        if ($format === 'print' || $format === 'pdf') {
+            @ini_set('memory_limit', '256M');
+            @set_time_limit(120);
+
+            $viewData = array_merge([
+                'headings'    => $export->activeHeadings(),
+                'rows'        => $export->pdfRows(),
+                'filterLine'  => $filterLine,
+                'printedOn'   => now()->format('d-m-Y H:i'),
+                'reportTitle' => $reportTitle,
+                'mode'        => $format,
+            ], $this->buildExportHeaderData());
+
+            // Print: return branded HTML that auto-prints in the opened window.
+            if ($format === 'print') {
+                return response()->view('admin.security.employee_idcard_approval.export_pdf', $viewData);
+            }
+
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.security.employee_idcard_approval.export_pdf', $viewData)
+                ->setPaper('a4', 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'isPhpEnabled' => true,
+                    'dpi' => 96,
+                ]);
+
+            return $pdf->download($filename . '.pdf');
+        }
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            $export,
+            $filename . '.xlsx',
+            \Maatwebsite\Excel\Excel::XLSX
+        );
     }
 
-    private function exportExcel($data, $filename)
+    /** Institution logos as data URIs so DomPDF and the print window both embed them. */
+    private function buildExportHeaderData(): array
     {
-        $headers = ['ID', 'Employee Name', 'Designation', 'ID Card No', 'DOB', 'Blood Group', 'Mobile', 'Request Date', 'Type', 'Card Type'];
-        
-        $csvData = implode(',', $headers) . "\n";
-        foreach ($data as $row) {
-            $csvData .= implode(',', [
-                $row->id ?? '',
-                '"' . ($row->name ?? '') . '"',
-                $row->designation ?? '',
-                $row->id_card_no ?? '',
-                $row->employee_dob ?? '',
-                $row->blood_group ?? '',
-                $row->mobile_no ?? '',
-                $row->created_date ?? '',
-                $row->type ?? '',
-                $row->card_type ?? '',
-            ]) . "\n";
+        $toDataUri = static function (string $path): ?string {
+            if (! is_file($path) || ! is_readable($path)) {
+                return null;
+            }
+            $raw = @file_get_contents($path);
+            if ($raw === false) {
+                return null;
+            }
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = match ($ext) {
+                'svg' => 'image/svg+xml',
+                'jpg', 'jpeg' => 'image/jpeg',
+                default => 'image/png',
+            };
+
+            return 'data:' . $mime . ';base64,' . base64_encode($raw);
+        };
+
+        $rightLogo = public_path('admin_assets/images/logos/constitution-75.png');
+        if (! is_file($rightLogo)) {
+            $rightLogo = public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png');
         }
 
-        return response($csvData)
-            ->header('Content-Type', 'text/csv')
-            ->header('Content-Disposition', "attachment; filename=\"{$filename}.csv\"");
+        return [
+            'logoLeft'   => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
+            'logoRight'  => $toDataUri($rightLogo),
+            'titleHindi' => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
+        ];
     }
 
-    private function exportPdf($data, $filename)
+    /** "Applied Filters: …" summary line shown in the export header. */
+    private function buildExportFilterLine($search, $cardType, $dateFrom, $dateTo): string
     {
-        $html = '<table border="1" cellpadding="5" style="width:100%;">';
-        $html .= '<tr><th>ID</th><th>Employee Name</th><th>Designation</th><th>ID Card No</th><th>DOB</th><th>Blood Group</th><th>Mobile</th><th>Request Date</th><th>Type</th><th>Card Type</th></tr>';
-        
-        foreach ($data as $row) {
-            $html .= '<tr>';
-            $html .= '<td>' . ($row->id ?? '') . '</td>';
-            $html .= '<td>' . ($row->name ?? '') . '</td>';
-            $html .= '<td>' . ($row->designation ?? '') . '</td>';
-            $html .= '<td>' . ($row->id_card_no ?? '') . '</td>';
-            $html .= '<td>' . ($row->employee_dob ?? '') . '</td>';
-            $html .= '<td>' . ($row->blood_group ?? '') . '</td>';
-            $html .= '<td>' . ($row->mobile_no ?? '') . '</td>';
-            $html .= '<td>' . ($row->created_date ?? '') . '</td>';
-            $html .= '<td>' . ($row->type ?? '') . '</td>';
-            $html .= '<td>' . ($row->card_type ?? '') . '</td>';
-            $html .= '</tr>';
+        $parts = [];
+        if (! empty($search)) {
+            $parts[] = 'Search: ' . trim((string) $search);
         }
-        $html .= '</table>';
+        if (! empty($cardType)) {
+            $parts[] = 'Card Type: ' . trim((string) $cardType);
+        }
+        if (! empty($dateFrom) || ! empty($dateTo)) {
+            $parts[] = 'Request Date: ' . ($dateFrom ?: '…') . ' to ' . ($dateTo ?: '…');
+        }
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)
-            ->setPaper('a4', 'landscape');
-
-        return $pdf->download($filename . '.pdf');
+        return $parts === [] ? '' : 'Applied Filters:   ' . implode('   |   ', $parts);
     }
 }
