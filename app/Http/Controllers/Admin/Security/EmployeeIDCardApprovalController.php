@@ -1200,34 +1200,11 @@ class EmployeeIDCardApprovalController extends Controller
         $issuedRows = $merged->filter(fn ($r) => (string) ($r->status ?? '') === 'Approved')->values();
         $rejectedRows = $merged->filter(fn ($r) => (string) ($r->status ?? '') === 'Rejected')->values();
 
-        $newRequests = new LengthAwarePaginator(
-            $newRows->forPage($newPage, $perPage)->values(),
-            $newRows->count(),
-            $perPage,
-            $newPage,
-            ['path' => $request->url(), 'pageName' => 'new_page', 'query' => $request->query()]
-        );
-        $forApprovalRequests = new LengthAwarePaginator(
-            $forApprovalRows->forPage($forApprovalPage, $perPage)->values(),
-            $forApprovalRows->count(),
-            $perPage,
-            $forApprovalPage,
-            ['path' => $request->url(), 'pageName' => 'for_page', 'query' => $request->query()]
-        );
-        $issuedRequests = new LengthAwarePaginator(
-            $issuedRows->forPage($issuedPage, $perPage)->values(),
-            $issuedRows->count(),
-            $perPage,
-            $issuedPage,
-            ['path' => $request->url(), 'pageName' => 'issued_page', 'query' => $request->query()]
-        );
-        $rejectedRequests = new LengthAwarePaginator(
-            $rejectedRows->forPage($rejectPage, $perPage)->values(),
-            $rejectedRows->count(),
-            $perPage,
-            $rejectPage,
-            ['path' => $request->url(), 'pageName' => 'reject_page', 'query' => $request->query()]
-        );
+        // Approval III renders each tab in full and paginates / searches client-side.
+        $newRequests = $newRows->values();
+        $forApprovalRequests = $forApprovalRows->values();
+        $issuedRequests = $issuedRows->values();
+        $rejectedRequests = $rejectedRows->values();
 
         $activeTab = $request->get('tab', 'new');
         if ($activeTab === 'archive') {
