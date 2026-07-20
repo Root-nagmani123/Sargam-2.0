@@ -9,7 +9,8 @@ class StreamController extends Controller
 {
     public function index()
     {
-        $streams = Stream::paginate(10);
+        // Rendered in full; the list paginates / searches client-side (DataTables).
+        $streams = Stream::orderBy('stream_name')->get();
         return view('admin.stream.index', compact('streams'));
     }
 

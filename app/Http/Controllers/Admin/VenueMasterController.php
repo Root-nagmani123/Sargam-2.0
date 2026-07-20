@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\{VenueMaster};
 use App\Support\DataTableRedisCache;
+use Illuminate\Support\Collection;
 
 class VenueMasterController extends Controller
 {
@@ -18,52 +19,24 @@ class VenueMasterController extends Controller
 
     public function index(Request $request)
     {
-        $perPage = 10;
-
+        // Rendered in full; the list paginates / searches client-side (DataTables).
         $epoch = DataTableRedisCache::readListEpoch(self::INDEX_LIST_EPOCH_KEY);
-        $cacheKey = 'venue_master_index:v1:' . md5(json_encode([
-            'epoch' => $epoch,
-            'page' => (int) $request->input('page', 1),
-            'per_page' => $perPage,
-        ]));
+        $cacheKey = 'venue_master_index:v2:' . md5(json_encode(['epoch' => $epoch]));
 
-        $cached = DataTableRedisCache::remember(
+        $venues = DataTableRedisCache::remember(
             $cacheKey,
             [
                 'enabled' => 'VENUE_MASTER_INDEX_CACHE_ENABLED',
                 'seconds' => 'VENUE_MASTER_INDEX_CACHE_SECONDS',
             ],
             'VenueMasterController@index',
-            fn () => $this->buildVenueMasterIndexPaginator($request, $perPage)
+            fn () => VenueMaster::query()->orderBy('venue_id', 'desc')->get()
         );
-
-        $venues = new \Illuminate\Pagination\LengthAwarePaginator(
-            $cached['items'],
-            $cached['total'],
-            $cached['perPage'],
-            $cached['currentPage'],
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
+        if (! $venues instanceof Collection) {
+            $venues = collect($venues);
+        }
 
         return view('admin.venueMaster.index', compact('venues'));
-    }
-
-    /**
-     * @return array{items: array<int, mixed>, total: int, perPage: int, currentPage: int}
-     */
-    private function buildVenueMasterIndexPaginator(Request $request, int $perPage): array
-    {
-        $paginator = VenueMaster::query()
-            ->orderBy('venue_id', 'desc')
-            ->paginate($perPage)
-            ->withQueryString();
-
-        return [
-            'items' => $paginator->items(),
-            'total' => $paginator->total(),
-            'perPage' => $paginator->perPage(),
-            'currentPage' => $paginator->currentPage(),
-        ];
     }
 
     public function create() {

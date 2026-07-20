@@ -10,8 +10,8 @@ use App\Http\Requests\ClassSessionMasterRequest;
 class ClassSessionMasterController extends Controller
 {
     function index() {
-
-        $classSessionMaster = ClassSessionMaster::paginate(10);
+        // Rendered in full; the list paginates / searches client-side (DataTables).
+        $classSessionMaster = ClassSessionMaster::orderBy('start_time')->get();
         return view('admin.master.class_session_master.index', compact('classSessionMaster'));
     }
     function create() {
