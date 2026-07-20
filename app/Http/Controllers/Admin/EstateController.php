@@ -6835,6 +6835,11 @@ class EstateController extends Controller
                 'emrd.electricty_charges',
                 'emrd.meter_one as emrd_meter_one_before',
                 'emrd.meter_two as emrd_meter_two_before',
+                // Old meter no. — units ke liye meter-replacement detect karne me chahiye.
+                'emrd.meter_one as emrd_meter_one',
+                'emrd.meter_two as emrd_meter_two',
+                'ehm.meter_one as ehm_meter_one',
+                'ehm.meter_two as ehm_meter_two',
                 'emrd.estate_possession_details_pk',
                 'ehm.pk as audit_estate_house_pk',
                 'ehm.estate_campus_master_pk as audit_campus_pk',
@@ -6909,8 +6914,21 @@ class EstateController extends Controller
                 $baseline1 = $curr1Existing !== null ? $curr1Existing : $prev1;
                 $baseline2 = $curr2Existing !== null ? $curr2Existing : $prev2;
 
-                $u1 = ($curr1New !== null && $curr1New >= $baseline1) ? (int) ($curr1New - $baseline1) : 0;
-                $u2 = ($curr2New !== null && $curr2New >= $baseline2) ? (int) ($curr2New - $baseline2) : 0;
+                // Meter replace hua ho toh naya meter 0 se start hota hai — reading hi consumed unit hai,
+                // warna purane baseline se difference lo.
+                $meter1Changed = $this->isRegularMeterReplaced($row, 1, $data['meter_one']);
+                $meter2Changed = $this->isRegularMeterReplaced($row, 2, $data['meter_two']);
+
+                if ($meter1Changed) {
+                    $u1 = $curr1New !== null ? (int) $curr1New : 0;
+                } else {
+                    $u1 = ($curr1New !== null && $curr1New >= $baseline1) ? (int) ($curr1New - $baseline1) : 0;
+                }
+                if ($meter2Changed) {
+                    $u2 = $curr2New !== null ? (int) $curr2New : 0;
+                } else {
+                    $u2 = ($curr2New !== null && $curr2New >= $baseline2) ? (int) ($curr2New - $baseline2) : 0;
+                }
 
                 $unitTypePk = isset($row->unit_type_pk) ? (int) $row->unit_type_pk : null;
                 $m1Charge = $u1 > 0 ? $this->calculateElectricChargeForUnits($unitTypePk, $u1) : 0.0;
@@ -7926,6 +7944,21 @@ class EstateController extends Controller
     /**
      * Effective old meter number for regular possession reading validation (matches list: emrd ?? ehm).
      */
+    /**
+     * Slot ka meter replace hua ya nahi — submitted new meter no. vs effective old meter no.
+     * True hone par us slot ke units = current reading (naya meter 0 se start hota hai).
+     */
+    private function isRegularMeterReplaced($row, int $meterSlot, ?string $submittedMeterNo): bool
+    {
+        $newDigits = preg_replace('/\D/', '', trim((string) $submittedMeterNo));
+        if ($newDigits === '') {
+            return false;
+        }
+        $oldDigits = preg_replace('/\D/', '', $this->effectiveOldMeterNoForRegularReadingRow($row, $meterSlot));
+
+        return $oldDigits !== '' && $newDigits !== $oldDigits;
+    }
+
     private function effectiveOldMeterNoForRegularReadingRow($row, int $meterSlot): string
     {
         if ($meterSlot === 2) {
@@ -8573,6 +8606,9 @@ class EstateController extends Controller
                             'epo.pk as possession_pk',
                             'ehm.pk as house_pk',
                             'ehm.house_no as ehm_house_no',
+                            // Old meter no. fallback — units ke liye meter-replacement detect karne me chahiye.
+                            'ehm.meter_one as ehm_meter_one',
+                            'ehm.meter_two as ehm_meter_two',
                             DB::raw('COALESCE(epo.estate_unit_type_master_pk, ' . $houseDerivedExpr . ') as electric_unit_type_pk_resolved'),
                         ])
                         ->first();
@@ -8602,6 +8638,23 @@ class EstateController extends Controller
                 $newMeterNoDigits = preg_replace('/\D/', '', $newMeterNoRaw ?? '');
                 $update = [];
 
+                // Meter replace hua ho toh naya meter 0 se start hota hai — reading hi consumed unit hai.
+                $ehmForOldMeter = [];
+                if ($otherPossessionCtx && ! empty($row->estate_possession_other_pk)) {
+                    $ehmForOldMeter[(int) $row->estate_possession_other_pk] = (object) [
+                        'meter_one' => $otherPossessionCtx->ehm_meter_one ?? null,
+                        'meter_two' => $otherPossessionCtx->ehm_meter_two ?? null,
+                    ];
+                }
+                $oldMeterDigitsForUnits = preg_replace('/\D/', '', $this->effectiveOldMeterNoForOtherReadingRow(
+                    $row,
+                    $meterSlot,
+                    $ehmForOldMeter
+                ));
+                $meterReplacedForUnits = $newMeterNoDigits !== ''
+                    && $oldMeterDigitsForUnits !== ''
+                    && $newMeterNoDigits !== $oldMeterDigitsForUnits;
+
                 if ($meterSlot === 2) {
                     $oldCurr2 = $row->curr_month_elec_red2;
                     if ($oldCurr2 !== null && $oldCurr2 !== '') {
@@ -8610,7 +8663,9 @@ class EstateController extends Controller
                     $baseline2 = ($oldCurr2 !== null && $oldCurr2 !== '')
                         ? (int) $oldCurr2
                         : (int) ($row->last_month_elec_red2 ?? 0);
-                    $units = $curr >= $baseline2 ? $curr - $baseline2 : 0;
+                    $units = $meterReplacedForUnits
+                        ? $curr
+                        : ($curr >= $baseline2 ? $curr - $baseline2 : 0);
                     $charge = $units > 0 ? $this->calculateElectricChargeForUnits($electricUnitTypePkOther, $units) : 0.0;
 
                     $update['curr_month_elec_red2'] = $curr;
@@ -8625,7 +8680,9 @@ class EstateController extends Controller
                     $baseline = ($oldCurr !== null && $oldCurr !== '')
                         ? (int) $oldCurr
                         : (int) ($row->last_month_elec_red ?? 0);
-                    $units = $curr >= $baseline ? $curr - $baseline : 0;
+                    $units = $meterReplacedForUnits
+                        ? $curr
+                        : ($curr >= $baseline ? $curr - $baseline : 0);
                     $charge = $units > 0 ? $this->calculateElectricChargeForUnits($electricUnitTypePkOther, $units) : 0.0;
 
                     $update['curr_month_elec_red'] = $curr;
