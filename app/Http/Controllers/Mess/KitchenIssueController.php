@@ -34,6 +34,8 @@ class KitchenIssueController extends Controller
 {
     private const SELLING_VOUCHER_DT_LIST_EPOCH = 'selling_voucher_dt_list_epoch';
 
+    private const INDEX_MASTER_CACHE_EPOCH = 'kitchen_issue_index_master_epoch';
+
     /**
      * Invalidate Redis-backed Selling Voucher DataTables JSON after listing mutations.
      */
@@ -41,6 +43,7 @@ class KitchenIssueController extends Controller
     {
         DataTableRedisCache::bumpListEpoch(self::SELLING_VOUCHER_DT_LIST_EPOCH, 'KitchenIssueController@sellingVouchersDatatable');
         AvailableQuantityService::bumpCacheEpoch();
+        DataTableRedisCache::bumpListEpoch(self::INDEX_MASTER_CACHE_EPOCH, 'KitchenIssueController@indexMasterData');
     }
 
     /**
@@ -61,133 +64,17 @@ class KitchenIssueController extends Controller
     public function index(Request $request)
     {
         // Listing rows load via AJAX (server-side DataTables — sellingVouchersDatatable).
-
-        // All courses (active + archived) for Client Name dropdown; label in UI via active_inactive.
-        // Course end date before today is treated as archived (same idea as course list filters).
-        $otCourses = CourseMaster::orderByDesc('active_inactive')
-            ->orderBy('course_name')
-            ->get(['pk', 'course_name', 'active_inactive', 'end_date']);
-        $today = Carbon::today();
-        $otCourses->each(function ($course) use ($today) {
-            if (filled($course->end_date) && Carbon::parse($course->end_date)->lt($today)) {
-                $course->active_inactive = 0;
-            }
-        });
-
-        // Get active stores and sub-stores
-        $stores = Store::active()->get(['id', 'store_name'])->map(function ($store) {
-            return [
-                'id' => $store->id,
-                'store_name' => $store->store_name,
-                'type' => 'store'
-            ];
-        });
-        
-        $subStores = SubStore::active()->get(['id', 'sub_store_name'])->map(function ($subStore) {
-            return [
-                'id' => 'sub_' . $subStore->id,
-                'store_name' => $subStore->sub_store_name . ' (Sub-Store)',
-                'type' => 'sub_store',
-                'original_id' => $subStore->id
-            ];
-        });
-        
-        // Combine stores and sub-stores
-        $stores = $stores->concat($subStores)->sortBy('store_name')->values();
-        
-        $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get()->map(function ($s) {
-            return [
-                'id' => $s->id,
-                'item_name' => $s->item_name ?? $s->name ?? '—',
-                'item_code' => $s->item_code ?? $s->subcategory_code ?? '—',
-                'unit_measurement' => $s->unit_measurement ?? '—',
-                'standard_cost' => $s->standard_cost ?? 0,
-            ];
-        });
-        $clientTypes = ClientType::clientTypes();
-        $clientNamesByType = ClientType::active()
-            ->orderBy('client_type')
-            ->orderBy('client_name')
-            ->get(['id', 'client_type', 'client_name'])
-            ->groupBy('client_type');
-
-        // Same split as Selling Voucher Date Range:
-        // - Faculty Staff: from FacultyMaster (linked via employee_master_pk)
-        // - Academy Staff: active employees excluding Mess staff + faculty-mapped employees
-        $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
-
-        $faculties = FacultyMaster::whereNotNull('full_name')
-            ->where('full_name', '!=', '')
-            ->where('faculty_type', 1)
-            ->whereNotNull('employee_master_pk')
-            ->whereIn('employee_master_pk', EmployeeMaster::active()->select('pk'))
-            ->orderBy('full_name')
-            ->get(['pk', 'full_name', 'faculty_code', 'employee_master_pk'])
-            ->map(function ($f) {
-                $fullName = trim((string) ($f->full_name ?? ''));
-                $facultyCode = trim((string) ($f->faculty_code ?? ''));
-                $f->full_name_with_code = $facultyCode !== '' ? ($fullName . ' (' . $facultyCode . ')') : $fullName;
-                return $f;
-            });
-
-        $facultyEmployeePks = $faculties
-            ->pluck('employee_master_pk')
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
-
-        $departmentNamesByPk = DepartmentMaster::pluck('department_name', 'pk');
-
-        $buildEmployeeLabel = function ($fullName, $departmentPk) use ($departmentNamesByPk) {
-            $fullName = trim((string) $fullName);
-            if ($fullName === '') {
-                $fullName = '—';
-            }
-            $departmentName = trim((string) ($departmentNamesByPk[$departmentPk] ?? ''));
-            return $departmentName !== '' ? ($fullName . ' (' . $departmentName . ')') : $fullName;
-        };
-
-        $employees = EmployeeMaster::active()
-            ->when($officersMessDept, function ($q) use ($officersMessDept) {
-                $q->where(function ($sub) use ($officersMessDept) {
-                    $sub->whereNull('department_master_pk')
-                        ->orWhere('department_master_pk', '!=', $officersMessDept->pk);
-                });
-            })
-            ->when(!empty($facultyEmployeePks), function ($q) use ($facultyEmployeePks) {
-                $q->whereNotIn('pk', $facultyEmployeePks);
-            })
-            ->orderBy('first_name')->orderBy('last_name')
-            ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
-            ->map(function ($e) use ($buildEmployeeLabel) {
-                $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                $fullName = $fullName ?: '—';
-                return (object) [
-                    'pk' => $e->pk,
-                    'full_name' => $fullName,
-                    'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
-                ];
-            })
-            ->filter(fn($e) => $e->full_name !== '—')
-            ->values();
-        $messStaff = $officersMessDept
-            ? EmployeeMaster::active()
-                ->where('department_master_pk', $officersMessDept->pk)
-                ->orderBy('first_name')->orderBy('last_name')
-                ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
-                ->map(function ($e) use ($buildEmployeeLabel) {
-                    $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                    $fullName = $fullName ?: '—';
-                    return (object) [
-                        'pk' => $e->pk,
-                        'full_name' => $fullName,
-                        'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
-                    ];
-                })
-                ->filter(fn($e) => $e->full_name !== '—')
-                ->values()
-            : collect();
+        $master = $this->loadIndexMasterFormData();
+        $stores = collect($master['stores']);
+        $itemSubcategories = collect($master['itemSubcategories']);
+        $clientTypes = $master['clientTypes'];
+        $clientNamesByType = collect($master['clientNamesByType'])->map(
+            fn ($group) => collect($group)->map(fn ($row) => (object) $row)
+        );
+        $faculties = collect($master['faculties'])->map(fn ($row) => (object) $row);
+        $employees = collect($master['employees'])->map(fn ($row) => (object) $row);
+        $messStaff = collect($master['messStaff'])->map(fn ($row) => (object) $row);
+        $otCourses = collect($master['otCourses'])->map(fn ($row) => (object) $row);
 
         $selectedClientType = (string) $request->input('client_type', '');
         $selectedClientTypePk = (string) $request->input('client_type_pk', '');
@@ -377,14 +264,220 @@ class KitchenIssueController extends Controller
     }
 
     /**
+     * Cached dropdown/master payload for the Selling Voucher index form.
+     *
+     * @return array<string, mixed>
+     */
+    private function loadIndexMasterFormData(): array
+    {
+        $epoch = DataTableRedisCache::readListEpoch(self::INDEX_MASTER_CACHE_EPOCH);
+        $cacheKey = 'kitchen_issue_index_master:v1:' . md5(json_encode(['epoch' => $epoch]));
+
+        /** @var array<string, mixed> $payload */
+        $payload = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'MESS_KITCHEN_ISSUE_INDEX_MASTER_CACHE_ENABLED',
+                'seconds' => 'MESS_KITCHEN_ISSUE_INDEX_MASTER_CACHE_SECONDS',
+            ],
+            'KitchenIssueController@indexMasterData',
+            fn () => $this->buildIndexMasterFormData()
+        );
+
+        return is_array($payload) ? $payload : $this->buildIndexMasterFormData();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildIndexMasterFormData(): array
+    {
+        $otCourses = CourseMaster::orderByDesc('active_inactive')
+            ->orderBy('course_name')
+            ->get(['pk', 'course_name', 'active_inactive', 'end_date']);
+        $today = Carbon::today();
+        $otCourses->each(function ($course) use ($today) {
+            if (filled($course->end_date) && Carbon::parse($course->end_date)->lt($today)) {
+                $course->active_inactive = 0;
+            }
+        });
+
+        $stores = Store::active()->get(['id', 'store_name'])->map(function ($store) {
+            return [
+                'id' => $store->id,
+                'store_name' => $store->store_name,
+                'type' => 'store',
+            ];
+        });
+
+        $subStores = SubStore::active()->get(['id', 'sub_store_name'])->map(function ($subStore) {
+            return [
+                'id' => 'sub_' . $subStore->id,
+                'store_name' => $subStore->sub_store_name . ' (Sub-Store)',
+                'type' => 'sub_store',
+                'original_id' => $subStore->id,
+            ];
+        });
+
+        $stores = $stores->concat($subStores)->sortBy('store_name')->values();
+
+        $itemSubcategories = ItemSubcategory::active()
+            ->orderedByDisplayName()
+            ->get($this->itemSubcategorySelectColumns())
+            ->map(function ($s) {
+                return [
+                    'id' => $s->id,
+                    'item_name' => $s->item_name ?? $s->name ?? '—',
+                    'item_code' => $s->item_code ?? $s->subcategory_code ?? '—',
+                    'unit_measurement' => $s->unit_measurement ?? '—',
+                    'standard_cost' => $s->standard_cost ?? 0,
+                ];
+            });
+
+        $clientNamesByType = ClientType::active()
+            ->orderBy('client_type')
+            ->orderBy('client_name')
+            ->get(['id', 'client_type', 'client_name'])
+            ->groupBy('client_type')
+            ->map(fn ($group) => $group->values()->all())
+            ->all();
+
+        $officersMessDept = DepartmentMaster::query()
+            ->where('department_name', 'Officers Mess')
+            ->first(['pk']);
+
+        $faculties = FacultyMaster::whereNotNull('full_name')
+            ->where('full_name', '!=', '')
+            ->where('faculty_type', 1)
+            ->whereNotNull('employee_master_pk')
+            ->whereIn('employee_master_pk', EmployeeMaster::active()->select('pk'))
+            ->orderBy('full_name')
+            ->get(['pk', 'full_name', 'faculty_code', 'employee_master_pk'])
+            ->map(function ($f) {
+                $fullName = trim((string) ($f->full_name ?? ''));
+                $facultyCode = trim((string) ($f->faculty_code ?? ''));
+
+                return [
+                    'pk' => $f->pk,
+                    'full_name' => $fullName,
+                    'faculty_code' => $facultyCode,
+                    'employee_master_pk' => $f->employee_master_pk,
+                    'full_name_with_code' => $facultyCode !== '' ? ($fullName . ' (' . $facultyCode . ')') : $fullName,
+                ];
+            })
+            ->values()
+            ->all();
+
+        $facultyEmployeePks = collect($faculties)
+            ->pluck('employee_master_pk')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $departmentNamesByPk = DepartmentMaster::query()
+            ->select(['pk', 'department_name'])
+            ->pluck('department_name', 'pk');
+
+        $buildEmployeeLabel = function ($fullName, $departmentPk) use ($departmentNamesByPk) {
+            $fullName = trim((string) $fullName);
+            if ($fullName === '') {
+                $fullName = '—';
+            }
+            $departmentName = trim((string) ($departmentNamesByPk[$departmentPk] ?? ''));
+
+            return $departmentName !== '' ? ($fullName . ' (' . $departmentName . ')') : $fullName;
+        };
+
+        $employees = EmployeeMaster::active()
+            ->when($officersMessDept, function ($q) use ($officersMessDept) {
+                $q->where(function ($sub) use ($officersMessDept) {
+                    $sub->whereNull('department_master_pk')
+                        ->orWhere('department_master_pk', '!=', $officersMessDept->pk);
+                });
+            })
+            ->when(! empty($facultyEmployeePks), function ($q) use ($facultyEmployeePks) {
+                $q->whereNotIn('pk', $facultyEmployeePks);
+            })
+            ->orderBy('first_name')->orderBy('last_name')
+            ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
+            ->map(function ($e) use ($buildEmployeeLabel) {
+                $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
+                $fullName = $fullName ?: '—';
+
+                return [
+                    'pk' => $e->pk,
+                    'full_name' => $fullName,
+                    'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
+                ];
+            })
+            ->filter(fn ($e) => $e['full_name'] !== '—')
+            ->values()
+            ->all();
+
+        $messStaff = $officersMessDept
+            ? EmployeeMaster::active()
+                ->where('department_master_pk', $officersMessDept->pk)
+                ->orderBy('first_name')->orderBy('last_name')
+                ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
+                ->map(function ($e) use ($buildEmployeeLabel) {
+                    $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
+                    $fullName = $fullName ?: '—';
+
+                    return [
+                        'pk' => $e->pk,
+                        'full_name' => $fullName,
+                        'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
+                    ];
+                })
+                ->filter(fn ($e) => $e['full_name'] !== '—')
+                ->values()
+                ->all()
+            : [];
+
+        return [
+            'stores' => $stores->values()->all(),
+            'itemSubcategories' => $itemSubcategories->values()->all(),
+            'clientTypes' => ClientType::clientTypes(),
+            'clientNamesByType' => $clientNamesByType,
+            'faculties' => $faculties,
+            'employees' => $employees,
+            'messStaff' => $messStaff,
+            'otCourses' => $otCourses->map(fn ($course) => [
+                'pk' => $course->pk,
+                'course_name' => $course->course_name,
+                'active_inactive' => $course->active_inactive,
+                'end_date' => $course->end_date,
+            ])->values()->all(),
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function itemSubcategorySelectColumns(): array
+    {
+        $columns = ['id', 'unit_measurement', 'standard_cost'];
+        foreach (['item_name', 'name', 'subcategory_name', 'item_code', 'subcategory_code'] as $column) {
+            if (Schema::hasColumn('mess_item_subcategories', $column)) {
+                $columns[] = $column;
+            }
+        }
+
+        return array_values(array_unique($columns));
+    }
+
+    /**
      * @param  \Illuminate\Support\Collection<int, object>  $employees
      * @return list<array{value: string, text: string}>
      */
     private function employeeBuyerFilterOptions($employees): array
     {
         return $employees->map(function ($employee) {
-            $value = (string) ($employee->pk ?? '');
-            $text = (string) ($employee->full_name_with_department ?? $employee->full_name ?? '');
+            $value = (string) (is_array($employee) ? ($employee['pk'] ?? '') : ($employee->pk ?? ''));
+            $text = (string) (is_array($employee)
+                ? ($employee['full_name_with_department'] ?? $employee['full_name'] ?? '')
+                : ($employee->full_name_with_department ?? $employee->full_name ?? ''));
             if ($value === '' || $text === '') {
                 return null;
             }
@@ -400,8 +493,10 @@ class KitchenIssueController extends Controller
     private function facultyBuyerFilterOptions($faculties): array
     {
         return $faculties->map(function ($faculty) {
-            $value = (string) ($faculty->pk ?? '');
-            $text = (string) ($faculty->full_name ?? '');
+            $value = (string) (is_array($faculty) ? ($faculty['pk'] ?? '') : ($faculty->pk ?? ''));
+            $text = (string) (is_array($faculty)
+                ? ($faculty['full_name_with_code'] ?? $faculty['full_name'] ?? '')
+                : ($faculty->full_name_with_code ?? $faculty->full_name ?? ''));
             if ($value === '' || $text === '') {
                 return null;
             }
@@ -1985,6 +2080,7 @@ class KitchenIssueController extends Controller
         ]);
 
         $itemIds = $kitchenIssue->items->pluck('pk')->toArray();
+        $itemsByPk = $kitchenIssue->items->keyBy('pk');
 
         try {
             DB::beginTransaction();
@@ -1993,8 +2089,8 @@ class KitchenIssueController extends Controller
                 if (!in_array($itemPk, $itemIds, true)) {
                     continue;
                 }
-                $item = KitchenIssueItem::find($itemPk);
-                if (!$item || $item->kitchen_issue_master_pk != $kitchenIssue->pk) {
+                $item = $itemsByPk->get($itemPk);
+                if (!$item) {
                     continue;
                 }
                 $returnQty = (float) ($row['return_quantity'] ?? 0);
@@ -2067,7 +2163,11 @@ class KitchenIssueController extends Controller
             }
         }
 
-        $records = $query->orderBy('issue_date', 'desc')->get();
+        $perPage = max(1, min(100, (int) $request->input('per_page', 20)));
+
+        $records = $query->orderBy('issue_date', 'desc')
+            ->paginate($perPage)
+            ->withQueryString();
 
         return response()->json($records);
     }
@@ -2123,11 +2223,24 @@ class KitchenIssueController extends Controller
             $query->where('client_type', $request->client_type);
         }
 
-        $kitchenIssues = $query->orderBy('issue_date', 'desc')->get();
+        $perPage = max(1, min(100, (int) $request->input('per_page', 20)));
+
+        $reportSummary = [
+            'total_issues' => (clone $query)->count(),
+            'paid_count' => (clone $query)->where('payment_type', 1)->count(),
+            'unpaid_count' => (clone $query)->where('payment_type', 0)->count(),
+            'total_amount' => (float) KitchenIssueItem::query()
+                ->whereIn('kitchen_issue_master_pk', (clone $query)->select('pk'))
+                ->sum('amount'),
+        ];
+
+        $kitchenIssues = $query->orderBy('issue_date', 'desc')
+            ->paginate($perPage)
+            ->withQueryString();
 
         $stores = Store::all();
 
-        return view('mess.kitchen-issues.bill-report', compact('kitchenIssues', 'stores'));
+        return view('mess.kitchen-issues.bill-report', compact('kitchenIssues', 'stores', 'reportSummary'));
     }
 
     /**

@@ -58,7 +58,7 @@
             <div class="card bg-primary text-white">
                 <div class="card-body">
                     <h6>Total Issues</h6>
-                    <h3>{{ $kitchenIssues->count() }}</h3>
+                    <h3>{{ $reportSummary['total_issues'] }}</h3>
                 </div>
             </div>
         </div>
@@ -66,7 +66,7 @@
             <div class="card bg-success text-white">
                 <div class="card-body">
                     <h6>Paid</h6>
-                    <h3>{{ $kitchenIssues->where('payment_type', 1)->count() }}</h3>
+                    <h3>{{ $reportSummary['paid_count'] }}</h3>
                 </div>
             </div>
         </div>
@@ -74,7 +74,7 @@
             <div class="card bg-danger text-white">
                 <div class="card-body">
                     <h6>Unpaid</h6>
-                    <h3>{{ $kitchenIssues->where('payment_type', 0)->count() }}</h3>
+                    <h3>{{ $reportSummary['unpaid_count'] }}</h3>
                 </div>
             </div>
         </div>
@@ -82,7 +82,7 @@
             <div class="card bg-info text-white">
                 <div class="card-body">
                     <h6>Total Amount</h6>
-                    <h3>₹{{ number_format($kitchenIssues->sum(function($issue) { return $issue->unit_price * $issue->quantity; }), 2) }}</h3>
+                    <h3>₹{{ number_format($reportSummary['total_amount'], 2) }}</h3>
                 </div>
             </div>
         </div>
@@ -135,20 +135,21 @@
                 </tr>
             @endforelse
             </tbody>
-            @if($kitchenIssues->count() > 0)
+            @if($reportSummary['total_issues'] > 0)
             <tfoot class="table-secondary">
                 <tr>
                     <th colspan="6" class="text-end">Grand Total:</th>
-                    <th>₹{{ number_format($kitchenIssues->sum(function($issue) { return $issue->unit_price * $issue->quantity; }), 2) }}</th>
+                    <th>₹{{ number_format($reportSummary['total_amount'], 2) }}</th>
                     <th colspan="2"></th>
                 </tr>
             </tfoot>
             @endif
         </table>
     </div>
-    
-    @if($kitchenIssues->count() > 0)
-    <div class="text-end mt-3">
+
+    @if($reportSummary['total_issues'] > 0)
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        {{ $kitchenIssues->links() }}
         <button onclick="window.print()" class="btn btn-success">Print Report</button>
     </div>
     @endif
