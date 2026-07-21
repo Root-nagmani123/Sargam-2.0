@@ -11,10 +11,148 @@ class SidebarNavResolver
 {
     public const HOME_TAB = '#home';
 
+    /**
+     * Id-keyed maps of the three tiny structural tables (menus 223 rows,
+     * menu_groups 23, sidebar_categories 5).
+     *
+     * Nav + breadcrumb resolution previously issued ~14 individual find() calls
+     * per page — one per category / group / menu / parent-chain hop — on rows
+     * that never change between menu edits. Loading each table once and resolving
+     * from memory removes all of them.
+     *
+     * Cached serialized so every caller gets its own object graph, and dropped by
+     * clearCache() (already called from MenuService on any menu create / update /
+     * delete / status change).
+     *
+     * @return \Illuminate\Support\Collection<int,mixed>
+     */
+    public static function structureMap(string $which)
+    {
+        static $memo = [];
+
+        if (isset($memo[$which])) {
+            return $memo[$which];
+        }
+
+        $build = static function () use ($which) {
+            $rows = match ($which) {
+                'menus' => Menu::all(),
+                'groups' => MenuGroup::all(),
+                default => SidebarCategory::all(),
+            };
+
+            return $rows->keyBy('id');
+        };
+
+        $ttl = (int) config('fc.menu_cache_ttl', 600);
+        if ($ttl <= 0) {
+            return $memo[$which] = $build();
+        }
+
+        try {
+            $payload = Cache::remember(
+                'fc_sidebar_map:'.$which,
+                $ttl,
+                static fn () => serialize($build())
+            );
+            $restored = is_string($payload) ? @unserialize($payload) : null;
+
+            if ($restored instanceof \Illuminate\Support\Collection) {
+                return $memo[$which] = $restored;
+            }
+        } catch (\Throwable $e) {
+            // fall through to a live build
+        }
+
+        return $memo[$which] = $build();
+    }
+
+    /** Active menu by id, or null. */
+    protected static function menuById($id, bool $activeOnly = true): ?Menu
+    {
+        if (! $id) {
+            return null;
+        }
+
+        $menu = self::structureMap('menus')->get((int) $id);
+
+        if (! $menu instanceof Menu) {
+            return null;
+        }
+
+        return ($activeOnly && ! $menu->is_active) ? null : $menu;
+    }
+
+    /** Parent of a menu, resolved from the cached map (never a DB round trip). */
+    public static function parentOf(?Menu $menu): ?Menu
+    {
+        if (! $menu || ! $menu->parent_id) {
+            return null;
+        }
+
+        return self::structureMap('menus')->get((int) $menu->parent_id);
+    }
+
+    /** Active category by id, or null. */
+    protected static function categoryById($id): ?SidebarCategory
+    {
+        if (! $id) {
+            return null;
+        }
+
+        $c = self::structureMap('categories')->get((int) $id);
+
+        return ($c instanceof SidebarCategory && $c->is_active) ? $c : null;
+    }
+
+    /** Active category by slug, or null. */
+    protected static function categoryBySlug(string $slug): ?SidebarCategory
+    {
+        return self::structureMap('categories')
+            ->first(fn ($c) => $c->is_active && $c->slug === $slug);
+    }
+
+    /** Group by id, or null. */
+    protected static function groupById($id): ?MenuGroup
+    {
+        if (! $id) {
+            return null;
+        }
+
+        $g = self::structureMap('groups')->get((int) $id);
+
+        return $g instanceof MenuGroup ? $g : null;
+    }
+
     public function resolve(?string $path = null, ?string $routeName = null): array
     {
         $path = $path ?? request()->path();
         $routeName = $routeName ?? (request()->route()?->getName() ?? '');
+
+        // Per-request memo. The layout resolves nav once and the breadcrumb
+        // component resolves it again, each via app() — separate instances, so an
+        // instance property would not be shared. Every inpu here (path, route name,
+        // ?menu / ?category) is fixed for the life of a request, so the answer
+        // cannot change within one; this halves the menu/category lookups on every
+        // page in the application.
+        static $memo = [];
+
+        $memoKey = $path.'|'.$routeName
+            .'|'.(string) request()->get('menu')
+            .'|'.(string) request()->get('category');
+
+        if (array_key_exists($memoKey, $memo)) {
+            return $memo[$memoKey];
+        }
+
+        return $memo[$memoKey] = $this->resolveUncached($path, $routeName);
+    }
+
+    /**
+     * The real resolution work; wrapped by resolve()'s per-request memo.
+     */
+    protected function resolveUncached(string $path, string $routeName): array
+    {
 
         // Fully dynamic, RBAC-driven resolution. The header tab, mini-nav category
         // and active menu are ALL derived from the matched menu's own category_id /
@@ -28,7 +166,7 @@ class SidebarNavResolver
         // its tab/group — is selected, not just the first menu that matches the URL.
         $requestMenuId = request()->get('menu');
         if ($requestMenuId) {
-            $menu = Menu::where('is_active', 1)->find($requestMenuId);
+            $menu = self::menuById($requestMenuId);
             if ($menu) {
                 return $this->resultFromMenu($menu);
             }
@@ -36,7 +174,7 @@ class SidebarNavResolver
 
         $requestCategoryId = request()->get('category');
         if ($requestCategoryId) {
-            $category = SidebarCategory::where('is_active', 1)->find($requestCategoryId);
+            $category = self::categoryById($requestCategoryId);
             if ($category) {
                 return $this->resultFromCategory($category);
             }
@@ -313,7 +451,7 @@ class SidebarNavResolver
 
         $category = null;
         if ($anchor->category_id) {
-            $category = SidebarCategory::where('is_active', 1)->find($anchor->category_id);
+            $category = self::categoryById($anchor->category_id);
         }
         if (!$category && $anchor->group_id) {
             $anchor->loadMissing('group.category');
@@ -344,11 +482,11 @@ class SidebarNavResolver
     {
         $guard = 0;
         while ($menu->parent_id && $guard++ < 20) {
-            $menu->loadMissing('parent');
-            if (!$menu->parent) {
+            $parent = self::parentOf($menu);
+            if (! $parent) {
                 break;
             }
-            $menu = $menu->parent;
+            $menu = $parent;
         }
 
         return $menu;
@@ -367,7 +505,7 @@ class SidebarNavResolver
 
     protected function resultForCategorySlug(string $slug): array
     {
-        $category = SidebarCategory::where('is_active', 1)->where('slug', $slug)->first();
+        $category = self::categoryBySlug($slug);
 
         return $category
             ? $this->resultFromCategory($category)
@@ -386,7 +524,7 @@ class SidebarNavResolver
      */
     protected function resultForHome(): array
     {
-        $home = SidebarCategory::where('is_active', 1)->where('slug', 'home')->first();
+        $home = self::categoryBySlug('home');
 
         return [
             'nav_tab' => self::HOME_TAB,
@@ -480,7 +618,7 @@ class SidebarNavResolver
         // Category (the header tab) — skip the Home category, since Home is
         // already the root and we don't want "Home / Home".
         if (! empty($result['category_id']) && ($result['category_slug'] ?? null) !== 'home') {
-            $category = SidebarCategory::find($result['category_id']);
+            $category = self::structureMap('categories')->get((int) $result['category_id']);
             if ($category && filled($category->name)) {
                 $trail[] = ['label' => $category->name, 'url' => null];
             }
@@ -488,7 +626,7 @@ class SidebarNavResolver
 
         // Group (the mid-level sidebar heading), when the menu sits inside one.
         if (! empty($result['group_id'])) {
-            $group = MenuGroup::find($result['group_id']);
+            $group = self::groupById($result['group_id']);
             if ($group && filled($group->name)) {
                 $trail[] = ['label' => $group->name, 'url' => null];
             }
@@ -498,7 +636,7 @@ class SidebarNavResolver
         // top-level → … → active. Ancestors link to their own page; the active
         // menu is left without a URL so it renders as the current crumb.
         if (! empty($result['menu_id'])) {
-            $menu = Menu::find($result['menu_id']);
+            $menu = self::structureMap('menus')->get((int) $result['menu_id']);
             if ($menu) {
                 foreach ($this->menuAncestryChain($menu) as $node) {
                     $trail[] = [
@@ -540,12 +678,12 @@ class SidebarNavResolver
                 break; // reached the top-level menu
             }
 
-            $current->loadMissing('parent');
-            if (! $current->parent) {
+            $parent = self::parentOf($current);
+            if (! $parent) {
                 break; // parent_id set but the parent row is missing/inactive
             }
 
-            $current = $current->parent;
+            $current = $parent;
         }
 
         return $chain;
@@ -612,6 +750,13 @@ class SidebarNavResolver
     public static function clearCache(): void
     {
         Cache::forget('sidebar_nav_route_index');
+
+        // The id-keyed structure maps used by nav + breadcrumb resolution must be
+        // dropped here too, otherwise a menu rename/move keeps resolving from the
+        // stale map until the TTL expires.
+        foreach (['menus', 'groups', 'categories'] as $which) {
+            Cache::forget('fc_sidebar_map:'.$which);
+        }
     }
 
     /**

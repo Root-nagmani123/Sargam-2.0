@@ -630,6 +630,10 @@ class StudentImportController extends Controller
                 return back()->with('error', 'No eligible records were migrated. Check selection and filters.');
             }
 
+            // Credentials were just written, so the cached roster↔credentials match
+            // set is stale — drop it so both tabs recount immediately.
+            \App\Services\FC\FcMigrateStudentsExportService::flushMatchedRosterPks();
+
             return back()->with('success', "Migration completed successfully for {$migratedCount} record(s).");
         } catch (\Exception $e) {
             DB::rollBack();

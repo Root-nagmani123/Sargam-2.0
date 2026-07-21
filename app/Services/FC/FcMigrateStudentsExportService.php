@@ -5,9 +5,13 @@ namespace App\Services\FC;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 class FcMigrateStudentsExportService
 {
+    /** Cache key for the roster↔credentials match set. */
+    private const MATCHED_PKS_CACHE_KEY = 'fc_migrate_matched_roster_pks';
+
     public const LIST_MIGRATED = 'migrated';
 
     public const LIST_ELIGIBLE = 'eligible';
@@ -226,7 +230,96 @@ class FcMigrateStudentsExportService
     /**
      * EXISTS / NOT EXISTS — same rules as the old correlated MIN(uc.pk) filter, without per-row SELECT cost.
      */
+    /**
+     * Roster pks that already have a matching user_credentials row.
+     *
+     * The membership test itself is unavoidably expensive: fc_registration_master
+     * is latin1_swedish_ci while user_credentials is utf8mb4_0900_ai_ci, so every
+     * comparison needs a runtime charset conversion (hence the TRIM/CAST/LOWER
+     * wrappers) and no index — not even the idx_uc_mig_* functional indexes — can
+     * be used. Evaluated per roster row it cost ~690ms on every request, including
+     * every sort, search and page change.
+     *
+     * Since the predicate is a pure membership test on r.pk, it is evaluated once
+     * and cached as a pk list; the table query then filters on the primary key
+     * (~18ms). The result set is identical.
+     *
+     * Invalidate with flushMatchedRosterPks() after migrating trainees.
+     *
+     * @return list<int>
+     */
+    public function matchedRosterPks(): array
+    {
+        static $memo = null;
+
+        if ($memo !== null) {
+            return $memo;
+        }
+
+        $build = fn () => DB::table('fc_registration_master as r')
+            ->whereRaw($this->userCredentialsMatchExistsSql())
+            ->pluck('r.pk')
+            ->map(fn ($pk) => (int) $pk)
+            ->all();
+
+        $ttl = (int) config('fc.migrate_match_cache_ttl', 300);
+        if ($ttl <= 0) {
+            return $memo = $build();
+        }
+
+        try {
+            return $memo = Cache::remember(self::MATCHED_PKS_CACHE_KEY, $ttl, $build);
+        } catch (\Throwable $e) {
+            return $memo = $build();
+        }
+    }
+
+    /** Drop the cached roster-match set (call after a migration writes credentials). */
+    public static function flushMatchedRosterPks(): void
+    {
+        try {
+            Cache::forget(self::MATCHED_PKS_CACHE_KEY);
+        } catch (\Throwable $e) {
+            // never let cache invalidation break a migration
+        }
+    }
+
+    /**
+     * The original OR-of-EXISTS predicate, used once to build the cached pk set.
+     */
+    private function userCredentialsMatchExistsSql(): string
+    {
+        return "(
+            EXISTS (SELECT 1 FROM user_credentials uc WHERE TRIM(CAST(uc.user_name AS CHAR)) = TRIM(CAST(r.user_id AS CHAR)))
+            OR (
+                TRIM(COALESCE(r.contact_no, '')) <> ''
+                AND EXISTS (SELECT 1 FROM user_credentials uc WHERE TRIM(CAST(uc.mobile_no AS CHAR)) = TRIM(CAST(r.contact_no AS CHAR)))
+            )
+            OR (
+                TRIM(COALESCE(r.email, '')) <> ''
+                AND EXISTS (SELECT 1 FROM user_credentials uc WHERE LOWER(TRIM(uc.email_id)) = LOWER(TRIM(r.email)))
+            )
+        )";
+    }
+
     public function applyUserCredentialsMatchExists(Builder $query, bool $mustExist): void
+    {
+        // Migrated and Eligible are exact complements of the same membership test,
+        // so both are served from one cached pk set: IN for migrated, NOT IN for
+        // eligible. Semantics are unchanged — see matchedRosterPks().
+        $matched = $this->matchedRosterPks();
+
+        if ($mustExist) {
+            $query->whereIn('r.pk', $matched);
+        } else {
+            $query->whereNotIn('r.pk', $matched);
+        }
+
+        return;
+    }
+
+    /** @deprecated superseded by the cached pk set above; kept for reference. */
+    private function applyUserCredentialsMatchExistsLegacy(Builder $query, bool $mustExist): void
     {
         // Each identifier (username / mobile / email) is matched with its own
         // single-column EXISTS subquery instead of one subquery that ORs all three

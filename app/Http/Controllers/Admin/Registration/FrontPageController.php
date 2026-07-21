@@ -14,6 +14,7 @@ use App\Models\FC\FcForm;
 use App\Models\FrontPage;
 use App\Models\FacultyMaster;
 use App\Models\DesignationMaster;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
@@ -49,6 +50,32 @@ class FrontPageController extends Controller
             ->with('warning', $message);
     }
 
+    /**
+     * Faculty / designation dropdown data for the front-page form.
+     *
+     * These are master records that change only when an admin edits faculty or
+     * designations, but were re-queried on every page view. Cached under the FC
+     * lookup version, so fc_flush_lookup_cache() publishes edits immediately;
+     * otherwise they refresh within fc.lookup_cache_ttl.
+     */
+    private function cachedFrontPageLookup(string $key, callable $fetch): array
+    {
+        $ttl = (int) config('fc.lookup_cache_ttl', 600);
+        if ($ttl <= 0) {
+            return $fetch();
+        }
+
+        try {
+            return Cache::remember(
+                'fc_lookup:'.DB::getDatabaseName().':v'.fc_lookup_cache_version().':frontpage_'.$key,
+                $ttl,
+                $fetch
+            );
+        } catch (\Throwable $e) {
+            return $fetch();
+        }
+    }
+
     public function index()
     {
         $data = FrontPage::first(); // fetch latest/only record
@@ -56,7 +83,10 @@ class FrontPageController extends Controller
         // Faculty list for the Coordinator Name dropdown (same source as Create Course).
         // Keyed by full_name so the saved value remains a name string and the public
         // front page (which prints coordinator_name directly) keeps working unchanged.
-        $facultyList = FacultyMaster::orderBy('full_name')->pluck('full_name', 'full_name')->toArray();
+        $facultyList = $this->cachedFrontPageLookup(
+            'faculty_names',
+            static fn () => FacultyMaster::orderBy('full_name')->pluck('full_name', 'full_name')->toArray()
+        );
 
         // Preserve a previously saved coordinator name even if it is no longer in the faculty list.
         if ($data && !empty($data->coordinator_name) && !isset($facultyList[$data->coordinator_name])) {
@@ -66,19 +96,25 @@ class FrontPageController extends Controller
         // Map of coordinator (faculty) name => their designation name, so the
         // Coordinator Designation field can auto-fill when a coordinator is picked.
         // Chain: faculty_master.employee_master_pk -> employee_master.designation_master_pk -> designation_master.
-        $coordinatorDesignations = FacultyMaster::query()
-            ->join('employee_master', 'faculty_master.employee_master_pk', '=', 'employee_master.pk')
-            ->join('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
-            ->whereNotNull('faculty_master.full_name')
-            ->pluck('designation_master.designation_name', 'faculty_master.full_name')
-            ->toArray();
+        $coordinatorDesignations = $this->cachedFrontPageLookup(
+            'coordinator_designations',
+            static fn () => FacultyMaster::query()
+                ->join('employee_master', 'faculty_master.employee_master_pk', '=', 'employee_master.pk')
+                ->join('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
+                ->whereNotNull('faculty_master.full_name')
+                ->pluck('designation_master.designation_name', 'faculty_master.full_name')
+                ->toArray()
+        );
 
         // Options for the Coordinator Designation searchable dropdown. Keyed by name so the
         // saved value stays a string (the public front page prints coordinator_designation directly).
-        $designationList = DesignationMaster::where('active_inactive', 1)
-            ->orderBy('designation_name')
-            ->pluck('designation_name', 'designation_name')
-            ->toArray();
+        $designationList = $this->cachedFrontPageLookup(
+            'active_designations',
+            static fn () => DesignationMaster::where('active_inactive', 1)
+                ->orderBy('designation_name')
+                ->pluck('designation_name', 'designation_name')
+                ->toArray()
+        );
 
         // Ensure every designation that a coordinator can auto-fill is selectable (even if inactive).
         foreach ($coordinatorDesignations as $desigName) {
@@ -111,7 +147,21 @@ class FrontPageController extends Controller
             'coordinator_signature' => 'nullable|mimes:jpeg,png,jpg,gif,pdf|max:5120',
         ]);
 
-        $data = $request->except(['important_updates', 'coordinator_signature']);
+        // Whitelist the real columns. This used to be $request->except([...]) — a
+        // blacklist — and FrontPage has $guarded = [], so EVERY posted field was
+        // mass-assigned straight into the UPDATE. Any extra input then produced
+        // "Unknown column": `files` from the Summernote image uploader, and `menu`
+        // whenever the form was submitted from a ?menu=183 URL.
+        $data = $request->only([
+            'course_start_date',
+            'course_end_date',
+            'registration_start_date',
+            'registration_end_date',
+            'course_title',
+            'coordinator_name',
+            'coordinator_designation',
+            'coordinator_info',
+        ]);
         $data['important_updates'] = html_entity_decode($request->input('important_updates'));
 
         // File Upload

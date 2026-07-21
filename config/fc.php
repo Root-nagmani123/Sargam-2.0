@@ -52,4 +52,17 @@ return [
     */
     'menu_cache_ttl' => (int) env('FC_MENU_CACHE_TTL', 600),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Migrate-students roster match cache (seconds)
+    |--------------------------------------------------------------------------
+    |
+    | fc_registration_master (latin1) and user_credentials (utf8mb4) collate
+    | differently, so the "already migrated?" test cannot use an index and cost
+    | ~690ms per request. The matched pk set is computed once and cached instead.
+    | Flushed automatically after a migration; set 0 to disable.
+    |
+    */
+    'migrate_match_cache_ttl' => (int) env('FC_MIGRATE_MATCH_CACHE_TTL', 300),
+
 ];

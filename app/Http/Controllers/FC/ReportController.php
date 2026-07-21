@@ -137,7 +137,7 @@ class ReportController extends Controller
         $trackerTable = $form->trackerStorageTable();
         $userKey      = $form->user_identifier ?: 'user_id';
 
-        $hasFormIdCol = \Illuminate\Support\Facades\Schema::hasColumn($trackerTable, 'form_id');
+        $hasFormIdCol = fc_schema_has_column($trackerTable, 'form_id');
 
         $baseCount = fn () => DB::table($trackerTable)
             ->when($hasFormIdCol, fn ($q) => $q->where('form_id', $form->id));
@@ -666,11 +666,11 @@ class ReportController extends Controller
         }
 
         foreach ($tables as $table) {
-            if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $labelColumn)) {
+            if (! fc_schema_has_table($table) || ! fc_schema_has_column($table, $labelColumn)) {
                 continue;
             }
             foreach ($valueColumns as $valueColumn) {
-                if (! Schema::hasColumn($table, $valueColumn)) {
+                if (! fc_schema_has_column($table, $valueColumn)) {
                     continue;
                 }
                 $label = DB::table($table)->where($valueColumn, $raw)->value($labelColumn);
@@ -754,7 +754,7 @@ class ReportController extends Controller
         $s1Col = fc_user_col('student_master_firsts');
         $smCol = fc_user_col('student_masters');
         $s2Col = fc_user_col('student_master_seconds');
-        $hasFrm = \Illuminate\Support\Facades\Schema::hasTable('fc_registration_master');
+        $hasFrm = fc_schema_has_table('fc_registration_master');
 
         $base = DB::table('student_master_firsts as s1')
             ->leftJoin('student_masters as sm', "sm.{$smCol}", '=', "s1.{$s1Col}")
@@ -869,7 +869,7 @@ class ReportController extends Controller
     public function byState(Request $request)
     {
         $states  = DB::table('state_master')->orderBy('state_name')->selectRaw('Pk as pk, state_name')->get();
-        $hasFrm  = Schema::hasTable('fc_registration_master');
+        $hasFrm  = fc_schema_has_table('fc_registration_master');
         $s1Col   = fc_user_col('student_master_firsts');
         $smCol   = fc_user_col('student_masters');
 
@@ -990,7 +990,7 @@ class ReportController extends Controller
 
                 $studentsQuery->leftJoin('service_master as svc', 's1.service_id', '=', 'svc.pk');
 
-                $hasFrm = Schema::hasTable('fc_registration_master');
+                $hasFrm = fc_schema_has_table('fc_registration_master');
                 if ($hasFrm) {
                     $studentsQuery->leftJoin('service_master as svc_frm', DB::raw('CAST(frm.service_master_pk AS UNSIGNED)'), '=', 'svc_frm.pk');
                 }
@@ -1070,7 +1070,7 @@ class ReportController extends Controller
         $studentsQuery->leftJoin('student_masters as sm', 'sm.user_id', '=', 's1.user_id')
             ->leftJoin('service_master as svc', 's1.service_id', '=', 'svc.pk');
 
-        $hasFrm = Schema::hasTable('fc_registration_master');
+        $hasFrm = fc_schema_has_table('fc_registration_master');
         if ($hasFrm) {
             $studentsQuery->leftJoin('service_master as svc_frm', DB::raw('CAST(frm.service_master_pk AS UNSIGNED)'), '=', 'svc_frm.pk');
         }
@@ -1124,7 +1124,7 @@ class ReportController extends Controller
         $s1Col  = fc_user_col('student_master_firsts');
         $smCol  = fc_user_col('student_masters');
         $bCol   = fc_user_col('new_registration_bank_details_masters');
-        $hasFrm = Schema::hasTable('fc_registration_master');
+        $hasFrm = fc_schema_has_table('fc_registration_master');
 
         $query = DB::table('student_master_firsts as s1')
             ->leftJoin('student_masters as sm', "sm.{$smCol}", '=', "s1.{$s1Col}")
@@ -1271,7 +1271,7 @@ class ReportController extends Controller
         $s1Col  = fc_user_col('student_master_firsts');
         $smCol  = fc_user_col('student_masters');
         $bCol   = fc_user_col('new_registration_bank_details_masters');
-        $hasFrm = Schema::hasTable('fc_registration_master');
+        $hasFrm = fc_schema_has_table('fc_registration_master');
 
         $out = fopen('php://output','w');
         fputcsv($out, ['User ID','Full Name','Service','Bank Name','IFSC','Account No','Holder Name']);
@@ -1375,7 +1375,7 @@ class ReportController extends Controller
     {
         $trackerTable = $form->trackerStorageTable();
         $userKey      = $form->user_identifier ?: 'user_id';
-        $hasFrm       = \Illuminate\Support\Facades\Schema::hasTable('fc_registration_master');
+        $hasFrm       = fc_schema_has_table('fc_registration_master');
 
         if ($request->filled('status')) {
             if ($request->status === 'COMPLETE') {
@@ -1642,7 +1642,7 @@ class ReportController extends Controller
                 $like    = '%' . $term . '%';
                 $t       = $form->trackerStorageTable();
                 $userKey = $form->user_identifier ?: 'user_id';
-                $hasFrm  = Schema::hasTable('fc_registration_master');
+                $hasFrm  = fc_schema_has_table('fc_registration_master');
                 $query->where(function ($sub) use ($like, $t, $userKey, $hasFrm) {
                     $sub->where('s1.full_name', 'like', $like)
                         ->orWhere('s1.first_name', 'like', $like)
@@ -2218,7 +2218,7 @@ class ReportController extends Controller
 
         // Resolve login username + registration rank/exam year the same way the report does,
         // so the per-student folder is named username_rank_year (not the raw numeric user_id).
-        $hasFrm = Schema::hasTable('fc_registration_master');
+        $hasFrm = fc_schema_has_table('fc_registration_master');
 
         $studentsQuery = DB::table('student_masters as sm');
         fc_report_apply_tracker_user_resolution($studentsQuery, 'student_masters', 'sm');

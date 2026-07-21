@@ -48,7 +48,28 @@ class CompressResponse
         }
 
         $content = $response->getContent();
-        if ($content === false || $content === null || strlen($content) < self::MIN_LENGTH) {
+        if ($content === false || $content === null) {
+            return $response;
+        }
+
+        // Absorb stray output echoed outside the response body before compressing.
+        //
+        // Blade emits anything outside a @section of an @extends view straight to
+        // the output buffer (a leading blank line after a top-level {{-- --}}
+        // comment is enough). Uncompressed that is harmless whitespace, but it is
+        // flushed BEFORE the gzip stream — producing "\n" + gzip, which no browser
+        // can decode, so the page renders blank. Folding it into the body first
+        // keeps the response a single valid gzip stream.
+        if (ob_get_level() > 0 && ob_get_length() > 0) {
+            $stray = ob_get_contents();
+            if (is_string($stray) && $stray !== '') {
+                ob_clean(); // empties the active buffer without closing it
+                $content = $stray . $content;
+                $response->setContent($content);
+            }
+        }
+
+        if (strlen($content) < self::MIN_LENGTH) {
             return $response;
         }
 

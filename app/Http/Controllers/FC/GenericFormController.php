@@ -68,9 +68,9 @@ class GenericFormController extends Controller
         // Travel Plan: read travel_done from the tracker table for this form + user
         $travelDone = false;
         $trackerTable = $form->trackerStorageTable();
-        if (Schema::hasTable($trackerTable) && Schema::hasColumn($trackerTable, 'travel_done')) {
+        if (fc_schema_has_table($trackerTable) && fc_schema_has_column($trackerTable, 'travel_done')) {
             $tq = DB::table($trackerTable)->where(fc_user_col($trackerTable), fc_user_val($trackerTable, $userId));
-            if (Schema::hasColumn($trackerTable, 'form_id')) {
+            if (fc_schema_has_column($trackerTable, 'form_id')) {
                 $tq->where('form_id', $form->id);
             }
             $travelDone = (bool) ($tq->value('travel_done') ?? false);
@@ -344,10 +344,10 @@ class GenericFormController extends Controller
             if ($step->tracker_column) {
                 $trackerTable = $form->trackerStorageTable();
                 $uCol = fc_user_col($trackerTable);
-                if (Schema::hasTable($trackerTable) && Schema::hasColumn($trackerTable, $uCol)) {
+                if (fc_schema_has_table($trackerTable) && fc_schema_has_column($trackerTable, $uCol)) {
                     $trackerKey  = [$uCol => fc_user_val($trackerTable, $userId)];
                     $trackerData = [$step->tracker_column => 1, 'updated_at' => now()];
-                    if (Schema::hasColumn($trackerTable, 'form_id')) {
+                    if (fc_schema_has_column($trackerTable, 'form_id')) {
                         $trackerKey['form_id']  = $form->id;
                         $trackerData['form_id'] = $form->id;
                     }
@@ -601,12 +601,12 @@ class GenericFormController extends Controller
         }
 
         $trackerTable = $form->trackerStorageTable();
-        if (! Schema::hasTable($trackerTable) || ! Schema::hasColumn($trackerTable, 'travel_done')) {
+        if (! fc_schema_has_table($trackerTable) || ! fc_schema_has_column($trackerTable, 'travel_done')) {
             return false;
         }
 
         $tq = DB::table($trackerTable)->where(fc_user_col($trackerTable), fc_user_val($trackerTable, $userId));
-        if (Schema::hasColumn($trackerTable, 'form_id')) {
+        if (fc_schema_has_column($trackerTable, 'form_id')) {
             $tq->where('form_id', $form->id);
         }
 

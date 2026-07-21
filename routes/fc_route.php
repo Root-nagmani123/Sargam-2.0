@@ -246,6 +246,9 @@ Route::post('/admin/migrate-fc-registration', [StudentImportController::class, '
 Route::get('/enrollment/create', [EnrollementController::class, 'create'])->name('enrollment.create');
 Route::post('/enrollment/store', [EnrollementController::class, 'store'])->name('enrollment.store');
 Route::post('/enrollment/filter-students', [EnrollementController::class, 'filterStudents'])->name('enrollment.filterStudents');
+// Server-side DataTables feed + full pk list for the enrolment student picker
+Route::get('/enrollment/students-data', [EnrollementController::class, 'studentsData'])->name('enrollment.studentsData');
+Route::get('/enrollment/students-all-pks', [EnrollementController::class, 'studentsAllPks'])->name('enrollment.studentsAllPks');
 
 // student master course map route
 Route::get('/student-courses', [EnrollementController::class, 'studentCourses'])->name('student.courses');

@@ -402,6 +402,11 @@ class FormBuilderController extends Controller
                     default    => $t->string($column, 500)->nullable(),
                 };
             });
+
+            // Runtime DDL: drop the cached column listing for this table so
+            // fc_schema_has_column() sees the new column immediately instead of
+            // serving a stale listing until the cache TTL expires.
+            fc_schema_cache_forget($table);
         }
     }
 }

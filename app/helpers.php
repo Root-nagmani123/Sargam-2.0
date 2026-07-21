@@ -144,9 +144,22 @@ if (! function_exists('fc_schema_columns')) {
      *
      * @return list<string>
      */
-    function fc_schema_columns(string $table): array
+    function fc_schema_columns(string $table, bool $forget = false): array
     {
         static $memo = [];
+
+        // Runtime DDL (form builder / column manager) must be able to drop the
+        // in-request memo too, not just the persistent cache — otherwise code
+        // running after the ALTER in the SAME request still sees the old columns.
+        if ($forget) {
+            if ($table === '') {
+                $memo = [];
+            } else {
+                unset($memo[$table]);
+            }
+
+            return [];
+        }
 
         if (array_key_exists($table, $memo)) {
             return $memo[$table];
@@ -199,9 +212,19 @@ if (! function_exists('fc_schema_has_column')) {
      * that differ in case from the name used in queries (e.g. degree_master.Pk
      * queried as `pk`). A case-sensitive compare would wrongly report them missing.
      */
-    function fc_schema_has_column(string $table, string $column): bool
+    function fc_schema_has_column(string $table, string $column, bool $forget = false): bool
     {
         static $lowerMemo = [];
+
+        if ($forget) {
+            if ($table === '') {
+                $lowerMemo = [];
+            } else {
+                unset($lowerMemo[$table]);
+            }
+
+            return false;
+        }
 
         if (! array_key_exists($table, $lowerMemo)) {
             $lowerMemo[$table] = array_flip(array_map('strtolower', fc_schema_columns($table)));
@@ -273,6 +296,11 @@ if (! function_exists('fc_schema_cache_forget')) {
      */
     function fc_schema_cache_forget(?string $table = null): void
     {
+        // Drop the in-request memo as well, so code running after a runtime
+        // ALTER TABLE in the same request sees the new columns immediately.
+        fc_schema_columns($table ?? '', true);
+        fc_schema_has_column($table ?? '', '', true);
+
         try {
             if ($table !== null) {
                 Cache::forget(fc_schema_cache_key($table));
