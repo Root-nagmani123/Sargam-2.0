@@ -1721,69 +1721,153 @@ document.addEventListener('DOMContentLoaded', function () {
 // END MDO/Escort Exemption
 
 // Attendance
-// Reusable function to perform attendance search
+// Single source of truth for the attendance filter payload. This used to be
+// built twice — once here and once in the grid's own ajax.data callback — and
+// the two drifted: the grid never sent attendance_type / session_value, so the
+// Attendance Type and Session dropdowns silently narrowed nothing.
+// The "More filters" panel: each select and the request key it feeds. Kept as
+// data so the payload, the option loading, the clearing and the active-count
+// badge all iterate the same list instead of naming the four fields four times.
+var ATTENDANCE_ADVANCED_FILTERS = [
+    { id: 'filter_topic',   key: 'topic',      list: 'topics',  placeholder: 'All Topics' },
+    { id: 'filter_venue',   key: 'venue_id',   list: 'venues',  placeholder: 'All Venues' },
+    { id: 'filter_faculty', key: 'faculty_pk', list: 'faculty', placeholder: 'All Faculty' },
+    { id: 'filter_group',   key: 'group_pk',   list: 'groups',  placeholder: 'All Groups' }
+];
+
+function attendanceFilterParams() {
+    var attendanceType = $('#attendance_type').val() || '';
+
+    // Each type reads its own session dropdown; '' (All Types) has none.
+    var sessionValue = '';
+    if (attendanceType === 'normal') {
+        sessionValue = $('#session').val() || '';
+    } else if (attendanceType === 'manual') {
+        sessionValue = $('#manual_session').val() || '';
+    }
+
+    var params = {
+        programme: $('#programme').val() || '',
+        from_date: $('#from_date').val() || '',
+        to_date: $('#to_date').val() || '',
+        attendance_type: attendanceType,
+        session_value: sessionValue,
+        page_context: (typeof window.attendancePageContext !== 'undefined') ? window.attendancePageContext : ''
+    };
+
+    ATTENDANCE_ADVANCED_FILTERS.forEach(function (f) {
+        params[f.key] = $('#' + f.id).val() || '';
+    });
+
+    return params;
+}
+
+// Reusable function to perform attendance search. The grid fetches its own rows
+// (see drawAttendanceTable), so this only needs to (re)draw it. The pre-flight
+// POST that used to run first duplicated every query and then discarded its
+// response.
 function performAttendanceSearch() {
-    let programme = $('#programme').val();
-    let fromDate = $('#from_date').val();
-    let toDate = $('#to_date').val();
-    // let viewType = $('#view_type').val();
+    drawAttendanceTable();
+}
 
-    let sessionTypeValue = '';
-    let attendanceType = $('input[name="attendance_type"]:checked').val();
-    if(attendanceType === 'normal') {
-        sessionTypeValue = $('#session').val();
+// Changing one filter clears others (see the Attendance Type handler and Reset
+// below), and each clear fires its own change event — so let those callers
+// suppress the resulting burst and run a single search instead.
+var attendanceSuppressSearch = false;
+
+function attendanceSearchUnlessSuppressed() {
+    if (attendanceSuppressSearch) {
+        return;
     }
-    if(attendanceType === 'manual') {
-        sessionTypeValue = $('#manual_session').val();
+    performAttendanceSearch();
+}
+
+// Replace a select's options, keeping a leading "All ..." placeholder selected.
+function attendanceSetSelectOptions(el, options, placeholder) {
+    var choices = [{ value: '', label: placeholder, selected: true }].concat(
+        (options || []).map(function (o) {
+            return { value: o.value, label: o.label };
+        })
+    );
+
+    var inst = el._choicesInstance;
+    if (inst && typeof inst.setChoices === 'function') {
+        inst.clearStore();
+        inst.setChoices(choices, 'value', 'label', true);
+        inst.setChoiceByValue('');
+        return;
     }
 
-    // || !viewType
-    // Validate inputs
-    // if (!programme || !fromDate || !toDate ) {
-    //     alert('Please fill all fields before searching.');
-    //     return;
-    // }
+    // Native <select> fallback (Choices not initialised yet). textContent, not
+    // innerHTML: topic labels are free text typed by users, not markup.
+    el.innerHTML = '';
+    choices.forEach(function (c) {
+        var opt = document.createElement('option');
+        opt.value = c.value;
+        opt.textContent = c.label;
+        el.appendChild(opt);
+    });
+    el.value = '';
+}
+
+function attendanceClearAdvancedFilters() {
+    var wasSuppressed = attendanceSuppressSearch;
+    attendanceSuppressSearch = true;
+    ATTENDANCE_ADVANCED_FILTERS.forEach(function (f) {
+        attendanceChoicesClear($('#' + f.id));
+    });
+    attendanceSuppressSearch = wasSuppressed;
+}
+
+// Load Topic / Venue / Faculty / Group options for the selected course, so every
+// option matches a real session. Deliberately not scoped to the Time Period: the
+// grid loads showing today only, and lists built from one day would be empty.
+function attendanceLoadFilterOptions() {
+    if (!$('#attendanceMoreFiltersWrap').length) {
+        return;
+    }
+
     $.ajax({
-        url: routes.getAttendanceList, // initial check only (optional)
-        type: 'POST',
-        data: {
-            _token: $('meta[name="csrf-token"]').attr('content'),
-            programme: programme,
-            from_date: fromDate,
-            to_date: toDate,
-            session_value: sessionTypeValue,
-            attendance_type: attendanceType,
-            page_context: (typeof window.attendancePageContext !== 'undefined') ? window.attendancePageContext : '',
-            // view_type: viewType
-        },
-        beforeSend: function () {
-            showAjaxLoader();
-        },
-        complete: function () {
-            hideAjaxLoader();
-        },
-        success: function (response) {
-            // Optional: validate response format
-            if (response && typeof response === 'object') {
-                drawAttendanceTable();
-            } else {
-                alert("Unexpected response format.");
+        url: routes.getAttendanceFilterOptions,
+        type: 'GET',
+        data: { programme: $('#programme').val() || '' },
+        success: function (res) {
+            if (!res || res.status !== 'success') {
+                return;
             }
-        },
-        error: function () {
-            alert('Failed to fetch attendance data.');
+
+            // Repopulating resets each select, which fires its change event.
+            var wasSuppressed = attendanceSuppressSearch;
+            attendanceSuppressSearch = true;
+            ATTENDANCE_ADVANCED_FILTERS.forEach(function (f) {
+                var el = document.getElementById(f.id);
+                if (el) {
+                    attendanceSetSelectOptions(el, res[f.list], f.placeholder);
+                }
+            });
+            attendanceSuppressSearch = wasSuppressed;
         }
     });
 }
 
-// Auto-trigger search when course is selected
+// Auto-trigger search when the course changes. This fires on clearing back to
+// the placeholder too: that has to widen the grid back to every course, so it
+// can't be skipped when the value is empty.
 $(document).on('change', '#programme', function () {
-    // Trigger search when course is selected
-    let programme = $(this).val();
-    if (programme) {
-        performAttendanceSearch();
-    }
+    // The panel's options belong to the course. Drop the old selections first —
+    // synchronously, so the search below can't run with a group or venue from
+    // the previous course — then refetch the lists for the new one.
+    attendanceClearAdvancedFilters();
+    attendanceLoadFilterOptions();
+    attendanceSearchUnlessSuppressed();
 });
+
+// The "+N Filters" selects are filters like any other.
+$(document).on('change', '#filter_topic, #filter_venue, #filter_faculty, #filter_group', attendanceSearchUnlessSuppressed);
+
+// Attendance Type / Session are filters like any other — re-run the search so
+// the grid reflects them.
+$(document).on('change', '#session, #manual_session', attendanceSearchUnlessSuppressed);
 
 // Auto-trigger search when date is selected
 $(document).on('change', '#from_date, #to_date', function () {
@@ -1806,46 +1890,51 @@ function attendanceChoicesClear($select) {
     }
 }
 
-// Reset attendance filter
-$(document).on('click', '#resetAttendance', function () {
-    // Clear date fields
-    $('#from_date').val('');
-    $('#to_date').val('');
+// Today as YYYY-MM-DD. Deliberately not moment(): that is loaded by the page,
+// after this file, so it is not reliably defined here.
+function attendanceTodayIso() {
+    var d = new Date();
+    return d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+}
 
+// Reset attendance filter — return every filter to its default and reload
+// the grid in its default (today) state.
+$(document).on('click', '#resetAttendance', function () {
+    // Every clear below fires a change event; hold them all and search once.
+    attendanceSuppressSearch = true;
+
+    // Course → none
     attendanceChoicesClear($('#programme'));
 
-    // Reset attendance type to 'full_day'
-    $('#full_day').prop('checked', true);
-    $('input[name="attendance_type"]').trigger('change');
+    // Attendance type → All Types (its change handler clears + hides the session dropdowns)
+    var attTypeEl = $('#attendance_type')[0];
+    if (attTypeEl && attTypeEl._choicesInstance) {
+        attTypeEl._choicesInstance.setChoiceByValue('');
+    }
+    $('#attendance_type').val('').trigger('change');
 
     attendanceChoicesClear($('#session'));
     attendanceChoicesClear($('#manual_session'));
-
-    // Hide session containers
     $('#normal_session_container').hide();
     $('#manual_session_container').hide();
 
-    // Destroy DataTable if it exists (restores the original tbody + default message)
-    if ($.fn.DataTable.isDataTable('#attendanceTable')) {
-        attendanceTable.destroy();
-        attendanceTable = null;
-    }
+    // More filters → cleared, and their options widened back to every course.
+    attendanceClearAdvancedFilters();
+    attendanceLoadFilterOptions();
 
-    // Drop the global DataTables UI chrome (auto-created search toolbar + footer)
-    // and its per-table state flags, so the NEXT search re-initialises and gets a
-    // freshly wired search box / pagination / "Showing X of Y items" count.
-    $('[data-sargam-dt-search-auto="attendanceTable"]').closest('.sargam-dt-toolbar').remove();
-    $('[data-sargam-dt-footer-auto="attendanceTable"]').remove();
-    $('#attendanceTable').removeData('sargamDtUiEventsBound').removeData('sargamPageSort');
+    // Time Period → today. The page listens for this event to re-sync the
+    // date-range picker's own display and selection to match.
+    var today = attendanceTodayIso();
+    $('#from_date').val(today);
+    $('#to_date').val(today);
+    $(document).trigger('attendance:reset-daterange');
 
-    // Restore default message row - show all elements with this ID
-    $('#defaultMessageRow').show();
+    attendanceSuppressSearch = false;
 
-    // If no default message row exists, the table body should be empty after destroy
-    // DataTable destroy should restore original HTML, but ensure default message is visible
-    if ($('#attendanceTable tbody tr').length === 0) {
-        $('#defaultMessageRow').show();
-    }
+    // Default state = the same view the page loads with: today, every course.
+    performAttendanceSearch();
 });
 
 let attendanceTable; // global variable
@@ -1901,11 +1990,8 @@ function drawAttendanceTable() {
             type: 'POST',
             data: function (d) {
                 d._token = $('meta[name="csrf-token"]').attr('content');
-                d.programme = $('#programme').val();
-                d.from_date = $('#from_date').val();
-                d.to_date = $('#to_date').val();
+                $.extend(d, attendanceFilterParams());
                 d.view_type = $('#view_type').val();
-                d.page_context = (typeof window.attendancePageContext !== 'undefined') ? window.attendancePageContext : '';
             }
         },
         drawCallback: function () {
@@ -1920,6 +2006,7 @@ function drawAttendanceTable() {
             { data: 'group_name', name: 'group_name' },
             { data: 'programme_name', name: 'programme_name' },
             { data: 'faculty_name', name: 'faculty_name' },
+            { data: 'status', name: 'status', orderable: false, searchable: false },
             { data: 'actions', name: 'actions', orderable: false, searchable: false }
         ]
     });
@@ -1932,23 +2019,36 @@ $(document).ready(function() {
     $('#manual_session_container').hide();
 
 
-    $('input[name="attendance_type"]').change(function() {
+    $(document).on('change', '#attendance_type', function() {
         $('#normal_session_container').hide();
         $('#manual_session_container').hide();
 
+        // Each clear fires a change on its own dropdown; hold the search until
+        // the new type has settled so this runs one query, not three.
+        var wasSuppressed = attendanceSuppressSearch;
+        attendanceSuppressSearch = true;
         attendanceChoicesClear($('#session'));
         attendanceChoicesClear($('#manual_session'));
+        attendanceSuppressSearch = wasSuppressed;
 
         if ($(this).val() === 'normal') {
             $('#normal_session_container').show();
         } else if ($(this).val() === 'manual') {
             $('#manual_session_container').show();
         }
-        // For 'full_day', both remain hidden
+        // For 'full_day' and '' (All Types) both remain hidden
+
+        attendanceSearchUnlessSuppressed();
     });
 
-    // Trigger change on page load to show/hide based on default checked radio
-    $('input[name="attendance_type"]:checked').trigger('change');
+    // Trigger change on page load to show/hide based on the default selection.
+    // Suppressed: the page's own auto-search runs once the filters are seeded.
+    attendanceSuppressSearch = true;
+    $('#attendance_type').trigger('change');
+    attendanceSuppressSearch = false;
+
+    // Seed the More filters panel (no course yet → every course's options).
+    attendanceLoadFilterOptions();
 });
 // End of students in attendance
 

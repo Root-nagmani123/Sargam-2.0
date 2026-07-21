@@ -181,6 +181,7 @@ Route::middleware(['auth'])->group(function () {
         ->name('admin.navigation.error');
     Route::get('/dashboard/feed', [UserController::class, 'dashboardFeed'])->name('admin.dashboard.feed');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
+    Route::get('/dashboard/ot-participants', [UserController::class, 'otParticipantsList'])->name('admin.dashboard.ot-participants');
     Route::get('/dashboard/students/export/{format}', [UserController::class, 'studentListExport'])->name('admin.dashboard.students.export');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
@@ -825,6 +826,8 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     Route::prefix('attendance')->name('attendance.')->controller(AttendanceController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/get-attendance-list', 'getAttendanceList')->name('get.attendance.list');
+        Route::get('/filter-options', 'attendanceFilterOptions')->name('filter_options');
+        Route::get('/export-list', 'exportAttendanceList')->name('export_list');
         Route::get('/create', 'create')->name('create');
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::get('/mark/{group_pk}/{course_pk}/{timetable_pk}', 'markAttendanceView')->name('mark');
