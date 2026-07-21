@@ -40,6 +40,7 @@ class KitchenIssueController extends Controller
     public static function bumpSellingVoucherListingCacheEpoch(): void
     {
         DataTableRedisCache::bumpListEpoch(self::SELLING_VOUCHER_DT_LIST_EPOCH, 'KitchenIssueController@sellingVouchersDatatable');
+        AvailableQuantityService::bumpCacheEpoch();
     }
 
     /**
@@ -615,7 +616,6 @@ class KitchenIssueController extends Controller
                 'kim.issue_date',
                 'kim.created_at',
                 DB::raw($misLabelSql . ' as sub_item_name'),
-                DB::raw($misLabelSql . ' as sub_name'),
                 DB::raw("(CASE
                     WHEN kim.store_type = 'sub_store' AND mss.sub_store_name IS NOT NULL THEN CONCAT(mss.sub_store_name, ' (Sub-Store)')
                     WHEN kim.store_type = 'store' AND ms.store_name IS NOT NULL THEN ms.store_name
@@ -676,16 +676,18 @@ class KitchenIssueController extends Controller
         $this->applySellingVoucherBuyerNameFilter($q, $request);
 
         // Date filter: default last 30 days when blank; skip default when user searches or targets a buyer/category.
+        // Use sargable range predicates (no DATE()) so indexes on issue_date can be used.
         if (! $request->filled('start_date') && ! $request->filled('end_date')) {
             if (! $this->sellingVoucherShouldSkipDefaultDateWindow($request)) {
-                $q->whereDate('kim.issue_date', '>=', now()->subDays(30)->toDateString());
+                $q->where('kim.issue_date', '>=', now()->subDays(30)->startOfDay());
             }
         } elseif ($request->filled('start_date') && $request->filled('end_date')) {
-            $q->whereBetween('kim.issue_date', [$request->start_date, $request->end_date]);
+            $q->where('kim.issue_date', '>=', Carbon::parse($request->start_date)->startOfDay())
+                ->where('kim.issue_date', '<', Carbon::parse($request->end_date)->addDay()->startOfDay());
         } elseif ($request->filled('start_date')) {
-            $q->whereDate('kim.issue_date', '>=', $request->start_date);
+            $q->where('kim.issue_date', '>=', Carbon::parse($request->start_date)->startOfDay());
         } elseif ($request->filled('end_date')) {
-            $q->whereDate('kim.issue_date', '<=', $request->end_date);
+            $q->where('kim.issue_date', '<', Carbon::parse($request->end_date)->addDay()->startOfDay());
         }
 
         $returnStatus = strtolower(trim((string) $request->input('return_status', '')));
@@ -1055,7 +1057,7 @@ class KitchenIssueController extends Controller
         if ($rawItemName !== '') {
             $itemCell = e($rawItemName);
         } else {
-            $fallback = trim((string) (($row->sub_item_name ?? null) ?: ($row->sub_name ?? '') ?: ''));
+            $fallback = trim((string) ($row->sub_item_name ?? ''));
             $itemCell = $fallback !== '' ? e($fallback) : '—';
         }
 
@@ -1369,7 +1371,7 @@ class KitchenIssueController extends Controller
             $storeId = (int) $storeId;
 
             // Server-side enforcement: issue qty cannot exceed available qty (per store + item)
-            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
+            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId, true);
             $requestedByItem = [];
             foreach ((array) $request->items as $row) {
                 $itemId = (int) ($row['item_subcategory_id'] ?? 0);
@@ -1780,7 +1782,7 @@ class KitchenIssueController extends Controller
             $storeId = (int) $storeId;
 
             // Server-side enforcement: issue qty cannot exceed available qty (per store + item)
-            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
+            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId, true);
             $requestedByItem = [];
             foreach ((array) $request->items as $row) {
                 $itemId = (int) ($row['item_subcategory_id'] ?? 0);

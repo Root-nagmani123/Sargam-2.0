@@ -41,6 +41,7 @@ class SellingVoucherDateRangeController extends Controller
     public static function bumpSellingVoucherDateRangeListingCacheEpoch(): void
     {
         DataTableRedisCache::bumpListEpoch(self::SV_DATE_RANGE_DT_LIST_EPOCH, 'SellingVoucherDateRangeController@datatable');
+        AvailableQuantityService::bumpCacheEpoch();
     }
 
     /**
@@ -569,7 +570,7 @@ class SellingVoucherDateRangeController extends Controller
             $storeType = 'sub_store';
         }
         $storeId = (int) $storeIdRaw;
-        $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
+        $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId, true);
 
         $requestedByItem = [];
         foreach ((array) $request->items as $row) {
@@ -1363,7 +1364,7 @@ class SellingVoucherDateRangeController extends Controller
             $storeId = (int) $storeId;
 
             // Enforce: Issue Qty cannot exceed available qty (server-side)
-            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
+            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId, true);
             $requestedByItem = [];
             foreach ((array) $request->items as $row) {
                 $itemId = (int) ($row['item_subcategory_id'] ?? 0);
@@ -1673,7 +1674,7 @@ class SellingVoucherDateRangeController extends Controller
                     $rowStoreId = $parsedStore['store_id'];
                     $cacheKey = $rowStoreType.'_'.$rowStoreId;
                     if (!isset($availabilityCache[$cacheKey])) {
-                        $availabilityCache[$cacheKey] = AvailableQuantityService::availableQuantitiesForStore($rowStoreType, $rowStoreId);
+                        $availabilityCache[$cacheKey] = AvailableQuantityService::availableQuantitiesForStore($rowStoreType, $rowStoreId, true);
                     }
 
                     $currentStock = (float) ($availabilityCache[$cacheKey][$itemSubId] ?? 0);
@@ -1747,7 +1748,7 @@ class SellingVoucherDateRangeController extends Controller
                 $rowStoreId = (int) ($itemReport->store_id ?? 0);
                 $cacheKey = $rowStoreType.'_'.$rowStoreId;
                 if (!isset($availabilityCache[$cacheKey])) {
-                    $availabilityCache[$cacheKey] = AvailableQuantityService::availableQuantitiesForStore($rowStoreType, $rowStoreId);
+                    $availabilityCache[$cacheKey] = AvailableQuantityService::availableQuantitiesForStore($rowStoreType, $rowStoreId, true);
                 }
 
                 $currentStock = (float) ($availabilityCache[$cacheKey][$itemSubId] ?? 0);
