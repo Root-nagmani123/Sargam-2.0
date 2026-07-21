@@ -490,6 +490,11 @@
                 <button type="button" class="btn btn-sm btn-outline-primary" id="discBulkPdfBtn" disabled>
                     <i class="bi bi-file-earmark-pdf"></i> Download Selected as PDF (ZIP)<span id="discBulkCount"></span>
                 </button>
+                @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction'))
+                <button type="button" class="btn btn-sm btn-outline-success" id="discBulkSendBtn" disabled>
+                    <i class="material-icons material-symbols-rounded align-middle" style="font-size:16px;">send</i> Send Selected Memos<span id="discBulkSendCount"></span>
+                </button>
+                @endif
             </div>
             <div id="memoDisciplineListContainer">
                 <div class="table-responsive">
@@ -539,7 +544,7 @@
                             @endphp
                             @forelse ($memos as $index => $memo)
                             <tr>
-                                <td><input type="checkbox" class="form-check-input disc-row-check" value="{{ $memo->pk }}" aria-label="Select record"></td>
+                                <td><input type="checkbox" class="form-check-input disc-row-check" value="{{ $memo->pk }}" data-status="{{ $memo->status }}" aria-label="Select record"></td>
                                 <td class="fw-semibold text-muted">{{ $memos->firstItem() + $index }}</td>
                                 <td class="fw-semibold">{{ $memo->course->course_name ?? 'N/A' }}</td>
                                 <td class="fw-semibold disc-nowrap">{{ $memo->student->display_name ?? 'N/A' }}</td>
@@ -912,6 +917,16 @@ $(document).ready(function() {
         if (btn) btn.disabled = checked.length === 0;
         if (countEl) countEl.textContent = checked.length ? ' (' + checked.length + ')' : '';
 
+        // Only "Recorded" (status 1) rows are eligible to send — already-sent/closed
+        // rows are excluded from this count so the button never implies it will
+        // (re)send something it can't. Checking one alongside eligible rows just
+        // silently leaves it out, same as the server-side skip in sendMemoBulk().
+        var sendableChecked = Array.from(checked).filter(function (cb) { return cb.dataset.status === '1'; });
+        var sendBtn = document.getElementById('discBulkSendBtn');
+        var sendCountEl = document.getElementById('discBulkSendCount');
+        if (sendBtn) sendBtn.disabled = sendableChecked.length === 0;
+        if (sendCountEl) sendCountEl.textContent = sendableChecked.length ? ' (' + sendableChecked.length + ')' : '';
+
         var selectAll = document.getElementById('discSelectAll');
         var all = document.querySelectorAll('.disc-row-check');
         if (selectAll) selectAll.checked = all.length > 0 && checked.length === all.length;
@@ -953,6 +968,47 @@ $(document).ready(function() {
         document.body.appendChild(form);
         form.submit();
         form.remove();
+    });
+
+    // ── Bulk "Send Selected Memos" ──
+    // Reuses the same .disc-row-check selection as the PDF bulk action above. The
+    // server (sendMemoBulk) silently skips any selected row that isn't status 1
+    // "Recorded" (already sent/closed), so a mixed-status selection is safe — the
+    // response's sent/skipped counts are surfaced back to the user.
+    $(document).on('click', '#discBulkSendBtn', function () {
+        var ids = Array.from(document.querySelectorAll('.disc-row-check:checked'))
+            .filter(function (cb) { return cb.dataset.status === '1'; })
+            .map(function (cb) { return cb.value; });
+        if (!ids.length) return;
+
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'Send memo to ' + ids.length + ' selected record(s)?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, send it!'
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+
+            $.ajax({
+                url: "{{ route('memo.discipline.sendMemoBulk') }}",
+                type: 'POST',
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    ids: ids
+                },
+                success: function (response) {
+                    Swal.fire('Done!', response.message, 'success').then(function () {
+                        location.reload();
+                    });
+                },
+                error: function () {
+                    Swal.fire('Error!', 'Something went wrong.', 'error');
+                }
+            });
+        });
     });
 
     // ── S. No. is a display counter, not data ──

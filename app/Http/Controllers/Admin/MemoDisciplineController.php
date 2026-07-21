@@ -920,6 +920,58 @@ private function buildDisciplineExportData(Request $request): array
             ]);
         }
     }
+    // Bulk version of sendMemo(): same per-memo rules (only status 1 "Recorded" is
+    // eligible), just applied to a checkbox-selected batch instead of one row. Rows
+    // that aren't eligible (already sent/closed) are silently skipped and counted,
+    // not treated as an error — the caller may have selected a mixed-status set.
+    function sendMemoBulk(Request $request){
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'exists:discipline_memo_status,pk',
+        ]);
+
+        $sent = 0;
+        $skipped = 0;
+
+        $memos = MemoDiscipline::whereIn('pk', $validated['ids'])->get();
+
+        foreach ($memos as $memo) {
+            if ($memo->status != 1) {
+                $skipped++;
+                continue;
+            }
+
+            $memo->status = 2;
+            $memo->modified_date = now();
+            $memo->save();
+
+            $credential = DB::table('user_credentials')
+                ->where('user_id', $memo->student_master_pk)
+                ->where('user_category', 'S')
+                ->first();
+
+            if ($credential) {
+                app(NotificationService::class)->create(
+                    $credential->pk,
+                    'memo',
+                    'MemoDiscipline',
+                    $memo->pk,
+                    'Discipline Memo Generated',
+                    'A discipline memo has been issued to you. Please review and respond.'
+                );
+            }
+
+            $sent++;
+        }
+
+        return response()->json([
+            'status' => true,
+            'sent' => $sent,
+            'skipped' => $skipped,
+            'message' => $sent . ' memo(s) sent successfully.' . ($skipped ? ' ' . $skipped . ' record(s) skipped (already sent or closed).' : ''),
+        ]);
+    }
+
     function getConversationModel(Request $request, $memoId,$type){
         // $memo = MemoDiscipline::with([
         //     'course:pk,course_name',

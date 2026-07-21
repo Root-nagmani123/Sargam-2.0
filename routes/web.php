@@ -1025,6 +1025,7 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
         Route::get('/templates-by-discipline', [MemoDisciplineController::class, 'getTemplatesByDiscipline'])->name('templatesByDiscipline');
 
         Route::post('/send-memo', [MemoDisciplineController::class, 'sendMemo'])->name('sendMemo');
+        Route::post('/send-memo-bulk', [MemoDisciplineController::class, 'sendMemoBulk'])->name('sendMemoBulk');
         Route::post('/close-memo', [MemoDisciplineController::class, 'closeMemo'])->name('closeMemo');
         Route::get('/get_conversation_model/{memoId}/{type}', [MemoDisciplineController::class, 'getConversationModel'])->name('get_conversation_model');
 
