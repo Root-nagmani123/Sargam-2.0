@@ -66,6 +66,11 @@ class DisciplineMemoExport implements
                 'value' => fn ($m) => $m->student->generated_OT_code ?? 'N/A'],
             'cadre' => ['heading' => 'Cadre', 'pdfClass' => 'col-cadre', 'center' => false,
                 'value' => fn ($m) => $m->student->cadre->cadre_name ?? 'N/A'],
+            // ?: rather than ?? — these are blank strings far more often than NULL.
+            'email' => ['heading' => 'Email', 'pdfClass' => 'col-email', 'center' => false,
+                'value' => fn ($m) => optional($m->student)->email ?: 'N/A'],
+            'mobile' => ['heading' => 'Mobile No.', 'pdfClass' => 'col-mobile', 'center' => false,
+                'value' => fn ($m) => optional($m->student)->contact_no ?: 'N/A'],
             'date' => ['heading' => 'Date of Infraction', 'pdfClass' => 'col-date', 'center' => true,
                 'value' => fn ($m) => $m->date ? Carbon::parse($m->date)->format('d M Y') : 'N/A'],
             'infraction' => ['heading' => 'Infraction', 'pdfClass' => 'col-infraction', 'center' => false,

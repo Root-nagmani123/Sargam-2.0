@@ -85,7 +85,7 @@ class MemoDisciplineController extends Controller
     $memos = MemoDiscipline::with([
             'course:pk,course_name',
             'discipline:pk,discipline_name,active_inactive',
-            'student:pk,display_name,generated_OT_code,cadre_master_pk',
+            'student:pk,display_name,generated_OT_code,email,contact_no,cadre_master_pk',
             'student.cadre:pk,cadre_name',
         ])
 
@@ -113,6 +113,8 @@ class MemoDisciplineController extends Controller
                 $sub->whereHas('student', function ($s) use ($searchFilter) {
                         $s->where('display_name', 'like', "%{$searchFilter}%")
                           ->orWhere('generated_OT_code', 'like', "%{$searchFilter}%")
+                          ->orWhere('email', 'like', "%{$searchFilter}%")
+                          ->orWhere('contact_no', 'like', "%{$searchFilter}%")
                           ->orWhereHas('cadre', function ($c) use ($searchFilter) {
                               $c->where('cadre_name', 'like', "%{$searchFilter}%");
                           });
@@ -630,6 +632,10 @@ private function buildDisciplineExportData(Request $request): array
             ->whereColumn('pk', 'discipline_memo_status.course_master_pk')->limit(1),
         'ot_code' => fn () => StudentMaster::select('generated_OT_code')
             ->whereColumn('pk', 'discipline_memo_status.student_master_pk')->limit(1),
+        'email' => fn () => StudentMaster::select('email')
+            ->whereColumn('pk', 'discipline_memo_status.student_master_pk')->limit(1),
+        'mobile' => fn () => StudentMaster::select('contact_no')
+            ->whereColumn('pk', 'discipline_memo_status.student_master_pk')->limit(1),
         'cadre' => fn () => DB::table('student_master as sm')
             ->join('cadre_master as cm', 'cm.pk', '=', 'sm.cadre_master_pk')
             ->whereColumn('sm.pk', 'discipline_memo_status.student_master_pk')
@@ -648,7 +654,7 @@ private function buildDisciplineExportData(Request $request): array
     $memos = MemoDiscipline::with([
             'course:pk,course_name',
             'discipline:pk,discipline_name,active_inactive',
-            'student:pk,display_name,generated_OT_code,cadre_master_pk',
+            'student:pk,display_name,generated_OT_code,email,contact_no,cadre_master_pk',
             'student.cadre:pk,cadre_name',
         ])
         ->when(hasRole('Student-OT'), function ($q) use ($studentCourses) {
@@ -675,6 +681,8 @@ private function buildDisciplineExportData(Request $request): array
                 $sub->whereHas('student', function ($s) use ($searchFilter) {
                         $s->where('display_name', 'like', "%{$searchFilter}%")
                           ->orWhere('generated_OT_code', 'like', "%{$searchFilter}%")
+                          ->orWhere('email', 'like', "%{$searchFilter}%")
+                          ->orWhere('contact_no', 'like', "%{$searchFilter}%")
                           ->orWhereHas('cadre', function ($c) use ($searchFilter) {
                               $c->where('cadre_name', 'like', "%{$searchFilter}%");
                           });
