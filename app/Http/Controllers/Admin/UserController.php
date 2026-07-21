@@ -1180,6 +1180,37 @@ class UserController extends Controller
             ->sortBy('course_name')
             ->values();
 
+        // Course filter dropdown. A faculty can belong to several courses at once,
+        // so the list has to be selectable rather than implied by the row set: we
+        // offer every currently-running course, unioned with the courses this
+        // faculty actually has rows for (which may include one whose end_date has
+        // just passed — it would otherwise vanish from the dropdown while its
+        // students are still listed). $availableCourses entries arrive as a mix of
+        // objects (student sources) and arrays ($groupMapCourses), hence the
+        // normalisation below.
+        $courseOptions = CourseMaster::where('active_inactive', '1')
+            ->where('end_date', '>=', now())
+            ->orderBy('course_name')
+            ->get(['pk', 'course_name', 'couse_short_name', 'start_year', 'end_date'])
+            // toBase(): Eloquent\Collection::merge() keys items by getKey(), which
+            // blows up on the plain objects below. Drop to a base collection first.
+            ->toBase()
+            ->merge(
+                collect($availableCourses)->map(function ($c) {
+                    return (object) [
+                        'pk' => is_array($c) ? ($c['pk'] ?? null) : ($c->pk ?? null),
+                        'course_name' => is_array($c) ? ($c['course_name'] ?? '') : ($c->course_name ?? ''),
+                        'couse_short_name' => is_array($c) ? ($c['couse_short_name'] ?? '') : ($c->couse_short_name ?? ''),
+                        'start_year' => is_array($c) ? ($c['start_year'] ?? null) : ($c->start_year ?? null),
+                        'end_date' => is_array($c) ? ($c['end_date'] ?? null) : ($c->end_date ?? null),
+                    ];
+                })
+            )
+            ->filter(fn ($c) => ! empty($c->pk))
+            ->unique('pk')
+            ->sortBy('course_name')
+            ->values();
+
         // Get group names from group_type_master_course_master_map with their type_name (counsellor type)
         // Only include groups for active courses (active_inactive = 1 and end_date >= now())
         // Filter by logged-in faculty if available
@@ -1300,7 +1331,7 @@ class UserController extends Controller
             'participant' => (string) $request->input('participant', ''),
         ];
 
-        return view('admin.dashboard.student_list', compact('students', 'presentStudents', 'absentStudents', 'availableCourses', 'counsellorTypes', 'counsellorFaculties', 'groupNames', 'dutyTypes', 'filters', 'cadreOptions', 'houseOptions', 'sessionOptions', 'topicOptions', 'participantOptions', 'tabCounts', 'cardCounts', 'snapshotDate', 'listTitle'));
+        return view('admin.dashboard.student_list', compact('students', 'presentStudents', 'absentStudents', 'availableCourses', 'courseOptions', 'counsellorTypes', 'counsellorFaculties', 'groupNames', 'dutyTypes', 'filters', 'cadreOptions', 'houseOptions', 'sessionOptions', 'topicOptions', 'participantOptions', 'tabCounts', 'cardCounts', 'snapshotDate', 'listTitle'));
     }
 
     /**
@@ -2941,19 +2972,19 @@ class UserController extends Controller
         // Column layout (DataTable column index → sort key).
         $columnMap = [
             0 => 'serial_no',
-            1 => 'ot_code',
-            2 => 'name',
+            // The OT code no longer has its own column — it renders under the name.
+            1 => 'name',
+            2 => 'course',
             3 => 'username',
             4 => 'cadre',
             5 => 'date',
             6 => 'session',
             7 => 'topic',
             8 => 'faculty',
-            // 9 => absent_reason (not sortable)
-            10 => 'status',
-            11 => 'mdo',
-            12 => 'escort',
-            13 => 'other_exempt',
+            9 => 'status',
+            10 => 'mdo',
+            11 => 'escort',
+            12 => 'other_exempt',
         ];
 
         $orderCol = (int) $request->input('order.0.column', 0);
@@ -3018,8 +3049,19 @@ class UserController extends Controller
 
             $data[] = [
                 's_no' => $start + $idx + 1,
-                'ot_code' => $student->generated_OT_code ?? 'N/A',
-                'name' => '<a href="' . e($detailUrl) . '" class="sl-count">' . e($displayName) . '</a>',
+                // OT code has no column of its own; it sits under the name so the
+                // listing stays narrower without losing the identifier.
+                'name' => (function () use ($detailUrl, $displayName, $student) {
+                    $html = '<a href="' . e($detailUrl) . '" class="sl-count">' . e($displayName) . '</a>';
+                    $otCode = trim((string) ($student->generated_OT_code ?? ''));
+                    if ($otCode !== '') {
+                        $html .= '<div class="sl-ot-code">' . e($otCode) . '</div>';
+                    }
+                    return $html;
+                })(),
+                // A faculty can be mapped to several courses, so each row names the
+                // course it belongs to — otherwise a multi-course list is ambiguous.
+                'course' => e($studentMap->course->course_name ?? 'N/A'),
                 'username' => e($student->email ?? 'N/A'),
                 'cadre' => e($student->cadre->cadre_name ?? 'N/A'),
                 'date' => e($studentMap->session_date ? \Illuminate\Support\Carbon::parse($studentMap->session_date)->format('d M Y') : 'N/A'),
@@ -3381,6 +3423,7 @@ class UserController extends Controller
             'name' => strtolower(trim((string) (($student->display_name ?? '') ?: trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''))))),
             'username', 'email' => strtolower((string) ($student->email ?? '')),
             'cadre' => strtolower((string) ($student->cadre->cadre_name ?? '')),
+            'course' => strtolower((string) ($studentMap->course->course_name ?? '')),
             'status' => (int) ($studentMap->attendance_present ?? true),
             'date' => (string) ($studentMap->session_date ?? ''),
             'session' => (string) ($studentMap->session_time ?? ''),
@@ -3419,6 +3462,7 @@ class UserController extends Controller
             'S. No.',
             'OT Code',
             'Name',
+            'Course',
             'User Name',
             'Cadre',
             'Date',
@@ -3466,6 +3510,7 @@ class UserController extends Controller
                 $index + 1,
                 $student->generated_OT_code ?? 'N/A',
                 $displayName,
+                $studentMap->course->course_name ?? 'N/A',
                 $student->email ?? 'N/A',
                 $student->cadre->cadre_name ?? 'N/A',
                 $studentMap->session_date ? Carbon::parse($studentMap->session_date)->format('d M Y') : 'N/A',

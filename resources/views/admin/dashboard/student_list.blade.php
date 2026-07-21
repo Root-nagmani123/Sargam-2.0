@@ -222,16 +222,15 @@
     .student-list-page .sl-status-present { color: #027a48; background: #ecfdf3; }
     .student-list-page .sl-status-late { color: #b54708; background: #fffaeb; }
 
-    /* Wide table with frozen first three columns (S.No., OT Code, Name). */
+    /* Wide table with frozen first two columns (S.No., Name — the OT code is
+       rendered under the name instead of in its own column). */
     .student-list-page .programme-dt-table { width: 100% !important; }
     .student-list-page .programme-dt-table th,
     .student-list-page .programme-dt-table td { white-space: nowrap; }
     .student-list-page .programme-dt-table th:nth-child(1),
     .student-list-page .programme-dt-table td:nth-child(1) { min-width: 70px; }
     .student-list-page .programme-dt-table th:nth-child(2),
-    .student-list-page .programme-dt-table td:nth-child(2) { min-width: 120px; }
-    .student-list-page .programme-dt-table th:nth-child(3),
-    .student-list-page .programme-dt-table td:nth-child(3) { min-width: 200px; }
+    .student-list-page .programme-dt-table td:nth-child(2) { min-width: 220px; }
 
     /* scrollX is OFF (it would clone the header into a second table and break
        sticky freezing). The scroll host is the ONE horizontal scroller. */
@@ -241,35 +240,35 @@
        <table>; force overflow:visible so the sticky cells anchor to the host. */
     .student-list-page .programme-dt-table { overflow: visible !important; }
 
-    /* Freeze the first three columns via sticky positioning on the single table. */
+    /* Freeze the first two columns via sticky positioning on the single table. */
     .student-list-page .programme-dt-table {
         --sl-pin-left-0: 0px;
         --sl-pin-left-1: 70px;
-        --sl-pin-left-2: 190px;
     }
-    .student-list-page .programme-dt-table thead th:nth-child(-n+3),
-    .student-list-page .programme-dt-table tbody td:nth-child(-n+3) {
+    .student-list-page .programme-dt-table thead th:nth-child(-n+2),
+    .student-list-page .programme-dt-table tbody td:nth-child(-n+2) {
         position: sticky;
     }
-    .student-list-page .programme-dt-table thead th:nth-child(-n+3) {
+    .student-list-page .programme-dt-table thead th:nth-child(-n+2) {
         z-index: 6;
         background: #f2f4f7 !important;
     }
-    .student-list-page .programme-dt-table tbody td:nth-child(-n+3) {
+    .student-list-page .programme-dt-table tbody td:nth-child(-n+2) {
         z-index: 3;
         background: #fff;
     }
-    .student-list-page .programme-dt-table tbody tr:hover td:nth-child(-n+3) {
+    .student-list-page .programme-dt-table tbody tr:hover td:nth-child(-n+2) {
         background: #f7fafc;
     }
     .student-list-page .programme-dt-table th:nth-child(1),
     .student-list-page .programme-dt-table td:nth-child(1) { left: var(--sl-pin-left-0); }
     .student-list-page .programme-dt-table th:nth-child(2),
     .student-list-page .programme-dt-table td:nth-child(2) { left: var(--sl-pin-left-1); }
-    .student-list-page .programme-dt-table th:nth-child(3),
-    .student-list-page .programme-dt-table td:nth-child(3) { left: var(--sl-pin-left-2); }
-    .student-list-page .programme-dt-table th:nth-child(3),
-    .student-list-page .programme-dt-table td:nth-child(3) { box-shadow: 1px 0 0 #e5e7eb; }
+    .student-list-page .programme-dt-table th:nth-child(2),
+    .student-list-page .programme-dt-table td:nth-child(2) { box-shadow: 1px 0 0 #e5e7eb; }
+
+    /* OT code shown as a muted second line inside the Name cell. */
+    .student-list-page .sl-ot-code { color: #667085; font-size: 0.78rem; line-height: 1.2; margin-top: 2px; }
 
     /* ── Collapsible search: full field when there's room, icon-only otherwise ── */
     .student-list-page .sl-search-wrap { position: relative; display: inline-flex; align-items: center; }
@@ -429,6 +428,27 @@
                         </div>
                     </div>
 
+                    {{-- Course --}}
+                    @if(($courseOptions ?? collect())->isNotEmpty())
+                    <div class="sl-filter-item" id="slItemCourse">
+                        <span class="sl-filter-label-text">Course</span>
+                        <select id="courseFilter" class="form-select sl-filter-select" aria-label="Filter by course">
+                            <option value="">Course Name</option>
+                            @foreach($courseOptions as $course)
+                                @php
+                                    $cStart = !empty($course->start_year) ? \Carbon\Carbon::parse($course->start_year)->format('j F Y') : '';
+                                    $cEnd = !empty($course->end_date) ? \Carbon\Carbon::parse($course->end_date)->format('j F Y') : '';
+                                    $cDuration = ($cStart && $cEnd) ? $cStart . ' to ' . $cEnd : '';
+                                @endphp
+                                <option value="{{ $course->pk }}"
+                                    data-shortname="{{ $course->couse_short_name ?? '' }}"
+                                    data-duration="{{ $cDuration }}"
+                                    {{ (string)($filters['course_id'] ?? '') === (string)$course->pk ? 'selected' : '' }}>{{ $course->course_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
+
                     {{-- Cadre --}}
                     @if(($cadreOptions ?? collect())->isNotEmpty())
                     <div class="sl-filter-item" id="slItemCadre">
@@ -512,8 +532,8 @@
                             <thead>
                                 <tr>
                                     <th>S. No.</th>
-                                    <th>OT Code</th>
                                     <th>Name</th>
+                                    <th>Course</th>
                                     <th>User name</th>
                                     <th>Cadre</th>
                                     <th>Date</th>
@@ -562,7 +582,7 @@
     $(document).ready(function() {
         const filters = @json($filters ?? []);
         const baseUrl = "{{ route('admin.dashboard.students') }}";
-        const LOCKED_COLUMNS = [0, 1, 2];
+        const LOCKED_COLUMNS = [0, 1];
         let dt = null;
         let currentAttendance = (filters.attendance === 'present' || filters.attendance === 'absent') ? filters.attendance : 'all';
         let loadingRequests = 0;
@@ -663,7 +683,7 @@
             if (!tableNode) { return; }
             const $headCells = $(tableNode).find('thead th');
             if (!$headCells.length) { return; }
-            const fallbackWidths = [70, 120, 200];
+            const fallbackWidths = [70, 220];
             let runningLeft = 0;
             LOCKED_COLUMNS.forEach(function(colIdx, i) {
                 const $cell = $headCells.eq(colIdx);
@@ -704,8 +724,8 @@
             },
             columns: [
                 { data: 's_no', name: 's_no' },
-                { data: 'ot_code', name: 'ot_code' },
                 { data: 'name', name: 'name', orderable: true, searchable: true },
+                { data: 'course', name: 'course' },
                 { data: 'username', name: 'username' },
                 { data: 'cadre', name: 'cadre' },
                 { data: 'date', name: 'date', searchable: false },
@@ -776,7 +796,7 @@
         // native `change` event, so the handlers bound above keep working unchanged.
         function initFilterSelect2() {
             if (!$.fn.select2) { return; }
-            $('#sessionFilter, #topicFilter, #cadreFilter, #participantFilter').each(function() {
+            $('#courseFilter, #sessionFilter, #topicFilter, #cadreFilter, #participantFilter').each(function() {
                 const $sel = $(this);
                 if ($sel.data('select2')) { $sel.select2('destroy'); }
                 const placeholder = ($sel.find('option[value=""]').first().text() || 'Select').trim();
@@ -839,7 +859,7 @@
         $('#studentListDownloadPdf').on('click', function(e) { e.preventDefault(); window.open(buildExportUrl('pdf'), '_blank'); });
 
         /* ── Column show / hide ── */
-        const studentColStorageKey = 'studentListGrid:hiddenColumns:v5:studentListTable';
+        const studentColStorageKey = 'studentListGrid:hiddenColumns:v7:studentListTable';
         function studentGetHiddenCols() {
             try { const raw = localStorage.getItem(studentColStorageKey); const arr = raw ? JSON.parse(raw) : []; return Array.isArray(arr) ? arr : []; }
             catch (e) { return []; }
@@ -899,7 +919,7 @@
         const $moreWrap = $('#slMoreFiltersWrap');
         const $moreBtn = $('#moreFiltersBtn');
         // Visual left-to-right order: leftmost filters stay inline the longest.
-        const inlineFilterIds = ['#slItemPeriod', '#slItemCadre', '#slItemSession', '#slItemTopic', '#slItemParticipant'];
+        const inlineFilterIds = ['#slItemPeriod', '#slItemCourse', '#slItemCadre', '#slItemSession', '#slItemTopic', '#slItemParticipant'];
 
         function updateMoreFiltersLabel() {
             const moved = $overflowSlot.children('.sl-filter-item').length;
