@@ -172,23 +172,27 @@ class StudentAttendanceListDataTable extends DataTable
             }
         }
 
-        // Medical Exemption (6) & Other Exemption (7): radio button ke bajaye text
-        // dikhao. Exemption lagu hai (checked) to label blue color me, warna N/A.
-        // Value ko save karne ke liye hidden input rakha jata hai taaki attendance
-        // status (6/7) database me persist ho — bilkul waise hi jaise MDO/Escort
-        // columns text dikhate hain.
-        if ($value === 6 || $value === 7) {
-            if ($checked) {
-                return "<span class='text-info fw-bold'>{$label}</span>
-                        <input type='hidden' name='student[{$studentId}]' value='{$value}'>";
-            }
-            return "<span class='text-muted'>N/A</span>";
-        }
+        return '<span class="text-muted">NA</span>';
+    }
 
-        return "<div class='form-check form-check-inline'>
-                    <input class='form-check-input' type='radio' name='student[{$studentId}]' value='{$value}' {$checked} id='student[{$studentId}][{$value}]'>
-                    <label class='form-check-label {$labelClass}' for='student[{$studentId}][{$value}]'>{$label}</label>
-                </div>";
+    protected function renderEscortCell($row): string
+    {
+        $pk = $row->studentsMaster->pk;
+        return $this->hasEscortDuty($pk)
+            ? '<span class="text-info fw-semibold">Escort/Moderator</span>'
+            : '<span class="text-muted">NA</span>';
+    }
+
+    protected function renderActionCell($row): string
+    {
+        $pk = $row->studentsMaster->pk;
+        $status = $this->getSavedStatus($pk);
+        $name = e($row->studentsMaster->display_name ?? '');
+
+        return '<button type="button" class="att-action-icon js-mark-ot" '
+            . 'data-ot="' . $pk . '" data-status="' . $status . '" data-name="' . $name . '" '
+            . 'title="Update Attendance" aria-label="Update Attendance">'
+            . '<i class="bi bi-clipboard-check"></i><span class="att-action-label">Update Attendance</span></button>';
     }
 
     protected function renderRadioGroup($row, string $field, array $options): string

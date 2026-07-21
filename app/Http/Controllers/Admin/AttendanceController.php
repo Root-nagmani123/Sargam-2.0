@@ -779,19 +779,34 @@ $currentPath = $segments[1] ?? null;
             ])->where('status', '!=', 0)->count();
 
             $allMarked = $expectedCount > 0 && $markedCount === $expectedCount;
+        } catch (\Throwable $e) {
+            Log::error('Error fetching attendance data: ' . $e->getMessage(), ['exception' => $e]);
 
-            return $dataTable->render('admin.attendance.mark-attendance', [
-                'group_pk' => $group_pk,
-                'course_pk' => $course_pk,
-                'courseGroup' => $courseGroup,
-                'currentPath' => $currentPath,
-                'allMarked' => $allMarked,
-                'facultyName' => $this->resolveTimetableFacultyNames($courseGroup?->timetable),
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error fetching attendance data: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'An error occurred while fetching attendance data: ' . $e->getMessage());
+            // This route serves BOTH the page and its own DataTables ajax (the grid
+            // posts back to url()->full()). A redirect here would target the page the
+            // xhr came from — i.e. itself — and the browser would follow it until it
+            // gave up with ERR_TOO_MANY_REDIRECTS. Ajax gets a status code, never a 302.
+            if (request()->ajax() || request()->expectsJson()) {
+                return response()->json(['error' => 'Unable to load the attendance grid.'], 500);
+            }
+
+            // Named fallback, not back(): back() resolves to the Referer, which on this
+            // route is this route.
+            return redirect()->route('attendance.index')
+                ->with('error', 'An error occurred while fetching attendance data.');
         }
+
+        // Deliberately outside the try. render() dispatches to Yajra, which runs the
+        // whole data layer on the ajax branch only; letting its exceptions reach the
+        // catch above is what turned a data bug into a redirect loop.
+        return $dataTable->render('admin.attendance.mark-attendance', [
+            'group_pk' => $group_pk,
+            'course_pk' => $course_pk,
+            'courseGroup' => $courseGroup,
+            'currentPath' => $currentPath,
+            'allMarked' => $allMarked,
+            'facultyName' => $this->resolveTimetableFacultyNames($courseGroup?->timetable),
+        ]);
     }
 
     public function export(Request $request, $group_pk, $course_pk, $timetable_pk)
