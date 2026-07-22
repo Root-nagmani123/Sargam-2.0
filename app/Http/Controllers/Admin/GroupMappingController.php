@@ -666,15 +666,30 @@ class GroupMappingController extends Controller
             // Trim all inputs
             $data = array_map('trim', $validated);
 
-            // Lookup: StudentMaster by OT code (case-insensitive)
-            $studentMaster = StudentMaster::whereRaw('LOWER(generated_OT_code) = ?', [strtolower($data['otcode'])])
-                ->select('pk')->first();
-                
+            // Lookup: StudentMaster by OT code (case-insensitive), scoped to the
+            // selected course. OT codes are NOT unique across the whole roster —
+            // they get reused across different courses/batches — so matching on
+            // OT code alone (with no ORDER BY) can silently resolve to a
+            // completely different student's row than the one actually enrolled
+            // in this course, making the later "belongs to course" check fail
+            // (or worse, pass) for the wrong person.
+            $studentMaster = StudentMaster::query()
+                ->join('student_master_course__map as smcm', 'smcm.student_master_pk', '=', 'student_master.pk')
+                ->whereRaw('LOWER(student_master.generated_OT_code) = ?', [strtolower($data['otcode'])])
+                ->where('smcm.course_master_pk', $data['course_master_pk'])
+                ->where('smcm.active_inactive', 1)
+                ->select('student_master.pk')
+                ->first();
 
             if (!$studentMaster) {
+                $otCodeExists = StudentMaster::whereRaw('LOWER(generated_OT_code) = ?', [strtolower($data['otcode'])])
+                    ->exists();
+
                 return response()->json([
                     'status' => 'error',
-                    'message' => "Student not found for OT code: {$data['otcode']}",
+                    'message' => $otCodeExists
+                        ? "Student does not belong to selected course"
+                        : "Student not found for OT code: {$data['otcode']}",
                 ], 422);
             }
 
@@ -714,21 +729,10 @@ class GroupMappingController extends Controller
                 ], 422);
             }
 
-            // Check if mapping already exists
-            $studentCourseExists = StudentMasterCourseMap::where(
-                        'student_master_pk',
-                        $studentMaster->pk
-                    )
-                    ->where('course_master_pk', $data['course_master_pk'])
-                    ->where('active_inactive', 1)
-                    ->exists();
-
-                if (!$studentCourseExists) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => "Student does not belong to selected course",
-                    ], 422);
-                }
+            // Course-enrollment membership is already guaranteed by the scoped
+            // lookup above (it joins student_master_course__map on this exact
+            // course_master_pk with active_inactive = 1), so no separate check
+            // is needed here.
 
             // Create the mapping (same as Excel import)
             StudentCourseGroupMap::create([

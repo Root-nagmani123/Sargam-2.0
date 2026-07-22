@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\CourseGroupTypeMaster;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\DB;
+use App\DataTables\GroupMappingDataTable;
 
 
 class CourseGroupTypeController extends Controller
@@ -34,11 +35,13 @@ class CourseGroupTypeController extends Controller
                 ->update([
                     'active_inactive' => $request->active_inactive
                 ]);
+            GroupMappingDataTable::bumpListingCacheEpoch();
         }
 
         // DELETE ROW
         if ($request->has('pk') && $request->active_inactive == 2) {
             CourseGroupTypeMaster::where('pk', $request->pk)->delete();
+            GroupMappingDataTable::bumpListingCacheEpoch();
         }
 
         // DataTable SELECT QUERY
@@ -117,6 +120,7 @@ class CourseGroupTypeController extends Controller
                     'type_name'       => $request->type_name,
                     'active_inactive' => $request->has('active_inactive') ? 1 : 0,
                 ]);
+            GroupMappingDataTable::bumpListingCacheEpoch();
 
             return redirect()->back()->with('success', 'Course Group Type updated successfully');
         } catch (\Exception $e) {
@@ -151,6 +155,7 @@ class CourseGroupTypeController extends Controller
                 $course->update([
                     'type_name' => $request->type_name
                 ]);
+                GroupMappingDataTable::bumpListingCacheEpoch();
 
                 return response()->json([
                     'status' => true,
@@ -162,6 +167,7 @@ class CourseGroupTypeController extends Controller
             CourseGroupTypeMaster::create([
                 'type_name' => $request->type_name
             ]);
+            GroupMappingDataTable::bumpListingCacheEpoch();
 
             return response()->json([
                 'status' => true,
@@ -211,6 +217,7 @@ class CourseGroupTypeController extends Controller
             }
 
             $courseGroupTypeMaster->delete();
+            GroupMappingDataTable::bumpListingCacheEpoch();
 
             return redirect()->route('master.course.group.type.index')
                 ->with('success', 'Course Group Type deleted successfully.');
