@@ -12,7 +12,6 @@ use App\Models\Mess\PurchaseOrderItem;
 use App\Models\Mess\Vendor;
 use App\Models\Mess\VendorItemMapping;
 use App\Models\Mess\Store;
-use App\Models\Mess\Inventory;
 use App\Models\Mess\ItemSubcategory;
 use App\Models\Mess\MaterialRequest;
 use Illuminate\Support\Facades\Auth;
@@ -52,9 +51,9 @@ class PurchaseOrderController extends Controller
         $vendorIds = $this->normalizeFilterIdList($request->input('vendor_id'));
         $storeIds = $this->normalizeFilterIdList($request->input('store_id'));
 
-        $vendors = Vendor::orderBy('name')->get();
-        $stores = Store::where('status', 1)->orderBy('store_name')->get();
-        $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get()
+        $vendors = Vendor::orderBy('name')->get(['id', 'name']);
+        $stores = Store::where('status', 1)->orderBy('store_name')->get(['id', 'store_name']);
+        $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get(ItemSubcategory::listSelectColumns())
             ->map(fn ($s) => [
                 'id' => $s->id,
                 'item_name' => $s->item_name ?? $s->name ?? '—',
@@ -95,10 +94,10 @@ class PurchaseOrderController extends Controller
         $query = PurchaseOrder::query();
 
         if ($request->filled('date_from')) {
-            $query->whereDate('po_date', '>=', $request->date_from);
+            $query->where('po_date', '>=', $request->date_from);
         }
         if ($request->filled('date_to')) {
-            $query->whereDate('po_date', '<=', $request->date_to);
+            $query->where('po_date', '<=', $request->date_to);
         }
         if ($vendorIds !== []) {
             $query->whereIn('vendor_id', $vendorIds);
@@ -232,9 +231,15 @@ class PurchaseOrderController extends Controller
 
     public function create(Request $request)
     {
-        $vendors = Vendor::all();
-        $stores = Store::where('status', 1)->get();
-        $inventories = Inventory::all();
+        $vendors = Vendor::orderBy('name')->get(['id', 'name']);
+        $stores = Store::where('status', 1)->orderBy('store_name')->get(['id', 'store_name']);
+        $itemSubcategories = ItemSubcategory::active()
+            ->orderBy('name')
+            ->get(ItemSubcategory::listSelectColumns())
+            ->map(fn ($s) => (object) [
+                'id' => $s->id,
+                'item_name' => $s->item_name ?? $s->name ?? '—',
+            ]);
         $materialRequest = null;
         
         if ($request->has('material_request_id')) {
@@ -242,7 +247,7 @@ class PurchaseOrderController extends Controller
         }
         
         $po_number = $this->generatePoNumber();
-        return view('mess.purchaseorders.create', compact('vendors', 'stores', 'inventories', 'po_number', 'materialRequest'));
+        return view('mess.purchaseorders.create', compact('vendors', 'stores', 'itemSubcategories', 'po_number', 'materialRequest'));
     }
 
     public function store(Request $request)

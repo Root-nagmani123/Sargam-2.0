@@ -11,7 +11,6 @@ use App\Models\KitchenIssueItem;
 use App\Models\KitchenIssuePaymentDetail;
 use App\Models\Mess\Store;
 use App\Models\Mess\SubStore;
-use App\Models\Mess\Inventory;
 use App\Models\Mess\ItemSubcategory;
 use App\Models\Mess\ClientType;
 use App\Models\Mess\SellingVoucherDateRangeReport;
@@ -457,14 +456,7 @@ class KitchenIssueController extends Controller
      */
     private function itemSubcategorySelectColumns(): array
     {
-        $columns = ['id', 'unit_measurement', 'standard_cost'];
-        foreach (['item_name', 'name', 'subcategory_name', 'item_code', 'subcategory_code'] as $column) {
-            if (Schema::hasColumn('mess_item_subcategories', $column)) {
-                $columns[] = $column;
-            }
-        }
-
-        return array_values(array_unique($columns));
+        return ItemSubcategory::listSelectColumns();
     }
 
     /**
@@ -1313,7 +1305,7 @@ class KitchenIssueController extends Controller
     public function create()
     {
         // Get active stores and sub-stores
-        $stores = Store::active()->get()->map(function ($store) {
+        $stores = Store::active()->get(['id', 'store_name'])->map(function ($store) {
             return [
                 'id' => $store->id,
                 'store_name' => $store->store_name,
@@ -1321,7 +1313,7 @@ class KitchenIssueController extends Controller
             ];
         });
         
-        $subStores = SubStore::active()->get()->map(function ($subStore) {
+        $subStores = SubStore::active()->get(['id', 'sub_store_name'])->map(function ($subStore) {
             return [
                 'id' => 'sub_' . $subStore->id,
                 'store_name' => $subStore->sub_store_name . ' (Sub-Store)',
@@ -1333,7 +1325,7 @@ class KitchenIssueController extends Controller
         // Combine stores and sub-stores
         $stores = $stores->concat($subStores)->sortBy('store_name')->values();
         
-        $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get()->map(function ($s) {
+        $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get(ItemSubcategory::listSelectColumns())->map(function ($s) {
             return [
                 'id' => $s->id,
                 'item_name' => $s->item_name ?? $s->name ?? '—',
@@ -1343,7 +1335,7 @@ class KitchenIssueController extends Controller
             ];
         });
         $clientTypes = ClientType::clientTypes();
-        $clientNamesByType = ClientType::active()->orderBy('client_type')->orderBy('client_name')->get()
+        $clientNamesByType = ClientType::active()->orderBy('client_type')->orderBy('client_name')->get(['id', 'client_type', 'client_name'])
             ->groupBy('client_type');
         $faculties = FacultyMaster::whereNotNull('full_name')
             ->where('full_name', '!=', '')
@@ -1358,7 +1350,7 @@ class KitchenIssueController extends Controller
                 $f->full_name_with_code = $facultyCode !== '' ? ($fullName . ' (' . $facultyCode . ')') : $fullName;
                 return $f;
             });
-        $departmentNamesByPk = DepartmentMaster::pluck('department_name', 'pk');
+        $departmentNamesByPk = DepartmentMaster::query()->select(['pk', 'department_name'])->pluck('department_name', 'pk');
 
         $buildEmployeeLabel = function ($fullName, $departmentPk) use ($departmentNamesByPk) {
             $fullName = trim((string) $fullName);
@@ -1384,7 +1376,7 @@ class KitchenIssueController extends Controller
             ->filter(fn($e) => $e->full_name !== '—')
             ->values();
 
-        $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
+        $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first(['pk']);
         $messStaff = $officersMessDept
             ? EmployeeMaster::active()
                 ->where('department_master_pk', $officersMessDept->pk)
@@ -1758,7 +1750,7 @@ class KitchenIssueController extends Controller
         }
 
         // Get active stores and sub-stores
-        $stores = Store::active()->get()->map(function ($store) {
+        $stores = Store::active()->get(['id', 'store_name'])->map(function ($store) {
             return [
                 'id' => $store->id,
                 'store_name' => $store->store_name,
@@ -1766,7 +1758,7 @@ class KitchenIssueController extends Controller
             ];
         });
         
-        $subStores = SubStore::active()->get()->map(function ($subStore) {
+        $subStores = SubStore::active()->get(['id', 'sub_store_name'])->map(function ($subStore) {
             return [
                 'id' => 'sub_' . $subStore->id,
                 'store_name' => $subStore->sub_store_name . ' (Sub-Store)',
@@ -1778,7 +1770,13 @@ class KitchenIssueController extends Controller
         // Combine stores and sub-stores
         $stores = $stores->concat($subStores)->sortBy('store_name')->values();
         
-        $items = Inventory::all();
+        $items = ItemSubcategory::active()
+            ->orderBy('name')
+            ->get(ItemSubcategory::listSelectColumns())
+            ->map(fn ($s) => (object) [
+                'id' => $s->id,
+                'item_name' => $s->item_name ?? $s->name ?? '—',
+            ]);
         return view('mess.kitchen-issues.edit', compact('kitchenIssue', 'stores', 'items'));
     }
 

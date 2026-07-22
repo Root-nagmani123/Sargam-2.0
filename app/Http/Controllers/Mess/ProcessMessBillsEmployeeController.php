@@ -94,66 +94,14 @@ class ProcessMessBillsEmployeeController extends Controller
         $statusFilter = $request->filled('status') ? $request->status : null;
         $invoiceSentFilter = $this->resolveInvoiceSentFilter($request);
 
-        // Query 1: Selling Voucher with Date Range (sv_date_range_reports)
-        $dateRangeQuery = SellingVoucherDateRangeReport::query()
-            ->select([
-                'id',
-                DB::raw("CONVERT(client_name USING utf8mb4) COLLATE {$unionCollation} as client_name"),
-                'issue_date',
-                DB::raw("CONVERT(client_type_slug USING utf8mb4) COLLATE {$unionCollation} as client_type_slug"),
-                'client_type_pk',
-                'total_amount',
-                'payment_type',
-                'status',
-                'store_id',
-                DB::raw("CONVERT('date_range' USING utf8mb4) COLLATE {$unionCollation} as source_type")
-            ])
-            ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS);
-
-        if (!empty($clientTypes)) {
-            $dateRangeQuery->whereIn('client_type_slug', $clientTypes);
-        }
-        if (!empty($clientTypePks)) {
-            $dateRangeQuery->whereIn('client_type_pk', $clientTypePks);
-        }
-        // Match Sale Voucher Report: filter SV date-range vouchers by line item request dates, not header dates only.
-        $dateRangeQuery->whereIn('status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses());
-        $this->applySellingVoucherDateRangeItemIssueDateFilter($dateRangeQuery, $dateFrom, $dateTo);
-        $this->applyBuyerNameFilter($dateRangeQuery, $buyerNames, $clientTypes, $clientTypePks);
-
-        // Query 2: Regular Selling Voucher (kitchen_issue_master)
-        $kitchenClientTypes = !empty($clientTypes)
-            ? array_map([$this, 'clientTypeSlugToKitchenId'], $clientTypes)
-            : self::ALLOWED_KITCHEN_CLIENT_TYPES;
-
-        $kitchenIssueQuery = KitchenIssueMaster::query()
-            ->select([
-                'pk as id',
-                DB::raw("CONVERT(client_name USING utf8mb4) COLLATE {$unionCollation} as client_name"),
-                'issue_date',
-                DB::raw("CONVERT((CASE client_type WHEN 1 THEN 'employee' WHEN 2 THEN 'ot' WHEN 3 THEN 'course' WHEN 4 THEN 'other' END) USING utf8mb4) COLLATE {$unionCollation} as client_type_slug"),
-                'client_type_pk',
-                DB::raw('NULL as total_amount'),
-                'payment_type',
-                'status',
-                'store_id',
-                DB::raw("CONVERT('kitchen_issue' USING utf8mb4) COLLATE {$unionCollation} as source_type")
-            ])
-            ->whereIn('client_type', $kitchenClientTypes)
-            ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
-            ->where('status', '!=', KitchenIssueMaster::STATUS_REJECTED);
-
-        if (!empty($clientTypePks)) {
-            $kitchenIssueQuery->whereIn('client_type_pk', $clientTypePks);
-        }
-
-        if ($dateFrom) {
-            $kitchenIssueQuery->where('issue_date', '>=', $dateFrom);
-        }
-        if ($dateTo) {
-            $kitchenIssueQuery->where('issue_date', '<=', $dateTo);
-        }
-        $this->applyBuyerNameFilter($kitchenIssueQuery, $buyerNames, $clientTypes, $clientTypePks);
+        [$dateRangeQuery, $kitchenIssueQuery] = $this->buildProcessMessBillsUnionQueries(
+            $dateFrom,
+            $dateTo,
+            $unionCollation,
+            $clientTypes,
+            $clientTypePks,
+            $buyerNames
+        );
 
         $effectiveDateFrom = $request->filled('date_from') ? $request->date_from : now()->startOfMonth()->format('d-m-Y');
         $effectiveDateTo = $request->filled('date_to') ? $request->date_to : now()->endOfMonth()->format('d-m-Y');
@@ -1389,6 +1337,80 @@ class ProcessMessBillsEmployeeController extends Controller
      *
      * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection}
      */
+    /**
+     * @param  array<int, string>  $clientTypes
+     * @param  array<int, string|int>  $clientTypePks
+     * @param  array<int, string>  $buyerNames
+     * @return array{0: \Illuminate\Database\Eloquent\Builder, 1: \Illuminate\Database\Eloquent\Builder}
+     */
+    private function buildProcessMessBillsUnionQueries(
+        string $dateFrom,
+        string $dateTo,
+        string $unionCollation,
+        array $clientTypes,
+        array $clientTypePks,
+        array $buyerNames
+    ): array {
+        $dateRangeQuery = SellingVoucherDateRangeReport::query()
+            ->select([
+                'id',
+                DB::raw("CONVERT(client_name USING utf8mb4) COLLATE {$unionCollation} as client_name"),
+                'issue_date',
+                DB::raw("CONVERT(client_type_slug USING utf8mb4) COLLATE {$unionCollation} as client_type_slug"),
+                'client_type_pk',
+                'total_amount',
+                'payment_type',
+                'status',
+                'store_id',
+                DB::raw("CONVERT('date_range' USING utf8mb4) COLLATE {$unionCollation} as source_type"),
+            ])
+            ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS);
+
+        if ($clientTypes !== []) {
+            $dateRangeQuery->whereIn('client_type_slug', $clientTypes);
+        }
+        if ($clientTypePks !== []) {
+            $dateRangeQuery->whereIn('client_type_pk', $clientTypePks);
+        }
+        $dateRangeQuery->whereIn('status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses());
+        $this->applySellingVoucherDateRangeItemIssueDateFilter($dateRangeQuery, $dateFrom, $dateTo);
+        $this->applyBuyerNameFilter($dateRangeQuery, $buyerNames, $clientTypes, $clientTypePks);
+
+        $kitchenClientTypes = $clientTypes !== []
+            ? array_map([$this, 'clientTypeSlugToKitchenId'], $clientTypes)
+            : self::ALLOWED_KITCHEN_CLIENT_TYPES;
+
+        $kitchenIssueQuery = KitchenIssueMaster::query()
+            ->select([
+                'pk as id',
+                DB::raw("CONVERT(client_name USING utf8mb4) COLLATE {$unionCollation} as client_name"),
+                'issue_date',
+                DB::raw("CONVERT((CASE client_type WHEN 1 THEN 'employee' WHEN 2 THEN 'ot' WHEN 3 THEN 'course' WHEN 4 THEN 'other' END) USING utf8mb4) COLLATE {$unionCollation} as client_type_slug"),
+                'client_type_pk',
+                DB::raw('NULL as total_amount'),
+                'payment_type',
+                'status',
+                'store_id',
+                DB::raw("CONVERT('kitchen_issue' USING utf8mb4) COLLATE {$unionCollation} as source_type"),
+            ])
+            ->whereIn('client_type', $kitchenClientTypes)
+            ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
+            ->where('status', '!=', KitchenIssueMaster::STATUS_REJECTED);
+
+        if ($clientTypePks !== []) {
+            $kitchenIssueQuery->whereIn('client_type_pk', $clientTypePks);
+        }
+        if ($dateFrom) {
+            $kitchenIssueQuery->where('issue_date', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $kitchenIssueQuery->where('issue_date', '<=', $dateTo);
+        }
+        $this->applyBuyerNameFilter($kitchenIssueQuery, $buyerNames, $clientTypes, $clientTypePks);
+
+        return [$dateRangeQuery, $kitchenIssueQuery];
+    }
+
     private function queryAndGroupBillsForProcessIndexLight(
         string $dateFrom,
         string $dateTo,
@@ -2872,93 +2894,59 @@ class ProcessMessBillsEmployeeController extends Controller
         $search = $request->filled('search') ? trim((string) $request->search) : null;
         $search = ($search !== null && $search !== '') ? $search : null;
         $clientTypes = $this->normalizeFilterArrayValues($request->input('client_type'));
-        $clientType = $clientTypes[0] ?? ($request->filled('client_type') ? $request->client_type : null);
         $clientTypePks = $this->normalizeFilterArrayValues($request->input('client_type_pk'));
         $buyerNames = $this->normalizeBuyerNames($request->input('buyer_name'));
         $buyerNames = $this->normalizeBuyerNamesToClientIds($buyerNames, $clientTypes, $clientTypePks);
-        $buyerName = $buyerNames[0] ?? null;
         $statusFilter = $request->filled('status') ? $request->status : null;
         $invoiceSentFilter = $this->resolveInvoiceSentFilter($request);
 
-        // Same union query as index, but get all results
-        $dateRangeQuery = SellingVoucherDateRangeReport::query()
-            ->select([
-                'id',
-                DB::raw("CONVERT(client_name USING utf8mb4) COLLATE {$unionCollation} as client_name"),
-                'issue_date',
-                'date_from',
-                DB::raw("CONVERT(client_type_slug USING utf8mb4) COLLATE {$unionCollation} as client_type_slug"),
-                'client_type_pk',
-                'total_amount',
-                'payment_type',
-                'status',
-                'store_id',
-                DB::raw("CONVERT('date_range' USING utf8mb4) COLLATE {$unionCollation} as source_type")
-            ])
-            ->whereIn('client_type_slug', $clientType ? [$clientType] : self::ALLOWED_CLIENT_SLUGS);
-
-        $this->applyBuyerNameFilter($dateRangeQuery, $buyerNames, $clientTypes, $clientTypePks);
-        $dateRangeQuery->whereIn('status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses());
-        $this->applySellingVoucherDateRangeItemIssueDateFilter($dateRangeQuery, $dateFrom, $dateTo);
-
-        $kitchenClientTypes = $clientType
-            ? [$this->clientTypeSlugToKitchenId($clientType)]
-            : self::ALLOWED_KITCHEN_CLIENT_TYPES;
-        $kitchenIssueQuery = KitchenIssueMaster::query()
-            ->select([
-                'pk as id',
-                DB::raw("CONVERT(client_name USING utf8mb4) COLLATE {$unionCollation} as client_name"),
-                'issue_date',
-                DB::raw('NULL as date_from'),
-                DB::raw("CONVERT((CASE client_type WHEN 1 THEN 'employee' WHEN 2 THEN 'ot' WHEN 3 THEN 'course' WHEN 4 THEN 'other' END) USING utf8mb4) COLLATE {$unionCollation} as client_type_slug"),
-                'client_type_pk',
-                DB::raw('NULL as total_amount'),
-                'payment_type',
-                'status',
-                'store_id',
-                DB::raw("CONVERT('kitchen_issue' USING utf8mb4) COLLATE {$unionCollation} as source_type")
-            ])
-            ->whereIn('client_type', $kitchenClientTypes)
-            ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES);
-
-        $this->applyBuyerNameFilter($kitchenIssueQuery, $buyerNames, $clientTypes, $clientTypePks);
-        if ($dateFrom) {
-            $kitchenIssueQuery->where('issue_date', '>=', $dateFrom);
-        }
-        if ($dateTo) {
-            $kitchenIssueQuery->where('issue_date', '<=', $dateTo);
-        }
-
-        [$combinedBills] = $this->queryAndGroupBillsForProcessIndexLight(
+        [$dateRangeQuery, $kitchenIssueQuery] = $this->buildProcessMessBillsUnionQueries(
             $dateFrom,
             $dateTo,
-            $dateRangeQuery,
-            $kitchenIssueQuery
+            $unionCollation,
+            $clientTypes,
+            $clientTypePks,
+            $buyerNames
         );
 
-        if ($search) {
-            $combinedBills = $this->filterCombinedBillsForProcessIndexSearch($combinedBills, $search)->values();
-        }
-        $bills = $rowsRaw->map(function ($bill) use ($dateFrom, $dateTo) {
-            if ($bill->source_type === 'date_range') {
-                $model = SellingVoucherDateRangeReport::with([
-                    'clientTypeCategory',
-                    'items' => function ($itemQ) use ($dateFrom, $dateTo) {
-                        $this->applySvDateRangeReportItemsIssueDateConstraint($itemQ, $dateFrom, $dateTo);
-                    },
-                    'items.itemSubcategory',
-                ])->find($bill->id);
-                if ($model) $model->setAttribute('source_type', 'date_range');
-                return $model;
+        if ($invoiceSentFilter === 'sent') {
+            $sentBuyerAllowlist = $this->getSentInvoiceBuyerAllowlistForDateRange($dateFrom, $dateTo);
+            if ($sentBuyerAllowlist === []) {
+                $combinedBills = collect();
+            } else {
+                $this->applySentInvoiceBuyerAllowlistFilter($dateRangeQuery, $kitchenIssueQuery, $sentBuyerAllowlist);
+                [$combinedBills] = $this->getCombinedBillsForProcessIndexCached(
+                    $dateFrom,
+                    $dateTo,
+                    $dateRangeQuery,
+                    $kitchenIssueQuery,
+                    [
+                        'client_types' => $clientTypes,
+                        'client_type_pks' => $clientTypePks,
+                        'buyer_names' => $buyerNames,
+                        'status_filter' => $statusFilter,
+                        'invoice_sent_filter' => $invoiceSentFilter,
+                        'context' => 'index',
+                    ]
+                );
             }
-            $model = KitchenIssueMaster::with(['clientTypeCategory', 'items'])->where('pk', $bill->id)->first();
-            if ($model) $model->setAttribute('source_type', 'kitchen_issue');
-            return $model;
-        })->filter()->values();
+        } else {
+            [$combinedBills] = $this->getCombinedBillsForProcessIndexCached(
+                $dateFrom,
+                $dateTo,
+                $dateRangeQuery,
+                $kitchenIssueQuery,
+                [
+                    'client_types' => $clientTypes,
+                    'client_type_pks' => $clientTypePks,
+                    'buyer_names' => $buyerNames,
+                    'status_filter' => $statusFilter,
+                    'invoice_sent_filter' => $invoiceSentFilter,
+                    'context' => 'index',
+                ]
+            );
+        }
 
-        $combinedBills = $this->groupBillsByBuyer($bills, $dateFrom, $dateTo);
-
-        // Optional status filter on combined bills for export as well
         if ($statusFilter !== null && $statusFilter !== '') {
             $statusMap = [
                 'unpaid' => 0,
@@ -2973,8 +2961,15 @@ class ProcessMessBillsEmployeeController extends Controller
                 $combinedBills = $combinedBills->where('status', $normalized)->values();
             }
         }
+
         $combinedBills = $this->filterCombinedBillsByInvoiceSent($combinedBills, $invoiceSentFilter, $dateFrom, $dateTo);
-        $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
+
+        if ($search) {
+            $combinedBills = $this->filterCombinedBillsForProcessIndexSearch($combinedBills, $search)->values();
+        }
+
+        $combinedBills = $this->enrichProcessIndexCombinedBillsLifetimeDue($combinedBills, $dateTo);
+
         $statusMap = [0 => 'Unpaid', 1 => 'Pending', 2 => 'Paid'];
 
         $visibleIndexes = ProcessMessBillsExport::parseVisibleColumnIndexes(
@@ -5099,12 +5094,12 @@ class ProcessMessBillsEmployeeController extends Controller
             return;
         }
         if ($dateFromYmd) {
-            $itemQuery->whereDate('issue_date', '>=', $dateFromYmd);
+            $itemQuery->where('issue_date', '>=', $dateFromYmd);
 
             return;
         }
         if ($dateToYmd) {
-            $itemQuery->whereDate('issue_date', '<=', $dateToYmd);
+            $itemQuery->where('issue_date', '<=', $dateToYmd);
 
             return;
         }

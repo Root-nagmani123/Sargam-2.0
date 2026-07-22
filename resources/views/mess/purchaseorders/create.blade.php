@@ -115,9 +115,9 @@
                 <div class="row g-2 align-items-end mb-2 item-row">
                     <div class="col-md-4">
                         <label class="form-label form-label-sm">Item</label>
-                        <select name="items[0][inventory_id]" class="form-select form-select-sm" required>
+                        <select name="items[0][item_subcategory_id]" class="form-select form-select-sm" required>
                             <option value="">Select Item</option>
-                            @foreach($inventories as $inv)
+                            @foreach($itemSubcategories as $inv)
                                 <option value="{{ $inv->id }}">{{ $inv->item_name }}</option>
                             @endforeach
                         </select>
@@ -154,16 +154,16 @@
 
 <script>
 let itemIndex = {{ $materialRequest ? $materialRequest->items->count() : 1 }};
-const inventories = @json($inventories);
+const itemSubcategories = @json($itemSubcategories);
 
 document.getElementById('addItem').addEventListener('click', function() {
     const container = document.getElementById('itemsContainer');
     const template = `
         <div class="row mb-2 item-row">
             <div class="col-md-4">
-                <select name="items[${itemIndex}][inventory_id]" class="form-control" required>
+                <select name="items[${itemIndex}][item_subcategory_id]" class="form-control" required>
                     <option value="">Select Item</option>
-                    ${inventories.map(inv => `<option value="${inv.id}">${inv.item_name}</option>`).join('')}
+                    ${itemSubcategories.map(inv => `<option value="${inv.id}">${inv.item_name}</option>`).join('')}
                 </select>
             </div>
             <div class="col-md-2">

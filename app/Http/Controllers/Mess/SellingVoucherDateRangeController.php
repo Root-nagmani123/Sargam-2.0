@@ -59,7 +59,7 @@ class SellingVoucherDateRangeController extends Controller
     public function index(Request $request)
     {
         // Get active stores and sub-stores
-        $stores = Store::active()->get()->map(function ($store) {
+        $stores = Store::active()->get(['id', 'store_name'])->map(function ($store) {
             return [
                 'id' => $store->id,
                 'store_name' => $store->store_name,
@@ -67,7 +67,7 @@ class SellingVoucherDateRangeController extends Controller
             ];
         });
         
-        $subStores = SubStore::active()->get()->map(function ($subStore) {
+        $subStores = SubStore::active()->get(['id', 'sub_store_name'])->map(function ($subStore) {
             return [
                 'id' => 'sub_' . $subStore->id,
                 'store_name' => $subStore->sub_store_name . ' (Sub-Store)',
@@ -79,7 +79,7 @@ class SellingVoucherDateRangeController extends Controller
         // Combine stores and sub-stores
         $stores = $stores->concat($subStores)->sortBy('store_name')->values();
         
-        $itemSubcategories = ItemSubcategory::active()->orderedByDisplayName()->get()->map(function ($s) {
+        $itemSubcategories = ItemSubcategory::active()->orderedByDisplayName()->get(ItemSubcategory::listSelectColumns())->map(function ($s) {
             return [
                 'id' => $s->id,
                 'item_name' => $s->item_name ?? $s->name ?? '—',
@@ -88,12 +88,12 @@ class SellingVoucherDateRangeController extends Controller
             ];
         });
         $clientTypes = ClientType::clientTypes();
-        $clientNamesByType = ClientType::active()->orderBy('client_type')->orderBy('client_name')->get()->groupBy('client_type');
+        $clientNamesByType = ClientType::active()->orderBy('client_type')->orderBy('client_name')->get(['id', 'client_type', 'client_name'])->groupBy('client_type');
 
         // Academy Staff should exclude:
         // 1) Mess Staff (Officers Mess department)
         // 2) Employees mapped as Faculty (FacultyMaster.employee_master_pk)
-        $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
+        $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first(['pk']);
 
         $faculties = FacultyMaster::whereNotNull('full_name')
             ->where('full_name', '!=', '')
@@ -116,7 +116,7 @@ class SellingVoucherDateRangeController extends Controller
             ->values()
             ->all();
 
-        $departmentNamesByPk = DepartmentMaster::pluck('department_name', 'pk');
+        $departmentNamesByPk = DepartmentMaster::query()->select(['pk', 'department_name'])->pluck('department_name', 'pk');
 
         $buildEmployeeLabel = function ($fullName, $departmentPk) use ($departmentNamesByPk) {
             $fullName = trim((string) $fullName);
