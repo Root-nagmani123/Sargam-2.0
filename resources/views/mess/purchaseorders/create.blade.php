@@ -82,36 +82,6 @@
             </div>
             <div class="card-body">
         <div id="itemsContainer">
-            @if($materialRequest)
-                @foreach($materialRequest->items as $index => $mrItem)
-                    <div class="row g-2 align-items-end mb-2 item-row">
-                        <div class="col-md-4">
-                            <label class="form-label form-label-sm">Item</label>
-                            <select name="items[{{ $index }}][inventory_id]" class="form-select form-select-sm" required>
-                                <option value="{{ $mrItem->inventory_id }}">{{ $mrItem->inventory->item_name }}</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label form-label-sm">Quantity</label>
-                            <input type="number" name="items[{{ $index }}][quantity]" class="form-control form-control-sm" 
-                                   placeholder="Quantity" step="0.01" value="{{ $mrItem->approved_quantity ?? $mrItem->requested_quantity }}" required>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label form-label-sm">Unit</label>
-                            <input type="text" name="items[{{ $index }}][unit]" class="form-control form-control-sm" 
-                                   placeholder="Unit" value="{{ $mrItem->unit }}">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label form-label-sm">Unit Price</label>
-                            <input type="number" name="items[{{ $index }}][unit_price]" class="form-control form-control-sm" 
-                                   placeholder="Unit Price" step="0.01" required>
-                        </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button type="button" class="btn btn-outline-danger btn-sm remove-item w-100">Remove</button>
-                        </div>
-                    </div>
-                @endforeach
-            @else
                 <div class="row g-2 align-items-end mb-2 item-row">
                     <div class="col-md-4">
                         <label class="form-label form-label-sm">Item</label>
@@ -138,7 +108,6 @@
                         <button type="button" class="btn btn-outline-danger btn-sm remove-item w-100" disabled>Remove</button>
                     </div>
                 </div>
-            @endif
         </div>
             </div>
         </div>
@@ -153,7 +122,7 @@
 </div>
 
 <script>
-let itemIndex = {{ $materialRequest ? $materialRequest->items->count() : 1 }};
+let itemIndex = 1;
 const itemSubcategories = @json($itemSubcategories);
 
 document.getElementById('addItem').addEventListener('click', function() {

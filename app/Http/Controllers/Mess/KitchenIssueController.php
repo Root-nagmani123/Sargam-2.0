@@ -2171,30 +2171,6 @@ class KitchenIssueController extends Controller
     }
 
     /**
-     * Send kitchen issue for approval
-     */
-    public function sendForApproval($id)
-    {
-        $kitchenIssue = KitchenIssueMaster::findOrFail($id);
-
-        if ($kitchenIssue->status == KitchenIssueMaster::STATUS_APPROVED) {
-            return back()->with('error', 'Material Management already approved');
-        }
-
-        try {
-            $kitchenIssue->update([
-                'status' => KitchenIssueMaster::STATUS_PROCESSING,
-                'modified_by' => Auth::id(),
-            ]);
-            self::bumpSellingVoucherListingCacheEpoch();
-
-            return back()->with('success', 'Material Management sent for approval successfully');
-        } catch (\Exception $e) {
-            return back()->with('error', 'Failed to send for approval: ' . $e->getMessage());
-        }
-    }
-
-    /**
      * Generate bill report
      */
     public function billReport(Request $request)

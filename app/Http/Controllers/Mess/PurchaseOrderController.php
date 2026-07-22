@@ -10,10 +10,8 @@ use Illuminate\Http\Request;
 use App\Models\Mess\PurchaseOrder;
 use App\Models\Mess\PurchaseOrderItem;
 use App\Models\Mess\Vendor;
-use App\Models\Mess\VendorItemMapping;
 use App\Models\Mess\Store;
 use App\Models\Mess\ItemSubcategory;
-use App\Models\Mess\MaterialRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -240,14 +238,9 @@ class PurchaseOrderController extends Controller
                 'id' => $s->id,
                 'item_name' => $s->item_name ?? $s->name ?? '—',
             ]);
-        $materialRequest = null;
-        
-        if ($request->has('material_request_id')) {
-            $materialRequest = MaterialRequest::with('items.inventory')->findOrFail($request->material_request_id);
-        }
-        
         $po_number = $this->generatePoNumber();
-        return view('mess.purchaseorders.create', compact('vendors', 'stores', 'itemSubcategories', 'po_number', 'materialRequest'));
+
+        return view('mess.purchaseorders.create', compact('vendors', 'stores', 'itemSubcategories', 'po_number'));
     }
 
     public function store(Request $request)
@@ -377,7 +370,7 @@ class PurchaseOrderController extends Controller
 
     public function show($id)
     {
-        $purchaseOrder = PurchaseOrder::with(['vendor', 'store', 'creator', 'approver', 'items.inventory', 'items.itemSubcategory'])->findOrFail($id);
+        $purchaseOrder = PurchaseOrder::with(['vendor', 'store', 'creator', 'approver', 'items.itemSubcategory'])->findOrFail($id);
         return view('mess.purchaseorders.show', compact('purchaseOrder'));
     }
 

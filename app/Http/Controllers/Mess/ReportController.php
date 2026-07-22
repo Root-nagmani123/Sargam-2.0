@@ -5,9 +5,7 @@ namespace App\Http\Controllers\Mess;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Mess\Concerns\SortsMessReportData;
 use App\Models\KitchenIssueMaster;
-use App\Models\Mess\MonthlyBill;
 use Illuminate\Http\Request;
-use App\Models\Mess\Inventory;
 use App\Models\Mess\Store;
 use App\Models\Mess\SubStore;
 use App\Models\Mess\ItemCategory;
@@ -27,7 +25,6 @@ use App\Exports\StockSummaryExport;
 use App\Exports\Mess\StockPurchaseDetailsExport;
 use App\Exports\Mess\StockBalanceTillDateExport;
 use App\Exports\Mess\PurchaseSaleQuantityExport;
-use App\Exports\Mess\SellingVoucherPrintSlipExport;
 use App\Exports\Mess\CategoryWisePrintSlipExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -1449,60 +1446,6 @@ class ReportController extends Controller
         $fileName = 'purchase-sale-quantity-' . $fromDate . '-to-' . $toDate . '-' . now()->format('Y-m-d_His') . '.pdf';
 
         return $pdf->download($fileName);
-    }
-
-    /**
-     * Selling Voucher Print Slip - Excel Export
-     */
-    public function sellingVoucherPrintSlipExcel(Request $request)
-    {
-        $query = \App\Models\Mess\SellingVoucherDateRangeReport::with([
-            'store',
-            'clientTypeCategory',
-            'items.itemSubcategory',
-        ]);
-
-        if ($request->filled('from_date')) {
-            $from = $request->from_date;
-            $query->where(function ($q) use ($from) {
-                $q->where('issue_date', '>=', $from)
-                  ->orWhere('date_from', '>=', $from);
-            });
-        }
-        if ($request->filled('to_date')) {
-            $to = $request->to_date;
-            $query->where(function ($q) use ($to) {
-                $q->where('issue_date', '<=', $to)
-                  ->orWhere('date_to', '<=', $to);
-            });
-        }
-        if ($request->filled('employee_ot_filter')) {
-            if ($request->employee_ot_filter === 'employee_ot') {
-                $query->whereIn('client_type_slug', [\App\Models\Mess\ClientType::TYPE_EMPLOYEE, \App\Models\Mess\ClientType::TYPE_OT]);
-            } elseif ($request->employee_ot_filter === 'employee') {
-                $query->where('client_type_slug', \App\Models\Mess\ClientType::TYPE_EMPLOYEE);
-            } elseif ($request->employee_ot_filter === 'ot') {
-                $query->where('client_type_slug', \App\Models\Mess\ClientType::TYPE_OT);
-            }
-        }
-        if ($request->filled('client_type_slug')) {
-            $query->where('client_type_slug', $request->client_type_slug);
-        }
-        if ($request->filled('client_type_pk')) {
-            $query->where('client_type_pk', $request->client_type_pk);
-        }
-        if ($request->filled('buyer_name') && $request->buyer_name !== '') {
-            $query->where('client_name', 'LIKE', '%' . $request->buyer_name . '%');
-        }
-        $query->whereIn('status', [
-            \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_DRAFT,
-            \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_FINAL,
-            \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED,
-        ]);
-        $vouchers = $query->orderBy('issue_date', 'desc')->get();
-
-        $fileName = 'selling-voucher-print-slip-' . now()->format('Y-m-d_His') . '.xlsx';
-        return Excel::download(new SellingVoucherPrintSlipExport($vouchers), $fileName);
     }
 
     /**
@@ -3292,85 +3235,6 @@ class ReportController extends Controller
     }
 
     /**
-     * Selling Voucher Print Slip
-     * Shows selling voucher details with category-wise filters
-     */
-    public function sellingVoucherPrintSlip(Request $request)
-    {
-        $query = \App\Models\Mess\SellingVoucherDateRangeReport::with([
-            'store',
-            'clientTypeCategory',
-            'items.itemSubcategory'
-        ]);
-        
-        // Apply filters
-        if ($request->filled('from_date')) {
-            $from = $request->from_date;
-            $query->where(function ($q) use ($from) {
-                $q->where('issue_date', '>=', $from)
-                  ->orWhere('date_from', '>=', $from);
-            });
-        }
-        
-        if ($request->filled('to_date')) {
-            $to = $request->to_date;
-            $query->where(function ($q) use ($to) {
-                $q->where('issue_date', '<=', $to)
-                  ->orWhere('date_to', '<=', $to);
-            });
-        }
-        
-        // Employee / OT filter
-        if ($request->filled('employee_ot_filter')) {
-            if ($request->employee_ot_filter === 'employee_ot') {
-                // Show both employee and OT
-                $query->whereIn('client_type_slug', [\App\Models\Mess\ClientType::TYPE_EMPLOYEE, \App\Models\Mess\ClientType::TYPE_OT]);
-            } elseif ($request->employee_ot_filter === 'employee') {
-                // Show only employee
-                $query->where('client_type_slug', \App\Models\Mess\ClientType::TYPE_EMPLOYEE);
-            } elseif ($request->employee_ot_filter === 'ot') {
-                // Show only OT
-                $query->where('client_type_slug', \App\Models\Mess\ClientType::TYPE_OT);
-            }
-        }
-        
-        if ($request->filled('client_type_slug')) {
-            $query->where('client_type_slug', $request->client_type_slug);
-        }
-        
-        if ($request->filled('client_type_pk')) {
-            $query->where('client_type_pk', $request->client_type_pk);
-        }
-        
-        if ($request->filled('buyer_name') && $request->buyer_name !== '') {
-            $query->where('client_name', 'LIKE', '%' . $request->buyer_name . '%');
-        }
-        
-        // Include all statuses (Draft, Final, Approved)
-        $query->whereIn('status', [
-            \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_DRAFT,
-            \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_FINAL,
-            \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED,
-        ]);
-        
-        $vouchers = $query->orderBy('issue_date', 'desc')->get();
-        
-        // Get filter options
-        $clientTypes = \App\Models\Mess\ClientType::clientTypes();
-        $clientTypeCategories = \App\Models\Mess\ClientType::active()
-            ->orderBy('client_type')
-            ->orderBy('client_name')
-            ->get()
-            ->groupBy('client_type');
-        
-        return view('admin.mess.reports.selling-voucher-print-slip', compact(
-            'vouchers',
-            'clientTypes',
-            'clientTypeCategories'
-        ));
-    }
-
-    /**
      * Item Report
      * Item-wise total Purchase quantity and total Sale quantity with date range.
      * Views: item-wise, subcategory-wise (grouped by category), category-wise (one category selected).
@@ -3587,135 +3451,5 @@ class ReportController extends Controller
         }
 
         return [$items, $reportData];
-    }
-
-    public function stockIssueDetailReport(Request $request)
-    {
-        $query = KitchenIssueMaster::query()
-            ->with(['store', 'items', 'paymentDetails', 'approvals'])
-            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER);
-
-        if ($request->filled('from_date')) {
-            $query->where('issue_date', '>=', $request->from_date);
-        }
-        if ($request->filled('to_date')) {
-            $query->where('issue_date', '<=', $request->to_date);
-        }
-
-        $this->applyMessReportQuerySort($query, $request, [
-            'issue_date' => 'issue_date',
-            'issue_number' => 'reference_number',
-            'store' => 'store_id',
-        ], 'issue_date', 'desc');
-
-        $issues = $query->paginate($this->messReportPerPage($request))->withQueryString();
-        $issues->getCollection()->transform(function (KitchenIssueMaster $issue) {
-            $issue->setAttribute('issue_number', $issue->reference_number);
-            $issue->setAttribute('total_amount', $issue->net_total);
-            $issue->setRelation('approval', $issue->approvals->sortByDesc('pk')->first());
-            $payment = $issue->paymentDetails->first();
-            if ($payment) {
-                $issue->setRelation('paymentDetails', $payment);
-            }
-
-            return $issue;
-        });
-
-        return view('admin.mess.reports.stock-issue-detail', compact('issues'));
-    }
-
-    public function itemsListReport(Request $request)
-    {
-        $nameColumn = ItemSubcategory::displayNameColumnForQuery();
-        $query = ItemSubcategory::query()
-            ->with('category')
-            ->where('status', 'active');
-
-        if ($request->filled('category_id')) {
-            $query->where('category_id', $request->category_id);
-        }
-        if ($request->filled('search')) {
-            $search = '%' . trim((string) $request->search) . '%';
-            $query->where(function ($q) use ($search, $nameColumn) {
-                $q->where($nameColumn, 'like', $search);
-                if (Schema::hasColumn('mess_item_subcategories', 'item_code')) {
-                    $q->orWhere('item_code', 'like', $search);
-                }
-            });
-        }
-
-        $sortMap = ['item_name' => $nameColumn, 'item_code' => 'item_code'];
-        if (Schema::hasColumn('mess_item_subcategories', 'standard_cost')) {
-            $sortMap['unit_price'] = 'standard_cost';
-        }
-        $this->applyMessReportQuerySort($query, $request, $sortMap, 'item_name', 'asc');
-
-        $items = $query->paginate($this->messReportPerPage($request))->withQueryString();
-        $items->getCollection()->transform(function (ItemSubcategory $item) {
-            $item->setAttribute('unit_of_measurement', $item->unit_measurement ?? 'Unit');
-            $item->setAttribute('minimum_stock', (float) ($item->alert_quantity ?? 0));
-            $item->setAttribute('unit_price', (float) ($item->standard_cost ?? 0));
-            $item->setAttribute('current_stock', 0);
-            $item->setAttribute('is_active', ($item->status ?? 'active') === ItemSubcategory::STATUS_ACTIVE);
-
-            return $item;
-        });
-        $categories = ItemCategory::active()->orderBy('category_name')->get();
-
-        return view('admin.mess.reports.items-list', compact('items', 'categories'));
-    }
-
-    public function purchaseOrdersReport(Request $request)
-    {
-        $query = PurchaseOrder::query()->with(['vendor', 'store', 'items', 'creator']);
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        $this->applyMessReportQuerySort($query, $request, [
-            'po_number' => 'po_number',
-            'po_date' => 'po_date',
-            'total_amount' => 'total_amount',
-            'status' => 'status',
-        ], 'po_date', 'desc');
-
-        $orders = $query->paginate($this->messReportPerPage($request))->withQueryString();
-
-        return view('admin.mess.reports.purchase-orders', compact('orders'));
-    }
-
-    public function pendingOrdersReport(Request $request)
-    {
-        $query = PurchaseOrder::query()
-            ->with(['vendor', 'store', 'items', 'creator'])
-            ->whereIn('status', ['pending', 'draft']);
-
-        $this->applyMessReportQuerySort($query, $request, [
-            'po_number' => 'po_number',
-            'po_date' => 'po_date',
-            'total_amount' => 'total_amount',
-        ], 'po_date', 'desc');
-
-        $orders = $query->paginate($this->messReportPerPage($request))->withQueryString();
-
-        return view('admin.mess.reports.pending-orders', compact('orders'));
-    }
-
-    public function messBillReport(Request $request)
-    {
-        $query = MonthlyBill::query()->with('user');
-
-        $this->applyMessReportQuerySort($query, $request, [
-            'bill_number' => 'bill_number',
-            'total_amount' => 'total_amount',
-            'balance' => 'balance',
-            'status' => 'status',
-            'period' => 'year',
-        ], 'year', 'desc');
-
-        $bills = $query->paginate($this->messReportPerPage($request))->withQueryString();
-
-        return view('admin.mess.reports.mess-bill', compact('bills'));
     }
 }
