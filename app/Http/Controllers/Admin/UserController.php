@@ -1774,6 +1774,9 @@ class UserController extends Controller
         // export 403s for users who see the on-screen table fine.
         $exportFacultyPk = get_auth_faculty_master_pk();
         if (! hasRole('Super Admin')
+            && ! hasRole('Training Induction Admin')
+            && ! hasRole('Training MCTP Admin')
+            && ! hasRole('Training IST')
             && ! is_faculty_portal_user()
             && ! ($exportFacultyPk && ! hasRole('Student-OT'))) {
             abort(403, 'You are not authorized to export the student list.');
@@ -1914,6 +1917,15 @@ class UserController extends Controller
         $facultyPk = get_auth_faculty_master_pk();
         $isSuperAdmin = hasRole('Super Admin');
 
+        // Training authorities (Induction / MCTP / IST admins) are administrative
+        // roles that oversee every course, not a single faculty's classes — the
+        // student-detail page already grants them Super-Admin-level access. Treat them
+        // the same here so their student list isn't empty (they have no faculty pk).
+        $seesAllCourses = $isSuperAdmin
+            || hasRole('Training Induction Admin')
+            || hasRole('Training MCTP Admin')
+            || hasRole('Training IST');
+
         // Active vs Archive scope. Only the OT-participants page sends status=archive;
         // everything else (student list, export) omits it and stays on "active".
         // Archive = course has ended (end_date < today); Active = still running.
@@ -1924,13 +1936,13 @@ class UserController extends Controller
         // scoped to their courses below. A coordinator/ACC is reached via their
         // faculty pk even if their login role isn't a standard faculty-portal role.
         // (Exclude Student-OT: their user_id can collide with a faculty pk.)
-        if ($isSuperAdmin || is_faculty_portal_user() || ($facultyPk && ! hasRole('Student-OT'))) {
+        if ($seesAllCourses || is_faculty_portal_user() || ($facultyPk && ! hasRole('Student-OT'))) {
 
-            if ($isSuperAdmin || $facultyPk) {
+            if ($seesAllCourses || $facultyPk) {
                 $source1Students = collect([]);
 
                 // Course set feeding the primary (enrollment) student source.
-                if ($isSuperAdmin) {
+                if ($seesAllCourses) {
                     $activeCoordinatorCourses = CourseMaster::where('active_inactive', 1)
                         ->where('end_date', $dateOp, now())
                         ->pluck('pk');
@@ -2029,7 +2041,7 @@ class UserController extends Controller
                 // in here (the session-level scope in expandStudentRowsBySession then
                 // keeps only this faculty's own sessions for such non-coordinated courses).
                 $source3Students = collect([]);
-                if ($facultyPk && ! $isSuperAdmin) {
+                if ($facultyPk && ! $seesAllCourses) {
                     $taughtRows = DB::table('course_student_attendance as a')
                         ->join('timetable as t', 'a.timetable_pk', '=', 't.pk')
                         ->where(function ($q) use ($facultyPk) {
@@ -2104,7 +2116,7 @@ class UserController extends Controller
                 // the current viewer is allowed to see. This is a student-list concern
                 // (and an N+1); skip it for callers that only want the course roster.
                 if ($withTotals) {
-                    $this->appendStudentsWithMemos($uniqueStudents, $seenStudentCourseKeys, $isSuperAdmin, $facultyPk);
+                    $this->appendStudentsWithMemos($uniqueStudents, $seenStudentCourseKeys, $seesAllCourses, $facultyPk);
                 }
 
                 // Batch-load House Name (hostel room, keyed by student_master.user_id == hostel user_name)
@@ -2188,8 +2200,9 @@ class UserController extends Controller
 
                 // Faculty session scope: a plain session-teacher sees only the
                 // sessions THEY conducted; a CC/ACC sees all sessions of the courses
-                // they coordinate. Super Admin (even with a faculty pk) is unscoped.
-                $sessionFacultyScope = $isSuperAdmin ? null : $facultyPk;
+                // they coordinate. Super Admin / Training authority (even with a
+                // faculty pk) is unscoped.
+                $sessionFacultyScope = $seesAllCourses ? null : $facultyPk;
                 $coordinatorCourseIds = $sessionFacultyScope
                     ? $this->getCoordinatorCourseIds($sessionFacultyScope)->map(fn ($id) => (string) $id)->values()->all()
                     : [];
