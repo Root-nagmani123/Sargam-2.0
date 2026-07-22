@@ -312,6 +312,7 @@
     $filters = $filters ?? [];
     $tabCounts = $tabCounts ?? ['all' => 0, 'present' => 0, 'absent' => 0];
     $activeAtt = in_array(($filters['attendance'] ?? 'all'), ['present', 'absent'], true) ? $filters['attendance'] : 'all';
+    $activeStatus = ($filters['status'] ?? 'active') === 'archive' ? 'archive' : 'active';
     $pad = fn ($n) => str_pad((string) (int) $n, 2, '0', STR_PAD_LEFT);
 @endphp
 <div class="container-fluid student-list-page">
@@ -375,6 +376,23 @@
                 </div>
             </a>
         </div>
+    </div>
+
+    {{-- Active / Archived course-status tabs. "Archived" surfaces students of
+         courses that have already ended so their old attendance stays viewable.
+         Switching does a full reload — the course list and student scope are
+         status-specific (see studentList()). --}}
+    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white" role="group" aria-label="Course status">
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $activeStatus === 'active' ? 'active' : '' }}"
+                    data-status="active">Active</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $activeStatus === 'archive' ? 'active' : '' }}"
+                    data-status="archive">Archived</button>
+            </li>
+        </ul>
     </div>
 
     {{-- All / Present / Absent tabs + Print / Download --}}
@@ -452,7 +470,6 @@
                     {{-- Cadre --}}
                     @if(($cadreOptions ?? collect())->isNotEmpty())
                     <div class="sl-filter-item" id="slItemCadre">
-                        <span class="sl-filter-label-text">Cadre</span>
                         <select id="cadreFilter" class="form-select sl-filter-select" aria-label="Filter by cadre">
                             <option value="">Cadre</option>
                             @foreach($cadreOptions as $cadre)
@@ -464,7 +481,6 @@
 
                     {{-- Session --}}
                     <div class="sl-filter-item" id="slItemSession">
-                        <span class="sl-filter-label-text">Session</span>
                         <select id="sessionFilter" class="form-select sl-filter-select" aria-label="Filter by session">
                             <option value="">Session</option>
                             @foreach(($sessionOptions ?? []) as $sess)
@@ -585,6 +601,7 @@
         const LOCKED_COLUMNS = [0, 1];
         let dt = null;
         let currentAttendance = (filters.attendance === 'present' || filters.attendance === 'absent') ? filters.attendance : 'all';
+        const currentStatus = (filters.status === 'archive') ? 'archive' : 'active';
         let loadingRequests = 0;
 
         function setTableLoading(show) {
@@ -608,6 +625,9 @@
                 participant: $('#participantFilter').val() || '',
                 from_date: (filters.from_date || '').toString(),
                 to_date: (filters.to_date || '').toString(),
+                // Keep the Active/Archived scope on every server-side reload so an
+                // Archived view doesn't silently fall back to active-course data.
+                status: currentStatus,
             };
         }
 
@@ -652,16 +672,35 @@
             return { changed: (!prevValid && prev !== '') };
         }
 
+        // Participant options are {pk, label} objects (value ≠ text), so they need a
+        // rebuild that keys the option value off pk and the display text off label.
+        function rebuildParticipantOptions($sel, items, placeholder) {
+            if (!$sel.length) { return { changed: false }; }
+            const prev = ($sel.val() || '').toString();
+            if ($sel.data('select2')) { $sel.select2('destroy'); }
+            $sel.empty().append($('<option>').val('').text(placeholder));
+            let prevValid = false;
+            (items || []).forEach(function(it) {
+                const val = (it && it.pk !== undefined && it.pk !== null) ? it.pk.toString() : '';
+                const $o = $('<option>').val(val).text((it && it.label != null) ? it.label.toString() : val);
+                if (val !== '' && val === prev) { $o.prop('selected', true); prevValid = true; }
+                $sel.append($o);
+            });
+            if (!prevValid && prev !== '') { $sel.val(''); }
+            return { changed: (!prevValid && prev !== '') };
+        }
+
         function applyCascadingFilterOptions(opts) {
             if (!opts || rebuildingFilters) { return; }
             rebuildingFilters = true;
             const sessRes = rebuildSelectOptions($('#sessionFilter'), opts.session, 'Session');
             const topicRes = rebuildSelectOptions($('#topicFilter'), opts.topic, 'Topic');
+            const partRes = rebuildParticipantOptions($('#participantFilter'), opts.participant, 'OT / Participant');
             initFilterSelect2();
             rebuildingFilters = false;
-            // A previously-selected Session/Topic that fell outside the new scope was
+            // A previously-selected Session/Topic/OT that fell outside the new scope was
             // cleared above — re-sync the URL and reload once so the table matches.
-            if (sessRes.changed || topicRes.changed) {
+            if (sessRes.changed || topicRes.changed || partRes.changed) {
                 syncUrl();
                 setTimeout(function() { if (dt) { dt.ajax.reload(null, false); } }, 0);
             }
@@ -749,14 +788,28 @@
           .on('draw.dt column-visibility.dt', function() { relayoutPinnedColumns(); });
 
         /* ── All / Present / Absent tabs ── */
-        $('.programme-status-tabs .programme-status-pill').on('click', function() {
+        // Scope to [data-attendance] — the Active/Archived row shares these classes.
+        $('.programme-status-pill[data-attendance]').on('click', function() {
             const att = $(this).data('attendance');
             if (att === currentAttendance) { return; }
             currentAttendance = att;
-            $('.programme-status-tabs .programme-status-pill').removeClass('active');
+            $('.programme-status-pill[data-attendance]').removeClass('active');
             $(this).addClass('active');
             syncUrl();
             if (dt) { dt.ajax.reload(null, true); }
+        });
+
+        /* ── Active / Archived course-status tabs ──
+           Full reload, not an AJAX refresh: the Course dropdown options and the
+           student scope are both status-specific and rebuilt server-side. Drop
+           course_id since a course from the other status won't exist in this list. */
+        $('.programme-status-pill[data-status]').on('click', function() {
+            const st = $(this).data('status');
+            if (st === currentStatus) { return; }
+            const p = new URLSearchParams(window.location.search);
+            p.set('status', st);
+            p.delete('course_id');
+            window.location.href = baseUrl + (p.toString() ? '?' + p.toString() : '');
         });
 
         /* ── Collapsible search ── */
@@ -789,7 +842,11 @@
         toggleCounsellorFaculty();
         $('#cadreFilter').on('change', function() { applyFilter({ cadre: this.value }); });
         $('#houseFilter').on('change', function() { applyFilter({ house: this.value }); });
-        $('#resetFilters').on('click', function() { window.location.href = baseUrl; });
+        $('#resetFilters').on('click', function() {
+            // Clear filters but stay on the current Active/Archived tab.
+            const qs = currentStatus === 'archive' ? '?status=archive' : '';
+            window.location.href = baseUrl + qs;
+        });
 
         /* ── Searchable filter dropdowns (Select2) ── */
         // Turn every filter <select> into a type-to-search dropdown. Select2 fires the

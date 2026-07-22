@@ -1032,6 +1032,13 @@ class UserController extends Controller
             $request->merge(['from_date' => $today, 'to_date' => $today]);
         }
 
+        // Active / Archived course status. "archive" shows students of courses that
+        // have already ended so their old attendance stays viewable; "active" (default)
+        // shows currently-running courses. The payload scopes students accordingly;
+        // the course-option queries below switch their end_date comparison to match.
+        $archive = $request->input('status') === 'archive';
+        $courseDateOp = $archive ? '<' : '>=';
+
         $payload = $this->resolveDashboardStudentListPayload($request);
         $students = $payload['students'];
         $availableCourses = $payload['availableCourses'];
@@ -1104,7 +1111,7 @@ class UserController extends Controller
             ->where('gmap.active_inactive', 1)
             ->where('cgroup.active_inactive', 1)
             ->where('cm.active_inactive', 1)
-            ->where('cm.end_date', '>=', now())
+            ->where('cm.end_date', $courseDateOp, now())
             ->where('fm.active_inactive', 1);
 
         // Filter by logged-in faculty if available
@@ -1152,7 +1159,7 @@ class UserController extends Controller
             ->join('faculty_master as fm', 'gmap.facility_id', '=', 'fm.pk')
             ->where('gmap.active_inactive', 1)
             ->where('cm.active_inactive', 1)
-            ->where('cm.end_date', '>=', now())
+            ->where('cm.end_date', $courseDateOp, now())
             ->where('fm.active_inactive', 1);
 
         // Filter by logged-in faculty if available
@@ -1189,7 +1196,7 @@ class UserController extends Controller
         // objects (student sources) and arrays ($groupMapCourses), hence the
         // normalisation below.
         $courseOptions = CourseMaster::where('active_inactive', '1')
-            ->where('end_date', '>=', now())
+            ->where('end_date', $courseDateOp, now())
             ->orderBy('course_name')
             ->get(['pk', 'course_name', 'couse_short_name', 'start_year', 'end_date'])
             // toBase(): Eloquent\Collection::merge() keys items by getKey(), which
@@ -1219,7 +1226,7 @@ class UserController extends Controller
             ->join('faculty_master as fm', 'gmap.facility_id', '=', 'fm.pk')
             ->where('gmap.active_inactive', 1)
             ->where('cm.active_inactive', 1)
-            ->where('cm.end_date', '>=', now())
+            ->where('cm.end_date', $courseDateOp, now())
             ->where('fm.active_inactive', 1)
             ->whereNotNull('gmap.group_name')
             ->where('gmap.group_name', '!=', '');
@@ -1258,21 +1265,9 @@ class UserController extends Controller
             (string) $request->input('session', '')
         );
 
-        // OT / Participant options (each distinct student) for that filter dropdown.
-        $participantOptions = $students
-            ->map(function ($m) {
-                $s = $m->studentMaster;
-                if (! $s) {
-                    return null;
-                }
-                $name = $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''));
-                $code = $s->generated_OT_code ?? '';
-                return (object) [
-                    'pk' => (string) $s->pk,
-                    'label' => trim(($code !== '' ? $code . ' — ' : '') . $name),
-                ];
-            })
-            ->filter()->unique('pk')->sortBy('label')->values();
+        // OT / Participant options (each distinct student), mapped to the selected
+        // Course so the OT list only shows participants of the chosen course.
+        $participantOptions = $this->dashboardStudentListParticipantOptions($students, $request);
 
         // Server-side filters (Course / ACC / Group / Cadre / House / Session / Participant).
         $students = $this->applyDashboardStudentListFilters($students, $request);
@@ -1329,6 +1324,7 @@ class UserController extends Controller
             'session' => (string) $request->input('session', ''),
             'topic' => (string) $request->input('topic', ''),
             'participant' => (string) $request->input('participant', ''),
+            'status' => $archive ? 'archive' : 'active',
         ];
 
         return view('admin.dashboard.student_list', compact('students', 'presentStudents', 'absentStudents', 'availableCourses', 'courseOptions', 'counsellorTypes', 'counsellorFaculties', 'groupNames', 'dutyTypes', 'filters', 'cadreOptions', 'houseOptions', 'sessionOptions', 'topicOptions', 'participantOptions', 'tabCounts', 'cardCounts', 'snapshotDate', 'listTitle'));
@@ -2469,6 +2465,43 @@ class UserController extends Controller
     }
 
     /**
+     * OT / Participant dropdown options, mapped to the selected Course so the OT
+     * list only shows participants belonging to the chosen course. With no course
+     * selected every in-scope participant is offered. Each option is a {pk, label}
+     * pair — pk is the student, label is "OT code — Name".
+     *
+     * @param  \Illuminate\Support\Collection  $students
+     * @return \Illuminate\Support\Collection
+     */
+    private function dashboardStudentListParticipantOptions($students, Request $request)
+    {
+        $courseId = (string) $request->input('course_id', '');
+
+        return $students
+            ->filter(function ($m) use ($courseId) {
+                if (! $m->studentMaster) {
+                    return false;
+                }
+                if ($courseId !== '' && (string) ($m->course->pk ?? '') !== $courseId) {
+                    return false;
+                }
+
+                return true;
+            })
+            ->map(function ($m) {
+                $s = $m->studentMaster;
+                $name = $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''));
+                $code = $s->generated_OT_code ?? '';
+
+                return (object) [
+                    'pk' => (string) $s->pk,
+                    'label' => trim(($code !== '' ? $code . ' — ' : '') . $name),
+                ];
+            })
+            ->unique('pk')->sortBy('label')->values();
+    }
+
+    /**
      * Distinct class-session time slots for the given students within the selected
      * Time Period (Session filter dropdown). Scoped to [$fromDate, $toDate].
      *
@@ -2799,15 +2832,24 @@ class UserController extends Controller
             if ($search !== '') {
                 $name = strtolower(trim((string) (($student->display_name ?? '') ?: trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')))));
                 $otCode = strtolower((string) ($student->generated_OT_code ?? ''));
+                $username = strtolower((string) ($student->user_id ?? ''));
                 $email = strtolower((string) ($student->email ?? ''));
                 $groupName = $studentMap->groupMapping->groupTypeMasterCourseMasterMap->group_name ?? null;
                 $cadre = strtolower((string) ($groupName ?: ($student->cadre->cadre_name ?? '')));
+                $topic = strtolower((string) ($studentMap->session_topic ?? ''));
+                $faculty = strtolower((string) $this->dashboardResolveSessionFaculty(
+                    $studentMap->session_faculty_master ?? null,
+                    $studentMap->session_internal_faculty ?? null
+                ));
 
                 if (
                     ! str_contains($name, $search)
                     && ! str_contains($otCode, $search)
+                    && ! str_contains($username, $search)
                     && ! str_contains($email, $search)
                     && ! str_contains($cadre, $search)
+                    && ! str_contains($topic, $search)
+                    && ! str_contains($faculty, $search)
                 ) {
                     return false;
                 }
@@ -2952,6 +2994,10 @@ class UserController extends Controller
             (string) $request->input('session', '')
         );
 
+        // OT / Participant options mapped to the selected Course, so the dropdown
+        // refreshes to that course's participants whenever the Course filter changes.
+        $participantOptions = $this->dashboardStudentListParticipantOptions($students, $request);
+
         [$filteredAll, $presentAll, $absentAll] = $this->dashboardStudentListTabSets($request, $students);
 
         $counts = [
@@ -3062,7 +3108,7 @@ class UserController extends Controller
                 // A faculty can be mapped to several courses, so each row names the
                 // course it belongs to — otherwise a multi-course list is ambiguous.
                 'course' => e($studentMap->course->course_name ?? 'N/A'),
-                'username' => e($student->email ?? 'N/A'),
+                'username' => e($student->user_id ?? 'N/A'),
                 'cadre' => e($student->cadre->cadre_name ?? 'N/A'),
                 'date' => e($studentMap->session_date ? \Illuminate\Support\Carbon::parse($studentMap->session_date)->format('d M Y') : 'N/A'),
                 'session' => e($studentMap->session_time ?: 'N/A'),
@@ -3119,6 +3165,7 @@ class UserController extends Controller
             'filterOptions' => [
                 'session' => $sessionOptions->values()->all(),
                 'topic' => $topicOptions->values()->all(),
+                'participant' => $participantOptions->values()->all(),
             ],
             'data' => $data,
         ]);
@@ -3421,7 +3468,8 @@ class UserController extends Controller
         return match ($sortKey) {
             'ot_code' => strtolower((string) ($student->generated_OT_code ?? '')),
             'name' => strtolower(trim((string) (($student->display_name ?? '') ?: trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''))))),
-            'username', 'email' => strtolower((string) ($student->email ?? '')),
+            'username' => strtolower((string) ($student->user_id ?? '')),
+            'email' => strtolower((string) ($student->email ?? '')),
             'cadre' => strtolower((string) ($student->cadre->cadre_name ?? '')),
             'course' => strtolower((string) ($studentMap->course->course_name ?? '')),
             'status' => (int) ($studentMap->attendance_present ?? true),
@@ -3511,7 +3559,7 @@ class UserController extends Controller
                 $student->generated_OT_code ?? 'N/A',
                 $displayName,
                 $studentMap->course->course_name ?? 'N/A',
-                $student->email ?? 'N/A',
+                $student->user_id ?? 'N/A',
                 $student->cadre->cadre_name ?? 'N/A',
                 $studentMap->session_date ? Carbon::parse($studentMap->session_date)->format('d M Y') : 'N/A',
                 $studentMap->session_time ?: 'N/A',
