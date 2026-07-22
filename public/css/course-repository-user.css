@@ -673,3 +673,18 @@
         display: none !important;
     }
 }
+
+/* ── Single-click reliability (see course-repository-admin.css) ──────────────
+   These clickable controls (View/Download/video icons, course & material/subject/
+   week cards) animate `transform` on :hover via a transition. A fast press during
+   that animation moves the target between mousedown and mouseup, so the `click`
+   never fires and it seems to need a double-click. Removing `transform` from the
+   animated properties makes the hover effect instant and holds the element still
+   during the press, so a single click always registers. ── */
+.cru-table-actions .btn-link,
+.course-card,
+.material-card,
+.subject-item,
+.week-item {
+    transition-property: color, background-color, box-shadow, border-color !important;
+}
