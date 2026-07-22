@@ -1047,17 +1047,23 @@ class SellingVoucherDateRangeController extends Controller
 
             $rowStoreIdentifier = $rowStoreType === 'sub_store' ? 'sub_'.$rowStoreId : (string) $rowStoreId;
 
+            $qty = (float) ($row->quantity ?? 0);
+            $retQty = (float) ($row->return_quantity ?? 0);
+            $netQty = max(0, $qty - $retQty);
+            $rate = (float) ($row->rate ?? 0);
+
             return [
                 'id' => (int) ($row->item_pk ?? 0),
                 'report_id' => (int) ($row->report_id ?? 0),
                 'item_subcategory_id' => $itemSubId > 0 ? $itemSubId : null,
                 'item_name' => trim((string) ($row->item_name ?? '')) ?: '—',
                 'unit' => trim((string) ($row->unit ?? '')) ?: '',
-                'quantity' => (float) ($row->quantity ?? 0),
+                'quantity' => $netQty,
+                'original_quantity' => $qty,
                 'available_quantity' => $currentAvailable,
-                'return_quantity' => (float) ($row->return_quantity ?? 0),
-                'rate' => (float) ($row->rate ?? 0),
-                'amount' => (float) ($row->amount ?? 0),
+                'return_quantity' => $retQty,
+                'rate' => $rate,
+                'amount' => $netQty * $rate,
                 'issue_date' => $issueDateYmd,
                 'store_id' => $rowStoreIdentifier,
                 'store_name' => trim((string) ($row->resolved_store_name ?? '')),
@@ -1271,15 +1277,21 @@ class SellingVoucherDateRangeController extends Controller
             $items = $report->items->map(function ($item) use ($availableMap, $report) {
                 $itemId = (int) ($item->item_subcategory_id ?? 0);
                 $currentAvailable = $itemId > 0 ? (float) ($availableMap[$itemId] ?? 0) : (float) ($item->available_quantity ?? 0);
+                $qty = (float) $item->quantity;
+                $retQty = (float) ($item->return_quantity ?? 0);
+                $netQty = max(0, $qty - $retQty);
+                $rate = (float) $item->rate;
                 return [
                     'item_subcategory_id' => $item->item_subcategory_id,
                     'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
                     'unit' => $item->unit ?? '',
-                    'quantity' => (float) $item->quantity,
+                    // Edit form shows net issued qty (same billable basis as View total).
+                    'quantity' => $netQty,
+                    'original_quantity' => $qty,
                     'available_quantity' => $currentAvailable,
-                    'return_quantity' => (float) ($item->return_quantity ?? 0),
-                    'rate' => (float) $item->rate,
-                    'amount' => (float) $item->amount,
+                    'return_quantity' => $retQty,
+                    'rate' => $rate,
+                    'amount' => $netQty * $rate,
                     'issue_date' => $item->issue_date ? $item->issue_date->format('Y-m-d') : '',
                     'store_name' => $report->resolved_store_name,
                     'store_id' => ($report->store_type === 'sub_store' ? 'sub_' : '') . (int) $report->store_id,
@@ -1372,13 +1384,15 @@ class SellingVoucherDateRangeController extends Controller
                 if ($itemId > 0) $requestedByItem[$itemId] = ($requestedByItem[$itemId] ?? 0) + $qty;
             }
 
-            // When updating: effective available = current stock + this voucher's existing issue qty per item
+            // When updating: effective available = current stock + this voucher's existing net issue qty per item
             // (so saving without changes or adding different items does not fail)
             $existingQtyByItem = [];
             foreach ($report->items as $existingItem) {
                 $itemId = (int) ($existingItem->item_subcategory_id ?? 0);
                 if ($itemId > 0) {
-                    $existingQtyByItem[$itemId] = ($existingQtyByItem[$itemId] ?? 0) + (float) ($existingItem->quantity ?? 0);
+                    $grossQty = (float) ($existingItem->quantity ?? 0);
+                    $retQty = (float) ($existingItem->return_quantity ?? 0);
+                    $existingQtyByItem[$itemId] = ($existingQtyByItem[$itemId] ?? 0) + max(0, $grossQty - $retQty);
                 }
             }
 
@@ -1444,19 +1458,25 @@ class SellingVoucherDateRangeController extends Controller
 
             foreach ($request->items as $row) {
                 $sub = $subcategories->get($row['item_subcategory_id']);
-                $qty = (float) ($row['quantity'] ?? 0);
+                // Form quantity is net (billable). Preserve return and store gross = net + return.
+                $netQty = (float) ($row['quantity'] ?? 0);
+                $returnQty = (float) ($row['return_quantity'] ?? 0);
+                if ($returnQty < 0) {
+                    $returnQty = 0;
+                }
+                $grossQty = $netQty + $returnQty;
                 $rate = (float) ($row['rate'] ?? 0);
                 $avail = (float) ($row['available_quantity'] ?? 0);
                 $itemIssueDate = $row['issue_date'] ?? $issueDate;
-                $amount = $qty * $rate;
+                $amount = $netQty * $rate;
                 $grandTotal += $amount;
                 SellingVoucherDateRangeReportItem::create([
                     'sv_date_range_report_id' => $report->id,
                     'item_subcategory_id' => $row['item_subcategory_id'],
                     'item_name' => $sub ? ($sub->item_name ?? $sub->name ?? '') : '',
-                    'quantity' => $qty,
+                    'quantity' => $grossQty,
                     'available_quantity' => $avail,
-                    'return_quantity' => (float) ($row['return_quantity'] ?? 0),
+                    'return_quantity' => $returnQty,
                     'rate' => $rate,
                     'amount' => $amount,
                     'unit' => $sub->unit_measurement ?? '',
@@ -1645,7 +1665,12 @@ class SellingVoucherDateRangeController extends Controller
             foreach ((array) $request->items as $row) {
                 $lineId = (int) ($row['line_id'] ?? 0);
                 $itemSubId = (int) ($row['item_subcategory_id'] ?? 0);
-                $qty = (float) ($row['quantity'] ?? 0);
+                $netQty = (float) ($row['quantity'] ?? 0);
+                $returnQty = (float) ($row['return_quantity'] ?? 0);
+                if ($returnQty < 0) {
+                    $returnQty = 0;
+                }
+                $grossQty = $netQty + $returnQty;
                 $rate = (float) ($row['rate'] ?? 0);
                 $avail = (float) ($row['available_quantity'] ?? 0);
                 $sub = $subcategories->get($itemSubId);
@@ -1678,13 +1703,13 @@ class SellingVoucherDateRangeController extends Controller
                     }
 
                     $currentStock = (float) ($availabilityCache[$cacheKey][$itemSubId] ?? 0);
-                    if ($qty > $currentStock) {
+                    if ($netQty > $currentStock) {
                         $name = $sub ? ($sub->item_name ?? $sub->name ?? ('Item #'.$itemSubId)) : ('Item #'.$itemSubId);
                         DB::rollBack();
 
                         return redirect()->route('admin.mess.selling-voucher-date-range.index')
                             ->withInput()
-                            ->with('error', "{$name}: issue {$qty} cannot exceed available {$currentStock}.");
+                            ->with('error', "{$name}: issue {$netQty} cannot exceed available {$currentStock}.");
                     }
 
                     $itemIssueDate = trim((string) ($row['issue_date'] ?? ''));
@@ -1710,14 +1735,14 @@ class SellingVoucherDateRangeController extends Controller
                         $targetReportCache
                     );
 
-                    $amount = $qty * $rate;
+                    $amount = $netQty * $rate;
                     SellingVoucherDateRangeReportItem::create([
                         'sv_date_range_report_id' => $targetReport->id,
                         'item_subcategory_id' => $itemSubId,
                         'item_name' => $sub ? ($sub->item_name ?? $sub->name ?? '') : '',
-                        'quantity' => $qty,
+                        'quantity' => $grossQty,
                         'available_quantity' => $avail,
-                        'return_quantity' => 0,
+                        'return_quantity' => $returnQty,
                         'rate' => $rate,
                         'amount' => $amount,
                         'unit' => $sub->unit_measurement ?? '',
@@ -1752,23 +1777,24 @@ class SellingVoucherDateRangeController extends Controller
                 }
 
                 $currentStock = (float) ($availabilityCache[$cacheKey][$itemSubId] ?? 0);
-                $existingQty = (float) ($item->quantity ?? 0);
-                $effectiveAvailable = $currentStock + $existingQty;
-                if ($qty > $effectiveAvailable) {
+                $existingNetQty = max(0, (float) ($item->quantity ?? 0) - (float) ($item->return_quantity ?? 0));
+                $effectiveAvailable = $currentStock + $existingNetQty;
+                if ($netQty > $effectiveAvailable) {
                     $name = $sub ? ($sub->item_name ?? $sub->name ?? ('Item #'.$itemSubId)) : ('Item #'.$itemSubId);
                     DB::rollBack();
 
                     return redirect()->route('admin.mess.selling-voucher-date-range.index')
                         ->withInput()
-                        ->with('error', "{$name}: issue {$qty} cannot exceed available {$effectiveAvailable}.");
+                        ->with('error', "{$name}: issue {$netQty} cannot exceed available {$effectiveAvailable}.");
                 }
 
-                $amount = $qty * $rate;
+                $amount = $netQty * $rate;
                 $item->update([
                     'item_subcategory_id' => $itemSubId,
                     'item_name' => $sub ? ($sub->item_name ?? $sub->name ?? '') : ($item->item_name ?? ''),
-                    'quantity' => $qty,
+                    'quantity' => $grossQty,
                     'available_quantity' => $avail,
+                    'return_quantity' => $returnQty,
                     'rate' => $rate,
                     'amount' => $amount,
                     'unit' => $sub->unit_measurement ?? ($item->unit ?? ''),
@@ -1785,9 +1811,10 @@ class SellingVoucherDateRangeController extends Controller
                 }
                 $grandTotal = $reportModel->items->sum(function ($line) {
                     $lineQty = (float) ($line->quantity ?? 0);
+                    $lineRet = (float) ($line->return_quantity ?? 0);
                     $lineRate = (float) ($line->rate ?? 0);
 
-                    return $lineQty * $lineRate;
+                    return max(0, $lineQty - $lineRet) * $lineRate;
                 });
                 $reportModel->update(['total_amount' => $grandTotal]);
             }

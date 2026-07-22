@@ -4264,16 +4264,21 @@ $selectedClientType = (string) request()->input('client_type', '');
         }
         const optionsHtml = options.join('');
         const avail = item.available_quantity != null ? item.available_quantity : '';
+        const returnQty = parseFloat(item.return_quantity) || 0;
         const qty = item.quantity != null ? item.quantity : '';
         const rate = item.rate != null ? item.rate : '';
         const issueDate = item.issue_date || '';
-        const total = (qty && rate) ? (parseFloat(qty) * parseFloat(rate)).toFixed(2) : '';
+        const total = (item.amount != null)
+            ? Number(item.amount).toFixed(2)
+            : ((qty !== '' && rate !== '') ? (parseFloat(qty) * parseFloat(rate)).toFixed(2) : '');
         const left = (avail !== '' && qty !== '') ? Math.max(0, parseFloat(avail) - parseFloat(qty)).toFixed(2) :
             '';
-        const originalQtyAttr = (item.quantity != null && item.quantity !== '') ? (' data-original-qty="' + (
-            parseFloat(item.quantity) || 0) + '"') : '';
+        const originalQtyAttr = (qty !== '' && qty != null) ? (' data-original-qty="' + (
+            parseFloat(qty) || 0) + '" data-return-qty="' + returnQty + '"') : '';
         const lineIdField = item.id ? ('<input type="hidden" name="items[' + index + '][line_id]" value="' +
             item.id + '">') : '';
+        const returnQtyField = '<input type="hidden" name="items[' + index +
+            '][return_quantity]" class="edit-dr-return-qty-hidden" value="' + returnQty + '">';
         const storeId = item.store_id || (!isExistingLine ? '' : (editCurrentStoreId || ''));
         const storeName = String(item.store_name || (!isExistingLine ? '' : editCurrentStoreName) || '—')
             .replace(/</g, '&lt;').replace(/"/g, '&quot;');
@@ -4289,7 +4294,7 @@ $selectedClientType = (string) request()->input('client_type', '');
         }
         return '<tr class="edit-dr-item-row"' + originalQtyAttr + '>' +
             storeCell +
-            '<td>' + lineIdField + '<select name="items[' + index +
+            '<td>' + lineIdField + returnQtyField + '<select name="items[' + index +
             '][item_subcategory_id]" class="form-select  edit-dr-item-select" required><option value="">Select Item</option>' +
             optionsHtml + '</select></td>' +
             '<td><input type="text" name="items[' + index +
@@ -4417,6 +4422,9 @@ $selectedClientType = (string) request()->input('client_type', '');
             updateEditGrandTotal();
         });
         newTr.querySelector('.edit-dr-item-select').addEventListener('change', function() {
+            const retHidden = newTr.querySelector('.edit-dr-return-qty-hidden');
+            if (retHidden) retHidden.value = '0';
+            newTr.setAttribute('data-return-qty', '0');
             const o = getSelectSelectedOption(this);
             newTr.querySelector('.edit-dr-unit').value = (o && o.dataset.unit) ? o.dataset.unit :
                 '—';
@@ -4833,6 +4841,9 @@ $selectedClientType = (string) request()->input('client_type', '');
                 updateEditGrandTotal();
             });
             row.querySelector('.edit-dr-item-select').addEventListener('change', function() {
+                const retHidden = row.querySelector('.edit-dr-return-qty-hidden');
+                if (retHidden) retHidden.value = '0';
+                row.setAttribute('data-return-qty', '0');
                 const o = getSelectSelectedOption(this);
                 row.querySelector('.edit-dr-unit').value = (o && o.dataset.unit) ? o.dataset.unit :
                     '—';

@@ -1735,15 +1735,21 @@ class KitchenIssueController extends Controller
             $items = $kitchenIssue->items->map(function ($item) use ($availableMap) {
                 $itemId = (int) ($item->item_subcategory_id ?? 0);
                 $currentAvailable = $itemId > 0 ? (float) ($availableMap[$itemId] ?? 0) : (float) ($item->available_quantity ?? 0);
+                $qty = (float) $item->quantity;
+                $retQty = (float) ($item->return_quantity ?? 0);
+                $netQty = max(0, $qty - $retQty);
+                $rate = (float) $item->rate;
                 return [
                     'item_subcategory_id' => $item->item_subcategory_id,
                     'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? '—'),
                     'unit' => $item->unit ?? '',
-                    'quantity' => (float) $item->quantity,
+                    // Edit form shows net issued qty (same billable basis as View total).
+                    'quantity' => $netQty,
+                    'original_quantity' => $qty,
                     'available_quantity' => $currentAvailable,
-                    'return_quantity' => (float) ($item->return_quantity ?? 0),
-                    'rate' => (float) $item->rate,
-                    'amount' => (float) $item->amount,
+                    'return_quantity' => $retQty,
+                    'rate' => $rate,
+                    'amount' => $netQty * $rate,
                 ];
             })->values()->toArray();
             return response()->json(['voucher' => $voucher, 'items' => $items]);
@@ -1888,11 +1894,16 @@ class KitchenIssueController extends Controller
             // When updating: effective available = current stock + this voucher's existing issue qty per item
             // (so saving without changes does not fail)
             $existingQtyByItem = [];
+            $existingReturnByItem = [];
             $existingItemDisplayById = [];
             foreach ($kitchenIssue->items as $existingItem) {
                 $itemId = (int) ($existingItem->item_subcategory_id ?? 0);
                 if ($itemId > 0) {
-                    $existingQtyByItem[$itemId] = ($existingQtyByItem[$itemId] ?? 0) + (float) ($existingItem->quantity ?? 0);
+                    $grossQty = (float) ($existingItem->quantity ?? 0);
+                    $retQty = (float) ($existingItem->return_quantity ?? 0);
+                    // Stock is reduced by net issued qty (gross - return).
+                    $existingQtyByItem[$itemId] = ($existingQtyByItem[$itemId] ?? 0) + max(0, $grossQty - $retQty);
+                    $existingReturnByItem[$itemId] = ($existingReturnByItem[$itemId] ?? 0) + $retQty;
                     if (!isset($existingItemDisplayById[$itemId])) {
                         $existingItemDisplayById[$itemId] = [
                             'item_name' => $existingItem->item_name ?? '',
@@ -1980,19 +1991,28 @@ class KitchenIssueController extends Controller
 
             foreach ($request->items as $row) {
                 $sub = $subcategories->get($row['item_subcategory_id']);
-                $qty = (float) ($row['quantity'] ?? 0);
+                $itemId = (int) ($row['item_subcategory_id'] ?? 0);
+                // Form quantity is net (billable). Preserve return and store gross = net + return.
+                $netQty = (float) ($row['quantity'] ?? 0);
+                $returnQty = array_key_exists('return_quantity', $row)
+                    ? (float) ($row['return_quantity'] ?? 0)
+                    : (float) ($existingReturnByItem[$itemId] ?? 0);
+                if ($returnQty < 0) {
+                    $returnQty = 0;
+                }
+                $grossQty = $netQty + $returnQty;
                 $rate = (float) ($row['rate'] ?? 0);
                 $avail = (float) ($row['available_quantity'] ?? 0);
-                $fallbackDisplay = $existingItemDisplayById[(int) $row['item_subcategory_id']] ?? ['item_name' => '', 'unit' => ''];
+                $fallbackDisplay = $existingItemDisplayById[$itemId] ?? ['item_name' => '', 'unit' => ''];
                 KitchenIssueItem::create([
                     'kitchen_issue_master_pk' => $kitchenIssue->pk,
                     'item_subcategory_id' => $row['item_subcategory_id'],
                     'item_name' => $sub ? ($sub->item_name ?? $sub->name ?? '') : $fallbackDisplay['item_name'],
-                    'quantity' => $qty,
+                    'quantity' => $grossQty,
                     'available_quantity' => $avail,
-                    'return_quantity' => 0,
+                    'return_quantity' => $returnQty,
                     'rate' => $rate,
-                    'amount' => $qty * $rate,
+                    'amount' => $netQty * $rate,
                     'unit' => $sub ? ($sub->unit_measurement ?? '') : $fallbackDisplay['unit'],
                 ]);
             }
