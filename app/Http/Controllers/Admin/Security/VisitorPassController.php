@@ -13,13 +13,62 @@ use Illuminate\Support\Facades\DB;
 
 class VisitorPassController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $visitorPasses = SecVisitorCardGenerated::with(['employee', 'visitorNames', 'createdBy'])
-            ->orderBy('created_date', 'desc')
-            ->paginate(10);
+        // First load (no date params at all) defaults to today. Once the user has
+        // touched the picker, an explicitly empty from_date/to_date means "all
+        // dates" — that's what the range picker's Clear button submits.
+        if (!$request->has('from_date') && !$request->has('to_date')) {
+            $fromDateFilter = now()->toDateString();
+            $toDateFilter = now()->toDateString();
+        } else {
+            $fromDateFilter = $request->get('from_date') ?: null;
+            $toDateFilter = $request->get('to_date') ?: null;
+        }
 
-        return view('admin.security.visitor_pass.index', compact('visitorPasses'));
+        $statusFilter = $request->get('status', '');
+        $employeeFilter = $request->get('employee_master_pk', '');
+        $searchFilter = trim((string) $request->get('search', ''));
+
+        $visitorPasses = SecVisitorCardGenerated::with(['employee', 'visitorNames', 'createdBy'])
+            ->when($fromDateFilter && $toDateFilter, function ($query) use ($fromDateFilter, $toDateFilter) {
+                $query->whereBetween('created_date', [$fromDateFilter . ' 00:00:00', $toDateFilter . ' 23:59:59']);
+            })
+            ->when($statusFilter === 'active', function ($query) {
+                $query->whereNull('out_time');
+            })
+            ->when($statusFilter === 'checked_out', function ($query) {
+                $query->whereNotNull('out_time');
+            })
+            ->when($employeeFilter, function ($query) use ($employeeFilter) {
+                $query->where('employee_master_pk', $employeeFilter);
+            })
+            ->when($searchFilter !== '', function ($query) use ($searchFilter) {
+                $query->where(function ($sub) use ($searchFilter) {
+                    $sub->where('pass_number', 'like', "%{$searchFilter}%")
+                        ->orWhere('company', 'like', "%{$searchFilter}%")
+                        ->orWhere('vehicle_number', 'like', "%{$searchFilter}%")
+                        ->orWhere('mobile_number', 'like', "%{$searchFilter}%")
+                        ->orWhereHas('visitorNames', function ($vn) use ($searchFilter) {
+                            $vn->where('visitor_name', 'like', "%{$searchFilter}%");
+                        });
+                });
+            })
+            ->orderBy('created_date', 'desc')
+            ->paginate(10)
+            ->appends([
+                'from_date' => $fromDateFilter ?? '',
+                'to_date' => $toDateFilter ?? '',
+                'status' => $statusFilter,
+                'employee_master_pk' => $employeeFilter,
+                'search' => $searchFilter,
+            ]);
+
+        $employees = EmployeeMaster::where('status', 1)->orderBy('first_name')->get();
+
+        return view('admin.security.visitor_pass.index', compact(
+            'visitorPasses', 'fromDateFilter', 'toDateFilter', 'statusFilter', 'employeeFilter', 'searchFilter', 'employees'
+        ));
     }
 
     public function create()

@@ -926,11 +926,11 @@ class CourseRepositoryController extends Controller
      * Get subjects by course (AJAX endpoint)
      * GET /course-repository/subjects/{coursePk}
      */
-    public function getSubjectsByCourse($coursePk = null, Request $request = null)
+    public function getSubjectsByCourse($coursePk, Request $request)
     {
         try {
             // Support both route parameter and query parameter for flexibility
-            if (!$coursePk && $request) {
+            if (!$coursePk) {
                 $coursePk = $request->query('course_pk');
             }
             
@@ -957,32 +957,35 @@ class CourseRepositoryController extends Controller
      * Get topics by subject (AJAX endpoint)
      * GET /course-repository/topics/{subjectPk}?course_master_pk={coursePk}
      */
-    public function getTopicsBySubject($subjectPk = null, Request $request = null)
+    public function getTopicsBySubject($subjectPk, Request $request)
     {
         try {
             // Support both route parameter and query parameter for flexibility
-            if (!$subjectPk && $request) {
+            if (!$subjectPk) {
                 $subjectPk = $request->query('subject_pk');
             }
-            
+
             // Get coursePk from query parameter
-            $coursePk = $request ? $request->query('course_master_pk') : null;
-            
+            $coursePk = $request->query('course_master_pk');
+
             if (!$subjectPk) {
                 return response()->json(['success' => false, 'data' => []], 422);
             }
 
-            // Get all topics that are mapped to this subject in course_repository_details
-            $query = Timetable::distinct()
-                ->leftJoin('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
-                ->where('timetable.subject_master_pk', $subjectPk);
-            
-            // Only filter by course if provided
-            if ($coursePk) {
-                $query->where('timetable.course_master_pk', $coursePk);
+            // A subject can be shared across many courses in the timetable table, so
+            // without the course scope this would return every topic ever taught under
+            // this subject, regardless of course. Fail closed (empty list) rather than
+            // silently falling back to the unscoped, cross-course result.
+            if (!$coursePk) {
+                return response()->json(['success' => true, 'data' => []]);
             }
-            
-            $topics = $query->select('timetable.pk', 'timetable.subject_topic', 'faculty_master.full_name as faculty_name', 'timetable.START_DATE')
+
+            // Get all topics that are mapped to this subject AND course in the timetable
+            $topics = Timetable::distinct()
+                ->leftJoin('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
+                ->where('timetable.subject_master_pk', $subjectPk)
+                ->where('timetable.course_master_pk', $coursePk)
+                ->select('timetable.pk', 'timetable.subject_topic', 'faculty_master.full_name as faculty_name', 'timetable.START_DATE')
                 ->get();
 
             return response()->json(['success' => true, 'data' => $topics]);
