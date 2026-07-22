@@ -1672,17 +1672,20 @@ table>thead {
     box-shadow: var(--ds-focus-ring, 0 0 0 .2rem rgba(0, 74, 147, .35)), var(--ds-shadow-lg, 0 4px 12px rgba(16, 24, 40, .18));
 }
 
+/* The ring around the "!" comes from the error_outline glyph itself, not from a
+   border here — a CSS border would draw a second circle around it. */
 .dash-report-fab-icon {
     position: relative;
-    font-size: 1.5rem;
+    font-size: 26px;
     line-height: 1;
-    border: 2px solid #fff;
-    border-radius: 50%;
     width: 26px;
     height: 26px;
     display: flex;
     align-items: center;
     justify-content: center;
+    /* Lifts the icon off dead-centre so it clears the curved label below it.
+       In a centre-justified flex column this shifts the icon up by half the value. */
+    margin-bottom: 12px;
     animation: dash-report-attention 2.4s ease-in-out infinite;
 }
 
@@ -1725,13 +1728,18 @@ table>thead {
     }
 }
 
-.dash-report-fab-label {
-    font-size: .625rem;
+/* Curved label. Sized in viewBox units (viewBox is 100x100 over an 84px button), so
+   it scales with the button and needs no separate mobile font-size override. */
+.dash-report-fab-arc {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    fill: #fff;
+    font-size: 14.5px;
     font-weight: 600;
-    line-height: 1.15;
-    letter-spacing: .02em;
-    text-align: center;
-    white-space: nowrap;
+    letter-spacing: .04em;
 }
 
 .dash-report-modal .modal-content {
@@ -1777,7 +1785,6 @@ table>thead {
         bottom: var(--ds-space-3, 1rem);
     }
 
-    .dash-report-fab-label {
-        font-size: .5rem;
-    }
+    /* No label font-size override needed: .dash-report-fab-arc is sized in viewBox
+       units, so it scales down with the button automatically. */
 }

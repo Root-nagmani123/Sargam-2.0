@@ -189,6 +189,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/issue-reports', [\App\Http\Controllers\Admin\IssueReportController::class, 'index'])->name('admin.issue-reports.index');
     Route::get('/issue-reports/{id}', [\App\Http\Controllers\Admin\IssueReportController::class, 'show'])->whereNumber('id')->name('admin.issue-reports.show');
     Route::post('/issue-reports/{id}/status', [\App\Http\Controllers\Admin\IssueReportController::class, 'updateStatus'])->whereNumber('id')->name('admin.issue-reports.status');
+    // Reporter-facing view of their OWN complaints. Intentionally not gated to admins —
+    // the row scoping lives in MyComplaintDataTable::query() and myComplaintShow().
+    Route::get('/my-complaints', [\App\Http\Controllers\Admin\IssueReportController::class, 'myComplaints'])->name('admin.my-complaints.index');
+    Route::get('/my-complaints/{id}', [\App\Http\Controllers\Admin\IssueReportController::class, 'myComplaintShow'])->whereNumber('id')->name('admin.my-complaints.show');
     Route::get('/directory/lbsnaa', [DirectoryController::class, 'lbsnaa'])->name('admin.directory.lbsnaa');
     Route::get('/directory/ot', [DirectoryController::class, 'ot'])->name('admin.directory.ot');
 

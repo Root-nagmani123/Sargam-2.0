@@ -92,8 +92,8 @@
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             <div class="modal-header bg-primary text-white border-0 py-3 px-4">
                 <h5 class="modal-title fw-semibold d-flex align-items-center gap-2 mb-0" id="issueDetailModalLabel">
-                    <i class="bi bi-exclamation-diamond-fill" aria-hidden="true"></i>
-                    <span id="issueDetailRef">Issue details</span>
+                    <i class="bi bi-exclamation-diamond-fill text-white" aria-hidden="true"></i>
+                    <span id="issueDetailRef" class="text-white">Issue details</span>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>

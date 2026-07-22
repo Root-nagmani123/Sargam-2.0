@@ -1,8 +1,18 @@
 {{-- Floating "Report Issue" launcher + "Report a problem" modal (dashboard only) --}}
 <button type="button" class="dash-report-fab" data-bs-toggle="modal" data-bs-target="#reportIssueModal"
     aria-label="Report an issue">
-    <i class="bi bi-exclamation-lg dash-report-fab-icon" aria-hidden="true"></i>
-    <span class="dash-report-fab-label">Report Issue</span>
+    {{-- error_outline is the "!" in a ring, so the glyph supplies the circle the design
+         shows. The CSS ring that used to draw it was removed to avoid a double circle. --}}
+    <i class="material-icons material-symbols-rounded dash-report-fab-icon" aria-hidden="true">error_outline</i>
+    {{-- Label curves along the button's lower arc. The arc runs left→right across the
+         bottom (sweep-flag 0), which is what keeps the glyphs upright rather than
+         inverted. aria-hidden because the button's aria-label already announces it. --}}
+    <svg class="dash-report-fab-arc" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+        <path id="dashReportArcPath" d="M 16,50 A 34,34 0 0 0 84,50" fill="none" />
+        <text text-anchor="middle">
+            <textPath href="#dashReportArcPath" startOffset="50%">Report Issue</textPath>
+        </text>
+    </svg>
 </button>
 
 <div class="modal fade" id="reportIssueModal" tabindex="-1" aria-labelledby="reportIssueModalLabel" aria-hidden="true"
@@ -42,7 +52,7 @@
                         <label for="reportIssueDescription" class="form-label">Issue Description<span
                                 class="text-danger">*</span></label>
                         <textarea class="form-control" id="reportIssueDescription" name="description" rows="4"
-                            placeholder="eg. Lorem ipsum dolor sit" maxlength="5000" required></textarea>
+                            placeholder="eg. Enter Issue Description...." maxlength="5000" required></textarea>
                         <div class="invalid-feedback" data-error-for="description"></div>
                     </div>
 
@@ -56,6 +66,12 @@
                 </div>
 
                 <div class="modal-footer">
+                    {{-- Reporters reach their own complaints from here rather than the
+                         sidebar: sidebar menus are permission-gated per user, so a menu
+                         entry would be invisible to the officer trainees who file most
+                         of these. --}}
+                    <a href="{{ route('admin.my-complaints.index') }}"
+                        class="btn btn-link text-decoration-none me-auto px-0">View my complaints</a>
                     <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary" id="reportIssueSubmit">Report</button>
                 </div>
