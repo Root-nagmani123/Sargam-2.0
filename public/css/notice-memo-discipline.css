@@ -1145,6 +1145,30 @@
     flex-shrink: 0;
 }
 
+/* Frozen (pinned) columns: locked on, can't be toggled off. The :has(input:checked)
+   selector below matches the checked-chip rule's specificity so this grey "locked"
+   look wins on source order (a frozen chip is always checked). */
+.sn-colvis-chip--locked,
+.sn-colvis-chip--locked:hover,
+.sn-colvis-chip--locked:has(input:checked) {
+    cursor: not-allowed;
+    background: #f2f4f7;
+    border-color: #e4e7ec;
+    color: #667085;
+}
+
+.sn-colvis-chip--locked .form-check-input {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.sn-colvis-lock {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: #98a2b3;
+    flex-shrink: 0;
+}
+
 .sn-colvis-chip .form-check-input:checked {
     background-color: #004a93;
     border-color: #004a93;

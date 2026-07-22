@@ -1095,7 +1095,9 @@ $(document).ready(function() {
     // Each pinned column's `left` is the summed width of the pinned columns
     // before it. Those widths depend on content, sort, the Columns modal and the
     // viewport, so they're measured here rather than hard-coded in CSS.
-    var DISC_FROZEN_COLS = 4; // select, S. No., Program Name, Name
+    // select, S. No., Program Name, Name. Exposed on window so the Column
+    // Visibility modal (built in a separate ready handler) can lock these.
+    var DISC_FROZEN_COLS = window.DISC_FROZEN_COLS = 4;
 
     window.discFreezeColumns = function () {
         var table = document.getElementById('discTable');
@@ -1361,16 +1363,33 @@ $(document).ready(function() {
         var label = $(this).text().trim();
         if (!label) return;
 
+        // Frozen (pinned) columns must always stay visible — hiding one would leave
+        // a gap in the sticky block — so their toggle is locked on and disabled.
+        var frozen = i < window.DISC_FROZEN_COLS;
+        var lockTitle = 'Frozen column — always visible';
+
         var id = 'discCol' + i;
-        $discGrid.append(
-            $('<label class="sn-colvis-chip">').attr({ 'for': id, title: label })
-                .append($('<input type="checkbox" class="form-check-input disc-col-toggle">')
-                    .attr({ id: id, 'data-col': i, 'data-label': label })
-                    .prop('checked', discHidden.indexOf(label) === -1))
-                .append(' ')
-                .append($('<span>').text(label))
-        );
+        var $checkbox = $('<input type="checkbox" class="form-check-input disc-col-toggle">')
+            .attr({ id: id, 'data-col': i, 'data-label': label })
+            .prop('checked', frozen ? true : discHidden.indexOf(label) === -1);
+        if (frozen) {
+            $checkbox.prop('disabled', true);
+        }
+
+        var $chip = $('<label class="sn-colvis-chip' + (frozen ? ' sn-colvis-chip--locked' : '') + '">')
+            .attr({ 'for': id, title: frozen ? lockTitle : label })
+            .append($checkbox)
+            .append(' ')
+            .append($('<span>').text(label));
+        if (frozen) {
+            $chip.append($('<i class="bi bi-lock-fill sn-colvis-lock" aria-hidden="true">'));
+        }
+        $discGrid.append($chip);
     });
+
+    // Normalise storage: a column that is now frozen must not linger in a
+    // previously-saved hidden list, or discApplyColumnVisibility would fight the lock.
+    window.discSaveHiddenCols();
     $discGrid.on('change', '.disc-col-toggle', function() {
         window.discSaveHiddenCols();
         var nth = parseInt($(this).data('col'), 10) + 1;
