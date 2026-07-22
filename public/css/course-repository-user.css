@@ -676,15 +676,25 @@
 
 /* ── Single-click reliability (see course-repository-admin.css) ──────────────
    These clickable controls (View/Download/video icons, course & material/subject/
-   week cards) animate `transform` on :hover via a transition. A fast press during
-   that animation moves the target between mousedown and mouseup, so the `click`
-   never fires and it seems to need a double-click. Removing `transform` from the
-   animated properties makes the hover effect instant and holds the element still
-   during the press, so a single click always registers. ── */
+   week cards) moved on :hover (transform translateY/scale). On small targets that
+   shift makes mousedown/mouseup land on different points — and at the edge the
+   shift can un-hover → snap back → re-hover (flicker) — so `click` intermittently
+   fails to fire and it seems to need a double-click. Removing the hover MOVEMENT
+   entirely keeps the element still under the cursor, so a single click always
+   registers. Colour/shadow hover feedback is kept. ── */
 .cru-table-actions .btn-link,
 .course-card,
 .material-card,
 .subject-item,
 .week-item {
     transition-property: color, background-color, box-shadow, border-color !important;
+}
+.cru-table-actions .btn-link:hover,
+.course-card:hover,
+.material-card:hover,
+.subject-item:hover,
+.week-item:hover,
+.cru-btn-primary:hover,
+.cru-view-toggle-pill .cru-view-toggle-btn:hover {
+    transform: none !important;
 }

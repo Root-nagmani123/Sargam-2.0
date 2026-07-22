@@ -851,13 +851,21 @@
 }
 
 /* ── Single-click reliability ────────────────────────────────────────────────
-   The small action buttons below animate `transform` on :hover through a CSS
-   transition. Pressing during that ~150ms animation moves the tiny target
-   between mousedown and mouseup, so the browser never fires a `click` and the
-   control appears to need a double-click. Dropping `transform` from the animated
-   properties keeps the hover lift (now applied instantly) but holds the element
-   still during the press, so a single click always registers. ── */
+   The controls below moved on :hover (transform translateY/scale). On a tiny
+   target that shift makes mousedown and mouseup land on different points — and
+   at the element's edge the 1px shift can even un-hover → snap back → re-hover
+   (flicker) — so the browser intermittently fails to fire `click` and the
+   control seems to need a double-click. Removing the hover MOVEMENT entirely
+   (no transform) keeps the element perfectly still under the cursor, so a single
+   click always registers. Colour/opacity/background hover feedback is kept. ── */
 .cr-admin .programme-action-btn,
 .cr-admin .cr-admin-icon-btn {
     transition-property: opacity, background-color, color, box-shadow, border-color !important;
+}
+.cr-admin .programme-action-btn:hover,
+.cr-admin .cr-admin-icon-btn:hover,
+.cr-admin #crCategoriesTable .btn:hover,
+.cr-admin #child_repositories .btn:hover,
+.cr-admin .cr-repo-breadcrumb-toolbar .btn:hover {
+    transform: none !important;
 }
