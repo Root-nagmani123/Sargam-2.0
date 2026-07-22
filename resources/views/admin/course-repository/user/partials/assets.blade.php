@@ -72,3 +72,4 @@
     document.addEventListener('cru:results-updated', initCruView);
 })();
 </script>
+@include('admin.course-repository.partials.single-click-links')
