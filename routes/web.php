@@ -753,18 +753,6 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         Route::post('/reject-group/{id}', 'rejectGroup')->name('reject_group');
     });
 
-    // Visitor/Gate Pass Routes
-    Route::prefix('security/visitor-pass')->name('admin.security.visitor_pass.')->controller(\App\Http\Controllers\Admin\Security\VisitorPassController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::post('/store', 'store')->name('store');
-        Route::get('/show/{id}', 'show')->name('show');
-        Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::post('/update/{id}', 'update')->name('update');
-        Route::delete('/delete/{id}', 'delete')->name('delete');
-        Route::post('/checkout/{id}', 'checkOut')->name('checkout');
-    });
-
     // ============================================
     // End Security Management Routes (prefix: security/)
     // ============================================
