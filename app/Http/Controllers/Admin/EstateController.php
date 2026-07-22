@@ -11801,6 +11801,10 @@ class EstateController extends Controller
             $unitOne = $meterOneIsNew ? $curr : (($curr >= $prev) ? $curr - $prev : 0);
             $unitTwo = $meterTwoIsNew ? $curr2 : (($curr2 >= $prev2) ? $curr2 - $prev2 : 0);
             $units = $unitOne + $unitTwo;
+
+            // Second meter tabhi dikhao jab meter_two ek real number ho (0/null nahi) ya uska koi reading ho.
+            // Isse meter_no column me extra "0" line nahi aayegi (meter_two = 0 wale single-meter homes).
+            $showMeterTwo = (int) ($r->meter_two ?? 0) !== 0 || $prev2 > 0 || $curr2 > 0;
             // Use electricity amount saved on the bill (set when meter reading was saved), not current slab rates.
             $totalCharge = (float) ($r->electricty_charges ?? 0);
             // Prefer Define House (estate_house_master) licence_fee so changes in Define House reflect here
@@ -11824,9 +11828,9 @@ class EstateController extends Controller
                 'house_no' => $r->house_no ?? '—',
                 'from_date' => $r->from_date ? \Carbon\Carbon::parse($r->from_date)->format('d-m-Y') : '—',
                 'to_date' => $r->to_date ? \Carbon\Carbon::parse($r->to_date)->format('d-m-Y') : '—',
-                'meter_no' => trim(($r->meter_one ?? '') . (isset($r->meter_two) && (string) $r->meter_two !== '' ? "\n" . $r->meter_two : '')),
-                'prev_reading' => ($meterOneIsNew ? '—' : (string) $prev) . (($prev2 > 0 || $curr2 > 0) ? "\n" . ($meterTwoIsNew ? '—' : (string) $prev2) : ''),
-                'curr_reading' => (string) $curr . (($prev2 > 0 || $curr2 > 0) ? "\n" . $curr2 : ''),
+                'meter_no' => trim(($r->meter_one ?? '') . ($showMeterTwo ? "\n" . (int) ($r->meter_two ?? 0) : '')),
+                'prev_reading' => ($meterOneIsNew ? '—' : (string) $prev) . ($showMeterTwo ? "\n" . ($meterTwoIsNew ? '—' : (string) $prev2) : ''),
+                'curr_reading' => (string) $curr . ($showMeterTwo ? "\n" . (string) $curr2 : ''),
                 'unit_consumed' => (string) $units,
                 'total_charge' => $totalCharge,
                 'licence_fee' => $licence,
