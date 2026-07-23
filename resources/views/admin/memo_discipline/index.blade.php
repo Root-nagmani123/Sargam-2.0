@@ -513,7 +513,6 @@
                                 <th>S. No.</th>
                                 <th>Program Name</th>
                                 <th>Name</th>
-                                <th>OT/Participant Code</th>
                                 <th>Cadre</th>
                                 <th>Email</th>
                                 <th>Mobile No.</th>
@@ -549,8 +548,7 @@
                                 <td><input type="checkbox" class="form-check-input disc-row-check" value="{{ $memo->pk }}" data-status="{{ $memo->status }}" aria-label="Select record"></td>
                                 <td class="fw-semibold text-muted">{{ $memos->firstItem() + $index }}</td>
                                 <td class="fw-semibold">{{ $memo->course->course_name ?? 'N/A' }}</td>
-                                <td class="fw-semibold disc-nowrap">{{ $memo->student->display_name ?? 'N/A' }}</td>
-                                <td class="text-muted">{{ $memo->student->generated_OT_code ?? 'N/A' }}</td>
+                                <td class="fw-semibold disc-nowrap">{{ $memo->student->display_name ?? 'N/A' }} ({{ $memo->student->generated_OT_code ?? 'N/A' }})</td>
                                 <td class="text-muted disc-nowrap">{{ $memo->student->cadre->cadre_name ?? 'N/A' }}</td>
                                 {{-- ?: not ?? — these two are blank strings far more often than
                                      they are NULL, and both should read "N/A". optional() keeps
