@@ -47,7 +47,7 @@
 </style>
 @endpush
 
-@section('title', ($repository->course_repository_name ?? 'Repository Details') . ' | Lal Bahadur')
+@section('title', ($repository->course_repository_name ?? 'Repository Details'))
 
 @section('setup_content')
 @include('admin.partials.choices-bootstrap5')
@@ -4012,7 +4012,11 @@ $(function() {
         }
 
         var dt = $table.DataTable({
-            responsive: true,
+            // NOTE: DataTables' `responsive` extension is intentionally NOT used
+            // here. It attaches its own row-level click handling and reflows
+            // columns, which caused table links to need a double-click (the first
+            // click was absorbed). The `.table-responsive` wrapper already handles
+            // horizontal overflow.
             autoWidth: false,
             pageLength: 10,
             lengthMenu: [
