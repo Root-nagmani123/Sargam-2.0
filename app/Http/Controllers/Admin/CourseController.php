@@ -20,8 +20,9 @@ use App\Services\CourseService;
 
 class CourseController extends Controller
 {
+    /** Cache TTL (seconds) for programme course-filter listings. */
+    private const COURSE_LIST_CACHE_TTL = 3600; // 1 hour
 
-    
     public function index(CourseMasterDataTable $dataTable)
     {
         $data_course_id = get_Role_by_course();
@@ -49,7 +50,8 @@ class CourseController extends Controller
                 }
 
                 return $q->orderBy('course_name')->pluck('course_name', 'pk')->toArray();
-            }
+            },
+            self::COURSE_LIST_CACHE_TTL
         );
 
         return $dataTable->render('admin.programme.index', compact('courses'));
@@ -95,7 +97,8 @@ class CourseController extends Controller
                 }
 
                 return ['success' => true, 'courses' => $courses];
-            }
+            },
+            self::COURSE_LIST_CACHE_TTL
         );
 
         return response()->json($payload);

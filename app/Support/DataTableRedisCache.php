@@ -19,6 +19,7 @@ final class DataTableRedisCache
      * @param  array{enabled: string, seconds: string}  $envKeys  Full .env key names, e.g. MEMBER_DATATABLE_CACHE_ENABLED
      * @param  callable(): JsonResponse  $parentAjax  Typically `fn () => parent::ajax()`
      * @param  array<string, mixed>  $extraFingerprint  Merged into fingerprint (e.g. custom ajax params from {@see preXhr.dt})
+     * @param  int|null  $ttlSeconds  Explicit TTL (seconds) passed from the controller; overrides the env value when set.
      */
     public static function serveCachedAjax(
         Request|DataTablesUtilitiesRequest $request,
@@ -27,7 +28,8 @@ final class DataTableRedisCache
         array $envKeys,
         string $logLabel,
         callable $parentAjax,
-        array $extraFingerprint = []
+        array $extraFingerprint = [],
+        ?int $ttlSeconds = null
     ): JsonResponse {
         $draw = (int) $request->input('draw', 0);
         $fingerprint = self::requestFingerprint($request, self::readListEpoch($listEpochKey));
@@ -49,7 +51,8 @@ final class DataTableRedisCache
                 unset($data['draw']);
 
                 return $data;
-            }
+            },
+            $ttlSeconds
         );
 
         if (is_array($payload) && ! isset($payload['__passthrough'])) {
@@ -129,12 +132,13 @@ final class DataTableRedisCache
     /**
      * @param  array{enabled: string, seconds: string}  $envKeys
      * @param  callable(): mixed  $callback
+     * @param  int|null  $ttlSeconds  Explicit TTL (seconds) passed from the controller; overrides the env value when set. Falls back to $envKeys['seconds'] (default 1 day / 86400) when null.
      * @return mixed
      */
-    public static function remember(string $cacheKey, array $envKeys, string $logLabel, callable $callback)
+    public static function remember(string $cacheKey, array $envKeys, string $logLabel, callable $callback, ?int $ttlSeconds = null)
     {
         $enabled = ! in_array(strtolower((string) env($envKeys['enabled'], 'true')), ['0', 'false', 'no', 'off'], true);
-        $ttl = max(30, (int) env($envKeys['seconds'], 300));
+        $ttl = max(30, $ttlSeconds ?? (int) env($envKeys['seconds'], 86400));
         if (! $enabled) {
             return $callback();
         }
