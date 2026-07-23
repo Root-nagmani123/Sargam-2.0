@@ -21,8 +21,8 @@ class StoreAllocationController extends Controller
             return $this->storeAllocationsDatatable($request);
         }
 
-        $subStores = SubStore::active()->orderBy('sub_store_name')->get();
-        $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get()
+        $subStores = SubStore::active()->orderBy('sub_store_name')->get(['id', 'sub_store_name']);
+        $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get(ItemSubcategory::listSelectColumns())
             ->map(fn ($s) => [
                 'id' => $s->id,
                 'item_name' => $s->item_name ?? $s->name ?? '—',

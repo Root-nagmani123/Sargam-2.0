@@ -11,7 +11,6 @@ use App\Models\KitchenIssueItem;
 use App\Models\KitchenIssuePaymentDetail;
 use App\Models\Mess\Store;
 use App\Models\Mess\SubStore;
-use App\Models\Mess\Inventory;
 use App\Models\Mess\ItemSubcategory;
 use App\Models\Mess\ClientType;
 use App\Models\Mess\SellingVoucherDateRangeReport;
@@ -34,12 +33,16 @@ class KitchenIssueController extends Controller
 {
     private const SELLING_VOUCHER_DT_LIST_EPOCH = 'selling_voucher_dt_list_epoch';
 
+    private const INDEX_MASTER_CACHE_EPOCH = 'kitchen_issue_index_master_epoch';
+
     /**
      * Invalidate Redis-backed Selling Voucher DataTables JSON after listing mutations.
      */
     public static function bumpSellingVoucherListingCacheEpoch(): void
     {
         DataTableRedisCache::bumpListEpoch(self::SELLING_VOUCHER_DT_LIST_EPOCH, 'KitchenIssueController@sellingVouchersDatatable');
+        AvailableQuantityService::bumpCacheEpoch();
+        DataTableRedisCache::bumpListEpoch(self::INDEX_MASTER_CACHE_EPOCH, 'KitchenIssueController@indexMasterData');
     }
 
     /**
@@ -60,133 +63,17 @@ class KitchenIssueController extends Controller
     public function index(Request $request)
     {
         // Listing rows load via AJAX (server-side DataTables — sellingVouchersDatatable).
-
-        // All courses (active + archived) for Client Name dropdown; label in UI via active_inactive.
-        // Course end date before today is treated as archived (same idea as course list filters).
-        $otCourses = CourseMaster::orderByDesc('active_inactive')
-            ->orderBy('course_name')
-            ->get(['pk', 'course_name', 'active_inactive', 'end_date']);
-        $today = Carbon::today();
-        $otCourses->each(function ($course) use ($today) {
-            if (filled($course->end_date) && Carbon::parse($course->end_date)->lt($today)) {
-                $course->active_inactive = 0;
-            }
-        });
-
-        // Get active stores and sub-stores
-        $stores = Store::active()->get(['id', 'store_name'])->map(function ($store) {
-            return [
-                'id' => $store->id,
-                'store_name' => $store->store_name,
-                'type' => 'store'
-            ];
-        });
-        
-        $subStores = SubStore::active()->get(['id', 'sub_store_name'])->map(function ($subStore) {
-            return [
-                'id' => 'sub_' . $subStore->id,
-                'store_name' => $subStore->sub_store_name . ' (Sub-Store)',
-                'type' => 'sub_store',
-                'original_id' => $subStore->id
-            ];
-        });
-        
-        // Combine stores and sub-stores
-        $stores = $stores->concat($subStores)->sortBy('store_name')->values();
-        
-        $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get()->map(function ($s) {
-            return [
-                'id' => $s->id,
-                'item_name' => $s->item_name ?? $s->name ?? '—',
-                'item_code' => $s->item_code ?? $s->subcategory_code ?? '—',
-                'unit_measurement' => $s->unit_measurement ?? '—',
-                'standard_cost' => $s->standard_cost ?? 0,
-            ];
-        });
-        $clientTypes = ClientType::clientTypes();
-        $clientNamesByType = ClientType::active()
-            ->orderBy('client_type')
-            ->orderBy('client_name')
-            ->get(['id', 'client_type', 'client_name'])
-            ->groupBy('client_type');
-
-        // Same split as Selling Voucher Date Range:
-        // - Faculty Staff: from FacultyMaster (linked via employee_master_pk)
-        // - Academy Staff: active employees excluding Mess staff + faculty-mapped employees
-        $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
-
-        $faculties = FacultyMaster::whereNotNull('full_name')
-            ->where('full_name', '!=', '')
-            ->where('faculty_type', 1)
-            ->whereNotNull('employee_master_pk')
-            ->whereIn('employee_master_pk', EmployeeMaster::active()->select('pk'))
-            ->orderBy('full_name')
-            ->get(['pk', 'full_name', 'faculty_code', 'employee_master_pk'])
-            ->map(function ($f) {
-                $fullName = trim((string) ($f->full_name ?? ''));
-                $facultyCode = trim((string) ($f->faculty_code ?? ''));
-                $f->full_name_with_code = $facultyCode !== '' ? ($fullName . ' (' . $facultyCode . ')') : $fullName;
-                return $f;
-            });
-
-        $facultyEmployeePks = $faculties
-            ->pluck('employee_master_pk')
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
-
-        $departmentNamesByPk = DepartmentMaster::pluck('department_name', 'pk');
-
-        $buildEmployeeLabel = function ($fullName, $departmentPk) use ($departmentNamesByPk) {
-            $fullName = trim((string) $fullName);
-            if ($fullName === '') {
-                $fullName = '—';
-            }
-            $departmentName = trim((string) ($departmentNamesByPk[$departmentPk] ?? ''));
-            return $departmentName !== '' ? ($fullName . ' (' . $departmentName . ')') : $fullName;
-        };
-
-        $employees = EmployeeMaster::active()
-            ->when($officersMessDept, function ($q) use ($officersMessDept) {
-                $q->where(function ($sub) use ($officersMessDept) {
-                    $sub->whereNull('department_master_pk')
-                        ->orWhere('department_master_pk', '!=', $officersMessDept->pk);
-                });
-            })
-            ->when(!empty($facultyEmployeePks), function ($q) use ($facultyEmployeePks) {
-                $q->whereNotIn('pk', $facultyEmployeePks);
-            })
-            ->orderBy('first_name')->orderBy('last_name')
-            ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
-            ->map(function ($e) use ($buildEmployeeLabel) {
-                $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                $fullName = $fullName ?: '—';
-                return (object) [
-                    'pk' => $e->pk,
-                    'full_name' => $fullName,
-                    'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
-                ];
-            })
-            ->filter(fn($e) => $e->full_name !== '—')
-            ->values();
-        $messStaff = $officersMessDept
-            ? EmployeeMaster::active()
-                ->where('department_master_pk', $officersMessDept->pk)
-                ->orderBy('first_name')->orderBy('last_name')
-                ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
-                ->map(function ($e) use ($buildEmployeeLabel) {
-                    $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                    $fullName = $fullName ?: '—';
-                    return (object) [
-                        'pk' => $e->pk,
-                        'full_name' => $fullName,
-                        'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
-                    ];
-                })
-                ->filter(fn($e) => $e->full_name !== '—')
-                ->values()
-            : collect();
+        $master = $this->loadIndexMasterFormData();
+        $stores = collect($master['stores']);
+        $itemSubcategories = collect($master['itemSubcategories']);
+        $clientTypes = $master['clientTypes'];
+        $clientNamesByType = collect($master['clientNamesByType'])->map(
+            fn ($group) => collect($group)->map(fn ($row) => (object) $row)
+        );
+        $faculties = collect($master['faculties'])->map(fn ($row) => (object) $row);
+        $employees = collect($master['employees'])->map(fn ($row) => (object) $row);
+        $messStaff = collect($master['messStaff'])->map(fn ($row) => (object) $row);
+        $otCourses = collect($master['otCourses'])->map(fn ($row) => (object) $row);
 
         $selectedClientType = (string) $request->input('client_type', '');
         $selectedClientTypePk = (string) $request->input('client_type_pk', '');
@@ -376,14 +263,213 @@ class KitchenIssueController extends Controller
     }
 
     /**
+     * Cached dropdown/master payload for the Selling Voucher index form.
+     *
+     * @return array<string, mixed>
+     */
+    private function loadIndexMasterFormData(): array
+    {
+        $epoch = DataTableRedisCache::readListEpoch(self::INDEX_MASTER_CACHE_EPOCH);
+        $cacheKey = 'kitchen_issue_index_master:v1:' . md5(json_encode(['epoch' => $epoch]));
+
+        /** @var array<string, mixed> $payload */
+        $payload = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'MESS_KITCHEN_ISSUE_INDEX_MASTER_CACHE_ENABLED',
+                'seconds' => 'MESS_KITCHEN_ISSUE_INDEX_MASTER_CACHE_SECONDS',
+            ],
+            'KitchenIssueController@indexMasterData',
+            fn () => $this->buildIndexMasterFormData()
+        );
+
+        return is_array($payload) ? $payload : $this->buildIndexMasterFormData();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildIndexMasterFormData(): array
+    {
+        $otCourses = CourseMaster::orderByDesc('active_inactive')
+            ->orderBy('course_name')
+            ->get(['pk', 'course_name', 'active_inactive', 'end_date']);
+        $today = Carbon::today();
+        $otCourses->each(function ($course) use ($today) {
+            if (filled($course->end_date) && Carbon::parse($course->end_date)->lt($today)) {
+                $course->active_inactive = 0;
+            }
+        });
+
+        $stores = Store::active()->get(['id', 'store_name'])->map(function ($store) {
+            return [
+                'id' => $store->id,
+                'store_name' => $store->store_name,
+                'type' => 'store',
+            ];
+        });
+
+        $subStores = SubStore::active()->get(['id', 'sub_store_name'])->map(function ($subStore) {
+            return [
+                'id' => 'sub_' . $subStore->id,
+                'store_name' => $subStore->sub_store_name . ' (Sub-Store)',
+                'type' => 'sub_store',
+                'original_id' => $subStore->id,
+            ];
+        });
+
+        $stores = $stores->concat($subStores)->sortBy('store_name')->values();
+
+        $itemSubcategories = ItemSubcategory::active()
+            ->orderedByDisplayName()
+            ->get($this->itemSubcategorySelectColumns())
+            ->map(function ($s) {
+                return [
+                    'id' => $s->id,
+                    'item_name' => $s->item_name ?? $s->name ?? '—',
+                    'item_code' => $s->item_code ?? $s->subcategory_code ?? '—',
+                    'unit_measurement' => $s->unit_measurement ?? '—',
+                    'standard_cost' => $s->standard_cost ?? 0,
+                ];
+            });
+
+        $clientNamesByType = ClientType::active()
+            ->orderBy('client_type')
+            ->orderBy('client_name')
+            ->get(['id', 'client_type', 'client_name'])
+            ->groupBy('client_type')
+            ->map(fn ($group) => $group->values()->all())
+            ->all();
+
+        $officersMessDept = DepartmentMaster::query()
+            ->where('department_name', 'Officers Mess')
+            ->first(['pk']);
+
+        $faculties = FacultyMaster::whereNotNull('full_name')
+            ->where('full_name', '!=', '')
+            ->where('faculty_type', 1)
+            ->whereNotNull('employee_master_pk')
+            ->whereIn('employee_master_pk', EmployeeMaster::active()->select('pk'))
+            ->orderBy('full_name')
+            ->get(['pk', 'full_name', 'faculty_code', 'employee_master_pk'])
+            ->map(function ($f) {
+                $fullName = trim((string) ($f->full_name ?? ''));
+                $facultyCode = trim((string) ($f->faculty_code ?? ''));
+
+                return [
+                    'pk' => $f->pk,
+                    'full_name' => $fullName,
+                    'faculty_code' => $facultyCode,
+                    'employee_master_pk' => $f->employee_master_pk,
+                    'full_name_with_code' => $facultyCode !== '' ? ($fullName . ' (' . $facultyCode . ')') : $fullName,
+                ];
+            })
+            ->values()
+            ->all();
+
+        $facultyEmployeePks = collect($faculties)
+            ->pluck('employee_master_pk')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $departmentNamesByPk = DepartmentMaster::query()
+            ->select(['pk', 'department_name'])
+            ->pluck('department_name', 'pk');
+
+        $buildEmployeeLabel = function ($fullName, $departmentPk) use ($departmentNamesByPk) {
+            $fullName = trim((string) $fullName);
+            if ($fullName === '') {
+                $fullName = '—';
+            }
+            $departmentName = trim((string) ($departmentNamesByPk[$departmentPk] ?? ''));
+
+            return $departmentName !== '' ? ($fullName . ' (' . $departmentName . ')') : $fullName;
+        };
+
+        $employees = EmployeeMaster::active()
+            ->when($officersMessDept, function ($q) use ($officersMessDept) {
+                $q->where(function ($sub) use ($officersMessDept) {
+                    $sub->whereNull('department_master_pk')
+                        ->orWhere('department_master_pk', '!=', $officersMessDept->pk);
+                });
+            })
+            ->when(! empty($facultyEmployeePks), function ($q) use ($facultyEmployeePks) {
+                $q->whereNotIn('pk', $facultyEmployeePks);
+            })
+            ->orderBy('first_name')->orderBy('last_name')
+            ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
+            ->map(function ($e) use ($buildEmployeeLabel) {
+                $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
+                $fullName = $fullName ?: '—';
+
+                return [
+                    'pk' => $e->pk,
+                    'full_name' => $fullName,
+                    'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
+                ];
+            })
+            ->filter(fn ($e) => $e['full_name'] !== '—')
+            ->values()
+            ->all();
+
+        $messStaff = $officersMessDept
+            ? EmployeeMaster::active()
+                ->where('department_master_pk', $officersMessDept->pk)
+                ->orderBy('first_name')->orderBy('last_name')
+                ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
+                ->map(function ($e) use ($buildEmployeeLabel) {
+                    $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
+                    $fullName = $fullName ?: '—';
+
+                    return [
+                        'pk' => $e->pk,
+                        'full_name' => $fullName,
+                        'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
+                    ];
+                })
+                ->filter(fn ($e) => $e['full_name'] !== '—')
+                ->values()
+                ->all()
+            : [];
+
+        return [
+            'stores' => $stores->values()->all(),
+            'itemSubcategories' => $itemSubcategories->values()->all(),
+            'clientTypes' => ClientType::clientTypes(),
+            'clientNamesByType' => $clientNamesByType,
+            'faculties' => $faculties,
+            'employees' => $employees,
+            'messStaff' => $messStaff,
+            'otCourses' => $otCourses->map(fn ($course) => [
+                'pk' => $course->pk,
+                'course_name' => $course->course_name,
+                'active_inactive' => $course->active_inactive,
+                'end_date' => $course->end_date,
+            ])->values()->all(),
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function itemSubcategorySelectColumns(): array
+    {
+        return ItemSubcategory::listSelectColumns();
+    }
+
+    /**
      * @param  \Illuminate\Support\Collection<int, object>  $employees
      * @return list<array{value: string, text: string}>
      */
     private function employeeBuyerFilterOptions($employees): array
     {
         return $employees->map(function ($employee) {
-            $value = (string) ($employee->pk ?? '');
-            $text = (string) ($employee->full_name_with_department ?? $employee->full_name ?? '');
+            $value = (string) (is_array($employee) ? ($employee['pk'] ?? '') : ($employee->pk ?? ''));
+            $text = (string) (is_array($employee)
+                ? ($employee['full_name_with_department'] ?? $employee['full_name'] ?? '')
+                : ($employee->full_name_with_department ?? $employee->full_name ?? ''));
             if ($value === '' || $text === '') {
                 return null;
             }
@@ -399,8 +485,10 @@ class KitchenIssueController extends Controller
     private function facultyBuyerFilterOptions($faculties): array
     {
         return $faculties->map(function ($faculty) {
-            $value = (string) ($faculty->pk ?? '');
-            $text = (string) ($faculty->full_name ?? '');
+            $value = (string) (is_array($faculty) ? ($faculty['pk'] ?? '') : ($faculty->pk ?? ''));
+            $text = (string) (is_array($faculty)
+                ? ($faculty['full_name_with_code'] ?? $faculty['full_name'] ?? '')
+                : ($faculty->full_name_with_code ?? $faculty->full_name ?? ''));
             if ($value === '' || $text === '') {
                 return null;
             }
@@ -615,7 +703,6 @@ class KitchenIssueController extends Controller
                 'kim.issue_date',
                 'kim.created_at',
                 DB::raw($misLabelSql . ' as sub_item_name'),
-                DB::raw($misLabelSql . ' as sub_name'),
                 DB::raw("(CASE
                     WHEN kim.store_type = 'sub_store' AND mss.sub_store_name IS NOT NULL THEN CONCAT(mss.sub_store_name, ' (Sub-Store)')
                     WHEN kim.store_type = 'store' AND ms.store_name IS NOT NULL THEN ms.store_name
@@ -676,16 +763,18 @@ class KitchenIssueController extends Controller
         $this->applySellingVoucherBuyerNameFilter($q, $request);
 
         // Date filter: default last 30 days when blank; skip default when user searches or targets a buyer/category.
+        // Use sargable range predicates (no DATE()) so indexes on issue_date can be used.
         if (! $request->filled('start_date') && ! $request->filled('end_date')) {
             if (! $this->sellingVoucherShouldSkipDefaultDateWindow($request)) {
-                $q->whereDate('kim.issue_date', '>=', now()->subDays(30)->toDateString());
+                $q->where('kim.issue_date', '>=', now()->subDays(30)->startOfDay());
             }
         } elseif ($request->filled('start_date') && $request->filled('end_date')) {
-            $q->whereBetween('kim.issue_date', [$request->start_date, $request->end_date]);
+            $q->where('kim.issue_date', '>=', Carbon::parse($request->start_date)->startOfDay())
+                ->where('kim.issue_date', '<', Carbon::parse($request->end_date)->addDay()->startOfDay());
         } elseif ($request->filled('start_date')) {
-            $q->whereDate('kim.issue_date', '>=', $request->start_date);
+            $q->where('kim.issue_date', '>=', Carbon::parse($request->start_date)->startOfDay());
         } elseif ($request->filled('end_date')) {
-            $q->whereDate('kim.issue_date', '<=', $request->end_date);
+            $q->where('kim.issue_date', '<', Carbon::parse($request->end_date)->addDay()->startOfDay());
         }
 
         $returnStatus = strtolower(trim((string) $request->input('return_status', '')));
@@ -1055,7 +1144,7 @@ class KitchenIssueController extends Controller
         if ($rawItemName !== '') {
             $itemCell = e($rawItemName);
         } else {
-            $fallback = trim((string) (($row->sub_item_name ?? null) ?: ($row->sub_name ?? '') ?: ''));
+            $fallback = trim((string) ($row->sub_item_name ?? ''));
             $itemCell = $fallback !== '' ? e($fallback) : '—';
         }
 
@@ -1216,7 +1305,7 @@ class KitchenIssueController extends Controller
     public function create()
     {
         // Get active stores and sub-stores
-        $stores = Store::active()->get()->map(function ($store) {
+        $stores = Store::active()->get(['id', 'store_name'])->map(function ($store) {
             return [
                 'id' => $store->id,
                 'store_name' => $store->store_name,
@@ -1224,7 +1313,7 @@ class KitchenIssueController extends Controller
             ];
         });
         
-        $subStores = SubStore::active()->get()->map(function ($subStore) {
+        $subStores = SubStore::active()->get(['id', 'sub_store_name'])->map(function ($subStore) {
             return [
                 'id' => 'sub_' . $subStore->id,
                 'store_name' => $subStore->sub_store_name . ' (Sub-Store)',
@@ -1236,7 +1325,7 @@ class KitchenIssueController extends Controller
         // Combine stores and sub-stores
         $stores = $stores->concat($subStores)->sortBy('store_name')->values();
         
-        $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get()->map(function ($s) {
+        $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get(ItemSubcategory::listSelectColumns())->map(function ($s) {
             return [
                 'id' => $s->id,
                 'item_name' => $s->item_name ?? $s->name ?? '—',
@@ -1246,7 +1335,7 @@ class KitchenIssueController extends Controller
             ];
         });
         $clientTypes = ClientType::clientTypes();
-        $clientNamesByType = ClientType::active()->orderBy('client_type')->orderBy('client_name')->get()
+        $clientNamesByType = ClientType::active()->orderBy('client_type')->orderBy('client_name')->get(['id', 'client_type', 'client_name'])
             ->groupBy('client_type');
         $faculties = FacultyMaster::whereNotNull('full_name')
             ->where('full_name', '!=', '')
@@ -1261,7 +1350,7 @@ class KitchenIssueController extends Controller
                 $f->full_name_with_code = $facultyCode !== '' ? ($fullName . ' (' . $facultyCode . ')') : $fullName;
                 return $f;
             });
-        $departmentNamesByPk = DepartmentMaster::pluck('department_name', 'pk');
+        $departmentNamesByPk = DepartmentMaster::query()->select(['pk', 'department_name'])->pluck('department_name', 'pk');
 
         $buildEmployeeLabel = function ($fullName, $departmentPk) use ($departmentNamesByPk) {
             $fullName = trim((string) $fullName);
@@ -1287,7 +1376,7 @@ class KitchenIssueController extends Controller
             ->filter(fn($e) => $e->full_name !== '—')
             ->values();
 
-        $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
+        $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first(['pk']);
         $messStaff = $officersMessDept
             ? EmployeeMaster::active()
                 ->where('department_master_pk', $officersMessDept->pk)
@@ -1369,7 +1458,7 @@ class KitchenIssueController extends Controller
             $storeId = (int) $storeId;
 
             // Server-side enforcement: issue qty cannot exceed available qty (per store + item)
-            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
+            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId, true);
             $requestedByItem = [];
             foreach ((array) $request->items as $row) {
                 $itemId = (int) ($row['item_subcategory_id'] ?? 0);
@@ -1496,7 +1585,7 @@ class KitchenIssueController extends Controller
                 ->withErrors($e->errors())
                 ->withInput()
                 ->with('open_selling_voucher_modal', true);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
 
             $returnJson = $request->ajax()
@@ -1646,22 +1735,28 @@ class KitchenIssueController extends Controller
             $items = $kitchenIssue->items->map(function ($item) use ($availableMap) {
                 $itemId = (int) ($item->item_subcategory_id ?? 0);
                 $currentAvailable = $itemId > 0 ? (float) ($availableMap[$itemId] ?? 0) : (float) ($item->available_quantity ?? 0);
+                $qty = (float) $item->quantity;
+                $retQty = (float) ($item->return_quantity ?? 0);
+                $netQty = max(0, $qty - $retQty);
+                $rate = (float) $item->rate;
                 return [
                     'item_subcategory_id' => $item->item_subcategory_id,
                     'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? '—'),
                     'unit' => $item->unit ?? '',
-                    'quantity' => (float) $item->quantity,
+                    // Edit form shows net issued qty (same billable basis as View total).
+                    'quantity' => $netQty,
+                    'original_quantity' => $qty,
                     'available_quantity' => $currentAvailable,
-                    'return_quantity' => (float) ($item->return_quantity ?? 0),
-                    'rate' => (float) $item->rate,
-                    'amount' => (float) $item->amount,
+                    'return_quantity' => $retQty,
+                    'rate' => $rate,
+                    'amount' => $netQty * $rate,
                 ];
             })->values()->toArray();
             return response()->json(['voucher' => $voucher, 'items' => $items]);
         }
 
         // Get active stores and sub-stores
-        $stores = Store::active()->get()->map(function ($store) {
+        $stores = Store::active()->get(['id', 'store_name'])->map(function ($store) {
             return [
                 'id' => $store->id,
                 'store_name' => $store->store_name,
@@ -1669,7 +1764,7 @@ class KitchenIssueController extends Controller
             ];
         });
         
-        $subStores = SubStore::active()->get()->map(function ($subStore) {
+        $subStores = SubStore::active()->get(['id', 'sub_store_name'])->map(function ($subStore) {
             return [
                 'id' => 'sub_' . $subStore->id,
                 'store_name' => $subStore->sub_store_name . ' (Sub-Store)',
@@ -1681,7 +1776,13 @@ class KitchenIssueController extends Controller
         // Combine stores and sub-stores
         $stores = $stores->concat($subStores)->sortBy('store_name')->values();
         
-        $items = Inventory::all();
+        $items = ItemSubcategory::active()
+            ->orderBy('name')
+            ->get(ItemSubcategory::listSelectColumns())
+            ->map(fn ($s) => (object) [
+                'id' => $s->id,
+                'item_name' => $s->item_name ?? $s->name ?? '—',
+            ]);
         return view('mess.kitchen-issues.edit', compact('kitchenIssue', 'stores', 'items'));
     }
 
@@ -1780,7 +1881,7 @@ class KitchenIssueController extends Controller
             $storeId = (int) $storeId;
 
             // Server-side enforcement: issue qty cannot exceed available qty (per store + item)
-            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
+            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId, true);
             $requestedByItem = [];
             foreach ((array) $request->items as $row) {
                 $itemId = (int) ($row['item_subcategory_id'] ?? 0);
@@ -1793,11 +1894,16 @@ class KitchenIssueController extends Controller
             // When updating: effective available = current stock + this voucher's existing issue qty per item
             // (so saving without changes does not fail)
             $existingQtyByItem = [];
+            $existingReturnByItem = [];
             $existingItemDisplayById = [];
             foreach ($kitchenIssue->items as $existingItem) {
                 $itemId = (int) ($existingItem->item_subcategory_id ?? 0);
                 if ($itemId > 0) {
-                    $existingQtyByItem[$itemId] = ($existingQtyByItem[$itemId] ?? 0) + (float) ($existingItem->quantity ?? 0);
+                    $grossQty = (float) ($existingItem->quantity ?? 0);
+                    $retQty = (float) ($existingItem->return_quantity ?? 0);
+                    // Stock is reduced by net issued qty (gross - return).
+                    $existingQtyByItem[$itemId] = ($existingQtyByItem[$itemId] ?? 0) + max(0, $grossQty - $retQty);
+                    $existingReturnByItem[$itemId] = ($existingReturnByItem[$itemId] ?? 0) + $retQty;
                     if (!isset($existingItemDisplayById[$itemId])) {
                         $existingItemDisplayById[$itemId] = [
                             'item_name' => $existingItem->item_name ?? '',
@@ -1885,19 +1991,28 @@ class KitchenIssueController extends Controller
 
             foreach ($request->items as $row) {
                 $sub = $subcategories->get($row['item_subcategory_id']);
-                $qty = (float) ($row['quantity'] ?? 0);
+                $itemId = (int) ($row['item_subcategory_id'] ?? 0);
+                // Form quantity is net (billable). Preserve return and store gross = net + return.
+                $netQty = (float) ($row['quantity'] ?? 0);
+                $returnQty = array_key_exists('return_quantity', $row)
+                    ? (float) ($row['return_quantity'] ?? 0)
+                    : (float) ($existingReturnByItem[$itemId] ?? 0);
+                if ($returnQty < 0) {
+                    $returnQty = 0;
+                }
+                $grossQty = $netQty + $returnQty;
                 $rate = (float) ($row['rate'] ?? 0);
                 $avail = (float) ($row['available_quantity'] ?? 0);
-                $fallbackDisplay = $existingItemDisplayById[(int) $row['item_subcategory_id']] ?? ['item_name' => '', 'unit' => ''];
+                $fallbackDisplay = $existingItemDisplayById[$itemId] ?? ['item_name' => '', 'unit' => ''];
                 KitchenIssueItem::create([
                     'kitchen_issue_master_pk' => $kitchenIssue->pk,
                     'item_subcategory_id' => $row['item_subcategory_id'],
                     'item_name' => $sub ? ($sub->item_name ?? $sub->name ?? '') : $fallbackDisplay['item_name'],
-                    'quantity' => $qty,
+                    'quantity' => $grossQty,
                     'available_quantity' => $avail,
-                    'return_quantity' => 0,
+                    'return_quantity' => $returnQty,
                     'rate' => $rate,
-                    'amount' => $qty * $rate,
+                    'amount' => $netQty * $rate,
                     'unit' => $sub ? ($sub->unit_measurement ?? '') : $fallbackDisplay['unit'],
                 ]);
             }
@@ -1910,7 +2025,7 @@ class KitchenIssueController extends Controller
         } catch (ValidationException $e) {
             DB::rollBack();
             throw $e;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
             return back()->withInput()
                         ->with('error', 'Failed to update Selling Voucher: ' . $e->getMessage());
@@ -1983,6 +2098,7 @@ class KitchenIssueController extends Controller
         ]);
 
         $itemIds = $kitchenIssue->items->pluck('pk')->toArray();
+        $itemsByPk = $kitchenIssue->items->keyBy('pk');
 
         try {
             DB::beginTransaction();
@@ -1991,8 +2107,8 @@ class KitchenIssueController extends Controller
                 if (!in_array($itemPk, $itemIds, true)) {
                     continue;
                 }
-                $item = KitchenIssueItem::find($itemPk);
-                if (!$item || $item->kitchen_issue_master_pk != $kitchenIssue->pk) {
+                $item = $itemsByPk->get($itemPk);
+                if (!$item) {
                     continue;
                 }
                 $returnQty = (float) ($row['return_quantity'] ?? 0);
@@ -2065,67 +2181,13 @@ class KitchenIssueController extends Controller
             }
         }
 
-        $records = $query->orderBy('issue_date', 'desc')->get();
+        $perPage = max(1, min(100, (int) $request->input('per_page', 20)));
+
+        $records = $query->orderBy('issue_date', 'desc')
+            ->paginate($perPage)
+            ->withQueryString();
 
         return response()->json($records);
-    }
-
-    /**
-     * Send kitchen issue for approval
-     */
-    public function sendForApproval($id)
-    {
-        $kitchenIssue = KitchenIssueMaster::findOrFail($id);
-
-        if ($kitchenIssue->status == KitchenIssueMaster::STATUS_APPROVED) {
-            return back()->with('error', 'Material Management already approved');
-        }
-
-        try {
-            $kitchenIssue->update([
-                'status' => KitchenIssueMaster::STATUS_PROCESSING,
-                'modified_by' => Auth::id(),
-            ]);
-            self::bumpSellingVoucherListingCacheEpoch();
-
-            return back()->with('success', 'Material Management sent for approval successfully');
-        } catch (\Exception $e) {
-            return back()->with('error', 'Failed to send for approval: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Generate bill report
-     */
-    public function billReport(Request $request)
-    {
-        $query = KitchenIssueMaster::with(['store', 'employee', 'student']);
-
-        if ($request->filled('messId')) {
-            $query->where('store_id', $request->messId);
-        }
-
-        if ($request->filled('empId')) {
-            $query->where('client_id', $request->empId);
-        }
-
-        if ($request->filled('sDate') && $request->filled('eDate')) {
-            $query->whereBetween('issue_date', [$request->sDate, $request->eDate]);
-        }
-
-        if ($request->filled('payment_type')) {
-            $query->where('payment_type', $request->payment_type);
-        }
-
-        if ($request->filled('client_type')) {
-            $query->where('client_type', $request->client_type);
-        }
-
-        $kitchenIssues = $query->orderBy('issue_date', 'desc')->get();
-
-        $stores = Store::all();
-
-        return view('mess.kitchen-issues.bill-report', compact('kitchenIssues', 'stores'));
     }
 
     /**

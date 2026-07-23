@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Mess\Store;
 use App\Models\Mess\SubStore;
-use App\Models\Mess\Inventory;
 use App\Models\User;
 
 class KitchenIssueMaster extends Model
