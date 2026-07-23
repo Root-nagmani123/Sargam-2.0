@@ -530,7 +530,8 @@ $(document).ready(function() {
         if (currReading === null || isNaN(currReading)) return false;
         const minAllowed = getMinAllowedForReadingInput($inp);
         if (minAllowed === null || currReading >= minAllowed) return false;
-        if (currReading === 0 && isMeterNoChangedForReading($inp)) return false;
+        // Meter replaced: the new meter starts fresh, so any lower reading is valid.
+        if (isMeterNoChangedForReading($inp)) return false;
         return true;
     }
 

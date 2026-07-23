@@ -227,12 +227,17 @@ class StudentAttendanceListDataTable extends DataTable
         } elseif ($courseStudent) {
             // If there's an existing attendance record, use its status
             $defaultCheckedValue = $courseStudent->status;
-            if( $defaultCheckedValue == 5 ){
+            // Duty/Exemption statuses (4=MDO, 5=Escort, 6=Medical, 7=Other) ke liye
+            // Attendance column me alag radio nahi hota — inko "Present" (1) dikhao
+            // taaki Attendance column me by default Present radio selected rahe.
+            if (in_array($defaultCheckedValue, [4, 5, 6, 7])) {
                 $defaultCheckedValue = 1;
             }
         } else {
-            // Nothing saved and nothing blocking → Present.
-            $defaultCheckedValue = 1;
+            // Exemption/duty lagu ho tab bhi Attendance column me "Present" radio
+            // by default selected rahega (MDO/Escort ki tarah). Medical/Other
+            // exemption ka actual status hidden input (value 6/7) se save hota hai.
+            $defaultCheckedValue = 1; // Present
         }
 
         foreach ($options as $value => $label) {
