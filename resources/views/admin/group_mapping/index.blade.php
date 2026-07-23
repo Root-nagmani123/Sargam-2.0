@@ -241,18 +241,6 @@
                     <div id="addStudentAlert" class="alert d-none" role="alert"></div>
 
                     <div class="mb-3">
-                        <label for="studentOtCode" class="form-label cgt-field-label">OT Code <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control rounded-1" id="studentOtCode" name="otcode"
-                            placeholder="eg. OT1344" required maxlength="255">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="studentName" class="form-label cgt-field-label">OT Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control rounded-1" id="studentName" name="name"
-                            placeholder="eg. John Doe" required maxlength="255">
-                    </div>
-
-                    <div class="mb-3">
                         <label for="studentCourse" class="form-label cgt-field-label">Course Name <span class="text-danger">*</span></label>
                         <select class="form-select rounded-1" id="studentCourse" name="course_master_pk" required>
                             <option value="">Select Course Name</option>
@@ -260,6 +248,19 @@
                             <option value="{{ $pk }}" {{ count($allCourses ?? []) === 1 ? 'selected' : '' }}>{{ $name }}</option>
                             @endforeach
                         </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="studentOtCode" class="form-label cgt-field-label">OT Code <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control rounded-1" id="studentOtCode" name="otcode"
+                            placeholder="eg. OT1344" required maxlength="255" disabled>
+                        <small class="text-muted d-block mt-1" id="studentOtCodeHelp">Please select a course first</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="studentName" class="form-label cgt-field-label">OT Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control rounded-1 bg-light" id="studentName" name="name"
+                            placeholder="Auto-filled from OT code" maxlength="255" readonly tabindex="-1">
                     </div>
 
                     <div class="mb-3">
@@ -942,6 +943,97 @@ $(document).ready(function() {
         });
     });
 
+    // Add Student (Single): Course must be picked before OT Code is usable, and
+    // OT Name is always resolved server-side from OT Code + Course (never
+    // free-typed) — OT codes repeat across different courses/batches, so the
+    // name has to be looked up scoped to the selected course, not guessed.
+    const studentOtCodeInput = $('#studentOtCode');
+    const studentNameInput = $('#studentName');
+    const studentOtCodeHelp = $('#studentOtCodeHelp');
+    let studentOtCodeLookupTimer = null;
+    let studentOtCodeXhr = null;
+    // Bumped on every course change / OT-code edit so an in-flight request's
+    // callback can tell it's been superseded and must not touch the DOM —
+    // clearing the debounce timer only stops requests that haven't fired yet,
+    // not ones already on the wire, so a slow, stale response could otherwise
+    // land after a newer one and overwrite the Name field with the wrong
+    // (previous course's) student.
+    let studentOtCodeRequestId = 0;
+
+    function abortPendingStudentLookup() {
+        clearTimeout(studentOtCodeLookupTimer);
+        if (studentOtCodeXhr) {
+            studentOtCodeXhr.abort();
+            studentOtCodeXhr = null;
+        }
+    }
+
+    function resetStudentOtCodeAndName(courseSelected) {
+        studentOtCodeRequestId++;
+        abortPendingStudentLookup();
+        studentOtCodeInput.val('').prop('disabled', !courseSelected);
+        studentNameInput.val('');
+        studentOtCodeHelp.text(courseSelected ? '' : 'Please select a course first')
+            .removeClass('text-success text-danger').addClass('text-muted');
+    }
+
+    $('#studentCourse').on('change', function() {
+        resetStudentOtCodeAndName(!!$(this).val());
+    });
+
+    // Covers the case where only one active course exists and its <option>
+    // is pre-selected server-side (no 'change' event fires for that).
+    $('#addStudentModal').on('show.bs.modal', function() {
+        resetStudentOtCodeAndName(!!$('#studentCourse').val());
+    });
+
+    studentOtCodeInput.on('input', function() {
+        const otcode = $(this).val().trim();
+        const coursePk = $('#studentCourse').val();
+        const requestId = ++studentOtCodeRequestId;
+
+        studentNameInput.val('');
+        abortPendingStudentLookup();
+
+        if (!otcode || !coursePk) {
+            studentOtCodeHelp.text('').removeClass('text-success text-danger').addClass('text-muted');
+            return;
+        }
+
+        studentOtCodeHelp.text('Looking up...').removeClass('text-success text-danger').addClass('text-muted');
+
+        studentOtCodeLookupTimer = setTimeout(function() {
+            studentOtCodeXhr = $.ajax({
+                url: routes.groupMappingGetStudentByOtCode,
+                type: 'POST',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    otcode: otcode,
+                    course_master_pk: coursePk
+                },
+                success: function(response) {
+                    if (requestId !== studentOtCodeRequestId) return; // superseded
+
+                    if (response.status === 'success') {
+                        studentNameInput.val(response.name);
+                        studentOtCodeHelp.text('Student found').removeClass('text-muted text-danger').addClass('text-success');
+                    } else {
+                        studentNameInput.val('');
+                        studentOtCodeHelp.text(response.message || 'Student not found')
+                            .removeClass('text-muted text-success').addClass('text-danger');
+                    }
+                },
+                error: function(xhr) {
+                    if (requestId !== studentOtCodeRequestId || xhr.statusText === 'abort') return; // superseded/cancelled
+
+                    studentNameInput.val('');
+                    const message = (xhr.responseJSON && xhr.responseJSON.message) || 'Student not found for this course.';
+                    studentOtCodeHelp.text(message).removeClass('text-muted text-success').addClass('text-danger');
+                }
+            });
+        }, 400);
+    });
+
     function resetGmImportWizard() {
         $('#gmImportStep1').removeClass('d-none');
         $('#gmImportStep2').addClass('d-none');
@@ -1030,6 +1122,7 @@ $(document).ready(function() {
         $('#addStudentAlert').addClass('d-none');
         $('#studentGroupName').html('<option value="">Select</option>').prop('disabled', true);
         $('#groupNameHelp').text('Please select a group type first').removeClass('text-success text-danger').addClass('text-muted');
+        resetStudentOtCodeAndName(!!$('#studentCourse').val());
     });
 
     const gmAddGroupMappingModalEl = document.getElementById('gmAddGroupMappingModal');
@@ -1311,6 +1404,13 @@ $(document).ready(function() {
         const form = $(this);
         const submitBtn = form.find('button[type="submit"]');
         const alertBox = $('#addStudentAlert');
+
+        if (!studentNameInput.val()) {
+            alertBox.removeClass('d-none alert-success')
+                .addClass('alert-danger')
+                .html('<i class="bi bi-exclamation-circle me-1"></i>Enter a valid OT code for the selected course — the name must be auto-filled before adding.');
+            return;
+        }
 
         submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Adding...');
         alertBox.addClass('d-none');

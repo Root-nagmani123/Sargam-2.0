@@ -232,18 +232,26 @@
                 // is active — exportCsv() then reads that as "brand new request, default to
                 // today-only", silently downloading the wrong (empty) dataset. See the same
                 // fix in memo_discipline/index.blade.php's Download link.
-                $mnmDownloadUrl = route('memo.notice.management.export_csv') . '?' . http_build_query([
+                $mnmExportParams = [
                     'program_name' => $programNameFilter ?? '',
                     'type' => $typeFilter ?? '',
                     'status' => $statusFilter ?? '',
                     'from_date' => $fromDateFilter ?? '',
                     'to_date' => $toDateFilter ?? '',
                     'search' => $searchFilter ?? '',
-                ]);
+                ];
+                $mnmDownloadUrl = route('memo.notice.management.export_csv') . '?' . http_build_query($mnmExportParams);
+                $mnmDownloadPdfUrl = route('memo.notice.management.export_pdf') . '?' . http_build_query($mnmExportParams);
             @endphp
-            <a href="{{ $mnmDownloadUrl }}" id="mnmDownloadLink" class="mnm-download">
-                <i class="bi bi-download"></i> Download
-            </a>
+            <div class="dropdown">
+                <button type="button" id="mnmDownloadToggle" class="mnm-download dropdown-toggle border-0" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-download"></i> Download
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="mnmDownloadToggle">
+                    <li><a href="{{ $mnmDownloadUrl }}" id="mnmDownloadLink" class="dropdown-item"><i class="bi bi-file-earmark-excel me-1"></i> Excel (.xlsx)</a></li>
+                    <li><a href="{{ $mnmDownloadPdfUrl }}" id="mnmDownloadPdfLink" class="dropdown-item"><i class="bi bi-file-earmark-pdf me-1"></i> PDF</a></li>
+                </ul>
+            </div>
             @endunless
         </div>
 
@@ -318,6 +326,7 @@
                             <th>Topic</th>
                             <th>Conclusion Type</th>
                             <th>Conclusion Remark</th>
+                            <th>Marks Deduction</th>
                             <th>Created Date</th>
                             <th>Status</th>
                             <th class="text-center">Action</th>
@@ -359,6 +368,7 @@
                             <td>{{ $memo->topic_name ?? 'N/A' }}</td>
                             <td>{{ ($memo->discussion_name ?? '') !== '' ? $memo->discussion_name : 'N/A' }}</td>
                             <td>{{ ($memo->conclusion_remark ?? '') !== '' ? $memo->conclusion_remark : 'N/A' }}</td>
+                            <td>{{ ($memo->mark_of_deduction ?? '') !== '' ? $memo->mark_of_deduction : 'N/A' }}</td>
                             <td>{{ !empty($memo->created_date) ? date('d-m-Y', strtotime($memo->created_date)) : 'N/A' }}</td>
                             <td><span class="mnm-status {{ $stClass }}">{{ $stLabel }}</span></td>
                             <td>
@@ -447,7 +457,7 @@
                         </tr>
                         @empty
                         <tr class="align-middle">
-                            <td colspan="11" class="text-center text-muted py-5">
+                            <td colspan="12" class="text-center text-muted py-5">
                                 <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                                 No records found
                             </td>
@@ -1193,14 +1203,19 @@ $(document).ready(function() {
         $('#studentReassignHint').toggleClass('d-none', mode !== 'edit');
 
         if (mode === 'preview') {
-            // Preview mode: make all fields read-only
+            // Preview mode: make all fields read-only. Native date/time inputs
+            // don't fully respect readonly — the picker UI can still change the
+            // value in several browsers — so those two need disabled as well to
+            // actually freeze them (e.g. Meeting Date on a closed memo).
             form.find('input[type="text"], input[type="date"], input[type="time"], textarea').prop('readonly', true);
+            form.find('input[type="date"], input[type="time"]').prop('disabled', true);
             form.find('select').prop('disabled', true);
             saveButton.hide();
             modalTitle.text('Preview Memo');
         } else if (mode === 'edit') {
             // Edit mode: an already-generated memo — everything correctable is editable.
             form.find('input, textarea').prop('readonly', false);
+            form.find('input[type="date"], input[type="time"]').prop('disabled', false); // undo preview-mode freeze
             form.find('select').prop('disabled', false);
             $('#course_master_name, #date_memo_notice, #subject_master_id, #topic_id, #class_session_master_pk, #faculty_name, #memo_number').prop('readonly', true);
             saveButton.show().text('Save Changes');
@@ -1208,6 +1223,7 @@ $(document).ready(function() {
         } else {
             // Generate mode: enable editable fields
             form.find('input, textarea').prop('readonly', false);
+            form.find('input[type="date"], input[type="time"]').prop('disabled', false); // undo preview-mode freeze
             form.find('select').prop('disabled', false);
             // Keep readonly fields as readonly
             $('#course_master_name, #date_memo_notice, #subject_master_id, #topic_id, #class_session_master_pk, #faculty_name, #student_name, #memo_number').prop('readonly', true);
@@ -1337,13 +1353,17 @@ $(function () {
                 if (newList) { listContainer.innerHTML = newList.innerHTML; }
                 window.history.replaceState({}, '', url);
 
-                // The Download link is a static server-rendered href from page load —
-                // without this, it would keep pointing at whatever filters were active
+                // The Download links are static server-rendered hrefs from page load —
+                // without this, they'd keep pointing at whatever filters were active
                 // on that initial load (e.g. today-only) even after AJAX-applying
                 // different filters, silently exporting the wrong/empty dataset.
                 var downloadLink = document.getElementById('mnmDownloadLink');
                 if (downloadLink) {
                     downloadLink.href = "{{ route('memo.notice.management.export_csv') }}" + (params ? '?' + params : '');
+                }
+                var downloadPdfLink = document.getElementById('mnmDownloadPdfLink');
+                if (downloadPdfLink) {
+                    downloadPdfLink.href = "{{ route('memo.notice.management.export_pdf') }}" + (params ? '?' + params : '');
                 }
             })
             .catch(function () { alert('Failed to apply filters'); })
@@ -1420,7 +1440,7 @@ $(function () {
     })();
 
     // ── Column Visibility modal (static, server-paginated table) ──
-    var mnmLabels = ['S. No.', 'Program Name', 'Participant Name', 'Type', 'Session Date', 'Topic', 'Conclusion Type', 'Conclusion Remark', 'Status', 'Action'];
+    var mnmLabels = ['S. No.', 'Program Name', 'Participant Name', 'Type', 'Session Date', 'Topic', 'Conclusion Type', 'Conclusion Remark', 'Marks Deduction', 'Created Date', 'Status', 'Action'];
     var $mnmGrid = $('#mnmColumnGrid');
     mnmLabels.forEach(function (label, i) {
         var id = 'mnmCol' + i;

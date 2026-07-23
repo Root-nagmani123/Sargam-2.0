@@ -575,6 +575,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('store', 'store')->name('store');
         Route::post('import-group-mapping', 'importGroupMapping')->name('import');
         Route::post('get-group-names-by-type', 'getGroupNamesByType')->name('get.group.names.by.type');
+        Route::post('get-student-by-otcode', 'getStudentByOtCode')->name('get.student.by.otcode');
         Route::post('add-single-student', 'addSingleStudent')->name('add.single.student');
         Route::post('student-list', 'studentList')->name('student.list');
         Route::post('student-update', 'updateStudent')->name('student.update');

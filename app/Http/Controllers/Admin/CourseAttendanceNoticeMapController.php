@@ -16,6 +16,8 @@ use App\Models\MemoNoticeTemplate;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\NotificationService;
 use App\Services\NotificationReceiverService;
+use App\Exports\MemoNoticeExport;
+use Maatwebsite\Excel\Facades\Excel;
  
 class CourseAttendanceNoticeMapController extends Controller
 {
@@ -66,6 +68,7 @@ class CourseAttendanceNoticeMapController extends Controller
             'sns.notice_memo',
             'sns.status',
             'sns.conclusion_remark',
+            'sns.mark_of_deduction',
             'ncm.discussion_name',
             'sm.display_name as student_name',
             'sm.pk as student_id',
@@ -150,6 +153,7 @@ class CourseAttendanceNoticeMapController extends Controller
                 'student_memo_status.course_master_pk',
                 'student_memo_status.date as date_',
                 'student_memo_status.conclusion_remark',
+                'student_memo_status.mark_of_deduction',
                 DB::raw('NULL as subject_master_pk'),
                 DB::raw('NULL as subject_topic'),
                 DB::raw('NULL as venue_id'),
@@ -215,6 +219,7 @@ class CourseAttendanceNoticeMapController extends Controller
                     'student_memo_status.course_master_pk',
                     'student_memo_status.date as date_',
                     'student_memo_status.conclusion_remark',
+                    'student_memo_status.mark_of_deduction',
                     DB::raw('NULL as subject_master_pk'),
                     DB::raw('NULL as subject_topic'),
                     DB::raw('NULL as venue_id'),
@@ -312,9 +317,15 @@ class CourseAttendanceNoticeMapController extends Controller
     // Conclusion types for the chat panel's "End Chat" action.
     $conclusions = \App\Models\MemoConclusionMaster::where('active_inactive', 1)->get();
     
-    // Get courses for Program Name filter - only active courses (active_inactive = 1 and end_date > now)
+    // Get courses for Program Name filter - only active courses (active_inactive = 1 and end_date > now),
+    // scoped to the courses mapped to the logged-in user's role (same as the
+    // Direct Notice and Discipline Memo tabs — see get_Role_by_course()).
+    $data_course_id = get_Role_by_course();
     $courses = CourseMaster::where('active_inactive', 1)
         ->where('end_date', '>', now())
+        ->when(!empty($data_course_id), function ($query) use ($data_course_id) {
+            $query->whereIn('pk', $data_course_id);
+        })
         ->orderBy('course_name', 'asc')
         ->get();
 
@@ -338,74 +349,105 @@ $noticeCount = $memos->groupBy(function($item) {
     return view('admin.courseAttendanceNoticeMap.index', compact('memos', 'venue', 'memo_master', 'conclusions', 'courses', 'programNameFilter', 'typeFilter', 'statusFilter', 'searchFilter', 'fromDateFilter', 'toDateFilter','noticeCount', 'canManageMemoNotice'));
 }
 
-    public function exportPdf(Request $request)
-    {
-        $data = $this->noticeMemoExportData($request);
-
-        // Generate PDF
-        $pdf = Pdf::loadView('admin.courseAttendanceNoticeMap.export_pdf', $data)
-            ->setPaper('a4', 'landscape');
-
-        $fileName = 'Notice_Memo_Report_' . date('Y-m-d_His') . '.pdf';
-        return $pdf->download($fileName);
-    }
-
     /**
-     * Download the Send Memo / Notice listing as a CSV, using the same
-     * filtered dataset as the PDF export, in the mess-style layout:
-     * a title block (report name + applied filters), the column-header row, then data rows.
+     * Build the filter-summary array shared by the Excel and PDF exports'
+     * letterhead (mirrors MemoDisciplineController's $filters shape).
      */
-    public function exportCsv(Request $request)
+    private function noticeMemoExportFilters(array $data): array
     {
-        $data = $this->noticeMemoExportData($request);
-        $memos = $data['memos'];
-
-        $courseName = optional($data['selectedCourse'])->course_name ?? 'All';
-        $typeText = $data['typeFilter'] === '1' ? 'Notice' : ($data['typeFilter'] === '0' ? 'Memo' : 'All');
-        $statusText = $data['statusFilter'] === '1' ? 'Open' : ($data['statusFilter'] === '0' ? 'Close' : 'All');
         $dateRange = ($data['fromDateFilter'] || $data['toDateFilter'])
             ? (($data['fromDateFilter'] ? Carbon::parse($data['fromDateFilter'])->format('d-m-Y') : '—') . ' to ' . ($data['toDateFilter'] ? Carbon::parse($data['toDateFilter'])->format('d-m-Y') : '—'))
             : 'All Dates';
 
-        $headers = ['Name', 'OT/Participant Code', 'Cadre', 'Infraction', 'Date of Infraction', 'Remarks'];
-
-        $rows = [];
-        foreach ($memos as $memo) {
-            $sessionDate = $memo->session_date ?? $memo->date_ ?? null;
-
-            $rows[] = [
-                $memo->student_name ?? 'N/A',
-                $memo->generated_OT_code ?? 'N/A',
-                $memo->cadre_name ?? 'N/A',
-                $memo->topic_name ?? 'N/A',
-                $sessionDate ? Carbon::parse($sessionDate)->format('d M Y') : 'N/A',
-                $memo->message ?? '',
-            ];
-        }
-
-        $titleBlock = [
-            ['Send Memo / Notice'],
-            ['Date Range', $dateRange, 'Program', $courseName, 'Type', $typeText, 'Status', $statusText],
-            ['Generated On', now()->format('d-m-Y H:i:s')],
-            [],
+        return [
+            'program' => optional($data['selectedCourse'])->course_name ?? 'All',
+            'type' => $data['typeFilter'] === '1' ? 'Notice' : ($data['typeFilter'] === '0' ? 'Memo' : 'All'),
+            'status' => $data['statusFilter'] === '1' ? 'Open' : ($data['statusFilter'] === '0' ? 'Close' : 'All'),
+            'period' => $dateRange,
         ];
+    }
 
-        $fileName = 'send-memo-notice-' . now()->format('Y-m-d_His') . '.csv';
+    /**
+     * Download the same listing as a PDF, using the same LBSNAA-branded layout as
+     * the Discipline Memo export (MemoDisciplineController::exportPdf).
+     */
+    public function exportPdf(Request $request)
+    {
+        $data = $this->noticeMemoExportData($request);
+        $memos = $data['memos'];
+        $filters = $this->noticeMemoExportFilters($data);
 
-        return response()->streamDownload(function () use ($titleBlock, $headers, $rows) {
-            $out = fopen('php://output', 'w');
-            fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM for Excel
-            foreach ($titleBlock as $line) {
-                fputcsv($out, $line);
+        @ini_set('memory_limit', '256M');
+        @set_time_limit(120);
+
+        $logoPath = public_path('images/lbsnaa_logo.jpg');
+        $logo = (is_file($logoPath) && is_readable($logoPath))
+            ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoPath))
+            : null;
+
+        // Columns/headings/values all come from the Excel export's columnDefs(), so
+        // the PDF and the sheet stay identical in column set, order and wording.
+        $defs = MemoNoticeExport::columnDefs();
+        $columns = array_map(fn ($key) => [
+            'key' => $key,
+            'heading' => $defs[$key]['heading'],
+            'class' => $defs[$key]['pdfClass'],
+        ], array_keys($defs));
+
+        $rows = $memos->map(function ($memo) use ($defs) {
+            $row = [];
+            foreach ($defs as $key => $def) {
+                $row[$key] = ($def['value'])($memo);
             }
-            fputcsv($out, $headers);
-            foreach ($rows as $row) {
-                fputcsv($out, $row);
-            }
-            fclose($out);
-        }, $fileName, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+
+            return $row;
+        });
+
+        $filterLine = 'Program: ' . $filters['program']
+            . '  |  Type: ' . $filters['type']
+            . '  |  Status: ' . $filters['status']
+            . '  |  Period: ' . $filters['period'];
+
+        $pdf = Pdf::loadView('admin.courseAttendanceNoticeMap.export_pdf', [
+            'columns' => $columns,
+            'rows' => $rows,
+            'filterLine' => $filterLine,
+            'printedOn' => now()->format('d-m-Y H:i'),
+            'reportTitle' => 'Send Memo / Notice Report',
+            'logo' => $logo,
+        ])
+            ->setPaper('a4', 'landscape')
+            ->setOptions([
+                'defaultFont' => 'DejaVu Sans',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'isPhpEnabled' => true,
+                'dpi' => 96,
+            ]);
+
+        $fileName = 'send-memo-notice-' . now()->format('Y-m-d_His') . '.pdf';
+        return $pdf->download($fileName);
+    }
+
+    /**
+     * Download the Send Memo / Notice listing as a styled Excel report, using the
+     * same LBSNAA-branded layout as the Discipline Memo export
+     * (MemoDisciplineController::exportCsv / DisciplineMemoExport). Route/method
+     * name kept as "export_csv"/"exportCsv" — same naming the Discipline module
+     * already uses for its real .xlsx download, so the existing Download button
+     * and route don't need to change.
+     */
+    public function exportCsv(Request $request)
+    {
+        $data = $this->noticeMemoExportData($request);
+        $filters = $this->noticeMemoExportFilters($data);
+
+        $fileName = 'send-memo-notice-' . now()->format('Y-m-d_His') . '.xlsx';
+
+        return Excel::download(
+            new MemoNoticeExport($data['memos'], $filters, now()->format('d-m-Y H:i:s')),
+            $fileName
+        );
     }
 
     /**
@@ -1990,6 +2032,9 @@ public function noticedeleteMessage($id,$type)
         $join->whereRaw('sm.pk = COALESCE(csa.Student_master_pk, student_notice_status.student_pk)');
     });
     $notices->leftJoin('timetable as t', 'student_notice_status.subject_topic', '=', 't.pk');
+    // A Notice closed directly (End Chat) records its conclusion on
+    // student_notice_status itself — same join admin's index() uses.
+    $notices->leftJoin('memo_conclusion_master as ncm', 'ncm.pk', '=', 'student_notice_status.conclusion_type_pk');
     $notices->select(
         'student_notice_status.pk as notice_id',
         'student_notice_status.student_pk',
@@ -2003,6 +2048,9 @@ public function noticedeleteMessage($id,$type)
         'student_notice_status.message',
         'student_notice_status.notice_memo',
         'student_notice_status.status',
+        'student_notice_status.conclusion_remark',
+        'student_notice_status.mark_of_deduction',
+        'ncm.discussion_name',
         'sm.display_name as student_name',
         'sm.pk as student_id',
         't.subject_topic as topic_name'
@@ -2018,6 +2066,7 @@ public function noticedeleteMessage($id,$type)
             ->leftJoin('student_master as sm', 'student_memo_status.student_pk', '=', 'sm.pk')
             ->leftJoin('student_notice_status as sns', 'student_memo_status.student_notice_status_pk', '=', 'sns.pk')
             ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
+            ->leftJoin('memo_conclusion_master as mcm', 'student_memo_status.memo_conclusion_master_pk', '=', 'mcm.pk')
             ->whereIn('student_memo_status.student_notice_status_pk', $status2Ids)
             ->select(
                 'student_memo_status.pk as memo_id',
@@ -2033,6 +2082,9 @@ public function noticedeleteMessage($id,$type)
                 'student_memo_status.message',
                 DB::raw('2 as notice_memo'),
                 'student_memo_status.status',
+                'student_memo_status.conclusion_remark',
+                'student_memo_status.mark_of_deduction',
+                'mcm.discussion_name',
                 'sm.display_name as student_name',
                 'sm.pk as student_id',
                 't.subject_topic as topic_name',
@@ -2179,6 +2231,8 @@ if (!$id || !is_numeric($id)) {
             })
             ->where('sns.pk', $id)
             ->select(
+                'sns.student_pk',
+                'sns.course_master_pk',
                 't.subject_topic',
                 'v.venue_name',
                 't.class_session as session_time',
@@ -2231,6 +2285,8 @@ if (!$id || !is_numeric($id)) {
             })
             ->where('sms.pk', $id)
             ->select(
+                'sms.student_pk',
+                'sms.course_master_pk',
                 't.subject_topic',
                 'v.venue_name',
                 't.class_session as session_time',
@@ -2254,6 +2310,40 @@ if (!$id || !is_numeric($id)) {
             $template_details = apply_memo_notice_template_snapshot($template_details);
 
     }
+
+    // Build the full list of sessions this student has been noticed for on this
+    // course, grouped by date, so the notice's session table matches the admin
+    // conversation view (same query as CourseAttendanceNoticeMapController::conversation()).
+    $sessionRows = collect();
+    if (!empty($template_details) && !empty($template_details->student_pk) && !empty($template_details->course_master_pk)) {
+        $sessionRows = DB::table('student_notice_status as sns2')
+            ->leftJoin('timetable as t2', 'sns2.subject_topic', '=', 't2.pk')
+            ->leftJoin('venue_master as v2', 't2.venue_id', '=', 'v2.venue_id')
+            ->where('sns2.student_pk', $template_details->student_pk)
+            ->where('sns2.course_master_pk', $template_details->course_master_pk)
+            ->orderBy('sns2.date_')
+            ->select(
+                'sns2.date_ as session_date',
+                't2.subject_topic',
+                'v2.venue_name',
+                't2.class_session as session_time'
+            )
+            ->get()
+            ->groupBy(function ($row) {
+                return \Carbon\Carbon::parse($row->session_date)->format('Y-m-d');
+            })
+            ->map(function ($rows) {
+                return (object) [
+                    'session_date'  => $rows->first()->session_date,
+                    'session_count' => $rows->count(),
+                    'topics'        => $rows->pluck('subject_topic')->filter()->unique()->implode(', '),
+                    'venues'        => $rows->pluck('venue_name')->filter()->unique()->implode(', '),
+                    'sessions'      => $rows->pluck('session_time')->filter()->unique()->implode(', '),
+                ];
+            })
+            ->values();
+    }
+
 // print_r($memoNotice);die;
     // Multiple distinct admins/faculty can post in the same conversation, so
     // resolve each sender's real name + role instead of collapsing them all
@@ -2281,7 +2371,7 @@ if (!$id || !is_numeric($id)) {
         $noticeStudentPk = (int) DB::table('student_memo_status')->where('pk', $id)->value('student_pk');
     }
 
-   return view('admin.courseAttendanceNoticeMap.chat', compact('id', 'memoNotice', 'type', 'template_details', 'memo_conclusion_master', 'noticeStudentPk'));
+   return view('admin.courseAttendanceNoticeMap.chat', compact('id', 'memoNotice', 'type', 'template_details', 'memo_conclusion_master', 'noticeStudentPk', 'sessionRows'));
 }
 public function memo_notice_conversation_student(Request $request)
 {

@@ -666,30 +666,14 @@ class GroupMappingController extends Controller
             // Trim all inputs
             $data = array_map('trim', $validated);
 
-            // Lookup: StudentMaster by OT code (case-insensitive), scoped to the
-            // selected course. OT codes are NOT unique across the whole roster —
-            // they get reused across different courses/batches — so matching on
-            // OT code alone (with no ORDER BY) can silently resolve to a
-            // completely different student's row than the one actually enrolled
-            // in this course, making the later "belongs to course" check fail
-            // (or worse, pass) for the wrong person.
-            $studentMaster = StudentMaster::query()
-                ->join('student_master_course__map as smcm', 'smcm.student_master_pk', '=', 'student_master.pk')
-                ->whereRaw('LOWER(student_master.generated_OT_code) = ?', [strtolower($data['otcode'])])
-                ->where('smcm.course_master_pk', $data['course_master_pk'])
-                ->where('smcm.active_inactive', 1)
-                ->select('student_master.pk')
-                ->first();
+            // Lookup: StudentMaster by OT code, scoped to the selected course
+            // (see resolveEnrolledStudent() for why the course scope matters).
+            [$studentMaster, $lookupError] = $this->resolveEnrolledStudent($data['otcode'], $data['course_master_pk']);
 
             if (!$studentMaster) {
-                $otCodeExists = StudentMaster::whereRaw('LOWER(generated_OT_code) = ?', [strtolower($data['otcode'])])
-                    ->exists();
-
                 return response()->json([
                     'status' => 'error',
-                    'message' => $otCodeExists
-                        ? "Student does not belong to selected course"
-                        : "Student not found for OT code: {$data['otcode']}",
+                    'message' => $lookupError,
                 ], 422);
             }
 
@@ -764,6 +748,77 @@ class GroupMappingController extends Controller
         }
     }
 
+    /**
+     * Resolve a StudentMaster row by OT code, scoped to a specific course via
+     * student_master_course__map. OT codes are NOT unique across the whole
+     * roster — they get reused across different courses/batches — so matching
+     * on OT code alone can silently resolve to a completely different
+     * student's row than the one actually enrolled in the selected course.
+     *
+     * @return array{0: ?StudentMaster, 1: ?string} [student, errorMessage]
+     */
+    private function resolveEnrolledStudent(string $otcode, $coursePk): array
+    {
+        $studentMaster = StudentMaster::query()
+            ->join('student_master_course__map as smcm', 'smcm.student_master_pk', '=', 'student_master.pk')
+            ->whereRaw('LOWER(student_master.generated_OT_code) = ?', [strtolower($otcode)])
+            ->where('smcm.course_master_pk', $coursePk)
+            ->where('smcm.active_inactive', 1)
+            ->select('student_master.pk', 'student_master.display_name')
+            ->first();
+
+        if ($studentMaster) {
+            return [$studentMaster, null];
+        }
+
+        $otCodeExists = StudentMaster::whereRaw('LOWER(generated_OT_code) = ?', [strtolower($otcode)])
+            ->exists();
+
+        return [null, $otCodeExists
+            ? 'Student does not belong to selected course'
+            : "Student not found for OT code: {$otcode}"];
+    }
+
+    /**
+     * AJAX: look up a student's display name by OT code for the given course,
+     * to autofill the (read-only) OT Name field in the Add Student modal.
+     */
+    public function getStudentByOtCode(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'otcode' => 'required|string|max:255',
+                'course_master_pk' => 'required|integer|exists:course_master,pk',
+            ]);
+
+            [$studentMaster, $lookupError] = $this->resolveEnrolledStudent(
+                trim($validated['otcode']),
+                $validated['course_master_pk']
+            );
+
+            if (!$studentMaster) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $lookupError,
+                ], 404);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'name' => $studentMaster->display_name,
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->validator->errors()->first() ?: 'Validation failed.',
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
 
     /**
      * Export the student list for group mappings to an Excel file.

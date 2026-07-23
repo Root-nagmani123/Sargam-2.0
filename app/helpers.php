@@ -1087,15 +1087,21 @@ function get_Role_by_course()
         return [-1];
     }
 
+    // course_master.user_role_master_pk stores a Spatie roles.id — confirmed
+    // by CourseController@create/@edit, which populates and reads this exact
+    // field via Spatie's Role model (Role::pluck('name','id') /
+    // Role::where('id', $course->user_role_master_pk)). Despite the
+    // misleading column name, this is NOT a foreign key into the separate
+    // legacy `user_role_master` table.
     $role_course = DB::table('course_master as cm')
         ->join('roles as r', 'cm.user_role_master_pk', '=', 'r.id')
         ->whereIn('r.id', $userRoleIds)
         ->pluck('cm.pk')
         ->toArray();
+
     if (empty($role_course)) {
         // Non-admin user with roles but no mapped courses should see no data.
         return [-1];
-        // return [-1];
     }
 
     return $role_course;

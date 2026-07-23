@@ -46,6 +46,9 @@
                             <th class="col">Type</th>
                             <th class="col">Date</th>
                             <th class="col">Topic</th>
+                            <th class="col">Conclusion Type</th>
+                            <th class="col">Conclusion Remark</th>
+                            <th class="col">Marks Deduction</th>
                             <th class="col">Conversation</th>
                             <th class="col">Status</th>
                         </tr>
@@ -53,7 +56,7 @@
                     <tbody>
                         @if ($memos->isEmpty())
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
+                            <td colspan="10" class="text-center text-muted py-4">
                                 <i class="bi bi-inbox me-1"></i> No records found
                             </td>
                         </tr>
@@ -76,6 +79,9 @@
                             </td>
                             <td class="date">{{ $memo->date_ }}</td>
                             <td>{{ $memo->topic_name ?? 'N/A' }}</td>
+                            <td>{{ ($memo->discussion_name ?? '') !== '' ? $memo->discussion_name : 'N/A' }}</td>
+                            <td>{{ ($memo->conclusion_remark ?? '') !== '' ? $memo->conclusion_remark : 'N/A' }}</td>
+                            <td>{{ ($memo->mark_of_deduction ?? '') !== '' ? $memo->mark_of_deduction : 'N/A' }}</td>
                             <td>
                                 <div class="d-flex gap-2 flex-nowrap">
                                     <a href="{{ route('memo.notice.management.conversation_student', ['id' => $memo->notice_id, 'type' => 'notice']) }}"

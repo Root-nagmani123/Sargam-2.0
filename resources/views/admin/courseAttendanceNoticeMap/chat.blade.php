@@ -10,11 +10,24 @@
 
             <div class="bg-white p-4 rounded shadow-sm mt-3" >
 
-                <h5 class="text-center fw-bold mb-3">{{ $template_details->course_name ?? 'Course Name' }}</h5>
-            <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+                <div class="d-flex align-items-center justify-content-between gap-3 mb-2">
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                        <img src="{{ asset('images/ashoka.png') }}" alt="National Emblem of India"
+                            style="height:64px;width:auto;object-fit:contain;">
+                        <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo"
+                            style="height:64px;width:auto;object-fit:contain;">
+                    </div>
+                    <div class="text-center flex-grow-1 px-2">
+                        <h5 class="fw-bold mb-1">{{ $template_details->course_name ?? 'Course Name' }}</h5>
+                        <p class="mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <img src="{{ asset('images/azadi.png') }}" alt="Azadi Ka Amrit Mahotsav"
+                            style="height:64px;width:auto;object-fit:contain;">
+                    </div>
+                </div>
             <hr>
 
-            <p class="mb-1">{{ $type == 'memo' ? 'SHOW CAUSE MEMO' : 'SHOW CAUSE NOTICE' }}</p>
             <p><strong>Date:</strong> {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }} </p>
 
             <div class="table-responsive mb-3">
@@ -29,13 +42,23 @@
                         </tr>
                     </thead>
                     <tbody>
+                        @forelse($sessionRows ?? [] as $row)
+                        <tr>
+                            <td>{{ \Carbon\Carbon::parse($row->session_date)->format('d/m/Y') }}</td>
+                            <td>{{ $row->session_count }}</td>
+                            <td>{{ $row->topics ?: 'Topic Name' }}</td>
+                            <td>{{ $row->venues ?: 'Venue' }}</td>
+                            <td>{{ $row->sessions ?: '06:00-07:00' }}</td>
+                        </tr>
+                        @empty
                         <tr>
                             <td>{{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}</td>
                             <td>1</td>
                             <td>{{ $template_details->subject_topic ?? 'Topic Name' }}</td>
                             <td>{{ $template_details->venue_name ?? 'Venue' }}</td>
-                            <td>{{ $template_details->session_time ?? '' }}</td>
+                            <td>{{ $template_details->session_time ?? '06:00-07:00' }}</td>
                         </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -46,7 +69,7 @@
 
             <p>
                 <strong>{{ $template_details->display_name ?? 'Student Name' }}, {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>
-                Remarks: {{ $type == 'memo' ? 'Show Cause Memo' : 'Show Cause Notice' }} for {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}
+                Remarks: for absence in {{ $template_details->subject_topic ?? 'the session' }} on {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}
             </p>
 
             <div class="text-end">
@@ -54,6 +77,28 @@
                     <img src="{{ Storage::url($template_details->signature_image) }}" alt="Signature" style="max-height:60px;display:block;margin-left:auto;margin-bottom:4px;">
                 @endif
                 <strong>{{ $template_details->director_name ?? 'Director Name' }}</strong><br>{{ $template_details->director_designation ?? 'Director Designation' }}
+            </div>
+
+            <!-- Exemption Table -->
+            <div class="table-responsive mb-4">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Total Exemption Have</th>
+                            <th>Total Exemption Taken</th>
+                            <th>MOD on SAT / SUN</th>
+                            <th>Exemption Balance (if any)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>3</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>3</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
 
 

@@ -83,7 +83,7 @@
             <p>
                 <strong>{{ $template_details->display_name ?? 'Student Name' }},
                     {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>
-                Remarks: {{ $type == 'memo' ? 'Show Cause Memo' : 'Show Cause Notice' }} for absence in
+                Remarks: for absence in
                 {{ $template_details->subject_topic ?? 'the session' }} on
                 {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}
             </p>
