@@ -181,6 +181,7 @@ Route::middleware(['auth'])->group(function () {
         ->name('admin.navigation.error');
     Route::get('/dashboard/feed', [UserController::class, 'dashboardFeed'])->name('admin.dashboard.feed');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
+    Route::get('/dashboard/ot-participants', [UserController::class, 'otParticipantsList'])->name('admin.dashboard.ot-participants');
     Route::get('/dashboard/students/export/{format}', [UserController::class, 'studentListExport'])->name('admin.dashboard.students.export');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
@@ -1035,6 +1036,7 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
         Route::get('/templates-by-discipline', [MemoDisciplineController::class, 'getTemplatesByDiscipline'])->name('templatesByDiscipline');
 
         Route::post('/send-memo', [MemoDisciplineController::class, 'sendMemo'])->name('sendMemo');
+        Route::post('/send-memo-bulk', [MemoDisciplineController::class, 'sendMemoBulk'])->name('sendMemoBulk');
         Route::post('/close-memo', [MemoDisciplineController::class, 'closeMemo'])->name('closeMemo');
         Route::get('/get_conversation_model/{memoId}/{type}', [MemoDisciplineController::class, 'getConversationModel'])->name('get_conversation_model');
 

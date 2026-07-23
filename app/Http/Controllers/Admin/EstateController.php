@@ -6719,7 +6719,8 @@ class EstateController extends Controller
                     $meterChanged = $newMeterNoDigits !== ''
                         && $oldMeterDigits !== ''
                         && $newMeterNoDigits !== $oldMeterDigits;
-                    if (! ($curr === 0 && $meterChanged)) {
+                    // Meter replaced: the new meter starts fresh, so any lower reading is valid.
+                    if (! $meterChanged) {
                         $v->errors()->add(
                             $field,
                             'New meter reading cannot be less than the saved current reading, or than the opening reading when no current reading exists yet.'
@@ -8489,7 +8490,8 @@ class EstateController extends Controller
                     $meterChanged = $newMeterNoDigits !== ''
                         && $oldMeterDigits !== ''
                         && $newMeterNoDigits !== $oldMeterDigits;
-                    if (! ($curr === 0 && $meterChanged)) {
+                    // Meter replaced: the new meter starts fresh, so any lower reading is valid.
+                    if (! $meterChanged) {
                         $house = $row->house_no ? (" (House: {$row->house_no})") : '';
                         $v->errors()->add(
                             "readings.$idx.curr_month_elec_red",

@@ -7,20 +7,111 @@ use App\Models\{
     IssueCategoryMaster,
     IssueSubCategoryMaster
 };
+use App\Support\DataTableRedisCache;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
 
 class IssueCategoryController extends Controller
-{ 
+{
+    private const LISTING_CACHE_EPOCH_KEY = 'admin_issue_categories_index_list_epoch';
+
+    private const INDEX_PER_PAGE = 20;
+
+    public static function bumpIndexListCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'IssueCategoryController@index');
+    }
+
+    private function indexFilteredQuery(): Builder
+    {
+        // pk tiebreaker — issue_category unique nahi hai, warna snapshot pagination me
+        // rows pages ke beech duplicate/miss ho sakte hain.
+        return IssueCategoryMaster::query()
+            ->orderBy('issue_category')
+            ->orderBy('pk');
+    }
+
+    /**
+     * @return array{total: int, ids: array<int, int>}
+     */
+    private function indexPageSnapshot(int $page): array
+    {
+        $base = $this->indexFilteredQuery();
+        $total = (int) (clone $base)->toBase()->getCountForPagination();
+        $ids = [];
+        if ($total > 0) {
+            $ids = (clone $base)->forPage($page, self::INDEX_PER_PAGE)->pluck('pk')->values()->all();
+            $ids = array_map('intval', $ids);
+        }
+
+        return ['total' => $total, 'ids' => $ids];
+    }
+
+    /**
+     * @param  array<int, int>  $ids
+     * @return \Illuminate\Support\Collection<int, IssueCategoryMaster>
+     */
+    private function hydrateCategoriesByOrderedPks(array $ids): \Illuminate\Support\Collection
+    {
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        if ($ids === []) {
+            return collect();
+        }
+        $byPk = IssueCategoryMaster::with('subCategories')
+            ->whereIn('pk', $ids)
+            ->get()
+            ->keyBy(fn (IssueCategoryMaster $m) => (int) $m->pk);
+
+        return collect($ids)
+            ->map(fn (int $id) => $byPk->get($id))
+            ->filter()
+            ->values();
+    }
+
     /**
      * Display a listing of issue categories.
      */
     public function index()
     {
-        $categories = IssueCategoryMaster::with('subCategories')
-            ->orderBy('issue_category')
-            ->paginate(20)
-            ->withQueryString();
+        $page = Paginator::resolveCurrentPage('page');
+        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
+        $cacheKey = 'admin_issue_categories_index:v1:' . md5(json_encode([
+            'epoch' => $epoch,
+            'page' => $page,
+        ]));
+
+        $snapshot = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'ISSUE_CATEGORY_INDEX_CACHE_ENABLED',
+                'seconds' => 'ISSUE_CATEGORY_INDEX_CACHE_SECONDS',
+            ],
+            'IssueCategoryController@index',
+            fn () => $this->indexPageSnapshot($page)
+        );
+
+        if (! is_array($snapshot) || ! array_key_exists('total', $snapshot) || ! array_key_exists('ids', $snapshot) || ! is_array($snapshot['ids'])) {
+            $snapshot = $this->indexPageSnapshot($page);
+        }
+
+        $total = (int) $snapshot['total'];
+        $ids = array_map('intval', $snapshot['ids']);
+        $items = $this->hydrateCategoriesByOrderedPks($ids);
+
+        $categories = new LengthAwarePaginator(
+            $items,
+            $total,
+            self::INDEX_PER_PAGE,
+            $page,
+            [
+                'path' => Paginator::resolveCurrentPath(),
+                'pageName' => 'page',
+            ]
+        );
+        $categories->withQueryString();
 
         return view('admin.issue_management.categories.index', compact('categories'));
     }
@@ -52,9 +143,11 @@ class IssueCategoryController extends Controller
                 }
             }
 
-            $message = $createdCount > 1 
-                ? "$createdCount categories created successfully." 
+            $message = $createdCount > 1
+                ? "$createdCount categories created successfully."
                 : 'Category created successfully.';
+
+            static::bumpIndexListCacheEpoch();
 
             return redirect()->route('admin.issue-categories.index')
                 ->with('success', $message);
@@ -73,6 +166,8 @@ class IssueCategoryController extends Controller
             'created_by' => $userId,
             'status' => 1,
         ]);
+
+        static::bumpIndexListCacheEpoch();
 
         return redirect()->route('admin.issue-categories.index')
             ->with('success', 'Category created successfully.');
@@ -99,6 +194,8 @@ class IssueCategoryController extends Controller
             'modified_by' => $userId,
         ]);
 
+        static::bumpIndexListCacheEpoch();
+
         return redirect()->route('admin.issue-categories.index')
             ->with('success', 'Category updated successfully.');
     }
@@ -119,6 +216,8 @@ class IssueCategoryController extends Controller
         }
 
         $category->delete();
+
+        static::bumpIndexListCacheEpoch();
 
         return redirect()->route('admin.issue-categories.index')
             ->with('success', 'Category deleted successfully.');
