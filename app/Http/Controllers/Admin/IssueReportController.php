@@ -63,7 +63,7 @@ class IssueReportController extends Controller
                 'sub_module'    => $report->sub_module,
                 'description'   => $report->description,
                 'page_url'      => $report->page_url,
-                'attachment_url'=> $report->attachment ? Storage::disk('public')->url($report->attachment) : null,
+                'attachment_url'=> $report->attachment ? url('storage/' . $report->attachment) : null,
                 'status'        => (int) $report->status,
                 'status_label'  => self::STATUS_LABELS[(int) $report->status] ?? 'Open',
                 'reported_on'   => $report->created_at ? Carbon::parse($report->created_at)->format('d-m-Y h:i A') : null,
@@ -107,6 +107,104 @@ class IssueReportController extends Controller
             ->unique(fn ($g) => strtolower(trim($g->name)))
             ->map(fn ($g) => ['id' => $g->id, 'name' => trim($g->name)])
             ->values();
+    }
+
+    /**
+     * Delete a reported issue (and its attachment if present).
+     */
+    public function destroy($id)
+    {
+        $report = IssueReport::findOrFail($id);
+
+        if ($report->attachment) {
+            Storage::disk('public')->delete($report->attachment);
+        }
+
+        $report->delete();
+
+        return response()->json(['success' => true, 'message' => 'Issue #' . $id . ' deleted.']);
+    }
+
+    /**
+     * Distinct department/submodule values for the filter dropdowns.
+     */
+    public function filterOptions()
+    {
+        $departments = DB::table('issue_reports')
+            ->whereNotNull('module_name')
+            ->where('module_name', '!=', '')
+            ->distinct()
+            ->orderBy('module_name')
+            ->pluck('module_name');
+
+        $submodules = DB::table('issue_reports')
+            ->whereNotNull('sub_module')
+            ->where('sub_module', '!=', '')
+            ->distinct()
+            ->orderBy('sub_module')
+            ->pluck('sub_module');
+
+        return response()->json(compact('departments', 'submodules'));
+    }
+
+    /**
+     * CSV export of issue reports (respects the same filters as the DataTable).
+     */
+    public function export(\Illuminate\Http\Request $request)
+    {
+        $statusFilter    = $request->query('status_filter', 'all');
+        $deptFilter      = $request->query('dept_filter', '');
+        $submoduleFilter = $request->query('submodule_filter', '');
+        $dateFrom        = $request->query('date_from', '');
+        $dateTo          = $request->query('date_to', '');
+
+        $query = IssueReport::query()
+            ->leftJoin('user_credentials as uc', 'uc.user_id', '=', 'issue_reports.reported_by')
+            ->select([
+                'issue_reports.*',
+                'uc.first_name as reporter_first',
+                'uc.last_name  as reporter_last',
+                'uc.user_name  as reporter_username',
+            ]);
+
+        if ($statusFilter === 'active') {
+            $query->whereIn('issue_reports.status', [IssueReport::STATUS_OPEN, IssueReport::STATUS_IN_PROGRESS]);
+        } elseif ($statusFilter === 'fixed') {
+            $query->whereIn('issue_reports.status', [IssueReport::STATUS_RESOLVED, IssueReport::STATUS_CLOSED]);
+        }
+
+        if ($deptFilter      !== '') $query->where('issue_reports.module_name', $deptFilter);
+        if ($submoduleFilter !== '') $query->where('issue_reports.sub_module', $submoduleFilter);
+        if ($dateFrom        !== '') $query->whereDate('issue_reports.created_at', '>=', $dateFrom);
+        if ($dateTo          !== '') $query->whereDate('issue_reports.created_at', '<=', $dateTo);
+
+        $reports  = $query->orderBy('issue_reports.id', 'desc')->get();
+        $filename = 'issue_reports_' . date('Ymd_His') . '.csv';
+
+        return response()->stream(function () use ($reports) {
+            $h = fopen('php://output', 'w');
+            fprintf($h, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($h, ['S.No.', 'Date', 'Department Name', 'Sub-Module', 'Issue Raised By', 'Issue Description', 'Status']);
+            foreach ($reports as $i => $r) {
+                $name  = trim(($r->reporter_first ?? '') . ' ' . ($r->reporter_last ?? ''));
+                if ($name === '') $name = $r->reporter_username ?? ('User #' . $r->reported_by);
+                $label = in_array((int) $r->status, [IssueReport::STATUS_OPEN, IssueReport::STATUS_IN_PROGRESS])
+                    ? 'Active' : 'Fixed Issue';
+                fputcsv($h, [
+                    $i + 1,
+                    $r->created_at ? Carbon::parse($r->created_at)->format('d-m-Y') : '',
+                    $r->module_name ?? '',
+                    $r->sub_module  ?? '',
+                    $name,
+                    $r->description ?? '',
+                    $label,
+                ]);
+            }
+            fclose($h);
+        }, 200, [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 
     public function store(Request $request)

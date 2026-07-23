@@ -20,10 +20,10 @@
 
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="reportIssueModule" class="form-label">Module that you are facing issues
+                        <label for="reportIssueModule" class="form-label">Department that you are facing issues
                             with<span class="text-danger">*</span></label>
                         <select class="form-select" id="reportIssueModule" name="menu_group_id" required>
-                            <option value="">Select Module</option>
+                            <option value="">Select Department</option>
                             @foreach ($issueReportModules ?? [] as $module)
                                 <option value="{{ $module['id'] }}">{{ $module['name'] }}</option>
                             @endforeach

@@ -187,8 +187,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/dashboard/report-issue', [\App\Http\Controllers\Admin\IssueReportController::class, 'store'])->name('admin.dashboard.report-issue');
     // Admin console for issues submitted via the dashboard "Report Issue" launcher
     Route::get('/issue-reports', [\App\Http\Controllers\Admin\IssueReportController::class, 'index'])->name('admin.issue-reports.index');
+    Route::get('/issue-reports/filter-options', [\App\Http\Controllers\Admin\IssueReportController::class, 'filterOptions'])->name('admin.issue-reports.filter-options');
+    Route::get('/issue-reports/export', [\App\Http\Controllers\Admin\IssueReportController::class, 'export'])->name('admin.issue-reports.export');
     Route::get('/issue-reports/{id}', [\App\Http\Controllers\Admin\IssueReportController::class, 'show'])->whereNumber('id')->name('admin.issue-reports.show');
     Route::post('/issue-reports/{id}/status', [\App\Http\Controllers\Admin\IssueReportController::class, 'updateStatus'])->whereNumber('id')->name('admin.issue-reports.status');
+    Route::delete('/issue-reports/{id}', [\App\Http\Controllers\Admin\IssueReportController::class, 'destroy'])->whereNumber('id')->name('admin.issue-reports.destroy');
     Route::get('/directory/lbsnaa', [DirectoryController::class, 'lbsnaa'])->name('admin.directory.lbsnaa');
     Route::get('/directory/ot', [DirectoryController::class, 'ot'])->name('admin.directory.ot');
 
