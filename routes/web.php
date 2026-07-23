@@ -190,6 +190,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/issue-reports', [\App\Http\Controllers\Admin\IssueReportController::class, 'index'])->name('admin.issue-reports.index');
     Route::get('/issue-reports/filter-options', [\App\Http\Controllers\Admin\IssueReportController::class, 'filterOptions'])->name('admin.issue-reports.filter-options');
     Route::get('/issue-reports/export', [\App\Http\Controllers\Admin\IssueReportController::class, 'export'])->name('admin.issue-reports.export');
+    // User-facing: only the current user's own reported issues
+    Route::get('/my-reported-issues', [\App\Http\Controllers\Admin\IssueReportController::class, 'myIssues'])->name('my.issue-reports.index');
+    Route::get('/my-reported-issues/filter-options', [\App\Http\Controllers\Admin\IssueReportController::class, 'myFilterOptions'])->name('my.issue-reports.filter-options');
+    Route::get('/my-reported-issues/export', [\App\Http\Controllers\Admin\IssueReportController::class, 'myExport'])->name('my.issue-reports.export');
     Route::get('/issue-reports/{id}', [\App\Http\Controllers\Admin\IssueReportController::class, 'show'])->whereNumber('id')->name('admin.issue-reports.show');
     Route::post('/issue-reports/{id}/status', [\App\Http\Controllers\Admin\IssueReportController::class, 'updateStatus'])->whereNumber('id')->name('admin.issue-reports.status');
     Route::delete('/issue-reports/{id}', [\App\Http\Controllers\Admin\IssueReportController::class, 'destroy'])->whereNumber('id')->name('admin.issue-reports.destroy');
