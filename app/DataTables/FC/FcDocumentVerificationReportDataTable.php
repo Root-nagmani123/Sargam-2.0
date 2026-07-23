@@ -66,7 +66,9 @@ class FcDocumentVerificationReportDataTable extends DataTable
 
         // Per-student "Document Verification" button → opens the standalone verify page.
         $dt->addColumn('action', function ($row) use ($userKey) {
-            $id = $row->{$userKey} ?? null;
+            // route_user_id is the correct route key when the tracker's user column isn't;
+            // mirror FcFormOverviewDataTable so identical data links correctly instead of 404ing.
+            $id = $row->route_user_id ?? $row->{$userKey} ?? null;
             if ($id === null || $id === '') {
                 return '<span class="text-muted">—</span>';
             }
@@ -108,10 +110,14 @@ class FcDocumentVerificationReportDataTable extends DataTable
         }, false); // autoFilter off: our closure is the only search (columns are aliases).
 
         // Order hints for aliased columns (avoid ORDER BY on raw expressions).
-        $dt->orderColumn('full_name', 's1.full_name $1');
-        $dt->orderColumn('service_code', 'svc.service_short_name $1');
-        $dt->orderColumn('allotted_state', 'st.state_name $1');
-        $dt->orderColumn('mobile_no', 's1.mobile_no $1');
+        // Only valid once a course is selected — the empty-state query has no s1/svc/st
+        // aliases, so registering these unconditionally 500s (error 1054) on a header click.
+        if ($form) {
+            $dt->orderColumn('full_name', 's1.full_name $1');
+            $dt->orderColumn('service_code', 'svc.service_short_name $1');
+            $dt->orderColumn('allotted_state', 'st.state_name $1');
+            $dt->orderColumn('mobile_no', 's1.mobile_no $1');
+        }
 
         $dt->rawColumns(['login_username', 'service_code', 'action']);
 

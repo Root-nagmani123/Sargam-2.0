@@ -2234,13 +2234,6 @@ class ReportController extends Controller
             ]);
         }
 
-        $students = $studentsQuery->get()->keyBy('user_id');
-
-        $uploadRows = DB::table('fc_joining_documents_user_uploads')
-            ->whereIn('user_id', $students->keys()->all())
-            ->get()
-            ->keyBy('user_id');
-
         // Build ZIP in a temp file
         $tmpPath = tempnam(sys_get_temp_dir(), 'docs_zip_');
         $zip     = new \ZipArchive();
@@ -2251,38 +2244,54 @@ class ReportController extends Controller
 
         $totalFiles = 0;
 
-        foreach ($students as $student) {
-            $upload = $uploadRows->get($student->user_id);
-            if (! $upload) {
-                continue;
-            }
+        // Stream the roster in batches so a large course doesn't load every student and
+        // every upload row into memory at once. Archive contents are identical — ZipArchive
+        // only reads each file at close(), so adding paths across chunks is transparent.
+        $studentsQuery->orderBy('sm.user_id')->chunk(500, function ($students) use ($zip, $docFields, &$totalFiles) {
+            $uploadRows = DB::table('fc_joining_documents_user_uploads')
+                ->whereIn('user_id', $students->pluck('user_id')->all())
+                ->get()
+                ->keyBy('user_id');
 
-            // Folder name format: username_rank_year (empty rank/year segments are dropped)
-            $folder = $this->safeZipName(implode('_', array_filter([
-                $student->login_username,
-                $student->reg_rank ?? null,
-                $student->exam_year ?? null,
-            ], fn ($v) => $v !== null && trim((string) $v) !== '')));
-
-            foreach ($docFields as $field) {
-                $col      = $field->target_column ?: $field->field_name;
-                $filePath = $upload->{$col} ?? null;
-
-                if (empty($filePath)) {
+            foreach ($students as $student) {
+                $upload = $uploadRows->get($student->user_id);
+                if (! $upload) {
                     continue;
                 }
 
-                $fullPath = storage_path('app/public/' . $filePath);
-                if (! is_file($fullPath)) {
-                    continue;
+                // Folder name format: username_rank_year (empty rank/year segments are dropped)
+                $folder = $this->safeZipName(implode('_', array_filter([
+                    $student->login_username,
+                    $student->reg_rank ?? null,
+                    $student->exam_year ?? null,
+                ], fn ($v) => $v !== null && trim((string) $v) !== '')));
+
+                // Fall back to a per-student folder so files never land at the archive root
+                // when username, rank and exam year are all blank.
+                if ($folder === '') {
+                    $folder = 'student_' . ($student->user_id ?? $totalFiles);
                 }
 
-                $ext      = pathinfo($filePath, PATHINFO_EXTENSION);
-                $docName  = $this->safeZipName($field->label) . ($ext ? '.' . strtolower($ext) : '');
-                $zip->addFile($fullPath, $folder . '/' . $docName);
-                $totalFiles++;
+                foreach ($docFields as $field) {
+                    $col      = $field->target_column ?: $field->field_name;
+                    $filePath = $upload->{$col} ?? null;
+
+                    if (empty($filePath)) {
+                        continue;
+                    }
+
+                    $fullPath = storage_path('app/public/' . $filePath);
+                    if (! is_file($fullPath)) {
+                        continue;
+                    }
+
+                    $ext      = pathinfo($filePath, PATHINFO_EXTENSION);
+                    $docName  = $this->safeZipName($field->label) . ($ext ? '.' . strtolower($ext) : '');
+                    $zip->addFile($fullPath, $folder . '/' . $docName);
+                    $totalFiles++;
+                }
             }
-        }
+        });
 
         $zip->close();
 

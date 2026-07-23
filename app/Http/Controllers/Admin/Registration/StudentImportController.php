@@ -535,7 +535,7 @@ class StudentImportController extends Controller
 
                         if ($existingForRekey && ! empty($existingForRekey->pk)) {
                             $affectedCredentialPks[] = (int) $existingForRekey->pk;
-                            $this->rekeyFcFormUserIdFromRosterPk((int) $record->pk, (int) $existingForRekey->pk);
+                            $this->rekeyFcFormUserIdFromRosterPk((int) $record->pk, (int) $existingForRekey->pk, (int) ($record->course_master_pk ?? 0));
                         }
                     }
 
@@ -635,7 +635,9 @@ class StudentImportController extends Controller
             \App\Services\FC\FcMigrateStudentsExportService::flushMatchedRosterPks();
 
             return back()->with('success', "Migration completed successfully for {$migratedCount} record(s).");
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            // \Throwable (not just \Exception) so a \TypeError/\ValueError from unexpected
+            // roster data still rolls the transaction back instead of escaping with locks held.
             DB::rollBack();
 
             return back()->with('error', 'Migration failed: ' . $e->getMessage());
@@ -700,7 +702,7 @@ class StudentImportController extends Controller
     /**
      * FC forms may store fc_registration_master.pk in user_id before migration; switch to user_credentials.pk.
      */
-    private function rekeyFcFormUserIdFromRosterPk(int $rosterPk, int $credentialsPk): void
+    private function rekeyFcFormUserIdFromRosterPk(int $rosterPk, int $credentialsPk, int $rosterCoursePk = 0): void
     {
         if ($rosterPk < 1 || $credentialsPk < 1 || $rosterPk === $credentialsPk) {
             return;
@@ -717,11 +719,16 @@ class StudentImportController extends Controller
         }
 
         // Populate course_master_pk (INT) on fc_pre_history and fc_ot_details rows for this user.
+        // course_master_pk is already loaded on the roster record (eligibleRosterQuery selects r.*)
+        // and passed in, so it is not re-queried per migrated record; the lookup below is only a
+        // defensive fallback for callers that don't supply it.
         $courseFlags = $this->courseBackfillFlags();
         if ($courseFlags['enabled']) {
-            $rosterCoursePk = (int) (DB::table('fc_registration_master')
-                ->where('pk', $rosterPk)
-                ->value('course_master_pk') ?? 0);
+            if ($rosterCoursePk < 1) {
+                $rosterCoursePk = (int) (DB::table('fc_registration_master')
+                    ->where('pk', $rosterPk)
+                    ->value('course_master_pk') ?? 0);
+            }
 
             if ($rosterCoursePk > 0) {
                 if ($courseFlags['pre_history']) {

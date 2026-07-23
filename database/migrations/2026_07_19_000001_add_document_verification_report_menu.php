@@ -1,4 +1,4 @@
-php artisan serve <?php
+<?php
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
@@ -43,11 +43,27 @@ return new class extends Migration
         );
 
         // Create the permission (guard web) so it can be assigned to roles.
+        // updateOrInsert applies one payload to both insert and update, which would reset
+        // created_at on a pre-existing permission — so created_at is written on insert only.
         if (DB::getSchemaBuilder()->hasTable('permissions')) {
-            DB::table('permissions')->updateOrInsert(
-                ['name' => $this->permissionName, 'guard_name' => 'web'],
-                ['updated_at' => now(), 'created_at' => now()]
-            );
+            $permissionExists = DB::table('permissions')
+                ->where('name', $this->permissionName)
+                ->where('guard_name', 'web')
+                ->exists();
+
+            if ($permissionExists) {
+                DB::table('permissions')
+                    ->where('name', $this->permissionName)
+                    ->where('guard_name', 'web')
+                    ->update(['updated_at' => now()]);
+            } else {
+                DB::table('permissions')->insert([
+                    'name'       => $this->permissionName,
+                    'guard_name' => 'web',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
         }
 
         SidebarNavResolver::clearCache();

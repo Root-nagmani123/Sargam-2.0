@@ -3,7 +3,6 @@
 namespace App\Services\FC;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Service-aware options for the "Optional Subject First / Second" dropdowns on the

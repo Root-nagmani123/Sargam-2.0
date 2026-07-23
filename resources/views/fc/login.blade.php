@@ -66,7 +66,7 @@
                                         type="submit"
                                         style="width: 150px;background-color: #004a93; border-color: #004a93;">
                                         <i class="material-icons me-2">login</i>
-                                        Authenticate
+                                        Login
                                     </button>
                                 </div>
                             </form>

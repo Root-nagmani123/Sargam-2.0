@@ -47,6 +47,12 @@ class CompressResponse
             return $response;
         }
 
+        // Recorded decision (BREACH consideration): this middleware gzips authenticated
+        // HTML that embeds a session-constant CSRF _token, which is the precondition for a
+        // BREACH oracle. The residual risk is accepted deliberately, not enabled by accident:
+        // responses do not reflect attacker-controlled input alongside the token, the token
+        // rotates per session, and the app is served over TLS. Revisit this if user-controlled
+        // input ever becomes reflected in the same compressed response as the token.
         $content = $response->getContent();
         if ($content === false || $content === null) {
             return $response;

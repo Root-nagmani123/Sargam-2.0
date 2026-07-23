@@ -305,7 +305,12 @@ class DynamicFormService
             $orderColumn = $field->lookup_order_column
                 ?: ($field->lookup_label_column ?: null);
 
-            $lookups[$field->field_name] = $this->cachedLookupRows($table, $orderColumn);
+            $lookups[$field->field_name] = $this->cachedLookupRows(
+                $table,
+                $orderColumn,
+                $field->lookup_value_column ?? null,
+                $field->lookup_label_column ?? null
+            );
         }
 
         return $lookups;
@@ -389,20 +394,6 @@ class DynamicFormService
     }
 
     /**
-     * Rows for a reference/master table, de-duplicated within the request and cached
-     * across requests.
-     *
-     * These masters (states, countries, languages, districts, cities, qualifications…)
-     * change very rarely but were re-queried once per field: a single Descriptive Roll
-     * render fetched language_master 5x, state_master 4x and country_master 2x. Under
-     * 200 concurrent users that multiplied into the dominant DB load.
-     *
-     * The per-request memo holds a plain array and a fresh Collection is handed to each
-     * caller, so no two fields can share (and accidentally mutate) one instance.
-     *
-     * @return Collection<int, object>
-     */
-    /**
      * Cache key for a reference-table lookup, namespaced by database and by the
      * lookup cache version so fc_flush_lookup_cache() can publish master-data
      * edits instantly instead of waiting out the TTL.
@@ -412,15 +403,62 @@ class DynamicFormService
         return 'fc_lookup:'.DB::getDatabaseName().':v'.fc_lookup_cache_version().':'.$suffix;
     }
 
-    private function cachedLookupRows(string $table, ?string $orderColumn = null): Collection
-    {
+    /**
+     * Rows for a reference/master table, de-duplicated within the request and cached
+     * across requests.
+     *
+     * These masters (states, countries, languages, districts, cities, qualifications…)
+     * change very rarely but were re-queried once per field: a single Descriptive Roll
+     * render fetched language_master 5x, state_master 4x and country_master 2x. Under
+     * 200 concurrent users that multiplied into the dominant DB load.
+     *
+     * Each caller gets a fresh Collection wrapper, but the row objects inside it are the
+     * shared cached instances — treat them as read-only and never mutate row properties.
+     *
+     * @return Collection<int, object>
+     */
+    private function cachedLookupRows(
+        string $table,
+        ?string $orderColumn = null,
+        ?string $valueColumn = null,
+        ?string $labelColumn = null
+    ): Collection {
         static $memo = [];
 
-        $key = $table.'|'.($orderColumn ?? '');
+        $key = $table.'|'.($orderColumn ?? '').'|'.($valueColumn ?? '').'|'.($labelColumn ?? '');
 
         if (! array_key_exists($key, $memo)) {
-            $fetch = static function () use ($table, $orderColumn) {
+            $fetch = static function () use ($table, $orderColumn, $valueColumn, $labelColumn) {
                 $query = DB::table($table);
+
+                // Select only the columns the dropdown partials actually read — value + label
+                // (with the blade's id/name fallbacks), the order column, and the optional
+                // country_master_pk used for the state→country cascade — instead of SELECT *.
+                // Only restrict when every core column exists; otherwise fall back to all
+                // columns so a misconfigured lookup can never turn into a SQL error.
+                $value = $valueColumn ?: 'id';
+                $label = $labelColumn ?: 'name';
+                $core  = array_values(array_unique(array_filter(
+                    [$value, $label, $orderColumn],
+                    static fn ($c) => is_string($c) && $c !== ''
+                )));
+
+                $restrict = $core !== [];
+                foreach ($core as $col) {
+                    if (! fc_schema_has_column($table, $col)) {
+                        $restrict = false;
+                        break;
+                    }
+                }
+
+                if ($restrict) {
+                    $select = $core;
+                    if (fc_schema_has_column($table, 'country_master_pk')) {
+                        $select[] = 'country_master_pk';
+                    }
+                    $query->select(array_values(array_unique($select)));
+                }
+
                 if ($orderColumn !== null && $orderColumn !== '') {
                     $query->orderBy($orderColumn);
                 }

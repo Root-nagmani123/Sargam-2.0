@@ -12,6 +12,13 @@ class SidebarNavResolver
     public const HOME_TAB = '#home';
 
     /**
+     * Per-request memo of the id-keyed structure maps. Held as a class property (not a
+     * function static) so clearCache() can drop it — otherwise code running after a menu
+     * /group/category edit within the same request keeps resolving from the stale map.
+     */
+    private static array $structureMemo = [];
+
+    /**
      * Id-keyed maps of the three tiny structural tables (menus 223 rows,
      * menu_groups 23, sidebar_categories 5).
      *
@@ -28,10 +35,8 @@ class SidebarNavResolver
      */
     public static function structureMap(string $which)
     {
-        static $memo = [];
-
-        if (isset($memo[$which])) {
-            return $memo[$which];
+        if (isset(self::$structureMemo[$which])) {
+            return self::$structureMemo[$which];
         }
 
         $build = static function () use ($which) {
@@ -46,7 +51,7 @@ class SidebarNavResolver
 
         $ttl = (int) config('fc.menu_cache_ttl', 600);
         if ($ttl <= 0) {
-            return $memo[$which] = $build();
+            return self::$structureMemo[$which] = $build();
         }
 
         try {
@@ -58,13 +63,13 @@ class SidebarNavResolver
             $restored = is_string($payload) ? @unserialize($payload) : null;
 
             if ($restored instanceof \Illuminate\Support\Collection) {
-                return $memo[$which] = $restored;
+                return self::$structureMemo[$which] = $restored;
             }
         } catch (\Throwable $e) {
             // fall through to a live build
         }
 
-        return $memo[$which] = $build();
+        return self::$structureMemo[$which] = $build();
     }
 
     /** Active menu by id, or null. */
@@ -757,6 +762,10 @@ class SidebarNavResolver
         foreach (['menus', 'groups', 'categories'] as $which) {
             Cache::forget('fc_sidebar_map:'.$which);
         }
+
+        // Drop the in-request memo too, so a menu/group/category edit re-resolves from
+        // the freshly rebuilt map within the same request instead of the stale one.
+        self::$structureMemo = [];
     }
 
     /**

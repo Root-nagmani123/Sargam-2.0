@@ -434,12 +434,14 @@ class EnrollementController extends Controller
             ->where('active_inactive', 1)
             ->when($courseStatus === 'active', function ($q) use ($currentDate) {
                 $q->where(function ($q2) use ($currentDate) {
+                    // Range comparison instead of whereDate() so the index on end_date can be
+                    // used; DATE(end_date) >= today is equivalent to end_date >= today 00:00:00.
                     $q2->whereNull('end_date')
-                        ->orWhereDate('end_date', '>=', $currentDate);
+                        ->orWhere('end_date', '>=', $currentDate.' 00:00:00');
                 });
             })
             ->when($courseStatus === 'inactive', function ($q) use ($currentDate) {
-                $q->whereDate('end_date', '<', $currentDate);
+                $q->where('end_date', '<', $currentDate.' 00:00:00');
             })
             ->orderBy('course_name')
             ->pluck('course_name', 'pk');
@@ -638,9 +640,9 @@ class EnrollementController extends Controller
         // Archived = flagged inactive OR already ended
         $courses = CourseMaster::query()
             ->when($courseStatus === 'active', fn($q) => $q->where('active_inactive', 1)
-                ->whereDate('end_date', '>=', now()))
+                ->where('end_date', '>=', now()->toDateString().' 00:00:00'))
             ->when($courseStatus === 'inactive', fn($q) => $q->where(fn($w) => $w->where('active_inactive', 0)
-                ->orWhereDate('end_date', '<', now())))
+                ->orWhere('end_date', '<', now()->toDateString().' 00:00:00')))
             ->when(!empty($data_course_id), fn($q) => $q->whereIn('pk', $data_course_id))
             ->orderBy('course_name')
             ->pluck('course_name', 'pk');
@@ -774,9 +776,9 @@ class EnrollementController extends Controller
         // export is restricted to the same set of courses shown on screen.
         $statusCourseIds = CourseMaster::query()
             ->when($courseStatus === 'active', fn($q) => $q->where('active_inactive', 1)
-                ->whereDate('end_date', '>=', now()))
+                ->where('end_date', '>=', now()->toDateString().' 00:00:00'))
             ->when($courseStatus === 'inactive', fn($q) => $q->where(fn($w) => $w->where('active_inactive', 0)
-                ->orWhereDate('end_date', '<', now())))
+                ->orWhere('end_date', '<', now()->toDateString().' 00:00:00')))
             ->when(!empty($data_course_id), fn($q) => $q->whereIn('pk', $data_course_id))
             ->pluck('pk')
             ->all();

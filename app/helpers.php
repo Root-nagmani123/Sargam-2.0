@@ -93,10 +93,15 @@ if (! function_exists('fc_schema_cache_version')) {
 
         if ($bump) {
             try {
-                $version = (int) Cache::increment($key);
-                if ($version <= 0) {
-                    $version = 1;
+                $incremented = Cache::increment($key);
+                if ($incremented === false || (int) $incremented <= 0) {
+                    // Key absent or the store returned false (e.g. the database cache store):
+                    // seed to current+1 rather than resetting to 1, which would collide with
+                    // entries already cached under an earlier v1 and serve them stale.
+                    $version = ((int) Cache::get($key, 1)) + 1;
                     Cache::forever($key, $version);
+                } else {
+                    $version = (int) $incremented;
                 }
             } catch (\Throwable $e) {
                 $version = 1;
@@ -168,19 +173,19 @@ if (! function_exists('fc_schema_columns')) {
         $ttl = (int) config('fc.schema_cache_ttl', 86400);
 
         try {
+            // The closure must NOT swallow a Schema:: failure into [] — Cache::remember would
+            // then persist that empty array for the full TTL (24h), which fc_schema_has_table()
+            // reads as "table does not exist", silently breaking fc_user_col()/report fallbacks
+            // for a day. Letting the exception propagate means nothing is cached and the catch
+            // below performs a live lookup instead.
             $columns = Cache::remember(
                 fc_schema_cache_key($table),
                 $ttl > 0 ? $ttl : 86400,
-                static function () use ($table) {
-                    try {
-                        return Schema::getColumnListing($table);
-                    } catch (\Throwable $e) {
-                        return [];
-                    }
-                }
+                static fn () => Schema::getColumnListing($table)
             );
         } catch (\Throwable $e) {
-            // Cache store unavailable — fall back to a live lookup rather than failing.
+            // Cache store unavailable, or the introspection query failed: fall back to a live
+            // lookup and never poison the cache with an empty result.
             try {
                 $columns = Schema::getColumnListing($table);
             } catch (\Throwable $e2) {
@@ -248,10 +253,15 @@ if (! function_exists('fc_lookup_cache_version')) {
 
         if ($bump) {
             try {
-                $version = (int) Cache::increment($key);
-                if ($version <= 0) {
-                    $version = 1;
+                $incremented = Cache::increment($key);
+                if ($incremented === false || (int) $incremented <= 0) {
+                    // Key absent or the store returned false (e.g. the database cache store):
+                    // seed to current+1 rather than resetting to 1, which would collide with
+                    // entries already cached under an earlier v1 and serve them stale.
+                    $version = ((int) Cache::get($key, 1)) + 1;
                     Cache::forever($key, $version);
+                } else {
+                    $version = (int) $incremented;
                 }
             } catch (\Throwable $e) {
                 $version = 1;
@@ -1802,7 +1812,7 @@ if (! function_exists('fc_report_apply_tracker_user_resolution')) {
 
         $query->leftJoin('user_credentials as uc', "{$t}.user_id", '=', 'uc.pk');
 
-        if (Schema::hasTable('fc_registration_master')) {
+        if (fc_schema_has_table('fc_registration_master')) {
             $query->leftJoin('fc_registration_master as frm', 'frm.pk', '=', "{$t}.user_id")
                 ->leftJoin('user_credentials as uc_frm', 'uc_frm.user_name', '=', 'frm.user_id');
         }
@@ -1817,7 +1827,7 @@ if (! function_exists('fc_report_login_username_sql')) {
         $t = $alias ?? $trackerTable;
         $parts = ["NULLIF(TRIM(uc.user_name), '')"];
 
-        if (Schema::hasTable('fc_registration_master')) {
+        if (fc_schema_has_table('fc_registration_master')) {
             $parts[] = "NULLIF(TRIM(frm.user_id), '')";
             $parts[] = "NULLIF(TRIM(uc_frm.user_name), '')";
         }
@@ -1833,7 +1843,7 @@ if (! function_exists('fc_report_route_user_id_sql')) {
     {
         $t = $alias ?? $trackerTable;
 
-        if (Schema::hasTable('fc_registration_master')) {
+        if (fc_schema_has_table('fc_registration_master')) {
             return "COALESCE(uc.pk, uc_frm.pk, `{$t}`.`user_id`)";
         }
 
@@ -1861,15 +1871,15 @@ if (! function_exists('fc_report_join_student_master_firsts')) {
             $join->on(function ($join) use ($t, $s1Col) {
                 $join->on("s1.{$s1Col}", '=', "{$t}.user_id");
 
-                if (Schema::hasColumn('student_master_firsts', 'user_id')) {
+                if (fc_schema_has_column('student_master_firsts', 'user_id')) {
                     $join->orOn('s1.user_id', '=', 'uc.pk');
-                    if (Schema::hasTable('fc_registration_master')) {
+                    if (fc_schema_has_table('fc_registration_master')) {
                         $join->orOn('s1.user_id', '=', 'uc_frm.pk');
                     }
                 }
 
-                if (Schema::hasTable('fc_registration_master')
-                    && Schema::hasColumn('student_master_firsts', 'username')) {
+                if (fc_schema_has_table('fc_registration_master')
+                    && fc_schema_has_column('student_master_firsts', 'username')) {
                     $join->orOn('s1.username', '=', 'frm.user_id');
                 }
             });
