@@ -32,7 +32,6 @@
             </div>
             <hr>
 
-            <p class="mb-1">{{ $type == 'memo' ? 'SHOW CAUSE MEMO' : 'SHOW CAUSE NOTICE' }}</p>
             <p><strong>Date:</strong>
                 {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}
             </p>
@@ -82,10 +81,7 @@
 
             <p>
                 <strong>{{ $template_details->display_name ?? 'Student Name' }},
-                    {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>
-                Remarks: for absence in
-                {{ $template_details->subject_topic ?? 'the session' }} on
-                {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}
+                    {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong>
             </p>
 
             <div class="text-end">

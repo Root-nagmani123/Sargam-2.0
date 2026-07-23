@@ -116,7 +116,6 @@
                             <h5 class="text-center fw-bold mb-2" id="anTplCourse"></h5>
                             <p class="text-center mb-0 small">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
                             <hr>
-                            <p class="mb-1" id="anTplType"></p>
                             <p class="mb-1"><strong>Date:</strong> <span id="anTplDate"></span></p>
                             <div id="anTplContent" class="mb-3"></div>
                             <p class="text-end mb-0"><strong id="anTplDirector"></strong><br><span id="anTplDesig"></span></p>
@@ -159,7 +158,6 @@
                             <h5 class="text-center fw-bold mb-2" id="editNoticeTplCourse"></h5>
                             <p class="text-center mb-0 small">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
                             <hr>
-                            <p class="mb-1" id="editNoticeTplType"></p>
                             <p class="mb-1"><strong>Date:</strong> <span id="editNoticeTplDate"></span></p>
                             <div class="table-responsive mb-3">
                                 <table class="table table-sm table-bordered mb-0">
@@ -1602,7 +1600,6 @@ $(function () {
     function renderTemplatePreview(tpl) {
         if (tpl && (tpl.content || tpl.director_name)) {
             $('#anTplCourse').text($('#anCourse option:selected').text());
-            $('#anTplType').text('SHOW CAUSE NOTICE');
             $('#anTplDate').text((new Date()).toLocaleDateString('en-GB'));
             $('#anTplContent').html(tpl.content || '');
             $('#anTplDirector').text(tpl.director_name || '');
@@ -1776,7 +1773,6 @@ $(function () {
     function renderEditNoticePreview(tpl, ctx) {
         if (tpl && (tpl.content || tpl.director_name)) {
             $('#editNoticeTplCourse').text(ctx.course_name || '');
-            $('#editNoticeTplType').text('SHOW CAUSE NOTICE');
             $('#editNoticeTplDate').text(ctx.date_ ? new Date(ctx.date_).toLocaleDateString('en-GB') : '');
             $('#editNoticeInfoDate').text(ctx.date_ ? new Date(ctx.date_).toLocaleDateString('en-GB') : '');
             $('#editNoticeInfoTopic').text(ctx.topic_name || '');

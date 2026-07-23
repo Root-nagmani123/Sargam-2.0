@@ -317,12 +317,15 @@ class CourseAttendanceNoticeMapController extends Controller
     // Conclusion types for the chat panel's "End Chat" action.
     $conclusions = \App\Models\MemoConclusionMaster::where('active_inactive', 1)->get();
     
-    // Get courses for Program Name filter - only active courses (active_inactive = 1 and end_date > now),
+    // Get courses for Program Name filter (and the Add Notice modal's Course
+    // dropdown, which reuses this same $courses) - only courses that have
+    // actually started (start_year <= today) and not yet ended (end_date > now),
     // scoped to the courses mapped to the logged-in user's role (same as the
     // Direct Notice and Discipline Memo tabs — see get_Role_by_course()).
     $data_course_id = get_Role_by_course();
     $courses = CourseMaster::where('active_inactive', 1)
         ->where('end_date', '>', now())
+        ->where('start_year', '<=', now())
         ->when(!empty($data_course_id), function ($query) use ($data_course_id) {
             $query->whereIn('pk', $data_course_id);
         })
@@ -783,8 +786,11 @@ if($memos[0]->status == 2){
     }
 public function create(Request $request)
 {
+    // Only courses that have actually started (start_year <= today) and not yet
+    // ended — same "future courses excluded" rule as the index()/Add Notice dropdown.
     $activeCourses = CourseMaster::where('active_inactive', '1')
         ->where('end_date', '>', now())
+        ->where('start_year', '<=', now())
         ->get();
 // print_r($activeCourses);die;
     return view('admin.courseAttendanceNoticeMap.create', compact('activeCourses'));
@@ -3186,7 +3192,11 @@ public function getGeneratedMemoData(Request $request)
         'memo_type_master_pk' => $memo->memo_type_master_pk ?? null,
         'memo_notice_template_pk' => $memo->memo_notice_template_pk ?? null,
         'venue_master_pk' => $memo->venue_master_pk ?? null,
-        'date' => $memo->date ?? null,
+        // student_memo_status.date is a DATETIME column ("2026-05-15 00:00:00"),
+        // but this feeds an <input type="date"> which only accepts a bare
+        // Y-m-d string — anything else is silently rejected by the browser,
+        // leaving the field empty. Format it down before sending.
+        'date' => $memo->date ? Carbon::parse($memo->date)->format('Y-m-d') : null,
         'start_time' => $memo->start_time ?? null,
         'message' => $memo->message ?? null,
         // Notice-related fields
