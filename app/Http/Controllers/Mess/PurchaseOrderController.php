@@ -540,7 +540,7 @@ class PurchaseOrderController extends Controller
 
         $items = ItemSubcategory::active()
             ->orderBy('name')
-            ->get()
+            ->get(ItemSubcategory::listSelectColumns())
             ->map(fn ($s) => [
                 'id' => $s->id,
                 'item_name' => $s->item_name ?? $s->name ?? '—',

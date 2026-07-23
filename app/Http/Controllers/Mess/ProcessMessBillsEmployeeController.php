@@ -4871,7 +4871,7 @@ class ProcessMessBillsEmployeeController extends Controller
                     ], 400);
                 }
                 DB::commit();
-            } catch (\Illuminate\Database\QueryException $e) {
+            } catch (\Throwable $e) {
                 DB::rollBack();
                 report($e);
 

@@ -725,7 +725,7 @@ class SellingVoucherDateRangeController extends Controller
             return redirect()->route('admin.mess.selling-voucher-date-range.index')
                 ->with('success', 'Date Range Report created successfully.')
                 ->with('open_add_modal', true);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
 
             if ($request->ajax() || $request->wantsJson()) {
@@ -1491,7 +1491,7 @@ class SellingVoucherDateRangeController extends Controller
 
             return redirect()->route('admin.mess.selling-voucher-date-range.index')
                 ->with('success', 'Date Range Report updated successfully.');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
             return redirect()->route('admin.mess.selling-voucher-date-range.index')
                 ->with('error', 'Failed to update report: ' . $e->getMessage());
@@ -1829,7 +1829,7 @@ class SellingVoucherDateRangeController extends Controller
 
             return redirect()->route('admin.mess.selling-voucher-date-range.index', $redirectParams)
                 ->with('success', 'Date Range Report updated successfully.');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
 
             return redirect()->route('admin.mess.selling-voucher-date-range.index')
@@ -2089,7 +2089,7 @@ class SellingVoucherDateRangeController extends Controller
 
             return redirect()->route('admin.mess.selling-voucher-date-range.index', $redirectParams)
                 ->with('success', 'Return updated successfully.');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
@@ -2436,31 +2436,19 @@ class SellingVoucherDateRangeController extends Controller
 
     private function findEmployeePkByDisplayName(string $buyerName, string $baseName): ?int
     {
-        $candidates = array_values(array_unique(array_filter([trim($buyerName), trim($baseName)])));
-
-        foreach ($candidates as $candidate) {
-            $employee = EmployeeMaster::query()
-                ->select('pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk')
-                ->get()
-                ->first(function ($row) use ($candidate) {
-                    $fullName = trim(($row->first_name ?? '').' '.($row->middle_name ?? '').' '.($row->last_name ?? ''));
-                    if ($fullName === $candidate) {
-                        return true;
-                    }
-
-                    $departmentName = trim((string) DepartmentMaster::query()
-                        ->where('pk', $row->department_master_pk)
-                        ->value('department_name'));
-
-                    return $departmentName !== '' && ($fullName.' ('.$departmentName.')') === $candidate;
-                });
-
-            if ($employee) {
-                return (int) $employee->pk;
-            }
+        $nameForMatch = trim($baseName !== '' ? $baseName : $buyerName);
+        if ($nameForMatch === '') {
+            return null;
         }
 
-        return null;
+        $pk = EmployeeMaster::query()
+            ->whereRaw(
+                "TRIM(CONCAT(COALESCE(first_name,''), ' ', COALESCE(middle_name,''), ' ', COALESCE(last_name,''))) = ?",
+                [$nameForMatch]
+            )
+            ->value('pk');
+
+        return ($pk !== null && (int) $pk > 0) ? (int) $pk : null;
     }
 
     private function resolveEmployeeBuyerNameForFilter(int $employeePk, int $clientTypePk): string

@@ -1585,7 +1585,7 @@ class KitchenIssueController extends Controller
                 ->withErrors($e->errors())
                 ->withInput()
                 ->with('open_selling_voucher_modal', true);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
 
             $returnJson = $request->ajax()
@@ -2025,7 +2025,7 @@ class KitchenIssueController extends Controller
         } catch (ValidationException $e) {
             DB::rollBack();
             throw $e;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
             return back()->withInput()
                         ->with('error', 'Failed to update Selling Voucher: ' . $e->getMessage());
@@ -2188,53 +2188,6 @@ class KitchenIssueController extends Controller
             ->withQueryString();
 
         return response()->json($records);
-    }
-
-    /**
-     * Generate bill report
-     */
-    public function billReport(Request $request)
-    {
-        $query = KitchenIssueMaster::with(['store', 'employee', 'student']);
-
-        if ($request->filled('messId')) {
-            $query->where('store_id', $request->messId);
-        }
-
-        if ($request->filled('empId')) {
-            $query->where('client_id', $request->empId);
-        }
-
-        if ($request->filled('sDate') && $request->filled('eDate')) {
-            $query->whereBetween('issue_date', [$request->sDate, $request->eDate]);
-        }
-
-        if ($request->filled('payment_type')) {
-            $query->where('payment_type', $request->payment_type);
-        }
-
-        if ($request->filled('client_type')) {
-            $query->where('client_type', $request->client_type);
-        }
-
-        $perPage = max(1, min(100, (int) $request->input('per_page', 20)));
-
-        $reportSummary = [
-            'total_issues' => (clone $query)->count(),
-            'paid_count' => (clone $query)->where('payment_type', 1)->count(),
-            'unpaid_count' => (clone $query)->where('payment_type', 0)->count(),
-            'total_amount' => (float) KitchenIssueItem::query()
-                ->whereIn('kitchen_issue_master_pk', (clone $query)->select('pk'))
-                ->sum('amount'),
-        ];
-
-        $kitchenIssues = $query->orderBy('issue_date', 'desc')
-            ->paginate($perPage)
-            ->withQueryString();
-
-        $stores = Store::all();
-
-        return view('mess.kitchen-issues.bill-report', compact('kitchenIssues', 'stores', 'reportSummary'));
     }
 
     /**
