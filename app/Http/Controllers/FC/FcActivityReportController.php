@@ -40,7 +40,7 @@ class FcActivityReportController extends Controller
         $this->access->assertMenuidAllowedForUser($menuid);
 
         $actCol = fc_user_col('fc_otactivity_details');
-        $serviceCol = \Illuminate\Support\Facades\Schema::hasColumn('service_master', 'service_name')
+        $serviceCol = fc_schema_has_column('service_master', 'service_name')
             ? 'service_name'
             : 'service_short_name';
 

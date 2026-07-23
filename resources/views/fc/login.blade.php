@@ -22,8 +22,7 @@
                             @endif --}}
                             <form class="row g-3" method="POST" action="{{ route('registration.verify') }}">
                                 @csrf
-                                <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">User Authentication -
-                                    Foundation Course Registration</h3>
+                                <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">User Authentication</h3>
                                 <hr>
                                 <!-- Mobile -->
                                 <div class="col-md-12">

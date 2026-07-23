@@ -46,15 +46,284 @@ function fc_user_col(string $table): string
 {
     static $cache = [];
     if (! array_key_exists($table, $cache)) {
-        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'user_id')) {
+        if (fc_schema_has_column($table, 'user_id')) {
             $cache[$table] = 'user_id';
-        } elseif (\Illuminate\Support\Facades\Schema::hasColumn($table, 'userid')) {
+        } elseif (fc_schema_has_column($table, 'userid')) {
             $cache[$table] = 'userid';
         } else {
             $cache[$table] = 'username';
         }
     }
     return $cache[$table];
+}
+
+if (! function_exists('fc_user_name_for_id')) {
+    /**
+     * user_credentials.user_name for an auth id, memoised for the request.
+     *
+     * Three separate call sites (fc_user_val(), FcImportedProfileLockService::rosterRow()
+     * and DynamicFormService's course fallback) each resolved this independently, so a
+     * single page render issued the same query three times. They now share one memo.
+     */
+    function fc_user_name_for_id(int $userId): ?string
+    {
+        static $memo = [];
+
+        if (array_key_exists($userId, $memo)) {
+            return $memo[$userId];
+        }
+
+        $name = DB::table('user_credentials')->where('pk', $userId)->value('user_name');
+
+        return $memo[$userId] = ($name === null ? null : (string) $name);
+    }
+}
+
+if (! function_exists('fc_schema_cache_version')) {
+    /**
+     * Version marker every schema cache key hangs off. Bumping it invalidates all
+     * cached listings at once without needing cache tags (which not every store
+     * supports). Memoised per request, so this costs one cache read per request.
+     */
+    function fc_schema_cache_version(bool $bump = false): int
+    {
+        static $version = null;
+
+        $key = 'fc_schema_version:'.DB::getDatabaseName();
+
+        if ($bump) {
+            try {
+                $incremented = Cache::increment($key);
+                if ($incremented === false || (int) $incremented <= 0) {
+                    // Key absent or the store returned false (e.g. the database cache store):
+                    // seed to current+1 rather than resetting to 1, which would collide with
+                    // entries already cached under an earlier v1 and serve them stale.
+                    $version = ((int) Cache::get($key, 1)) + 1;
+                    Cache::forever($key, $version);
+                } else {
+                    $version = (int) $incremented;
+                }
+            } catch (\Throwable $e) {
+                $version = 1;
+            }
+
+            return $version;
+        }
+
+        if ($version !== null) {
+            return $version;
+        }
+
+        try {
+            $version = (int) Cache::get($key, 1);
+        } catch (\Throwable $e) {
+            $version = 1;
+        }
+
+        return $version = $version > 0 ? $version : 1;
+    }
+}
+
+if (! function_exists('fc_schema_cache_key')) {
+    /**
+     * Cache key namespace for schema introspection, scoped to the connection's
+     * database so multiple environments sharing a cache store never collide.
+     */
+    function fc_schema_cache_key(string $table): string
+    {
+        return 'fc_schema_cols:'.DB::getDatabaseName().':v'.fc_schema_cache_version().':'.$table;
+    }
+}
+
+if (! function_exists('fc_schema_columns')) {
+    /**
+     * Column listing for a table, memoised per request AND cached across requests.
+     *
+     * Schema::hasTable()/hasColumn() each hit information_schema, which is far slower
+     * than a normal indexed read and contends badly under concurrency — a load test
+     * showed 24-49 metadata queries per page render, thousands/sec at 200 concurrent
+     * users. One cached column listing answers both questions for a table.
+     *
+     * The cache is invalidated automatically when migrations run (see AppServiceProvider)
+     * and by `php artisan cache:clear`.
+     *
+     * @return list<string>
+     */
+    function fc_schema_columns(string $table, bool $forget = false): array
+    {
+        static $memo = [];
+
+        // Runtime DDL (form builder / column manager) must be able to drop the
+        // in-request memo too, not just the persistent cache — otherwise code
+        // running after the ALTER in the SAME request still sees the old columns.
+        if ($forget) {
+            if ($table === '') {
+                $memo = [];
+            } else {
+                unset($memo[$table]);
+            }
+
+            return [];
+        }
+
+        if (array_key_exists($table, $memo)) {
+            return $memo[$table];
+        }
+
+        $ttl = (int) config('fc.schema_cache_ttl', 86400);
+
+        try {
+            // The closure must NOT swallow a Schema:: failure into [] — Cache::remember would
+            // then persist that empty array for the full TTL (24h), which fc_schema_has_table()
+            // reads as "table does not exist", silently breaking fc_user_col()/report fallbacks
+            // for a day. Letting the exception propagate means nothing is cached and the catch
+            // below performs a live lookup instead.
+            $columns = Cache::remember(
+                fc_schema_cache_key($table),
+                $ttl > 0 ? $ttl : 86400,
+                static fn () => Schema::getColumnListing($table)
+            );
+        } catch (\Throwable $e) {
+            // Cache store unavailable, or the introspection query failed: fall back to a live
+            // lookup and never poison the cache with an empty result.
+            try {
+                $columns = Schema::getColumnListing($table);
+            } catch (\Throwable $e2) {
+                $columns = [];
+            }
+        }
+
+        return $memo[$table] = is_array($columns) ? $columns : [];
+    }
+}
+
+if (! function_exists('fc_schema_has_table')) {
+    /**
+     * Cached Schema::hasTable(). A table always has at least one column, so an
+     * empty column listing means the table does not exist.
+     */
+    function fc_schema_has_table(string $table): bool
+    {
+        return fc_schema_columns($table) !== [];
+    }
+}
+
+if (! function_exists('fc_schema_has_column')) {
+    /**
+     * Cached Schema::hasColumn().
+     *
+     * Matches case-insensitively, exactly as Laravel's Schema::hasColumn() does —
+     * MySQL column names are case-insensitive and this codebase has real columns
+     * that differ in case from the name used in queries (e.g. degree_master.Pk
+     * queried as `pk`). A case-sensitive compare would wrongly report them missing.
+     */
+    function fc_schema_has_column(string $table, string $column, bool $forget = false): bool
+    {
+        static $lowerMemo = [];
+
+        if ($forget) {
+            if ($table === '') {
+                $lowerMemo = [];
+            } else {
+                unset($lowerMemo[$table]);
+            }
+
+            return false;
+        }
+
+        if (! array_key_exists($table, $lowerMemo)) {
+            $lowerMemo[$table] = array_flip(array_map('strtolower', fc_schema_columns($table)));
+        }
+
+        return isset($lowerMemo[$table][strtolower($column)]);
+    }
+}
+
+if (! function_exists('fc_lookup_cache_version')) {
+    /**
+     * Version marker for cached reference/master-data lookups. Bumping it makes every
+     * cached dropdown unreachable at once, so master-data edits publish immediately
+     * instead of waiting out the TTL. Memoised per request.
+     */
+    function fc_lookup_cache_version(bool $bump = false): int
+    {
+        static $version = null;
+
+        $key = 'fc_lookup_version:'.DB::getDatabaseName();
+
+        if ($bump) {
+            try {
+                $incremented = Cache::increment($key);
+                if ($incremented === false || (int) $incremented <= 0) {
+                    // Key absent or the store returned false (e.g. the database cache store):
+                    // seed to current+1 rather than resetting to 1, which would collide with
+                    // entries already cached under an earlier v1 and serve them stale.
+                    $version = ((int) Cache::get($key, 1)) + 1;
+                    Cache::forever($key, $version);
+                } else {
+                    $version = (int) $incremented;
+                }
+            } catch (\Throwable $e) {
+                $version = 1;
+            }
+
+            return $version;
+        }
+
+        if ($version !== null) {
+            return $version;
+        }
+
+        try {
+            $version = (int) Cache::get($key, 1);
+        } catch (\Throwable $e) {
+            $version = 1;
+        }
+
+        return $version = $version > 0 ? $version : 1;
+    }
+}
+
+if (! function_exists('fc_flush_lookup_cache')) {
+    /**
+     * Publish master-data changes to form dropdowns immediately.
+     * Call after saving states / districts / languages / qualifications etc.
+     */
+    function fc_flush_lookup_cache(): void
+    {
+        try {
+            fc_lookup_cache_version(true);
+        } catch (\Throwable $e) {
+            // Never let cache invalidation break a save.
+        }
+    }
+}
+
+if (! function_exists('fc_schema_cache_forget')) {
+    /**
+     * Drop cached schema introspection. Called automatically after migrations;
+     * pass a table to target one, or nothing to clear everything FC has cached.
+     */
+    function fc_schema_cache_forget(?string $table = null): void
+    {
+        // Drop the in-request memo as well, so code running after a runtime
+        // ALTER TABLE in the same request sees the new columns immediately.
+        fc_schema_columns($table ?? '', true);
+        fc_schema_has_column($table ?? '', '', true);
+
+        try {
+            if ($table !== null) {
+                Cache::forget(fc_schema_cache_key($table));
+
+                return;
+            }
+
+            // Bump the version marker so every cached listing becomes unreachable.
+            fc_schema_cache_version(true);
+        } catch (\Throwable $e) {
+            // Never let cache invalidation break a migration/deploy.
+        }
+    }
 }
 
 /**
@@ -109,12 +378,7 @@ function fc_user_val(string $table, int $userId): string|int
     }
 
     // Pre-migration: resolve the username string from user_credentials.
-    if (! array_key_exists($userId, $usernameCache)) {
-        $usernameCache[$userId] = \Illuminate\Support\Facades\DB::table('user_credentials')
-            ->where('pk', $userId)
-            ->value('user_name') ?? '';
-    }
-    return $usernameCache[$userId];
+    return fc_user_name_for_id($userId) ?? '';
 }
 
 /**
@@ -560,7 +824,11 @@ function userHasAssignedRoles(): bool
         return false;
     }
 
-    return $user->roles()->exists();
+    // hasRole() has almost always loaded this relation already on the same request;
+    // reusing it avoids a second identical roles query per page.
+    return $user->relationLoaded('roles')
+        ? $user->roles->isNotEmpty()
+        : $user->roles()->exists();
 }
 
 /**
@@ -1544,7 +1812,7 @@ if (! function_exists('fc_report_apply_tracker_user_resolution')) {
 
         $query->leftJoin('user_credentials as uc', "{$t}.user_id", '=', 'uc.pk');
 
-        if (Schema::hasTable('fc_registration_master')) {
+        if (fc_schema_has_table('fc_registration_master')) {
             $query->leftJoin('fc_registration_master as frm', 'frm.pk', '=', "{$t}.user_id")
                 ->leftJoin('user_credentials as uc_frm', 'uc_frm.user_name', '=', 'frm.user_id');
         }
@@ -1559,7 +1827,7 @@ if (! function_exists('fc_report_login_username_sql')) {
         $t = $alias ?? $trackerTable;
         $parts = ["NULLIF(TRIM(uc.user_name), '')"];
 
-        if (Schema::hasTable('fc_registration_master')) {
+        if (fc_schema_has_table('fc_registration_master')) {
             $parts[] = "NULLIF(TRIM(frm.user_id), '')";
             $parts[] = "NULLIF(TRIM(uc_frm.user_name), '')";
         }
@@ -1575,7 +1843,7 @@ if (! function_exists('fc_report_route_user_id_sql')) {
     {
         $t = $alias ?? $trackerTable;
 
-        if (Schema::hasTable('fc_registration_master')) {
+        if (fc_schema_has_table('fc_registration_master')) {
             return "COALESCE(uc.pk, uc_frm.pk, `{$t}`.`user_id`)";
         }
 
@@ -1603,15 +1871,15 @@ if (! function_exists('fc_report_join_student_master_firsts')) {
             $join->on(function ($join) use ($t, $s1Col) {
                 $join->on("s1.{$s1Col}", '=', "{$t}.user_id");
 
-                if (Schema::hasColumn('student_master_firsts', 'user_id')) {
+                if (fc_schema_has_column('student_master_firsts', 'user_id')) {
                     $join->orOn('s1.user_id', '=', 'uc.pk');
-                    if (Schema::hasTable('fc_registration_master')) {
+                    if (fc_schema_has_table('fc_registration_master')) {
                         $join->orOn('s1.user_id', '=', 'uc_frm.pk');
                     }
                 }
 
-                if (Schema::hasTable('fc_registration_master')
-                    && Schema::hasColumn('student_master_firsts', 'username')) {
+                if (fc_schema_has_table('fc_registration_master')
+                    && fc_schema_has_column('student_master_firsts', 'username')) {
                     $join->orOn('s1.username', '=', 'frm.user_id');
                 }
             });

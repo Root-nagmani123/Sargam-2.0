@@ -338,6 +338,9 @@ class FormManagementController extends Controller
             Schema::table($table, function (Blueprint $t) use ($column) {
                 $t->tinyInteger($column)->unsigned()->default(0)->after('updated_at')->nullable();
             });
+
+            // Runtime DDL — invalidate the cached column listing for this table.
+            fc_schema_cache_forget($table);
         }
     }
 

@@ -1134,7 +1134,7 @@
                                 loading="eager"
                                 onerror="this.style.display='none'">
                             <div class="header-govt">
-                                <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
+                                <img src="{{ asset('images/flag-of-india.svg') }}"
                                     alt="National Flag of India" loading="eager" onerror="this.style.display='none'">
                                 <span lang="hi">भारत सरकार</span>
                                 <span class="d-none d-sm-inline">| Government of India</span>

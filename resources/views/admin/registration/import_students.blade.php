@@ -288,7 +288,7 @@
                             @include('admin.registration.partials.migrate-export-toolbar')
                         </div>
                         <div class="table-responsive enrollment-dt-wrap">
-                            {!! $migratedDataTable->table(['class' => 'table table-striped table-hover table-sm align-middle w-100']) !!}
+                            {!! $migratedDataTable->table(['class' => 'table table-striped table-hover table-sm align-middle w-100 dt-legacy-layout', 'data-sargam-dt-ui' => 'false']) !!}
                         </div>
                     </div>
 
@@ -318,7 +318,7 @@
                             </p>
 
                             <div class="table-responsive enrollment-dt-wrap">
-                                {!! $dataTable->table(['class' => 'table table-striped table-hover table-sm align-middle w-100']) !!}
+                                {!! $dataTable->table(['class' => 'table table-striped table-hover table-sm align-middle w-100 dt-legacy-layout', 'data-sargam-dt-ui' => 'false']) !!}
                             </div>
                         </form>
                     </div>

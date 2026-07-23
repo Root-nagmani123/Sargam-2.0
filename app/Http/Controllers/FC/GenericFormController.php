@@ -19,7 +19,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 
@@ -68,9 +67,9 @@ class GenericFormController extends Controller
         // Travel Plan: read travel_done from the tracker table for this form + user
         $travelDone = false;
         $trackerTable = $form->trackerStorageTable();
-        if (Schema::hasTable($trackerTable) && Schema::hasColumn($trackerTable, 'travel_done')) {
+        if (fc_schema_has_table($trackerTable) && fc_schema_has_column($trackerTable, 'travel_done')) {
             $tq = DB::table($trackerTable)->where(fc_user_col($trackerTable), fc_user_val($trackerTable, $userId));
-            if (Schema::hasColumn($trackerTable, 'form_id')) {
+            if (fc_schema_has_column($trackerTable, 'form_id')) {
                 $tq->where('form_id', $form->id);
             }
             $travelDone = (bool) ($tq->value('travel_done') ?? false);
@@ -107,10 +106,12 @@ class GenericFormController extends Controller
         }
 
         $fields   = $step->activeFields;
-        $groups   = $step->activeFieldGroups()->with('activeGroupFields')->get()->values();
 
-        // Other Details / step 3: tabbed field groups (same detection as form-builder editor)
+        // Other Details / step 3: tabbed field groups (same detection as form-builder editor).
+        // $groups is only needed on this branch, so it is loaded inside it — flat steps
+        // (the majority) would otherwise pay an extra field-groups query for nothing.
         if ($step->usesFieldGroups()) {
+            $groups         = $step->activeFieldGroups()->with('activeGroupFields')->get()->values();
             $existingRows   = [];
             $groupLookups   = [];
             $completedGroups = [];
@@ -155,7 +156,7 @@ class GenericFormController extends Controller
 
         // Flat fields step
         $lookups      = $this->formService->getLookupData($fields);
-        $existingData = $this->formService->getExistingData($step->step_slug, $userId);
+        $existingData = $this->formService->getExistingDataForStep($step, $userId);
         $districtOptions = $this->formService->getDistrictMasterOptions();
 
         // Academy-provided identity fields (from the first Excel upload) are prefilled and locked.
@@ -237,17 +238,14 @@ class GenericFormController extends Controller
             }
             $this->formService->syncDocumentStepCompletion($step, $userId);
 
-            $allSteps  = $form->activeSteps;
-            $stepIndex = $allSteps->search(fn ($s) => $s->id === $step->id);
-            $nextStep  = $stepIndex < $allSteps->count() - 1 ? $allSteps[$stepIndex + 1] : null;
+            $nextStep = $this->nextApplicableStep($form, $step, $userId);
 
             if ($nextStep) {
                 return redirect()->route('fc-reg.forms.step', [$form, $nextStep])
                     ->with('success', "{$step->step_name} completed.");
             }
 
-            return redirect()->route('fc-reg.forms.dashboard', $form)
-                ->with('success', "{$step->step_name} saved. All steps completed!");
+            return $this->redirectAfterFinalStep($form, $userId, "{$step->step_name} saved.");
         }
 
         // Normalise PAN fields to uppercase before validation. The input only *looks*
@@ -294,17 +292,15 @@ class GenericFormController extends Controller
 
         $this->formService->saveStepDataForStep($step, $userId, $validated, $request);
 
-        // Navigate to next step or back to dashboard
-        $allSteps  = $form->activeSteps;
-        $stepIndex = $allSteps->search(fn($s) => $s->id === $step->id);
-        $nextStep  = $stepIndex < $allSteps->count() - 1 ? $allSteps[$stepIndex + 1] : null;
+        // Navigate to the next applicable step (skipping "not applicable" ones);
+        // Travel Plan closes the flow once every step is done.
+        $nextStep = $this->nextApplicableStep($form, $step, $userId);
 
         if ($nextStep) {
             return $this->redirectToFormStep($form, $nextStep, "{$step->step_name} saved. Please complete {$nextStep->step_name}.");
         }
 
-        return redirect()->route('fc-reg.forms.dashboard', $form)
-            ->with('success', "{$step->step_name} saved. All steps completed!");
+        return $this->redirectAfterFinalStep($form, $userId, "{$step->step_name} saved.");
     }
 
     // ── Save group data ──────────────────────────────────────────────
@@ -347,10 +343,10 @@ class GenericFormController extends Controller
             if ($step->tracker_column) {
                 $trackerTable = $form->trackerStorageTable();
                 $uCol = fc_user_col($trackerTable);
-                if (Schema::hasTable($trackerTable) && Schema::hasColumn($trackerTable, $uCol)) {
+                if (fc_schema_has_table($trackerTable) && fc_schema_has_column($trackerTable, $uCol)) {
                     $trackerKey  = [$uCol => fc_user_val($trackerTable, $userId)];
                     $trackerData = [$step->tracker_column => 1, 'updated_at' => now()];
-                    if (Schema::hasColumn($trackerTable, 'form_id')) {
+                    if (fc_schema_has_column($trackerTable, 'form_id')) {
                         $trackerKey['form_id']  = $form->id;
                         $trackerData['form_id'] = $form->id;
                     }
@@ -360,16 +356,13 @@ class GenericFormController extends Controller
 
             app(FcRegistrationRegisteredSyncService::class)->syncForCredentialsUser($userId, $form);
 
-            $allSteps  = $form->activeSteps;
-            $stepIndex = $allSteps->search(fn($s) => $s->id === $step->id);
-            $nextStep  = $stepIndex < $allSteps->count() - 1 ? $allSteps[$stepIndex + 1] : null;
+            $nextStep = $this->nextApplicableStep($form, $step, $userId);
 
             if ($nextStep) {
                 return $this->redirectToFormStep($form, $nextStep, "{$step->step_name} completed.");
             }
 
-            return redirect()->route('fc-reg.forms.dashboard', $form)
-                ->with('success', 'All steps completed!');
+            return $this->redirectAfterFinalStep($form, $userId, "{$step->step_name} completed.");
         }
 
         $groupIndex = $allGroups->search(fn ($g) => $g->id === $group->id);
@@ -506,9 +499,15 @@ class GenericFormController extends Controller
 
         // Special Assistant may only be opened when the trainee has a ph_value; otherwise
         // it is not applicable and cannot be viewed or saved (matches the disabled card).
+        // Carry the trainee forward to the next step they can actually fill instead of
+        // dropping them back on the dashboard, which broke the step-by-step flow.
         if ($this->specialAssistantGatedOff($step, (int) $userId)) {
-            return redirect()->route('fc-reg.forms.dashboard', $form)
-                ->with('error', 'Special Assistant is not applicable for you.');
+            $nextStep = $this->nextApplicableStep($form, $step, $userId);
+            if ($nextStep) {
+                return $this->redirectToFormStep($form, $nextStep, 'Special Assistant is not applicable for you.');
+            }
+
+            return $this->redirectAfterFinalStep($form, $userId, 'Special Assistant is not applicable for you.');
         }
 
         if ($form->form_slug === 'fc-registration') {
@@ -559,5 +558,72 @@ class GenericFormController extends Controller
     {
         return $this->isSpecialAssistantStep($step)
             && ! $this->importedProfileLock->hasPhValue($userId);
+    }
+
+    /**
+     * The next step the trainee can actually fill, skipping any that are gated off
+     * (e.g. Special Assistant when they have no ph_value). Without this the flow
+     * lands on a "not applicable" step and bounces back to the dashboard.
+     */
+    private function nextApplicableStep(FcForm $form, FcFormStep $step, $userId): ?FcFormStep
+    {
+        $allSteps  = $form->activeSteps;
+        $stepIndex = $allSteps->search(fn ($s) => $s->id === $step->id);
+
+        if ($stepIndex === false) {
+            return null;
+        }
+
+        for ($i = $stepIndex + 1; $i < $allSteps->count(); $i++) {
+            if (! $this->specialAssistantGatedOff($allSteps[$i], (int) $userId)) {
+                return $allSteps[$i];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Travel Plan is not an admin-configurable step, but it closes the flow for any
+     * form that has a Bank Details step — the same rule the dashboard card uses.
+     */
+    private function travelPlanPending(FcForm $form, $userId): bool
+    {
+        if (! $form->activeSteps->firstWhere('tracker_column', 'bank_done')) {
+            return false;
+        }
+
+        if (($form->form_slug ?? '') === 'fc-registration') {
+            $progress = fc_registration_progress_view($this->registrationService->getProgress($userId));
+
+            return ! ($progress['steps']['travel'] ?? false);
+        }
+
+        $trackerTable = $form->trackerStorageTable();
+        if (! fc_schema_has_table($trackerTable) || ! fc_schema_has_column($trackerTable, 'travel_done')) {
+            return false;
+        }
+
+        $tq = DB::table($trackerTable)->where(fc_user_col($trackerTable), fc_user_val($trackerTable, $userId));
+        if (fc_schema_has_column($trackerTable, 'form_id')) {
+            $tq->where('form_id', $form->id);
+        }
+
+        return ! (bool) ($tq->value('travel_done') ?? false);
+    }
+
+    /**
+     * Where to go once the last applicable step is saved: on to the Travel Plan while
+     * it is still pending, otherwise back to the form dashboard.
+     */
+    private function redirectAfterFinalStep(FcForm $form, $userId, string $message): RedirectResponse
+    {
+        if ($this->travelPlanPending($form, $userId)) {
+            return redirect()->route('fc-reg.registration.travel')
+                ->with('success', trim($message).' Please complete your Travel Plan.');
+        }
+
+        return redirect()->route('fc-reg.forms.dashboard', $form)
+            ->with('success', trim($message).' All steps completed!');
     }
 }

@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Schema;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Symfony\Component\Process\Process;
 use App\DataTables\FC\FcDescriptiveRollReportDataTable;
+use App\DataTables\FC\FcDocumentVerificationReportDataTable;
 use App\DataTables\FC\FcHealthRiskReportDataTable;
 use App\Exports\FcHealthRiskExport;
 use Maatwebsite\Excel\Facades\Excel;
@@ -136,7 +137,7 @@ class ReportController extends Controller
         $trackerTable = $form->trackerStorageTable();
         $userKey      = $form->user_identifier ?: 'user_id';
 
-        $hasFormIdCol = \Illuminate\Support\Facades\Schema::hasColumn($trackerTable, 'form_id');
+        $hasFormIdCol = fc_schema_has_column($trackerTable, 'form_id');
 
         $baseCount = fn () => DB::table($trackerTable)
             ->when($hasFormIdCol, fn ($q) => $q->where('form_id', $form->id));
@@ -292,6 +293,50 @@ class ReportController extends Controller
         ));
     }
 
+    /**
+     * Standalone per-student Document Verification page.
+     *
+     * Moved out of the student profile so verification lives behind its own link.
+     * The document resolution + verification logic is identical to studentDetail();
+     * only the presentation is separated into its own view.
+     */
+    public function studentDocuments(string $username)
+    {
+        $s1Col = fc_user_col('student_master_firsts');
+        $smCol = fc_user_col('student_masters');
+
+        $step1  = StudentMasterFirst::where($s1Col, $username)->first();
+        $master = StudentMaster::where($smCol, $username)->first();
+
+        abort_unless($step1 || $master, 404, "Student '{$username}' not found.");
+
+        $userId      = $username;
+        $displayName = trim((string) ($step1->full_name ?? ''))
+            ?: trim(implode(' ', array_filter([(string)($step1->first_name ?? ''), (string)($step1->last_name ?? '')])))
+            ?: (string) $username;
+
+        // Form this student is registered under
+        $reportForm = ($master?->form_id) ? FcForm::find($master->form_id) : null;
+
+        // Resolve document list: prefer dynamic (new) doc step, fall back to legacy table
+        $documentSource = 'legacy';
+        $documents      = collect();
+        if ($reportForm) {
+            $dynamicDocs = app(RegistrationService::class)->dynamicFormDocumentsForDisplay((int) $username, $reportForm);
+            if ($dynamicDocs->isNotEmpty()) {
+                $documents      = $dynamicDocs;
+                $documentSource = 'dynamic';
+            }
+        }
+        if ($documentSource === 'legacy') {
+            $documents = app(RegistrationService::class)->joiningDocumentChecklistForDisplay((int) $username);
+        }
+
+        return view('fc.report.student-documents', compact(
+            'username', 'userId', 'displayName', 'reportForm', 'documents', 'documentSource'
+        ));
+    }
+
     public function updateStudentDocumentVerification(Request $request, string $username, int $documentMasterId)
     {
         $request->validate([
@@ -322,6 +367,31 @@ class ReportController extends Controller
         ]);
 
         return back()->with('success', "\"{$docMaster->document_name}\" verification updated successfully.");
+    }
+
+    /**
+     * Save admin verification for a dynamic form document field (new form-builder docs).
+     * Delegates to RegistrationService::saveDynamicFormDocumentVerification.
+     */
+    public function updateDynamicFormDocumentVerification(Request $request, int $userId, int $formFieldId)
+    {
+        $request->validate([
+            'is_verified' => 'nullable|boolean',
+            'remarks' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            $documentName = app(RegistrationService::class)->saveDynamicFormDocumentVerification(
+                $userId,
+                $formFieldId,
+                (bool) $request->boolean('is_verified'),
+                trim((string) $request->input('remarks', '')) ?: null
+            );
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', "\"{$documentName}\" verification updated successfully.");
     }
 
     /**
@@ -596,11 +666,11 @@ class ReportController extends Controller
         }
 
         foreach ($tables as $table) {
-            if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $labelColumn)) {
+            if (! fc_schema_has_table($table) || ! fc_schema_has_column($table, $labelColumn)) {
                 continue;
             }
             foreach ($valueColumns as $valueColumn) {
-                if (! Schema::hasColumn($table, $valueColumn)) {
+                if (! fc_schema_has_column($table, $valueColumn)) {
                     continue;
                 }
                 $label = DB::table($table)->where($valueColumn, $raw)->value($labelColumn);
@@ -684,7 +754,7 @@ class ReportController extends Controller
         $s1Col = fc_user_col('student_master_firsts');
         $smCol = fc_user_col('student_masters');
         $s2Col = fc_user_col('student_master_seconds');
-        $hasFrm = \Illuminate\Support\Facades\Schema::hasTable('fc_registration_master');
+        $hasFrm = fc_schema_has_table('fc_registration_master');
 
         $base = DB::table('student_master_firsts as s1')
             ->leftJoin('student_masters as sm', "sm.{$smCol}", '=', "s1.{$s1Col}")
@@ -799,7 +869,7 @@ class ReportController extends Controller
     public function byState(Request $request)
     {
         $states  = DB::table('state_master')->orderBy('state_name')->selectRaw('Pk as pk, state_name')->get();
-        $hasFrm  = Schema::hasTable('fc_registration_master');
+        $hasFrm  = fc_schema_has_table('fc_registration_master');
         $s1Col   = fc_user_col('student_master_firsts');
         $smCol   = fc_user_col('student_masters');
 
@@ -911,10 +981,25 @@ class ReportController extends Controller
                     'target_column' => $f->target_column ?: $f->field_name,
                 ])->values();
 
-                $students = DB::table('student_masters as sm')
-                    ->leftJoin('student_master_firsts as s1', 's1.user_id', '=', 'sm.user_id')
-                    ->leftJoin('service_masters as svc', 's1.service_id', '=', 'svc.id')
-                    ->leftJoin('user_credentials as uc', 'uc.pk', '=', 'sm.user_id')
+                // Resolve login username + service exactly like the main form report
+                // (fc_registration_master fallback + service_master singular). Without this,
+                // the ID column showed the raw numeric user_id and Service always showed '—'.
+                $studentsQuery = DB::table('student_masters as sm');
+                fc_report_apply_tracker_user_resolution($studentsQuery, 'student_masters', 'sm');
+                fc_report_join_student_master_firsts($studentsQuery, 'student_masters', 'sm');
+
+                $studentsQuery->leftJoin('service_master as svc', 's1.service_id', '=', 'svc.pk');
+
+                $hasFrm = fc_schema_has_table('fc_registration_master');
+                if ($hasFrm) {
+                    $studentsQuery->leftJoin('service_master as svc_frm', DB::raw('CAST(frm.service_master_pk AS UNSIGNED)'), '=', 'svc_frm.pk');
+                }
+
+                $serviceExpr = $hasFrm
+                    ? "COALESCE(NULLIF(TRIM(svc.service_short_name),''), NULLIF(TRIM(svc.service_name),''), NULLIF(TRIM(svc_frm.service_short_name),''), NULLIF(TRIM(svc_frm.service_name),''), NULLIF(TRIM(sm.service_code),''))"
+                    : "COALESCE(NULLIF(TRIM(svc.service_short_name),''), NULLIF(TRIM(svc.service_name),''), NULLIF(TRIM(sm.service_code),''))";
+
+                $students = $studentsQuery
                     ->where('sm.form_id', $scopedForm->id)
                     ->select(
                         'sm.user_id',
@@ -925,10 +1010,11 @@ class ReportController extends Controller
                             NULLIF(TRIM(uc.user_name),''),
                             '—'
                         ) as full_name"),
-                        DB::raw("COALESCE(NULLIF(TRIM(sm.service_code),''), NULLIF(TRIM(svc.service_code),'')) as service_code"),
-                        DB::raw("COALESCE(NULLIF(TRIM(sm.cadre),''), NULLIF(TRIM(s1.cadre),'')) as cadre"),
-                        'uc.user_name as login_username'
+                        DB::raw("{$serviceExpr} as service_code"),
+                        DB::raw("COALESCE(NULLIF(TRIM(sm.cadre),''), NULLIF(TRIM(s1.cadre),'')) as cadre")
                     )
+                    ->addSelect(DB::raw(fc_report_login_username_sql('student_masters', 'sm').' as login_username'))
+                    ->addSelect(DB::raw(fc_report_route_user_id_sql('student_masters', 'sm').' as route_user_id'))
                     ->orderBy('full_name')
                     ->get();
 
@@ -976,9 +1062,24 @@ class ReportController extends Controller
         $mandatoryIds   = FcJoiningRelatedDocumentsMaster::where('is_active', 1)->where('is_mandatory', 1)->pluck('id');
         $docUploadedSql = "(d.is_uploaded = 1 OR (d.file_path IS NOT NULL AND d.file_path != ''))";
 
-        $students = DB::table('student_master_firsts as s1')
-            ->leftJoin('student_masters as sm', 'sm.user_id', '=', 's1.user_id')
-            ->leftJoin('service_masters as svc', 's1.service_id', '=', 'svc.id')
+        // Resolve login username + service like the main form report so the ID column
+        // shows the login name (not the raw user_id) and Service resolves instead of '—'.
+        $studentsQuery = DB::table('student_master_firsts as s1');
+        fc_report_apply_tracker_user_resolution($studentsQuery, 'student_master_firsts', 's1');
+
+        $studentsQuery->leftJoin('student_masters as sm', 'sm.user_id', '=', 's1.user_id')
+            ->leftJoin('service_master as svc', 's1.service_id', '=', 'svc.pk');
+
+        $hasFrm = fc_schema_has_table('fc_registration_master');
+        if ($hasFrm) {
+            $studentsQuery->leftJoin('service_master as svc_frm', DB::raw('CAST(frm.service_master_pk AS UNSIGNED)'), '=', 'svc_frm.pk');
+        }
+
+        $serviceExpr = $hasFrm
+            ? "COALESCE(NULLIF(TRIM(svc.service_short_name),''), NULLIF(TRIM(svc.service_name),''), NULLIF(TRIM(svc_frm.service_short_name),''), NULLIF(TRIM(svc_frm.service_name),''), NULLIF(TRIM(sm.service_code),''))"
+            : "COALESCE(NULLIF(TRIM(svc.service_short_name),''), NULLIF(TRIM(svc.service_name),''), NULLIF(TRIM(sm.service_code),''))";
+
+        $students = $studentsQuery
             ->when($scopedForm, fn ($q) => $q->where('sm.form_id', $scopedForm->id))
             ->when($request->filled('doc_status') && $mandatoryIds->isNotEmpty(), function ($q) use ($request, $mandatoryIds, $docUploadedSql) {
                 $total = $mandatoryIds->count();
@@ -993,7 +1094,9 @@ class ReportController extends Controller
                                    AND d.document_master_id IN ({$ids})) < {$total}");
                 }
             })
-            ->select('s1.user_id', 's1.full_name', 'svc.service_code', 's1.cadre')
+            ->select('s1.user_id', 's1.full_name', DB::raw("{$serviceExpr} as service_code"), 's1.cadre')
+            ->addSelect(DB::raw(fc_report_login_username_sql('student_master_firsts', 's1').' as login_username'))
+            ->addSelect(DB::raw(fc_report_route_user_id_sql('student_master_firsts', 's1').' as route_user_id'))
             ->orderBy('s1.full_name')
             ->get();
 
@@ -1021,7 +1124,7 @@ class ReportController extends Controller
         $s1Col  = fc_user_col('student_master_firsts');
         $smCol  = fc_user_col('student_masters');
         $bCol   = fc_user_col('new_registration_bank_details_masters');
-        $hasFrm = Schema::hasTable('fc_registration_master');
+        $hasFrm = fc_schema_has_table('fc_registration_master');
 
         $query = DB::table('student_master_firsts as s1')
             ->leftJoin('student_masters as sm', "sm.{$smCol}", '=', "s1.{$s1Col}")
@@ -1168,7 +1271,7 @@ class ReportController extends Controller
         $s1Col  = fc_user_col('student_master_firsts');
         $smCol  = fc_user_col('student_masters');
         $bCol   = fc_user_col('new_registration_bank_details_masters');
-        $hasFrm = Schema::hasTable('fc_registration_master');
+        $hasFrm = fc_schema_has_table('fc_registration_master');
 
         $out = fopen('php://output','w');
         fputcsv($out, ['User ID','Full Name','Service','Bank Name','IFSC','Account No','Holder Name']);
@@ -1272,7 +1375,7 @@ class ReportController extends Controller
     {
         $trackerTable = $form->trackerStorageTable();
         $userKey      = $form->user_identifier ?: 'user_id';
-        $hasFrm       = \Illuminate\Support\Facades\Schema::hasTable('fc_registration_master');
+        $hasFrm       = fc_schema_has_table('fc_registration_master');
 
         if ($request->filled('status')) {
             if ($request->status === 'COMPLETE') {
@@ -1408,6 +1511,29 @@ class ReportController extends Controller
         ));
     }
 
+    /**
+     * Course-wise Document Verification report (student list + course filter),
+     * mirroring the Descriptive Roll / Health Risk reports. Each row links to the
+     * standalone per-student document verification page.
+     */
+    public function documentVerificationIndex(Request $request)
+    {
+        $selectedFormId = (int) $request->input('form_id', 0);
+        $form = $selectedFormId > 0 ? FcForm::find($selectedFormId) : null;
+
+        $dataTable = new FcDocumentVerificationReportDataTable($form);
+
+        // DataTables server-side AJAX → return JSON scoped to the selected course.
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('fc.report.document-verification-index', array_merge(
+            ['form' => $form],
+            ['forms' => $this->fcReportCourseOptions()]
+        ));
+    }
+
     public function healthRiskReport(Request $request)
     {
         $selectedFormId = (int) $request->input('form_id', 0);
@@ -1516,7 +1642,7 @@ class ReportController extends Controller
                 $like    = '%' . $term . '%';
                 $t       = $form->trackerStorageTable();
                 $userKey = $form->user_identifier ?: 'user_id';
-                $hasFrm  = Schema::hasTable('fc_registration_master');
+                $hasFrm  = fc_schema_has_table('fc_registration_master');
                 $query->where(function ($sub) use ($like, $t, $userKey, $hasFrm) {
                     $sub->where('s1.full_name', 'like', $like)
                         ->orWhere('s1.first_name', 'like', $like)
@@ -2090,23 +2216,23 @@ class ReportController extends Controller
             return back()->with('error', 'No document fields found.');
         }
 
-        // Fetch students with display names
-        $students = DB::table('student_masters as sm')
-            ->leftJoin('student_master_firsts as s1', 's1.user_id', '=', 'sm.user_id')
-            ->leftJoin('user_credentials as uc', 'uc.pk', '=', 'sm.user_id')
-            ->where('sm.form_id', $scopedForm->id)
-            ->select(
-                'sm.user_id',
-                DB::raw("COALESCE(NULLIF(TRIM(sm.full_name),''),NULLIF(TRIM(s1.full_name),''),NULLIF(TRIM(uc.user_name),''),sm.user_id) as full_name"),
-                DB::raw("COALESCE(NULLIF(TRIM(uc.user_name),''),sm.user_id) as login_username")
-            )
-            ->get()
-            ->keyBy('user_id');
+        // Resolve login username + registration rank/exam year the same way the report does,
+        // so the per-student folder is named username_rank_year (not the raw numeric user_id).
+        $hasFrm = fc_schema_has_table('fc_registration_master');
 
-        $uploadRows = DB::table('fc_joining_documents_user_uploads')
-            ->whereIn('user_id', $students->keys()->all())
-            ->get()
-            ->keyBy('user_id');
+        $studentsQuery = DB::table('student_masters as sm');
+        fc_report_apply_tracker_user_resolution($studentsQuery, 'student_masters', 'sm');
+
+        $studentsQuery->where('sm.form_id', $scopedForm->id)
+            ->select('sm.user_id')
+            ->addSelect(DB::raw(fc_report_login_username_sql('student_masters', 'sm') . ' as login_username'));
+
+        if ($hasFrm) {
+            $studentsQuery->addSelect([
+                DB::raw("NULLIF(TRIM(frm.`rank`),'') as reg_rank"),
+                DB::raw("NULLIF(TRIM(frm.exam_year),'') as exam_year"),
+            ]);
+        }
 
         // Build ZIP in a temp file
         $tmpPath = tempnam(sys_get_temp_dir(), 'docs_zip_');
@@ -2118,35 +2244,54 @@ class ReportController extends Controller
 
         $totalFiles = 0;
 
-        foreach ($students as $student) {
-            $upload = $uploadRows->get($student->user_id);
-            if (! $upload) {
-                continue;
-            }
+        // Stream the roster in batches so a large course doesn't load every student and
+        // every upload row into memory at once. Archive contents are identical — ZipArchive
+        // only reads each file at close(), so adding paths across chunks is transparent.
+        $studentsQuery->orderBy('sm.user_id')->chunk(500, function ($students) use ($zip, $docFields, &$totalFiles) {
+            $uploadRows = DB::table('fc_joining_documents_user_uploads')
+                ->whereIn('user_id', $students->pluck('user_id')->all())
+                ->get()
+                ->keyBy('user_id');
 
-            $folder = $this->safeZipName(
-                $student->login_username . '_' . $student->full_name
-            );
-
-            foreach ($docFields as $field) {
-                $col      = $field->target_column ?: $field->field_name;
-                $filePath = $upload->{$col} ?? null;
-
-                if (empty($filePath)) {
+            foreach ($students as $student) {
+                $upload = $uploadRows->get($student->user_id);
+                if (! $upload) {
                     continue;
                 }
 
-                $fullPath = storage_path('app/public/' . $filePath);
-                if (! is_file($fullPath)) {
-                    continue;
+                // Folder name format: username_rank_year (empty rank/year segments are dropped)
+                $folder = $this->safeZipName(implode('_', array_filter([
+                    $student->login_username,
+                    $student->reg_rank ?? null,
+                    $student->exam_year ?? null,
+                ], fn ($v) => $v !== null && trim((string) $v) !== '')));
+
+                // Fall back to a per-student folder so files never land at the archive root
+                // when username, rank and exam year are all blank.
+                if ($folder === '') {
+                    $folder = 'student_' . ($student->user_id ?? $totalFiles);
                 }
 
-                $ext      = pathinfo($filePath, PATHINFO_EXTENSION);
-                $docName  = $this->safeZipName($field->label) . ($ext ? '.' . strtolower($ext) : '');
-                $zip->addFile($fullPath, $folder . '/' . $docName);
-                $totalFiles++;
+                foreach ($docFields as $field) {
+                    $col      = $field->target_column ?: $field->field_name;
+                    $filePath = $upload->{$col} ?? null;
+
+                    if (empty($filePath)) {
+                        continue;
+                    }
+
+                    $fullPath = storage_path('app/public/' . $filePath);
+                    if (! is_file($fullPath)) {
+                        continue;
+                    }
+
+                    $ext      = pathinfo($filePath, PATHINFO_EXTENSION);
+                    $docName  = $this->safeZipName($field->label) . ($ext ? '.' . strtolower($ext) : '');
+                    $zip->addFile($fullPath, $folder . '/' . $docName);
+                    $totalFiles++;
+                }
             }
-        }
+        });
 
         $zip->close();
 
