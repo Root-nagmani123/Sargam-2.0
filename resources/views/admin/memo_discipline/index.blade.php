@@ -490,6 +490,11 @@
                 <button type="button" class="btn btn-sm btn-outline-primary" id="discBulkPdfBtn" disabled>
                     <i class="bi bi-file-earmark-pdf"></i> Download Selected as PDF (ZIP)<span id="discBulkCount"></span>
                 </button>
+                @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction'))
+                <button type="button" class="btn btn-sm btn-outline-success" id="discBulkSendBtn" disabled>
+                    <i class="material-icons material-symbols-rounded align-middle" style="font-size:16px;">send</i> Send Selected Memos<span id="discBulkSendCount"></span>
+                </button>
+                @endif
             </div>
             <div id="memoDisciplineListContainer">
                 <div class="table-responsive">
@@ -510,6 +515,8 @@
                                 <th>Name</th>
                                 <th>OT/Participant Code</th>
                                 <th>Cadre</th>
+                                <th>Email</th>
+                                <th>Mobile No.</th>
                                 <th>Date of Infraction</th>
                                 <th>Infraction</th>
                                 <th>Category</th>
@@ -539,12 +546,17 @@
                             @endphp
                             @forelse ($memos as $index => $memo)
                             <tr>
-                                <td><input type="checkbox" class="form-check-input disc-row-check" value="{{ $memo->pk }}" aria-label="Select record"></td>
+                                <td><input type="checkbox" class="form-check-input disc-row-check" value="{{ $memo->pk }}" data-status="{{ $memo->status }}" aria-label="Select record"></td>
                                 <td class="fw-semibold text-muted">{{ $memos->firstItem() + $index }}</td>
                                 <td class="fw-semibold">{{ $memo->course->course_name ?? 'N/A' }}</td>
                                 <td class="fw-semibold disc-nowrap">{{ $memo->student->display_name ?? 'N/A' }}</td>
                                 <td class="text-muted">{{ $memo->student->generated_OT_code ?? 'N/A' }}</td>
                                 <td class="text-muted disc-nowrap">{{ $memo->student->cadre->cadre_name ?? 'N/A' }}</td>
+                                {{-- ?: not ?? — these two are blank strings far more often than
+                                     they are NULL, and both should read "N/A". optional() keeps
+                                     it safe when the student row itself is missing. --}}
+                                <td class="text-muted">{{ optional($memo->student)->email ?: 'N/A' }}</td>
+                                <td class="text-muted disc-nowrap">{{ optional($memo->student)->contact_no ?: 'N/A' }}</td>
                                 <td class="text-muted">{{ $memo->date ? \Carbon\Carbon::parse($memo->date)->format('d M Y') : 'N/A' }}</td>
                                 <td><span class="badge bg-info-subtle text-info">{{ $memo->discipline->discipline_name ?? 'N/A' }}</span></td>
                                 <td>
@@ -639,7 +651,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="{{ hasRole('Officer Trainee') ? 15 : 16 }}" class="text-center py-5 text-muted">
+                                <td colspan="{{ hasRole('Officer Trainee') ? 17 : 18 }}" class="text-center py-5 text-muted">
                                     <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                                     <span class="fw-medium">No memo records available</span>
                                 </td>
@@ -818,9 +830,9 @@ $(document).ready(function() {
     // Maps #discTable header column index -> the sort key exportCsv() understands.
     // Must stay in the same order as the <th> cells. Blank entries (checkbox, S. No.,
     // Action) are not orderable, so they never produce a sort key.
-    var DISC_COLUMN_SORT_KEYS = ['', '', 'program', 'name', 'ot_code', 'cadre', 'date',
-        'infraction', '', 'submitted', 'final', 'remarks', 'conclusion_remark',
-        'created_date', 'status', ''
+    var DISC_COLUMN_SORT_KEYS = ['', '', 'program', 'name', 'ot_code', 'cadre', 'email',
+        'mobile', 'date', 'infraction', '', 'submitted', 'final', 'remarks',
+        'conclusion_remark', 'created_date', 'status', ''
     ];
 
     // Maps #discTable header column index -> the export column key the server's
@@ -828,10 +840,43 @@ $(document).ready(function() {
     // null = a column that isn't in the Excel/PDF at all (the select box, Category,
     // Action), so hiding those changes nothing in a download.
     var DISC_EXPORT_COLUMN_KEYS = ['', 'sno', 'program', 'name', 'ot_code', 'cadre',
-        'date', 'infraction', '', 'submitted', 'final', 'remarks', 'conclusion_remark',
-        'created_date', 'status', ''
+        'email', 'mobile', 'date', 'infraction', '', 'submitted', 'final', 'remarks',
+        'conclusion_remark', 'created_date', 'status', ''
     ];
     var DISC_EXPORT_COL_COUNT = DISC_EXPORT_COLUMN_KEYS.filter(Boolean).length;
+
+    // ── Remembered column visibility ──
+    // Persisted in localStorage, so the choice survives a refresh, an AJAX filter,
+    // and a logout/login on this browser. Keyed by user id so two people sharing a
+    // machine don't inherit each other's hidden columns.
+    //
+    // The stored value is a list of column LABELS, deliberately NOT indices:
+    // indices shift the moment a column is added to the table (adding Email/Mobile
+    // did exactly that), which would silently hide the wrong columns for everyone
+    // holding an older saved preference. A label that no longer matches any header
+    // is simply ignored, so a renamed column comes back VISIBLE rather than hiding
+    // something else — the safe direction to fail in.
+    var DISC_COLVIS_KEY = 'sargam.disciplineMemo.hiddenCols.{{ auth()->id() ?? 'guest' }}';
+
+    window.discReadHiddenCols = function () {
+        try {
+            var raw = window.localStorage.getItem(DISC_COLVIS_KEY);
+            var arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) {
+            return []; // private mode / storage disabled / corrupt value
+        }
+    };
+
+    window.discSaveHiddenCols = function () {
+        var hidden = [];
+        document.querySelectorAll('.disc-col-toggle').forEach(function (cb) {
+            if (!cb.checked) hidden.push(cb.dataset.label);
+        });
+        try {
+            window.localStorage.setItem(DISC_COLVIS_KEY, JSON.stringify(hidden));
+        } catch (e) { /* storage unavailable — the preference just won't persist */ }
+    };
 
     // Keep the Download links' (Excel + PDF) ?cols= in sync with the Column
     // Visibility modal, so a column hidden on screen is left out of the download
@@ -866,10 +911,28 @@ $(document).ready(function() {
     // an AJAX filter would bring hidden columns back on screen while their
     // checkboxes still read as unticked (and the export would then disagree).
     window.discApplyColumnVisibility = function () {
-        document.querySelectorAll('.disc-col-toggle').forEach(function (cb) {
-            var nth = parseInt(cb.dataset.col, 10) + 1;
+        var toggles = document.querySelectorAll('.disc-col-toggle');
+        if (toggles.length) {
+            toggles.forEach(function (cb) {
+                var nth = parseInt(cb.dataset.col, 10) + 1;
+                $('#discTable tr').each(function () {
+                    $(this).children(':nth-child(' + nth + ')').toggle(cb.checked);
+                });
+            });
+            return;
+        }
+
+        // First paint: the Columns modal is built in a LATER ready handler, so there
+        // are no checkboxes to read yet. Fall back to the saved labels — otherwise
+        // hidden columns would flash back onto the screen on every page load until
+        // that handler runs.
+        var hidden = window.discReadHiddenCols();
+        if (!hidden.length) return;
+        $('#discTable thead th').each(function (i) {
+            if (hidden.indexOf($(this).text().trim()) === -1) return;
+            var nth = i + 1;
             $('#discTable tr').each(function () {
-                $(this).children(':nth-child(' + nth + ')').toggle(cb.checked);
+                $(this).children(':nth-child(' + nth + ')').hide();
             });
         });
     };
@@ -911,6 +974,16 @@ $(document).ready(function() {
         var countEl = document.getElementById('discBulkCount');
         if (btn) btn.disabled = checked.length === 0;
         if (countEl) countEl.textContent = checked.length ? ' (' + checked.length + ')' : '';
+
+        // Only "Recorded" (status 1) rows are eligible to send — already-sent/closed
+        // rows are excluded from this count so the button never implies it will
+        // (re)send something it can't. Checking one alongside eligible rows just
+        // silently leaves it out, same as the server-side skip in sendMemoBulk().
+        var sendableChecked = Array.from(checked).filter(function (cb) { return cb.dataset.status === '1'; });
+        var sendBtn = document.getElementById('discBulkSendBtn');
+        var sendCountEl = document.getElementById('discBulkSendCount');
+        if (sendBtn) sendBtn.disabled = sendableChecked.length === 0;
+        if (sendCountEl) sendCountEl.textContent = sendableChecked.length ? ' (' + sendableChecked.length + ')' : '';
 
         var selectAll = document.getElementById('discSelectAll');
         var all = document.querySelectorAll('.disc-row-check');
@@ -955,6 +1028,47 @@ $(document).ready(function() {
         form.remove();
     });
 
+    // ── Bulk "Send Selected Memos" ──
+    // Reuses the same .disc-row-check selection as the PDF bulk action above. The
+    // server (sendMemoBulk) silently skips any selected row that isn't status 1
+    // "Recorded" (already sent/closed), so a mixed-status selection is safe — the
+    // response's sent/skipped counts are surfaced back to the user.
+    $(document).on('click', '#discBulkSendBtn', function () {
+        var ids = Array.from(document.querySelectorAll('.disc-row-check:checked'))
+            .filter(function (cb) { return cb.dataset.status === '1'; })
+            .map(function (cb) { return cb.value; });
+        if (!ids.length) return;
+
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'Send memo to ' + ids.length + ' selected record(s)?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, send it!'
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+
+            $.ajax({
+                url: "{{ route('memo.discipline.sendMemoBulk') }}",
+                type: 'POST',
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    ids: ids
+                },
+                success: function (response) {
+                    Swal.fire('Done!', response.message, 'success').then(function () {
+                        location.reload();
+                    });
+                },
+                error: function () {
+                    Swal.fire('Error!', 'Something went wrong.', 'error');
+                }
+            });
+        });
+    });
+
     // ── S. No. is a display counter, not data ──
     // The server prints each row's position in the UNSORTED page. DataTables sorts
     // client-side by moving the <tr>s, so each number would travel with its row and
@@ -981,7 +1095,9 @@ $(document).ready(function() {
     // Each pinned column's `left` is the summed width of the pinned columns
     // before it. Those widths depend on content, sort, the Columns modal and the
     // viewport, so they're measured here rather than hard-coded in CSS.
-    var DISC_FROZEN_COLS = 4; // select, S. No., Program Name, Name
+    // select, S. No., Program Name, Name. Exposed on window so the Column
+    // Visibility modal (built in a separate ready handler) can lock these.
+    var DISC_FROZEN_COLS = window.DISC_FROZEN_COLS = 4;
 
     window.discFreezeColumns = function () {
         var table = document.getElementById('discTable');
@@ -1237,6 +1353,8 @@ $(document).ready(function() {
 
     /* ── Column Visibility modal (built from the actual header cells) ── */
     var $discGrid = $('#discColumnGrid');
+    // Whatever the user hid last time (see DISC_COLVIS_KEY) comes back unticked.
+    var discHidden = window.discReadHiddenCols();
     $('#discTable thead th').each(function(i) {
         // Header cells with no text aren't real, nameable columns — the only one is
         // the row-select checkbox column, which held the select-all box and so used
@@ -1245,15 +1363,35 @@ $(document).ready(function() {
         var label = $(this).text().trim();
         if (!label) return;
 
+        // Frozen (pinned) columns must always stay visible — hiding one would leave
+        // a gap in the sticky block — so their toggle is locked on and disabled.
+        var frozen = i < window.DISC_FROZEN_COLS;
+        var lockTitle = 'Frozen column — always visible';
+
         var id = 'discCol' + i;
-        $discGrid.append(
-            '<label class="sn-colvis-chip" for="' + id + '" title="' + label + '">' +
-            '<input type="checkbox" class="form-check-input disc-col-toggle" id="' + id +
-            '" data-col="' + i + '" checked> ' +
-            '<span>' + label + '</span></label>'
-        );
+        var $checkbox = $('<input type="checkbox" class="form-check-input disc-col-toggle">')
+            .attr({ id: id, 'data-col': i, 'data-label': label })
+            .prop('checked', frozen ? true : discHidden.indexOf(label) === -1);
+        if (frozen) {
+            $checkbox.prop('disabled', true);
+        }
+
+        var $chip = $('<label class="sn-colvis-chip' + (frozen ? ' sn-colvis-chip--locked' : '') + '">')
+            .attr({ 'for': id, title: frozen ? lockTitle : label })
+            .append($checkbox)
+            .append(' ')
+            .append($('<span>').text(label));
+        if (frozen) {
+            $chip.append($('<i class="bi bi-lock-fill sn-colvis-lock" aria-hidden="true">'));
+        }
+        $discGrid.append($chip);
     });
+
+    // Normalise storage: a column that is now frozen must not linger in a
+    // previously-saved hidden list, or discApplyColumnVisibility would fight the lock.
+    window.discSaveHiddenCols();
     $discGrid.on('change', '.disc-col-toggle', function() {
+        window.discSaveHiddenCols();
         var nth = parseInt($(this).data('col'), 10) + 1;
         var show = this.checked;
         $('#discTable tr').each(function() {
@@ -1271,8 +1409,15 @@ $(document).ready(function() {
     });
 
     // The grid above is built from the header cells on ready, i.e. AFTER the first
-    // reinitDiscTable() ran with no checkboxes to read. Stamp the links once now
-    // that they exist.
+    // reinitDiscTable() ran with no checkboxes to read. Now that they exist, apply
+    // the restored state to the table for real and stamp the Download links to
+    // match, so a remembered hidden column is left out of the exports too.
+    if (typeof window.discApplyColumnVisibility === 'function') {
+        window.discApplyColumnVisibility();
+    }
+    if (typeof window.discFreezeColumns === 'function') {
+        window.discFreezeColumns();
+    }
     if (typeof window.discUpdateDownloadCols === 'function') {
         window.discUpdateDownloadCols();
     }
