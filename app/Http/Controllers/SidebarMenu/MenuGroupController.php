@@ -35,6 +35,7 @@ class MenuGroupController extends Controller
     public function store(MenuGroupRequest $request)
     {
         $this->service->store($request->validated());
+        $this->flushSidebarCaches();
         return redirect()->back()->with('success', 'Menu Group Created Successfully');
     }
 
@@ -53,23 +54,37 @@ class MenuGroupController extends Controller
     public function update(MenuGroupRequest $request, $id)
     {
         $this->service->update($id, $request->validated());
+        $this->flushSidebarCaches();
         return redirect()->back()->with('success', 'Menu Group Updated Successfully');
     }
 
     public function destroy($id)
     {
         $this->service->delete($id);
+        $this->flushSidebarCaches();
         return back()->with('success', 'Menu Group Deleted Successfully ');
     }
 
     public function status($id,Request $request)
     {
         $this->service->status($id, $request->is_active);
+        $this->flushSidebarCaches();
         $status = $request->is_active == 1 ? 'Activated' : 'Deactivated';
         return response()->json([
             'success' => true,
             'message' => 'Menu Group '.$status.' Successfully'
         ]);
+    }
+
+    /**
+     * Menu group edits change the sidebar structure, so drop the nav/breadcrumb caches
+     * (mirrors what MenuService does on menu edits) — otherwise the change stays invisible
+     * until the menu_cache_ttl expires.
+     */
+    private function flushSidebarCaches(): void
+    {
+        \App\Services\SidebarMenu\SidebarNavResolver::clearCache();
+        \App\Services\SidebarMenu\MenuService::clearStructureCache();
     }
     
 }

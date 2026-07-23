@@ -16,6 +16,7 @@ use App\Models\CourseMaster;
 use App\Models\FcRegistrationExportMaster as ModelsFcRegistrationExportMaster;
 use Carbon\Carbon;
 use App\Services\FC\FcRosterApplicationGuardService;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Excel as ExcelFormat;
@@ -306,14 +307,42 @@ class RegistrationImportController extends Controller
 
     public function fc_masterindex(FcRegistrationMasterListDaTable $dataTable)
     {
+        // Courses stay uncached: programmeCoursesForStatus() is scoped per role via
+        // get_Role_by_course(), so a shared cache entry could leak another role's list.
         $courses = $this->programmeCoursesForStatus('active');
-        $exemptionCategories = DB::table('fc_exemption_master')->pluck('Exemption_name', 'Pk');
         $applicationTypes = [1 => 'Registration', 2 => 'Exemption'];
-        $serviceMasters = DB::table('service_master')->pluck('service_name', 'pk');
-        $years = DB::table('fc_registration_master')
+
+        // The three filter dropdowns below are global reference data, identical for
+        // every admin, but were re-queried on every page view. Cached under the FC
+        // lookup version so fc_flush_lookup_cache() publishes changes immediately.
+        $ttl = (int) config('fc.lookup_cache_ttl', 600);
+
+        $remember = static function (string $key, callable $fetch) use ($ttl) {
+            if ($ttl <= 0) {
+                return $fetch();
+            }
+
+            try {
+                return Cache::remember(
+                    'fc_lookup:'.DB::getDatabaseName().':v'.fc_lookup_cache_version().':'.$key,
+                    $ttl,
+                    $fetch
+                );
+            } catch (\Throwable $e) {
+                return $fetch();
+            }
+        };
+
+        $exemptionCategories = $remember('fcmaster_exemptions', static fn () => DB::table('fc_exemption_master')
+            ->pluck('Exemption_name', 'Pk'));
+
+        $serviceMasters = $remember('fcmaster_services', static fn () => DB::table('service_master')
+            ->pluck('service_name', 'pk'));
+
+        $years = $remember('fcmaster_exam_years', static fn () => DB::table('fc_registration_master')
             ->select(DB::raw('DISTINCT exam_year'))
             ->orderBy('exam_year', 'desc')
-            ->pluck('exam_year', 'exam_year');
+            ->pluck('exam_year', 'exam_year'));
 
 
         return $dataTable->render('admin.registration.fcregistrationmaster_list', [

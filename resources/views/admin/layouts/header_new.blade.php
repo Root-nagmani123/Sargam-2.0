@@ -13,7 +13,7 @@
             <!-- Left: Government Identity -->
             <div class="d-flex align-items-center gap-2">
                 <span class="header-flag-wrap">
-                    <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
+                    <img src="{{ asset('images/flag-of-india.svg') }}"
                         alt="Flag of India" class="header-flag-icon">
                 </span>
                 <span class="fw-medium text-white text-nowrap" style="font-size: 0.75rem;">

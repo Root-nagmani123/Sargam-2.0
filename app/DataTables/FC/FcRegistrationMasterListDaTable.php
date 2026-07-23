@@ -152,22 +152,55 @@ class FcRegistrationMasterListDaTable extends DataTable
     // }
 
 
+    /**
+     * Columns actually rendered by this table (see dataTable() + getColumns()).
+     *
+     * fc_registration_master has 187 columns; selecting `*` shipped every one of
+     * them in the JSON for every row — ~133 KB for a 25-row page — even though the
+     * grid displays about 19. Join keys (course_master_pk, service_master_pk, …)
+     * are deliberately absent: they are only used in ON/WHERE clauses, which work
+     * regardless of the SELECT list, and their display values come from the joins.
+     *
+     * @var list<string>
+     */
+    private const ROW_COLUMNS = [
+        'pk',                 // action + status toggle + row key
+        'active_inactive',    // status toggle
+        'application_type',
+        'schema_id',
+        'contact_no',
+        'dob',
+        'display_name',
+        'first_name',
+        'middle_name',
+        'last_name',
+        'email',              // displayed + used by the email_count subquery
+        'rank',
+        'web_auth',
+        'generated_OT_code',
+        'exam_year',
+    ];
+
     public function query(FcRegistrationMaster $model): \Illuminate\Database\Eloquent\Builder
     {
+        $select = array_map(
+            static fn (string $c) => 'fc_registration_master.'.$c,
+            self::ROW_COLUMNS
+        );
+
         $query = $model->newQuery()
             ->leftJoin('service_master as s', 'fc_registration_master.service_master_pk', '=', 's.pk')
             ->leftJoin('fc_exemption_master as e', 'fc_registration_master.fc_exemption_master_pk', '=', 'e.Pk')
             ->leftJoin('cadre_master as c', 'fc_registration_master.cadre_master_pk', '=', 'c.pk')
             ->leftJoin('course_master as cm', 'fc_registration_master.course_master_pk', '=', 'cm.pk')
-            ->select(
-                'fc_registration_master.*',
+            ->select(array_merge($select, [
                 'cm.course_name',
                 's.service_short_name',
                 'e.Exemption_name as exemption_name',
                 'c.cadre_name as cadre_name',
                 's.group_service_name as group_type',
-                DB::raw('(SELECT COUNT(*) FROM fc_registration_master f2 WHERE f2.email = fc_registration_master.email) as email_count')
-            );
+                DB::raw('(SELECT COUNT(*) FROM fc_registration_master f2 WHERE f2.email = fc_registration_master.email) as email_count'),
+            ]));
 
         if ($course = request('course_name')) {
             $query->where('fc_registration_master.course_master_pk', $course);
