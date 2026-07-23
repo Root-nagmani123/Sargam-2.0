@@ -73,15 +73,19 @@
         table.data-table tbody tr:nth-child(even) { background: #f4f7fb; }
 
         .col-sno { width: 3%; text-align: center; }
-        .col-program { width: 11%; }
-        .col-name { width: 10%; }
-        .col-code { width: 7%; }
-        .col-cadre { width: 8%; }
+        .col-program { width: 10%; }
+        .col-name { width: 9%; }
+        .col-code { width: 6%; }
+        .col-cadre { width: 7%; }
+        /* Emails are long and unbreakable; without word-break they force the whole
+           landscape table wider than the page and every other column collapses. */
+        .col-email { width: 11%; word-break: break-all; }
+        .col-mobile { width: 6%; }
         .col-date { width: 6%; text-align: center; }
-        .col-infraction { width: 9%; }
-        .col-marks { width: 6%; text-align: center; }
-        .col-remarks { width: 12%; }
-        .col-status { width: 6%; text-align: center; }
+        .col-infraction { width: 8%; }
+        .col-marks { width: 5%; text-align: center; }
+        .col-remarks { width: 9%; }
+        .col-status { width: 5%; text-align: center; }
 
         .badge { display: inline-block; padding: 1px 5px; border-radius: 3px; color: #fff; font-weight: bold; }
         .badge-recorded { background: #198754; }
