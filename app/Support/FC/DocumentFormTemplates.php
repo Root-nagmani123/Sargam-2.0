@@ -592,6 +592,7 @@ class DocumentFormTemplates
                     'heading' => 'Government Servant Details / सरकारी कर्मचारी का विवरण',
                     'fields'  => [
                         ['name' => 'officer_name', 'label' => 'Name of the Officer (in full) and Service to which he/she belongs / अधिकारी का नाम (पूर्ण रूप में) तथा वह सेवा जिससे वह संबंधित है', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
+                        ['name' => 'as_on_date', 'label' => 'Statement as on Date / जिस तिथि तक विवरण है', 'type' => 'date', 'width' => 'col-md-4'],
                         ['name' => 'present_post', 'label' => 'Present Post held / वर्तमान में धारित पद', 'type' => 'text', 'width' => 'col-md-3'],
                         ['name' => 'cadre', 'label' => 'Cadre of the State on which borne / जिस राज्य के संवर्ग में सम्मिलित है', 'type' => 'text', 'width' => 'col-md-3'],
                         ['name' => 'present_pay', 'label' => 'Present Pay (₹) / वर्तमान वेतन (₹)', 'type' => 'text', 'width' => 'col-md-3'],
@@ -857,6 +858,14 @@ class DocumentFormTemplates
                         ['name' => 'surety_address', 'label' => 'Address of Surety / प्रतिभू का पता', 'type' => 'textarea', 'width' => 'col-md-6'],
                         ['name' => 'surety_occupation', 'label' => 'Occupation of Surety / प्रतिभू का व्यवसाय', 'type' => 'text', 'width' => 'col-md-6'],
                         ['name' => 'surety_eligibility', 'label' => 'Surety is / प्रतिभू है', 'type' => 'select', 'options' => ['In the permanent service of Government', 'Ordinarily resident in India'], 'width' => 'col-md-6'],
+                    ],
+                ],
+                [
+                    'heading' => 'Bond Execution / बंधपत्र निष्पादन',
+                    'fields'  => [
+                        ['name' => 'bond_dated_at', 'label' => 'Dated (at/year) / दिनांक', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'bond_dated_day', 'label' => 'This … day / इस … दिन', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'bond_dated_month', 'label' => 'Day of (month/year) / माह', 'type' => 'text', 'width' => 'col-md-4'],
                     ],
                 ],
                 [

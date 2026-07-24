@@ -109,18 +109,31 @@
                 </p>
 
                 <div class="sb-lines">
-                    Dated <input type="date" name="declaration_date" class="blank blank--sm" value="{{ $val('declaration_date') }}" data-mirror="ddate">.
-                    <div class="sb-sign mt-3">Signature of the Probationer ______________________</div>
-                    <div>Signed by the Probationer in the presence of —</div>
-                    <div>Name of Witness: <input type="text" name="prob_witness_name" class="blank blank--mid" value="{{ $val('prob_witness_name') }}"></div>
-                    <div>Address: <input type="text" name="prob_witness_address" class="blank blank--wide" value="{{ $val('prob_witness_address') }}"></div>
-                    <div>Occupation: <input type="text" name="prob_witness_occupation" class="blank blank--mid" value="{{ $val('prob_witness_occupation') }}"></div>
+                    Dated <input type="text" name="bond_dated_at" class="blank blank--sm" value="{{ $val('bond_dated_at') }}">
+                    this <input type="text" name="bond_dated_day" class="blank blank--sm" value="{{ $val('bond_dated_day') }}">
+                    day of <input type="text" name="bond_dated_month" class="blank blank--mid" value="{{ $val('bond_dated_month') }}">
 
-                    <div class="sb-sign mt-3">Signature of the Surety ______________________</div>
-                    <div>Signed by the Surety in the presence of —</div>
-                    <div>Name of Witness: <input type="text" name="surety_witness_name" class="blank blank--mid" value="{{ $val('surety_witness_name') }}"></div>
-                    <div>Address: <input type="text" name="surety_witness_address" class="blank blank--wide" value="{{ $val('surety_witness_address') }}"></div>
-                    <div>Occupation: <input type="text" name="surety_witness_occupation" class="blank blank--mid" value="{{ $val('surety_witness_occupation') }}"></div>
+                    {{-- ── Probationer signature block ── --}}
+                    <div class="sb-sign" style="text-align:center; margin-top:2rem;">Signature of the Probationer: ______________________</div>
+
+                    <div style="margin-top:1rem;">Signed <b>by Probationer</b> in the presence of &nbsp;(Name of Witness)
+                        <input type="text" name="prob_witness_name" class="blank blank--wide" value="{{ $val('prob_witness_name') }}"></div>
+                    <div>Address <input type="text" name="prob_witness_address" class="blank" style="min-width:560px;" value="{{ $val('prob_witness_address') }}"></div>
+                    <div>
+                        <span style="display:inline-block; min-width:200px; border-bottom:1px dotted #64748b;">&nbsp;</span>
+                        Occupation
+                        <input type="text" name="prob_witness_occupation" class="blank blank--mid" value="{{ $val('prob_witness_occupation') }}"></div>
+
+                    {{-- ── Surety signature block ── --}}
+                    <div class="sb-sign" style="text-align:center; margin-top:2rem;">Signature of the Surety: ______________________</div>
+
+                    <div style="margin-top:1rem;">Signed <b>by Surety</b> in the presence of &nbsp;(Name of Witness)
+                        <input type="text" name="surety_witness_name" class="blank blank--wide" value="{{ $val('surety_witness_name') }}"></div>
+                    <div>Address <input type="text" name="surety_witness_address" class="blank" style="min-width:560px;" value="{{ $val('surety_witness_address') }}"></div>
+                    <div>
+                        <span style="display:inline-block; min-width:200px; border-bottom:1px dotted #64748b;">&nbsp;</span>
+                        Occupation
+                        <input type="text" name="surety_witness_occupation" class="blank blank--mid" value="{{ $val('surety_witness_occupation') }}"></div>
                 </div>
 
                 <p class="sb-body" style="text-indent:0; margin-top:1.4rem;">
@@ -173,10 +186,6 @@
                     <div class="sb-sign mt-3">परिवीक्षाधीन के हस्ताक्षर ______________________</div>
                     <div>साक्षी की उपस्थिति में परिवीक्षाधीन द्वारा हस्ताक्षरित — साक्षी का नाम: <input type="text" name="hi[pwname]" class="blank blank--mid" value="{{ $data['_hi']['pwname'] ?? '' }}" autocomplete="off"></div>
                     <div>पता: <input type="text" name="hi[pwaddr]" class="blank blank--wide" value="{{ $data['_hi']['pwaddr'] ?? '' }}" autocomplete="off"> &nbsp; व्यवसाय: <input type="text" name="hi[pwocc]" class="blank blank--mid" value="{{ $data['_hi']['pwocc'] ?? '' }}" autocomplete="off"></div>
-
-                    <div class="sb-sign mt-3">प्रतिभू के हस्ताक्षर ______________________</div>
-                    <div>साक्षी की उपस्थिति में प्रतिभू द्वारा हस्ताक्षरित — साक्षी का नाम: <input type="text" name="hi[swname]" class="blank blank--mid" value="{{ $data['_hi']['swname'] ?? '' }}" autocomplete="off"></div>
-                    <div>पता: <input type="text" name="hi[swaddr]" class="blank blank--wide" value="{{ $data['_hi']['swaddr'] ?? '' }}" autocomplete="off"> &nbsp; व्यवसाय: <input type="text" name="hi[swocc]" class="blank blank--mid" value="{{ $data['_hi']['swocc'] ?? '' }}" autocomplete="off"></div>
                 </div>
 
                 <p class="sb-body" style="text-indent:0; margin-top:1.4rem;">
@@ -185,6 +194,12 @@
                     <span class="d-block">(ख) मैं साधारणतया भारत का निवासी हूँ और मेरे पास ऐसे साधन हैं जिनसे करार के निबंधनों के अनुसार राशि की मांग किए जाने पर मैं केन्द्र सरकार को वह राशि चुका सकता/सकती हूँ।</span>
                     (जो लागू न हो उसे काट दें।)
                 </p>
+
+                <div class="sb-lines">
+                    <div class="sb-sign mt-3">प्रतिभू के हस्ताक्षर ______________________</div>
+                    <div>साक्षी की उपस्थिति में प्रतिभू द्वारा हस्ताक्षरित — साक्षी का नाम: <input type="text" name="hi[swname]" class="blank blank--mid" value="{{ $data['_hi']['swname'] ?? '' }}" autocomplete="off"></div>
+                    <div>पता: <input type="text" name="hi[swaddr]" class="blank blank--wide" value="{{ $data['_hi']['swaddr'] ?? '' }}" autocomplete="off"> &nbsp; व्यवसाय: <input type="text" name="hi[swocc]" class="blank blank--mid" value="{{ $data['_hi']['swocc'] ?? '' }}" autocomplete="off"></div>
+                </div>
             </div>
         </div>
 

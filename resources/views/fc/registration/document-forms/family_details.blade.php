@@ -70,9 +70,9 @@
             <div class="fm-title-hi">फॉर्म सं. 3 : परिवार का विवरण</div>
 
             <div class="fm-item"><span class="lbl">Name of the Government Servant / सरकारी कर्मचारी का नाम:</span>
-                <input type="text" name="officer_name" class="fm-blank" required value="{{ $val('officer_name') }}" style="min-width:240px;"></div>
+                <input type="text" name="officer_name" class="fm-blank" required value="{{ $val('officer_name') }}" style="min-width:240px;" readonly></div>
             <div class="fm-item"><span class="lbl">Designation / पद नाम:</span>
-                <input type="text" name="designation" class="fm-blank" value="{{ $val('designation') }}" style="min-width:220px;"></div>
+                <input type="text" name="designation" class="fm-blank" value="{{ $val('designation') }}" style="min-width:220px;" readonly></div>
             <div class="fm-item"><span class="lbl">Date of Birth / जन्म तिथि:</span>
                 <input type="date" name="date_of_birth" class="fm-blank" value="{{ $val('date_of_birth') }}"></div>
             <div class="fm-item"><span class="lbl">Details of the members of my family* as on / परिवार के सदस्यों का विवरण, तदनांक:</span>
@@ -114,15 +114,15 @@
 
             <div class="fm-sign row">
                 <div class="col-md-6">
-                    <div>Place / स्थान: <input type="text" name="place" class="fm-blank" value="{{ $val('place') }}"></div>
-                    <div>Date / दिनांक: <input type="date" name="declaration_date" class="fm-blank" value="{{ $val('declaration_date') }}"></div>
+                    <div>Place / स्थान: <input type="text" name="place" class="fm-blank" value="{{ old('place', $data['place'] ?? 'Mussoorie') }}" readonly></div>
+                    <div>Date / दिनांक: <input type="date" name="declaration_date" class="fm-blank" value="{{ old('declaration_date', $data['declaration_date'] ?? '2026-08-24') }}" readonly></div>
                 </div>
                 <div class="col-md-6 text-md-end">Signature of the Government Servant / सरकारी कर्मचारी के हस्ताक्षर<br>______________________</div>
             </div>
 
             <div class="fm-notes">
-                <div><b>* Family</b> means family as defined in clause (b) of sub-rule (14) of Rule 54 of the CCS (Pension) Rules, 1972 — wife/husband (incl. judicially separated), unmarried son under 25 & unmarried/widowed/divorced daughter (incl. legally adopted), dependent parents, and dependent disabled siblings. / <b>* परिवार</b> का अर्थ केन्द्रीय सिविल सेवा (पेंशन) नियमावली, 1972 के नियम 54 के उप-नियम (14) के खंड (ख) में परिभाषित परिवार से है।</div>
-                <div class="mt-1"><b>**</b> Please attach an ID proof of date of birth (in each case, except your own). / <b>**</b> जन्म तिथि का पहचान प्रमाण संलग्न करें (अपने को छोड़कर प्रत्येक मामले में)।</div>
+                <div><b>* Family</b> for this purpose means family as defined in clause (b) of sub-rule of Rule 54 of the CCS (Pension) Rule, 1972 (Mention overleaf for ready reference)</div>
+                <div class="mt-1"><b>**</b> Please attach an ID proof of Date of birth (in each case, except your own).</div>
                 <div class="mt-1"><b>Note:</b> Additions/alterations are recorded in Column (7) under the Head of Office's signature; details of spouse, all children and parents, and disabled siblings may be given. / <b>नोट:</b> परिवर्धन/परिवर्तन कॉलम (7) में कार्यालय प्रमुख के हस्ताक्षर के तहत दर्ज किए जाते हैं। (Full instructions are reproduced on the generated PDF.)</div>
             </div>
         </div>

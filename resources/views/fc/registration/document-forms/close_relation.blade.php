@@ -10,7 +10,7 @@
         ['Father', 'पिता / Father'],
         ['Mother', 'माता / Mother'],
         ['Wife / Husband', 'पत्नी / पति / Wife / Husband'],
-        ['Son(s)', 'पुत्र / Son(s)'],
+        ['Son(s)', 'पुत्र / Son{s}'],
         ['Daughter(s)', 'पुत्री / पुत्रियाँ / Daughter(s)'],
         ['Brother(s)', 'भाई / Brother(s)'],
         ['Sister(s)', 'बहिन / बहिनें / Sister(s)'],
@@ -97,7 +97,7 @@
                     @if($ti === 0)
                         विदेशों में निवास कर रहे या विदेशी राष्ट्रीयता-प्राप्त निकट संबंधी <span class="en">/ Close relations who are Nationals of, or are domiciled in, other countries</span>
                     @else
-                        भारत में निवास कर रहे निकट संबंधी जो भारतीय मूल के नहीं हैं <span class="en">/ Close relations residing in India who are of non-Indian origin</span>
+                        भारत में निवास कर रहे निकट संबंधी जो भारतीय मूल के नहीं हैं <span class="en">/ Close relations residing in India, who are non-Indian origin</span>
                     @endif
                 </div>
                 <table class="cr">

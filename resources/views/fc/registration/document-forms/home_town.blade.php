@@ -56,7 +56,6 @@
             <div class="ht-doc">
                 <div class="ht-docno">Document-5</div>
                 <div class="ht-title">गृह नगर घोषणा &nbsp; DECLARATION OF HOME TOWN</div>
-                <div class="ht-sub">For the purpose of Leave Travel Concession (MHA Memo No. 43/715/57-Ests.(A), dated 24-06-1958)</div>
 
                 <div class="ht-lead">
                     मैं घोषणा करता/करती हूँ कि अवकाश यात्रा रियायत हेतु मेरा गृह नगर/गांव निम्नलिखित है —
@@ -81,14 +80,14 @@
                 </div>
 
                 <div class="ht-sign">
-                    <div style="text-align:right;">हस्ताक्षर / Signature: ______________________</div>
-                    <div>नाम स्पष्ट अक्षरों में / Name in Block Letters:
-                        <input type="text" name="officer_name" class="blank blank--wide" required value="{{ $val('officer_name') }}"></div>
-                    <div>पदनाम / Designation:
-                        <input type="text" name="designation" class="blank blank--wide" value="{{ $val('designation') }}" placeholder="name of your service followed by (Probationer)"></div>
-                    <div>स्थान / Place:
-                        <input type="text" name="place" class="blank" value="{{ $val('place') }}">
-                        &nbsp;&nbsp;तारीख / Dated:
+                    <div style="padding-left:42%;">हस्ताक्षर / Signature: ______________________</div>
+                    <div style="padding-left:42%;">नाम स्पष्ट अक्षरों में / Name in Block Letters:
+                        <input type="text" name="officer_name" class="blank" required value="{{ $val('officer_name') }}"></div>
+                    <div style="padding-left:42%;">पदनाम / Designation:
+                        <input type="text" name="designation" class="blank" value="{{ $val('designation') }}" placeholder="name of your service followed by (Probationer)"></div>
+                    <div style="padding-left:42%;">स्थान / Place:
+                        <input type="text" name="place" class="blank" value="{{ $val('place') }}"></div>
+                    <div style="padding-left:42%;">तारीख / Dated:
                         <input type="date" name="declaration_date" class="blank blank--sm" value="{{ $val('declaration_date') }}"></div>
                 </div>
 
