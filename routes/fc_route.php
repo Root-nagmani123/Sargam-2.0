@@ -148,6 +148,9 @@ Route::get('/registration/foundation-course', [FrontPageController::class, 'foun
 // Auth verify user 
 Route::get('/registration/fc-auth', [FrontPageController::class, 'authindex'])->name('verify.authindex');
 Route::post('/registration/verify', [FrontPageController::class, 'verify'])->name('registration.verify');
+Route::post('/registration/send-otp', [FrontPageController::class, 'sendRegistrationOtp'])
+    ->middleware('throttle:6,1')
+    ->name('registration.send_otp');
 
 // Show the create credentials form
 Route::get('/fc/create-credentials', [FrontPageController::class, 'credential_index'])->name('credential.registration.create');
@@ -215,6 +218,14 @@ Route::post('/fc/password-reset', [FrontPageController::class, 'resetPassword'])
 
 //reset web-auth form verify
 Route::post('/fc/verify-web-auth', [FrontPageController::class, 'verifyWebAuth'])->name('fc.verify_web_auth');
+
+// A5 — logged-in / staged FC password change with OTP
+Route::post('/fc/password-change/send-otp', [FrontPageController::class, 'sendPasswordChangeOtp'])
+    ->middleware('throttle:6,1')
+    ->name('fc.password.change.send_otp');
+Route::post('/fc/password-change', [FrontPageController::class, 'changePasswordWithOtp'])
+    ->middleware('throttle:6,1')
+    ->name('fc.password.change');
 
 //joining document route
 Route::get('/admin/fc/joining-documents/{formId}', [FcJoiningDocumentController::class, 'create'])->name('fc.joining.index');

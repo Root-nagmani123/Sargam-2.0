@@ -8,6 +8,8 @@ use App\Services\FC\FcRegistrationIntentService;
 use App\Services\FC\FcRegistrationStatusService;
 use App\Services\FC\FcRosterApplicationGuardService;
 use App\Services\FC\FcRosterAuthService;
+use App\Services\FC\FcNotifyService;
+use App\Services\FC\FcOtpService;
 use App\Support\FcEncryptedFormId;
 use Illuminate\Http\Request;
 use App\Models\FC\FcForm;
@@ -40,6 +42,8 @@ class FrontPageController extends Controller
         private FcRegistrationIntentService $fcRegistrationIntent,
         private FcRegistrationStatusService $fcRegistrationStatus,
         private FcRosterApplicationGuardService $rosterGuard,
+        private FcNotifyService $fcNotify,
+        private FcOtpService $fcOtp,
     ) {
     }
 
@@ -221,15 +225,68 @@ class FrontPageController extends Controller
         return view('fc.login');
     }
 
+    /**
+     * A1 — Send registration OTP (web_auth must match; existing verify flow unchanged).
+     */
+    public function sendRegistrationOtp(Request $request)
+    {
+        $request->validate([
+            'reg_mobile' => 'required|digits:10',
+            'reg_web_code' => 'required|string',
+        ]);
+
+        $registration = DB::table('fc_registration_master')
+            ->where('contact_no', $request->reg_mobile)
+            ->where('web_auth', $request->reg_web_code)
+            ->first();
+
+        if (!$registration) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid contact number or web auth code.',
+            ], 422);
+        }
+
+        if ($blocked = $this->rosterGuard->registrationBlockedReason($registration)) {
+            return response()->json(['success' => false, 'message' => $blocked], 422);
+        }
+
+        $programmeName = $this->resolvedIntendedProgrammeName()
+            ?: (string) config('gupshup.default_programme_name', 'Foundation Course');
+
+        $result = $this->fcNotify->registrationOtp(
+            $request->reg_mobile,
+            trim((string) ($registration->display_name ?? '')),
+            $programmeName,
+            isset($registration->pk) ? (int) $registration->pk : null,
+        );
+
+        if (!($result['sent'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to send OTP SMS right now. Please try again, or check SMS gateway / DLT delivery.',
+            ], 502);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OTP sent to your registered mobile number.',
+            'validity_minutes' => $this->fcOtp->validityMinutes(),
+        ]);
+    }
+
     //validates user exists 
     public function verify(Request $request)
     {
-        // Step 1: Validate input, including captcha
+        // Step 1: Validate input, including captcha + mandatory OTP (A1)
         $request->validate([
             'reg_mobile'   => 'required|digits:10',
             'reg_web_code' => 'required|string',
+            'otp'          => 'required|digits:6',
             'captcha'      => 'required|captcha',
         ], [
+            'otp.required' => 'Please enter the OTP sent to your mobile.',
+            'otp.digits' => 'OTP must be a 6-digit code.',
             'captcha.captcha' => 'Invalid captcha.',
         ]);
 
@@ -242,6 +299,19 @@ class FrontPageController extends Controller
         if (!$registration) {
             return back()
                 ->withErrors(['web_auth' => 'Invalid contact number or web auth code.'])
+                ->withInput();
+        }
+
+        // A1: OTP is mandatory — wrong / expired / missing OTP must block login.
+        if (!$this->fcOtp->hasPending('registration', $request->reg_mobile)) {
+            return back()
+                ->withErrors(['otp' => 'Please click Send OTP and enter the code sent to your mobile.'])
+                ->withInput();
+        }
+
+        if (!$this->fcOtp->verify('registration', $request->reg_mobile, $request->input('otp'))) {
+            return back()
+                ->withErrors(['otp' => 'Invalid or expired OTP. Please request a new OTP.'])
                 ->withInput();
         }
 
@@ -377,6 +447,18 @@ class FrontPageController extends Controller
 
         // Email only the username — never email the plain-text password (CWE-312).
         $this->sendCredentialsEmail($registration->email ?? null, $request->reg_name, $registration->pk ?? null);
+
+        // A2 SMS (best-effort via Gupshup/log driver) — does not affect save/redirect.
+        $programmeName = $this->resolvedIntendedProgrammeName()
+            ?: (string) config('gupshup.default_programme_name', 'Foundation Course');
+        $this->fcNotify->credentialsCreated(
+            $request->reg_mobile,
+            trim((string) ($registration->display_name ?? '')),
+            $programmeName,
+            $request->reg_name,
+            $request->reg_password,
+            isset($registration->pk) ? (int) $registration->pk : null,
+        );
 
         return redirect()->route('fc.login', $this->intentQueryForFcFormLinks())->with(
             'sweet_success',
@@ -1168,6 +1250,19 @@ class FrontPageController extends Controller
                 'exemption_count' => DB::raw('GREATEST(COALESCE(exemption_count, 0), 1)'),
             ]);
 
+        // C1 SMS (best-effort via Gupshup/log driver) — does not affect save/redirect.
+        $programmeName = $this->resolvedIntendedProgrammeName()
+            ?: (string) config('gupshup.default_programme_name', 'Foundation Course');
+        $applicationNo = 'EXM'.now()->format('Y').str_pad((string) ($registration->pk ?? 0), 4, '0', STR_PAD_LEFT);
+        $this->fcNotify->exemptionConfirmation(
+            $request->ex_mobile,
+            trim((string) ($registration->display_name ?? '')),
+            $programmeName,
+            trim((string) ($exemption->Exemption_name ?? '')),
+            $applicationNo,
+            isset($registration->pk) ? (int) $registration->pk : null,
+        );
+
         return redirect()->route('fc.thank_you')->with('success', 'Exemption form submitted successfully.');
     }
 
@@ -1192,11 +1287,21 @@ class FrontPageController extends Controller
                 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/',
             ],
             'confirm_password' => 'required|same:new_password',
+            'otp' => 'nullable|string',
         ], [
             'new_password.min' => 'The password must be at least 8 characters.',
             'new_password.regex' => 'Password must include uppercase, lowercase, a number and a special character.',
             'confirm_password.same' => 'The confirm password and password must match.',
         ]);
+
+        // A4: if forgot-password OTP was issued, require it (backward compatible when none sent).
+        if ($this->fcOtp->hasPending('forgot_password', $request->mobile_number)) {
+            if (!$this->fcOtp->verify('forgot_password', $request->mobile_number, $request->input('otp'))) {
+                return back()
+                    ->withErrors(['otp' => 'Invalid or expired OTP. Please verify web auth again to receive a new OTP.'])
+                    ->withInput();
+            }
+        }
 
         // Check user exists by mobile number
         $user = DB::table('user_credentials')
@@ -1207,6 +1312,16 @@ class FrontPageController extends Controller
             return back()
                 ->withErrors(['mobile_number' => 'Mobile number not found.'])
                 ->withInput();
+        }
+
+        // Also update staged FC roster password when present (same mobile).
+        $roster = DB::table('fc_registration_master')
+            ->where('contact_no', $request->mobile_number)
+            ->first();
+        if ($roster) {
+            DB::table('fc_registration_master')
+                ->where('pk', $roster->pk)
+                ->update(['password' => Hash::make($request->new_password)]);
         }
 
         // Update password
@@ -1250,10 +1365,97 @@ class FrontPageController extends Controller
             return response()->json(['success' => false, 'message' => 'User credentials not found.']);
         }
 
+        // A4 — send forgot-password OTP after web_auth succeeds (best-effort).
+        $this->fcNotify->forgotPasswordOtp(
+            $request->mobile_number,
+            trim((string) ($user->display_name ?? '')),
+            isset($user->pk) ? (int) $user->pk : null,
+        );
+
         return response()->json([
             'success' => true,
             'user_name' => $credentials->user_name,
+            'otp_sent' => true,
+            'message' => 'OTP sent to your registered mobile number.',
+            'validity_minutes' => $this->fcOtp->validityMinutes(),
         ]);
+    }
+
+    /**
+     * A5 — Send password-change OTP for logged-in / staged FC trainee.
+     */
+    public function sendPasswordChangeOtp(Request $request)
+    {
+        $mobile = session('fc_user_mobile') ?: Auth::user()?->mobile_no;
+        $mobile = is_string($mobile) ? trim($mobile) : '';
+
+        if ($mobile === '') {
+            return response()->json(['success' => false, 'message' => 'Session expired. Please login again.'], 401);
+        }
+
+        $registration = DB::table('fc_registration_master')
+            ->where('contact_no', $mobile)
+            ->orderByDesc('pk')
+            ->first();
+
+        if (!$registration) {
+            return response()->json(['success' => false, 'message' => 'Registration not found.'], 404);
+        }
+
+        $this->fcNotify->passwordChangeOtp(
+            $mobile,
+            trim((string) ($registration->display_name ?? '')),
+            isset($registration->pk) ? (int) $registration->pk : null,
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OTP sent to your registered mobile number.',
+            'validity_minutes' => $this->fcOtp->validityMinutes(),
+        ]);
+    }
+
+    /**
+     * A5 — Change FC roster password after OTP verification.
+     */
+    public function changePasswordWithOtp(Request $request)
+    {
+        $request->validate([
+            'otp' => 'required|string',
+            'new_password' => [
+                'required',
+                'string',
+                'min:8',
+                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/',
+            ],
+            'confirm_password' => 'required|same:new_password',
+        ], [
+            'new_password.regex' => 'Password must include uppercase, lowercase, a number and a special character.',
+            'confirm_password.same' => 'The confirm password and password must match.',
+        ]);
+
+        $mobile = session('fc_user_mobile') ?: Auth::user()?->mobile_no;
+        $mobile = is_string($mobile) ? trim($mobile) : '';
+
+        if ($mobile === '') {
+            return back()->withErrors(['otp' => 'Session expired. Please login again.']);
+        }
+
+        if (!$this->fcOtp->verify('password_change', $mobile, $request->input('otp'))) {
+            return back()->withErrors(['otp' => 'Invalid or expired OTP.'])->withInput();
+        }
+
+        $hashed = Hash::make($request->new_password);
+
+        DB::table('fc_registration_master')
+            ->where('contact_no', $mobile)
+            ->update(['password' => $hashed]);
+
+        DB::table('user_credentials')
+            ->where('mobile_no', $mobile)
+            ->update(['jbp_password' => $hashed]);
+
+        return back()->with('sweet_success', 'Password changed successfully.');
     }
 
     // app/Http/Controllers/FoundationCourseController.php

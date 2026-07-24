@@ -47,6 +47,7 @@ class FcRegistrationRegisteredSyncService
                 $form = FcForm::resolveForUserId($userCredentialsPk);
             }
 
+            $wasRegistered = (int) ($registration->is_registered ?? 0) === 1;
             $isRegistered = $this->firstTwoStepsComplete($userCredentialsPk, $form);
             $isExemption = (int) ($registration->application_type ?? 0) === FcRosterApplicationGuardService::APPLICATION_EXEMPTION;
 
@@ -61,6 +62,22 @@ class FcRegistrationRegisteredSyncService
             DB::table('fc_registration_master')
                 ->where('pk', $registration->pk)
                 ->update($update);
+
+            // A3 SMS once when trainee first becomes registered (best-effort; does not affect sync).
+            if ($isRegistered && ! $wasRegistered) {
+                $programmeName = trim((string) ($form?->form_name ?? ''));
+                if ($programmeName === '') {
+                    $programmeName = (string) config('gupshup.default_programme_name', 'Foundation Course');
+                }
+
+                app(FcNotifyService::class)->registrationSuccessful(
+                    $registration->contact_no ?? null,
+                    trim((string) ($registration->display_name ?? '')),
+                    $programmeName,
+                    trim((string) ($registration->user_id ?? '')),
+                    isset($registration->pk) ? (int) $registration->pk : null,
+                );
+            }
         } catch (\Throwable $e) {
             Log::warning('fc_registration_master.is_registered sync failed', [
                 'user_credentials_pk' => $userCredentialsPk,
