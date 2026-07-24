@@ -6835,6 +6835,11 @@ class EstateController extends Controller
                 'emrd.electricty_charges',
                 'emrd.meter_one as emrd_meter_one_before',
                 'emrd.meter_two as emrd_meter_two_before',
+                // Old meter no. — units ke liye meter-replacement detect karne me chahiye.
+                'emrd.meter_one as emrd_meter_one',
+                'emrd.meter_two as emrd_meter_two',
+                'ehm.meter_one as ehm_meter_one',
+                'ehm.meter_two as ehm_meter_two',
                 'emrd.estate_possession_details_pk',
                 'ehm.pk as audit_estate_house_pk',
                 'ehm.estate_campus_master_pk as audit_campus_pk',
@@ -6909,8 +6914,21 @@ class EstateController extends Controller
                 $baseline1 = $curr1Existing !== null ? $curr1Existing : $prev1;
                 $baseline2 = $curr2Existing !== null ? $curr2Existing : $prev2;
 
-                $u1 = ($curr1New !== null && $curr1New >= $baseline1) ? (int) ($curr1New - $baseline1) : 0;
-                $u2 = ($curr2New !== null && $curr2New >= $baseline2) ? (int) ($curr2New - $baseline2) : 0;
+                // Meter replace hua ho toh naya meter 0 se start hota hai — reading hi consumed unit hai,
+                // warna purane baseline se difference lo.
+                $meter1Changed = $this->isRegularMeterReplaced($row, 1, $data['meter_one']);
+                $meter2Changed = $this->isRegularMeterReplaced($row, 2, $data['meter_two']);
+
+                if ($meter1Changed) {
+                    $u1 = $curr1New !== null ? (int) $curr1New : 0;
+                } else {
+                    $u1 = ($curr1New !== null && $curr1New >= $baseline1) ? (int) ($curr1New - $baseline1) : 0;
+                }
+                if ($meter2Changed) {
+                    $u2 = $curr2New !== null ? (int) $curr2New : 0;
+                } else {
+                    $u2 = ($curr2New !== null && $curr2New >= $baseline2) ? (int) ($curr2New - $baseline2) : 0;
+                }
 
                 $unitTypePk = isset($row->unit_type_pk) ? (int) $row->unit_type_pk : null;
                 $m1Charge = $u1 > 0 ? $this->calculateElectricChargeForUnits($unitTypePk, $u1) : 0.0;
@@ -7926,6 +7944,21 @@ class EstateController extends Controller
     /**
      * Effective old meter number for regular possession reading validation (matches list: emrd ?? ehm).
      */
+    /**
+     * Slot ka meter replace hua ya nahi — submitted new meter no. vs effective old meter no.
+     * True hone par us slot ke units = current reading (naya meter 0 se start hota hai).
+     */
+    private function isRegularMeterReplaced($row, int $meterSlot, ?string $submittedMeterNo): bool
+    {
+        $newDigits = preg_replace('/\D/', '', trim((string) $submittedMeterNo));
+        if ($newDigits === '') {
+            return false;
+        }
+        $oldDigits = preg_replace('/\D/', '', $this->effectiveOldMeterNoForRegularReadingRow($row, $meterSlot));
+
+        return $oldDigits !== '' && $newDigits !== $oldDigits;
+    }
+
     private function effectiveOldMeterNoForRegularReadingRow($row, int $meterSlot): string
     {
         if ($meterSlot === 2) {
@@ -8573,6 +8606,9 @@ class EstateController extends Controller
                             'epo.pk as possession_pk',
                             'ehm.pk as house_pk',
                             'ehm.house_no as ehm_house_no',
+                            // Old meter no. fallback — units ke liye meter-replacement detect karne me chahiye.
+                            'ehm.meter_one as ehm_meter_one',
+                            'ehm.meter_two as ehm_meter_two',
                             DB::raw('COALESCE(epo.estate_unit_type_master_pk, ' . $houseDerivedExpr . ') as electric_unit_type_pk_resolved'),
                         ])
                         ->first();
@@ -8602,6 +8638,23 @@ class EstateController extends Controller
                 $newMeterNoDigits = preg_replace('/\D/', '', $newMeterNoRaw ?? '');
                 $update = [];
 
+                // Meter replace hua ho toh naya meter 0 se start hota hai — reading hi consumed unit hai.
+                $ehmForOldMeter = [];
+                if ($otherPossessionCtx && ! empty($row->estate_possession_other_pk)) {
+                    $ehmForOldMeter[(int) $row->estate_possession_other_pk] = (object) [
+                        'meter_one' => $otherPossessionCtx->ehm_meter_one ?? null,
+                        'meter_two' => $otherPossessionCtx->ehm_meter_two ?? null,
+                    ];
+                }
+                $oldMeterDigitsForUnits = preg_replace('/\D/', '', $this->effectiveOldMeterNoForOtherReadingRow(
+                    $row,
+                    $meterSlot,
+                    $ehmForOldMeter
+                ));
+                $meterReplacedForUnits = $newMeterNoDigits !== ''
+                    && $oldMeterDigitsForUnits !== ''
+                    && $newMeterNoDigits !== $oldMeterDigitsForUnits;
+
                 if ($meterSlot === 2) {
                     $oldCurr2 = $row->curr_month_elec_red2;
                     if ($oldCurr2 !== null && $oldCurr2 !== '') {
@@ -8610,7 +8663,9 @@ class EstateController extends Controller
                     $baseline2 = ($oldCurr2 !== null && $oldCurr2 !== '')
                         ? (int) $oldCurr2
                         : (int) ($row->last_month_elec_red2 ?? 0);
-                    $units = $curr >= $baseline2 ? $curr - $baseline2 : 0;
+                    $units = $meterReplacedForUnits
+                        ? $curr
+                        : ($curr >= $baseline2 ? $curr - $baseline2 : 0);
                     $charge = $units > 0 ? $this->calculateElectricChargeForUnits($electricUnitTypePkOther, $units) : 0.0;
 
                     $update['curr_month_elec_red2'] = $curr;
@@ -8625,7 +8680,9 @@ class EstateController extends Controller
                     $baseline = ($oldCurr !== null && $oldCurr !== '')
                         ? (int) $oldCurr
                         : (int) ($row->last_month_elec_red ?? 0);
-                    $units = $curr >= $baseline ? $curr - $baseline : 0;
+                    $units = $meterReplacedForUnits
+                        ? $curr
+                        : ($curr >= $baseline ? $curr - $baseline : 0);
                     $charge = $units > 0 ? $this->calculateElectricChargeForUnits($electricUnitTypePkOther, $units) : 0.0;
 
                     $update['curr_month_elec_red'] = $curr;
@@ -9129,6 +9186,63 @@ class EstateController extends Controller
      * @param  array<int, int>|null  $restrictEmployeePksSorted  null when full-access query; otherwise employee_pk allow-list (sorted)
      * @return \Illuminate\Support\Collection<int, object>
      */
+    /**
+     * Estate bill rows ke liye "kaunse possession + bill-month me naya meter no. bana" ka map banata hai.
+     * Key = "<possessionPk>|<Month YYYY>" (e.g. "123|June 2026"), value = ['m1' => bool, 'm2' => bool].
+     * Source: estate_update_reading audit (meter_change_month = bill_month . ' ' . bill_year).
+     * Ek hi query me saare possessions ke change records nikaalte hain (N+1 se bachne ke liye).
+     *
+     * @param  \Illuminate\Support\Collection  $bills
+     * @param  string  $type  'l' = regular possession, 'o' = other.
+     */
+    private function buildEstateMeterChangeMonthMap($bills, string $type = 'l'): array
+    {
+        $map = [];
+        if (! Schema::hasTable('estate_update_reading') || $bills === null || $bills->isEmpty()) {
+            return $map;
+        }
+
+        $possessionPks = $bills->pluck('estate_possession_details_pk')
+            ->filter(fn ($v) => $v !== null && (int) $v > 0)
+            ->map(fn ($v) => (int) $v)
+            ->unique()
+            ->values()
+            ->all();
+        if (empty($possessionPks)) {
+            return $map;
+        }
+
+        $eurRows = DB::table('estate_update_reading')
+            ->where('type', $type)
+            ->whereIn('estate_possession_details_pk', $possessionPks)
+            ->get([
+                'estate_possession_details_pk',
+                'meter_change_month',
+                'old_meter_no_one',
+                'new_meter_no_one',
+                'old_meter_no_two',
+                'new_meter_no_two',
+            ]);
+
+        foreach ($eurRows as $eur) {
+            $key = (int) $eur->estate_possession_details_pk . '|' . trim((string) ($eur->meter_change_month ?? ''));
+            if (! isset($map[$key])) {
+                $map[$key] = ['m1' => false, 'm2' => false];
+            }
+            // Naya meter tab maano jab new_meter_no set ho aur old se alag ho (old null/blank bhi replacement hai).
+            if ($eur->new_meter_no_one !== null && (string) $eur->new_meter_no_one !== ''
+                && (string) $eur->new_meter_no_one !== (string) $eur->old_meter_no_one) {
+                $map[$key]['m1'] = true;
+            }
+            if ($eur->new_meter_no_two !== null && (string) $eur->new_meter_no_two !== ''
+                && (string) $eur->new_meter_no_two !== (string) $eur->old_meter_no_two) {
+                $map[$key]['m2'] = true;
+            }
+        }
+
+        return $map;
+    }
+
     private function computeGenerateEstateBillBillsCollection(
         string $year,
         string $month,
@@ -9141,6 +9255,7 @@ class EstateController extends Controller
     ): \Illuminate\Support\Collection {
         $selectCols = [
             'emrd.pk',
+            'emrd.estate_possession_details_pk',
             'emrd.bill_no',
             'emrd.bill_month',
             'emrd.bill_year',
@@ -9208,7 +9323,17 @@ class EstateController extends Controller
 
         $bills = $this->orderEstateGenerateBillQueryLatestFirst($query)->get();
 
+        // Meter number change map: possession + bill-month ("June 2026") jiske liye naya meter bana hai.
+        // Naya meter 0 se start hota hai (consumed unit = current reading), isliye us pehle bill me
+        // Previous Reading blank dikhani hai — purane meter ka reading nahi.
+        $meterChangeMap = $this->buildEstateMeterChangeMonthMap($bills, 'l');
+
         foreach ($bills as $b) {
+            $mcKey = (isset($b->estate_possession_details_pk) ? (int) $b->estate_possession_details_pk : 0)
+                . '|' . trim((string) ($b->bill_month ?? '') . ' ' . (string) ($b->bill_year ?? ''));
+            $b->meter_one_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m1'];
+            $b->meter_two_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m2'];
+
             $b->bill_no = $this->resolveBillNumber($b->bill_no ?? null, $b->pk ?? null);
             $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d-m-Y') : '—';
             $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d-m-Y') : '—';
@@ -9323,7 +9448,7 @@ class EstateController extends Controller
                 'ln' => Schema::hasColumn('employee_master', 'last_name') ? 1 : 0,
             ];
 
-            $cacheKey = 'estate_geb_lbs:v2:' . md5(json_encode([
+            $cacheKey = 'estate_geb_lbs:v3:' . md5(json_encode([
                 'bm' => $billMonth,
                 'ust' => $ustKey,
                 'q' => $search,
@@ -9677,6 +9802,7 @@ class EstateController extends Controller
         $employeePk = $request->get('employee_pk');
         $employeeCategory = trim((string) $request->get('employee_category', 'LBSNAA'));
         $bill = null;
+        $billIsOther = false; // resolved bill regular (l) hai ya Other/contract (o) — meter-change lookup type ke liye.
 
         $resolveMonthVariants = function ($m): array {
             $m = trim((string) $m);
@@ -9760,6 +9886,7 @@ class EstateController extends Controller
         $baseQuery = function () use ($hasUnitTypeOnSubType, $hasEpdReading2Print) {
             $cols = [
                 'emrd.pk',
+                'emrd.estate_possession_details_pk',
                 'emrd.bill_no',
                 'emrd.bill_month',
                 'emrd.bill_year',
@@ -9815,6 +9942,7 @@ class EstateController extends Controller
                 ->leftJoin('estate_unit_sub_type_master as eust', 'epo.estate_unit_sub_type_master_pk', '=', 'eust.pk')
                 ->select(
                     'emro.pk',
+                    'epo.pk as estate_possession_details_pk',
                     'emro.bill_no',
                     'emro.bill_month',
                     'emro.bill_year',
@@ -9867,8 +9995,12 @@ class EstateController extends Controller
                             ->orWhere('emro.pk', $billNo);
                     })
                     ->first();
+                if ($bill) {
+                    $billIsOther = true;
+                }
             }
         } elseif ($month && $year && $employeePk) {
+            $billIsOther = $isOtherEmployee;
             $monthVariants = $resolveMonthVariants($month);
             // Allow print preview for any bill (draft or notified) when filtering by employee
             if ($isOtherEmployee) {
@@ -9898,6 +10030,13 @@ class EstateController extends Controller
         }
 
         if ($bill) {
+            // Naya meter (is bill month me bana) → Previous Reading blank, kyunki naya meter 0 se start hota hai.
+            $meterChangeMap = $this->buildEstateMeterChangeMonthMap(collect([$bill]), $billIsOther ? 'o' : 'l');
+            $mcKey = (isset($bill->estate_possession_details_pk) ? (int) $bill->estate_possession_details_pk : 0)
+                . '|' . trim((string) ($bill->bill_month ?? '') . ' ' . (string) ($bill->bill_year ?? ''));
+            $bill->meter_one_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m1'];
+            $bill->meter_two_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m2'];
+
             $bill->bill_no = $this->resolveBillNumber($bill->bill_no ?? null, $bill->pk ?? null);
             $bill->from_date_formatted = $bill->from_date ? \Carbon\Carbon::parse($bill->from_date)->format('d.m.Y') : '—';
             $bill->to_date_formatted = $bill->to_date ? \Carbon\Carbon::parse($bill->to_date)->format('d.m.Y') : '—';
@@ -10063,6 +10202,7 @@ class EstateController extends Controller
                 ->whereIn('emro.pk', $selectedPks)
                 ->select(
                     'emro.pk',
+                    'epo.pk as estate_possession_details_pk',
                     'emro.bill_no',
                     'emro.bill_month',
                     'emro.bill_year',
@@ -10095,7 +10235,15 @@ class EstateController extends Controller
                 ->orderBy('emro.bill_no')
                 ->get();
 
+            // Naya meter (is bill month me bana) → Previous Reading blank. Other/contract bills => type 'o'.
+            $meterChangeMap = $this->buildEstateMeterChangeMonthMap($rows, 'o');
+
             foreach ($rows as $b) {
+                $mcKey = (isset($b->estate_possession_details_pk) ? (int) $b->estate_possession_details_pk : 0)
+                    . '|' . trim((string) ($b->bill_month ?? '') . ' ' . (string) ($b->bill_year ?? ''));
+                $b->meter_one_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m1'];
+                $b->meter_two_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m2'];
+
                 $b->bill_no = $this->resolveBillNumber($b->bill_no ?? null, $b->pk ?? null);
                 $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d.m.Y') : '—';
                 $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d.m.Y') : '—';
@@ -10133,6 +10281,7 @@ class EstateController extends Controller
 
             $selectCols = [
                 'emrd.pk',
+                'emrd.estate_possession_details_pk',
                 'emrd.bill_no',
                 'emrd.bill_month',
                 'emrd.bill_year',
@@ -10203,7 +10352,15 @@ class EstateController extends Controller
 
             $bills = $this->orderEstateGenerateBillQueryLatestFirst($query)->get();
 
+            // Naya meter (is bill month me bana) → Previous Reading blank, kyunki naya meter 0 se start hota hai.
+            $meterChangeMap = $this->buildEstateMeterChangeMonthMap($bills, 'l');
+
             foreach ($bills as $b) {
+                $mcKey = (isset($b->estate_possession_details_pk) ? (int) $b->estate_possession_details_pk : 0)
+                    . '|' . trim((string) ($b->bill_month ?? '') . ' ' . (string) ($b->bill_year ?? ''));
+                $b->meter_one_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m1'];
+                $b->meter_two_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m2'];
+
                 $b->bill_no = $this->resolveBillNumber($b->bill_no ?? null, $b->pk ?? null);
                 $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d.m.Y') : '—';
                 $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d.m.Y') : '—';
@@ -10269,6 +10426,7 @@ class EstateController extends Controller
 
             $selectCols = [
                 'emrd.pk',
+                'emrd.estate_possession_details_pk',
                 'emrd.bill_no',
                 'emrd.bill_month',
                 'emrd.bill_year',
@@ -10329,7 +10487,15 @@ class EstateController extends Controller
 
             $bills = $this->orderEstateGenerateBillQueryLatestFirst($query)->get();
 
+            // Naya meter (is bill month me bana) → Previous Reading blank, kyunki naya meter 0 se start hota hai.
+            $meterChangeMap = $this->buildEstateMeterChangeMonthMap($bills, 'l');
+
             foreach ($bills as $b) {
+                $mcKey = (isset($b->estate_possession_details_pk) ? (int) $b->estate_possession_details_pk : 0)
+                    . '|' . trim((string) ($b->bill_month ?? '') . ' ' . (string) ($b->bill_year ?? ''));
+                $b->meter_one_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m1'];
+                $b->meter_two_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m2'];
+
                 $b->bill_no = $this->resolveBillNumber($b->bill_no ?? null, $b->pk ?? null);
                 $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d.m.Y') : '—';
                 $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d.m.Y') : '—';
@@ -11591,6 +11757,7 @@ class EstateController extends Controller
         $other = $other
             ->select([
                 'emro.pk',
+                'epo.pk as estate_possession_details_pk',
                 'emro.bill_no',
                 'emro.bill_month',
                 'emro.bill_year',
@@ -11615,13 +11782,29 @@ class EstateController extends Controller
             ->orderByDesc('emro.pk')
             ->get();
 
+        // Naya meter (is bill month me bana) → uski Previous Reading blank, kyunki naya meter 0 se start hota hai.
+        // Other/contract bills => estate_update_reading type 'o'.
+        $meterChangeMap = $this->buildEstateMeterChangeMonthMap($other, 'o');
+
         $rows = [];
         foreach ($other as $r) {
+            $mcKey = (isset($r->estate_possession_details_pk) ? (int) $r->estate_possession_details_pk : 0)
+                . '|' . trim((string) ($r->bill_month ?? '') . ' ' . (string) ($r->bill_year ?? ''));
+            $meterOneIsNew = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m1'];
+            $meterTwoIsNew = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m2'];
+
             $prev = (int) ($r->last_month_elec_red ?? 0);
             $curr = (int) ($r->curr_month_elec_red ?? 0);
             $prev2 = (int) ($r->last_month_elec_red2 ?? 0);
             $curr2 = (int) ($r->curr_month_elec_red2 ?? 0);
-            $units = (($curr >= $prev) ? $curr - $prev : 0) + (($curr2 >= $prev2) ? $curr2 - $prev2 : 0);
+            // Naya meter → current reading hi consumed unit (0 se start). Warna purana concept: curr - prev.
+            $unitOne = $meterOneIsNew ? $curr : (($curr >= $prev) ? $curr - $prev : 0);
+            $unitTwo = $meterTwoIsNew ? $curr2 : (($curr2 >= $prev2) ? $curr2 - $prev2 : 0);
+            $units = $unitOne + $unitTwo;
+
+            // Second meter tabhi dikhao jab meter_two ek real number ho (0/null nahi) ya uska koi reading ho.
+            // Isse meter_no column me extra "0" line nahi aayegi (meter_two = 0 wale single-meter homes).
+            $showMeterTwo = (int) ($r->meter_two ?? 0) !== 0 || $prev2 > 0 || $curr2 > 0;
             // Use electricity amount saved on the bill (set when meter reading was saved), not current slab rates.
             $totalCharge = (float) ($r->electricty_charges ?? 0);
             // Prefer Define House (estate_house_master) licence_fee so changes in Define House reflect here
@@ -11645,9 +11828,9 @@ class EstateController extends Controller
                 'house_no' => $r->house_no ?? '—',
                 'from_date' => $r->from_date ? \Carbon\Carbon::parse($r->from_date)->format('d-m-Y') : '—',
                 'to_date' => $r->to_date ? \Carbon\Carbon::parse($r->to_date)->format('d-m-Y') : '—',
-                'meter_no' => trim(($r->meter_one ?? '') . (isset($r->meter_two) && (string) $r->meter_two !== '' ? "\n" . $r->meter_two : '')),
-                'prev_reading' => (string) $prev . (($prev2 > 0 || $curr2 > 0) ? "\n" . $prev2 : ''),
-                'curr_reading' => (string) $curr . (($prev2 > 0 || $curr2 > 0) ? "\n" . $curr2 : ''),
+                'meter_no' => trim(($r->meter_one ?? '') . ($showMeterTwo ? "\n" . (int) ($r->meter_two ?? 0) : '')),
+                'prev_reading' => ($meterOneIsNew ? '—' : (string) $prev) . ($showMeterTwo ? "\n" . ($meterTwoIsNew ? '—' : (string) $prev2) : ''),
+                'curr_reading' => (string) $curr . ($showMeterTwo ? "\n" . (string) $curr2 : ''),
                 'unit_consumed' => (string) $units,
                 'total_charge' => $totalCharge,
                 'licence_fee' => $licence,
@@ -11691,7 +11874,7 @@ class EstateController extends Controller
         $billMonthStr = date('F', mktime(0, 0, 0, $monthNum, 1));
 
         $hasReturnHomeStatusCol = Schema::hasColumn('estate_possession_other', 'return_home_status');
-        $cacheKey = 'estate_gebo:v1:' . md5(json_encode([
+        $cacheKey = 'estate_gebo:v2:' . md5(json_encode([
             'bm' => $billMonthStr,
             'by' => $billYearStr,
             'rh' => $hasReturnHomeStatusCol ? 1 : 0,

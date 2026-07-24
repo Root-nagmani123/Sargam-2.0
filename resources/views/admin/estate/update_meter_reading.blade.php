@@ -432,7 +432,7 @@ $(document).ready(function() {
                             '<input type="hidden" name="readings['+i1+'][meter_slot]" value="2">' +
                             '</div>' +
                         '</td>' +
-                        '<td class="other-dual-col other-dual-units text-body-secondary small">' +
+                        '<td class="other-dual-col other-dual-units small">' +
                             '<div class="other-dual-seg" data-slot="1"><span class="unit-cell">—</span></div>' +
                             '<div class="other-dual-seg" data-slot="2"><span class="unit-cell">—</span></div>' +
                         '</td>' +
@@ -636,30 +636,36 @@ $(document).ready(function() {
         window.meterReadingRowData[key].curr_month_elec_red = $row.find('.new-meter-reading').val() || '';
     }
 
-    $(document).on('input', '#meterReadingSaveForm .new-meter-reading', function() {
-        this.value = String(this.value || '').replace(/\D/g, '').slice(0, 20);
-        const $inp = $(this);
+    function refreshUnitForReadingInput($inp) {
         const $row = $inp.closest('tr');
         const minBaseline = getMinAllowedForReadingInput($inp);
 
-        let currVal = $inp.val();
-        let currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
-
-        syncRowDataFromInputs($row);
+        const currVal = $inp.val();
+        const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
 
         let unit = '';
-        if (minBaseline !== null && currReading !== null && currReading >= minBaseline) {
+        if (isMeterNoChangedForReading($inp)) {
+            // Meter replaced: naya meter 0 se start hota hai, isliye reading hi unit hai.
+            if (currReading !== null) unit = currReading;
+        } else if (minBaseline !== null && currReading !== null && currReading >= minBaseline) {
             unit = currReading - minBaseline;
         }
         const unitText = unit === '' ? '—' : String(unit);
         if ($row.hasClass('other-dual-stacked')) {
-            var slot = $inp.closest('.other-dual-seg').data('slot');
+            const slot = $inp.closest('.other-dual-seg').data('slot');
             if (slot !== undefined && slot !== null) {
                 $row.find('.other-dual-units .other-dual-seg[data-slot="' + slot + '"] .unit-cell').text(unitText);
             }
         } else {
-            $row.find('td.unit-cell').last().text(unit === '' ? '—' : unitText);
+            $row.find('td.unit-cell').last().text(unitText);
         }
+    }
+
+    $(document).on('input', '#meterReadingSaveForm .new-meter-reading', function() {
+        this.value = String(this.value || '').replace(/\D/g, '').slice(0, 20);
+        const $inp = $(this);
+        syncRowDataFromInputs($inp.closest('tr'));
+        refreshUnitForReadingInput($inp);
     });
 
     $(document).on('blur', '#meterReadingSaveForm .new-meter-reading', function() {
@@ -674,7 +680,19 @@ $(document).ready(function() {
 
     $(document).on('input change', '#meterReadingSaveForm .new-meter-no', function() {
         this.value = String(this.value || '').replace(/\D/g, '').slice(0, 50);
-        syncRowDataFromInputs($(this).closest('tr'));
+        const $meterInp = $(this);
+        const $row = $meterInp.closest('tr');
+        syncRowDataFromInputs($row);
+
+        // Meter no badalne se unit ka basis badalta hai — Unit column refresh karo.
+        let $readingInp;
+        if ($row.hasClass('other-dual-stacked')) {
+            const slot = $meterInp.closest('.other-dual-seg').data('slot');
+            $readingInp = $row.find('.other-dual-reading-col .other-dual-seg[data-slot="' + slot + '"] .new-meter-reading');
+        } else {
+            $readingInp = $row.find('.new-meter-reading').first();
+        }
+        if ($readingInp && $readingInp.length) refreshUnitForReadingInput($readingInp);
     });
 
     $(document).on('keydown', '#meterReadingSaveForm .new-meter-no', function(e) {
