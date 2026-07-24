@@ -122,7 +122,7 @@
 
             <div class="fm-notes">
                 <div><b>* Family</b> for this purpose means family as defined in clause (b) of sub-rule of Rule 54 of the CCS (Pension) Rule, 1972 (Mention overleaf for ready reference)</div>
-                <div class="mt-1"><b>**</b> Please attach an ID proof of Date of birth (in each case, except your own).</div>
+                <div class="mt-1"><b>** Please attach an ID proof of Date of birth (in each case, except your own).</b></div>
                 <div class="mt-1"><b>Note:</b> Additions/alterations are recorded in Column (7) under the Head of Office's signature; details of spouse, all children and parents, and disabled siblings may be given. / <b>नोट:</b> परिवर्धन/परिवर्तन कॉलम (7) में कार्यालय प्रमुख के हस्ताक्षर के तहत दर्ज किए जाते हैं। (Full instructions are reproduced on the generated PDF.)</div>
             </div>
         </div>

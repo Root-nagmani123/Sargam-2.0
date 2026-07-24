@@ -75,14 +75,12 @@
 
         <div class="dc-paper">
             <div class="dc-docno">Document-6-C</div>
-            <div class="dc-title">Statement of Debts and Other Liabilities on First Appointment</div>
+            <div class="dc-title">Statement of Debts and Other Liabilities on First Appointment
+                <span style="text-decoration:none; font-weight:600; white-space:nowrap;">&nbsp; as on date / जिस तिथि तक:
+                    <input type="date" name="as_on_date" class="dc-blank" value="{{ $val('as_on_date') }}" style="min-width:150px;"></span></div>
             <div class="dc-form">Form No. 6-C</div>
             <div class="dc-title-hi">प्रथम नियुक्ति पर ऋणों तथा अन्य देयताओं का विवरण</div>
             <div class="dc-sub">[debts and other liabilities incurred by him/her directly or indirectly]</div>
-            <div class="dc-ason">
-                as on date / जिस तिथि तक:
-                <input type="date" name="as_on_date" class="dc-blank" value="{{ $val('as_on_date') }}" style="min-width:160px;">
-            </div>
 
             <div class="d-flex justify-content-end mb-1">
                 <button type="button" class="btn btn-sm btn-outline-primary" onclick="dcAddRow()"><i class="bi bi-plus-circle me-1"></i>Add Row</button>

@@ -85,13 +85,6 @@
         <div style="margin-top:10px;">Signed <b>by Probationer</b> in the presence of &nbsp;(Name of Witness) {!! $blank($pwn, '220px') !!}</div>
         <div>Address {!! $blank($pwa, '420px') !!}</div>
         <div>{!! $blank('', '200px') !!} Occupation {!! $blank($pwo, '200px') !!}</div>
-
-        <div class="sign" style="text-align:center; margin-top:22px;">Signature of the Surety:
-            @if(!empty($sigs[1]))<img src="{{ $sigs[1] }}" class="sig-img">@else {!! $blank('', '200px') !!} @endif
-        </div>
-        <div style="margin-top:10px;">Signed <b>by Surety</b> in the presence of &nbsp;(Name of Witness) {!! $blank($swn, '220px') !!}</div>
-        <div>Address {!! $blank($swa, '420px') !!}</div>
-        <div>{!! $blank('', '200px') !!} Occupation {!! $blank($swo, '200px') !!}</div>
     </div>
 
     <div class="body" style="text-indent:0; margin-top:14px;">
@@ -99,6 +92,15 @@
         <div class="elig">{!! $box($isPerm) !!} (a) I am in the permanent service of the Government of {!! $blank('', '180px') !!}; <i>or</i></div>
         <div class="elig">{!! $box($isRes) !!} (b) I am ordinarily resident in India and possess means which will enable me to repay to the Central Government the sums of money referred to, in the event of my being called upon to do so in accordance with the terms of the agreement.</div>
         <div style="margin-top:6px;"><i>(Strike out whichever is not applicable.)</i></div>
+    </div>
+
+    <div class="lines">
+        <div class="sign" style="text-align:center; margin-top:22px;">Signature of the Surety:
+            @if(!empty($sigs[1]))<img src="{{ $sigs[1] }}" class="sig-img">@else {!! $blank('', '200px') !!} @endif
+        </div>
+        <div style="margin-top:10px;">Signed <b>by Surety</b> in the presence of &nbsp;(Name of Witness) {!! $blank($swn, '220px') !!}</div>
+        <div>Address {!! $blank($swa, '420px') !!}</div>
+        <div>{!! $blank('', '200px') !!} Occupation {!! $blank($swo, '200px') !!}</div>
     </div>
 
     <pagebreak />
