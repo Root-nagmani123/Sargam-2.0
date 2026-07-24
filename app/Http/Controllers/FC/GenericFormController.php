@@ -15,6 +15,7 @@ use App\Services\FC\HindiTransliterationService;
 use App\Services\FC\FcRegistrationIntentService;
 use App\Services\FC\FcRegistrationRegisteredSyncService;
 use App\Services\FC\RegistrationService;
+use App\Support\DataTableRedisCache;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -33,6 +34,60 @@ class GenericFormController extends Controller
         private HindiTransliterationService $hindiTransliteration,
     ) {}
 
+    /** Per-form epoch key for the shared form-structure cache. */
+    public static function formStructureEpochKey(int $formId): string
+    {
+        return 'fc_form_structure_epoch:' . $formId;
+    }
+
+    /**
+     * Invalidate the cached STRUCTURE (steps/fields/groups) for a form. Call after any
+     * admin edit that changes the form's steps, fields or groups.
+     */
+    public static function bumpFormStructureEpoch(int $formId): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::formStructureEpochKey($formId), 'FcFormStructure');
+    }
+
+    /**
+     * Read-through Redis cache for a SHARED form-structure query (identical for every
+     * trainee), following the Programme (Course) module pattern. Feature-flagged OFF by
+     * default; per-user data is never routed through here. Falls back to a live load on a
+     * cache miss, when disabled, or if Redis is unavailable.
+     *
+     * @param  callable(): mixed  $load
+     * @return mixed
+     */
+    private function cachedFormStructure(int $formId, string $suffix, callable $load)
+    {
+        if (! config('fc.form_structure_cache_enabled', false)) {
+            return $load();
+        }
+
+        $epoch    = DataTableRedisCache::readListEpoch(self::formStructureEpochKey($formId));
+        $cacheKey = 'fc_form_structure:v1:' . md5(json_encode([
+            'epoch'  => $epoch,
+            'form'   => $formId,
+            'suffix' => $suffix,
+        ]));
+
+        // Base TTL + up to 10% random jitter, so entries cached together don't all expire
+        // in the same second and stampede the DB with simultaneous rebuilds under peak load.
+        $baseTtl = max(30, (int) config('fc.form_structure_cache_ttl', 3600));
+        $ttl     = $baseTtl + random_int(0, (int) round($baseTtl * 0.1));
+
+        return DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'FC_FORM_STRUCTURE_CACHE_ENABLED',
+                'seconds' => 'FC_FORM_STRUCTURE_CACHE_SECONDS',
+            ],
+            'GenericFormController@formStructure:' . $suffix,
+            $load,
+            $ttl
+        );
+    }
+
     // ── Form Dashboard — list steps for a form ───────────────────────
     public function formDashboard(FcForm $form): View
     {
@@ -40,7 +95,7 @@ class GenericFormController extends Controller
         $this->programmeContext->rememberCourseForForm($form);
         session([FcRegistrationIntentService::SESSION_FORM_ID => (int) $form->id]);
 
-        $steps    = $form->activeSteps()->withCount(['fields', 'fieldGroups'])->get();
+        $steps    = $this->cachedFormStructure($form->id, 'dashboard_steps', fn () => $form->activeSteps()->withCount(['fields', 'fieldGroups'])->get());
         $stepStatus = $this->registrationFlow->buildStepCompletionByStepId($form, $steps, $userId);
 
         // Special Assistant is available only when the academy has set a ph_value on the
@@ -105,13 +160,13 @@ class GenericFormController extends Controller
             return redirect()->route('fc-reg.registration.documents');
         }
 
-        $fields   = $step->activeFields;
+        $fields   = $this->cachedFormStructure($form->id, 'step_' . $step->id . '_fields', fn () => $step->activeFields);
 
         // Other Details / step 3: tabbed field groups (same detection as form-builder editor).
         // $groups is only needed on this branch, so it is loaded inside it — flat steps
         // (the majority) would otherwise pay an extra field-groups query for nothing.
         if ($step->usesFieldGroups()) {
-            $groups         = $step->activeFieldGroups()->with('activeGroupFields')->get()->values();
+            $groups         = $this->cachedFormStructure($form->id, 'step_' . $step->id . '_groups', fn () => $step->activeFieldGroups()->with('activeGroupFields')->get()->values());
             $existingRows   = [];
             $groupLookups   = [];
             $completedGroups = [];
