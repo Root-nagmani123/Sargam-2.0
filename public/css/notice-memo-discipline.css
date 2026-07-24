@@ -183,6 +183,44 @@
     background: #f9fafb;
 }
 
+/* Time Period date-range field (matches the attendance page, mnm tokens) */
+.mnm-page .mnm-daterange-wrap {
+    position: relative;
+    width: 215px;
+}
+
+.mnm-page .mnm-daterange-input {
+    width: 215px;
+    min-height: 40px;
+    padding: 0.4rem 0.85rem 0.4rem 2.25rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: #344054;
+    cursor: pointer;
+    background: #fff;
+}
+
+.mnm-page .mnm-daterange-input::placeholder {
+    color: #667085;
+}
+
+.mnm-page .mnm-daterange-input:focus {
+    border-color: #004a93;
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+    outline: 0;
+}
+
+.mnm-page .mnm-daterange-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #667085;
+    font-size: 1rem;
+    pointer-events: none;
+}
+
 /* Column dropdown menu (memo/notice + discipline still use a dropdown) */
 .mnm-page .mnm-column-menu,
 .disc-page .disc-column-menu {
@@ -1104,6 +1142,30 @@
 
 .sn-colvis-chip .form-check-input {
     margin: 0;
+    flex-shrink: 0;
+}
+
+/* Frozen (pinned) columns: locked on, can't be toggled off. The :has(input:checked)
+   selector below matches the checked-chip rule's specificity so this grey "locked"
+   look wins on source order (a frozen chip is always checked). */
+.sn-colvis-chip--locked,
+.sn-colvis-chip--locked:hover,
+.sn-colvis-chip--locked:has(input:checked) {
+    cursor: not-allowed;
+    background: #f2f4f7;
+    border-color: #e4e7ec;
+    color: #667085;
+}
+
+.sn-colvis-chip--locked .form-check-input {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.sn-colvis-lock {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: #98a2b3;
     flex-shrink: 0;
 }
 

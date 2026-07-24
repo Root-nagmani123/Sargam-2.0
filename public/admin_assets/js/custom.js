@@ -96,7 +96,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Adjust when main wrapper finishes CSS transition (e.g., sidebar collapse)
     const mainWrapper = document.getElementById('main-wrapper');
     if (mainWrapper) {
-        mainWrapper.addEventListener('transitionend', function() {
+        mainWrapper.addEventListener('transitionend', function(e) {
+            // transitionend BUBBLES: without this guard, every hover colour/opacity
+            // transition finishing anywhere inside the page bubbled up here and ran
+            // adjustAllDataTables() → api.draw()/responsive.recalc(), which REBUILDS
+            // the table rows. A click landing during that rebuild was lost because
+            // the pressed <tr> gets replaced — the "sometimes needs a double-click"
+            // bug. Only the wrapper's OWN layout transition (sidebar collapse/expand)
+            // should trigger a realign.
+            if (e.target !== mainWrapper) return;
+            // Ignore non-layout properties (colour/opacity/etc.) for the same reason.
+            if (e.propertyName && !/^(width|margin|margin-left|left|padding|transform)$/.test(e.propertyName)) return;
             // Small delay to ensure final layout
             setTimeout(adjustAllDataTables, 100);
         });

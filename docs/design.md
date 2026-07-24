@@ -124,5 +124,13 @@ Inert until a page adds the class. Use these when **modernizing a screen**.
 5. **Load order matters** — this file must remain the last stylesheet so it
    overrides the theme without `!important`.
 
-See also: [master.md](master.md) for how this stylesheet and page-scoped
-`@push('styles')`/`@push('scripts')` blocks are wired into the layout.
+See also:
+
+- [master.md](master.md) — how this stylesheet and page-scoped
+  `@push('styles')`/`@push('scripts')` blocks are wired into the layout.
+- [new-design-index-page.md](new-design-index-page.md) — the "new design" admin
+  listing chrome (`programme-dt` toolbar, table panel, footer). That pattern
+  lives in `custom.css`, not here; this file is the token/component layer it
+  builds on.
+- [column-visibility.md](column-visibility.md) — the Columns modal, its
+  remembered state, and keeping exports in sync.

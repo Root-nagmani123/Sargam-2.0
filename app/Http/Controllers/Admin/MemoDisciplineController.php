@@ -85,7 +85,7 @@ class MemoDisciplineController extends Controller
     $memos = MemoDiscipline::with([
             'course:pk,course_name',
             'discipline:pk,discipline_name,active_inactive',
-            'student:pk,display_name,generated_OT_code,cadre_master_pk',
+            'student:pk,display_name,generated_OT_code,email,contact_no,cadre_master_pk',
             'student.cadre:pk,cadre_name',
         ])
 
@@ -113,6 +113,8 @@ class MemoDisciplineController extends Controller
                 $sub->whereHas('student', function ($s) use ($searchFilter) {
                         $s->where('display_name', 'like', "%{$searchFilter}%")
                           ->orWhere('generated_OT_code', 'like', "%{$searchFilter}%")
+                          ->orWhere('email', 'like', "%{$searchFilter}%")
+                          ->orWhere('contact_no', 'like', "%{$searchFilter}%")
                           ->orWhereHas('cadre', function ($c) use ($searchFilter) {
                               $c->where('cadre_name', 'like', "%{$searchFilter}%");
                           });
@@ -630,6 +632,10 @@ private function buildDisciplineExportData(Request $request): array
             ->whereColumn('pk', 'discipline_memo_status.course_master_pk')->limit(1),
         'ot_code' => fn () => StudentMaster::select('generated_OT_code')
             ->whereColumn('pk', 'discipline_memo_status.student_master_pk')->limit(1),
+        'email' => fn () => StudentMaster::select('email')
+            ->whereColumn('pk', 'discipline_memo_status.student_master_pk')->limit(1),
+        'mobile' => fn () => StudentMaster::select('contact_no')
+            ->whereColumn('pk', 'discipline_memo_status.student_master_pk')->limit(1),
         'cadre' => fn () => DB::table('student_master as sm')
             ->join('cadre_master as cm', 'cm.pk', '=', 'sm.cadre_master_pk')
             ->whereColumn('sm.pk', 'discipline_memo_status.student_master_pk')
@@ -648,7 +654,7 @@ private function buildDisciplineExportData(Request $request): array
     $memos = MemoDiscipline::with([
             'course:pk,course_name',
             'discipline:pk,discipline_name,active_inactive',
-            'student:pk,display_name,generated_OT_code,cadre_master_pk',
+            'student:pk,display_name,generated_OT_code,email,contact_no,cadre_master_pk',
             'student.cadre:pk,cadre_name',
         ])
         ->when(hasRole('Student-OT'), function ($q) use ($studentCourses) {
@@ -675,6 +681,8 @@ private function buildDisciplineExportData(Request $request): array
                 $sub->whereHas('student', function ($s) use ($searchFilter) {
                         $s->where('display_name', 'like', "%{$searchFilter}%")
                           ->orWhere('generated_OT_code', 'like', "%{$searchFilter}%")
+                          ->orWhere('email', 'like', "%{$searchFilter}%")
+                          ->orWhere('contact_no', 'like', "%{$searchFilter}%")
                           ->orWhereHas('cadre', function ($c) use ($searchFilter) {
                               $c->where('cadre_name', 'like', "%{$searchFilter}%");
                           });
@@ -987,6 +995,58 @@ private function buildDisciplineExportData(Request $request): array
             'message' => 'Memo sent successfully.'
         ]);
     }
+    // Bulk version of sendMemo(): same per-memo rules (only status 1 "Recorded" is
+    // eligible), just applied to a checkbox-selected batch instead of one row. Rows
+    // that aren't eligible (already sent/closed) are silently skipped and counted,
+    // not treated as an error — the caller may have selected a mixed-status set.
+    function sendMemoBulk(Request $request){
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'exists:discipline_memo_status,pk',
+        ]);
+
+        $sent = 0;
+        $skipped = 0;
+
+        $memos = MemoDiscipline::whereIn('pk', $validated['ids'])->get();
+
+        foreach ($memos as $memo) {
+            if ($memo->status != 1) {
+                $skipped++;
+                continue;
+            }
+
+            $memo->status = 2;
+            $memo->modified_date = now();
+            $memo->save();
+
+            $credential = DB::table('user_credentials')
+                ->where('user_id', $memo->student_master_pk)
+                ->where('user_category', 'S')
+                ->first();
+
+            if ($credential) {
+                app(NotificationService::class)->create(
+                    $credential->pk,
+                    'memo',
+                    'MemoDiscipline',
+                    $memo->pk,
+                    'Discipline Memo Generated',
+                    'A discipline memo has been issued to you. Please review and respond.'
+                );
+            }
+
+            $sent++;
+        }
+
+        return response()->json([
+            'status' => true,
+            'sent' => $sent,
+            'skipped' => $skipped,
+            'message' => $sent . ' memo(s) sent successfully.' . ($skipped ? ' ' . $skipped . ' record(s) skipped (already sent or closed).' : ''),
+        ]);
+    }
+
     function getConversationModel(Request $request, $memoId,$type){
         // $memo = MemoDiscipline::with([
         //     'course:pk,course_name',
