@@ -13,8 +13,8 @@
         Choose a template and send. Lists are different:
         <strong>Form step incomplete</strong> = started form (1+ step done) but still pending;
         <strong>Registration pending</strong> = login exists but no form step started yet.
-        Click recipient count to view users. No manual select / no send limit.
-        OTP, credentials, exemption, and registration-success SMS stay automatic.
+        Each send goes as <strong>SMS + Email</strong> (same trigger). Click recipient count to view users.
+        No manual select / no send limit. OTP, credentials, exemption, and registration-success stay automatic (also SMS + Email).
     </p>
 
     @if(session('success'))

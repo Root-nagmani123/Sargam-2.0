@@ -15,27 +15,26 @@ class FcAdminSmsController extends Controller
 {
     public function index(FcAdminSmsBulkService $bulk): View
     {
-        $preview = $bulk->previewCounts();
-        $lists = [
-            FcAdminSmsBulkService::TEMPLATE_B1 => $bulk->recipientList(FcAdminSmsBulkService::TEMPLATE_B1),
-            FcAdminSmsBulkService::TEMPLATE_B2 => $bulk->recipientList(FcAdminSmsBulkService::TEMPLATE_B2),
-        ];
+        $payload = $bulk->previewPayload();
 
         return view('admin.fc-sms.index', [
-            'preview' => $preview,
-            'lists' => $lists,
+            'preview' => [
+                'programme' => $payload['programme'],
+                'last_date' => $payload['last_date'],
+            ],
+            'lists' => $payload['lists'],
             'templates' => [
                 FcAdminSmsBulkService::TEMPLATE_B1 => [
                     'label' => 'Form step incomplete',
                     'code' => 'B1 / FC-IFM',
                     'help' => 'Started the form (at least 1 step done) but still has pending steps — SMS uses their first pending step name.',
-                    'count' => $preview['b1'],
+                    'count' => $payload['b1'],
                 ],
                 FcAdminSmsBulkService::TEMPLATE_B2 => [
                     'label' => 'Registration pending',
                     'code' => 'B2 / FC-R-P',
                     'help' => 'Has login but has not completed any form step yet — overall registration deadline reminder.',
-                    'count' => $preview['b2'],
+                    'count' => $payload['b2'],
                 ],
             ],
         ]);

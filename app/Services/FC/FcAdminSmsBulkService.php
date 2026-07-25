@@ -24,6 +24,9 @@ class FcAdminSmsBulkService
 
     public const TEMPLATE_B2 = 'b2';
 
+    /** @var array{b1: Collection, b2: Collection}|null */
+    protected ?array $classifiedCache = null;
+
     public function __construct(
         private FcNotifyService $notify,
         private FcRegistrationFlowService $flow,
@@ -51,15 +54,60 @@ class FcAdminSmsBulkService
     }
 
     /**
+     * Single-pass preview for the admin page (counts + lists). Avoids scanning roster 4×.
+     *
+     * @return array{
+     *   b1: int,
+     *   b2: int,
+     *   programme: string,
+     *   last_date: string,
+     *   lists: array{b1: Collection, b2: Collection}
+     * }
+     */
+    public function previewPayload(): array
+    {
+        $buckets = $this->classifiedBuckets();
+
+        $listB1 = $buckets['b1']->map(fn (array $row) => [
+            'pk' => $row['pk'],
+            'name' => $row['name'],
+            'mobile' => $row['mobile'],
+            'user_id' => $row['user_id'] ?? '',
+            'step_name' => $row['step_name'],
+        ])->values();
+
+        $listB2 = $buckets['b2']->map(fn (array $row) => [
+            'pk' => $row['pk'],
+            'name' => $row['name'],
+            'mobile' => $row['mobile'],
+            'user_id' => $row['user_id'] ?? '',
+            'step_name' => null,
+        ])->values();
+
+        return [
+            'b1' => $listB1->count(),
+            'b2' => $listB2->count(),
+            'programme' => $this->programmeName(),
+            'last_date' => $this->registrationDeadlineText(),
+            'lists' => [
+                self::TEMPLATE_B1 => $listB1,
+                self::TEMPLATE_B2 => $listB2,
+            ],
+        ];
+    }
+
+    /**
      * @return array{b1: int, b2: int, programme: string, last_date: string}
      */
     public function previewCounts(): array
     {
+        $payload = $this->previewPayload();
+
         return [
-            'b1' => $this->b1Recipients()->count(),
-            'b2' => $this->b2Recipients()->count(),
-            'programme' => $this->programmeName(),
-            'last_date' => $this->registrationDeadlineText(),
+            'b1' => $payload['b1'],
+            'b2' => $payload['b2'],
+            'programme' => $payload['programme'],
+            'last_date' => $payload['last_date'],
         ];
     }
 
@@ -69,28 +117,9 @@ class FcAdminSmsBulkService
     public function recipientList(string $template): Collection
     {
         $template = strtolower(trim($template));
+        $payload = $this->previewPayload();
 
-        if ($template === self::TEMPLATE_B1) {
-            return $this->b1Recipients()->map(fn (array $row) => [
-                'pk' => $row['pk'],
-                'name' => $row['name'],
-                'mobile' => $row['mobile'],
-                'user_id' => $row['user_id'] ?? '',
-                'step_name' => $row['step_name'],
-            ])->values();
-        }
-
-        if ($template === self::TEMPLATE_B2) {
-            return $this->b2Recipients()->map(fn (array $row) => [
-                'pk' => $row['pk'],
-                'name' => $row['name'],
-                'mobile' => $row['mobile'],
-                'user_id' => $row['user_id'] ?? '',
-                'step_name' => null,
-            ])->values();
-        }
-
-        return collect();
+        return $payload['lists'][$template] ?? collect();
     }
 
     /**
@@ -121,6 +150,7 @@ class FcAdminSmsBulkService
                     $row['name'],
                     $row['step_name'],
                     $row['pk'],
+                    $row['email'] ?? null,
                 );
                 $sent++;
             } catch (\Throwable $e) {
@@ -130,7 +160,7 @@ class FcAdminSmsBulkService
 
         return [
             'ok' => true,
-            'message' => "Form step incomplete SMS processed for {$sent} trainee(s).",
+            'message' => "Form step incomplete SMS + Email processed for {$sent} trainee(s).",
             'sent' => $sent,
             'skipped' => 0,
             'failed' => $failed,
@@ -168,6 +198,8 @@ class FcAdminSmsBulkService
                     $programme,
                     $lastDate,
                     $row['pk'],
+                    $row['email'] ?? null,
+                    $row['pending_steps'] ?? null,
                 );
                 $sent++;
             } catch (\Throwable $e) {
@@ -177,7 +209,7 @@ class FcAdminSmsBulkService
 
         return [
             'ok' => true,
-            'message' => "Registration pending SMS processed for {$sent} trainee(s).",
+            'message' => "Registration pending SMS + Email processed for {$sent} trainee(s).",
             'sent' => $sent,
             'skipped' => 0,
             'failed' => $failed,
@@ -191,24 +223,7 @@ class FcAdminSmsBulkService
      */
     protected function b1Recipients(): Collection
     {
-        $out = collect();
-
-        foreach ($this->eligibleRosterRows() as $row) {
-            $classified = $this->classifyRosterRow($row);
-            if ($classified === null || $classified['bucket'] !== self::TEMPLATE_B1) {
-                continue;
-            }
-
-            $out->push([
-                'pk' => $classified['pk'],
-                'mobile' => $classified['mobile'],
-                'name' => $classified['name'],
-                'user_id' => $classified['user_id'],
-                'step_name' => $classified['step_name'],
-            ]);
-        }
-
-        return $out;
+        return $this->classifiedBuckets()['b1'];
     }
 
     /**
@@ -218,23 +233,52 @@ class FcAdminSmsBulkService
      */
     protected function b2Recipients(): Collection
     {
-        $out = collect();
+        return $this->classifiedBuckets()['b2'];
+    }
+
+    /**
+     * Classify eligible roster once per request (shared by preview + send).
+     *
+     * @return array{b1: Collection, b2: Collection}
+     */
+    protected function classifiedBuckets(): array
+    {
+        if ($this->classifiedCache !== null) {
+            return $this->classifiedCache;
+        }
+
+        $b1 = collect();
+        $b2 = collect();
+        $defaultForm = FcForm::activeRegistrationDynamicForm();
 
         foreach ($this->eligibleRosterRows() as $row) {
-            $classified = $this->classifyRosterRow($row);
-            if ($classified === null || $classified['bucket'] !== self::TEMPLATE_B2) {
+            $classified = $this->classifyRosterRow($row, $defaultForm);
+            if ($classified === null) {
                 continue;
             }
 
-            $out->push([
-                'pk' => $classified['pk'],
-                'mobile' => $classified['mobile'],
-                'name' => $classified['name'],
-                'user_id' => $classified['user_id'],
-            ]);
+            if ($classified['bucket'] === self::TEMPLATE_B1) {
+                $b1->push([
+                    'pk' => $classified['pk'],
+                    'mobile' => $classified['mobile'],
+                    'name' => $classified['name'],
+                    'user_id' => $classified['user_id'],
+                    'email' => $classified['email'] ?? null,
+                    'step_name' => $classified['step_name'],
+                ]);
+            } elseif ($classified['bucket'] === self::TEMPLATE_B2) {
+                $b2->push([
+                    'pk' => $classified['pk'],
+                    'mobile' => $classified['mobile'],
+                    'name' => $classified['name'],
+                    'user_id' => $classified['user_id'],
+                    'email' => $classified['email'] ?? null,
+                    'pending_steps' => $classified['pending_steps'] ?? null,
+                ]);
+            }
         }
 
-        return $out;
+        return $this->classifiedCache = ['b1' => $b1, 'b2' => $b2];
     }
 
     /**
@@ -247,8 +291,13 @@ class FcAdminSmsBulkService
             return collect();
         }
 
+        $columns = ['pk', 'display_name', 'contact_no', 'user_id'];
+        if (Schema::hasColumn('fc_registration_master', 'email')) {
+            $columns[] = 'email';
+        }
+
         $query = DB::table('fc_registration_master')
-            ->select('pk', 'display_name', 'contact_no', 'user_id')
+            ->select($columns)
             ->whereNotNull('contact_no')
             ->where('contact_no', '!=', '')
             ->whereNotNull('user_id')
@@ -265,9 +314,9 @@ class FcAdminSmsBulkService
     }
 
     /**
-     * @return array{bucket: string, pk: int, mobile: string, name: string, user_id: string, step_name: ?string}|null
+     * @return array{bucket: string, pk: int, mobile: string, name: string, user_id: string, email: ?string, step_name: ?string, pending_steps: ?string}|null
      */
-    protected function classifyRosterRow(object $row): ?array
+    protected function classifyRosterRow(object $row, ?FcForm $defaultForm = null): ?array
     {
         $mobile = trim((string) ($row->contact_no ?? ''));
         if ($mobile === '') {
@@ -279,7 +328,7 @@ class FcAdminSmsBulkService
             return null;
         }
 
-        $form = FcForm::resolveForUserId($progressUserId) ?? FcForm::activeRegistrationDynamicForm();
+        $form = FcForm::resolveForUserId($progressUserId) ?? $defaultForm ?? FcForm::activeRegistrationDynamicForm();
         $progress = $this->stepProgress($progressUserId, $form);
 
         // All done — neither B1 nor B2
@@ -287,12 +336,15 @@ class FcAdminSmsBulkService
             return null;
         }
 
+        $email = trim((string) ($row->email ?? ''));
         $base = [
             'pk' => (int) $row->pk,
             'mobile' => $mobile,
             'name' => trim((string) ($row->display_name ?? '')),
             'user_id' => trim((string) ($row->user_id ?? '')),
+            'email' => $email !== '' ? $email : null,
             'step_name' => $progress['pending_step'],
+            'pending_steps' => $progress['pending_steps'] ?? $progress['pending_step'],
         ];
 
         // Started (≥1 done) + still pending → Incomplete (B1)
@@ -314,7 +366,7 @@ class FcAdminSmsBulkService
     }
 
     /**
-     * @return array{done: int, pending_step: ?string}
+     * @return array{done: int, pending_step: ?string, pending_steps: ?string}
      */
     protected function stepProgress(int $progressUserId, ?FcForm $form): array
     {
@@ -322,7 +374,7 @@ class FcAdminSmsBulkService
             $steps = $form->activeSteps()->get();
             $status = $this->flow->buildStepCompletionByStepId($form, $steps, $progressUserId);
             $done = 0;
-            $pending = null;
+            $pending = [];
 
             foreach ($steps as $step) {
                 if ($this->flow->stepNotApplicable($step, $progressUserId)) {
@@ -330,16 +382,20 @@ class FcAdminSmsBulkService
                 }
                 if ($status[$step->id] ?? false) {
                     $done++;
-                } elseif ($pending === null) {
-                    $pending = trim((string) $step->step_name) ?: 'registration';
+                } else {
+                    $pending[] = trim((string) $step->step_name) ?: 'registration';
                 }
             }
 
-            if ($pending === null && ! $this->flow->isTravelComplete($progressUserId, $form)) {
-                $pending = 'Travel Plan';
+            if ($pending === [] && ! $this->flow->isTravelComplete($progressUserId, $form)) {
+                $pending[] = 'Travel Plan';
             }
 
-            return ['done' => $done, 'pending_step' => $pending];
+            return [
+                'done' => $done,
+                'pending_step' => $pending[0] ?? null,
+                'pending_steps' => $pending !== [] ? implode(', ', $pending) : null,
+            ];
         }
 
         $progress = app(RegistrationService::class)->getProgress($progressUserId);
@@ -355,16 +411,20 @@ class FcAdminSmsBulkService
         ];
 
         $done = 0;
-        $pending = null;
+        $pending = [];
         foreach ($labels as $key => $label) {
             if (! empty($steps[$key])) {
                 $done++;
-            } elseif ($pending === null) {
-                $pending = $label;
+            } else {
+                $pending[] = $label;
             }
         }
 
-        return ['done' => $done, 'pending_step' => $pending];
+        return [
+            'done' => $done,
+            'pending_step' => $pending[0] ?? null,
+            'pending_steps' => $pending !== [] ? implode(', ', $pending) : null,
+        ];
     }
 
     protected function resolveProgressUserId(object $roster): ?int

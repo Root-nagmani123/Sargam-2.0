@@ -20,7 +20,6 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use App\Models\PathPage;
 use App\Models\PathPageFaq;
@@ -445,10 +444,7 @@ class FrontPageController extends Controller
                 'password' => Hash::make($request->reg_password),
             ]);
 
-        // Email only the username — never email the plain-text password (CWE-312).
-        $this->sendCredentialsEmail($registration->email ?? null, $request->reg_name, $registration->pk ?? null);
-
-        // A2 SMS (best-effort via Gupshup/log driver) — does not affect save/redirect.
+        // A2 SMS + Email (best-effort) — does not affect save/redirect.
         $programmeName = $this->resolvedIntendedProgrammeName()
             ?: (string) config('gupshup.default_programme_name', 'Foundation Course');
         $this->fcNotify->credentialsCreated(
@@ -458,6 +454,7 @@ class FrontPageController extends Controller
             $request->reg_name,
             $request->reg_password,
             isset($registration->pk) ? (int) $registration->pk : null,
+            $registration->email ?? null,
         );
 
         return redirect()->route('fc.login', $this->intentQueryForFcFormLinks())->with(
@@ -487,43 +484,6 @@ class FrontPageController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('fc.login', $formQuery);
-    }
-
-    /**
-     * Email the FC login credentials (username + password) to the trainee.
-     * Best-effort: any mail failure is logged but never blocks account creation.
-     */
-    protected function sendCredentialsEmail(?string $email, string $username, ?int $registrationPk = null): void
-    {
-        $email = trim((string) $email);
-        if ($email === '') {
-            return;
-        }
-
-        try {
-            $fromAddress = config('mail.from.address') ?: 'no-reply@lbsnaa.gov.in';
-            $fromName = config('mail.from.name') ?: 'LBSNAA Foundation Course';
-
-            // Plain-text password is intentionally NOT included in this email (CWE-312:
-            // Cleartext Storage of Sensitive Information). The candidate just set their
-            // own password and already knows it.
-            $body = "Dear Candidate,\n\n"
-                . "Your login credentials for the LBSNAA Foundation Course registration portal have been created successfully.\n\n"
-                . "Username: {$username}\n\n"
-                . "Please keep your credentials confidential and do not share them with anyone.\n\n"
-                . "Regards,\n"
-                . "Lal Bahadur Shastri National Academy of Administration, Mussoorie";
-
-            Mail::raw($body, function ($mail) use ($email, $fromAddress, $fromName) {
-                $mail->from($fromAddress, $fromName)
-                    ->to($email)
-                    ->subject('Your Foundation Course Login Credentials');
-            });
-        } catch (\Throwable $e) {
-            Log::error('Failed to send FC credentials email: ' . $e->getMessage(), [
-                'registration_pk' => $registrationPk,
-            ]);
-        }
     }
 
     //user login verification
