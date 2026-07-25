@@ -9,13 +9,17 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * Admin page: choose B1/B2 SMS template → bulk send to incomplete trainees (no user picker).
+ * Admin page: choose B1/B2 template → bulk SMS+Email (chunked send, paginated lists).
  */
 class FcAdminSmsController extends Controller
 {
-    public function index(FcAdminSmsBulkService $bulk): View
+    public function index(Request $request, FcAdminSmsBulkService $bulk): View
     {
-        $payload = $bulk->previewPayload();
+        $payload = $bulk->previewForIndex(
+            max(1, (int) $request->query('b1_page', 1)),
+            max(1, (int) $request->query('b2_page', 1)),
+            FcAdminSmsBulkService::LIST_PER_PAGE
+        );
 
         return view('admin.fc-sms.index', [
             'preview' => [
@@ -37,6 +41,9 @@ class FcAdminSmsController extends Controller
                     'count' => $payload['b2'],
                 ],
             ],
+            'openList' => in_array($request->query('open'), ['b1', 'b2'], true)
+                ? $request->query('open')
+                : (request()->has('b1_page') ? 'b1' : (request()->has('b2_page') ? 'b2' : null)),
         ]);
     }
 

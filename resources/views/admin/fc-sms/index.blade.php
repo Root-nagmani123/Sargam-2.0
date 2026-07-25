@@ -13,8 +13,8 @@
         Choose a template and send. Lists are different:
         <strong>Form step incomplete</strong> = started form (1+ step done) but still pending;
         <strong>Registration pending</strong> = login exists but no form step started yet.
-        Each send goes as <strong>SMS + Email</strong> (same trigger). Click recipient count to view users.
-        No manual select / no send limit. OTP, credentials, exemption, and registration-success stay automatic (also SMS + Email).
+        Each send goes as <strong>SMS + Email</strong> (same trigger). Recipient lists are paginated (20/page);
+        send still covers <strong>all</strong> matching trainees (chunked).
     </p>
 
     @if(session('success'))
@@ -55,7 +55,11 @@
                 <div class="mb-3">
                     <label class="form-label fw-semibold">SMS template</label>
                     @foreach($templates as $key => $tpl)
-                        @php $rows = $lists[$key] ?? collect(); @endphp
+                        @php
+                            $pager = $lists[$key] ?? null;
+                            $isOpen = ($openList ?? null) === $key
+                                || request()->has($key.'_page');
+                        @endphp
                         <div class="border rounded-3 p-3 mb-2">
                             <div class="d-flex align-items-start gap-2 flex-wrap">
                                 <div class="form-check flex-grow-1 mb-0">
@@ -72,13 +76,13 @@
                                         class="btn btn-sm btn-outline-primary"
                                         data-bs-toggle="collapse"
                                         data-bs-target="#recipients_{{ $key }}"
-                                        aria-expanded="false"
+                                        aria-expanded="{{ $isOpen ? 'true' : 'false' }}"
                                         aria-controls="recipients_{{ $key }}">
                                     {{ number_format($tpl['count']) }} recipient(s) — view list
                                 </button>
                             </div>
 
-                            <div class="collapse mt-3" id="recipients_{{ $key }}">
+                            <div class="collapse mt-3 {{ $isOpen ? 'show' : '' }}" id="recipients_{{ $key }}">
                                 <div class="table-responsive border rounded">
                                     <table class="table table-sm table-hover mb-0 align-middle">
                                         <thead class="table-light">
@@ -93,9 +97,9 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @forelse($rows as $i => $row)
+                                            @forelse(($pager ?? collect()) as $i => $row)
                                                 <tr>
-                                                    <td>{{ $i + 1 }}</td>
+                                                    <td>{{ (($pager->currentPage() - 1) * $pager->perPage()) + $i + 1 }}</td>
                                                     <td>{{ $row['name'] !== '' ? $row['name'] : '—' }}</td>
                                                     <td><code class="small">{{ $row['user_id'] !== '' ? $row['user_id'] : '—' }}</code></td>
                                                     <td>{{ $row['mobile'] }}</td>
@@ -113,13 +117,23 @@
                                         </tbody>
                                     </table>
                                 </div>
+                                @if($pager && $pager->hasPages())
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2 px-1">
+                                        <div class="text-muted small">
+                                            Showing {{ $pager->firstItem() }}–{{ $pager->lastItem() }} of {{ $pager->total() }}
+                                        </div>
+                                        <div>
+                                            {{ $pager->appends(request()->except($key.'_page'))->links() }}
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     @endforeach
                 </div>
 
                 <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-send me-1"></i>Send SMS
+                    <i class="bi bi-send me-1"></i>Send SMS + Email
                 </button>
             </form>
         </div>
