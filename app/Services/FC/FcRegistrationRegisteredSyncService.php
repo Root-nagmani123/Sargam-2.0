@@ -7,7 +7,6 @@ use App\Models\FC\StudentMaster;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Keeps fc_registration_master.is_registered and application_type in sync with trainee progress:
@@ -18,8 +17,8 @@ class FcRegistrationRegisteredSyncService
     public function syncForCredentialsUser(int $userCredentialsPk, ?FcForm $form = null): void
     {
         try {
-            if (! Schema::hasTable('fc_registration_master')
-                || ! Schema::hasColumn('fc_registration_master', 'is_registered')) {
+            if (! fc_schema_has_table('fc_registration_master')
+                || ! fc_schema_has_column('fc_registration_master', 'is_registered')) {
                 return;
             }
 
@@ -52,7 +51,7 @@ class FcRegistrationRegisteredSyncService
 
             $update = ['is_registered' => $isRegistered ? 1 : 0];
 
-            if (! $isExemption && Schema::hasColumn('fc_registration_master', 'application_type')) {
+            if (! $isExemption && fc_schema_has_column('fc_registration_master', 'application_type')) {
                 $update['application_type'] = $isRegistered
                     ? FcRosterApplicationGuardService::APPLICATION_REGISTRATION
                     : FcRosterApplicationGuardService::APPLICATION_NA;
@@ -118,7 +117,7 @@ class FcRegistrationRegisteredSyncService
 
     private function legacyFirstTwoStepsComplete(int $userCredentialsPk): bool
     {
-        if (! Schema::hasTable('student_masters')) {
+        if (! fc_schema_has_table('student_masters')) {
             return false;
         }
 

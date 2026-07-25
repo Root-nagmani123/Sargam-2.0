@@ -18,6 +18,28 @@ class FormBuilderController extends Controller
 {
     public function __construct(private DynamicFormService $formService) {}
 
+    /**
+     * Invalidate the cached form STRUCTURE for the form that owns the given
+     * step / field / group / group-field. Safe no-op if the form can't be resolved.
+     */
+    private function bumpFormStructure($model): void
+    {
+        $formId = 0;
+        if ($model instanceof FcFormStep) {
+            $formId = (int) $model->form_id;
+        } elseif ($model instanceof FcFormField) {
+            $formId = (int) optional($model->step)->form_id;
+        } elseif ($model instanceof FcFormFieldGroup) {
+            $formId = (int) optional($model->step)->form_id;
+        } elseif ($model instanceof FcFormGroupField) {
+            $formId = (int) optional(optional($model->group)->step)->form_id;
+        }
+
+        if ($formId > 0) {
+            GenericFormController::bumpFormStructureEpoch($formId);
+        }
+    }
+
     // ── Step List ────────────────────────────────────────────────────
     public function index()
     {
@@ -60,6 +82,7 @@ class FormBuilderController extends Controller
 
         $validated['is_active'] = $request->boolean('is_active');
         $step->update($validated);
+        $this->bumpFormStructure($step);
 
         return back()->with('success', 'Step settings updated.');
     }
@@ -76,6 +99,7 @@ class FormBuilderController extends Controller
         $this->ensureColumnExists($data['target_table'], $data['target_column'], $data['field_type']);
 
         $field = FcFormField::create($data);
+        $this->bumpFormStructure($step);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -95,6 +119,7 @@ class FormBuilderController extends Controller
         $this->ensureColumnExists($targetTable, $data['target_column'], $data['field_type']);
 
         $field->update($data);
+        $this->bumpFormStructure($field);
 
         return back()->with('success', 'Field updated.');
     }
@@ -105,6 +130,7 @@ class FormBuilderController extends Controller
             return back()->with('error', 'This field is currently in use on the form and cannot be deleted. Set it to inactive first, then try again.');
         }
 
+        $this->bumpFormStructure($field);
         $field->delete();
 
         return back()->with('success', 'Field removed.');
@@ -115,6 +141,9 @@ class FormBuilderController extends Controller
         $request->validate(['order' => 'required|array', 'order.*' => 'integer']);
         foreach ($request->order as $position => $id) {
             FcFormField::where('id', $id)->update(['display_order' => $position + 1]);
+        }
+        if (($firstId = collect($request->order)->first()) && ($first = FcFormField::find($firstId))) {
+            $this->bumpFormStructure($first);
         }
         return response()->json(['ok' => true]);
     }
@@ -136,6 +165,7 @@ class FormBuilderController extends Controller
         $data['display_order'] = ($step->fieldGroups()->max('display_order') ?? 0) + 1;
 
         FcFormFieldGroup::create($data);
+        $this->bumpFormStructure($step);
 
         return back()->with('success', 'Group added.');
     }
@@ -153,12 +183,14 @@ class FormBuilderController extends Controller
 
         $data['is_active'] = $request->boolean('is_active');
         $group->update($data);
+        $this->bumpFormStructure($group);
 
         return back()->with('success', 'Group updated.');
     }
 
     public function deleteGroup(FcFormFieldGroup $group)
     {
+        $this->bumpFormStructure($group);
         $group->delete();
         return back()->with('success', 'Group and its fields removed.');
     }
@@ -175,6 +207,7 @@ class FormBuilderController extends Controller
         $this->ensureColumnExists($group->target_table, $data['target_column'], $data['field_type']);
 
         FcFormGroupField::create($data);
+        $this->bumpFormStructure($group);
 
         return back()->with('success', 'Group field added.');
     }
@@ -185,6 +218,7 @@ class FormBuilderController extends Controller
         $this->ensureColumnExists($field->group->target_table, $data['target_column'], $data['field_type']);
 
         $field->update($data);
+        $this->bumpFormStructure($field);
 
         return back()->with('success', 'Group field updated.');
     }
@@ -195,6 +229,7 @@ class FormBuilderController extends Controller
             return back()->with('error', 'This field is currently in use on the form and cannot be deleted. Set it to inactive first, then try again.');
         }
 
+        $this->bumpFormStructure($field);
         $field->delete();
 
         return back()->with('success', 'Group field removed.');
@@ -205,6 +240,9 @@ class FormBuilderController extends Controller
         $request->validate(['order' => 'required|array', 'order.*' => 'integer']);
         foreach ($request->order as $position => $id) {
             FcFormGroupField::where('id', $id)->update(['display_order' => $position + 1]);
+        }
+        if (($firstId = collect($request->order)->first()) && ($first = FcFormGroupField::find($firstId))) {
+            $this->bumpFormStructure($first);
         }
         return response()->json(['ok' => true]);
     }
