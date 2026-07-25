@@ -53,11 +53,10 @@
 <body>
 
     <div class="docno">Document-6-C / दस्तावेज़-6-सी</div>
-    <div class="title">Statement of Debts and Other Liabilities on First Appointment</div>
+    <div class="title" style="font-size:10.5px; white-space:nowrap;">Statement of Debts and Other Liabilities on First Appointment<span style="text-decoration:none; font-weight:bold;">&nbsp; as on date / जिस तिथि तक: {!! $blank($ason, '120px') !!}</span></div>
     <div class="formno">Form No. 6-C</div>
     <div class="title-hi">प्रथम नियुक्ति पर ऋणों तथा अन्य देयताओं का विवरण</div>
     <div class="sub">[debts and other liabilities incurred by him/her directly or indirectly]</div>
-    <div class="ason">as on date / जिस तिथि तक: {!! $blank($ason, '160px') !!}</div>
 
     <table class="dc">
         <thead>

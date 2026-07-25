@@ -15,6 +15,7 @@
     $pwn = $g('prob_witness_name');   $pwa = $g('prob_witness_address');   $pwo = $g('prob_witness_occupation');
     $swn = $g('surety_witness_name'); $swa = $g('surety_witness_address'); $swo = $g('surety_witness_occupation');
     $dated = $fmt($data['declaration_date'] ?? '');
+    $dAt   = $g('bond_dated_at');   $dDay = $g('bond_dated_day');   $dMon = $g('bond_dated_month');
     $sigs  = $data['_signature_src'] ?? [];
     $hi    = $data['_hi'] ?? [];   // candidate-typed Hindi values (blank if none)
 
@@ -77,18 +78,12 @@
     </div>
 
     <div class="lines">
-        Dated {!! $blank($dated, '150px') !!}.
+        Dated {!! $blank($dAt, '130px') !!} this {!! $blank($dDay, '110px') !!} day of {!! $blank($dMon, '150px') !!}
         <div class="sign">Signature of the Probationer:
             @if(!empty($sigs[0]))<img src="{{ $sigs[0] }}" class="sig-img">@else {!! $blank('', '200px') !!} @endif
         </div>
         <div>Signed by the Probationer in the presence of — Name of Witness: {!! $blank($pwn, '200px') !!}</div>
         <div>Address: {!! $blank($pwa, '300px') !!} &nbsp; Occupation: {!! $blank($pwo, '160px') !!}</div>
-
-        <div class="sign">Signature of the Surety:
-            @if(!empty($sigs[1]))<img src="{{ $sigs[1] }}" class="sig-img">@else {!! $blank('', '200px') !!} @endif
-        </div>
-        <div>Signed by the Surety in the presence of — Name of Witness: {!! $blank($swn, '200px') !!}</div>
-        <div>Address: {!! $blank($swa, '300px') !!} &nbsp; Occupation: {!! $blank($swo, '160px') !!}</div>
     </div>
 
     <div class="body" style="text-indent:0; margin-top:14px;">
@@ -96,6 +91,14 @@
         <div class="elig">{!! $box($isPerm) !!} (a) I am in the permanent service of the Government of {!! $blank('', '180px') !!}; <i>or</i></div>
         <div class="elig">{!! $box($isRes) !!} (b) I am ordinarily resident in India and possess means which will enable me to repay to the Central Government the sums of money referred to, in the event of my being called upon to do so in accordance with the terms of the agreement.</div>
         <div style="margin-top:6px;"><i>(Strike out whichever is not applicable.)</i></div>
+    </div>
+
+    <div class="lines">
+        <div class="sign">Signature of the Surety:
+            @if(!empty($sigs[1]))<img src="{{ $sigs[1] }}" class="sig-img">@else {!! $blank('', '200px') !!} @endif
+        </div>
+        <div>Signed by the Surety in the presence of — Name of Witness: {!! $blank($swn, '200px') !!}</div>
+        <div>Address: {!! $blank($swa, '300px') !!} &nbsp; Occupation: {!! $blank($swo, '160px') !!}</div>
     </div>
 
     <pagebreak />

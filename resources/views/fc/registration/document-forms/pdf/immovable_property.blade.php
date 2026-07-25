@@ -9,6 +9,7 @@
     $cadre   = $g('cadre');
     $pay     = $g('present_pay');
     $dated   = $fmt($data['declaration_date'] ?? '');
+    $asOn    = $fmt($data['as_on_date'] ?? '');
     $rows    = $data['_tables']['properties'] ?? [];
     $sigSrc  = $data['_signature_src'][0] ?? null;
     $blank = function ($v, $w = '150px') {
@@ -46,6 +47,7 @@
     <div class="formline">[Form 1 — See Government of India's Instruction (1) and (2) below Rule 16]</div>
     <div class="title-hi">प्रथम नियुक्ति के समय भरा जाने वाला अचल संपत्ति के विवरण का फार्म</div>
     <div class="title">STATEMENT OF IMMOVABLE PROPERTY ON FIRST APPOINTMENT</div>
+    <div style="text-align:center; font-weight:bold; font-size:10px; margin-top:4px;">as on date / जिस तिथि तक: {!! $blank($asOn, '130px') !!}</div>
 
     <div class="item"><b>1.</b> अधिकारी का पूरा नाम, तथा सेवा जिससे वह संबंधित है / Name of the Officer (in full) and service to which the officer belongs: {!! $blank($name, '300px') !!}</div>
     <div class="item"><b>2.</b> वर्तमान पद / Present Post held: {!! $blank($post, '220px') !!}</div>

@@ -104,6 +104,8 @@
     </table>
 
     <div class="notes">
+        <div class="def-hd">*Family for this purpose means family as defined in clause (b) of sub-rule of Rule 54 of the CCS (Pension) Rule, 1972 (Mention overleaf for ready reference)</div>
+        <div class="def-hd">** Please attach an ID proof of Date of birth (in each case, except your own).</div>
         <div class="note-p"><b>Note 1.</b> The original Form submitted by the Government servant is to be retained. All additions/alterations are to be recorded in this Form under the signature of Head of Office in Col. 7. No new Form will substitute the original Form. However, the retiring Government servant should submit the details of family afresh along with Form 5.
             <span class="note-hi"><b>नोट 1.</b> सरकारी कर्मचारी द्वारा जमा किया गया मूल फार्म अभिलेख में रखा जाना है। इस फार्म में कॉलम 7 में कार्यालय प्रमुख के हस्ताक्षर के तहत सभी परिवर्धन/परिवर्तन दर्ज किए जाने हैं। कोई भी नया फॉर्म मूल फॉर्म को प्रतिस्थापित नहीं करेगा। सेवानिवृत्त होने वाले सरकारी कर्मचारी को फॉर्म 5 के साथ परिवार का विवरण फिर से जमा करना चाहिए।</span></div>
         <div class="note-p"><b>Note 2.</b> The details of spouse, all children and parents (whether eligible for family pension or not) and disabled siblings (brothers and sisters) may be given.
@@ -112,14 +114,6 @@
             <span class="note-hi"><b>नोट 3.</b> कार्यालय प्रमुख &lsquo;टिप्पणी&rsquo; कॉलम में परिवार में परिवर्धन या परिवर्तन की सूचना की प्राप्ति की तारीख का उल्लेख करेगा। परिवार के किसी सदस्य की विकलांगता या वैवाहिक स्थिति में बदलाव के तथ्य को भी &lsquo;टिप्पणी&rsquo; कॉलम में दर्शाया जाना चाहिए।</span></div>
         <div class="note-p"><b>Note 4.</b> Wife and husband shall include judicially separated wife and husband.
             <span class="note-hi"><b>नोट 4.</b> पति और पत्नी में न्यायिक रूप से अलग हो चुके पति और पत्नी शामिल होंगे।</span></div>
-
-        <div class="def-hd">*Family for this purpose means family as defined in clause (b) of sub-rule (14) of Rule 54 of the CCS (Pension) Rules, 1972 (as amended from time to time). &lsquo;Family&rsquo; in relation to a Government servant means —
-            <span class="note-hi">* इस प्रयोजनार्थ परिवार का अर्थ केन्द्रीय सिविल सेवा (पेंशन) नियमावली, 1972 (समय-समय पर संशोधित) के नियम 54 के उप-नियम (14) के खंड (ख) में परिभाषित परिवार से है। सरकारी सेवक के संबंध में &lsquo;परिवार&rsquo; का अर्थ है —</span></div>
-        <div class="clause">14(b) wife in the case of a male Government servant, or husband in the case of a female Government servant; / 14(ख) पुरुष सरकारी कर्मचारी के मामले में पत्नी, या महिला सरकारी कर्मचारी के मामले में पति;</div>
-        <div class="clause">(ia) a judicially separated wife or husband, such separation not being granted on the ground of adultery and the person surviving not held guilty of committing adultery; / (iक) न्यायिक रूप से अलग हो चुके पति या पत्नी (जहाँ अलगाव व्यभिचार के आधार पर स्वीकृत न हुआ हो और उत्तरजीवी व्यभिचार का दोषी न ठहराया गया हो);</div>
-        <div class="clause">(ii) unmarried son who has not attained the age of twenty-five years, and unmarried or widowed or divorced daughter, including such son and daughter adopted legally; / (ii) अविवाहित पुत्र जिसने पच्चीस वर्ष की आयु प्राप्त नहीं की है, तथा अविवाहित या विधवा या तलाकशुदा पुत्री (कानूनी रूप से गोद लिए गए पुत्र-पुत्री सहित);</div>
-        <div class="clause">(iii) dependent parents; / (iii) आश्रित माता-पिता;</div>
-        <div class="clause">(iv) dependent disabled siblings (i.e. brother or sister) of a Government servant. / (iv) सरकारी कर्मचारी के आश्रित विकलांग सहोदर (अर्थात भाई या बहन)।</div>
     </div>
 
 </body>

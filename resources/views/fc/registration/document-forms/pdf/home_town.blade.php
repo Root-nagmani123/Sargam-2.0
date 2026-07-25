@@ -40,7 +40,6 @@
 <body>
     <div class="docno">Document-5</div>
     <div class="title">गृह नगर घोषणा &nbsp; DECLARATION OF HOME TOWN</div>
-    <div class="sub">For the purpose of Leave Travel Concession (MHA Memo No. 43/715/57-Ests.(A), dated 24-06-1958)</div>
 
     <div class="lead">
         मैं घोषणा करता/करती हूँ कि अवकाश यात्रा रियायत हेतु मेरा गृह नगर/गांव निम्नलिखित है —<br>
@@ -57,17 +56,19 @@
     </div>
 
     <div class="sign">
-        <div style="text-align:right;">हस्ताक्षर / Signature: @if($sigSrc)<img src="{{ $sigSrc }}" class="sig-img">@else {!! $blank('', '200px') !!} @endif</div>
-        <div>नाम स्पष्ट अक्षरों में / Name in Block Letters: {!! $blank($name, '300px') !!}</div>
-        <div>पदनाम / Designation: {!! $blank($desig, '320px') !!}</div>
-        <div>स्थान / Place: {!! $blank($place, '180px') !!} &nbsp;&nbsp; तारीख / Dated: {!! $blank($dated, '150px') !!}</div>
+        <div style="padding-left:42%;">हस्ताक्षर / Signature: @if($sigSrc)<img src="{{ $sigSrc }}" class="sig-img">@else {!! $blank('', '190px') !!} @endif</div>
+        <div style="padding-left:42%;">नाम स्पष्ट अक्षरों में / Name in Block Letters: {!! $blank($name, '190px') !!}</div>
+        <div style="padding-left:42%;">पदनाम / Designation: {!! $blank($desig, '190px') !!}</div>
+        <div style="padding-left:42%;">स्थान / Place: {!! $blank($place, '150px') !!}</div>
+        <div style="padding-left:42%;">तारीख / Dated: {!! $blank($dated, '150px') !!}</div>
     </div>
 
     <div class="def">
-        <div class="def-hd">Definition of the term &ldquo;Home Town&rdquo; for the purpose of Leave Travel Concession (MHA Memo No. 43/715/57-Ests.(A) dated 24-06-1958). The declaration may be made based on the criteria below / &ldquo;गृह नगर&rdquo; की परिभाषा — घोषणा निम्नलिखित मानदंडों के आधार पर की जा सकती है:</div>
-        <ol type="a">
-            @foreach($template['notes'] ?? [] as $n)<li>{!! preg_replace('/^\([a-d]\)\s*/', '', $n) !!}</li>@endforeach
-        </ol>
+        <div class="def-hd">Definition of term &ldquo;Home Town&rdquo; for the purpose of LEAVE TRAVEL CONCESSION in view of Ministry of Home Affairs Memo No. 43/715/57/Exts(A) dated 24.06.1958 received under F.No. 30/189/58 (Co-ord) (372) dated 12.07.1958. The declaration may be made based on the criteria given below.</div>
+        <div style="margin:5px 0 0 18px;">a) Whether the place declared by Government servant is the one which requires his physical presence at intervals for discharging various domestic and social obligations, and if so, whether after his entry into service, the Government servant had been visiting that place frequently.</div>
+        <div style="margin:3px 0 0 18px;">b) Whether the Government servant owns residential property in that place or whether he is a member of a joint family having such property there.</div>
+        <div style="margin:3px 0 0 18px;">c) Whether his near relations are resident in that place.</div>
+        <div style="margin:3px 0 0 18px;">d) Whether, prior to his entry into Government service, the Government servant had been living there for some years.</div>
     </div>
 
     <div class="accepted">स्वीकृत / ACCEPTED</div>
