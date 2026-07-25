@@ -1056,13 +1056,18 @@ class DynamicFormService
                     return;
                 }
 
-                // One existence check, then update or insert — replaces updateOrInsert + a
-                // re-read + a conditional created_at update (3-4 queries -> 2). created_at is
-                // written on insert only; updated_at (already in $data) on both. Identical result.
-                if (DB::table($gt)->where($uCol, $uVal)->exists()) {
+                // One read, then update or insert — replaces updateOrInsert + a re-read + a
+                // conditional created_at update (3-4 queries -> 2). created_at is written on
+                // insert and back-filled for legacy rows missing it; updated_at always. Same result.
+                $existing = DB::table($gt)->where($uCol, $uVal)->first();
+                if ($existing) {
+                    if (empty($existing->created_at)) {
+                        $data['created_at'] = now();
+                    }
                     DB::table($gt)->where($uCol, $uVal)->update($data);
                 } else {
-                    DB::table($gt)->insert(array_merge($data, ['created_at' => now()]));
+                    $data['created_at'] = now();
+                    DB::table($gt)->insert($data);
                 }
             }
         });
@@ -1694,14 +1699,23 @@ class DynamicFormService
     protected function cachedColumnType(string $table, string $column): ?string
     {
         $ttl = (int) config('fc.schema_cache_ttl', 86400);
+        $ttl = $ttl > 0 ? $ttl : 86400;
         $cacheKey = 'fc_col_type:'.DB::getDatabaseName().':v'.fc_schema_cache_version().':'.$table.'.'.$column;
 
         try {
-            return Cache::remember(
-                $cacheKey,
-                $ttl > 0 ? $ttl : 86400,
-                fn () => $this->fetchMysqlColumnType($table, $column)
-            );
+            $cached = Cache::get($cacheKey);
+            if ($cached !== null) {
+                return $cached;
+            }
+
+            // Only ever cache a real result — never persist a null (a transient failure or a
+            // missing column), so a hiccup can't poison the type for the whole TTL (cf. F-02).
+            $type = $this->fetchMysqlColumnType($table, $column);
+            if ($type !== null) {
+                Cache::put($cacheKey, $type, $ttl);
+            }
+
+            return $type;
         } catch (\Throwable $e) {
             return $this->fetchMysqlColumnType($table, $column);
         }

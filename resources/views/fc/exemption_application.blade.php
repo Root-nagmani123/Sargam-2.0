@@ -52,7 +52,7 @@
                                 </div>
 
                                 <div class="col-md-6">
-                                    <label for="year" class="form-label fw-semibold">Year <span
+                                    <label for="year" class="form-label fw-semibold">Year of completion <span
                                             class="text-danger">*</span></label>
                                     <select class="form-select rounded-3 @error('year') is-invalid @enderror" id="year"
                                         name="year" required>
@@ -80,7 +80,7 @@
 
                             @if (str_contains($exName, 'reappearing') || str_contains($exName, 'civil services'))
                                 <div class="col-md-6">
-                                    <label for="roll_number" class="form-label fw-semibold">Roll Number <span
+                                    <label for="roll_number" class="form-label fw-semibold">Roll Number (Mains-2026) <span
                                             class="text-danger">*</span></label>
                                     <input type="text" class="form-control rounded-3 @error('roll_number') is-invalid @enderror"
                                         id="roll_number" name="roll_number" placeholder="Enter your UPSC Roll Number"
