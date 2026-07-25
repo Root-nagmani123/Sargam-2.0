@@ -93,12 +93,12 @@ return [
             'body' => 'Dear {Applicant_Name}, you have asked for exemption from {Programme_Name} under the category \'{Exemption_Category}\'. App No: {Application_No}. - {Institute_Name}',
         ],
 
-        // PC-FB — D6
-        'feedback_request' => [
-            'dlt_name' => 'PC-FB',
-            'dlt_template_id' => env('GUPSHUP_DLT_D6_FEEDBACK', '1477170161515505030'),
-            'body' => 'Dear {Participant_Name}, please submit your feedback for {Programme_Name} by {Last_Date}. Your feedback is important. Submit here: {Feedback_Link} - {Institute_Name}',
-        ],
+        // PC-FB — D6 (skipped for now — not used from Admin or auto flows)
+        // 'feedback_request' => [
+        //     'dlt_name' => 'PC-FB',
+        //     'dlt_template_id' => env('GUPSHUP_DLT_D6_FEEDBACK', '1477170161515505030'),
+        //     'body' => 'Dear {Participant_Name}, please submit your feedback for {Programme_Name} by {Last_Date}. Your feedback is important. Submit here: {Feedback_Link} - {Institute_Name}',
+        // ],
 
     ],
 

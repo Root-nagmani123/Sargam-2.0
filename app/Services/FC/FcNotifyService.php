@@ -197,28 +197,28 @@ class FcNotifyService
         ], $registrationPk);
     }
 
-    /** D6 — Feedback Request */
-    public function feedbackRequest(
-        ?string $mobile,
-        string $participantName,
-        string $programmeName,
-        string $lastDate,
-        ?string $feedbackLink = null,
-        ?int $registrationPk = null,
-    ): void {
-        $mobile = trim((string) $mobile);
-        if ($mobile === '') {
-            return;
-        }
-
-        $this->sendSms('feedback_request', $mobile, [
-            'Participant_Name' => $participantName !== '' ? $participantName : 'Candidate',
-            'Programme_Name' => $this->programme($programmeName),
-            'Last_Date' => $lastDate !== '' ? $lastDate : 'the deadline',
-            'Feedback_Link' => $feedbackLink ?: $this->portal(),
-            'Institute_Name' => $this->institute(),
-        ], $registrationPk);
-    }
+    // D6 — Feedback Request (skipped for now)
+    // public function feedbackRequest(
+    //     ?string $mobile,
+    //     string $participantName,
+    //     string $programmeName,
+    //     string $lastDate,
+    //     ?string $feedbackLink = null,
+    //     ?int $registrationPk = null,
+    // ): void {
+    //     $mobile = trim((string) $mobile);
+    //     if ($mobile === '') {
+    //         return;
+    //     }
+    //
+    //     $this->sendSms('feedback_request', $mobile, [
+    //         'Participant_Name' => $participantName !== '' ? $participantName : 'Candidate',
+    //         'Programme_Name' => $this->programme($programmeName),
+    //         'Last_Date' => $lastDate !== '' ? $lastDate : 'the deadline',
+    //         'Feedback_Link' => $feedbackLink ?: $this->portal(),
+    //         'Institute_Name' => $this->institute(),
+    //     ], $registrationPk);
+    // }
 
     public function otpService(): FcOtpService
     {

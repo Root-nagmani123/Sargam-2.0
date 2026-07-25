@@ -8,6 +8,7 @@ use App\Http\Controllers\FC\{
     FcActivityMedicalController,
     FcActivityReportController,
     FcActivityStatusController,
+    FcAdminSmsController,
     FcTravelArrivalSlotController,
     RegistrationStep1Controller,
     RegistrationStep2Controller,
@@ -110,6 +111,12 @@ Route::middleware(['auth'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->grou
         Route::post('/',            [FcJoiningSampleDocumentController::class, 'store'])->name('store');
         Route::put('/{sample}',     [FcJoiningSampleDocumentController::class, 'update'])->name('update');
         Route::delete('/{sample}',  [FcJoiningSampleDocumentController::class, 'destroy'])->name('destroy');
+    });
+
+    // ── FC SMS bulk send (B1 / B2 only; no recipient picker) ──
+    Route::prefix('sms')->name('sms.')->group(function () {
+        Route::get('/',  [FcAdminSmsController::class, 'index'])->name('index');
+        Route::post('/', [FcAdminSmsController::class, 'send'])->name('send');
     });
 
     // NOTE: the fc-reg/admin/joining/* attendance routes were removed — their

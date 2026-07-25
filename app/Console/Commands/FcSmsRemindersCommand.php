@@ -11,33 +11,42 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * B1 / B2 / D6 SMS reminders (memo/notice skipped). Uses SMS_DRIVER=log|gupshup.
+ * B1 / B2 SMS reminders (memo/notice/feedback skipped). Uses SMS_DRIVER=log|gupshup.
  *
  * Examples:
  *  php artisan fc:sms-reminders --type=b1 --step="Bank Details"
  *  php artisan fc:sms-reminders --type=b2
- *  php artisan fc:sms-reminders --type=d6 --programme="Foundation Course 2026-Batch1" --last-date=25-Jul-2026
  *  php artisan fc:sms-reminders --type=b1 --step="Bank Details" --pk=123
+ *
+ * D6 feedback skipped for now:
+ *  php artisan fc:sms-reminders --type=d6 --programme="Foundation Course 2026-Batch1" --last-date=25-Jul-2026
  */
 class FcSmsRemindersCommand extends Command
 {
     protected $signature = 'fc:sms-reminders
-        {--type=b2 : b1 (step incomplete), b2 (pending deadline), d6 (feedback request)}
+        {--type=b2 : b1 (step incomplete), b2 (pending deadline)}
         {--step= : Step name for B1 (e.g. "Bank Details")}
         {--pk= : Optional single fc_registration_master.pk}
         {--programme= : Programme / course label}
         {--last-date= : Deadline text (e.g. 20-Jul-2026)}
-        {--feedback-link= : Feedback URL for D6}
+        {--feedback-link= : Feedback URL for D6 (unused — D6 skipped)}
         {--limit=200 : Max recipients}
         {--dry-run : List recipients without sending}';
 
-    protected $description = 'Send FC SMS reminders for B1 / B2 / D6 (not memo/notice)';
+    protected $description = 'Send FC SMS reminders for B1 / B2 (not memo/notice/feedback)';
 
     public function handle(FcNotifyService $notify): int
     {
         $type = strtolower((string) $this->option('type'));
-        if (!in_array($type, ['b1', 'b2', 'd6'], true)) {
-            $this->error('Invalid --type. Use b1, b2, or d6.');
+
+        // D6 feedback skipped for now
+        if ($type === 'd6') {
+            $this->error('D6 feedback SMS is skipped for now. Use b1 or b2.');
+            return self::FAILURE;
+        }
+
+        if (!in_array($type, ['b1', 'b2'], true)) {
+            $this->error('Invalid --type. Use b1 or b2.');
             return self::FAILURE;
         }
 
@@ -66,7 +75,7 @@ class FcSmsRemindersCommand extends Command
         }
 
         $step = trim((string) $this->option('step'));
-        $feedbackLink = trim((string) $this->option('feedback-link')) ?: (string) config('gupshup.portal_url');
+        // $feedbackLink = trim((string) $this->option('feedback-link')) ?: (string) config('gupshup.portal_url');
         $dryRun = (bool) $this->option('dry-run');
         $sent = 0;
 
@@ -89,7 +98,7 @@ class FcSmsRemindersCommand extends Command
             match ($type) {
                 'b1' => $notify->formStepIncomplete($mobile, $name, $step, $pk),
                 'b2' => $notify->registrationPending($mobile, $name, $programme, $lastDate, $pk),
-                'd6' => $notify->feedbackRequest($mobile, $name, $programme, $lastDate, $feedbackLink, $pk),
+                // 'd6' => $notify->feedbackRequest($mobile, $name, $programme, $lastDate, $feedbackLink, $pk),
             };
             $sent++;
         }
@@ -104,9 +113,10 @@ class FcSmsRemindersCommand extends Command
         $limit = max(1, (int) $this->option('limit'));
         $pk = $this->option('pk');
 
-        if ($type === 'd6') {
-            return $this->feedbackRecipients($limit, $pk);
-        }
+        // D6 feedback skipped for now
+        // if ($type === 'd6') {
+        //     return $this->feedbackRecipients($limit, $pk);
+        // }
 
         if (!Schema::hasTable('fc_registration_master')) {
             return collect();
@@ -137,26 +147,27 @@ class FcSmsRemindersCommand extends Command
         return $query->orderBy('pk')->limit($limit)->get();
     }
 
-    protected function feedbackRecipients(int $limit, $pk)
-    {
-        // Prefer roster mobiles for FC programme reminders; refine later with pending-feedback joins.
-        if (!Schema::hasTable('fc_registration_master')) {
-            return collect();
-        }
-
-        $query = DB::table('fc_registration_master')
-            ->select('pk', 'display_name', 'contact_no')
-            ->whereNotNull('contact_no')
-            ->where('contact_no', '!=', '');
-
-        if ($pk !== null && $pk !== '') {
-            $query->where('pk', (int) $pk);
-        } elseif (Schema::hasColumn('fc_registration_master', 'is_registered')) {
-            $query->where('is_registered', 1);
-        }
-
-        return $query->orderBy('pk')->limit($limit)->get();
-    }
+    // D6 feedback skipped for now
+    // protected function feedbackRecipients(int $limit, $pk)
+    // {
+    //     // Prefer roster mobiles for FC programme reminders; refine later with pending-feedback joins.
+    //     if (!Schema::hasTable('fc_registration_master')) {
+    //         return collect();
+    //     }
+    //
+    //     $query = DB::table('fc_registration_master')
+    //         ->select('pk', 'display_name', 'contact_no')
+    //         ->whereNotNull('contact_no')
+    //         ->where('contact_no', '!=', '');
+    //
+    //     if ($pk !== null && $pk !== '') {
+    //         $query->where('pk', (int) $pk);
+    //     } elseif (Schema::hasColumn('fc_registration_master', 'is_registered')) {
+    //         $query->where('is_registered', 1);
+    //     }
+    //
+    //     return $query->orderBy('pk')->limit($limit)->get();
+    // }
 
     protected function registrationDeadlineText(): string
     {
