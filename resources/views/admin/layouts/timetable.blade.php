@@ -146,7 +146,7 @@
     </div>
 
 
-    <!-- Main Content (OT student pages use @section('content'); calendar uses @section('setup_content')) -->
+    {{-- Main Content (OT student pages use @@section('content'); calendar uses @@section('setup_content')) --}}
     <main id="main-content" class="flex-grow-1">
                    <div class="container-fluid p-0 px-2">
                      <x-session_message />
