@@ -179,7 +179,7 @@
                         <h6 class="text-secondary small text-uppercase fw-semibold mb-2 opacity-75">Meter One</h6>
                         <div class="row row-cols-2 row-cols-md-5 g-2 g-md-3">
                             <div class="col"><span class="text-muted small d-block">Meter No.</span><span class="fw-medium">{{ $bill->meter_one ?? '—' }}</span></div>
-                            <div class="col"><span class="text-muted small d-block">Previous Reading</span><span>{{ $bill->last_month_elec_red ?? '—' }}</span></div>
+                            <div class="col"><span class="text-muted small d-block">Previous Reading</span><span>{{ !empty($bill->meter_one_is_new) ? '—' : ($bill->last_month_elec_red ?? '—') }}</span></div>
                             <div class="col"><span class="text-muted small d-block">Current Reading</span><span>{{ $bill->curr_month_elec_red ?? '—' }}</span></div>
                             <div class="col"><span class="text-muted small d-block">Consumed Unit</span><span>{{ $bill->meter_one_consume_unit ?? '—' }}</span></div>
                             <div class="col"><span class="text-muted small d-block">Electricity Bill</span><span>₹ {{ number_format((float)($bill->meter_one_elec_charge ?? 0), 2) }}</span></div>
@@ -195,7 +195,7 @@
                         <h6 class="text-secondary small text-uppercase fw-semibold mb-2 opacity-75">Meter Two</h6>
                         <div class="row row-cols-2 row-cols-md-5 g-2 g-md-3">
                             <div class="col"><span class="text-muted small d-block">Meter No.</span><span class="fw-medium">{{ $bill->meter_two ?? '—' }}</span></div>
-                            <div class="col"><span class="text-muted small d-block">Previous Reading</span><span>{{ $bill->last_month_elec_red2 ?? '—' }}</span></div>
+                            <div class="col"><span class="text-muted small d-block">Previous Reading</span><span>{{ !empty($bill->meter_two_is_new) ? '—' : ($bill->last_month_elec_red2 ?? '—') }}</span></div>
                             <div class="col"><span class="text-muted small d-block">Current Reading</span><span>{{ $bill->curr_month_elec_red2 ?? '—' }}</span></div>
                             <div class="col"><span class="text-muted small d-block">Consumed Unit</span><span>{{ $bill->meter_two_consume_unit ?? '—' }}</span></div>
                             <div class="col"><span class="text-muted small d-block">Electricity Bill</span><span>₹ {{ number_format((float)($bill->meter_two_elec_charge ?? 0), 2) }}</span></div>
