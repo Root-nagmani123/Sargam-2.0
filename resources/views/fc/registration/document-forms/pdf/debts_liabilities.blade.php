@@ -10,9 +10,9 @@
     $dated   = $fmt($data['declaration_date'] ?? '');
     $rows    = $data['_tables']['liabilities'] ?? [];
     $sigSrc  = $data['_signature_src'][0] ?? null;
-    $blank = function ($v, $w = '150px') {
+    $blank = function ($v, $w = '150pt') {
         $val = ($v !== '' && $v !== null) ? e($v) : '&nbsp;';
-        return '<span style="display:inline-block; min-width:'.$w.'; border-bottom:1px solid #000; text-align:center; font-weight:bold; padding:0 4px;">'.$val.'</span>';
+        return '<span style="display:inline-block; min-width:'.$w.'; border-bottom:1px solid #000; text-align:center; font-weight:bold; padding:0 4pt;">'.$val.'</span>';
     };
     // Official 6-C notes (bilingual pairs) — same content as the on-screen form.
     $notes = [
@@ -31,29 +31,30 @@
 <head>
 <meta charset="utf-8">
 <style>
-    body { font-family: 'DejaVu Sans', sans-serif; font-size: 11px; color: #000; }
-    .docno { text-align: right; font-weight: bold; font-size: 11px; }
-    .title { text-align: center; font-weight: bold; font-size: 13px; text-decoration: underline; margin-top: 4px; }
-    .formno { text-align: center; font-weight: bold; font-size: 10px; margin-top: 2px; }
-    .title-hi { text-align: center; font-weight: bold; font-size: 12px; margin-top: 3px; }
-    .sub { text-align: center; font-style: italic; font-size: 10px; margin-top: 3px; }
-    .ason { text-align: center; font-size: 11px; margin-top: 10px; }
-    table.dc { width: 100%; border-collapse: collapse; margin-top: 12px; }
-    table.dc th, table.dc td { border: 0.8px solid #000; padding: 5px 6px; font-size: 9px; vertical-align: top; }
+    @page { margin: 11mm 12mm 11mm 12mm; }
+    body { font-family: 'DejaVu Sans', sans-serif; font-size: 11pt; color: #000; }
+    .docno { text-align: right; font-weight: bold; font-size: 11pt; }
+    .title { text-align: center; font-weight: bold; font-size: 13pt; text-decoration: underline; margin-top: 4pt; }
+    .formno { text-align: center; font-weight: bold; font-size: 10pt; margin-top: 2pt; }
+    .title-hi { text-align: center; font-weight: bold; font-size: 12pt; margin-top: 3pt; }
+    .sub { text-align: center; font-style: italic; font-size: 10pt; margin-top: 3pt; }
+    .ason { text-align: center; font-size: 11pt; margin-top: 10pt; }
+    table.dc { width: 100%; border-collapse: collapse; margin-top: 12pt; }
+    table.dc th, table.dc td { border: 0.8px solid #000; padding: 5pt 6pt; font-size: 9.5pt; vertical-align: top; }
     table.dc th { text-align: center; font-weight: bold; }
     .cno { font-weight: normal; }
-    .foot { width: 100%; margin-top: 22px; font-size: 11px; }
-    .foot td { vertical-align: top; padding: 4px 0; }
-    .sig-img { max-height: 34px; }
-    .notes { margin-top: 18px; font-size: 9px; line-height: 1.5; border-top: 1px solid #000; padding-top: 8px; }
-    .notes td { vertical-align: top; padding: 2px 4px 2px 0; }
-    .rowspace td { height: 26px; }
+    .foot { width: 100%; margin-top: 22pt; font-size: 11pt; }
+    .foot td { vertical-align: top; padding: 4pt 0; }
+    .sig-img { max-height: 34pt; }
+    .notes { margin-top: 18pt; font-size: 9.5pt; line-height: 1.5; border-top: 1px solid #000; padding-top: 8pt; }
+    .notes td { vertical-align: top; padding: 2pt 4pt 2pt 0; }
+    .rowspace td { height: 26pt; }
 </style>
 </head>
 <body>
 
     <div class="docno">Document-6-C / दस्तावेज़-6-सी</div>
-    <div class="title" style="font-size:10.5px; white-space:nowrap;">Statement of Debts and Other Liabilities on First Appointment<span style="text-decoration:none; font-weight:bold;">&nbsp; as on date / जिस तिथि तक: {!! $blank($ason, '120px') !!}</span></div>
+    <div class="title" style="font-size:10.5pt; white-space:nowrap;">Statement of Debts and Other Liabilities on First Appointment<span style="text-decoration:none; font-weight:bold;">&nbsp; as on date / जिस तिथि तक: {!! $blank($ason, '120pt') !!}</span></div>
     <div class="formno">Form No. 6-C</div>
     <div class="title-hi">प्रथम नियुक्ति पर ऋणों तथा अन्य देयताओं का विवरण</div>
     <div class="sub">[debts and other liabilities incurred by him/her directly or indirectly]</div>
@@ -87,18 +88,18 @@
 
     <table class="foot">
         <tr>
-            <td style="width:45%;">Dated / दिनांक: {!! $blank($dated, '160px') !!}</td>
+            <td style="width:45%;">Dated / दिनांक: {!! $blank($dated, '160pt') !!}</td>
             <td>
-                <div>Signature / हस्ताक्षर: @if($sigSrc)<img src="{{ $sigSrc }}" class="sig-img">@else {!! $blank('', '210px') !!} @endif</div>
-                <div style="margin-top:6px;">Name (in Block Letters) / नाम (स्पष्ट अक्षरों में): {!! $blank($name, '200px') !!}</div>
-                <div style="margin-top:6px;">Service / सेवा: {!! $blank($service, '210px') !!}</div>
+                <div>Signature / हस्ताक्षर: @if($sigSrc)<img src="{{ $sigSrc }}" class="sig-img">@else {!! $blank('', '210pt') !!} @endif</div>
+                <div style="margin-top:6pt;">Name (in Block Letters) / नाम (स्पष्ट अक्षरों में): {!! $blank($name, '200pt') !!}</div>
+                <div style="margin-top:6pt;">Service / सेवा: {!! $blank($service, '210pt') !!}</div>
             </td>
         </tr>
     </table>
 
     <table class="notes">
         @foreach($notes as $i => $n)
-            <tr><td style="width:52px;"><b>NOTE {{ $i + 1 }}.</b></td><td>{{ $n[0] }}<br>{{ $n[1] }}</td></tr>
+            <tr><td style="width:52pt;"><b>NOTE {{ $i + 1 }}.</b></td><td>{{ $n[0] }}<br>{{ $n[1] }}</td></tr>
         @endforeach
     </table>
 

@@ -11,15 +11,28 @@ use Illuminate\Database\Seeder;
  *
  * The 4 external cards (Aadhar, PAN, Cancel Cheque, Supporting Document) are
  * intentionally left as plain file uploads.
+ *
+ * So are the 3 Accounts Section documents — see self::UPLOAD_ONLY.
  */
 class FcJoiningFillableFormsSeeder extends Seeder
 {
-    /** field_name => template_key (must match App\Support\FC\DocumentFormTemplates) */
-    private const MAP = [
-        'doc_family_details'      => 'family_details',
+    /**
+     * Accounts Section documents that must stay plain uploads: statutory forms the
+     * officer downloads (via the "View Sample" column), fills and signs offline,
+     * then uploads. Listed here rather than deleted so the decision is explicit and
+     * a future re-seed cannot quietly turn them back into online forms.
+     *
+     * @see database/migrations/FC/2026_07_26_000001_make_accounts_documents_upload_only.php
+     */
+    private const UPLOAD_ONLY = [
         'doc_group_insurance'     => 'group_insurance',
         'doc_nps_subscription'    => 'nps_subscription',
         'doc_employee_info_sheet' => 'employee_info_sheet',
+    ];
+
+    /** field_name => template_key (must match App\Support\FC\DocumentFormTemplates) */
+    private const MAP = [
+        'doc_family_details'      => 'family_details',
         'doc_debts_liabilities'   => 'debts_liabilities',
         'doc_immovable_prop'      => 'immovable_property',
         'doc_movable_prop'        => 'movable_property',
@@ -43,6 +56,13 @@ class FcJoiningFillableFormsSeeder extends Seeder
                 ->update(['form_template' => $templateKey]);
         }
 
-        $this->command?->info("FcJoiningFillableFormsSeeder: set form_template on {$total} field rows.");
+        // Actively clear the upload-only documents rather than just skipping them,
+        // so re-running this seeder corrects an environment where they were set.
+        $cleared = FcFormField::whereIn('field_name', array_keys(self::UPLOAD_ONLY))
+            ->where('field_type', 'file')
+            ->whereNotNull('form_template')
+            ->update(['form_template' => null]);
+
+        $this->command?->info("FcJoiningFillableFormsSeeder: set form_template on {$total} field rows, cleared {$cleared} upload-only rows.");
     }
 }
