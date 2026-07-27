@@ -10,9 +10,11 @@
     </div>
 
     <p class="text-muted small mb-3">
+        Recipients are limited to the active programme course (same as Registration Master
+        Programme / Course filter, Active tab) — not all FC courses.
         Choose a template and send. Lists are different:
-        <strong>Form step incomplete</strong> = started form (1+ step done) but still pending;
-        <strong>Registration pending</strong> = login exists but no form step started yet.
+        <strong>Form step incomplete</strong> = started submitting the form (1+ step done) but still pending;
+        <strong>Registration pending</strong> = registration not completed and form not started yet.
         Each send goes as <strong>SMS + Email</strong> (same trigger). Open a list to search, pick trainees, and send to
         <strong>all</strong> or <strong>selected only</strong>.
         @if(strtolower((string) config('gupshup.driver')) === 'log')

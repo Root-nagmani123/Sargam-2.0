@@ -28,13 +28,13 @@ class FcAdminSmsController extends Controller
                 FcAdminSmsBulkService::TEMPLATE_B1 => [
                     'label' => 'Form step incomplete',
                     'code' => 'B1 / FC-IFM',
-                    'help' => 'Started the form (at least 1 step done) but still has pending steps — SMS uses their first pending step name.',
+                    'help' => 'Started submitting the form (at least 1 step done) but still has pending steps — SMS uses their first pending step name.',
                     'count' => $counts['b1'],
                 ],
                 FcAdminSmsBulkService::TEMPLATE_B2 => [
                     'label' => 'Registration pending',
                     'code' => 'B2 / FC-R-P',
-                    'help' => 'Has login but has not completed any form step yet — overall registration deadline reminder.',
+                    'help' => 'Registration not completed and form not started yet (or zero steps done) — overall registration deadline reminder.',
                     'count' => $counts['b2'],
                 ],
             ],

@@ -16,6 +16,9 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Admin bulk SMS + Email for B1 / B2.
  *
+ * B1 — form started (1+ trackable step done) but still has pending steps.
+ * B2 — registration not completed and form not started (no tracker / 0 steps done).
+ *
  * DB practices: select required columns, chunkById for scans/sends,
  * batch credential + tracker lookups (no per-row queries in loops),
  * paginated recipient lists. Requirements unchanged (no send limit).
@@ -85,39 +88,28 @@ class FcAdminSmsBulkService
             return [];
         }
 
-        $form = FcForm::activeRegistrationDynamicForm();
-        $steps = $this->trackableSteps($form);
         $out = [];
-        $chunkCol = $this->trackerChunkColumn($form);
-
-        $this->eligibleTrackerQuery($form)->orderBy($chunkCol)->chunkById(self::CHUNK_SIZE, function ($rows) use (
-            &$out,
-            $template,
-            $form,
-            $steps
-        ) {
-            foreach ($this->classifyTrackerChunk($rows, $form, $steps) as $item) {
-                if (($item['bucket'] ?? null) !== $template) {
-                    continue;
-                }
-
-                $out[] = [
-                    'pk' => (int) $item['pk'],
-                    'name' => trim((string) ($item['name'] ?? '')),
-                    'mobile' => trim((string) ($item['mobile'] ?? '')),
-                    'user_id' => trim((string) ($item['user_id'] ?? '')),
-                    'step_name' => $template === self::TEMPLATE_B1
-                        ? trim((string) ($item['step_name'] ?? ''))
-                        : null,
-                ];
+        $this->eachClassifiedRecipient(function (array $item) use (&$out, $template) {
+            if (($item['bucket'] ?? null) !== $template) {
+                return;
             }
-        }, $chunkCol);
+
+            $out[] = [
+                'pk' => (int) $item['pk'],
+                'name' => trim((string) ($item['name'] ?? '')),
+                'mobile' => trim((string) ($item['mobile'] ?? '')),
+                'user_id' => trim((string) ($item['user_id'] ?? '')),
+                'step_name' => $template === self::TEMPLATE_B1
+                    ? trim((string) ($item['step_name'] ?? ''))
+                    : null,
+            ];
+        });
 
         return $out;
     }
 
     /**
-     * One chunked roster pass: counts + one page of each list (no full dataset in memory).
+     * One chunked pass: counts + one page of each list (no full dataset in memory).
      *
      * @return array{
      *   b1: int,
@@ -141,36 +133,25 @@ class FcAdminSmsBulkService
         ];
 
         $form = FcForm::activeRegistrationDynamicForm();
-        $steps = $this->trackableSteps($form);
-        $chunkCol = $this->trackerChunkColumn($form);
 
-        $this->eligibleTrackerQuery($form)->orderBy($chunkCol)->chunkById(self::CHUNK_SIZE, function ($rows) use (
-            &$counts,
-            &$pageItems,
-            $offsets,
-            $perPage,
-            $form,
-            $steps
-        ) {
-            foreach ($this->classifyTrackerChunk($rows, $form, $steps) as $item) {
-                $bucket = $item['bucket'] ?? null;
-                if ($bucket !== self::TEMPLATE_B1 && $bucket !== self::TEMPLATE_B2) {
-                    continue;
-                }
-
-                $idx = $counts[$bucket];
-                if ($idx >= $offsets[$bucket] && count($pageItems[$bucket]) < $perPage) {
-                    $pageItems[$bucket][] = [
-                        'pk' => $item['pk'],
-                        'name' => $item['name'],
-                        'mobile' => $item['mobile'],
-                        'user_id' => $item['user_id'] ?? '',
-                        'step_name' => $bucket === self::TEMPLATE_B1 ? ($item['step_name'] ?? null) : null,
-                    ];
-                }
-                $counts[$bucket]++;
+        $this->eachClassifiedRecipient(function (array $item) use (&$counts, &$pageItems, $offsets, $perPage) {
+            $bucket = $item['bucket'] ?? null;
+            if ($bucket !== self::TEMPLATE_B1 && $bucket !== self::TEMPLATE_B2) {
+                return;
             }
-        }, $chunkCol);
+
+            $idx = $counts[$bucket];
+            if ($idx >= $offsets[$bucket] && count($pageItems[$bucket]) < $perPage) {
+                $pageItems[$bucket][] = [
+                    'pk' => $item['pk'],
+                    'name' => $item['name'],
+                    'mobile' => $item['mobile'],
+                    'user_id' => $item['user_id'] ?? '',
+                    'step_name' => $bucket === self::TEMPLATE_B1 ? ($item['step_name'] ?? null) : null,
+                ];
+            }
+            $counts[$bucket]++;
+        }, $form);
 
         return [
             'b1' => $counts[self::TEMPLATE_B1],
@@ -233,7 +214,7 @@ class FcAdminSmsBulkService
             ];
         }
 
-        // Fail fast on bad SMTP so 484 recipients are not blocked ~2s each.
+        // Fail fast on bad SMTP so large B2 cohorts are not blocked ~2s each.
         config(['mail.mailers.smtp.timeout' => 5]);
         $this->notify->resetEmailCircuit();
 
@@ -246,20 +227,16 @@ class FcAdminSmsBulkService
         ]);
 
         $form = FcForm::activeRegistrationDynamicForm();
-        $steps = $this->trackableSteps($form);
         $programme = $this->programmeName($form);
         $lastDate = $this->registrationDeadlineText();
-        $chunkCol = $this->trackerChunkColumn($form);
 
         $sent = 0;
         $failed = 0;
         $matched = 0;
         $emailSkipped = false;
 
-        $this->eligibleTrackerQuery($form)->orderBy($chunkCol)->chunkById(self::CHUNK_SIZE, function ($rows) use (
+        $this->eachClassifiedRecipient(function (array $row) use (
             $template,
-            $form,
-            $steps,
             $programme,
             $lastDate,
             $registrationPks,
@@ -268,67 +245,65 @@ class FcAdminSmsBulkService
             &$matched,
             &$emailSkipped
         ) {
-            foreach ($this->classifyTrackerChunk($rows, $form, $steps) as $row) {
-                if (($row['bucket'] ?? null) !== $template) {
-                    continue;
+            if (($row['bucket'] ?? null) !== $template) {
+                return;
+            }
+
+            if ($registrationPks !== null && ! in_array((int) ($row['pk'] ?? 0), $registrationPks, true)) {
+                return;
+            }
+
+            $matched++;
+
+            try {
+                if ($template === self::TEMPLATE_B1) {
+                    $this->notify->formStepIncomplete(
+                        $row['mobile'],
+                        $row['name'],
+                        $row['step_name'] ?? 'registration',
+                        $row['pk'],
+                        $row['email'] ?? null,
+                    );
+                } else {
+                    $this->notify->registrationPending(
+                        $row['mobile'],
+                        $row['name'],
+                        $programme,
+                        $lastDate,
+                        $row['pk'],
+                        $row['email'] ?? null,
+                        $row['pending_steps'] ?? null,
+                    );
                 }
+                $sent++;
 
-                if ($registrationPks !== null && ! in_array((int) ($row['pk'] ?? 0), $registrationPks, true)) {
-                    continue;
-                }
-
-                $matched++;
-
-                try {
-                    if ($template === self::TEMPLATE_B1) {
-                        $this->notify->formStepIncomplete(
-                            $row['mobile'],
-                            $row['name'],
-                            $row['step_name'] ?? 'registration',
-                            $row['pk'],
-                            $row['email'] ?? null,
-                        );
-                    } else {
-                        $this->notify->registrationPending(
-                            $row['mobile'],
-                            $row['name'],
-                            $programme,
-                            $lastDate,
-                            $row['pk'],
-                            $row['email'] ?? null,
-                            $row['pending_steps'] ?? null,
-                        );
-                    }
-                    $sent++;
-
-                    if ($matched === 1 || $matched % 50 === 0) {
-                        Log::info('FC admin bulk send progress.', [
-                            'template' => $template,
-                            'matched' => $matched,
-                            'sent' => $sent,
-                            'email_circuit_open' => $this->notify->isEmailCircuitOpen(),
-                        ]);
-                    }
-                } catch (\Throwable $e) {
-                    $failed++;
-                    Log::error('FC admin bulk send recipient failed: '.$e->getMessage(), [
+                if ($matched === 1 || $matched % 50 === 0) {
+                    Log::info('FC admin bulk send progress.', [
                         'template' => $template,
-                        'pk' => $row['pk'] ?? null,
+                        'matched' => $matched,
+                        'sent' => $sent,
+                        'email_circuit_open' => $this->notify->isEmailCircuitOpen(),
                     ]);
                 }
-
-                if ($this->notify->isEmailCircuitOpen()) {
-                    $emailSkipped = true;
-                }
+            } catch (\Throwable $e) {
+                $failed++;
+                Log::error('FC admin bulk send recipient failed: '.$e->getMessage(), [
+                    'template' => $template,
+                    'pk' => $row['pk'] ?? null,
+                ]);
             }
-        }, $chunkCol);
+
+            if ($this->notify->isEmailCircuitOpen()) {
+                $emailSkipped = true;
+            }
+        }, $form);
 
         if ($matched === 0) {
             $emptyMsg = $registrationPks !== null
                 ? 'None of the selected trainees are eligible for this template.'
                 : ($template === self::TEMPLATE_B1
                     ? 'No trainees found who started the form and still have a pending step.'
-                    : 'No trainees found with registration pending (no form step started yet).');
+                    : 'No trainees found with registration pending (form not started / not registered).');
 
             return [
                 'ok' => $registrationPks === null,
@@ -366,6 +341,130 @@ class FcAdminSmsBulkService
             'skipped' => 0,
             'failed' => $failed,
         ];
+    }
+
+    /**
+     * Stream classified B1/B2 recipients without keeping the full list in memory.
+     *
+     * @param  callable(array<string, mixed>): void  $callback
+     */
+    protected function eachClassifiedRecipient(callable $callback, ?FcForm $form = null): void
+    {
+        $form = $form ?? FcForm::activeRegistrationDynamicForm();
+        $steps = $this->trackableSteps($form);
+
+        /** @var array<int, true> $skipB2 Roster pks already in B1 or with a fully completed form. */
+        $skipB2 = [];
+        /** @var array<int, true> $emitted Already yielded (avoid double B2). */
+        $emitted = [];
+
+        $chunkCol = $this->trackerChunkColumn($form);
+        $this->eligibleTrackerQuery($form)->orderBy($chunkCol)->chunkById(self::CHUNK_SIZE, function ($rows) use (
+            $callback,
+            $form,
+            $steps,
+            &$skipB2,
+            &$emitted
+        ) {
+            foreach ($this->classifyTrackerChunk($rows, $form, $steps, $skipB2) as $item) {
+                $pk = (int) ($item['pk'] ?? 0);
+                if ($pk <= 0) {
+                    continue;
+                }
+
+                $bucket = $item['bucket'] ?? null;
+                if ($bucket === self::TEMPLATE_B1) {
+                    $skipB2[$pk] = true;
+                }
+
+                $emitted[$pk] = true;
+                $callback($item);
+            }
+        }, $chunkCol);
+
+        $pendingStepsLabel = $steps
+            ->map(fn ($s) => trim((string) ($s->step_name ?? '')))
+            ->filter()
+            ->implode(', ');
+        if ($pendingStepsLabel === '') {
+            $pendingStepsLabel = 'pending steps';
+        }
+
+        $this->eligibleIncompleteRosterQuery($form)->orderBy('pk')->chunkById(self::CHUNK_SIZE, function ($rows) use (
+            $callback,
+            &$skipB2,
+            &$emitted,
+            $pendingStepsLabel
+        ) {
+            foreach ($rows as $roster) {
+                $pk = (int) ($roster->pk ?? 0);
+                if ($pk <= 0 || isset($skipB2[$pk]) || isset($emitted[$pk])) {
+                    continue;
+                }
+
+                $mobile = trim((string) ($roster->contact_no ?? ''));
+                if ($mobile === '') {
+                    continue;
+                }
+
+                $email = trim((string) ($roster->email ?? ''));
+                $emitted[$pk] = true;
+                $callback([
+                    'bucket' => self::TEMPLATE_B2,
+                    'pk' => $pk,
+                    'mobile' => $mobile,
+                    'name' => trim((string) ($roster->display_name ?? '')),
+                    'user_id' => trim((string) ($roster->user_id ?? '')),
+                    'email' => $email !== '' ? $email : null,
+                    'step_name' => null,
+                    'pending_steps' => $pendingStepsLabel,
+                ]);
+            }
+        }, 'pk');
+    }
+
+    /**
+     * Incomplete (not registered) roster for the active form's course — same scope as
+     * Registration Master when that Programme/Course + Active is selected.
+     * Excludes exemption applications.
+     */
+    protected function eligibleIncompleteRosterQuery(?FcForm $form = null)
+    {
+        if (! Schema::hasTable('fc_registration_master')) {
+            return DB::table('fc_registration_master')->whereRaw('1 = 0');
+        }
+
+        $coursePk = (int) ($form?->course_master_pk ?? 0);
+        // Never fall back to "all FC courses" — require the form's course (e.g. FC-101 2026).
+        if ($coursePk <= 0 || ! Schema::hasColumn('fc_registration_master', 'course_master_pk')) {
+            return DB::table('fc_registration_master')->whereRaw('1 = 0');
+        }
+
+        $query = DB::table('fc_registration_master')
+            ->select(['pk', 'display_name', 'contact_no', 'user_id', 'email'])
+            ->where('course_master_pk', $coursePk)
+            ->whereNotNull('contact_no')
+            ->where('contact_no', '!=', '');
+
+        // Same as Registration Master "Active" tab.
+        if (Schema::hasColumn('fc_registration_master', 'active_inactive')) {
+            $query->where('active_inactive', 1);
+        }
+
+        if (Schema::hasColumn('fc_registration_master', 'is_registered')) {
+            $query->where(function ($q) {
+                $q->where('is_registered', 0)->orWhereNull('is_registered');
+            });
+        }
+
+        if (Schema::hasColumn('fc_registration_master', 'application_type')) {
+            $query->where(function ($q) {
+                $q->whereNull('application_type')
+                    ->orWhere('application_type', '!=', FcRosterApplicationGuardService::APPLICATION_EXEMPTION);
+            });
+        }
+
+        return $query;
     }
 
     /**
@@ -428,10 +527,15 @@ class FcAdminSmsBulkService
      *
      * @param  Collection<int, object>  $trackerRows
      * @param  Collection<int, FcFormStep>  $steps
+     * @param  array<int, true>  $skipB2  Roster pks with a fully completed form (filled by this method).
      * @return list<array<string, mixed>>
      */
-    protected function classifyTrackerChunk(Collection $trackerRows, ?FcForm $form, Collection $steps): array
-    {
+    protected function classifyTrackerChunk(
+        Collection $trackerRows,
+        ?FcForm $form,
+        Collection $steps,
+        array &$skipB2 = [],
+    ): array {
         if ($trackerRows->isEmpty() || ! $form || $steps->isEmpty()) {
             return [];
         }
@@ -478,6 +582,7 @@ class FcAdminSmsBulkService
                 $userCol,
                 $rosterByPk,
                 $rosterByLogin,
+                $skipB2,
             );
             if ($classified !== null) {
                 $out[] = $classified;
@@ -490,6 +595,7 @@ class FcAdminSmsBulkService
     /**
      * @param  Collection<int|string, object>  $rosterByPk
      * @param  Collection<string, object>  $rosterByLogin
+     * @param  array<int, true>  $skipB2
      * @return array<string, mixed>|null
      */
     protected function classifyTrackerRow(
@@ -499,6 +605,7 @@ class FcAdminSmsBulkService
         string $userCol,
         Collection $rosterByPk,
         Collection $rosterByLogin,
+        array &$skipB2 = [],
     ): ?array {
         $trackerUserKey = $trackerRow->{$userCol} ?? null;
         if ($trackerUserKey === null || $trackerUserKey === '') {
@@ -519,26 +626,45 @@ class FcAdminSmsBulkService
 
         if (Schema::hasColumn('fc_registration_master', 'application_type')) {
             $appType = $roster->application_type ?? null;
-            if ($appType === FcRosterApplicationGuardService::APPLICATION_EXEMPTION) {
+            if ($appType === FcRosterApplicationGuardService::APPLICATION_EXEMPTION
+                || (int) $appType === FcRosterApplicationGuardService::APPLICATION_EXEMPTION) {
                 return null;
             }
         }
 
+        // Same course + Active as Registration Master for this programme.
+        $expectedCoursePk = (int) ($form->course_master_pk ?? 0);
+        if ($expectedCoursePk > 0 && Schema::hasColumn('fc_registration_master', 'course_master_pk')) {
+            if ((int) ($roster->course_master_pk ?? 0) !== $expectedCoursePk) {
+                return null;
+            }
+        }
+        if (Schema::hasColumn('fc_registration_master', 'active_inactive')
+            && (int) ($roster->active_inactive ?? 0) !== 1) {
+            return null;
+        }
+
         $mobile = trim((string) ($roster->contact_no ?? ''));
         $login = trim((string) ($roster->user_id ?? ''));
-        if ($mobile === '' || $login === '') {
+        if ($mobile === '') {
             return null;
         }
 
         $progress = $this->stepProgressFromTracker($form, $steps, $trackerRow);
+        $rosterPk = (int) $roster->pk;
 
+        // Form fully submitted — never B2 deadline reminder; also not B1.
         if ($progress['pending_step'] === null) {
+            if ($rosterPk > 0) {
+                $skipB2[$rosterPk] = true;
+            }
+
             return null;
         }
 
         $email = trim((string) ($roster->email ?? ''));
         $base = [
-            'pk' => (int) $roster->pk,
+            'pk' => $rosterPk,
             'mobile' => $mobile,
             'name' => trim((string) ($roster->display_name ?? '')),
             'user_id' => $login,
@@ -547,13 +673,22 @@ class FcAdminSmsBulkService
             'pending_steps' => $progress['pending_steps'] ?? $progress['pending_step'],
         ];
 
+        // B1: started form (1+ step done), still incomplete.
         if ($progress['done'] >= 1) {
             $base['bucket'] = self::TEMPLATE_B1;
 
             return $base;
         }
 
+        // B2: tracker exists but no step completed yet (and still not registered).
         if ($progress['done'] === 0) {
+            if (Schema::hasColumn('fc_registration_master', 'is_registered')) {
+                $registered = $roster->is_registered ?? null;
+                if ((int) $registered === 1) {
+                    return null;
+                }
+            }
+
             $base['bucket'] = self::TEMPLATE_B2;
             $base['step_name'] = null;
 
@@ -602,6 +737,16 @@ class FcAdminSmsBulkService
     protected function programmeName(?FcForm $form = null): string
     {
         $form = $form ?? FcForm::activeRegistrationDynamicForm();
+        $coursePk = (int) ($form?->course_master_pk ?? 0);
+
+        // Prefer course_master.course_name so bulk page matches Registration Master (e.g. FC-101 2026).
+        if ($coursePk > 0 && Schema::hasTable('course_master')) {
+            $courseName = trim((string) (DB::table('course_master')->where('pk', $coursePk)->value('course_name') ?? ''));
+            if ($courseName !== '') {
+                return $courseName;
+            }
+        }
+
         $name = trim((string) ($form?->form_name ?? ''));
 
         return $name !== ''
