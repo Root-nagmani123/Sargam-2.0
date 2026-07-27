@@ -13,7 +13,7 @@
         $out = '<table style="border-collapse:collapse;"><tr>';
         for ($i = 0; $i < $cells; $i++) {
             $ch = mb_substr($value, $i, 1);
-            $out .= '<td style="border:0.5px solid #555; width:13px; height:15px; text-align:center; font-size:9px; font-weight:bold; color:#0b3d91;">'.($ch !== '' ? e($ch) : '&nbsp;').'</td>';
+            $out .= '<td style="border:0.5px solid #555; width:13pt; height:15pt; text-align:center; font-size:9pt; font-weight:bold; color:#0b3d91;">'.($ch !== '' ? e($ch) : '&nbsp;').'</td>';
         }
         $out .= '</tr></table>';
         return $out;
@@ -24,7 +24,7 @@
         $out = '';
         foreach ($options as $o) {
             $mark = ((string) $o === $sel) ? '&#9745;' : '&#9744;'; // ☑ / ☐
-            $out .= '<span style="margin-right:14px; font-size:9.5px;">'.$mark.' '.e($o).'</span>';
+            $out .= '<span style="margin-right:14pt; font-size:9.5pt;">'.$mark.' '.e($o).'</span>';
         }
         return $out;
     };
@@ -36,28 +36,29 @@
 <head>
 <meta charset="utf-8">
 <style>
-    body { font-family: 'DejaVu Sans', sans-serif; font-size: 9px; color: #000; }
+    @page { margin: 11mm 12mm 11mm 12mm; }
+    body { font-family: 'DejaVu Sans', sans-serif; font-size: 11pt; color: #000; }
     .top { border: 1.4px solid #000; }
-    .top td { vertical-align: middle; padding: 5px 7px; }
-    .top .t { text-align: center; font-weight: bold; font-size: 12px; }
-    .top .c { text-align: center; font-size: 7px; color: #333; margin-top: 1px; }
-    .top .h { text-align: center; font-weight: bold; font-size: 10px; margin-top: 1px; }
-    .top .photo { border-left: 1.4px solid #000; width: 78px; text-align: center; font-size: 6.5px; color: #667; }
-    .catbox { border: 1px solid #000; border-top: 0; padding: 5px 7px; }
-    .catbox b { font-size: 9px; }
-    .to { font-size: 8.6px; margin: 7px 0; line-height: 1.45; }
-    .note { font-size: 7px; color: #444; font-style: italic; }
-    .band { background-color: #14315e; color: #fff; font-weight: bold; font-size: 8.6px; padding: 3px 7px; text-transform: uppercase; margin-top: 8px; }
+    .top td { vertical-align: middle; padding: 5pt 7pt; }
+    .top .t { text-align: center; font-weight: bold; font-size: 12pt; }
+    .top .c { text-align: center; font-size: 8.5pt; color: #333; margin-top: 1pt; }
+    .top .h { text-align: center; font-weight: bold; font-size: 10pt; margin-top: 1pt; }
+    .top .photo { border-left: 1.4px solid #000; width: 78pt; text-align: center; font-size: 8.5pt; color: #667; }
+    .catbox { border: 1px solid #000; border-top: 0; padding: 5pt 7pt; }
+    .catbox b { font-size: 9pt; }
+    .to { font-size: 8.6pt; margin: 7pt 0; line-height: 1.45; }
+    .note { font-size: 8.5pt; color: #444; font-style: italic; }
+    .band { background-color: #14315e; color: #fff; font-weight: bold; font-size: 8.6pt; padding: 3pt 7pt; text-transform: uppercase; margin-top: 8pt; }
     table.kv { width: 100%; border-collapse: collapse; border: 0.6px solid #b9c7de; border-top: 0; }
-    table.kv td { padding: 4px 6px; font-size: 8.6px; vertical-align: middle; border-bottom: 0.5px solid #dbe3ef; }
+    table.kv td { padding: 4pt 6pt; font-size: 8.6pt; vertical-align: middle; border-bottom: 0.5px solid #dbe3ef; }
     table.kv td.l { font-weight: bold; width: 30%; color: #333; }
-    table.grid { width: 100%; border-collapse: collapse; margin-top: 3px; }
-    table.grid th, table.grid td { border: 0.6px solid #666; padding: 3.5px 5px; font-size: 8px; }
+    table.grid { width: 100%; border-collapse: collapse; margin-top: 3pt; }
+    table.grid th, table.grid td { border: 0.6px solid #666; padding: 3.5pt 5pt; font-size: 8.5pt; }
     table.grid th { background-color: #eaf0f8; text-align: center; font-weight: bold; }
-    .decl { border: 0.6px solid #999; background-color: #fafafa; padding: 6px 8px; font-size: 8.2px; line-height: 1.45; }
-    .sign { margin-top: 24px; text-align: right; }
-    .sign-line { display: inline-block; border-top: 1px solid #000; padding-top: 3px; font-size: 8.4px; min-width: 240px; text-align: center; }
-    .sig-img { max-height: 34px; }
+    .decl { border: 0.6px solid #999; background-color: #fafafa; padding: 6pt 8pt; font-size: 8.5pt; line-height: 1.45; }
+    .sign { margin-top: 24pt; text-align: right; }
+    .sign-line { display: inline-block; border-top: 1px solid #000; padding-top: 3pt; font-size: 8.5pt; min-width: 240pt; text-align: center; }
+    .sig-img { max-height: 34pt; }
 </style>
 </head>
 <body>
@@ -175,7 +176,7 @@
     <div class="band">12. DECLARATION BY SUBSCRIBER / अंशदाता द्वारा घोषणा</div>
     <div class="decl">{!! $template['declaration'] !!}</div>
     @foreach($template['sections_footer'] ?? [] as $section)
-        <table class="kv" style="border-top:0.6px solid #b9c7de; margin-top:3px;">
+        <table class="kv" style="border-top:0.6px solid #b9c7de; margin-top:3pt;">
             @foreach($section['fields'] as $f)
                 <tr><td class="l" style="width:18%;">{!! $f['label'] !!}</td><td><b>{{ ($f['type']??'')==='date' ? $fmt($data[$f['name']] ?? '') : ($data[$f['name']] ?? '') }}</b></td></tr>
             @endforeach
