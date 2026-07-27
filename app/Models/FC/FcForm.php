@@ -136,6 +136,14 @@ class FcForm extends Model
     }
 
     /**
+     * Form URL for Users (/fc-reg/forms/{token}), as shown in Form Management.
+     */
+    public function formUrlForUsers(): string
+    {
+        return route('fc-reg.forms.dashboard', $this);
+    }
+
+    /**
      * Public landing page URL for this form (?form= encrypted token), as shown in Form Management.
      */
     public function landingPageUrl(): string

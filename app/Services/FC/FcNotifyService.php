@@ -318,7 +318,7 @@ class FcNotifyService
     {
         $form = $this->resolveFormForPortal($registrationPk);
         if ($form) {
-            return rtrim($form->landingPageUrl(), '/');
+            return rtrim($form->formUrlForUsers(), '/');
         }
 
         return rtrim((string) config('gupshup.portal_url'), '/');
