@@ -4,6 +4,7 @@ namespace Database\Seeders\FC;
 
 use App\Models\FC\FcFormField;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Marks the joining-document fields that should be filled online (instead of
@@ -49,20 +50,59 @@ class FcJoiningFillableFormsSeeder extends Seeder
 
     public function run(): void
     {
-        $total = 0;
+        // Both writes are one statement each and must land together, so an aborted
+        // seed cannot leave some documents fillable and others not (G7).
+        [$total, $cleared] = DB::transaction(fn () => [
+            $this->applyTemplates(),
+            $this->clearUploadOnly(),
+        ]);
+
+        $this->command?->info("FcJoiningFillableFormsSeeder: set form_template on {$total} field rows, cleared {$cleared} upload-only rows.");
+    }
+
+    /**
+     * Set every fillable document's template in a single UPDATE.
+     *
+     * Each field maps to a different template key, so this uses a CASE expression
+     * rather than one UPDATE per field (G5: no queries inside loops). The SQL
+     * structure is built only from self::MAP — a private constant — and every
+     * field name and template key is passed as a bound parameter.
+     */
+    private function applyTemplates(): int
+    {
+        $cases = '';
+        $bindings = [];
+
         foreach (self::MAP as $fieldName => $templateKey) {
-            $total += FcFormField::where('field_name', $fieldName)
-                ->where('field_type', 'file')
-                ->update(['form_template' => $templateKey]);
+            $cases .= ' WHEN ? THEN ?';
+            $bindings[] = $fieldName;
+            $bindings[] = $templateKey;
         }
 
-        // Actively clear the upload-only documents rather than just skipping them,
-        // so re-running this seeder corrects an environment where they were set.
-        $cleared = FcFormField::whereIn('field_name', array_keys(self::UPLOAD_ONLY))
+        $names = array_keys(self::MAP);
+        $placeholders = implode(', ', array_fill(0, count($names), '?'));
+
+        // updated_at is set explicitly: raw SQL bypasses Eloquent's timestamp
+        // handling, and the per-field loop this replaces did bump it.
+        return DB::update(
+            "UPDATE fc_form_fields
+                SET form_template = CASE field_name{$cases} END,
+                    updated_at = ?
+              WHERE field_type = 'file'
+                AND field_name IN ({$placeholders})",
+            array_merge($bindings, [now()], $names)
+        );
+    }
+
+    /**
+     * Actively clear the upload-only documents rather than just skipping them, so
+     * re-running this seeder corrects an environment where they were set.
+     */
+    private function clearUploadOnly(): int
+    {
+        return FcFormField::whereIn('field_name', array_keys(self::UPLOAD_ONLY))
             ->where('field_type', 'file')
             ->whereNotNull('form_template')
             ->update(['form_template' => null]);
-
-        $this->command?->info("FcJoiningFillableFormsSeeder: set form_template on {$total} field rows, cleared {$cleared} upload-only rows.");
     }
 }
