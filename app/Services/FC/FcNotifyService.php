@@ -3,6 +3,7 @@
 namespace App\Services\FC;
 
 use App\Models\PathPage;
+use App\Models\FC\FcForm;
 use App\Services\Messaging\GupshupSmsService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -96,7 +97,7 @@ class FcNotifyService
             'Programme_Name' => $this->programme($programmeName),
             'Registration_ID' => $username,
             'Password' => $password,
-            'Portal_Link' => $this->portal(),
+            'Portal_Link' => $this->portal($registrationPk),
             'Institute_Name' => $this->institute(),
         ];
 
@@ -128,7 +129,7 @@ class FcNotifyService
             'Programme_Name' => $this->programme($programmeName),
             'Registration_ID' => $registrationId !== '' ? $registrationId : 'N/A',
             'Programme_Dates' => $this->programmeDates(),
-            'Portal_Link' => $this->portal(),
+            'Portal_Link' => $this->portal($registrationPk),
             'Institute_Name' => $this->institute(),
         ];
 
@@ -221,7 +222,7 @@ class FcNotifyService
         $replacements = [
             'Participant_Name' => $participantName !== '' ? $participantName : 'Candidate',
             'Step_Name' => $stepName !== '' ? $stepName : 'registration',
-            'Portal_Link' => $this->portal(),
+            'Portal_Link' => $this->portal($registrationPk),
             'Institute_Name' => $this->institute(),
         ];
 
@@ -256,7 +257,7 @@ class FcNotifyService
             'Pending_Steps' => ($pendingSteps !== null && trim($pendingSteps) !== '')
                 ? trim($pendingSteps)
                 : 'pending steps',
-            'Portal_Link' => $this->portal(),
+            'Portal_Link' => $this->portal($registrationPk),
             'Institute_Name' => $this->institute(),
         ];
 
@@ -313,9 +314,52 @@ class FcNotifyService
             : (string) config('gupshup.default_programme_name', 'Foundation Course');
     }
 
-    protected function portal(): string
+    protected function portal(?int $registrationPk = null): string
     {
+        $form = $this->resolveFormForPortal($registrationPk);
+        if ($form) {
+            return rtrim($form->landingPageUrl(), '/');
+        }
+
         return rtrim((string) config('gupshup.portal_url'), '/');
+    }
+
+    protected function resolveFormForPortal(?int $registrationPk): ?FcForm
+    {
+        $sessionFormId = session(FcRegistrationIntentService::SESSION_FORM_ID);
+        if (is_numeric($sessionFormId) && (int) $sessionFormId > 0) {
+            $fromSession = FcForm::query()
+                ->whereKey((int) $sessionFormId)
+                ->where('is_active', true)
+                ->first();
+            if ($fromSession) {
+                return $fromSession;
+            }
+        }
+
+        if ($registrationPk && $registrationPk > 0) {
+            $activeForm = FcForm::activeRegistrationDynamicForm();
+            $trackerTable = $activeForm?->trackerStorageTable() ?? 'student_masters';
+
+            if (Schema::hasTable($trackerTable) && Schema::hasColumn($trackerTable, 'form_id')) {
+                $userCol = fc_user_col($trackerTable);
+                $formId = (int) (DB::table($trackerTable)
+                    ->where($userCol, $registrationPk)
+                    ->value('form_id') ?? 0);
+
+                if ($formId > 0) {
+                    $fromTracker = FcForm::query()
+                        ->whereKey($formId)
+                        ->where('is_active', true)
+                        ->first();
+                    if ($fromTracker) {
+                        return $fromTracker;
+                    }
+                }
+            }
+        }
+
+        return FcForm::activeRegistrationDynamicForm();
     }
 
     protected function institute(): string

@@ -92,9 +92,20 @@ class FcForm extends Model
      */
     public static function activeRegistrationDynamicForm(): ?self
     {
-        return static::query()
+        $form = static::query()
             ->where('form_slug', 'fc-registration')
             ->where('is_active', true)
+            ->first();
+
+        if ($form) {
+            return $form;
+        }
+
+        // Fallback: current intake when slug fc-registration is not present (e.g. fc-102).
+        return static::query()
+            ->where('is_active', true)
+            ->where('form_slug', '!=', 'fc_template')
+            ->orderByDesc('id')
             ->first();
     }
 
@@ -122,6 +133,14 @@ class FcForm extends Model
         }
 
         return static::activeRegistrationDynamicForm();
+    }
+
+    /**
+     * Public landing page URL for this form (?form= encrypted token), as shown in Form Management.
+     */
+    public function landingPageUrl(): string
+    {
+        return route('frontpage.index', ['form' => $this->getRouteKey()]);
     }
 }
 

@@ -41,7 +41,7 @@ return [
         'registration_otp' => [
             'dlt_name' => 'FC-OTP',
             'dlt_template_id' => env('GUPSHUP_DLT_A1_REGISTRATION_OTP', '1477170161102987810'),
-            'body' => 'Dear {Applicant_Name}, your OTP to register for Foundation Course 2025 Batch-I is {OTP}. Valid for {OTP_Validity} minutes. Do not share this OTP. - {Institute_Name}',
+            'body' => 'Dear {Applicant_Name}, your OTP to register for Foundation Course 2026 Batch-I is {OTP}. Valid for {OTP_Validity} minutes. Do not share this OTP. - {Institute_Name}',
         ],
 
         // FC-CRED-I — A2

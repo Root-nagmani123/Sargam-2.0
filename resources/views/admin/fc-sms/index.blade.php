@@ -13,8 +13,8 @@
         Choose a template and send. Lists are different:
         <strong>Form step incomplete</strong> = started form (1+ step done) but still pending;
         <strong>Registration pending</strong> = login exists but no form step started yet.
-        Each send goes as <strong>SMS + Email</strong> (same trigger). Recipient lists are paginated (20/page);
-        send still covers <strong>all</strong> matching trainees (chunked).
+        Each send goes as <strong>SMS + Email</strong> (same trigger). Open a list to search, pick trainees, and send to
+        <strong>all</strong> or <strong>selected only</strong>.
         @if(strtolower((string) config('gupshup.driver')) === 'log')
             <span class="text-danger fw-semibold">SMS_DRIVER=log — SMS goes to laravel.log only, not to phones.</span>
         @endif
@@ -51,22 +51,20 @@
 
     <div class="card border-0 shadow-sm">
         <div class="card-body">
-            <form method="POST" action="{{ route('fc-reg.admin.sms.send') }}"
-                  onsubmit="return confirm('Send this SMS template to all matching incomplete trainees? This cannot be undone.');">
+            <form id="fcSmsSendForm" method="POST" action="{{ route('fc-reg.admin.sms.send') }}">
                 @csrf
 
                 <div class="mb-3">
                     <label class="form-label fw-semibold">SMS template</label>
                     @foreach($templates as $key => $tpl)
                         @php
-                            $pager = $lists[$key] ?? null;
-                            $isOpen = ($openList ?? null) === $key
-                                || request()->has($key.'_page');
+                            $isOpen = ($openList ?? null) === $key;
+                            $tableId = 'fcSmsRecipients' . strtoupper($key);
                         @endphp
                         <div class="border rounded-3 p-3 mb-2">
                             <div class="d-flex align-items-start gap-2 flex-wrap">
                                 <div class="form-check flex-grow-1 mb-0">
-                                    <input class="form-check-input ms-0 me-2" type="radio" name="template"
+                                    <input class="form-check-input ms-0 me-2 fc-sms-template-radio" type="radio" name="template"
                                            id="tpl_{{ $key }}" value="{{ $key }}"
                                            {{ old('template', 'b1') === $key ? 'checked' : '' }} required>
                                     <label class="form-check-label" for="tpl_{{ $key }}">
@@ -85,11 +83,28 @@
                                 </button>
                             </div>
 
-                            <div class="collapse mt-3 {{ $isOpen ? 'show' : '' }}" id="recipients_{{ $key }}">
+                            <div class="collapse mt-3 {{ $isOpen ? 'show' : '' }}" id="recipients_{{ $key }}"
+                                 data-fc-sms-template="{{ $key }}"
+                                 data-fc-sms-table="{{ $tableId }}">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2 px-1">
+                                    <span class="text-muted small">
+                                        Selected for this template:
+                                        <strong id="fcSmsSelectedCount_{{ $key }}">0</strong>
+                                    </span>
+                                    <button type="button" class="btn btn-link btn-sm p-0 fc-sms-clear-selection"
+                                            data-template="{{ $key }}">Clear selection</button>
+                                </div>
                                 <div class="table-responsive border rounded">
-                                    <table class="table table-sm table-hover mb-0 align-middle">
+                                    <table id="{{ $tableId }}"
+                                           class="table table-sm table-hover mb-0 align-middle w-100"
+                                           data-fc-sms-recipients="1">
                                         <thead class="table-light">
                                             <tr>
+                                                <th style="width:36px;">
+                                                    <input type="checkbox" class="form-check-input fc-sms-page-select-all"
+                                                           data-template="{{ $key }}" title="Select all on this page"
+                                                           aria-label="Select all on this page">
+                                                </th>
                                                 <th style="width:50px;">#</th>
                                                 <th>Name</th>
                                                 <th>Username</th>
@@ -99,41 +114,33 @@
                                                 @endif
                                             </tr>
                                         </thead>
-                                        <tbody>
-                                            @forelse(($pager ?? collect()) as $i => $row)
-                                                <tr>
-                                                    <td>{{ (($pager->currentPage() - 1) * $pager->perPage()) + $i + 1 }}</td>
-                                                    <td>{{ $row['name'] !== '' ? $row['name'] : '—' }}</td>
-                                                    <td><code class="small">{{ $row['user_id'] !== '' ? $row['user_id'] : '—' }}</code></td>
-                                                    <td>{{ $row['mobile'] }}</td>
-                                                    @if($key === 'b1')
-                                                        <td><span class="badge bg-warning text-dark">{{ $row['step_name'] ?? '—' }}</span></td>
-                                                    @endif
-                                                </tr>
-                                            @empty
-                                                <tr>
-                                                    <td colspan="{{ $key === 'b1' ? 5 : 4 }}" class="text-muted text-center py-3">
-                                                        No recipients found.
-                                                    </td>
-                                                </tr>
-                                            @endforelse
-                                        </tbody>
+                                        <tbody></tbody>
                                     </table>
                                 </div>
-                                @if($pager && $pager->hasPages())
-                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2 px-1">
-                                        <div class="text-muted small">
-                                            Showing {{ $pager->firstItem() }}–{{ $pager->lastItem() }} of {{ $pager->total() }}
-                                        </div>
-                                        <div>
-                                            {{ $pager->appends(request()->except($key.'_page'))->links() }}
-                                        </div>
-                                    </div>
-                                @endif
                             </div>
                         </div>
                     @endforeach
                 </div>
+
+                <div class="border rounded-3 p-3 mb-3 bg-light">
+                    <label class="form-label fw-semibold mb-2">Send to</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="send_mode" id="send_mode_all"
+                               value="all" {{ old('send_mode', 'all') === 'all' ? 'checked' : '' }} required>
+                        <label class="form-check-label" for="send_mode_all">
+                            All matching recipients for the selected template
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="send_mode" id="send_mode_selected"
+                               value="selected" {{ old('send_mode') === 'selected' ? 'checked' : '' }} required>
+                        <label class="form-check-label" for="send_mode_selected">
+                            Selected trainees only <span class="text-muted">(tick checkboxes in the list above)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="fcSmsPkInputs"></div>
 
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-send me-1"></i>Send SMS + Email
@@ -144,3 +151,193 @@
 
 </div>
 @endsection
+
+@push('scripts')
+<script>
+$(function () {
+    var recipientsUrl = @json(route('fc-reg.admin.sms.recipients'));
+    var initialized = {};
+    var selectedByTemplate = { b1: new Set(), b2: new Set() };
+
+    var dtLanguage = {
+        processing: 'Loading…',
+        search: '',
+        searchPlaceholder: 'Search name, username, mobile…',
+        lengthMenu: 'Show _MENU_',
+        info: 'Showing _START_–_END_ of _TOTAL_ recipients',
+        infoEmpty: 'Showing 0 of 0 recipients',
+        infoFiltered: '(filtered from _MAX_ total)',
+        emptyTable: 'No recipients found.',
+        zeroRecords: 'No matching recipients.',
+        paginate: { previous: '‹', next: '›' }
+    };
+
+    function activeTemplate() {
+        return $('input[name="template"]:checked').val() || 'b1';
+    }
+
+    function updateSelectedCount(template) {
+        var tpl = template || activeTemplate();
+        var count = selectedByTemplate[tpl] ? selectedByTemplate[tpl].size : 0;
+        $('#fcSmsSelectedCount_' + tpl).text(count);
+    }
+
+    function syncPageCheckboxes(tableId, template) {
+        var $table = $('#' + tableId);
+        var set = selectedByTemplate[template] || new Set();
+        $table.find('.fc-sms-recipient-pick').each(function () {
+            this.checked = set.has(parseInt(this.value, 10));
+        });
+        var $picks = $table.find('.fc-sms-recipient-pick');
+        var allChecked = $picks.length > 0 && $picks.filter(':checked').length === $picks.length;
+        $table.find('.fc-sms-page-select-all').prop('checked', allChecked);
+    }
+
+    function initRecipientsTable($collapse) {
+        var template = $collapse.data('fc-sms-template');
+        var tableId = $collapse.data('fc-sms-table');
+        if (!template || !tableId || initialized[tableId]) {
+            return;
+        }
+
+        var $table = $('#' + tableId);
+        if (!$table.length || $.fn.DataTable.isDataTable($table)) {
+            initialized[tableId] = true;
+            return;
+        }
+
+        var columns = [
+            { data: 'select', name: 'select', orderable: false, searchable: false, className: 'text-center', width: '36px' },
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'text-center', width: '50px' },
+            { data: 'name', name: 'name' },
+            { data: 'user_id', name: 'user_id', orderable: false },
+            { data: 'mobile', name: 'mobile' }
+        ];
+
+        if (template === 'b1') {
+            columns.push({ data: 'step_name', name: 'step_name', orderable: false });
+        }
+
+        $table.DataTable({
+            processing: true,
+            serverSide: false,
+            searching: true,
+            ordering: true,
+            order: [[2, 'asc']],
+            autoWidth: false,
+            responsive: false,
+            pageLength: 25,
+            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+            dom: "<'row align-items-center mb-2'<'col-sm-6'l><'col-sm-6'f>>" +
+                 "<'row'<'col-12'tr>>" +
+                 "<'row align-items-center mt-2'<'col-sm-6'i><'col-sm-6'p>>",
+            language: dtLanguage,
+            ajax: {
+                url: recipientsUrl,
+                type: 'GET',
+                data: function (d) {
+                    d.template = template;
+                }
+            },
+            columns: columns,
+            drawCallback: function () {
+                syncPageCheckboxes(tableId, template);
+                if (typeof adjustAllDataTables === 'function') {
+                    setTimeout(adjustAllDataTables, 50);
+                }
+            }
+        });
+
+        initialized[tableId] = true;
+    }
+
+    $('[data-fc-sms-template]').each(function () {
+        var $collapse = $(this);
+        if ($collapse.hasClass('show')) {
+            initRecipientsTable($collapse);
+        }
+        $collapse.on('shown.bs.collapse', function () {
+            initRecipientsTable($collapse);
+        });
+    });
+
+    $(document).on('change', '.fc-sms-recipient-pick', function () {
+        var template = $(this).data('template');
+        var pk = parseInt(this.value, 10);
+        if (!selectedByTemplate[template]) {
+            selectedByTemplate[template] = new Set();
+        }
+        if (this.checked) {
+            selectedByTemplate[template].add(pk);
+        } else {
+            selectedByTemplate[template].delete(pk);
+        }
+        updateSelectedCount(template);
+    });
+
+    $(document).on('change', '.fc-sms-page-select-all', function () {
+        var template = $(this).data('template');
+        var tableId = 'fcSmsRecipients' + template.toUpperCase();
+        var checked = this.checked;
+        if (!selectedByTemplate[template]) {
+            selectedByTemplate[template] = new Set();
+        }
+        $('#' + tableId + ' .fc-sms-recipient-pick').each(function () {
+            this.checked = checked;
+            var pk = parseInt(this.value, 10);
+            if (checked) {
+                selectedByTemplate[template].add(pk);
+            } else {
+                selectedByTemplate[template].delete(pk);
+            }
+        });
+        updateSelectedCount(template);
+    });
+
+    $('.fc-sms-clear-selection').on('click', function () {
+        var template = $(this).data('template');
+        selectedByTemplate[template] = new Set();
+        var tableId = 'fcSmsRecipients' + template.toUpperCase();
+        $('#' + tableId + ' .fc-sms-recipient-pick').prop('checked', false);
+        $('#' + tableId + ' .fc-sms-page-select-all').prop('checked', false);
+        updateSelectedCount(template);
+    });
+
+    $('input[name="template"]').on('change', function () {
+        updateSelectedCount(this.value);
+    });
+
+    $('#fcSmsSendForm').on('submit', function (e) {
+        var mode = $('input[name="send_mode"]:checked').val();
+        var template = activeTemplate();
+        var $pkWrap = $('#fcSmsPkInputs');
+        $pkWrap.empty();
+
+        if (mode === 'selected') {
+            var set = selectedByTemplate[template] || new Set();
+            if (set.size === 0) {
+                e.preventDefault();
+                alert('Please select at least one trainee from the list (use the checkboxes).');
+                return false;
+            }
+            set.forEach(function (pk) {
+                $('<input>', { type: 'hidden', name: 'registration_pks[]', value: pk }).appendTo($pkWrap);
+            });
+            if (!confirm('Send SMS + Email to ' + set.size + ' selected trainee(s)?')) {
+                e.preventDefault();
+                return false;
+            }
+            return true;
+        }
+
+        if (!confirm('Send SMS + Email to ALL matching trainees for the selected template?')) {
+            e.preventDefault();
+            return false;
+        }
+        return true;
+    });
+
+    updateSelectedCount(activeTemplate());
+});
+</script>
+@endpush

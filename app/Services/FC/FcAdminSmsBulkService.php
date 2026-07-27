@@ -36,15 +36,16 @@ class FcAdminSmsBulkService
     }
 
     /**
+     * @param  list<int>|null  $registrationPks  When set, send only to these roster pk values.
      * @return array{ok: bool, message: string, sent: int, skipped: int, failed: int}
      */
-    public function send(string $template): array
+    public function send(string $template, ?array $registrationPks = null): array
     {
         $template = strtolower(trim($template));
 
         return match ($template) {
-            self::TEMPLATE_B1 => $this->sendByTemplate(self::TEMPLATE_B1),
-            self::TEMPLATE_B2 => $this->sendByTemplate(self::TEMPLATE_B2),
+            self::TEMPLATE_B1 => $this->sendByTemplate(self::TEMPLATE_B1, $registrationPks),
+            self::TEMPLATE_B2 => $this->sendByTemplate(self::TEMPLATE_B2, $registrationPks),
             default => [
                 'ok' => false,
                 'message' => 'Invalid template. Choose Form step incomplete or Registration pending.',
@@ -73,6 +74,49 @@ class FcAdminSmsBulkService
     }
 
     /**
+     * Full recipient list for one template (chunked scan — used by DataTables AJAX).
+     *
+     * @return list<array{pk: int, name: string, mobile: string, user_id: string, step_name: ?string}>
+     */
+    public function allRecipientsForTemplate(string $template): array
+    {
+        $template = strtolower(trim($template));
+        if ($template !== self::TEMPLATE_B1 && $template !== self::TEMPLATE_B2) {
+            return [];
+        }
+
+        $form = FcForm::activeRegistrationDynamicForm();
+        $steps = $this->trackableSteps($form);
+        $out = [];
+        $chunkCol = $this->trackerChunkColumn($form);
+
+        $this->eligibleTrackerQuery($form)->orderBy($chunkCol)->chunkById(self::CHUNK_SIZE, function ($rows) use (
+            &$out,
+            $template,
+            $form,
+            $steps
+        ) {
+            foreach ($this->classifyTrackerChunk($rows, $form, $steps) as $item) {
+                if (($item['bucket'] ?? null) !== $template) {
+                    continue;
+                }
+
+                $out[] = [
+                    'pk' => (int) $item['pk'],
+                    'name' => trim((string) ($item['name'] ?? '')),
+                    'mobile' => trim((string) ($item['mobile'] ?? '')),
+                    'user_id' => trim((string) ($item['user_id'] ?? '')),
+                    'step_name' => $template === self::TEMPLATE_B1
+                        ? trim((string) ($item['step_name'] ?? ''))
+                        : null,
+                ];
+            }
+        }, $chunkCol);
+
+        return $out;
+    }
+
+    /**
      * One chunked roster pass: counts + one page of each list (no full dataset in memory).
      *
      * @return array{
@@ -97,9 +141,10 @@ class FcAdminSmsBulkService
         ];
 
         $form = FcForm::activeRegistrationDynamicForm();
-        $steps = $form ? $form->activeSteps()->get() : collect();
+        $steps = $this->trackableSteps($form);
+        $chunkCol = $this->trackerChunkColumn($form);
 
-        $this->eligibleRosterQuery()->orderBy('pk')->chunkById(self::CHUNK_SIZE, function ($rows) use (
+        $this->eligibleTrackerQuery($form)->orderBy($chunkCol)->chunkById(self::CHUNK_SIZE, function ($rows) use (
             &$counts,
             &$pageItems,
             $offsets,
@@ -107,7 +152,7 @@ class FcAdminSmsBulkService
             $form,
             $steps
         ) {
-            foreach ($this->classifyChunk($rows, $form, $steps) as $item) {
+            foreach ($this->classifyTrackerChunk($rows, $form, $steps) as $item) {
                 $bucket = $item['bucket'] ?? null;
                 if ($bucket !== self::TEMPLATE_B1 && $bucket !== self::TEMPLATE_B2) {
                     continue;
@@ -125,7 +170,7 @@ class FcAdminSmsBulkService
                 }
                 $counts[$bucket]++;
             }
-        }, 'pk');
+        }, $chunkCol);
 
         return [
             'b1' => $counts[self::TEMPLATE_B1],
@@ -167,11 +212,26 @@ class FcAdminSmsBulkService
     }
 
     /**
+     * @param  list<int>|null  $registrationPks
      * @return array{ok: bool, message: string, sent: int, skipped: int, failed: int}
      */
-    protected function sendByTemplate(string $template): array
+    protected function sendByTemplate(string $template, ?array $registrationPks = null): array
     {
         @set_time_limit(0);
+
+        $registrationPks = $registrationPks !== null
+            ? array_values(array_unique(array_filter(array_map('intval', $registrationPks))))
+            : null;
+
+        if ($registrationPks !== null && $registrationPks === []) {
+            return [
+                'ok' => false,
+                'message' => 'Select at least one trainee to send.',
+                'sent' => 0,
+                'skipped' => 0,
+                'failed' => 0,
+            ];
+        }
 
         // Fail fast on bad SMTP so 484 recipients are not blocked ~2s each.
         config(['mail.mailers.smtp.timeout' => 5]);
@@ -181,31 +241,39 @@ class FcAdminSmsBulkService
             'template' => $template,
             'sms_driver' => config('gupshup.driver'),
             'mail_host' => config('mail.mailers.smtp.host'),
+            'selected_only' => $registrationPks !== null,
+            'selected_count' => $registrationPks !== null ? count($registrationPks) : null,
         ]);
 
         $form = FcForm::activeRegistrationDynamicForm();
-        $steps = $form ? $form->activeSteps()->get() : collect();
+        $steps = $this->trackableSteps($form);
         $programme = $this->programmeName($form);
         $lastDate = $this->registrationDeadlineText();
+        $chunkCol = $this->trackerChunkColumn($form);
 
         $sent = 0;
         $failed = 0;
         $matched = 0;
         $emailSkipped = false;
 
-        $this->eligibleRosterQuery()->orderBy('pk')->chunkById(self::CHUNK_SIZE, function ($rows) use (
+        $this->eligibleTrackerQuery($form)->orderBy($chunkCol)->chunkById(self::CHUNK_SIZE, function ($rows) use (
             $template,
             $form,
             $steps,
             $programme,
             $lastDate,
+            $registrationPks,
             &$sent,
             &$failed,
             &$matched,
             &$emailSkipped
         ) {
-            foreach ($this->classifyChunk($rows, $form, $steps) as $row) {
+            foreach ($this->classifyTrackerChunk($rows, $form, $steps) as $row) {
                 if (($row['bucket'] ?? null) !== $template) {
+                    continue;
+                }
+
+                if ($registrationPks !== null && ! in_array((int) ($row['pk'] ?? 0), $registrationPks, true)) {
                     continue;
                 }
 
@@ -253,15 +321,17 @@ class FcAdminSmsBulkService
                     $emailSkipped = true;
                 }
             }
-        }, 'pk');
+        }, $chunkCol);
 
         if ($matched === 0) {
-            $emptyMsg = $template === self::TEMPLATE_B1
-                ? 'No trainees found who started the form and still have a pending step.'
-                : 'No trainees found with registration pending (no form step started yet).';
+            $emptyMsg = $registrationPks !== null
+                ? 'None of the selected trainees are eligible for this template.'
+                : ($template === self::TEMPLATE_B1
+                    ? 'No trainees found who started the form and still have a pending step.'
+                    : 'No trainees found with registration pending (no form step started yet).');
 
             return [
-                'ok' => true,
+                'ok' => $registrationPks === null,
                 'message' => $emptyMsg,
                 'sent' => 0,
                 'skipped' => 0,
@@ -270,7 +340,9 @@ class FcAdminSmsBulkService
         }
 
         $label = $template === self::TEMPLATE_B1 ? 'Form step incomplete' : 'Registration pending';
-        $message = "{$label} processed for {$sent} trainee(s).";
+        $message = $registrationPks !== null
+            ? "{$label} sent to {$sent} selected trainee(s)."
+            : "{$label} processed for {$sent} trainee(s).";
 
         if (strtolower((string) config('gupshup.driver')) === 'log') {
             $message .= ' SMS_DRIVER=log (SMS written to laravel.log only — not sent to phones).';
@@ -297,76 +369,116 @@ class FcAdminSmsBulkService
     }
 
     /**
-     * Eligible roster query (columns + filters only — no get()).
+     * Steps with tracker columns — same set as FcFormOverviewDataTable / report incomplete filter.
      */
-    protected function eligibleRosterQuery()
+    protected function trackableSteps(?FcForm $form): Collection
     {
-        if (! Schema::hasTable('fc_registration_master')) {
-            return DB::table('fc_registration_master')->whereRaw('1 = 0');
+        if (! $form) {
+            return collect();
         }
 
-        $columns = ['pk', 'display_name', 'contact_no', 'user_id'];
-        if (Schema::hasColumn('fc_registration_master', 'email')) {
-            $columns[] = 'email';
-        }
-        if (Schema::hasColumn('fc_registration_master', 'ph_value')) {
-            $columns[] = 'ph_value';
+        return $form->activeSteps()
+            ->whereNotNull('tracker_column')
+            ->orderBy('step_number')
+            ->get()
+            ->filter(fn ($s) => preg_match('/^[a-zA-Z0-9_]+$/', (string) $s->tracker_column))
+            ->values();
+    }
+
+    protected function trackerChunkColumn(?FcForm $form): string
+    {
+        $table = $form?->trackerStorageTable() ?? 'student_masters';
+
+        if (Schema::hasColumn($table, 'id')) {
+            return 'id';
         }
 
-        $query = DB::table('fc_registration_master')
-            ->select($columns)
-            ->whereNotNull('contact_no')
-            ->where('contact_no', '!=', '')
-            ->whereNotNull('user_id')
-            ->where('user_id', '!=', '');
+        if (Schema::hasColumn($table, 'pk')) {
+            return 'pk';
+        }
 
-        if (Schema::hasColumn('fc_registration_master', 'application_type')) {
-            $query->where(function ($q) {
-                $q->whereNull('application_type')
-                    ->orWhere('application_type', '!=', FcRosterApplicationGuardService::APPLICATION_EXEMPTION);
-            });
+        return 'id';
+    }
+
+    /**
+     * Tracker rows for the active FC form (same scope as the form overview report).
+     */
+    protected function eligibleTrackerQuery(?FcForm $form)
+    {
+        if (! $form) {
+            return DB::table('student_masters')->whereRaw('1 = 0');
+        }
+
+        $table = $form->trackerStorageTable();
+        if (! fc_schema_has_table($table)) {
+            return DB::table($table)->whereRaw('1 = 0');
+        }
+
+        $query = DB::table($table);
+
+        if (fc_schema_has_column($table, 'form_id')) {
+            $query->where('form_id', $form->id);
         }
 
         return $query;
     }
 
     /**
-     * Classify one chunk with batch credential + tracker lookups (no N+1).
+     * Classify tracker rows for the active form (batch roster lookup — no N+1).
      *
-     * @param  Collection<int, object>  $rows
+     * @param  Collection<int, object>  $trackerRows
      * @param  Collection<int, FcFormStep>  $steps
      * @return list<array<string, mixed>>
      */
-    protected function classifyChunk(Collection $rows, ?FcForm $form, Collection $steps): array
+    protected function classifyTrackerChunk(Collection $trackerRows, ?FcForm $form, Collection $steps): array
     {
-        if ($rows->isEmpty()) {
+        if ($trackerRows->isEmpty() || ! $form || $steps->isEmpty()) {
             return [];
         }
 
-        $logins = $rows->map(fn ($r) => trim((string) ($r->user_id ?? '')))
-            ->filter(fn ($u) => $u !== '')
+        $userCol = fc_user_col($form->trackerStorageTable());
+        $trackerKeys = $trackerRows
+            ->map(fn ($r) => $r->{$userCol} ?? null)
+            ->filter(fn ($v) => $v !== null && $v !== '')
             ->unique()
-            ->values()
-            ->all();
+            ->values();
 
-        $credMap = [];
-        if ($logins !== [] && Schema::hasTable('user_credentials')) {
-            $credMap = DB::table('user_credentials')
-                ->select(['pk', 'user_name'])
-                ->whereIn('user_name', $logins)
+        $rosterByPk = collect();
+        if (Schema::hasTable('fc_registration_master') && $trackerKeys->isNotEmpty()) {
+            $rosterByPk = DB::table('fc_registration_master')
+                ->whereIn('pk', $trackerKeys->map(fn ($v) => (int) $v)->filter(fn ($v) => $v > 0)->all())
                 ->get()
-                ->mapWithKeys(fn ($c) => [trim((string) $c->user_name) => (int) $c->pk])
-                ->all();
+                ->keyBy('pk');
         }
 
-        $trackerByUser = [];
-        if ($form && $steps->isNotEmpty()) {
-            $trackerByUser = $this->batchTrackerRows($form, $rows, $credMap);
+        $rosterByLogin = collect();
+        if (Schema::hasTable('fc_registration_master') && Schema::hasTable('user_credentials')) {
+            $credLogins = DB::table('user_credentials')
+                ->whereIn('pk', $trackerKeys->map(fn ($v) => (int) $v)->filter(fn ($v) => $v > 0)->all())
+                ->pluck('user_name')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            if ($credLogins !== []) {
+                $rosterByLogin = DB::table('fc_registration_master')
+                    ->whereIn('user_id', $credLogins)
+                    ->get()
+                    ->keyBy(fn ($r) => trim((string) $r->user_id));
+            }
         }
 
         $out = [];
-        foreach ($rows as $row) {
-            $classified = $this->classifyRow($row, $form, $steps, $credMap, $trackerByUser);
+        foreach ($trackerRows as $trackerRow) {
+            $classified = $this->classifyTrackerRow(
+                $trackerRow,
+                $form,
+                $steps,
+                $userCol,
+                $rosterByPk,
+                $rosterByLogin,
+            );
             if ($classified !== null) {
                 $out[] = $classified;
             }
@@ -376,45 +488,66 @@ class FcAdminSmsBulkService
     }
 
     /**
-     * @param  array<string, int>  $credMap
-     * @param  array<int|string, object>  $trackerByUser
+     * @param  Collection<int|string, object>  $rosterByPk
+     * @param  Collection<string, object>  $rosterByLogin
      * @return array<string, mixed>|null
      */
-    protected function classifyRow(
-        object $row,
-        ?FcForm $form,
+    protected function classifyTrackerRow(
+        object $trackerRow,
+        FcForm $form,
         Collection $steps,
-        array $credMap,
-        array $trackerByUser,
+        string $userCol,
+        Collection $rosterByPk,
+        Collection $rosterByLogin,
     ): ?array {
-        $mobile = trim((string) ($row->contact_no ?? ''));
-        $login = trim((string) ($row->user_id ?? ''));
+        $trackerUserKey = $trackerRow->{$userCol} ?? null;
+        if ($trackerUserKey === null || $trackerUserKey === '') {
+            return null;
+        }
+
+        $roster = $rosterByPk->get((int) $trackerUserKey);
+        if (! $roster && is_numeric($trackerUserKey)) {
+            $login = fc_user_name_for_id((int) $trackerUserKey);
+            if ($login) {
+                $roster = $rosterByLogin->get(trim($login));
+            }
+        }
+
+        if (! $roster) {
+            return null;
+        }
+
+        if (Schema::hasColumn('fc_registration_master', 'application_type')) {
+            $appType = $roster->application_type ?? null;
+            if ($appType === FcRosterApplicationGuardService::APPLICATION_EXEMPTION) {
+                return null;
+            }
+        }
+
+        $mobile = trim((string) ($roster->contact_no ?? ''));
+        $login = trim((string) ($roster->user_id ?? ''));
         if ($mobile === '' || $login === '') {
             return null;
         }
 
-        $progressUserId = $credMap[$login] ?? FcRosterAuthService::stagedUserId((int) $row->pk);
-        $trackerKey = $this->trackerLookupKey($progressUserId, $row, $credMap);
-        $trackerRow = $trackerKey !== null ? ($trackerByUser[$trackerKey] ?? null) : null;
+        $progress = $this->stepProgressFromTracker($form, $steps, $trackerRow);
 
-        $progress = $this->stepProgressFromTracker($form, $steps, $trackerRow, $row);
-
-        if ($progress['pending_step'] === null && $progress['done'] > 0) {
+        if ($progress['pending_step'] === null) {
             return null;
         }
 
-        $email = trim((string) ($row->email ?? ''));
+        $email = trim((string) ($roster->email ?? ''));
         $base = [
-            'pk' => (int) $row->pk,
+            'pk' => (int) $roster->pk,
             'mobile' => $mobile,
-            'name' => trim((string) ($row->display_name ?? '')),
+            'name' => trim((string) ($roster->display_name ?? '')),
             'user_id' => $login,
             'email' => $email !== '' ? $email : null,
             'step_name' => $progress['pending_step'],
             'pending_steps' => $progress['pending_steps'] ?? $progress['pending_step'],
         ];
 
-        if ($progress['done'] >= 1 && $progress['pending_step'] !== null) {
+        if ($progress['done'] >= 1) {
             $base['bucket'] = self::TEMPLATE_B1;
 
             return $base;
@@ -431,70 +564,12 @@ class FcAdminSmsBulkService
     }
 
     /**
-     * @param  array<string, int>  $credMap
-     * @return array<int|string, object>
-     */
-    protected function batchTrackerRows(FcForm $form, Collection $rows, array $credMap): array
-    {
-        $trackerTable = $form->trackerStorageTable();
-        if (! fc_schema_has_table($trackerTable)) {
-            return [];
-        }
-
-        $userCol = fc_user_col($trackerTable);
-        $keys = [];
-
-        foreach ($rows as $row) {
-            $login = trim((string) ($row->user_id ?? ''));
-            if ($login === '') {
-                continue;
-            }
-            $progressUserId = $credMap[$login] ?? FcRosterAuthService::stagedUserId((int) $row->pk);
-            $key = $this->trackerLookupKey($progressUserId, $row, $credMap);
-            if ($key !== null) {
-                $keys[] = $key;
-            }
-        }
-
-        $keys = array_values(array_unique($keys));
-        if ($keys === []) {
-            return [];
-        }
-
-        $query = DB::table($trackerTable)->whereIn($userCol, $keys);
-        if (fc_schema_has_column($trackerTable, 'form_id')) {
-            $query->where('form_id', $form->id);
-        }
-
-        return $query->get()->keyBy($userCol)->all();
-    }
-
-    /**
-     * @param  array<string, int>  $credMap
-     */
-    protected function trackerLookupKey(int $progressUserId, object $row, array $credMap): int|string|null
-    {
-        // Prefer migrated credentials pk; else staged roster pk when tracker uses integer user_id.
-        if ($progressUserId > 0) {
-            return $progressUserId;
-        }
-
-        $login = trim((string) ($row->user_id ?? ''));
-        if ($login !== '' && isset($credMap[$login])) {
-            return $credMap[$login];
-        }
-
-        return (int) $row->pk;
-    }
-
-    /**
      * @return array{done: int, pending_step: ?string, pending_steps: ?string}
      */
     protected function stepProgressFromTracker(
         ?FcForm $form,
         Collection $steps,
         ?object $trackerRow,
-        object $rosterRow,
     ): array {
         if (! $form || $steps->isEmpty()) {
             return ['done' => 0, 'pending_step' => 'Basic Information', 'pending_steps' => 'Basic Information'];
@@ -502,17 +577,8 @@ class FcAdminSmsBulkService
 
         $done = 0;
         $pending = [];
-        $hasPh = filled($rosterRow->ph_value ?? null);
 
         foreach ($steps as $step) {
-            $isSpecialAssistant = str_starts_with(
-                strtolower(trim((string) $step->step_name)),
-                'special assist'
-            );
-            if ($isSpecialAssistant && ! $hasPh) {
-                continue;
-            }
-
             $col = $step->tracker_column ?? null;
             $complete = false;
             if ($col && $trackerRow !== null && isset($trackerRow->{$col})) {
@@ -523,13 +589,6 @@ class FcAdminSmsBulkService
                 $done++;
             } else {
                 $pending[] = trim((string) $step->step_name) ?: 'registration';
-            }
-        }
-
-        if ($pending === [] && $trackerRow !== null) {
-            $travelDone = isset($trackerRow->travel_done) ? (bool) $trackerRow->travel_done : true;
-            if (! $travelDone) {
-                $pending[] = 'Travel Plan';
             }
         }
 
