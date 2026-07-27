@@ -2073,6 +2073,9 @@ public function noticedeleteMessage($id,$type)
             ->leftJoin('student_notice_status as sns', 'student_memo_status.student_notice_status_pk', '=', 'sns.pk')
             ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
             ->leftJoin('memo_conclusion_master as mcm', 'student_memo_status.memo_conclusion_master_pk', '=', 'mcm.pk')
+            // The memo's OWN meeting venue (set at Generate Memo time) — distinct
+            // from the original notice's session venue, which doesn't apply here.
+            ->leftJoin('venue_master as vm', 'student_memo_status.venue_master_pk', '=', 'vm.venue_id')
             ->whereIn('student_memo_status.student_notice_status_pk', $status2Ids)
             ->select(
                 'student_memo_status.pk as memo_id',
@@ -2080,6 +2083,8 @@ public function noticedeleteMessage($id,$type)
                 'student_memo_status.student_pk',
                 'student_memo_status.course_master_pk',
                 'student_memo_status.date as date_',
+                'student_memo_status.start_time as meeting_time',
+                'vm.venue_name',
                 DB::raw('NULL as subject_master_pk'),
                 DB::raw('NULL as subject_topic'),
                 DB::raw('NULL as venue_id'),
@@ -3197,7 +3202,12 @@ public function getGeneratedMemoData(Request $request)
         // Y-m-d string — anything else is silently rejected by the browser,
         // leaving the field empty. Format it down before sending.
         'date' => $memo->date ? Carbon::parse($memo->date)->format('Y-m-d') : null,
-        'start_time' => $memo->start_time ?? null,
+        // student_memo_status.start_time is a TIME column that includes seconds
+        // ("11:23:00"). The Meeting Time <input type="time"> happily accepts that
+        // and displays it fine, but re-submitting it as-is fails the server's
+        // 'date_format:H:i' validation (which requires exactly H:i, no seconds) —
+        // so Save Changes errored even when the admin hadn't touched the time.
+        'start_time' => $memo->start_time ? Carbon::parse($memo->start_time)->format('H:i') : null,
         'message' => $memo->message ?? null,
         // Notice-related fields
         'course_master_name' => $memo->course_name ?? '',
@@ -3219,6 +3229,15 @@ public function getGeneratedMemoData(Request $request)
 public function store_memo_status(Request $request)
 {
     // print_r($request->all());die;
+    // NOTE: the "Generate Memo" form has TWO separate date inputs — the readonly
+    // `date_memo_notice` (the original notice's date, shown near the top for
+    // context only) and `memo_date` (the actual Meeting Date the admin picks,
+    // paired with Meeting Time). This used to validate/save `date_memo_notice`
+    // here, so the memo's saved date silently ignored whatever the admin
+    // actually entered in the Date field and stored the notice's original date
+    // instead — hence Edit Memo later showing a date that didn't match what was
+    // typed at generate time. The AJAX edit path (updateMemoStatus) already reads
+    // the correct field; this brings create in line with it.
     $validated = $request->validate([
         'student_notice_status_pk' => 'required|integer',
         'memo_type_master_pk'             => 'required|integer',
@@ -3226,7 +3245,7 @@ public function store_memo_status(Request $request)
         'course_master_pk'                => 'required|integer',
         'course_master_name'             => 'required|string',
         'memo_count'                      => 'required|integer',
-        'date_memo_notice'               => 'required|date',
+        'memo_date'                      => 'required|date',
         'venue'                          => 'required|integer',
         'meeting_time'                   => 'required|date_format:H:i',
         'memo_notice_template_pk'        => 'required|exists:memo_notice_templates,pk',
@@ -3244,7 +3263,7 @@ public function store_memo_status(Request $request)
         'memo_no'                         => $request->memo_number,
         'memo_count'                      => $validated['memo_count'],
         'venue_master_pk'                 => $validated['venue'],
-        'date'                            => $validated['date_memo_notice'],
+        'date'                            => $validated['memo_date'],
         'start_time'                      => $validated['meeting_time'],
         'message'                         => $validated['Remark'] ?? null,
         'memo_notice_template_pk'         => $validated['memo_notice_template_pk'] ?? null,
@@ -3261,7 +3280,7 @@ public function store_memo_status(Request $request)
         (int) $validated['student_pk'],
         (int) $validated['course_master_pk'],
         (int) $validated['student_notice_status_pk'],
-        $validated['date_memo_notice'],
+        $validated['memo_date'],
         $validated['Remark'] ?? null
     );
 
