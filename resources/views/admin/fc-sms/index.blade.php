@@ -15,6 +15,9 @@
         <strong>Registration pending</strong> = login exists but no form step started yet.
         Each send goes as <strong>SMS + Email</strong> (same trigger). Recipient lists are paginated (20/page);
         send still covers <strong>all</strong> matching trainees (chunked).
+        @if(strtolower((string) config('gupshup.driver')) === 'log')
+            <span class="text-danger fw-semibold">SMS_DRIVER=log — SMS goes to laravel.log only, not to phones.</span>
+        @endif
     </p>
 
     @if(session('success'))

@@ -17,10 +17,27 @@ use Illuminate\Support\Facades\Schema;
  */
 class FcNotifyService
 {
+    /** Skip further emails in this request after repeated SMTP failures (bulk safety). */
+    protected bool $emailCircuitOpen = false;
+
+    protected int $emailFailStreak = 0;
+
     public function __construct(
         private GupshupSmsService $sms,
         private FcOtpService $otp,
     ) {
+    }
+
+    /** Call at the start of admin bulk send. */
+    public function resetEmailCircuit(): void
+    {
+        $this->emailCircuitOpen = false;
+        $this->emailFailStreak = 0;
+    }
+
+    public function isEmailCircuitOpen(): bool
+    {
+        return $this->emailCircuitOpen;
     }
 
     /** A1 — Registration OTP. Returns ['otp' => ?string, 'sent' => bool]. */
@@ -383,6 +400,10 @@ class FcNotifyService
         array $replacements,
         ?int $registrationPk = null,
     ): bool {
+        if ($this->emailCircuitOpen) {
+            return false;
+        }
+
         try {
             $template = config("fc_email.templates.{$templateKey}");
             if (! is_array($template) || empty($template['subject']) || empty($template['body'])) {
@@ -402,13 +423,25 @@ class FcNotifyService
                     ->subject($subject);
             });
 
+            $this->emailFailStreak = 0;
+
             return true;
         } catch (\Throwable $e) {
+            $this->emailFailStreak++;
             Log::error('FcNotifyService: Email failed: '.$e->getMessage(), [
                 'template' => $templateKey,
                 'registration_pk' => $registrationPk,
                 'email' => $email,
             ]);
+
+            // After repeated SMTP auth/timeout failures, skip remaining emails this request
+            // so bulk SMS is not blocked for hundreds of recipients.
+            if ($this->emailFailStreak >= 3) {
+                $this->emailCircuitOpen = true;
+                Log::warning('FcNotifyService: email circuit open — further emails skipped for this request.', [
+                    'fail_streak' => $this->emailFailStreak,
+                ]);
+            }
 
             return false;
         }

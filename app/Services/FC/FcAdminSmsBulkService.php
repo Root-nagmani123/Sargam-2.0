@@ -10,6 +10,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\LengthAwarePaginator as Paginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -172,6 +173,16 @@ class FcAdminSmsBulkService
     {
         @set_time_limit(0);
 
+        // Fail fast on bad SMTP so 484 recipients are not blocked ~2s each.
+        config(['mail.mailers.smtp.timeout' => 5]);
+        $this->notify->resetEmailCircuit();
+
+        Log::info('FC admin bulk send started.', [
+            'template' => $template,
+            'sms_driver' => config('gupshup.driver'),
+            'mail_host' => config('mail.mailers.smtp.host'),
+        ]);
+
         $form = FcForm::activeRegistrationDynamicForm();
         $steps = $form ? $form->activeSteps()->get() : collect();
         $programme = $this->programmeName($form);
@@ -180,6 +191,7 @@ class FcAdminSmsBulkService
         $sent = 0;
         $failed = 0;
         $matched = 0;
+        $emailSkipped = false;
 
         $this->eligibleRosterQuery()->orderBy('pk')->chunkById(self::CHUNK_SIZE, function ($rows) use (
             $template,
@@ -189,7 +201,8 @@ class FcAdminSmsBulkService
             $lastDate,
             &$sent,
             &$failed,
-            &$matched
+            &$matched,
+            &$emailSkipped
         ) {
             foreach ($this->classifyChunk($rows, $form, $steps) as $row) {
                 if (($row['bucket'] ?? null) !== $template) {
@@ -219,8 +232,25 @@ class FcAdminSmsBulkService
                         );
                     }
                     $sent++;
+
+                    if ($matched === 1 || $matched % 50 === 0) {
+                        Log::info('FC admin bulk send progress.', [
+                            'template' => $template,
+                            'matched' => $matched,
+                            'sent' => $sent,
+                            'email_circuit_open' => $this->notify->isEmailCircuitOpen(),
+                        ]);
+                    }
                 } catch (\Throwable $e) {
                     $failed++;
+                    Log::error('FC admin bulk send recipient failed: '.$e->getMessage(), [
+                        'template' => $template,
+                        'pk' => $row['pk'] ?? null,
+                    ]);
+                }
+
+                if ($this->notify->isEmailCircuitOpen()) {
+                    $emailSkipped = true;
                 }
             }
         }, 'pk');
@@ -240,10 +270,26 @@ class FcAdminSmsBulkService
         }
 
         $label = $template === self::TEMPLATE_B1 ? 'Form step incomplete' : 'Registration pending';
+        $message = "{$label} processed for {$sent} trainee(s).";
+
+        if (strtolower((string) config('gupshup.driver')) === 'log') {
+            $message .= ' SMS_DRIVER=log (SMS written to laravel.log only — not sent to phones).';
+        }
+        if ($emailSkipped) {
+            $message .= ' Email stopped early after SMTP failures (check MAIL_* / App Password).';
+        }
+
+        Log::info('FC admin bulk send finished.', [
+            'template' => $template,
+            'matched' => $matched,
+            'sent' => $sent,
+            'failed' => $failed,
+            'email_circuit_open' => $emailSkipped,
+        ]);
 
         return [
             'ok' => true,
-            'message' => "{$label} SMS + Email processed for {$sent} trainee(s).",
+            'message' => $message,
             'sent' => $sent,
             'skipped' => 0,
             'failed' => $failed,
