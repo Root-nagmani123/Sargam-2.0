@@ -13,6 +13,7 @@
     $elig    = $g('surety_eligibility');
     $pwn = $g('prob_witness_name');   $pwa = $g('prob_witness_address');   $pwo = $g('prob_witness_occupation');
     $swn = $g('surety_witness_name'); $swa = $g('surety_witness_address'); $swo = $g('surety_witness_occupation');
+    $swn2 = $g('surety_witness_name2'); $swa2 = $g('surety_witness_address2'); $swo2 = $g('surety_witness_occupation2');
     $dated = $fmt($data['declaration_date'] ?? '');
     $dAt   = $g('bond_dated_at');   $dDay = $g('bond_dated_day');   $dMon = $g('bond_dated_month');
     $sigs  = $data['_signature_src'] ?? [];
@@ -104,9 +105,9 @@
 
     <div class="lines">
         <div class="sign" style="text-align:center; margin-top:22pt;">Signature of the Surety: {!! $blank('', '200pt') !!}</div>
-        <div style="margin-top:10pt;">Signed <b>by Surety</b> in the presence of &nbsp;(Name of Witness) {!! $blank('', '220pt') !!}</div>
-        <div>Address {!! $blank('', '420pt') !!}</div>
-        <div>Occupation {!! $blank('', '200pt') !!}</div>
+        <div style="margin-top:10pt;">Signed <b>by Surety</b> in the presence of &nbsp;(Name of Witness) {!! $blank($swn2, '220pt') !!}</div>
+        <div>Address {!! $blank($swa2, '420pt') !!}</div>
+        <div>Occupation {!! $blank($swo2, '200pt') !!}</div>
     </div>
 
     <pagebreak />
@@ -158,8 +159,8 @@
 
     <div class="lines">
         <div class="sign" style="margin-top:14pt;">प्रतिभू के हस्ताक्षर: {!! $blank('', '200pt') !!}</div>
-        <div>साक्षी की उपस्थिति में प्रतिभू द्वारा हस्ताक्षरित — साक्षी का नाम: {!! $blank('', '200pt') !!}</div>
-        <div>पता: {!! $blank('', '280pt') !!} &nbsp; व्यवसाय: {!! $blank('', '150pt') !!}</div>
+        <div>साक्षी की उपस्थिति में प्रतिभू द्वारा हस्ताक्षरित — साक्षी का नाम: {!! $blank($hi['swname2'] ?? '', '200pt') !!}</div>
+        <div>पता: {!! $blank($hi['swaddr2'] ?? '', '280pt') !!} &nbsp; व्यवसाय: {!! $blank($hi['swocc2'] ?? '', '150pt') !!}</div>
     </div>
 
 </body>

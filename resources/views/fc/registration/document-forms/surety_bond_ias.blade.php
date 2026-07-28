@@ -149,9 +149,10 @@
 
                 <div class="sb-lines">
                     <div class="sb-sign" style="text-align:center; margin-top:2rem;">Signature of the Surety: ______________________</div>
-                    <div style="margin-top:1rem;">Signed <b>by Surety</b> in the presence of &nbsp;(Name of Witness) ______________________</div>
-                    <div>Address ______________________</div>
-                    <div>Occupation ______________________</div>
+                    <div style="margin-top:1rem;">Signed <b>by Surety</b> in the presence of &nbsp;(Name of Witness)
+                        <input type="text" name="surety_witness_name2" class="blank blank--wide" value="{{ $val('surety_witness_name2') }}"></div>
+                    <div>Address <input type="text" name="surety_witness_address2" class="blank" style="min-width:560px;" value="{{ $val('surety_witness_address2') }}"></div>
+                    <div>Occupation <input type="text" name="surety_witness_occupation2" class="blank blank--mid" value="{{ $val('surety_witness_occupation2') }}"></div>
                 </div>
             </div>
 
@@ -208,8 +209,8 @@
 
                 <div class="sb-lines">
                     <div class="sb-sign mt-3">प्रतिभू के हस्ताक्षर ______________________</div>
-                    <div>साक्षी की उपस्थिति में प्रतिभू द्वारा हस्ताक्षरित — साक्षी का नाम: ______________________</div>
-                    <div>पता: ______________________ &nbsp; व्यवसाय: ______________________</div>
+                    <div>साक्षी की उपस्थिति में प्रतिभू द्वारा हस्ताक्षरित — साक्षी का नाम: <input type="text" name="hi[swname2]" class="blank blank--mid" value="{{ $data['_hi']['swname2'] ?? '' }}" autocomplete="off"></div>
+                    <div>पता: <input type="text" name="hi[swaddr2]" class="blank blank--wide" value="{{ $data['_hi']['swaddr2'] ?? '' }}" autocomplete="off"> &nbsp; व्यवसाय: <input type="text" name="hi[swocc2]" class="blank blank--mid" value="{{ $data['_hi']['swocc2'] ?? '' }}" autocomplete="off"></div>
                 </div>
             </div>
         </div>

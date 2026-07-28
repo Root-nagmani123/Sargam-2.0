@@ -884,6 +884,14 @@ class DocumentFormTemplates
                         ['name' => 'surety_witness_occupation', 'label' => 'Occupation / व्यवसाय', 'type' => 'text', 'width' => 'col-md-4'],
                     ],
                 ],
+                [
+                    'heading' => 'Witness to Surety (Declaration) / प्रतिभू के साक्षी (घोषणा)',
+                    'fields'  => [
+                        ['name' => 'surety_witness_name2', 'label' => 'Name of Witness / साक्षी का नाम', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'surety_witness_address2', 'label' => 'Address / पता', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'surety_witness_occupation2', 'label' => 'Occupation / व्यवसाय', 'type' => 'text', 'width' => 'col-md-4'],
+                    ],
+                ],
             ],
             'declaration' => 'NOW THE CONDITION of the above-written bond is that if the Probationer shall faithfully serve the Government for the prescribed period and shall duly fulfil the terms of his/her appointment, then this bond shall be void; otherwise the Probationer and the Surety bind themselves, their heirs, executors and administrators, jointly and severally, to pay to the Government the amounts due under the bond. / उपर्युक्त बंधपत्र की शर्त यह है कि यदि परिवीक्षाधीन अधिकारी निर्धारित अवधि तक सरकार की निष्ठापूर्वक सेवा करता है और अपनी नियुक्ति की शर्तों को विधिवत पूरा करता है, तो यह बंधपत्र शून्य हो जाएगा; अन्यथा परिवीक्षाधीन अधिकारी और प्रतिभू स्वयं को, अपने उत्तराधिकारियों, निष्पादकों एवं प्रशासकों को संयुक्त रूप से तथा पृथक-पृथक रूप से इस बंधपत्र के अंतर्गत देय राशि सरकार को भुगतान करने के लिए आबद्ध करते हैं।',
             'sections_footer' => [self::dateOnlySection()],
