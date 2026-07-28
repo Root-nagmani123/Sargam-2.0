@@ -92,8 +92,8 @@
     <div class="cert">मैं प्रमाणित करता/करती हूँ कि जहाँ तक मेरी जानकारी और विश्वास है, पूर्वोक्त सूचना सही और पूर्ण है।<br>I certify that the foregoing information is correct and complete to the best of my knowledge and belief.</div>
 
     <div class="sign">
-        <div style="text-align:right;">हस्ताक्षर / Signature: @if($sigSrc)<img src="{{ $sigSrc }}" class="sig-img">@else <span style="display:inline-block;min-width:180pt;border-bottom:1px solid #000;">&nbsp;</span> @endif</div>
-        <div style="text-align:right; margin-top:6pt;">पदनाम / Designation: <b>{{ $desig ?: ' ' }}</b></div>
+        <div style="text-align:right;">हस्ताक्षर / Signature: @if($sigSrc)<img src="{{ $sigSrc }}" class="sig-img">@else <span style="display:inline-block;min-width:180pt;border-bottom:1px solid #000;font-weight:bold;text-align:center;">{!! str_repeat('_', 30) !!}</span> @endif</div>
+        <div style="text-align:right; margin-top:6pt;">पदनाम / Designation: <span style="display:inline-block; min-width:180pt; border-bottom:1px solid #000; font-weight:bold; text-align:center;">{!! $desig !== '' ? e($desig) : str_repeat('_', 30) !!}</span></div>
         <div style="text-align:right; margin-top:6pt;">तारीख / Date: <b>{{ $dated }}</b></div>
     </div>
 

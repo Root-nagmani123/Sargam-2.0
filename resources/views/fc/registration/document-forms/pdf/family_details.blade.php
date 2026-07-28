@@ -14,7 +14,7 @@
     $sigSrc  = $data['_signature_src'][0] ?? null;
     $minRows = max(10, count($rows));   // fixed 10-row grid like the sample
     $blank = function ($v, $w = '160pt') {
-        $val = ($v !== '' && $v !== null) ? e($v) : '&nbsp;';
+        $val = ($v !== '' && $v !== null) ? e($v) : str_repeat('_', max(12, (int) round((strpos($w, 'mm') !== false ? (float) $w * 2.83465 : (float) $w) / 6)));
         return '<span style="display:inline-block; min-width:'.$w.'; border-bottom:1px solid #000; font-weight:bold; padding:0 4pt;">'.$val.'</span>';
     };
 @endphp

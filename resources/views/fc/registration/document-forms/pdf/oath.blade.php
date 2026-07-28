@@ -11,7 +11,7 @@
 
     // A ruled fill-in-the-blank: shows the value (or an empty ruled space).
     $blank = function ($value, $minWidth = '180pt') {
-        $v = $value !== '' && $value !== null ? e($value) : '&nbsp;';
+        $v = $value !== '' && $value !== null ? e($value) : str_repeat('_', max(12, (int) round((strpos($minWidth, 'mm') !== false ? (float) $minWidth * 2.83465 : (float) $minWidth) / 6)));
         return '<span style="display:inline-block; min-width:'.$minWidth.'; border-bottom:1px solid #000; '
              . 'text-align:center; font-weight:bold; padding:0 4pt; line-height:1.4;">'.$v.'</span>';
     };

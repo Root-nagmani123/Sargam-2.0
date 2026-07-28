@@ -20,7 +20,7 @@
     $hi    = $data['_hi'] ?? [];   // candidate-typed Hindi values (blank if none)
 
     $blank = function ($v, $w = '150pt') {
-        $val = ($v !== '' && $v !== null) ? e($v) : '&nbsp;';
+        $val = ($v !== '' && $v !== null) ? e($v) : str_repeat('_', max(12, (int) round((strpos($w, 'mm') !== false ? (float) $w * 2.83465 : (float) $w) / 6)));
         return '<span style="display:inline-block; min-width:'.$w.'; border-bottom:1px solid #000; text-align:center; font-weight:bold; padding:0 4pt;">'.$val.'</span>';
     };
     $isPerm = $elig === 'In the permanent service of Government';
