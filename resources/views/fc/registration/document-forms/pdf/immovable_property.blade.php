@@ -49,8 +49,7 @@
     <div class="docno">Document-6(a)</div>
     <div class="formline">[Form 1 — See Government of India's Instruction (1) and (2) below Rule 16]</div>
     <div class="title-hi">प्रथम नियुक्ति के समय भरा जाने वाला अचल संपत्ति के विवरण का फार्म</div>
-    <div class="title">STATEMENT OF IMMOVABLE PROPERTY ON FIRST APPOINTMENT</div>
-    <div style="text-align:center; font-weight:bold; font-size:10pt; margin-top:4pt;">as on date / जिस तिथि तक: {!! $blank($asOn, '130pt') !!}</div>
+    <div class="title" style="white-space:nowrap; font-size:9pt;">STATEMENT OF IMMOVABLE PROPERTY ON FIRST APPOINTMENT<span style="text-decoration:none; font-weight:bold;">&nbsp; as on date / जिस तिथि तक: {!! $blank($asOn, '90pt') !!}</span></div>
 
     <div class="item"><b>1.</b> अधिकारी का पूरा नाम, तथा सेवा जिससे वह संबंधित है / Name of the Officer (in full) and service to which the officer belongs: {!! $blank($name, '300pt') !!}</div>
     <div class="item"><b>2.</b> वर्तमान पद / Present Post held: {!! $blank($post, '220pt') !!}</div>
