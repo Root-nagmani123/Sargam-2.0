@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Mess;
 
+use App\Exports\ItemSubcategoryMasterExport;
 use App\Http\Controllers\Controller;
 use App\Models\Mess\ItemCategory;
 use App\Models\Mess\ItemSubcategory;
@@ -10,6 +11,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Excel as ExcelFormat;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ItemSubcategoryController extends Controller
 {
@@ -25,7 +29,7 @@ class ItemSubcategoryController extends Controller
         if ($request->ajax() && $request->has('draw')) {
             return DataTableRedisCache::serveCachedAjax(
                 $request,
-                'mess_item_subcategory_dt:v1:',
+                'mess_item_subcategory_dt:v2:',
                 self::DT_LIST_EPOCH_KEY,
                 [
                     'enabled' => 'MESS_ITEM_SUBCATEGORY_DATATABLE_CACHE_ENABLED',
@@ -111,35 +115,36 @@ class ItemSubcategoryController extends Controller
 
         $paged = clone $query;
         $table = (new ItemSubcategory())->getTable();
-        $orderCol = DataTableSearchHelper::orderColumnIndex($request, 1);
+        // Column 0 is now the (unsortable) S.No; data columns shift by +1.
+        $orderCol = DataTableSearchHelper::orderColumnIndex($request, 2);
         $orderDir = DataTableSearchHelper::orderDirection($request, 'asc');
         $nameCol = ItemSubcategory::displayNameColumnForQuery();
 
         switch ($orderCol) {
-            case 0:
+            case 1:
                 $paged->leftJoin('mess_item_categories as isc_sort_cat', $table . '.category_id', '=', 'isc_sort_cat.id')
                     ->orderBy('isc_sort_cat.category_name', $orderDir)
                     ->select($table . '.*');
                 break;
-            case 1:
+            case 2:
                 $paged->orderBy($nameCol, $orderDir);
                 break;
-            case 2:
+            case 3:
                 if (Schema::hasColumn($table, 'item_code')) {
                     $paged->orderBy('item_code', $orderDir);
                 } elseif (Schema::hasColumn($table, 'subcategory_code')) {
                     $paged->orderBy('subcategory_code', $orderDir);
                 }
                 break;
-            case 3:
+            case 4:
                 $paged->orderBy('unit_measurement', $orderDir);
                 break;
-            case 4:
+            case 5:
                 if (Schema::hasColumn($table, 'alert_quantity')) {
                     $paged->orderBy('alert_quantity', $orderDir);
                 }
                 break;
-            case 5:
+            case 6:
                 if (Schema::hasColumn($table, 'status')) {
                     $paged->orderBy('status', $orderDir);
                 }
@@ -156,7 +161,10 @@ class ItemSubcategoryController extends Controller
         $rows = $paged->get();
         $canDelete = function_exists('hasRole') && (hasRole('Admin') || hasRole('Mess-Admin'));
 
-        $data = $rows->map(fn (ItemSubcategory $item) => $this->buildItemSubcategoryDatatableRow($item, $canDelete))->all();
+        // S.No is the running position within the full filtered set (survives paging).
+        $data = $rows->values()
+            ->map(fn (ItemSubcategory $item, int $i) => $this->buildItemSubcategoryDatatableRow($item, $canDelete, $start + $i + 1))
+            ->all();
 
         return response()->json([
             'draw' => $draw,
@@ -169,20 +177,21 @@ class ItemSubcategoryController extends Controller
     /**
      * @return string[]
      */
-    private function buildItemSubcategoryDatatableRow(ItemSubcategory $itemsubcategory, bool $canDelete): array
+    private function buildItemSubcategoryDatatableRow(ItemSubcategory $itemsubcategory, bool $canDelete, int $serial): array
     {
         $categoryCell = e($itemsubcategory->category ? $itemsubcategory->category->category_name : '-');
         $itemName = e($itemsubcategory->item_name ?? '');
-        $itemNameCell = '<div class="fw-semibold">' . $itemName . '</div>';
+        $itemNameCell = '<div class="itemsub-name-primary">' . $itemName . '</div>';
         $itemCode = e($itemsubcategory->item_code ?? '-');
         $unit = e($itemsubcategory->unit_measurement ?? '-');
         $alertQty = isset($itemsubcategory->alert_quantity) && $itemsubcategory->alert_quantity !== null && $itemsubcategory->alert_quantity !== ''
             ? e(number_format((float) $itemsubcategory->alert_quantity, 2))
             : '-';
-        $statusCell = '<span class="badge bg-' . e($itemsubcategory->status_badge_class) . '">'
-            . e($itemsubcategory->status_label) . '</span>';
+        $isActive = ($itemsubcategory->status ?? 'active') === ItemSubcategory::STATUS_ACTIVE;
+        $statusCell = '<span class="badge programme-status-badge programme-status-badge--' . ($isActive ? 'active' : 'inactive') . '">'
+            . e(ucfirst((string) $itemsubcategory->status_label)) . '</span>';
 
-        $editBtn = '<button type="button" class="text-primary btn-edit-itemsubcategory bg-transparent border-0"'
+        $editBtn = '<button type="button" class="itemsub-action-btn btn-edit-itemsubcategory text-primary"'
             . ' data-id="' . (int) $itemsubcategory->id . '"'
             . ' data-category-id="' . e((string) ($itemsubcategory->category_id ?? '')) . '"'
             . ' data-item-name="' . e($itemsubcategory->item_name ?? '') . '"'
@@ -191,23 +200,25 @@ class ItemSubcategoryController extends Controller
             . ' data-alert-quantity="' . e((string) ($itemsubcategory->alert_quantity ?? '')) . '"'
             . ' data-description="' . e($itemsubcategory->description ?? '') . '"'
             . ' data-status="' . e($itemsubcategory->status ?? 'active') . '"'
-            . ' title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>';
+            . ' title="Edit"><i class="material-symbols-rounded">edit</i><span>Edit</span></button>';
 
         $deleteForm = '';
         if ($canDelete) {
             $deleteUrl = route('admin.mess.itemsubcategories.destroy', $itemsubcategory->id);
-            $deleteForm = '<form method="POST" action="' . e($deleteUrl) . '" class="d-inline"'
-                . ' onsubmit="return confirm(\'Are you sure you want to delete this item?\');">'
+            $deleteForm = '<form method="POST" action="' . e($deleteUrl) . '" class="mess-delete-form"'
+                . ' data-confirm-title="Delete Sub-Category Item?"'
+                . ' data-confirm-message="Are you sure you want to delete this item?">'
                 . '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">'
                 . '<input type="hidden" name="_method" value="DELETE">'
-                . '<button type="submit" class="text-primary btn-delete-itemsubcategory bg-transparent border-0" title="Delete">'
-                . '<i class="material-icons material-symbol-rounded">delete</i></button>'
+                . '<button type="submit" class="itemsub-action-btn text-danger" title="Delete">'
+                . '<i class="material-symbols-rounded">delete</i><span>Delete</span></button>'
                 . '</form>';
         }
 
-        $actions = '<div class="d-flex gap-2 flex-wrap">' . $editBtn . $deleteForm . '</div>';
+        $actions = '<div class="d-flex align-items-start justify-content-start itemsub-actions">' . $editBtn . $deleteForm . '</div>';
 
         return [
+            (string) $serial,
             $categoryCell,
             $itemNameCell,
             $itemCode,
@@ -223,6 +234,128 @@ class ItemSubcategoryController extends Controller
         $categories = ItemCategory::active()->orderBy('category_name')->get();
 
         return view('mess.itemsubcategories.create', compact('categories'));
+    }
+
+    /**
+     * Branded Sub-Category Item Master report — Print (inline PDF) and Download
+     * (styled .xlsx). Both carry the official LBSNAA header and respect the Category
+     * filter + search. See {@see \App\Exports\ItemSubcategoryMasterExport}.
+     */
+    public function export(Request $request)
+    {
+        $format = strtolower((string) $request->get('format', 'excel'));
+        if (! in_array($format, ['csv', 'excel', 'xlsx', 'pdf'], true)) {
+            $format = 'excel';
+        }
+
+        $search = $request->get('search');
+        $categoryId = $request->get('category_id');
+        $visibleColumns = $this->parseVisibleColumns($request->get('columns'));
+
+        $export = new ItemSubcategoryMasterExport($search, $categoryId, $visibleColumns);
+        $fileName = 'sub-category-item-master-' . now()->format('Y-m-d_H-i-s');
+
+        if ($format === 'pdf') {
+            @ini_set('memory_limit', '256M');
+            @set_time_limit(120);
+
+            $pdf = Pdf::loadView('mess.itemsubcategories.export_pdf', array_merge([
+                'headings' => $export->activeHeadings(),
+                'rows' => $export->pdfRows(),
+                'filterLine' => $this->buildExportFilterLine($request),
+                'printedOn' => now()->format('d-m-Y H:i'),
+                'reportTitle' => 'Sub-Category Item Master',
+            ], $this->buildExportHeaderData()))
+                ->setPaper('a4', 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'isPhpEnabled' => true,
+                    'dpi' => 96,
+                ]);
+
+            return $request->boolean('inline')
+                ? $pdf->stream($fileName . '.pdf')
+                : $pdf->download($fileName . '.pdf');
+        }
+
+        return Excel::download($export, $fileName . '.xlsx', ExcelFormat::XLSX);
+    }
+
+    /**
+     * Turn the `columns=0,1,2,…` request param into a clean list of exportable
+     * data-column indexes. Only 0..6 are valid — Action (7) is never exported.
+     *
+     * @return array<int,int>|null
+     */
+    private function parseVisibleColumns($raw): ?array
+    {
+        if (! is_string($raw) || trim($raw) === '') {
+            return null;
+        }
+
+        $cols = array_values(array_unique(array_filter(
+            array_map('intval', explode(',', $raw)),
+            static fn ($v) => $v >= 0 && $v <= 6
+        )));
+
+        return $cols !== [] ? $cols : null;
+    }
+
+    /** "Applied Filters: …" line for the PDF header, or '' when unfiltered. */
+    private function buildExportFilterLine(Request $request): string
+    {
+        $parts = [];
+        $categoryId = $request->get('category_id');
+        if ($categoryId !== null && trim((string) $categoryId) !== '') {
+            $cat = ItemCategory::find((int) $categoryId);
+            if ($cat) {
+                $parts[] = 'Category: ' . $cat->category_name;
+            }
+        }
+        $search = $request->get('search');
+        if ($search !== null && trim((string) $search) !== '') {
+            $parts[] = 'Search: ' . trim($search);
+        }
+
+        return $parts === [] ? '' : 'Applied Filters:   ' . implode('   |   ', $parts);
+    }
+
+    /**
+     * Branded LBSNAA header assets for the PDF export — emblem / Hindi title /
+     * 75-years logo used by the official report layout.
+     *
+     * @return array{logoLeft:?string,logoRight:?string,titleHindi:?string,courseName:string,courseDuration:string}
+     */
+    private function buildExportHeaderData(): array
+    {
+        $toDataUri = static function (string $path): ?string {
+            if (! is_file($path) || ! is_readable($path)) {
+                return null;
+            }
+            $raw = @file_get_contents($path);
+            if ($raw === false) {
+                return null;
+            }
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = match ($ext) {
+                'svg' => 'image/svg+xml',
+                'jpg', 'jpeg' => 'image/jpeg',
+                default => 'image/png',
+            };
+
+            return 'data:' . $mime . ';base64,' . base64_encode($raw);
+        };
+
+        return [
+            'logoLeft' => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
+            'logoRight' => $toDataUri(public_path('admin_assets/images/logos/constitution-75.png'))
+                ?: $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
+            'titleHindi' => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
+            'courseName' => '',
+            'courseDuration' => '',
+        ];
     }
 
     public function store(Request $request)
