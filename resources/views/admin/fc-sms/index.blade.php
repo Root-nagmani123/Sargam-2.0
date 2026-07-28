@@ -1,79 +1,206 @@
 @extends('admin.layouts.master')
 @section('title', 'FC SMS — Bulk Send')
 
-@section('setup_content')
-<div class="container-fluid py-3">
+@push('styles')
+<style>
+/* =====================================================================
+   FC SMS — Bulk Send — page-scoped polish.
+   Tokens/components come from sargam-app.css (--ds-*, .ds-*).
+   Only what Bootstrap utilities + .ds-* can't express lives here.
+   ===================================================================== */
 
-    <div class="d-flex align-items-center flex-wrap gap-2 mb-3">
-        <h4 class="mb-0"><i class="bi bi-chat-left-text me-2"></i>FC SMS — Bulk Send</h4>
-        <span class="badge bg-secondary">Admin</span>
+/* --- Two-up filter grid ----------------------------------------- */
+.fc-sms-filter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--ds-space-3);
+}
+@media (max-width: 767.98px) {
+    .fc-sms-filter-grid { grid-template-columns: 1fr; }
+}
+
+.fc-sms-field-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ds-ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin-bottom: var(--ds-space-2);
+    display: block;
+}
+
+/* --- Selected-template summary (accent card) -------------------- */
+.fc-sms-summary { display: flex; flex-direction: column; gap: var(--ds-space-2); }
+.fc-sms-summary .fc-sms-summary-name {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--ds-ink);
+    line-height: 1.2;
+}
+.fc-sms-summary .fc-sms-summary-slug {
+    display: inline-block;
+    font-family: var(--bs-font-monospace, monospace);
+    font-size: 0.75rem;
+    color: var(--ds-primary);
+    background: rgba(var(--bs-primary-rgb, 0 74 147), 0.08);
+    padding: 0.1rem var(--ds-space-2);
+    border-radius: var(--ds-radius-1);
+}
+.fc-sms-summary-date {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    padding-top: var(--ds-space-2);
+    border-top: 1px dashed var(--ds-line);
+}
+.fc-sms-summary-date .label { font-size: 0.75rem; color: var(--ds-ink-muted); }
+.fc-sms-summary-date .value { font-weight: 600; color: var(--ds-ink); }
+
+/* --- Template option cards (radio-selectable) ------------------- */
+.fc-sms-option {
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-2);
+    padding: var(--ds-space-3);
+    margin-bottom: var(--ds-space-3);
+    background: var(--ds-surface);
+    transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+.fc-sms-option:hover { border-color: var(--ds-primary); box-shadow: var(--ds-shadow-sm); }
+.fc-sms-option:has(.fc-sms-template-radio:checked) {
+    border-color: var(--ds-primary);
+    box-shadow: var(--ds-focus-ring);
+    background: rgba(var(--bs-primary-rgb, 0 74 147), 0.03);
+}
+.fc-sms-option .form-check-label { cursor: pointer; }
+.fc-sms-option-title { font-weight: 600; color: var(--ds-ink); }
+.fc-sms-option-help { font-size: 0.8125rem; color: var(--ds-ink-muted); margin-top: 2px; }
+.fc-sms-code-badge {
+    font-family: var(--bs-font-monospace, monospace);
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--ds-ink-muted);
+    background: var(--ds-surface-2);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-1);
+    padding: 0.05rem var(--ds-space-2);
+    vertical-align: middle;
+}
+
+/* View-list toggle button footprint matches the design controls */
+.fc-sms-view-btn {
+    white-space: nowrap;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-1);
+}
+.fc-sms-view-btn[aria-expanded="true"] .fc-sms-view-caret { transform: rotate(180deg); }
+.fc-sms-view-caret { transition: transform .15s ease; }
+
+/* Selection strip above each recipient table */
+.fc-sms-select-strip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--ds-space-2);
+    padding: var(--ds-space-2) var(--ds-space-1);
+    margin-bottom: var(--ds-space-2);
+    background: var(--ds-surface-2);
+    border-radius: var(--ds-radius-1);
+}
+.fc-sms-select-strip .count-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-1);
+    font-size: 0.8125rem;
+    color: var(--ds-ink-muted);
+}
+.fc-sms-select-strip .count-pill strong { color: var(--ds-primary); }
+
+/* Recipient table wrap uses the token line + radius */
+.fc-sms-table-wrap {
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-2);
+    overflow: hidden;
+}
+
+/* --- Send-to choices -------------------------------------------- */
+.fc-sms-sendmode {
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-2);
+    padding: var(--ds-space-3);
+    background: var(--ds-surface-2);
+}
+.fc-sms-sendmode .form-check + .form-check { margin-top: var(--ds-space-2); }
+
+/* --- Sticky submit footer --------------------------------------- */
+.fc-sms-footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--ds-space-3);
+    margin-top: var(--ds-space-4);
+    padding-top: var(--ds-space-3);
+    border-top: 1px solid var(--ds-line);
+}
+</style>
+@endpush
+
+@section('setup_content')
+<div class="container-fluid">
+    <x-breadcrum title="FC SMS — Bulk Send" :showBack="false"></x-breadcrum>
+
+    {{-- Step 1 — pick the registration template ------------------------------ --}}
+    <div class="ds-card mb-4">
+        <div class="ds-card-header">
+            <i class="bi bi-ui-checks-grid" aria-hidden="true"></i>
+            <span>Registration template</span>
+        </div>
+        <div class="ds-card-body">
+            <form method="GET" action="{{ route('fc-reg.admin.sms.index') }}" id="fcSmsTemplateFilterForm">
+                @if(request()->filled('menu'))
+                    <input type="hidden" name="menu" value="{{ request('menu') }}">
+                @endif
+                <div class="fc-sms-filter-grid">
+                    <div>
+                        <label for="fcSmsFormFilter" class="fc-sms-field-label">Template Name</label>
+                        <select name="form_id" id="fcSmsFormFilter" class="form-select">
+                            @foreach(($forms ?? []) as $form)
+                                <option value="{{ (int) $form->id }}" {{ (int) ($selectedFormId ?? 0) === (int) $form->id ? 'selected' : '' }}>
+                                    {{ $form->form_name }} ({{ $form->form_slug }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="ds-card ds-card--accent" style="box-shadow:none;">
+                        <div class="ds-card-body fc-sms-summary" style="background:var(--ds-surface);">
+                            <div>
+                                <div class="fc-sms-field-label mb-1">Selected Template</div>
+                                <div class="fc-sms-summary-name">{{ $preview['form_name'] }}</div>
+                                @if(! empty($preview['form_slug']))
+                                    <span class="fc-sms-summary-slug mt-1">{{ $preview['form_slug'] }}</span>
+                                @endif
+                            </div>
+                            <div class="fc-sms-summary-date">
+                                <i class="bi bi-calendar-event text-muted" aria-hidden="true"></i>
+                                <span class="label">Registration last date (B2)</span>
+                                <span class="value ms-auto">{{ $preview['last_date'] }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <p class="text-muted small mb-3">
-        Recipients are limited to the selected template's linked course
-        (same as Registration Master Course filter, Active tab).
-        Choose a template and send. Lists are different:
-        <strong>Form step incomplete</strong> = started submitting the form (1+ step done) but still pending;
-        <strong>Registration pending</strong> = registration not completed and form not started yet.
-        Each send goes as <strong>SMS + Email</strong> (same trigger). Open a list to search, pick trainees, and send to
-        <strong>all</strong> or <strong>selected only</strong>.
-        @if(strtolower((string) config('gupshup.driver')) === 'log')
-            <span class="text-danger fw-semibold">SMS_DRIVER=log — SMS goes to laravel.log only, not to phones.</span>
-        @endif
-    </p>
-
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show fc-sms-flash" role="alert">
-            <i class="bi bi-check-circle me-1"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    {{-- Step 2 — compose + choose recipients --------------------------------- --}}
+    <div class="ds-card">
+        <div class="ds-card-header">
+            <i class="bi bi-send" aria-hidden="true"></i>
+            <span>Compose &amp; send</span>
         </div>
-    @endif
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show fc-sms-flash" role="alert">
-            <i class="bi bi-exclamation-triangle me-1"></i>{{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-    @if($errors->any())
-        <div class="alert alert-danger py-2 small">
-            <ul class="mb-0 ps-3">
-                @foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach
-            </ul>
-        </div>
-    @endif
-
-    <form method="GET" action="{{ route('fc-reg.admin.sms.index') }}" id="fcSmsTemplateFilterForm" class="row g-3 mb-3">
-        @if(request()->filled('menu'))
-            <input type="hidden" name="menu" value="{{ request('menu') }}">
-        @endif
-        <div class="col-md-6">
-            <div class="border rounded-3 p-3 bg-light h-100">
-                <label for="fcSmsFormFilter" class="text-muted small mb-2 d-block">Template Name</label>
-                <select name="form_id" id="fcSmsFormFilter" class="form-select form-select-sm">
-                    @foreach(($forms ?? []) as $form)
-                        <option value="{{ (int) $form->id }}" {{ (int) ($selectedFormId ?? 0) === (int) $form->id ? 'selected' : '' }}>
-                            {{ $form->form_name }} ({{ $form->form_slug }})
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="border rounded-3 p-3 bg-light h-100">
-                <div class="text-muted small">Selected Template</div>
-                <div class="fw-semibold">{{ $preview['form_name'] }}</div>
-                @if(! empty($preview['form_slug']))
-                    <div class="text-muted small mt-1"><code>{{ $preview['form_slug'] }}</code></div>
-                @endif
-                <hr class="my-2">
-                <div class="text-muted small">Registration last date (B2)</div>
-                <div class="fw-semibold">{{ $preview['last_date'] }}</div>
-            </div>
-        </div>
-    </form>
-
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
+        <div class="ds-card-body">
             <form id="fcSmsSendForm" method="POST" action="{{ route('fc-reg.admin.sms.send') }}">
                 @csrf
                 <input type="hidden" name="form_id" id="fcSmsSelectedFormId" value="{{ (int) ($selectedFormId ?? 0) }}">
@@ -81,47 +208,50 @@
                     <input type="hidden" name="menu" value="{{ request('menu') }}">
                 @endif
 
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">SMS template</label>
+                <div class="mb-4">
+                    <label class="fc-sms-field-label">SMS template</label>
                     @foreach($templates as $key => $tpl)
                         @php
                             $isOpen = ($openList ?? null) === $key;
                             $tableId = 'fcSmsRecipients' . strtoupper($key);
                         @endphp
-                        <div class="border rounded-3 p-3 mb-2">
-                            <div class="d-flex align-items-start gap-2 flex-wrap">
+                        <div class="fc-sms-option">
+                            <div class="d-flex align-items-start gap-3 flex-wrap">
                                 <div class="form-check flex-grow-1 mb-0">
                                     <input class="form-check-input ms-0 me-2 fc-sms-template-radio" type="radio" name="template"
                                            id="tpl_{{ $key }}" value="{{ $key }}"
                                            {{ old('template', 'b1') === $key ? 'checked' : '' }} required>
                                     <label class="form-check-label" for="tpl_{{ $key }}">
-                                        <span class="fw-semibold">{{ $tpl['label'] }}</span>
-                                        <span class="badge bg-light text-dark border ms-1">{{ $tpl['code'] }}</span>
-                                        <div class="text-muted small mt-1">{{ $tpl['help'] }}</div>
+                                        <span class="fc-sms-option-title">{{ $tpl['label'] }}</span>
+                                        <span class="fc-sms-code-badge ms-1">{{ $tpl['code'] }}</span>
+                                        <div class="fc-sms-option-help">{{ $tpl['help'] }}</div>
                                     </label>
                                 </div>
                                 <button type="button"
-                                        class="btn btn-sm btn-outline-primary"
+                                        class="btn btn-sm btn-outline-primary fc-sms-view-btn"
                                         data-bs-toggle="collapse"
                                         data-bs-target="#recipients_{{ $key }}"
                                         aria-expanded="{{ $isOpen ? 'true' : 'false' }}"
                                         aria-controls="recipients_{{ $key }}">
-                                    {{ number_format($tpl['count']) }} recipient(s) — view list
+                                    <i class="bi bi-people" aria-hidden="true"></i>
+                                    <span>{{ number_format($tpl['count']) }} recipient(s)</span>
+                                    <i class="bi bi-chevron-down fc-sms-view-caret" aria-hidden="true"></i>
                                 </button>
                             </div>
 
                             <div class="collapse mt-3 {{ $isOpen ? 'show' : '' }}" id="recipients_{{ $key }}"
                                  data-fc-sms-template="{{ $key }}"
                                  data-fc-sms-table="{{ $tableId }}">
-                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2 px-1">
-                                    <span class="text-muted small">
+                                <div class="fc-sms-select-strip">
+                                    <span class="count-pill">
+                                        <i class="bi bi-check2-square" aria-hidden="true"></i>
                                         Selected for this template:
                                         <strong id="fcSmsSelectedCount_{{ $key }}">0</strong>
                                     </span>
                                     <button type="button" class="btn btn-link btn-sm p-0 fc-sms-clear-selection"
                                             data-template="{{ $key }}">Clear selection</button>
                                 </div>
-                                <div class="table-responsive border rounded">
+                                <div class="fc-sms-table-wrap">
                                     <table id="{{ $tableId }}"
                                            class="table table-sm table-hover mb-0 align-middle w-100"
                                            data-fc-sms-recipients="1">
@@ -149,32 +279,36 @@
                     @endforeach
                 </div>
 
-                <div class="border rounded-3 p-3 mb-3 bg-light">
-                    <label class="form-label fw-semibold mb-2">Send to</label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="send_mode" id="send_mode_all"
-                               value="all" {{ old('send_mode', 'all') === 'all' ? 'checked' : '' }} required>
-                        <label class="form-check-label" for="send_mode_all">
-                            All matching recipients for the selected template
-                        </label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="send_mode" id="send_mode_selected"
-                               value="selected" {{ old('send_mode') === 'selected' ? 'checked' : '' }} required>
-                        <label class="form-check-label" for="send_mode_selected">
-                            Selected trainees only <span class="text-muted">(tick checkboxes in the list above)</span>
-                        </label>
+                <div class="mb-3">
+                    <label class="fc-sms-field-label">Send to</label>
+                    <div class="fc-sms-sendmode">
+                        {{-- send_mode is resolved automatically from the list selection:
+                             any ticked trainees => 'selected', otherwise => 'all'. --}}
+                        <input type="hidden" name="send_mode" id="fcSmsSendMode" value="all">
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="bi bi-info-circle text-primary" style="font-size:1.05rem;line-height:1.4;" aria-hidden="true"></i>
+                            <div>
+                                <div id="fcSmsSendSummary" class="fw-semibold text-dark"></div>
+                                <div class="text-muted small mt-1">
+                                    Tick trainees in the list above to message only them. With nothing ticked,
+                                    every matching recipient for the selected template is messaged.
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div id="fcSmsPkInputs"></div>
 
-                <button type="submit" class="btn btn-primary" id="fcSmsSendBtn">
-                    <i class="bi bi-send me-1"></i>Send SMS + Email
-                </button>
-                <div id="fcSmsSendingStatus" class="text-muted small mt-2 d-none">
-                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                    Sending SMS and email. Please wait…
+                <div class="fc-sms-footer">
+                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2" id="fcSmsSendBtn">
+                        <i class="bi bi-send" aria-hidden="true"></i>
+                        <span>Send SMS + Email</span>
+                    </button>
+                    <div id="fcSmsSendingStatus" class="text-muted small d-none d-inline-flex align-items-center">
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Sending SMS and email. Please wait…
+                    </div>
                 </div>
             </form>
         </div>
@@ -221,6 +355,22 @@ $(function () {
         var tpl = template || activeTemplate();
         var count = selectedByTemplate[tpl] ? selectedByTemplate[tpl].size : 0;
         $('#fcSmsSelectedCount_' + tpl).text(count);
+        updateSendSummary();
+    }
+
+    // Resolve send_mode from the active template's selection:
+    //   any ticked trainees -> 'selected' (message only those),
+    //   nothing ticked       -> 'all' (message every matching recipient).
+    function updateSendSummary() {
+        var tpl = activeTemplate();
+        var set = selectedByTemplate[tpl] || new Set();
+        var mode = set.size > 0 ? 'selected' : 'all';
+        $('#fcSmsSendMode').val(mode);
+        if (mode === 'selected') {
+            $('#fcSmsSendSummary').html('Sending to <strong>' + set.size + '</strong> selected trainee(s) for this template.');
+        } else {
+            $('#fcSmsSendSummary').html('No trainees ticked — sending to <strong>all</strong> matching recipients for this template.');
+        }
     }
 
     function syncPageCheckboxes(tableId, template) {
@@ -350,20 +500,17 @@ $(function () {
     });
 
     $('#fcSmsSendForm').on('submit', function (e) {
-        var mode = $('input[name="send_mode"]:checked').val();
         var template = activeTemplate();
+        var set = selectedByTemplate[template] || new Set();
+        // Ticked trainees drive the send: any selection => selected, else => all.
+        var mode = set.size > 0 ? 'selected' : 'all';
         var $pkWrap = $('#fcSmsPkInputs');
         var $btn = $('#fcSmsSendBtn');
         var $status = $('#fcSmsSendingStatus');
+        $('#fcSmsSendMode').val(mode);
         $pkWrap.empty();
 
         if (mode === 'selected') {
-            var set = selectedByTemplate[template] || new Set();
-            if (set.size === 0) {
-                e.preventDefault();
-                alert('Please select at least one trainee from the list (use the checkboxes).');
-                return false;
-            }
             set.forEach(function (pk) {
                 $('<input>', { type: 'hidden', name: 'registration_pks[]', value: pk }).appendTo($pkWrap);
             });
@@ -382,12 +529,46 @@ $(function () {
         return true;
     });
 
-    var $flash = $('.fc-sms-flash').first();
-    if ($flash.length) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
     updateSelectedCount(activeTemplate());
 });
 </script>
+
+{{-- Flash messages use the app-standard SweetAlert design
+     (icon:'success' renders as the global top-right toast card). --}}
+@if(session('success'))
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof Swal === 'undefined') return;
+        Swal.fire({
+            icon: 'success',
+            title: 'Success',
+            text: @json(session('success')),
+            timer: 3000,
+            showConfirmButton: false,
+        });
+    });
+</script>
+@endif
+@if(session('error'))
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof Swal === 'undefined') return;
+        Swal.fire('Error', @json(session('error')), 'error');
+    });
+</script>
+@endif
+@if($errors->any())
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof Swal === 'undefined') return;
+        Swal.fire({
+            icon: 'error',
+            title: 'Please fix the following',
+            html: '<ul class="text-start mb-0 ps-3">' + @json(
+                    collect($errors->all())->map(fn ($e) => '<li>' . e($e) . '</li>')->implode('')
+                ) + '</ul>',
+        });
+    });
+</script>
+@endif
 @endpush
