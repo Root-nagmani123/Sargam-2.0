@@ -43,12 +43,12 @@
     <div class="doc-subtitle">[MHA OM No. 31/3/65-Estt.(A) dated 23-3-1964- as amended from time to time]</div>
 
     <div class="doc-body">
-        &ldquo;I, {!! $blank($name, '250pt') !!} (Name of the Probationer) do swear/solemnly affirm
+        "I, {!! $blank($name, '250pt') !!} (Name of the Probationer) do swear/solemnly affirm
         that I will be faithful and bear true allegiance to India and to the Constitution of India as
         by law established, that I will uphold the sovereignty and integrity of India, and that I will
         carry out the duties of my office loyally, honestly, and with impartiality.
     </div>
-    <div class="doc-god">(SO HELP ME GOD)&rdquo;</div>
+    <div class="doc-god" style="text-align:left; padding-left:110pt;">(SO HELP ME GOD)"</div>
 
     <table class="lines" style="width:340pt; margin-left:150pt;">
         <tr>

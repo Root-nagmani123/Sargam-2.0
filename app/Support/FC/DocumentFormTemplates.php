@@ -855,6 +855,7 @@ class DocumentFormTemplates
                     'heading' => 'Surety / प्रतिभू',
                     'fields'  => [
                         ['name' => 'surety_name', 'label' => 'Full Name of Surety / प्रतिभू का पूरा नाम', 'type' => 'text', 'width' => 'col-md-6'],
+                        ['name' => 'surety_decl_name', 'label' => 'Name of Surety (in declaration) / प्रतिभू का नाम (घोषणा में)', 'type' => 'text', 'width' => 'col-md-6'],
                         ['name' => 'surety_address', 'label' => 'Address of Surety / प्रतिभू का पता', 'type' => 'textarea', 'width' => 'col-md-6'],
                         ['name' => 'surety_occupation', 'label' => 'Occupation of Surety / प्रतिभू का व्यवसाय', 'type' => 'text', 'width' => 'col-md-6'],
                         ['name' => 'surety_eligibility', 'label' => 'Surety is / प्रतिभू है', 'type' => 'select', 'options' => ['In the permanent service of Government', 'Ordinarily resident in India'], 'width' => 'col-md-6'],

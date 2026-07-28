@@ -137,7 +137,7 @@
                 </div>
 
                 <p class="sb-body" style="text-indent:0; margin-top:1.4rem;">
-                    I, the Surety whose signature is appended to the above agreement, do hereby declare that —
+                    I (Insert name of surety) <input type="text" name="surety_decl_name" class="blank blank--wide" value="{{ $val('surety_decl_name') }}"> whose signature is appended to the above agreement, do hereby declare that —
                     <span class="sb-elig d-block">
                         <label class="d-block"><input type="radio" name="surety_eligibility" value="In the permanent service of Government" {{ $elig==='In the permanent service of Government'?'checked':'' }}>
                             (a) I am in the permanent service of the Government of <span style="border-bottom:1px dotted #64748b; min-width:160px; display:inline-block;">&nbsp;</span>; <em>or</em></label>

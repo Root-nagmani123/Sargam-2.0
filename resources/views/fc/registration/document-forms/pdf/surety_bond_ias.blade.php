@@ -97,7 +97,7 @@
     </div>
 
     <div class="body" style="text-indent:0; margin-top:14pt;">
-        I, the Surety whose signature is appended to the above agreement, do hereby declare that —
+        I (Insert name of surety) {!! $blank($g('surety_decl_name'), '220pt') !!} whose signature is appended to the above agreement, do hereby declare that —
         <div class="elig">{!! $box($isPerm) !!} (a) I am in the permanent service of the Government of {!! $blank('', '180pt') !!}; <i>or</i></div>
         <div class="elig">{!! $box($isRes) !!} (b) I am ordinarily resident in India and possess means which will enable me to repay to the Central Government the sums of money referred to, in the event of my being called upon to do so in accordance with the terms of the agreement.</div>
         <div style="margin-top:6pt;"><i>(Strike out whichever is not applicable.)</i></div>
