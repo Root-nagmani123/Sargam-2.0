@@ -659,6 +659,8 @@ class FcAdminSmsBulkService
             $query->where('active_inactive', 1);
         }
 
+        $this->applyExemptionExclusion($query);
+
         return $query;
     }
 
@@ -744,8 +746,17 @@ class FcAdminSmsBulkService
 
         $rosterByPk = collect();
         if (Schema::hasTable('fc_registration_master') && $trackerKeys->isNotEmpty()) {
-            $rosterByPk = DB::table('fc_registration_master')
+            $rosterByPkQuery = DB::table('fc_registration_master')
                 ->whereIn('pk', $trackerKeys->map(fn ($v) => (int) $v)->filter(fn ($v) => $v > 0)->all())
+                ->when(
+                    Schema::hasColumn('fc_registration_master', 'course_master_pk') && (int) ($form?->course_master_pk ?? 0) > 0,
+                    fn ($q) => $q->where('course_master_pk', (int) $form->course_master_pk)
+                );
+            if (Schema::hasColumn('fc_registration_master', 'active_inactive')) {
+                $rosterByPkQuery->where('active_inactive', 1);
+            }
+            $this->applyExemptionExclusion($rosterByPkQuery);
+            $rosterByPk = $rosterByPkQuery
                 ->get()
                 ->keyBy('pk');
         }
@@ -761,8 +772,17 @@ class FcAdminSmsBulkService
                 ->all();
 
             if ($credLogins !== []) {
-                $rosterByLogin = DB::table('fc_registration_master')
+                $rosterByLoginQuery = DB::table('fc_registration_master')
                     ->whereIn('user_id', $credLogins)
+                    ->when(
+                        Schema::hasColumn('fc_registration_master', 'course_master_pk') && (int) ($form?->course_master_pk ?? 0) > 0,
+                        fn ($q) => $q->where('course_master_pk', (int) $form->course_master_pk)
+                    );
+                if (Schema::hasColumn('fc_registration_master', 'active_inactive')) {
+                    $rosterByLoginQuery->where('active_inactive', 1);
+                }
+                $this->applyExemptionExclusion($rosterByLoginQuery);
+                $rosterByLogin = $rosterByLoginQuery
                     ->get()
                     ->keyBy(fn ($r) => trim((string) $r->user_id));
             }
@@ -962,5 +982,31 @@ class FcAdminSmsBulkService
         }
 
         return FcForm::activeRegistrationDynamicForm();
+    }
+
+    protected function applyExemptionExclusion($query): void
+    {
+        $hasApplicationType = Schema::hasColumn('fc_registration_master', 'application_type');
+        $hasExemptionPk = Schema::hasColumn('fc_registration_master', 'fc_exemption_master_pk');
+
+        if (! $hasApplicationType && ! $hasExemptionPk) {
+            return;
+        }
+
+        $query->where(function ($sub) use ($hasApplicationType, $hasExemptionPk) {
+            if ($hasApplicationType) {
+                $sub->where(function ($q) {
+                    $q->whereNull('application_type')
+                        ->orWhere('application_type', '!=', 2);
+                });
+            }
+
+            if ($hasExemptionPk) {
+                $sub->where(function ($q) {
+                    $q->whereNull('fc_exemption_master_pk')
+                        ->orWhere('fc_exemption_master_pk', 0);
+                });
+            }
+        });
     }
 }
