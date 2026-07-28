@@ -7,6 +7,7 @@ use App\Models\CourseMaster;
 use App\Models\FC\FcForm;
 use App\Models\FC\FcFormStep;
 use App\Models\FC\FcFormFieldGroup;
+use App\Services\FC\FcStepApplicabilityService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Schema\Blueprint;
@@ -214,10 +215,14 @@ class FormManagementController extends Controller
             'description'         => 'nullable|string',
             'icon'                => 'nullable|string|max:50',
             'consolidation_table' => 'nullable|string|max:100',
+            'registration_requires_all_steps' => 'nullable|boolean',
             'is_active'           => 'nullable|boolean',
         ]);
 
         $validated['is_active'] = $request->boolean('is_active');
+        // Unchecked switches are absent from the payload — read them explicitly so turning
+        // the rule back off actually persists.
+        $validated['registration_requires_all_steps'] = $request->boolean('registration_requires_all_steps');
         $form->update($validated);
 
         return back()->with('success', 'Form settings updated.');
@@ -240,10 +245,15 @@ class FormManagementController extends Controller
             'target_table'      => 'required|string|max:100',
             'completion_column' => 'nullable|string|max:100',
             'tracker_column'    => 'nullable|string|max:100',
+            'applicability_rule' => 'nullable|string|in:'.FcStepApplicabilityService::RULE_PH_VALUE,
             'description'       => 'nullable|string',
             'icon'              => 'nullable|string|max:50',
             'has_groups'        => 'nullable|boolean',
         ]);
+
+        $validated['applicability_rule'] = filled($request->input('applicability_rule'))
+            ? $validated['applicability_rule']
+            : null;
 
         $validated['form_id']     = $form->id;
         $validated['step_number'] = ($form->steps()->max('step_number') ?? 0) + 1;
@@ -275,10 +285,17 @@ class FormManagementController extends Controller
             'target_table'      => 'required|string|max:100',
             'completion_column' => 'nullable|string|max:100',
             'tracker_column'    => 'nullable|string|max:100',
+            'applicability_rule' => 'nullable|string|in:'.FcStepApplicabilityService::RULE_PH_VALUE,
             'description'       => 'nullable|string',
             'icon'              => 'nullable|string|max:50',
             'is_active'         => 'nullable|boolean',
         ]);
+
+        // A step marked "applies only when …" is skipped for trainees the rule excludes,
+        // and drops out of their progress denominator. Blank = applies to everyone.
+        $validated['applicability_rule'] = filled($request->input('applicability_rule'))
+            ? $validated['applicability_rule']
+            : null;
 
         $validated['is_active'] = $request->boolean('is_active');
         $validated['icon'] = ($validated['icon'] ?? '') !== '' ? $validated['icon'] : 'bi-file-text';

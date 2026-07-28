@@ -4,7 +4,6 @@ namespace App\Services\FC;
 
 use App\Models\FC\FcForm;
 use App\Models\FC\FcFormStep;
-use App\Services\FC\FcImportedProfileLockService;
 use App\Models\FC\StudentMaster;
 use App\Models\FC\StudentTravelPlanMaster;
 use Illuminate\Http\RedirectResponse;
@@ -133,22 +132,13 @@ class FcRegistrationFlowService
     /**
      * Whether a step simply does not apply to this trainee.
      *
-     * Currently only Special Assistant, which the academy enables per trainee via
-     * fc_registration_master.ph_value. Mirrors the gate in GenericFormController,
-     * which skips the step in the flow and never lets it block later steps.
+     * The rule itself lives in FcStepApplicabilityService — this used to be a private
+     * second copy of the Special Assistant step-name match, which drifted from the one
+     * in GenericFormController and was absent from reporting altogether.
      */
     public function stepNotApplicable(FcFormStep $step, int $userId): bool
     {
-        $isSpecialAssistant = str_starts_with(
-            strtolower(trim((string) $step->step_name)),
-            'special assist'
-        );
-
-        if (! $isSpecialAssistant) {
-            return false;
-        }
-
-        return ! app(FcImportedProfileLockService::class)->hasPhValue($userId);
+        return app(FcStepApplicabilityService::class)->notApplicable($step, $userId);
     }
 
     public function buildTravelStepNav(FcForm $form, int $userId): array

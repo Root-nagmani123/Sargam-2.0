@@ -120,6 +120,8 @@ class FcRegistrationStatusService
                 'label' => 'Service wise List',
                 'list_title' => 'Service wise List Report',
                 'theme' => 'service',
+                // This badge counts SERVICES, not people — every other tab counts people.
+                'count_unit' => 'services',
             ],
             self::TAB_EXEMPTION => [
                 'label' => 'Applied for Exemption',

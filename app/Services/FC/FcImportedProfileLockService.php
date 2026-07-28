@@ -147,6 +147,13 @@ class FcImportedProfileLockService
      *
      * Mirrors fc_user_val(): staged /fc/login users have a negative auth id equal to
      * -roster.pk; migrated users are linked via user_credentials.user_name = roster.user_id.
+     *
+     * A positive id that resolves to no user_credentials row is not a credentials pk at
+     * all — it is a roster pk on a record FcReconcileRosterIds has not rekeyed yet, which
+     * is exactly how the tracker tables still store some rows. Falling back to pk keeps
+     * this in step with the reporting SQL (which reaches the same row through
+     * `frm.pk = tracker.user_id`); without it the trainee-facing flow and the admin
+     * report disagreed about who a conditional step applies to.
      */
     private function rosterRow(int $userId): ?object
     {
@@ -154,15 +161,19 @@ class FcImportedProfileLockService
             return $this->rosterRowCache[$userId];
         }
 
-        $query = DB::table('fc_registration_master');
+        $query = fn () => DB::table('fc_registration_master');
 
         if ($userId < 0) {
-            $row = $query->where('pk', abs($userId))->first();
-        } else {
-            $username = fc_user_name_for_id($userId);
-            $row = ($username !== null && trim((string) $username) !== '')
-                ? $query->where('user_id', trim((string) $username))->first()
-                : null;
+            return $this->rosterRowCache[$userId] = $query()->where('pk', abs($userId))->first();
+        }
+
+        $username = fc_user_name_for_id($userId);
+        $row = ($username !== null && trim((string) $username) !== '')
+            ? $query()->where('user_id', trim((string) $username))->first()
+            : null;
+
+        if ($row === null && $username === null) {
+            $row = $query()->where('pk', $userId)->first();
         }
 
         return $this->rosterRowCache[$userId] = $row;

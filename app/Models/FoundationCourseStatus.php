@@ -49,14 +49,80 @@ class FoundationCourseStatus extends Model
         return $this->belongsTo(FcExemptionMaster::class, 'fc_exemption_master_pk', 'Pk');
     }
 
+    /**
+     * The four status tabs form a PARTITION: every fc_registration_master row falls in
+     * exactly one of Not Responded / Incomplete / Registered / Exemption.
+     *
+     * The previous scopes keyed Not Responded and Registered off admission_status = 0 / 1
+     * literally, so the 47 rows where admission_status is NULL (plus one holding the junk
+     * string 're') appeared in NO tab at all — 43 of 534 rows were invisible and the badges
+     * summed to 491 instead of 534. Registration completion is now read from
+     * admission_status OR is_registered, and "not responded" means the trainee never even
+     * received staged credentials, which is what the label actually claims.
+     */
+
+    /** Trainee has completed registration (admission marked, or the registration flag set). */
+    public function scopeWhereRegistrationComplete(Builder $query): Builder
+    {
+        return $query->where(function (Builder $q) {
+            $q->where('admission_status', self::STATUS_REGISTERED);
+
+            if (Schema::hasColumn($this->getTable(), 'is_registered')) {
+                $q->orWhere('is_registered', 1);
+            }
+        });
+    }
+
+    /** Trainee has NOT completed registration. Mirror of the above — keep the two in step. */
+    public function scopeWhereRegistrationIncomplete(Builder $query): Builder
+    {
+        return $query
+            ->where(function (Builder $q) {
+                $q->where('admission_status', '!=', self::STATUS_REGISTERED)
+                    ->orWhereNull('admission_status');
+            })
+            ->when(Schema::hasColumn($this->getTable(), 'is_registered'), function (Builder $q) {
+                $q->where(function (Builder $w) {
+                    $w->where('is_registered', '!=', 1)->orWhereNull('is_registered');
+                });
+            });
+    }
+
+    /** Exemption applications are their own bucket and never counted as registrations. */
+    public function scopeWhereNotExemption(Builder $query): Builder
+    {
+        return $query->where(function (Builder $q) {
+            $q->where('application_type', '!=', self::APPLICATION_EXEMPTION)
+                ->orWhereNull('application_type');
+        });
+    }
+
+    /** Credentials were staged for the trainee, i.e. they were able to start the form. */
+    public function scopeWhereHasStagedCredentials(Builder $query, bool $has = true): Builder
+    {
+        if ($has) {
+            return $query
+                ->whereNotNull('user_id')->where('user_id', '!=', '')
+                ->whereNotNull('password')->where('password', '!=', '');
+        }
+
+        return $query->where(function (Builder $q) {
+            $q->whereNull('user_id')->orWhere('user_id', '')
+                ->orWhereNull('password')->orWhere('password', '');
+        });
+    }
+
+    /** Never engaged: no credentials staged, not registered, no exemption applied. */
     public function scopeNotResponded(Builder $query): Builder
     {
-        return $query->where('admission_status', self::STATUS_NOT_RESPONDED);
+        return $query->whereNotExemption()
+            ->whereRegistrationIncomplete()
+            ->whereHasStagedCredentials(false);
     }
 
     public function scopeRegistered(Builder $query): Builder
     {
-        return $query->where('admission_status', self::STATUS_REGISTERED);
+        return $query->whereNotExemption()->whereRegistrationComplete();
     }
 
     public function scopeExemption(Builder $query): Builder
@@ -64,23 +130,12 @@ class FoundationCourseStatus extends Model
         return $query->where('application_type', self::APPLICATION_EXEMPTION);
     }
 
+    /** Started but unfinished: credentials staged, not registered, no exemption applied. */
     public function scopeIncomplete(Builder $query): Builder
     {
-        if (Schema::hasColumn('fc_registration_master', 'is_registered')) {
-            return $query
-                ->where(function (Builder $q) {
-                    $q->where('is_registered', 0)->orWhereNull('is_registered');
-                })
-                ->where(function (Builder $q) {
-                    $q->where('application_type', '!=', self::APPLICATION_EXEMPTION)
-                        ->orWhereNull('application_type');
-                })
-                ->where('admission_status', '!=', self::STATUS_REGISTERED)
-                ->whereNotNull('user_id')
-                ->where('user_id', '!=', '');
-        }
-
-        return $query->where('final_submit', self::SUBMISSION_DRAFT);
+        return $query->whereNotExemption()
+            ->whereRegistrationIncomplete()
+            ->whereHasStagedCredentials(true);
     }
 
     public function getFullNameAttribute(): string

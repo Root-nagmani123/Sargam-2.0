@@ -7,8 +7,14 @@
 <div class="fc-shell">
     @php
         $gatedStepMeta = $gatedStepMeta ?? [];
-        $totalSteps = $steps->count();
-        $doneSteps  = $steps->filter(fn ($s) => ($stepStatus[$s->id] ?? false))->count();
+        // A step that does not apply to this trainee can never be completed, so it is
+        // excluded from the denominator — otherwise a finished trainee reads "6 of 7".
+        // $progressDone / $progressTotal come from FcStepApplicabilityService; the
+        // filters below are the same rule, kept as a fallback for any other caller.
+        $doneSteps  = $progressDone ?? $steps->filter(fn ($s) => ($stepStatus[$s->id] ?? false))->count();
+        $totalSteps = $progressTotal ?? $steps->filter(
+            fn ($s) => ($stepStatus[$s->id] ?? false) || !isset($gatedStepMeta[$s->id])
+        )->count();
         $pct        = $totalSteps > 0 ? (int) round($doneSteps / $totalSteps * 100) : 0;
     @endphp
     <div class="fc-band">
@@ -22,6 +28,15 @@
                 <small>{{ $doneSteps }} of {{ $totalSteps }} steps completed</small>
                 <div class="fc-prog"><span style="width: {{ $pct }}%"></span></div>
             </div>
+            @if($formComplete ?? false)
+                {{-- Offered only once every applicable step is done; the controller enforces
+                     the same check, so the link cannot be used to skip ahead. --}}
+                <a href="{{ route('fc-reg.forms.descriptive-roll.pdf', $form) }}"
+                   class="btn btn-light btn-sm fw-semibold"
+                   style="white-space:nowrap;">
+                    <i class="bi bi-file-earmark-arrow-down me-1"></i>Download Descriptive Roll (PDF)
+                </a>
+            @endif
         </div>
     </div>
 
@@ -58,7 +73,11 @@
                         $blockedMsg = $isAccessible ? null : 'Complete the previous step first';
                     }
 
-                    // Special Assistant with no ph_value on the roster: disabled + not applicable.
+                    // Step whose applicability rule does not hold for this trainee (e.g. Special
+                    // Assistant with no ph_value on the roster): disabled, and rendered in its own
+                    // "not applicable" state rather than as a pending step, so it does not read as
+                    // outstanding work. Already-filled steps keep their normal Completed state.
+                    $isNotApplicable = isset($gatedStepMeta[$step->id]) && !$rawDone;
                     if (isset($gatedStepMeta[$step->id])) {
                         $isAccessible = false;
                         $isDone = false;
@@ -70,9 +89,11 @@
                         <div class="card-body">
                             <div class="d-flex align-items-center mb-3">
                                 <div class="rounded-circle d-flex align-items-center justify-content-center me-3"
-                                     style="width:40px;height:40px;background:{{ $isDone ? '#198754' : '#1a3c6e' }};color:#fff;font-size:1rem;">
+                                     style="width:40px;height:40px;background:{{ $isDone ? '#198754' : ($isNotApplicable ? '#adb5bd' : '#1a3c6e') }};color:#fff;font-size:1rem;">
                                     @if($isDone)
                                         <i class="bi bi-check-lg"></i>
+                                    @elseif($isNotApplicable)
+                                        <i class="bi bi-dash-lg"></i>
                                     @else
                                         <span class="fw-bold">{{ $si + 1 }}</span>
                                     @endif
@@ -83,6 +104,8 @@
                                 </div>
                                 @if($isDone)
                                     <span class="badge bg-success ms-auto">Completed</span>
+                                @elseif($isNotApplicable)
+                                    <span class="badge bg-secondary ms-auto">Not applicable</span>
                                 @endif
                             </div>
 

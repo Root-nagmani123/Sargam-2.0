@@ -14,6 +14,7 @@ use App\Services\FC\FcImportedProfileLockService;
 use App\Services\FC\HindiTransliterationService;
 use App\Services\FC\FcRegistrationIntentService;
 use App\Services\FC\FcRegistrationRegisteredSyncService;
+use App\Services\FC\FcStepApplicabilityService;
 use App\Services\FC\RegistrationService;
 use App\Support\DataTableRedisCache;
 use Illuminate\Http\RedirectResponse;
@@ -31,6 +32,7 @@ class GenericFormController extends Controller
         private FcProgrammeContextService $programmeContext,
         private FcRegistrationFlowService $registrationFlow,
         private FcImportedProfileLockService $importedProfileLock,
+        private FcStepApplicabilityService $stepApplicability,
         private HindiTransliterationService $hindiTransliteration,
     ) {}
 
@@ -65,7 +67,10 @@ class GenericFormController extends Controller
         }
 
         $epoch    = DataTableRedisCache::readListEpoch(self::formStructureEpochKey($formId));
-        $cacheKey = 'fc_form_structure:v1:' . md5(json_encode([
+        // v2: fc_form_steps gained applicability_rule. Entries cached under v1 predate the
+        // column, and a step payload without it silently falls back to the legacy
+        // step-name match — bump rather than wait out the TTL.
+        $cacheKey = 'fc_form_structure:v2:' . md5(json_encode([
             'epoch'  => $epoch,
             'form'   => $formId,
             'suffix' => $suffix,
@@ -98,15 +103,23 @@ class GenericFormController extends Controller
         $steps    = $this->cachedFormStructure($form->id, 'dashboard_steps', fn () => $form->activeSteps()->withCount(['fields', 'fieldGroups'])->get());
         $stepStatus = $this->registrationFlow->buildStepCompletionByStepId($form, $steps, $userId);
 
-        // Special Assistant is available only when the academy has set a ph_value on the
-        // trainee's roster row. When absent, the step is shown disabled and — because it is
-        // optional — is treated as non-blocking so later steps stay accessible.
+        // A step whose applicability rule does not hold for this trainee (today: Special
+        // Assistant, enabled per trainee via fc_registration_master.ph_value) is shown
+        // disabled, never blocks the steps after it, and — because it can never be
+        // completed — is left out of the progress denominator entirely. Counting it made
+        // an otherwise finished trainee sit at "6 of 7" forever.
         $gatedStepMeta = [];
         foreach ($steps as $s) {
-            if ($this->specialAssistantGatedOff($s, (int) $userId)) {
+            if ($this->stepGatedOff($s, (int) $userId)) {
                 $gatedStepMeta[$s->id] = 'Not applicable for you';
             }
         }
+
+        [$progressDone, $progressTotal] = $this->stepApplicability->progress($steps, (int) $userId, $stepStatus);
+
+        // Drives the "Download Descriptive Roll" button. ReportController@myDescriptiveRollPdf
+        // re-checks this server-side, so hiding the button is presentation only.
+        $formComplete = $progressTotal > 0 && $progressDone >= $progressTotal;
 
         $registrationProgress = null;
         $fcRegistrationMeta = null;
@@ -135,6 +148,9 @@ class GenericFormController extends Controller
             'steps',
             'stepStatus',
             'gatedStepMeta',
+            'progressDone',
+            'progressTotal',
+            'formComplete',
             'registrationProgress',
             'fcRegistrationMeta',
             'travelDone'
@@ -556,7 +572,7 @@ class GenericFormController extends Controller
         // it is not applicable and cannot be viewed or saved (matches the disabled card).
         // Carry the trainee forward to the next step they can actually fill instead of
         // dropping them back on the dashboard, which broke the step-by-step flow.
-        if ($this->specialAssistantGatedOff($step, (int) $userId)) {
+        if ($this->stepGatedOff($step, (int) $userId)) {
             $nextStep = $this->nextApplicableStep($form, $step, $userId);
             if ($nextStep) {
                 return $this->redirectToFormStep($form, $nextStep, 'Special Assistant is not applicable for you.');
@@ -587,7 +603,7 @@ class GenericFormController extends Controller
             // A Special Assistant step that is gated off (no ph_value) is optional, so it
             // never blocks the steps that follow it.
             if (! ($stepStatus[$steps[$i]->id] ?? false)
-                && ! $this->specialAssistantGatedOff($steps[$i], (int) $userId)) {
+                && ! $this->stepGatedOff($steps[$i], (int) $userId)) {
                 return redirect()->route('fc-reg.forms.dashboard', $form)
                     ->with('error', 'Please complete the previous steps first.');
             }
@@ -597,22 +613,17 @@ class GenericFormController extends Controller
     }
 
     /**
-     * A step is the "Special Assistant" step when its name is Special Assistant /
-     * Special Assistance (spelling varies across FC form templates).
+     * A step is "gated off" when its configured applicability rule does not hold for
+     * this trainee (today: Special Assistant, enabled per trainee via
+     * fc_registration_master.ph_value). Such a step is disabled, skippable, never
+     * blocks the steps after it, and is excluded from the progress denominator.
+     *
+     * The rule lives in FcStepApplicabilityService so the trainee dashboard, the flow
+     * guard and every admin report answer the same question the same way.
      */
-    private function isSpecialAssistantStep(FcFormStep $step): bool
+    private function stepGatedOff(FcFormStep $step, int $userId): bool
     {
-        return str_starts_with(strtolower(trim((string) $step->step_name)), 'special assist');
-    }
-
-    /**
-     * The Special Assistant step is "gated off" (disabled and skippable) for a trainee
-     * who has no ph_value on their fc_registration_master roster row.
-     */
-    private function specialAssistantGatedOff(FcFormStep $step, int $userId): bool
-    {
-        return $this->isSpecialAssistantStep($step)
-            && ! $this->importedProfileLock->hasPhValue($userId);
+        return $this->stepApplicability->notApplicable($step, $userId);
     }
 
     /**
@@ -630,7 +641,7 @@ class GenericFormController extends Controller
         }
 
         for ($i = $stepIndex + 1; $i < $allSteps->count(); $i++) {
-            if (! $this->specialAssistantGatedOff($allSteps[$i], (int) $userId)) {
+            if (! $this->stepGatedOff($allSteps[$i], (int) $userId)) {
                 return $allSteps[$i];
             }
         }

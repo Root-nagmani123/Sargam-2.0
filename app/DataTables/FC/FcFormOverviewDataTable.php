@@ -3,6 +3,7 @@
 namespace App\DataTables\FC;
 
 use App\Models\FC\FcForm;
+use App\Services\FC\FcStepApplicabilityService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -17,12 +18,14 @@ class FcFormOverviewDataTable extends DataTable
     protected string $trackerTable;
     protected string $userKey;
     public int $totalSteps;
+    protected FcStepApplicabilityService $applicability;
 
     public function __construct(FcForm $form)
     {
         $this->form         = $form;
         $this->trackerTable = $form->trackerStorageTable();
         $this->userKey      = $form->user_identifier ?: 'user_id';
+        $this->applicability = app(FcStepApplicabilityService::class);
 
         // Only steps with a whitelisted tracker_column are treated as progress columns.
         $this->steps = $form->activeSteps()
@@ -57,6 +60,16 @@ class FcFormOverviewDataTable extends DataTable
         fc_report_apply_tracker_user_resolution($query, $t, $t);
         fc_report_join_student_master_firsts($query, $t, $t);
 
+        // Reach the roster row so a step that does not apply to a trainee (e.g. Special
+        // Assistant without a ph_value) can be dropped from that row's denominator. No-op
+        // when the form has no conditional step.
+        $this->applicability->applyReportJoins($query, $this->steps, $this->trackerTable, $t);
+
+        // Denominator is per-row, not $totalSteps: a trainee the step does not apply to
+        // could otherwise never reach "Complete", because nothing can set that column.
+        $stepsApplicableExpr = $this->applicability
+            ->applicableCountSql($this->steps, $this->trackerTable, $t);
+
         $query->leftJoin('service_master as svc', 's1.service_id', '=', 'svc.pk')
             ->leftJoin('state_masters as st', 's1.allotted_state_id', '=', 'st.id');
 
@@ -86,6 +99,7 @@ class FcFormOverviewDataTable extends DataTable
                 DB::raw("{$cadreExpr} as cadre"),
                 DB::raw("{$stateExpr} as allotted_state"),
                 DB::raw("({$stepsDoneExpr}) as steps_done"),
+                DB::raw("({$stepsApplicableExpr}) as steps_applicable"),
             ]);
 
         // route_user_id and login_username must be addSelect'd AFTER select() to avoid being replaced
@@ -101,9 +115,16 @@ class FcFormOverviewDataTable extends DataTable
             ]);
         }
 
-        // Add one boolean column per trackable step
+        // Add one boolean column per trackable step, plus a waived flag for the steps that
+        // can be gated off, so the cell can render "—" instead of a misleading empty circle.
         foreach ($this->steps as $step) {
-            $query->addSelect("{$t}.{$step->tracker_column}");
+            $col = $step->tracker_column;
+            $query->addSelect("{$t}.{$col}");
+
+            $waivedSql = $this->applicability->stepWaivedSql($step, $this->steps, $this->trackerTable, $t);
+            if ($waivedSql !== '0') {
+                $query->addSelect(DB::raw("({$waivedSql}) as `waived_{$col}`"));
+            }
         }
 
         return $query;
@@ -137,27 +158,36 @@ class FcFormOverviewDataTable extends DataTable
                 : '—'
         );
 
-        // Tick / cross per step
+        // Tick / cross per step — a step that does not apply to the trainee shows "—",
+        // not an empty circle, which read as "still pending".
         foreach ($this->steps as $step) {
             $col = $step->tracker_column;
-            $dt->editColumn($col, fn ($row) =>
-                ($row->{$col} ?? false)
-                    ? '<i class="bi bi-check-circle-fill text-success" style="font-size:13px;"></i>'
-                    : '<i class="bi bi-circle text-secondary" style="font-size:13px;opacity:.4;"></i>'
-            );
+            $dt->editColumn($col, function ($row) use ($col) {
+                if ($row->{$col} ?? false) {
+                    return '<i class="bi bi-check-circle-fill text-success" style="font-size:13px;"></i>';
+                }
+                if ((int) ($row->{'waived_'.$col} ?? 0) === 1) {
+                    return '<span class="text-muted" style="font-size:13px;" title="Not applicable for this trainee">—</span>';
+                }
+
+                return '<i class="bi bi-circle text-secondary" style="font-size:13px;opacity:.4;"></i>';
+            });
         }
 
-        // Progress bar (based on pre-computed steps_done)
+        // Progress bar — denominator is the row's own applicable step count, so a trainee
+        // a step does not apply to can actually reach 100%.
         $dt->addColumn('progress_bar', function ($row) use ($totalSteps) {
             if ($totalSteps < 1) {
                 return '—';
             }
-            $done = (int) $row->steps_done;
-            $pct  = round(($done / $totalSteps) * 100);
+            $done      = (int) ($row->steps_done ?? 0);
+            $applicable = max(0, (int) ($row->steps_applicable ?? $totalSteps));
+            $pct       = $applicable > 0 ? round(($done / $applicable) * 100) : 0;
+
             return '<div class="progress mx-auto" style="height:6px;width:60px;">'
                 . '<div class="progress-bar bg-success" style="width:' . $pct . '%"></div>'
                 . '</div>'
-                . '<span style="font-size:10px;color:#666;">' . $done . '/' . $totalSteps . '</span>';
+                . '<span style="font-size:10px;color:#666;">' . $done . '/' . $applicable . '</span>';
         });
 
         // Status badge
@@ -165,7 +195,8 @@ class FcFormOverviewDataTable extends DataTable
             if ($row->status === 'SUBMITTED') {
                 return '<span class="badge bg-success" style="font-size:10px;">Submitted</span>';
             }
-            if ($totalSteps > 0 && (int) ($row->steps_done ?? 0) >= $totalSteps) {
+            $applicable = max(0, (int) ($row->steps_applicable ?? $totalSteps));
+            if ($totalSteps > 0 && $applicable > 0 && (int) ($row->steps_done ?? 0) >= $applicable) {
                 return '<span class="badge bg-success" style="font-size:10px;">Complete</span>';
             }
 
@@ -198,24 +229,19 @@ class FcFormOverviewDataTable extends DataTable
         // Custom server-side filtering — mirrors the controller's fcApplyFormOverviewFilters
         // so COMPLETE / INCOMPLETE are derived from the step columns (not a raw status match).
         $steps = $this->steps;
-        $dt->filter(function ($q) use ($t, $userKey, $steps) {
+        $applicability = $this->applicability;
+        $trackerTable = $this->trackerTable;
+        $dt->filter(function ($q) use ($t, $userKey, $steps, $applicability, $trackerTable) {
             $req    = request();
             $hasFrm = Schema::hasTable('fc_registration_master');
 
             if ($req->filled('f_status')) {
+                // COMPLETE / INCOMPLETE ignore steps that do not apply to the row —
+                // matching the badge, so the card counts and the filtered list agree.
                 if ($req->f_status === 'COMPLETE') {
-                    foreach ($steps as $step) {
-                        $q->where("{$t}.{$step->tracker_column}", 1);
-                    }
+                    $applicability->whereComplete($q, $steps, $trackerTable, $t);
                 } elseif ($req->f_status === 'INCOMPLETE') {
-                    $q->where(function ($sub) use ($t, $steps) {
-                        foreach ($steps as $step) {
-                            $sub->orWhere(function ($q2) use ($t, $step) {
-                                $q2->where("{$t}.{$step->tracker_column}", '!=', 1)
-                                   ->orWhereNull("{$t}.{$step->tracker_column}");
-                            });
-                        }
-                    });
+                    $applicability->whereIncomplete($q, $steps, $trackerTable, $t);
                 } else {
                     $q->where("{$t}.status", $req->f_status);
                 }
