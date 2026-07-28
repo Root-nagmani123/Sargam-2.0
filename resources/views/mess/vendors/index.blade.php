@@ -1,33 +1,146 @@
 @extends('admin.layouts.master')
 @section('title', 'Mess Vendors')
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<style>
+    /* ── Vendor Master — new design chrome (built on --ds-* tokens + programme-dt system) ── */
+    .vendor-master-page .vendor-master-card {
+        background: var(--ds-surface, #fff);
+        border-radius: var(--ds-radius-card, 8px);
+        box-shadow: var(--ds-shadow, 0 1px 3px rgba(16, 24, 40, .1));
+    }
+
+    /* Download / Print bar */
+    .vendor-master-page .vendor-master-export-btn {
+        height: var(--ds-control-h, 40px);
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        padding: 0 1.1rem;
+        font-size: .9375rem;
+        font-weight: 500;
+        color: var(--ds-primary, #004a93);
+        border: 1px solid var(--ds-line, #d0d5dd);
+        border-radius: var(--ds-radius-2, 8px);
+        background: var(--ds-surface, #fff);
+    }
+
+    .vendor-master-page .vendor-master-export-btn:hover {
+        background: #f2f7fc;
+        border-color: var(--ds-primary, #004a93);
+        color: var(--ds-primary, #004a93);
+    }
+
+    .vendor-master-page .vendor-master-export-btn i { font-size: 1.15rem; line-height: 1; }
+
+    /* Collapse the leftover (now-emptied) DataTables control wrappers once the
+       global enhancer has relocated search / pagination into the slots below. */
+    .vendor-master-page .dt-top:empty,
+    .vendor-master-page .dt-foot:empty { display: none; margin: 0; }
+
+    /* Column visibility is presented as a programme-style modal, so the mess
+       Column-manager's own injected dropdown stays hidden — it remains the
+       underlying state engine that keeps Download/Print column-sync correct. */
+    .vendor-master-page .mess-col-manager-dropdown { display: none !important; }
+
+    #vendorsColumnToggleGrid .colvis-item {
+        cursor: pointer;
+        transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    #vendorsColumnToggleGrid .colvis-item:hover {
+        border-color: var(--ds-primary, #004a93) !important;
+        background-color: rgba(0, 74, 147, 0.04);
+    }
+
+    #vendorsColumnToggleGrid .colvis-item .form-check-input { cursor: pointer; flex-shrink: 0; }
+
+    .vendor-master-page .vendor-name-primary { font-weight: 600; color: var(--ds-ink, #1f2937); }
+
+    /* Row actions — icon over label (blue See/Edit, red Delete), matching the mock. */
+    .vendor-master-page .vendor-actions { gap: 1.1rem; }
+    .vendor-master-page .vendor-actions form { margin: 0; }
+
+    .vendor-master-page .vendor-action-btn {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        gap: .1rem;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        line-height: 1.1;
+        font-size: .75rem;
+        font-weight: 500;
+    }
+
+    .vendor-master-page .vendor-action-btn i { font-size: 1.2rem; line-height: 1; }
+    .vendor-master-page .vendor-action-btn.text-primary { color: var(--ds-primary, #004a93) !important; }
+    .vendor-master-page .vendor-action-btn.text-danger { color: var(--ds-secondary, #d92d20) !important; }
+    .vendor-master-page .vendor-action-btn:hover { opacity: .78; }
+
+    /* Pagination → arrows + numbers only (drop First/Last, swap word labels). */
+    .vendor-master-page .programme-dt-footer .paginate_button.first,
+    .vendor-master-page .programme-dt-footer .paginate_button.last { display: none; }
+
+    .vendor-master-page .programme-dt-footer .paginate_button.previous .page-link,
+    .vendor-master-page .programme-dt-footer .paginate_button.next .page-link { font-size: 0; }
+
+    .vendor-master-page .programme-dt-footer .paginate_button.previous .page-link::before { content: "\2039"; font-size: 1.1rem; }
+    .vendor-master-page .programme-dt-footer .paginate_button.next .page-link::before { content: "\203A"; font-size: 1.1rem; }
+</style>
+@endpush
+
 @section('content')
 @php
     $canDeleteVendor = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
-<div class="container-fluid">
-    <x-breadcrum title="Mess Stores"></x-breadcrum>
-    <div class="datatables">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="mb-0">Vendor Master</h4>
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal"
-                        data-bs-target="#createVendorModal">
-                        Add Vendor
-                    </button>
-                </div>
+<div class="container-fluid vendor-master-page">
+    <x-breadcrum title="Vendor Master">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createVendorModal">
+            <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
+            <span>Add Vendor</span>
+        </button>
+    </x-breadcrum>
 
-                @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-                @endif
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
 
+    {{-- Download / Print bar (branded server-side exports — see admin.mess.vendors.export) --}}
+    <div class="d-flex justify-content-end gap-2 mb-3">
+        <button type="button" class="btn vendor-master-export-btn border-0" id="vendorsDownloadBtn">
+            <i class="material-symbols-rounded">download</i>
+            <span>Download</span>
+        </button>
+        <button type="button" class="btn vendor-master-export-btn border-0" id="vendorsPrintBtn">
+            <i class="material-symbols-rounded">print</i>
+            <span>Print</span>
+        </button>
+    </div>
+
+    <div class="card vendor-master-card border-0">
+        <div class="card-body">
+            {{-- Toolbar: Columns modal trigger + search (the global enhancer relocates the search box here) --}}
+            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3">
+                <button type="button" class="btn programme-dt-btn-columns" id="btnVendorsColumns"
+                        data-bs-toggle="modal" data-bs-target="#vendorsColumnVisibilityModal" title="Show / hide columns">
+                    <span>Columns</span>
+                    <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                </button>
+                <div class="programme-dt-search" data-dt-search-for="vendorsTable"></div>
+            </div>
+
+            <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <table id="vendorsTable" class="table align-middle w-100">
+                    <table id="vendorsTable" class="table programme-dt-table align-middle w-100 mb-0">
                         <thead>
                             <tr>
+                                <th>S. No.</th>
                                 <th>Vendor Name</th>
                                 <th>Email</th>
                                 <th>Contact Person</th>
@@ -39,17 +152,16 @@
                         <tbody>
                             @foreach($vendors as $vendor)
                             <tr>
-                                <td>
-                                    <div class="fw-semibold">{{ $vendor->name }}</div>
-                                </td>
+                                <td>{{ $loop->iteration }}</td>
+                                <td><div class="vendor-name-primary">{{ $vendor->name }}</div></td>
                                 <td>{{ $vendor->email ?? '-' }}</td>
                                 <td>{{ $vendor->contact_person ?? '-' }}</td>
                                 <td>{{ $vendor->phone ?? '-' }}</td>
                                 <td>{{ $vendor->address ?? '-' }}</td>
                                 <td>
-                                    <div class="d-flex gap-2 flex-wrap">
+                                    <div class="d-flex align-items-start justify-content-start vendor-actions">
                                         <button type="button"
-                                            class="text-primary btn-view-vendor bg-transparent border-0"
+                                            class="vendor-action-btn btn-view-vendor text-primary"
                                             data-id="{{ $vendor->id }}" data-name="{{ e($vendor->name) }}"
                                             data-email="{{ e($vendor->email ?? '') }}"
                                             data-contact-person="{{ e($vendor->contact_person ?? '') }}"
@@ -59,9 +171,9 @@
                                             data-bank-name="{{ e($vendor->bank_name ?? '') }}"
                                             data-ifsc-code="{{ e($vendor->ifsc_code ?? '') }}"
                                             data-account-number="{{ e($vendor->account_number ?? '') }}" title="View"><i
-                                                class="material-icons material-symbol-rounded">visibility</i></button>
+                                                class="material-symbols-rounded">visibility</i><span>See</span></button>
                                         <button type="button"
-                                            class="text-primary btn-edit-vendor bg-transparent border-0"
+                                            class="vendor-action-btn btn-edit-vendor text-primary"
                                             data-id="{{ $vendor->id }}" data-name="{{ e($vendor->name) }}"
                                             data-email="{{ e($vendor->email ?? '') }}"
                                             data-contact-person="{{ e($vendor->contact_person ?? '') }}"
@@ -71,16 +183,15 @@
                                             data-bank-name="{{ e($vendor->bank_name ?? '') }}"
                                             data-ifsc-code="{{ e($vendor->ifsc_code ?? '') }}"
                                             data-account-number="{{ e($vendor->account_number ?? '') }}" title="Edit"><i
-                                                class="material-icons material-symbol-rounded">edit</i></button>
+                                                class="material-symbols-rounded">edit</i><span>Edit</span></button>
                                         @if($canDeleteVendor)
                                             <form method="POST"
                                                 action="{{ route('admin.mess.vendors.destroy', $vendor->id) }}"
-                                                class="d-inline"
                                                 onsubmit="return confirm('Are you sure you want to delete this vendor?');">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">
-                                                    <i class="material-icons material-symbol-rounded">delete</i>
+                                                <button type="submit" class="vendor-action-btn text-danger" title="Delete">
+                                                    <i class="material-symbols-rounded">delete</i><span>Delete</span>
                                                 </button>
                                             </form>
                                         @endif
@@ -92,6 +203,9 @@
                     </table>
                 </div>
             </div>
+
+            {{-- Footer: pagination (left) + "Showing [N] of M items" (right), populated by the global enhancer --}}
+            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3" data-dt-footer-for="vendorsTable"></div>
         </div>
     </div>
 </div>
@@ -391,8 +505,159 @@
         </div>
     </div>
 </div>
-@include('components.mess-master-datatables', ['tableId' => 'vendorsTable', 'searchPlaceholder' => 'Search vendors...',
-'orderColumn' => 0, 'actionColumnIndex' => 5, 'infoLabel' => 'vendors'])
+{{-- Column Visibility Modal (programme/attendance style). It toggles the mess
+     Column-manager state so Download / Print exports stay in sync with the view. --}}
+<div class="modal fade" id="vendorsColumnVisibilityModal" tabindex="-1" aria-labelledby="vendorsColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="vendorsColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="vendorsColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@include('components.mess-master-datatables', [
+    'tableId' => 'vendorsTable',
+    'searchPlaceholder' => 'Search',
+    'orderColumn' => 0,
+    'actionColumnIndex' => 6,
+    'infoLabel' => 'items',
+    'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
+])
+
+@push('scripts')
+{{-- Download / Print → branded server-side report (admin.mess.vendors.export).
+     Passes the live search term + the Column-Visibility-chosen columns so the
+     report matches what's on screen. Print opens the PDF inline for printing. --}}
+<script>
+(function () {
+    var TABLE_ID = 'vendorsTable';
+    var BASE = @json(route('admin.mess.vendors.export'));
+    var $ = window.jQuery;
+
+    function buildUrl(format, inline) {
+        var params = ['format=' + format];
+
+        var dt = ($ && $.fn.DataTable && $.fn.DataTable.isDataTable('#' + TABLE_ID))
+            ? $('#' + TABLE_ID).DataTable() : null;
+        var search = dt ? dt.search() : '';
+        if (search) params.push('search=' + encodeURIComponent(search));
+
+        var cols = (window.MessColumnManager && typeof window.MessColumnManager.resolveExportIndexes === 'function')
+            ? window.MessColumnManager.resolveExportIndexes(TABLE_ID) : null;
+        if (cols && cols.length) params.push('columns=' + encodeURIComponent(cols.join(',')));
+
+        if (inline) params.push('inline=1');
+        return BASE + '?' + params.join('&');
+    }
+
+    var downloadBtn = document.getElementById('vendorsDownloadBtn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', function () {
+            window.location.href = buildUrl('excel', false);
+        });
+    }
+
+    var printBtn = document.getElementById('vendorsPrintBtn');
+    if (printBtn) {
+        printBtn.addEventListener('click', function () {
+            window.open(buildUrl('pdf', true), '_blank');
+        });
+    }
+})();
+</script>
+{{-- Column Visibility modal ⇄ mess Column-manager bridge (see the Store Master
+     reference — the manager owns the visibility state; this modal is its UI). --}}
+<script>
+(function () {
+    var TABLE_ID = 'vendorsTable';
+    var $ = window.jQuery;
+    var grid = document.getElementById('vendorsColumnToggleGrid');
+    var modalEl = document.getElementById('vendorsColumnVisibilityModal');
+    if (!$ || !grid || !modalEl) return;
+
+    function getMgr() {
+        return (window.MessColumnManager && typeof window.MessColumnManager.get === 'function')
+            ? window.MessColumnManager.get(TABLE_ID)
+            : null;
+    }
+
+    function visibleCount(mgr) {
+        return mgr.baseColumns.filter(function (c) {
+            return mgr.state.visibility[String(c.index)] !== false;
+        }).length;
+    }
+
+    function buildGrid() {
+        var mgr = getMgr();
+        if (!mgr || !mgr.baseColumns || !mgr.baseColumns.length) return false;
+
+        grid.innerHTML = '';
+        (mgr.state.order || []).forEach(function (idx) {
+            var col = mgr.baseColumns.filter(function (c) { return c.index === idx; })[0];
+            if (!col) return;
+
+            var isVisible = mgr.state.visibility[String(col.index)] !== false;
+            var inputId = 'vendorscolvis_' + col.index;
+
+            var cell = document.createElement('div');
+            cell.className = 'col-12 col-sm-6 col-md-4';
+
+            var label = document.createElement('label');
+            label.className = 'colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100';
+            label.setAttribute('for', inputId);
+
+            var cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.className = 'form-check-input m-0';
+            cb.id = inputId;
+            cb.checked = isVisible;
+            if (col.locked) cb.disabled = true;
+
+            cb.addEventListener('change', function () {
+                var m = getMgr();
+                if (!m) return;
+                if (!cb.checked && visibleCount(m) <= 1) {
+                    cb.checked = true;
+                    window.alert('At least one column must remain visible.');
+                    return;
+                }
+                m.state.visibility[String(col.index)] = cb.checked;
+                m.saveState();
+                m.apply();
+            });
+
+            var span = document.createElement('span');
+            span.textContent = col.label;
+
+            label.appendChild(cb);
+            label.appendChild(span);
+            cell.appendChild(label);
+            grid.appendChild(cell);
+        });
+        return true;
+    }
+
+    modalEl.addEventListener('show.bs.modal', function () {
+        if (buildGrid()) return;
+        var tries = 0;
+        var timer = setInterval(function () {
+            if (buildGrid() || ++tries > 20) clearInterval(timer);
+        }, 100);
+    });
+})();
+</script>
+@endpush
+
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {

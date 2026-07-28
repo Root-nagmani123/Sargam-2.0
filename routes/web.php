@@ -1485,6 +1485,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     // Master Data
     Route::resource('events', \App\Http\Controllers\Mess\EventController::class)->only(['index', 'create', 'store']);
     Route::resource('inventories', \App\Http\Controllers\Mess\InventoryController::class)->only(['index', 'create', 'store']);
+    Route::get('vendors/export', [\App\Http\Controllers\Mess\VendorController::class, 'export'])->name('vendors.export');
     Route::resource('vendors', \App\Http\Controllers\Mess\VendorController::class)->except(['show']);
     Route::resource('invoices', \App\Http\Controllers\Mess\InvoiceController::class)->only(['index', 'create', 'store']);
     Route::resource('itemcategories', \App\Http\Controllers\Mess\ItemCategoryController::class)->except(['show']);
