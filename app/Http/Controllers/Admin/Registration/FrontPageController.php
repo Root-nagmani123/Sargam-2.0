@@ -787,8 +787,11 @@ class FrontPageController extends Controller
             'guidelines'         => 'required|string',
 
             // Course Dates
-            'course_start_date'  => ['required', 'date', 'after_or_equal:today'],
-            'course_end_date'    => ['required', 'date', 'after:course_start_date', 'after_or_equal:today'],
+            // No after_or_equal:today on any of these — an admin has to be able to record a
+            // course or registration window that already began (back-dating). Every rule
+            // BETWEEN the dates is unchanged and still enforced here.
+            'course_start_date'  => ['required', 'date'],
+            'course_end_date'    => ['required', 'date', 'after:course_start_date'],
 
             // Registration Dates
             'registration_start_date' => [
@@ -799,7 +802,6 @@ class FrontPageController extends Controller
             'registration_end_date' => [
                 'nullable',
                 'date',
-                'after_or_equal:today',
                 'after_or_equal:registration_start_date',
                 'before_or_equal:' . $oneDayBeforeStart, // course_start_date - 1 day
             ],
@@ -809,7 +811,6 @@ class FrontPageController extends Controller
             'exemption_start_date' => [
                 'nullable',
                 'date',
-                'after_or_equal:today',
             ],
             'exemption_end_date' => [
                 'nullable',
@@ -1326,7 +1327,8 @@ class FrontPageController extends Controller
         return view('fc.status', [
             'activeTab' => $payload['activeTab'],
             'counts' => $this->fcRegistrationStatus->counts(),
-            'courseMeta' => $this->fcRegistrationStatus->courseMeta(),
+            // courseMeta dropped with the course title / date line — it read the whole
+            // fc_front_pages row on every page load for output that no longer exists.
             'tabMeta' => $payload['tabMeta'],
             'serviceList' => $payload['serviceList'],
             'participants' => $payload['participants'],

@@ -207,6 +207,10 @@ Route::middleware(['auth'])->prefix('fc-reg/forms')->name('fc-reg.forms.')->grou
     // Fillable joining-document forms (fill online → generates a PDF into the doc slot)
     Route::get('/{form}/step/{step}/fill/{field}',  [FcJoiningDocumentFormController::class, 'show'])->name('doc-form');
     Route::post('/{form}/step/{step}/fill/{field}', [FcJoiningDocumentFormController::class, 'save'])->name('doc-form.save');
+
+    // Trainee downloads their OWN descriptive roll once the form is complete. No username
+    // in the path on purpose — the controller resolves the trainee from Auth::id().
+    Route::get('/{form}/descriptive-roll/pdf', [ReportController::class, 'myDescriptiveRollPdf'])->name('descriptive-roll.pdf');
 });
 
 // ── FC Travel plans (admin) ────────────────────────────────────
