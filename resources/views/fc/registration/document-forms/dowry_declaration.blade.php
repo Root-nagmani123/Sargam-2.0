@@ -159,11 +159,11 @@
 
                 <table class="dw-signtbl">
                     <tr>
-                        <td>Place: <input type="text" name="place" class="blank" value="{{ $val('place') }}" data-mirror="place"></td>
+                        <td>Place: <input type="text" name="place" class="blank" value="{{ old('place', $data['place'] ?? 'Mussoorie') }}" data-mirror="place" readonly></td>
                         <td>Signature: <span class="dw-ruled">&nbsp;</span></td>
                     </tr>
                     <tr>
-                        <td>Dated: <input type="date" name="declaration_date" class="blank blank--sm" value="{{ $val('declaration_date') }}" data-mirror="ddate"></td>
+                        <td>Dated: <input type="date" name="declaration_date" class="blank blank--sm" value="{{ old('declaration_date', $data['declaration_date'] ?? '2026-08-24') }}" data-mirror="ddate" readonly></td>
                         <td>(Name of Officer in Block Letters): <span class="mirror-out" data-mirror-out="name">&nbsp;</span></td>
                     </tr>
                 </table>

@@ -50,12 +50,10 @@
     </div>
     <div class="doc-god">(SO HELP ME GOD)&rdquo;</div>
 
-    <table class="lines" style="width:100%;">
+    <table class="lines" style="width:340pt; margin-left:150pt;">
         <tr>
             <td class="lbl">SIGNATURE</td>
-            <td style="border-bottom:1px solid #000; text-align:center;">
-                @if($sigSrc)<img src="{{ $sigSrc }}" class="sig-img">@else &nbsp; @endif
-            </td>
+            <td style="border-bottom:1px solid #000; text-align:center;">@if($sigSrc)<img src="{{ $sigSrc }}" class="sig-img">@else &nbsp;@endif</td>
         </tr>
         <tr>
             <td class="lbl">NAME</td>
@@ -63,7 +61,7 @@
         </tr>
         <tr>
             <td></td>
-            <td style="text-align:right; font-style:italic; font-weight:normal;">(In capital letters)</td>
+            <td style="text-align:right; font-style:italic;">(In capital letters)</td>
         </tr>
         <tr>
             <td class="lbl">SERVICE</td>
@@ -90,12 +88,10 @@
     </div>
     <div class="doc-god">(भगवान मेरी सहायता करे)&rdquo;</div>
 
-    <table class="lines" style="width:100%;">
+    <table class="lines" style="width:340pt; margin-left:150pt;">
         <tr>
             <td class="lbl">हस्ताक्षर</td>
-            <td style="border-bottom:1px solid #000; text-align:center;">
-                @if($sigSrc)<img src="{{ $sigSrc }}" class="sig-img">@else &nbsp; @endif
-            </td>
+            <td style="border-bottom:1px solid #000; text-align:center;">@if($sigSrc)<img src="{{ $sigSrc }}" class="sig-img">@else &nbsp;@endif</td>
         </tr>
         <tr>
             <td class="lbl">नाम</td>

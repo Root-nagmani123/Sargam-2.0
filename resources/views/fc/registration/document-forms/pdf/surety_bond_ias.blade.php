@@ -78,7 +78,7 @@
     </div>
 
     <div class="lines">
-        Dated {!! $blank($dAt, '130pt') !!} this {!! $blank($dDay, '110pt') !!} day of {!! $blank($dMon, '150pt') !!}
+        <div style="text-align:center;">Dated {!! $blank($dAt, '130pt') !!} this {!! $blank($dDay, '110pt') !!} day of {!! $blank($dMon, '150pt') !!}</div>
 
         <div class="sign" style="text-align:center; margin-top:22pt;">Signature of the Probationer:
             @if(!empty($sigs[0]))<img src="{{ $sigs[0] }}" class="sig-img">@else {!! $blank('', '200pt') !!} @endif
@@ -86,6 +86,13 @@
         <div style="margin-top:10pt;">Signed <b>by Probationer</b> in the presence of &nbsp;(Name of Witness) {!! $blank($pwn, '220pt') !!}</div>
         <div>Address {!! $blank($pwa, '420pt') !!}</div>
         <div>{!! $blank('', '200pt') !!} Occupation {!! $blank($pwo, '200pt') !!}</div>
+
+        <div class="sign" style="text-align:center; margin-top:22pt;">Signature of the Surety:
+            @if(!empty($sigs[1]))<img src="{{ $sigs[1] }}" class="sig-img">@else {!! $blank('', '200pt') !!} @endif
+        </div>
+        <div style="margin-top:10pt;">Signed <b>by Surety</b> in the presence of &nbsp;(Name of Witness) {!! $blank($swn, '220pt') !!}</div>
+        <div>Address {!! $blank($swa, '420pt') !!}</div>
+        <div>{!! $blank('', '200pt') !!} Occupation {!! $blank($swo, '200pt') !!}</div>
     </div>
 
     <div class="body" style="text-indent:0; margin-top:14pt;">
@@ -96,12 +103,10 @@
     </div>
 
     <div class="lines">
-        <div class="sign" style="text-align:center; margin-top:22pt;">Signature of the Surety:
-            @if(!empty($sigs[1]))<img src="{{ $sigs[1] }}" class="sig-img">@else {!! $blank('', '200pt') !!} @endif
-        </div>
-        <div style="margin-top:10pt;">Signed <b>by Surety</b> in the presence of &nbsp;(Name of Witness) {!! $blank($swn, '220pt') !!}</div>
-        <div>Address {!! $blank($swa, '420pt') !!}</div>
-        <div>{!! $blank('', '200pt') !!} Occupation {!! $blank($swo, '200pt') !!}</div>
+        <div class="sign" style="text-align:center; margin-top:22pt;">Signature of the Surety: {!! $blank('', '200pt') !!}</div>
+        <div style="margin-top:10pt;">Signed <b>by Surety</b> in the presence of &nbsp;(Name of Witness) {!! $blank('', '220pt') !!}</div>
+        <div>Address {!! $blank('', '420pt') !!}</div>
+        <div>Occupation {!! $blank('', '200pt') !!}</div>
     </div>
 
     <pagebreak />
@@ -138,6 +143,10 @@
         <div class="sign">परिवीक्षाधीन के हस्ताक्षर: {!! $blank('', '200pt') !!}</div>
         <div>साक्षी की उपस्थिति में परिवीक्षाधीन द्वारा हस्ताक्षरित — साक्षी का नाम: {!! $blank($hi['pwname'] ?? '', '200pt') !!}</div>
         <div>पता: {!! $blank($hi['pwaddr'] ?? '', '280pt') !!} &nbsp; व्यवसाय: {!! $blank($hi['pwocc'] ?? '', '150pt') !!}</div>
+
+        <div class="sign" style="margin-top:14pt;">प्रतिभू के हस्ताक्षर: {!! $blank('', '200pt') !!}</div>
+        <div>साक्षी की उपस्थिति में प्रतिभू द्वारा हस्ताक्षरित — साक्षी का नाम: {!! $blank($hi['swname'] ?? '', '200pt') !!}</div>
+        <div>पता: {!! $blank($hi['swaddr'] ?? '', '280pt') !!} &nbsp; व्यवसाय: {!! $blank($hi['swocc'] ?? '', '150pt') !!}</div>
     </div>
 
     <div class="body" style="text-indent:0; margin-top:14pt;">
@@ -148,9 +157,9 @@
     </div>
 
     <div class="lines">
-        <div class="sign">प्रतिभू के हस्ताक्षर: {!! $blank('', '200pt') !!}</div>
-        <div>साक्षी की उपस्थिति में प्रतिभू द्वारा हस्ताक्षरित — साक्षी का नाम: {!! $blank($hi['swname'] ?? '', '200pt') !!}</div>
-        <div>पता: {!! $blank($hi['swaddr'] ?? '', '280pt') !!} &nbsp; व्यवसाय: {!! $blank($hi['swocc'] ?? '', '150pt') !!}</div>
+        <div class="sign" style="margin-top:14pt;">प्रतिभू के हस्ताक्षर: {!! $blank('', '200pt') !!}</div>
+        <div>साक्षी की उपस्थिति में प्रतिभू द्वारा हस्ताक्षरित — साक्षी का नाम: {!! $blank('', '200pt') !!}</div>
+        <div>पता: {!! $blank('', '280pt') !!} &nbsp; व्यवसाय: {!! $blank('', '150pt') !!}</div>
     </div>
 
 </body>

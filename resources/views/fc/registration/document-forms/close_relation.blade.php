@@ -52,7 +52,7 @@
     .cr-in:focus{ border-bottom-color:var(--fc-blue); background:#eef6ff; }
     .cr-cert{ font-size:.95rem; margin-top:1.2rem; }
     .cr-sign{ margin-top:1.4rem; font-size:1rem; line-height:2.1; }
-    .cr-notes{ font-size:.82rem; margin-top:1.2rem; line-height:1.55; font-family:system-ui,sans-serif; border-top:1px solid #d5deeb; padding-top:.8rem; }
+    .cr-notes{ font-size:.98rem; margin-top:1.2rem; line-height:1.6; font-family:system-ui,sans-serif; border-top:1px solid #d5deeb; padding-top:.8rem; }
     .cr-notes b{ color:#14315e; }
     .blank{ border:0; border-bottom:1px dotted #64748b; background:transparent; color:#0b3d91; font-weight:600; padding:0 .3rem 1px; outline:none; min-width:130px; }
     .blank:focus{ border-bottom-color:var(--fc-blue); background:#eef6ff; }
@@ -129,11 +129,11 @@
             <div class="cr-cert">मैं प्रमाणित करता/करती हूँ कि जहाँ तक मेरी जानकारी और विश्वास है, पूर्वोक्त सूचना सही और पूर्ण है। I certify that the foregoing information is correct and complete to the best of my knowledge and belief.</div>
 
             <div class="cr-sign row">
-                <div class="col-md-6">तारीख / Date:
-                    <input type="date" name="declaration_date" class="blank" value="{{ $val('declaration_date') }}" style="min-width:150px;"></div>
+                <div class="col-md-6"></div>
                 <div class="col-md-6 text-md-end">
                     <div>हस्ताक्षर / Signature: ______________________</div>
-                    <div>पदनाम / Designation: <input type="text" name="designation" class="blank" value="{{ $val('designation') }}" style="min-width:200px;"></div>
+                    <div>पदनाम / Designation: <input type="text" name="designation" class="blank" value="{{ $val('designation') }}" style="width:200px;"></div>
+                    <div>तारीख / Date: <input type="date" name="declaration_date" class="blank" value="{{ old('declaration_date', $data['declaration_date'] ?? '2026-08-24') }}" style="width:200px;" readonly></div>
                 </div>
             </div>
 

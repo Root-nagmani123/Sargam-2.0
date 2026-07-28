@@ -10,8 +10,8 @@
     $reason  = $g('reason');
     $name    = $g('officer_name');
     $desig   = $g('designation');
-    $place   = $g('place');
-    $dated   = $fmt($data['declaration_date'] ?? '');
+    $place   = $g('place') ?: 'Mussoorie';
+    $dated   = $fmt($data['declaration_date'] ?? '') ?: '24-08-2026';
     $sigSrc  = $data['_signature_src'][0] ?? null;
     $blank = function ($v, $w = '160pt') {
         $val = ($v !== '' && $v !== null) ? e($v) : '&nbsp;';
@@ -60,8 +60,10 @@
         <div style="padding-left:42%;">हस्ताक्षर / Signature: @if($sigSrc)<img src="{{ $sigSrc }}" class="sig-img">@else {!! $blank('', '190pt') !!} @endif</div>
         <div style="padding-left:42%;">नाम स्पष्ट अक्षरों में / Name in Block Letters: {!! $blank($name, '190pt') !!}</div>
         <div style="padding-left:42%;">पदनाम / Designation: {!! $blank($desig, '190pt') !!}</div>
-        <div style="padding-left:42%;">स्थान / Place: {!! $blank($place, '150pt') !!}</div>
-        <div style="padding-left:42%;">तारीख / Dated: {!! $blank($dated, '150pt') !!}</div>
+        <table style="width:100%; margin-top:6pt;"><tr>
+            <td style="width:42%;">स्थान / Place: {!! $blank($place, '150pt') !!}</td>
+            <td>तारीख / Dated: {!! $blank($dated, '150pt') !!}</td>
+        </tr></table>
     </div>
 
     <div class="def">
