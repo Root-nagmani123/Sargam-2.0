@@ -8,7 +8,7 @@
     $desig  = $g('designation');
     $place  = $g('place') ?: 'Mussoorie';
     $reasons= $g('exemption_reasons');
-    $dated  = $fmt($data['declaration_date'] ?? '');
+    $dated  = $fmt($data['declaration_date'] ?? '') ?: '24-08-2026';
     $sc     = $g('status_clause');
     $sigSrc = $data['_signature_src'][0] ?? null;
     $blank = function ($v, $w = '160pt') {

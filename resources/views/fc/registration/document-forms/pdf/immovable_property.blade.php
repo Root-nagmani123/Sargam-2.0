@@ -8,7 +8,7 @@
     $post    = $g('present_post');
     $cadre   = $g('cadre');
     $pay     = $g('present_pay');
-    $dated   = $fmt($data['declaration_date'] ?? '');
+    $dated   = $fmt($data['declaration_date'] ?? '') ?: '24-08-2026';
     $asOn    = $fmt($data['as_on_date'] ?? '');
     $rows    = $data['_tables']['properties'] ?? [];
     $sigSrc  = $data['_signature_src'][0] ?? null;

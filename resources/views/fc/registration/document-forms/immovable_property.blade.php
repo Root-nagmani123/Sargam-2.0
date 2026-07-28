@@ -114,7 +114,7 @@
 
             <div class="im-footer row">
                 <div class="col-md-6">दिनांक / Dated:
-                    <input type="date" name="declaration_date" class="im-blank" value="{{ $val('declaration_date') }}" style="min-width:150px;"></div>
+                    <input type="date" name="declaration_date" class="im-blank" value="{{ old('declaration_date', '2026-08-24') }}" style="min-width:150px;" readonly></div>
                 <div class="col-md-6 text-md-end">हस्ताक्षर / Signature: ______________________</div>
             </div>
 
