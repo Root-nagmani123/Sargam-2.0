@@ -10,8 +10,8 @@
     </div>
 
     <p class="text-muted small mb-3">
-        Recipients are limited to the active programme course (same as Registration Master
-        Programme / Course filter, Active tab) — not all FC courses.
+        Recipients are limited to the selected template's linked course
+        (same as Registration Master Course filter, Active tab).
         Choose a template and send. Lists are different:
         <strong>Form step incomplete</strong> = started submitting the form (1+ step done) but still pending;
         <strong>Registration pending</strong> = registration not completed and form not started yet.
@@ -23,10 +23,16 @@
     </p>
 
     @if(session('success'))
-        <div class="alert alert-success py-2 small">{{ session('success') }}</div>
+        <div class="alert alert-success alert-dismissible fade show fc-sms-flash" role="alert">
+            <i class="bi bi-check-circle me-1"></i>{{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
     @endif
     @if(session('error'))
-        <div class="alert alert-danger py-2 small">{{ session('error') }}</div>
+        <div class="alert alert-danger alert-dismissible fade show fc-sms-flash" role="alert">
+            <i class="bi bi-exclamation-triangle me-1"></i>{{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
     @endif
     @if($errors->any())
         <div class="alert alert-danger py-2 small">
@@ -36,25 +42,44 @@
         </div>
     @endif
 
-    <div class="row g-3 mb-3">
+    <form method="GET" action="{{ route('fc-reg.admin.sms.index') }}" id="fcSmsTemplateFilterForm" class="row g-3 mb-3">
+        @if(request()->filled('menu'))
+            <input type="hidden" name="menu" value="{{ request('menu') }}">
+        @endif
         <div class="col-md-6">
             <div class="border rounded-3 p-3 bg-light h-100">
-                <div class="text-muted small">Programme</div>
-                <div class="fw-semibold">{{ $preview['programme'] }}</div>
+                <label for="fcSmsFormFilter" class="text-muted small mb-2 d-block">Template Name</label>
+                <select name="form_id" id="fcSmsFormFilter" class="form-select form-select-sm">
+                    @foreach(($forms ?? []) as $form)
+                        <option value="{{ (int) $form->id }}" {{ (int) ($selectedFormId ?? 0) === (int) $form->id ? 'selected' : '' }}>
+                            {{ $form->form_name }} ({{ $form->form_slug }})
+                        </option>
+                    @endforeach
+                </select>
             </div>
         </div>
         <div class="col-md-6">
             <div class="border rounded-3 p-3 bg-light h-100">
+                <div class="text-muted small">Selected Template</div>
+                <div class="fw-semibold">{{ $preview['form_name'] }}</div>
+                @if(! empty($preview['form_slug']))
+                    <div class="text-muted small mt-1"><code>{{ $preview['form_slug'] }}</code></div>
+                @endif
+                <hr class="my-2">
                 <div class="text-muted small">Registration last date (B2)</div>
                 <div class="fw-semibold">{{ $preview['last_date'] }}</div>
             </div>
         </div>
-    </div>
+    </form>
 
     <div class="card border-0 shadow-sm">
         <div class="card-body">
             <form id="fcSmsSendForm" method="POST" action="{{ route('fc-reg.admin.sms.send') }}">
                 @csrf
+                <input type="hidden" name="form_id" id="fcSmsSelectedFormId" value="{{ (int) ($selectedFormId ?? 0) }}">
+                @if(request()->filled('menu'))
+                    <input type="hidden" name="menu" value="{{ request('menu') }}">
+                @endif
 
                 <div class="mb-3">
                     <label class="form-label fw-semibold">SMS template</label>
@@ -144,9 +169,13 @@
 
                 <div id="fcSmsPkInputs"></div>
 
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn-primary" id="fcSmsSendBtn">
                     <i class="bi bi-send me-1"></i>Send SMS + Email
                 </button>
+                <div id="fcSmsSendingStatus" class="text-muted small mt-2 d-none">
+                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    Sending SMS and email. Please wait…
+                </div>
             </form>
         </div>
     </div>
@@ -160,6 +189,16 @@ $(function () {
     var recipientsUrl = @json(route('fc-reg.admin.sms.recipients'));
     var initialized = {};
     var selectedByTemplate = { b1: new Set(), b2: new Set() };
+    var selectedFormId = parseInt($('#fcSmsSelectedFormId').val() || '0', 10);
+
+    $('#fcSmsFormFilter').on('change', function () {
+        selectedFormId = parseInt(this.value || '0', 10);
+        $('#fcSmsSelectedFormId').val(selectedFormId);
+        selectedByTemplate.b1 = new Set();
+        selectedByTemplate.b2 = new Set();
+        initialized = {};
+        $('#fcSmsTemplateFilterForm').trigger('submit');
+    });
 
     var dtLanguage = {
         processing: 'Loading…',
@@ -239,6 +278,7 @@ $(function () {
                 type: 'GET',
                 data: function (d) {
                     d.template = template;
+                    d.form_id = selectedFormId;
                 }
             },
             columns: columns,
@@ -313,6 +353,8 @@ $(function () {
         var mode = $('input[name="send_mode"]:checked').val();
         var template = activeTemplate();
         var $pkWrap = $('#fcSmsPkInputs');
+        var $btn = $('#fcSmsSendBtn');
+        var $status = $('#fcSmsSendingStatus');
         $pkWrap.empty();
 
         if (mode === 'selected') {
@@ -329,15 +371,21 @@ $(function () {
                 e.preventDefault();
                 return false;
             }
-            return true;
-        }
-
-        if (!confirm('Send SMS + Email to ALL matching trainees for the selected template?')) {
+        } else if (!confirm('Send SMS + Email to ALL matching trainees for the selected template? This can take time for large lists.')) {
             e.preventDefault();
             return false;
         }
+
+        $btn.prop('disabled', true);
+        $status.removeClass('d-none');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         return true;
     });
+
+    var $flash = $('.fc-sms-flash').first();
+    if ($flash.length) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
     updateSelectedCount(activeTemplate());
 });

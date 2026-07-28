@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\FC;
 
 use App\Http\Controllers\Controller;
+use App\Models\FC\FcForm;
 use App\Services\FC\FcAdminSmsBulkService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Validation\Rule;
 use Yajra\DataTables\Facades\DataTables;
 
 /**
@@ -17,13 +19,28 @@ class FcAdminSmsController extends Controller
 {
     public function index(Request $request, FcAdminSmsBulkService $bulk): View
     {
-        $counts = $bulk->previewCounts();
+        $forms = FcForm::query()
+            ->where('is_active', true)
+            ->orderByRaw('LOWER(form_name)')
+            ->get(['id', 'form_name', 'form_slug']);
+
+        $defaultForm = FcForm::activeRegistrationDynamicForm();
+        $selectedFormId = (int) $request->query('form_id', $defaultForm?->id ?? 0);
+        if ($selectedFormId <= 0 || ! $forms->pluck('id')->contains($selectedFormId)) {
+            $selectedFormId = (int) ($defaultForm?->id ?? ($forms->first()->id ?? 0));
+        }
+
+        $selectedForm = $forms->firstWhere('id', $selectedFormId);
+        $counts = $bulk->previewCounts($selectedFormId > 0 ? $selectedFormId : null);
 
         return view('admin.fc-sms.index', [
             'preview' => [
-                'programme' => $counts['programme'],
+                'form_name' => $selectedForm?->form_name ?? $counts['programme'],
+                'form_slug' => $selectedForm?->form_slug ?? '',
                 'last_date' => $counts['last_date'],
             ],
+            'forms' => $forms,
+            'selectedFormId' => $selectedFormId,
             'templates' => [
                 FcAdminSmsBulkService::TEMPLATE_B1 => [
                     'label' => 'Form step incomplete',
@@ -48,11 +65,12 @@ class FcAdminSmsController extends Controller
     {
         $validated = $request->validate([
             'template' => 'required|in:b1,b2',
+            'form_id' => ['required', 'integer', Rule::exists('fc_forms', 'id')->where('is_active', true)],
         ]);
 
         $template = $validated['template'];
         $isB1 = $template === FcAdminSmsBulkService::TEMPLATE_B1;
-        $rows = $bulk->allRecipientsForTemplate($template);
+        $rows = $bulk->allRecipientsForTemplate($template, (int) $validated['form_id']);
         $total = count($rows);
 
         $dt = DataTables::of(collect($rows))
@@ -103,6 +121,7 @@ class FcAdminSmsController extends Controller
     {
         $validated = $request->validate([
             'template' => 'required|in:b1,b2',
+            'form_id' => ['required', 'integer', Rule::exists('fc_forms', 'id')->where('is_active', true)],
             'send_mode' => 'required|in:all,selected',
             'registration_pks' => 'required_if:send_mode,selected|array|min:1',
             'registration_pks.*' => 'integer|min:1',
@@ -115,7 +134,7 @@ class FcAdminSmsController extends Controller
             ? array_values(array_unique(array_map('intval', $validated['registration_pks'] ?? [])))
             : null;
 
-        $result = $bulk->send($validated['template'], $pks);
+        $result = $bulk->send($validated['template'], $pks, (int) $validated['form_id']);
 
         $flash = $result['ok'] ? 'success' : 'error';
         $detail = $result['message'];
@@ -124,7 +143,10 @@ class FcAdminSmsController extends Controller
         }
 
         return redirect()
-            ->route('fc-reg.admin.sms.index')
+            ->route('fc-reg.admin.sms.index', array_filter([
+                'form_id' => (int) $validated['form_id'],
+                'menu' => $request->input('menu') ?? $request->query('menu'),
+            ]))
             ->with($flash, $detail);
     }
 }

@@ -17,12 +17,12 @@ return [
 
         'credentials_created' => [
             'subject' => 'Login Credentials Created Successfully',
-            'body' => "Dear {Participant_Name},\n\nYour login credentials for the Training Portal have been created successfully.\n\nUsername: {Registration_ID}\nPassword: {Password}\nProgramme: {Programme_Name}\n\nYou may now log in and complete the remaining sections of your registration form.\n\nTraining Portal: {Portal_Link}\n\n{Institute_Name}",
+            'body' => "Dear {Participant_Name},\n\nYour login credentials for the Training Portal have been created successfully.\n\nUsername: {Registration_ID}\nPassword: {Password}\nProgramme: {Programme_Name}\n\nYou may now log in and complete the remaining sections of your registration form.\n\nClick here to login:\n{Portal_Link}\n\n{Institute_Name}",
         ],
 
         'registration_successful' => [
             'subject' => 'Registration Successful',
-            'body' => "Dear {Participant_Name},\n\nYour registration for the training programme {Programme_Name} has been successfully completed.\n\nRegistration ID (Username): {Registration_ID}\nProgramme Dates: {Programme_Dates}\n\nYou can log in to the Training Portal using your registered credentials.\n\nTraining Portal: {Portal_Link}\n\nThank you.\n{Institute_Name}",
+            'body' => "Dear {Participant_Name},\n\nYour registration for the training programme {Programme_Name} has been successfully completed.\n\nRegistration ID (Username): {Registration_ID}\nProgramme Dates: {Programme_Dates}\n\nYou can log in to the Training Portal using your registered credentials.\n\nClick here to login:\n{Portal_Link}\n\nThank you.\n{Institute_Name}",
         ],
 
         'forgot_password_otp' => [
@@ -37,12 +37,12 @@ return [
 
         'form_step_incomplete' => [
             'subject' => 'Action Required: {Step_Name} Section Incomplete',
-            'body' => "Dear {Participant_Name},\n\nWe noticed that the '{Step_Name}' section of your Foundation Course registration form is yet to be completed.\n\nPlease log in to the Training Portal and complete this section at the earliest to avoid delays in processing your registration.\n\nPortal: {Portal_Link}\n\n{Institute_Name}",
+            'body' => "Dear {Participant_Name},\n\nWe noticed that the '{Step_Name}' section of your Foundation Course registration form is yet to be completed.\n\nPlease log in to the Training Portal and complete this section at the earliest to avoid delays in processing your registration.\n\nClick here to login:\n{Portal_Link}\n\n{Institute_Name}",
         ],
 
         'registration_pending' => [
             'subject' => 'Registration Pending',
-            'body' => "Dear {Participant_Name},\n\nYour registration for {Programme_Name} is incomplete.\n\nPending Step(s): {Pending_Steps}\n\nPlease complete the pending requirements before {Last_Date} to confirm your registration.\n\nPortal: {Portal_Link}\n\n{Institute_Name}",
+            'body' => "Dear {Participant_Name},\n\nYour registration for {Programme_Name} is incomplete.\n\nPending Step(s): {Pending_Steps}\n\nPlease complete the pending requirements before {Last_Date} to confirm your registration.\n\nClick here to login:\n{Portal_Link}\n\n{Institute_Name}",
         ],
 
         'exemption_confirmation' => [

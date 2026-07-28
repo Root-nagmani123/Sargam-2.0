@@ -458,10 +458,11 @@ class FcNotifyService
 
             $subject = $this->applyReplacements((string) $template['subject'], $replacements);
             $body = $this->applyReplacements((string) $template['body'], $replacements);
+            $htmlBody = $this->formatEmailBodyAsHtml($body);
             $fromAddress = config('mail.from.address') ?: 'no-reply@lbsnaa.gov.in';
             $fromName = config('mail.from.name') ?: $this->institute();
 
-            Mail::raw($body, function ($mail) use ($email, $subject, $fromAddress, $fromName) {
+            Mail::html($htmlBody, function ($mail) use ($email, $subject, $fromAddress, $fromName) {
                 $mail->from($fromAddress, $fromName)
                     ->to($email)
                     ->subject($subject);
@@ -501,5 +502,22 @@ class FcNotifyService
         }
 
         return $text;
+    }
+
+    protected function formatEmailBodyAsHtml(string $body): string
+    {
+        $escaped = htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $escaped = nl2br($escaped, false);
+
+        return preg_replace_callback(
+            '/(https?:\/\/[^\s<]+)/i',
+            function (array $m): string {
+                $url = $m[1];
+                $safeUrl = htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+                return '<a href="'.$safeUrl.'" target="_blank" rel="noopener noreferrer" style="color:#1a3c6e;font-weight:600;">Click here to login</a>';
+            },
+            $escaped
+        ) ?? $escaped;
     }
 }
