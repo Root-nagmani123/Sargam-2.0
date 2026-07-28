@@ -1488,6 +1488,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     Route::get('vendors/export', [\App\Http\Controllers\Mess\VendorController::class, 'export'])->name('vendors.export');
     Route::resource('vendors', \App\Http\Controllers\Mess\VendorController::class)->except(['show']);
     Route::resource('invoices', \App\Http\Controllers\Mess\InvoiceController::class)->only(['index', 'create', 'store']);
+    Route::get('itemcategories/export', [\App\Http\Controllers\Mess\ItemCategoryController::class, 'export'])->name('itemcategories.export');
     Route::resource('itemcategories', \App\Http\Controllers\Mess\ItemCategoryController::class)->except(['show']);
     Route::resource('itemsubcategories', \App\Http\Controllers\Mess\ItemSubcategoryController::class)->except(['show']);
     Route::resource('storeallocations', \App\Http\Controllers\Mess\StoreAllocationController::class)->only(['index', 'store']);

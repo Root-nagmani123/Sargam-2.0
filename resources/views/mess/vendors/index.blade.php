@@ -189,7 +189,7 @@
     $canDeleteVendor = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid vendor-master-page">
-    <x-breadcrum title="Vendor Master">
+    <x-breadcrum title="Vendor Master" :showBack="false">
         <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createVendorModal">
             <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
             <span>Add Vendor</span>
