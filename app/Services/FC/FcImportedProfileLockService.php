@@ -167,12 +167,20 @@ class FcImportedProfileLockService
             return $this->rosterRowCache[$userId] = $query()->where('pk', abs($userId))->first();
         }
 
-        $username = fc_user_name_for_id($userId);
-        $row = ($username !== null && trim((string) $username) !== '')
-            ? $query()->where('user_id', trim((string) $username))->first()
+        // '' and null both mean "no login name resolved", so both must take the pk fallback.
+        // Treating only null as unresolved left an empty username finding no roster row at
+        // all — precisely the roster-pk-keyed case the fallback exists for. The reporting SQL
+        // applies the same widened test (see FcStepApplicabilityService::ruleSqlFor()), so
+        // the two sides stay in step.
+        $username = trim((string) (fc_user_name_for_id($userId) ?? ''));
+
+        $row = $username !== ''
+            ? $query()->where('user_id', $username)->first()
             : null;
 
-        if ($row === null && $username === null) {
+        // Only when NO login name resolved: a real username that simply matches no roster row
+        // means the id IS a credentials pk, and falling back to pk would pull a stranger's row.
+        if ($row === null && $username === '') {
             $row = $query()->where('pk', $userId)->first();
         }
 

@@ -220,9 +220,21 @@ class FormManagementController extends Controller
         ]);
 
         $validated['is_active'] = $request->boolean('is_active');
+
         // Unchecked switches are absent from the payload — read them explicitly so turning
         // the rule back off actually persists.
-        $validated['registration_requires_all_steps'] = $request->boolean('registration_requires_all_steps');
+        //
+        // Guarded, and the key dropped entirely when the column is missing: validate() leaves
+        // it in $validated whenever the checkbox was ticked, so naming it in the UPDATE would
+        // throw SQLSTATE[42S22] on a database where 2026_07_27_100000 has not run — breaking
+        // the save of EVERY form setting, not just this switch. Mirrors the defensive read in
+        // FcForm::registrationRequiresAllSteps().
+        if (fc_schema_has_column('fc_forms', 'registration_requires_all_steps')) {
+            $validated['registration_requires_all_steps'] = $request->boolean('registration_requires_all_steps');
+        } else {
+            unset($validated['registration_requires_all_steps']);
+        }
+
         $form->update($validated);
 
         return back()->with('success', 'Form settings updated.');

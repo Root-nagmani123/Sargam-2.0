@@ -28,10 +28,12 @@ class FcFormOverviewDataTable extends DataTable
         $this->applicability = app(FcStepApplicabilityService::class);
 
         // Only steps with a whitelisted tracker_column are treated as progress columns.
+        // Columns are listed explicitly (G1) — 'icon' on top of the shared set because the
+        // summary cards in form-overview.blade render it.
         $this->steps = $form->activeSteps()
             ->whereNotNull('tracker_column')
             ->orderBy('step_number')
-            ->get()
+            ->get(FcStepApplicabilityService::stepColumns(['icon']))
             ->filter(fn ($s) => preg_match('/^[a-zA-Z0-9_]+$/', $s->tracker_column))
             ->values();
 
@@ -60,10 +62,12 @@ class FcFormOverviewDataTable extends DataTable
         fc_report_apply_tracker_user_resolution($query, $t, $t);
         fc_report_join_student_master_firsts($query, $t, $t);
 
-        // Reach the roster row so a step that does not apply to a trainee (e.g. Special
-        // Assistant without a ph_value) can be dropped from that row's denominator. No-op
-        // when the form has no conditional step.
-        $this->applicability->applyReportJoins($query, $this->steps, $this->trackerTable, $t);
+        // No roster join is added here on purpose. A step that does not apply to a trainee
+        // (e.g. Special Assistant without a ph_value) is detected with a correlated EXISTS
+        // inside the expressions below, because fc_registration_master.user_id is not unique
+        // and a LEFT JOIN on it could duplicate this row — see rosterHasPhValueSql().
+        // `uc` and `frm`, which those expressions also name, are already joined above on a
+        // primary key by fc_report_apply_tracker_user_resolution().
 
         // Denominator is per-row, not $totalSteps: a trainee the step does not apply to
         // could otherwise never reach "Complete", because nothing can set that column.

@@ -15,26 +15,16 @@ use Illuminate\Support\Facades\Log;
 class FcRegistrationRegisteredSyncService
 {
     /**
-     * The only fc_form_steps columns the completion + applicability checks read (G1 —
-     * never SELECT *). applicability_rule is appended only when it exists, so this still
-     * works on a database where that migration has not run yet.
+     * The only fc_form_steps columns the completion + applicability checks read (G1 — never
+     * SELECT *). Owned by FcStepApplicabilityService: it is the applicability_rule column that
+     * has to be selected conditionally, so the guard belongs next to the code that reads it
+     * rather than in a second copy here.
      *
-     * @var list<string>
+     * @return list<string>
      */
-    private const STEP_COLUMNS = [
-        'id', 'step_number', 'step_name', 'target_table', 'completion_column', 'tracker_column',
-    ];
-
-    /** @return list<string> */
     private function stepColumns(): array
     {
-        $columns = self::STEP_COLUMNS;
-
-        if (fc_schema_has_column('fc_form_steps', 'applicability_rule')) {
-            $columns[] = 'applicability_rule';
-        }
-
-        return $columns;
+        return FcStepApplicabilityService::stepColumns();
     }
 
     public function syncForCredentialsUser(int $userCredentialsPk, ?FcForm $form = null): void

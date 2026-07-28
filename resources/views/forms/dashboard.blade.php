@@ -30,7 +30,11 @@
             </div>
             @if($formComplete ?? false)
                 {{-- Offered only once every applicable step is done; the controller enforces
-                     the same check, so the link cannot be used to skip ahead. --}}
+                     the same check, so the link cannot be used to skip ahead.
+
+                     The PDF itself only contains the first two steps. Requiring all of them
+                     anyway is deliberate academy policy — registration must be finished before
+                     a trainee can self-print from it. See ReportController@myDescriptiveRollPdf. --}}
                 <a href="{{ route('fc-reg.forms.descriptive-roll.pdf', $form) }}"
                    class="btn btn-light btn-sm fw-semibold"
                    style="white-space:nowrap;">

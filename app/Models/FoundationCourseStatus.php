@@ -17,7 +17,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Schema;
 
 class FoundationCourseStatus extends Model
 {
@@ -67,7 +66,9 @@ class FoundationCourseStatus extends Model
         return $query->where(function (Builder $q) {
             $q->where('admission_status', self::STATUS_REGISTERED);
 
-            if (Schema::hasColumn($this->getTable(), 'is_registered')) {
+            // fc_schema_has_column(), not Schema::hasColumn() — these scopes run on every
+            // status-page load and the facade hits information_schema uncached each time.
+            if (fc_schema_has_column($this->getTable(), 'is_registered')) {
                 $q->orWhere('is_registered', 1);
             }
         });
@@ -81,7 +82,7 @@ class FoundationCourseStatus extends Model
                 $q->where('admission_status', '!=', self::STATUS_REGISTERED)
                     ->orWhereNull('admission_status');
             })
-            ->when(Schema::hasColumn($this->getTable(), 'is_registered'), function (Builder $q) {
+            ->when(fc_schema_has_column($this->getTable(), 'is_registered'), function (Builder $q) {
                 $q->where(function (Builder $w) {
                     $w->where('is_registered', '!=', 1)->orWhereNull('is_registered');
                 });
@@ -130,7 +131,21 @@ class FoundationCourseStatus extends Model
         return $query->where('application_type', self::APPLICATION_EXEMPTION);
     }
 
-    /** Started but unfinished: credentials staged, not registered, no exemption applied. */
+    /**
+     * Started but unfinished: credentials staged, not registered, no exemption applied.
+     *
+     * BEHAVIOUR CHANGE, deliberate. This scope previously fell back to
+     * `where('final_submit', self::SUBMISSION_DRAFT)` on a deployment whose
+     * fc_registration_master has no `is_registered` column. That fallback is gone rather
+     * than ported, because it answered a different question ("is the form a draft?") and
+     * ignored exemptions and staged credentials entirely — so the four tabs did not
+     * partition the roster and rows fell through every one of them.
+     *
+     * The definition below degrades correctly instead: without `is_registered` the
+     * whereRegistrationIncomplete() clause simply reads admission_status alone, and
+     * Not Responded / Incomplete / Registered / Exemption still cover every row exactly once.
+     * SUBMISSION_DRAFT is retained on the model for other callers.
+     */
     public function scopeIncomplete(Builder $query): Builder
     {
         return $query->whereNotExemption()

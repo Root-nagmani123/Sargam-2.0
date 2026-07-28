@@ -24,18 +24,22 @@ return new class extends Migration
             return;
         }
 
+        // Backfill ONLY when this migration is the one that adds the column. Outside the
+        // guard it re-runs on every invocation, which would re-stamp the rule onto a step an
+        // admin had deliberately set back to "Every trainee" — a blank applicability_rule is
+        // a valid, meaningful choice, not a not-yet-migrated one.
         if (! Schema::hasColumn('fc_form_steps', 'applicability_rule')) {
             Schema::table('fc_form_steps', function (Blueprint $table) {
                 $table->string('applicability_rule', 40)->nullable()->after('tracker_column');
             });
-        }
 
-        // Backfill the steps the hard-coded rule already covered, so behaviour is
-        // identical the moment this deploys. Single UPDATE, no per-row loop.
-        DB::table('fc_form_steps')
-            ->whereNull('applicability_rule')
-            ->where('step_name', 'like', 'special assist%')
-            ->update(['applicability_rule' => self::RULE]);
+            // Seed the steps the hard-coded rule already covered, so behaviour is identical
+            // the moment this deploys. Single UPDATE, no per-row loop.
+            DB::table('fc_form_steps')
+                ->whereNull('applicability_rule')
+                ->where('step_name', 'like', 'special assist%')
+                ->update(['applicability_rule' => self::RULE]);
+        }
 
         $this->forgetSchemaCache();
     }

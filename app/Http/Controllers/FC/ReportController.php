@@ -264,8 +264,12 @@ class ReportController extends Controller
                 ->whereNotNull('tracker_column')
                 ->orderBy('step_number')
                 // Only the columns the applicability check reads (G1) — this replaced a
-                // pluck('tracker_column'), so it must not become a SELECT *.
-                ->get(['id', 'step_number', 'step_name', 'tracker_column', 'applicability_rule'])
+                // pluck('tracker_column'), so it must not become a SELECT *. The list is owned
+                // by FcStepApplicabilityService because applicability_rule has to be selected
+                // conditionally: naming it outright throws SQLSTATE[42S22] on any database where
+                // 2026_07_27_000000 has not run yet, which breaks this whole page whenever code
+                // is deployed ahead of its migrations.
+                ->get(FcStepApplicabilityService::stepColumns())
                 ->filter(fn ($s) => preg_match('/^[a-zA-Z0-9_]+$/', (string) $s->tracker_column))
                 ->values();
 
@@ -1780,6 +1784,13 @@ class ReportController extends Controller
      * cannot be pointed at another trainee's profile. (The admin equivalent,
      * admin.reports.descriptive-roll.student.pdf, does accept a username — it sits behind
      * the admin report routes.)
+     *
+     * The gate is intentionally STRICTER than the document. The PDF renders only the first
+     * two steps (FIRST_TWO_STEP_LIMIT — the descriptive roll proper, matching the admin PDF
+     * and both ZIP exports), but the download is withheld until every APPLICABLE step is
+     * done. That is an academy policy — a trainee should have finished their registration
+     * before self-printing from it — not a constraint of the document's contents. Do not
+     * "fix" the two to agree by relaxing the gate: the stricter check is the requirement.
      */
     public function myDescriptiveRollPdf(FcForm $form)
     {
@@ -1787,7 +1798,8 @@ class ReportController extends Controller
         abort_unless($userId !== 0, 403);
 
         $flow  = app(FcRegistrationFlowService::class);
-        $steps = $form->activeSteps()->get();
+        // Explicit column list (G1) — only what the completion and applicability checks read.
+        $steps = $form->activeSteps()->get(FcStepApplicabilityService::stepColumns());
         $status = $flow->buildStepCompletionByStepId($form, $steps, $userId);
 
         [$done, $total] = app(FcStepApplicabilityService::class)->progress($steps, $userId, $status);

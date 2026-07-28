@@ -31,15 +31,52 @@ class FcStepApplicabilityService
     /** Step applies only when the roster row carries fc_registration_master.ph_value. */
     public const RULE_PH_VALUE = 'ph_value_present';
 
-    /** Report-side alias for the roster row resolved by login username. */
+    /** Alias for the roster row inside the applicability EXISTS subquery (scoped to it). */
     private const ROSTER_ALIAS = 'frm_ph';
+
+    /**
+     * A tracker_column is interpolated into raw SQL, so it must be a bare identifier.
+     * The value is admin-writable through the form builder.
+     */
+    private const COLUMN_PATTERN = '/^[a-zA-Z0-9_]+$/';
 
     private const ROSTER_TABLE = 'fc_registration_master';
 
-    /** @var array<int, bool> Per-request memo of hasPhValue(), keyed by user id. */
-    private array $phValueMemo = [];
+    /** @var array<string, bool> Per-request memo of hasConditionalSteps(), keyed by step-id set. */
+    private array $conditionalMemo = [];
 
     public function __construct(private FcImportedProfileLockService $importedProfileLock) {}
+
+    // ── Step loading ─────────────────────────────────────────────────
+
+    /**
+     * The fc_form_steps columns an applicability-aware consumer needs — never SELECT * (G1).
+     *
+     * Covers what ruleFor() reads plus what FcRegistrationFlowService::buildStepCompletionByStepId()
+     * needs to resolve completion, since every caller that evaluates applicability also evaluates
+     * completion.
+     *
+     * applicability_rule is appended ONLY when the column exists, so this is safe on a database
+     * where 2026_07_27_000000 has not run yet: ruleFor() then falls back to the legacy step-name
+     * match, which is why step_name is always selected. Selecting the column unguarded would throw
+     * SQLSTATE[42S22] whenever code is deployed ahead of its migrations.
+     *
+     * @param  list<string>  $extra  Extra columns a specific caller renders (e.g. 'icon').
+     * @return list<string>
+     */
+    public static function stepColumns(array $extra = []): array
+    {
+        $columns = array_merge([
+            'id', 'form_id', 'step_number', 'step_name',
+            'target_table', 'completion_column', 'tracker_column',
+        ], $extra);
+
+        if (fc_schema_has_column('fc_form_steps', 'applicability_rule')) {
+            $columns[] = 'applicability_rule';
+        }
+
+        return array_values(array_unique($columns));
+    }
 
     // ── Rule resolution ──────────────────────────────────────────────
 
@@ -58,13 +95,32 @@ class FcStepApplicabilityService
             return trim($rule);
         }
 
+        // Fall back to the legacy name match ONLY when the column was not loaded at all —
+        // i.e. the migration has not run, or the payload predates it. A column that IS
+        // present and blank is an admin's explicit "Every trainee" and must be honoured;
+        // deriving the rule from the step name anyway made that setting impossible to turn
+        // off for any step called "Special Assistant", and quietly undid the same choice the
+        // backfill migration is careful not to overwrite.
+        if (array_key_exists('applicability_rule', $step->getAttributes())) {
+            return null;
+        }
+
         return $this->legacyRuleFromStepName($step);
     }
 
-    /** Whether any step in the set carries an applicability rule. */
+    /**
+     * Whether any step in the set carries an applicability rule.
+     *
+     * Memoised per step set: reportRuleIsResolvable() calls this, and ruleSqlFor() calls
+     * that once per step — so building one report expression rescanned the whole collection
+     * once for every step in it. Cheap at 7 steps, but pointlessly quadratic.
+     */
     public function hasConditionalSteps(Collection $steps): bool
     {
-        return $steps->contains(fn (FcFormStep $s) => $this->ruleFor($s) !== null);
+        $key = $steps->map(fn (FcFormStep $s) => (string) ($s->id ?? spl_object_id($s)))->implode(',');
+
+        // ??= and not isset(): a memoised `false` must not be recomputed.
+        return $this->conditionalMemo[$key] ??= $steps->contains(fn (FcFormStep $s) => $this->ruleFor($s) !== null);
     }
 
     // ── PHP evaluation (trainee-facing flow) ─────────────────────────
@@ -130,10 +186,14 @@ class FcStepApplicabilityService
         };
     }
 
+    /**
+     * No memo here on purpose — FcImportedProfileLockService already caches the roster row
+     * per user id (rosterRowCache), so a second cache keyed on the same id bought nothing
+     * and gave the same fact two places to go stale.
+     */
     private function hasPhValue(int $userId): bool
     {
-        return $this->phValueMemo[$userId]
-            ??= $this->importedProfileLock->hasPhValue($userId);
+        return $this->importedProfileLock->hasPhValue($userId);
     }
 
     /**
@@ -150,39 +210,45 @@ class FcStepApplicabilityService
     // ── SQL evaluation (reporting) ───────────────────────────────────
 
     /**
-     * Join whatever the report needs to evaluate applicability per row. No-op when no
-     * step in the form is conditional, so unconditional forms gain no extra join.
+     * The step's tracker column, or null when it is not a bare identifier safe to
+     * interpolate into raw SQL.
      *
-     * Mirrors fc_report_apply_tracker_user_resolution(): the tracker's user column may
-     * hold either a user_credentials pk or a legacy login username, so the roster row is
-     * reached through `uc` in the first case and directly in the second.
-     *
-     * @param  \Illuminate\Database\Query\Builder  $query
-     * @param  Collection<int, FcFormStep>  $steps
+     * Every current caller already whitelists with the same pattern before handing steps to
+     * this service, so this changes nothing today. It exists because the guarantee belonged
+     * outside the class that depends on it: these expressions build raw SQL, the value is
+     * admin-writable through the form builder, and a future caller that forgets to filter
+     * should get a skipped step rather than an injection point.
      */
-    public function applyReportJoins($query, Collection $steps, string $trackerTable, ?string $alias = null): void
+    private function safeTrackerColumn(FcFormStep $step): ?string
     {
-        if (! $this->reportRuleIsResolvable($steps)) {
-            return;
-        }
+        $col = (string) ($step->tracker_column ?? '');
 
-        $t = $alias ?? $trackerTable;
+        return preg_match(self::COLUMN_PATTERN, $col) === 1 ? $col : null;
+    }
+
+    /**
+     * Whether the roster row reached by $probeExpression carries a ph_value.
+     *
+     * A correlated EXISTS, deliberately NOT a join. fc_registration_master.user_id has only
+     * the non-unique index frm_user_id_idx — nothing stops two roster rows sharing a login
+     * username, and 50 rows already hold an empty user_id, so the column is plainly not
+     * treated as a key. A LEFT JOIN on it would duplicate the trainee's row in the overview
+     * list and, worse, inflate the COUNT(*)/SUM() aggregates in overviewSummary(), which
+     * count post-join rows. EXISTS can never multiply the driving row.
+     *
+     * It also reads more truthfully than the join did: "some roster row for this trainee has
+     * a ph_value", rather than "the arbitrary row the join happened to pick has one".
+     *
+     * The probe value (not the indexed column) carries the collation conversion, so the
+     * index seek is preserved — see rosterUserIdProbeSql().
+     */
+    private function rosterHasPhValueSql(string $probeExpression): string
+    {
+        $probe = $this->rosterUserIdProbeSql($probeExpression);
         $a = self::ROSTER_ALIAS;
 
-        if (fc_user_col($trackerTable) === 'user_id') {
-            // `uc` is joined on uc.pk = tracker.user_id by the resolution helper; the
-            // roster row is keyed by login username.
-            $query->leftJoin(self::ROSTER_TABLE." as {$a}", function ($join) use ($a) {
-                $join->on(DB::raw("`{$a}`.`user_id`"), '=', DB::raw($this->rosterUserIdProbeSql('uc.user_name')));
-            });
-
-            return;
-        }
-
-        $u = fc_user_col($trackerTable);
-        $query->leftJoin(self::ROSTER_TABLE." as {$a}", function ($join) use ($a, $t, $u) {
-            $join->on(DB::raw("`{$a}`.`user_id`"), '=', DB::raw($this->rosterUserIdProbeSql("`{$t}`.`{$u}`")));
-        });
+        return 'EXISTS (SELECT 1 FROM `'.self::ROSTER_TABLE."` AS `{$a}`"
+            ." WHERE `{$a}`.`user_id` = {$probe} AND `{$a}`.`ph_value` IS NOT NULL)";
     }
 
     /**
@@ -192,7 +258,7 @@ class FcStepApplicabilityService
      *
      * @param  Collection<int, FcFormStep>  $steps  every step on the form
      */
-    public function ruleSqlFor(FcFormStep $step, Collection $steps, string $trackerTable): ?string
+    public function ruleSqlFor(FcFormStep $step, Collection $steps, string $trackerTable, ?string $alias = null): ?string
     {
         $rule = $this->ruleFor($step);
 
@@ -204,20 +270,30 @@ class FcStepApplicabilityService
             return null; // Unknown rule — fail open, exactly as ruleSatisfied() does.
         }
 
-        $a = self::ROSTER_ALIAS;
+        $t = $alias ?? $trackerTable;
+        $u = fc_user_col($trackerTable);
 
-        // `frm` (roster joined by pk) only exists on the user_id path; a tracker row may
-        // still be keyed by roster pk if it predates FcReconcileRosterIds / the
-        // migrate-students rekey.
+        if ($u !== 'user_id') {
+            // Tracker holds the login username directly.
+            return $this->rosterHasPhValueSql("`{$t}`.`{$u}`");
+        }
+
+        // Tracker holds a user_credentials pk, so the roster is reached by login username
+        // through `uc` (joined by fc_report_apply_tracker_user_resolution / applySummaryJoins).
         //
-        // That pk fallback is gated on `uc.user_name IS NULL` so it can only fire when the
-        // id is NOT a credentials pk — otherwise a credentials pk that happens to equal an
-        // unrelated roster pk would import a stranger's ph_value. Mirrors exactly the
-        // guard in FcImportedProfileLockService::rosterRow(), which falls back to pk only
-        // when fc_user_name_for_id() resolves nothing.
-        return fc_user_col($trackerTable) === 'user_id'
-            ? "COALESCE(`{$a}`.`ph_value`, CASE WHEN `uc`.`user_name` IS NULL THEN `frm`.`ph_value` END) IS NOT NULL"
-            : "`{$a}`.`ph_value` IS NOT NULL";
+        // `frm` is the roster joined by pk — a tracker row may still be keyed by roster pk if
+        // it predates FcReconcileRosterIds / the migrate-students rekey. That pk fallback is
+        // gated on `uc.user_name IS NULL` so it can only fire when the id is NOT a credentials
+        // pk — otherwise a credentials pk that happens to equal an unrelated roster pk would
+        // import a stranger's ph_value. Mirrors exactly the guard in
+        // FcImportedProfileLockService::rosterRow(), which falls back to pk only when
+        // fc_user_name_for_id() resolves nothing.
+        // NULL *or* blank — a user_credentials row with an empty user_name resolves no login
+        // name at all, exactly as a missing row does. Mirrors the widened test in
+        // FcImportedProfileLockService::rosterRow(); the two must agree or the trainee
+        // dashboard and the admin report disagree about who a conditional step applies to.
+        return '('.$this->rosterHasPhValueSql('uc.user_name')
+            ." OR ((`uc`.`user_name` IS NULL OR TRIM(`uc`.`user_name`) = '') AND `frm`.`ph_value` IS NOT NULL))";
     }
 
     /**
@@ -228,9 +304,10 @@ class FcStepApplicabilityService
     public function stepCountsSql(FcFormStep $step, Collection $steps, string $trackerTable, ?string $alias = null): string
     {
         $t = $alias ?? $trackerTable;
-        $col = $step->tracker_column;
-        $ruleSql = $this->ruleSqlFor($step, $steps, $trackerTable);
+        $col = $this->safeTrackerColumn($step);
+        $ruleSql = $col === null ? null : $this->ruleSqlFor($step, $steps, $trackerTable, $alias);
 
+        // Unusable column, or the step always applies — either way it always counts.
         if ($ruleSql === null) {
             return '1';
         }
@@ -278,8 +355,13 @@ class FcStepApplicabilityService
         $t = $alias ?? $trackerTable;
 
         foreach ($steps as $step) {
-            $col = $step->tracker_column;
-            $ruleSql = $this->ruleSqlFor($step, $steps, $trackerTable);
+            $col = $this->safeTrackerColumn($step);
+
+            if ($col === null) {
+                continue; // Cannot be tested in SQL — do not constrain on it.
+            }
+
+            $ruleSql = $this->ruleSqlFor($step, $steps, $trackerTable, $alias);
 
             if ($ruleSql === null) {
                 $query->where("{$t}.{$col}", 1);
@@ -304,10 +386,15 @@ class FcStepApplicabilityService
     {
         $t = $alias ?? $trackerTable;
 
-        $query->where(function ($outer) use ($steps, $t, $trackerTable) {
+        $query->where(function ($outer) use ($steps, $t, $trackerTable, $alias) {
             foreach ($steps as $step) {
-                $col = $step->tracker_column;
-                $ruleSql = $this->ruleSqlFor($step, $steps, $trackerTable);
+                $col = $this->safeTrackerColumn($step);
+
+                if ($col === null) {
+                    continue; // Cannot be tested in SQL — contributes no "pending" branch.
+                }
+
+                $ruleSql = $this->ruleSqlFor($step, $steps, $trackerTable, $alias);
 
                 $outer->orWhere(function ($q) use ($t, $col, $ruleSql) {
                     $q->where(function ($pending) use ($t, $col) {
@@ -350,7 +437,11 @@ class FcStepApplicabilityService
         }
 
         foreach ($steps as $step) {
-            $col = $step->tracker_column;
+            $col = $this->safeTrackerColumn($step);
+
+            if ($col === null) {
+                continue; // No usable tracker column — cannot hold the trainee back.
+            }
 
             if ((int) ($trackerRow->{$col} ?? 0) === 1) {
                 continue;
@@ -379,8 +470,12 @@ class FcStepApplicabilityService
     {
         $selects = [DB::raw('COUNT(*) as total_rows')];
 
-        foreach ($steps as $step) {
-            $col = $step->tracker_column;
+        // Steps whose tracker column is not a bare identifier are dropped: they cannot be
+        // aggregated in SQL, and must never be interpolated into it.
+        $sqlSteps = $steps->filter(fn (FcFormStep $s) => $this->safeTrackerColumn($s) !== null)->values();
+
+        foreach ($sqlSteps as $step) {
+            $col = $this->safeTrackerColumn($step);
             $countsSql = $this->stepCountsSql($step, $steps, $trackerTable);
 
             $selects[] = DB::raw("SUM(CASE WHEN `{$trackerTable}`.`{$col}` = 1 THEN 1 ELSE 0 END) as `done_{$col}`");
@@ -388,9 +483,9 @@ class FcStepApplicabilityService
         }
 
         // complete = zero applicable-but-pending steps on the row
-        $pendingParts = $steps
+        $pendingParts = $sqlSteps
             ->map(function (FcFormStep $s) use ($steps, $trackerTable) {
-                $col = $s->tracker_column;
+                $col = $this->safeTrackerColumn($s);
                 $ruleSql = $this->ruleSqlFor($s, $steps, $trackerTable);
                 $pending = "(`{$trackerTable}`.`{$col}` <> 1 OR `{$trackerTable}`.`{$col}` IS NULL)";
                 $applies = $ruleSql === null ? '' : " AND ({$ruleSql})";
@@ -422,8 +517,8 @@ class FcStepApplicabilityService
             'incomplete' => max(0, $total - $complete),
         ];
 
-        foreach ($steps as $step) {
-            $col = $step->tracker_column;
+        foreach ($sqlSteps as $step) {
+            $col = $this->safeTrackerColumn($step);
             $summary[$col] = [
                 'done' => (int) ($row->{'done_'.$col} ?? 0),
                 'applicable' => (int) ($row->{'appl_'.$col} ?? 0),
@@ -434,33 +529,27 @@ class FcStepApplicabilityService
     }
 
     /**
-     * The summary query counts the tracker table directly (no report joins), so it must
-     * reach the roster itself when a conditional step is present.
+     * The summary query counts the tracker table directly (no report joins), so on the
+     * user_id path it must reach `uc` and `frm` itself — ruleSqlFor() names both.
+     *
+     * Only these two joins, and both are on a primary key (uc.pk / frm.pk = tracker.user_id),
+     * so neither can multiply a tracker row. That matters here more than anywhere else: this
+     * query's COUNT(*) and SUM() are computed over joined rows, so a fan-out would silently
+     * inflate the "total / complete / incomplete" cards. The roster lookup that CANNOT be
+     * proven 1:1 is done as an EXISTS inside the expression instead — see rosterHasPhValueSql().
+     *
+     * Nothing is needed on the legacy-username path: the EXISTS probes the tracker column directly.
      *
      * @param  \Illuminate\Database\Query\Builder  $query
      * @param  Collection<int, FcFormStep>  $steps
      */
     private function applySummaryJoins($query, Collection $steps, string $trackerTable): void
     {
-        if (! $this->reportRuleIsResolvable($steps)) {
-            return;
-        }
-
-        $a = self::ROSTER_ALIAS;
-        $u = fc_user_col($trackerTable);
-
-        if ($u !== 'user_id') {
-            $query->leftJoin(self::ROSTER_TABLE." as {$a}", function ($join) use ($a, $trackerTable, $u) {
-                $join->on(DB::raw("`{$a}`.`user_id`"), '=', DB::raw($this->rosterUserIdProbeSql("`{$trackerTable}`.`{$u}`")));
-            });
-
+        if (! $this->reportRuleIsResolvable($steps) || fc_user_col($trackerTable) !== 'user_id') {
             return;
         }
 
         $query->leftJoin('user_credentials as uc', 'uc.pk', '=', "{$trackerTable}.user_id")
-            ->leftJoin(self::ROSTER_TABLE." as {$a}", function ($join) use ($a) {
-                $join->on(DB::raw("`{$a}`.`user_id`"), '=', DB::raw($this->rosterUserIdProbeSql('uc.user_name')));
-            })
             ->leftJoin(self::ROSTER_TABLE.' as frm', 'frm.pk', '=', "{$trackerTable}.user_id");
     }
 
@@ -482,10 +571,21 @@ class FcStepApplicabilityService
      */
     private function rosterUserIdProbeSql(string $expression): string
     {
+        // Memoised only once the charset is actually KNOWN. rosterUserIdCharset() returns
+        // null when the lookup fails (cache store down, DB blip); memoising that would pin
+        // the un-converted probe for the whole process — indefinitely under a queue worker
+        // or Octane — silently disabling the index optimisation this method exists for.
+        // Leaving the memo unset means the next call re-probes and self-heals.
         static $needsConversion = null;
 
         if ($needsConversion === null) {
-            $needsConversion = $this->rosterUserIdCharset() === 'latin1';
+            $charset = $this->rosterUserIdCharset();
+
+            if ($charset === null) {
+                return $expression; // Unknown this time — probe plainly, retry next call.
+            }
+
+            $needsConversion = $charset === 'latin1';
         }
 
         return $needsConversion ? "CONVERT({$expression} USING latin1)" : $expression;
