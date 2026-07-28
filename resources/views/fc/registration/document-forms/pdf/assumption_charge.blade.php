@@ -8,7 +8,7 @@
     $service = trim((string) ($data['service'] ?? ''));
     $adate   = $fmt($data['date_of_assumption'] ?? '');
     $time    = trim((string) ($data['time_of_assumption'] ?? ''));
-    $ddate   = $fmt($data['declaration_date'] ?? '');
+    $ddate   = '24-07-2026';   // hard-frozen date, overrides any saved value
     $sigSrc  = $data['_signature_src'][0] ?? null;
     $hi      = $data['_hi'] ?? [];   // candidate-typed Hindi values (blank if none)
 

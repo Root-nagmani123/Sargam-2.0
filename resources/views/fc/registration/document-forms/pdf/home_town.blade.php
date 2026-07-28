@@ -11,7 +11,7 @@
     $name    = $g('officer_name');
     $desig   = $g('designation');
     $place   = $g('place') ?: 'Mussoorie';
-    $dated   = $fmt($data['declaration_date'] ?? '') ?: '24-08-2026';
+    $dated   = '24-08-2026';   // hard-frozen date, overrides any saved value
     $sigSrc  = $data['_signature_src'][0] ?? null;
     $blank = function ($v, $w = '160pt') {
         $val = ($v !== '' && $v !== null) ? e($v) : '&nbsp;';

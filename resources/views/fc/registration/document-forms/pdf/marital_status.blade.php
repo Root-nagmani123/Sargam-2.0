@@ -6,9 +6,9 @@
     $g      = fn ($k) => trim((string) ($data[$k] ?? ''));
     $name   = $g('officer_name');
     $desig  = $g('designation');
-    $place  = $g('place') ?: 'Mussoorie';
+    $place  = 'Mussoorie';   // hard-frozen: always Mussoorie, overrides any saved value
     $reasons= $g('exemption_reasons');
-    $dated  = $fmt($data['declaration_date'] ?? '') ?: '24-08-2026';
+    $dated  = '24-08-2026';   // hard-frozen date, overrides any saved value
     $sc     = $g('status_clause');
     $sigSrc = $data['_signature_src'][0] ?? null;
     $blank = function ($v, $w = '160pt') {

@@ -8,8 +8,8 @@
     $desig   = $g('designation');
     $dob     = $fmt($data['date_of_birth'] ?? '');
     $ason    = $fmt($data['details_as_on'] ?? '');
-    $place   = $g('place');
-    $dated   = $fmt($data['declaration_date'] ?? '');
+    $place   = 'Mussoorie';   // hard-frozen, overrides any saved value
+    $dated   = '24-08-2026';  // hard-frozen date, overrides any saved value
     $rows    = $data['_tables']['members'] ?? [];
     $sigSrc  = $data['_signature_src'][0] ?? null;
     $minRows = max(10, count($rows));   // fixed 10-row grid like the sample

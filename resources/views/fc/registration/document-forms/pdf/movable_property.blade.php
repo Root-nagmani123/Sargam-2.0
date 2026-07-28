@@ -8,7 +8,7 @@
     $post    = $g('present_post');
     $pay     = $g('present_pay');
     $year    = $g('year');
-    $dated   = $fmt($data['declaration_date'] ?? '');
+    $dated   = '24-08-2026';   // hard-frozen date, overrides any saved value
     $rows    = $data['_tables']['movables'] ?? [];
     $sigSrc  = $data['_signature_src'][0] ?? null;
     $blank = function ($v, $w = '150pt') {
