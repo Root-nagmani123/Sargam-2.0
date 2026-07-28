@@ -1501,6 +1501,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     Route::get('stores/export', [\App\Http\Controllers\Mess\StoreController::class, 'export'])->name('stores.export');
     Route::resource('stores', \App\Http\Controllers\Mess\StoreController::class)->except(['show']);
 
+    Route::get('sub-stores/export', [\App\Http\Controllers\Mess\SubStoreController::class, 'export'])->name('sub-stores.export');
     Route::resource('sub-stores', \App\Http\Controllers\Mess\SubStoreController::class)->except(['show']);
 
     // NEW: Setup - Configuration Modules
