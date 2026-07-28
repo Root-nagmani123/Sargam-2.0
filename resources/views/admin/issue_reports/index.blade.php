@@ -110,8 +110,7 @@
                    class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1">
                     <i class="bi bi-download" aria-hidden="true"></i> Download
                 </a>
-                <button class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
-                        onclick="window.print()">
+                <button id="printBtn" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1">
                     <i class="bi bi-printer" aria-hidden="true"></i> Print
                 </button>
             </div>
@@ -149,7 +148,7 @@
                 </div>
             </div>
 
-            <button class="btn btn-sm btn-outline-danger" id="removeFilterBtn">Remove Filter</button>
+            <button class="btn btn-sm btn-outline-danger" id="removeFilterBtn">Reset Filter</button>
 
             {{-- Columns visibility --}}
             <div class="dropdown ms-auto">
@@ -235,15 +234,161 @@ $(document).ready(function () {
         };
     }
 
-    /* ── Keep Download link in sync with active filters ── */
+    /* ── Build a <thead>/<tbody> HTML string from the currently visible columns/rows ── */
+    function buildPrintableTableHtml() {
+        if (!table) return '';
+        var vis = [];
+        table.columns().every(function (i) {
+            var title = $(this.header()).text().trim();
+            if (!title || title === 'Action') return;
+            if (this.visible()) vis.push(i);
+        });
+
+        var html = '<thead><tr>';
+        vis.forEach(function (ci) {
+            html += '<th>' + ($(table.column(ci).header()).text() || '').trim() + '</th>';
+        });
+        html += '</tr></thead><tbody>';
+
+        table.rows({ search: 'applied' }).nodes().each(function (rowNode) {
+            var $row = $(rowNode);
+            if ($row.hasClass('child')) return;
+            html += '<tr>';
+            vis.forEach(function (ci) {
+                var cellNode = table.cell(rowNode, ci).node();
+                var cellHtml = '';
+                if (cellNode) {
+                    var $cell = $(cellNode).clone();
+                    $cell.find('input,button,select,textarea,a').each(function () {
+                        var $el = $(this);
+                        if ($el.is('a')) { $el.replaceWith($el.text()); }
+                        else { $el.remove(); }
+                    });
+                    cellHtml = ($cell.html() || '').trim();
+                }
+                html += '<td>' + cellHtml + '</td>';
+            });
+            html += '</tr>';
+        });
+
+        html += '</tbody>';
+        return html;
+    }
+
+    /* ── Open a formatted print window (Govt. of India letterhead + report table) ── */
+    function openPrintWindow(tableHtml, reportTitle) {
+        var emblemUrl = '{{ asset("images/ashoka.png") }}';
+        var logoUrl   = '{{ asset("admin_assets/images/logos/logo.png") }}';
+
+        var filterParts = [];
+        var tabLabel = $('.issue-tab.active').text().trim();
+        if (tabLabel && tabLabel !== 'All Issues') filterParts.push(tabLabel);
+        var deptText = $('#deptFilter option:selected').text().trim();
+        if ($('#deptFilter').val()) filterParts.push('Department: ' + deptText);
+        var subText = $('#submoduleFilter option:selected').text().trim();
+        if ($('#submoduleFilter').val()) filterParts.push('Submodule: ' + subText);
+        if ($('#dateFrom').val()) filterParts.push('From: ' + $('#dateFrom').val());
+        if ($('#dateTo').val())   filterParts.push('To: ' + $('#dateTo').val());
+        var filterLine = filterParts.length ? filterParts.join(' | ') : 'No filters applied';
+
+        var printWindow = window.open('', '_blank');
+        if (!printWindow) { window.print(); return; }
+
+        printWindow.document.open();
+        printWindow.document.write('<!doctype html>\n' +
+'<html lang="en">\n' +
+'<head>\n' +
+'    <meta charset="utf-8">\n' +
+'    <title>' + reportTitle + ' - LBSNAA MUSSOORIE</title>\n' +
+'    <style>\n' +
+'        *, *::before, *::after { box-sizing: border-box; }\n' +
+'        body {\n' +
+'            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;\n' +
+'            font-size: 11px;\n' +
+'            color: #212529;\n' +
+'            -webkit-print-color-adjust: exact;\n' +
+'            print-color-adjust: exact;\n' +
+'            margin: 0;\n' +
+'            padding: 12mm 10mm;\n' +
+'        }\n' +
+'        .print-header { display: flex; align-items: center; gap: 12px; border-bottom: 3px solid #004a93; padding-bottom: 10px; margin-bottom: 12px; }\n' +
+'        .print-header img { height: 48px; width: auto; object-fit: contain; }\n' +
+'        .header-text { flex: 1; }\n' +
+'        .header-text .line1 { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #004a93; font-weight: 600; margin: 0; }\n' +
+'        .header-text .line2 { font-size: 14px; font-weight: 700; text-transform: uppercase; color: #1a1a1a; margin: 2px 0 0; }\n' +
+'        .header-text .line3 { font-size: 9px; color: #555; margin: 1px 0 0; }\n' +
+'        .report-title-block { text-align: center; margin-bottom: 10px; }\n' +
+'        .report-title-block h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 4px; color: #1a1a1a; }\n' +
+'        .date-pill { display: inline-block; background: #004a93; color: #fff; padding: 3px 14px; border-radius: 10px; font-size: 10px; font-weight: 500; -webkit-print-color-adjust: exact; print-color-adjust: exact; border: 1px solid #004a93; }\n' +
+'        .report-meta { font-size: 10px; line-height: 1.7; margin: 8px 0 10px; color: #333; }\n' +
+'        .report-meta strong { color: #1a1a1a; }\n' +
+'        .data-table { width: 100%; border-collapse: collapse; font-size: 10px; }\n' +
+'        .data-table th, .data-table td { padding: 4px 6px; border: 1px solid #bbb; vertical-align: middle; word-break: break-word; white-space: normal; }\n' +
+'        .data-table thead th { background: #004a93; color: #fff; font-weight: 600; font-size: 10px; text-align: left; }\n' +
+'        .data-table tbody tr:nth-child(even) td { background: #f9fafb; }\n' +
+'        .footer { border-top: 1px solid #dee2e6; font-size: 8px; color: #666; text-align: center; padding-top: 4px; margin-top: 8px; }\n' +
+'        @page { size: A4 landscape; margin: 8mm; }\n' +
+'        @media print { body { padding: 0; } thead { display: table-header-group; } tr { page-break-inside: avoid; } }\n' +
+'    </style>\n' +
+'</head>\n' +
+'<body>\n' +
+'<div class="print-header">\n' +
+'    <img src="' + emblemUrl + '" alt="Emblem">\n' +
+'    <div class="header-text">\n' +
+'        <p class="line1">Government of India</p>\n' +
+'        <p class="line2">LBSNAA MUSSOORIE</p>\n' +
+'        <p class="line3">Lal Bahadur Shastri National Academy of Administration</p>\n' +
+'    </div>\n' +
+'    <img src="' + logoUrl + '" alt="LBSNAA Logo" onerror="this.style.display=\'none\'">\n' +
+'</div>\n' +
+'<div class="report-title-block">\n' +
+'    <h2>' + reportTitle + '</h2>\n' +
+'    <span class="date-pill">' + filterLine + '</span>\n' +
+'</div>\n' +
+'<div class="report-meta">\n' +
+'    <strong>Printed:</strong> ' + new Date().toLocaleDateString('en-IN') + ' ' + new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}) + '\n' +
+'</div>\n' +
+'<table class="data-table">\n' + tableHtml + '\n</table>\n' +
+'<div class="footer"><small>LBSNAA Mussoorie &mdash; ' + reportTitle + '</small></div>\n' +
+'<script>\n' +
+'    window.addEventListener("load", function() {\n' +
+'        setTimeout(function() { window.print(); }, 300);\n' +
+'    });\n' +
+'<\/script>\n' +
+'</body>\n' +
+'</html>');
+        printWindow.document.close();
+    }
+
+    /* ── Column title -> export field key, used to restrict Download to checked columns ── */
+    var COLUMN_KEY_MAP = {
+        'S. No.':            'sno',
+        'Date':               'date',
+        'Department Name':    'dept_name',
+        'Sub-Module Name':    'sub_module_name',
+        'Issue Raised By':    'reporter',
+        'Issue Description':  'description',
+        'Attachment':         'attachment',
+        'Status':             'status'
+    };
+
+    /* ── Keep Download link in sync with active filters + visible columns ── */
     function updateDownloadLink() {
         var base = '{{ route('admin.issue-reports.export') }}';
         var p    = filterParams();
         var qs   = Object.entries(p)
             .filter(function (e) { return e[1] !== ''; })
-            .map(function (e) { return encodeURIComponent(e[0]) + '=' + encodeURIComponent(e[1]); })
-            .join('&');
-        $('#downloadBtn').attr('href', base + (qs ? '?' + qs : ''));
+            .map(function (e) { return encodeURIComponent(e[0]) + '=' + encodeURIComponent(e[1]); });
+
+        var visibleKeys = [];
+        $('#columnsDropdown input[type=checkbox]:checked').each(function () {
+            visibleKeys.push($(this).data('key'));
+        });
+        if (visibleKeys.length) {
+            qs.push('columns=' + encodeURIComponent(visibleKeys.join(',')));
+        }
+
+        $('#downloadBtn').attr('href', base + (qs.length ? '?' + qs.join('&') : ''));
     }
 
     /* ── Build footer: move paginate/length/info into #issueDtFooter ── */
@@ -292,9 +437,10 @@ $(document).ready(function () {
             if (!title || title === 'Action') return;
 
             var visible = this.visible();
+            var key     = COLUMN_KEY_MAP[title] || title;
             var $li     = $('<li>');
             var $label  = $('<label class="dropdown-item py-1 mb-0">');
-            var $cb     = $('<input type="checkbox" class="me-2">').prop('checked', visible).data('col', idx);
+            var $cb     = $('<input type="checkbox" class="me-2">').prop('checked', visible).data('col', idx).data('key', key);
             $label.append($cb).append(title);
             $li.append($label);
             $menu.append($li);
@@ -302,6 +448,7 @@ $(document).ready(function () {
 
         $menu.on('change', 'input[type=checkbox]', function () {
             table.column($(this).data('col')).visible(this.checked);
+            updateDownloadLink();
         });
 
         $menu.data('built', true);
@@ -376,6 +523,31 @@ $(document).ready(function () {
         $('#dateTo').val('');
         updateDownloadLink();
         if (table) table.ajax.reload();
+    });
+
+    /* ── Print ── */
+    $('#printBtn').on('click', function () {
+        if (!table) { window.print(); return; }
+        var originalLen  = table.page.len();
+        var originalPage = table.page();
+        var restored     = false;
+
+        var restore = function () {
+            if (restored) return;
+            restored = true;
+            table.page.len(originalLen);
+            table.page(originalPage);
+            table.draw(false);
+        };
+
+        table.one('draw', function () {
+            setTimeout(function () {
+                openPrintWindow(buildPrintableTableHtml(), 'Reported Issues Report');
+                setTimeout(restore, 800);
+            }, 250);
+        });
+
+        table.page.len(-1).draw();
     });
 
     /* ── Search toggle ── */

@@ -42,7 +42,7 @@
                         <label for="reportIssueDescription" class="form-label">Issue Description<span
                                 class="text-danger">*</span></label>
                         <textarea class="form-control" id="reportIssueDescription" name="description" rows="4"
-                            placeholder="eg. Lorem ipsum dolor sit" maxlength="5000" required></textarea>
+                            placeholder="eg. Unable to submit OT attendance for July" maxlength="5000" required></textarea>
                         <div class="invalid-feedback" data-error-for="description"></div>
                     </div>
 

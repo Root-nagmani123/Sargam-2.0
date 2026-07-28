@@ -180,21 +180,37 @@ class IssueReportController extends Controller
         $reports  = $query->orderBy('id', 'desc')->get();
         $filename = 'my_issue_reports_' . date('Ymd_His') . '.csv';
 
-        return response()->stream(function () use ($reports) {
+        $columnDefs = [
+            'sno'             => 'S.No.',
+            'date'            => 'Date',
+            'dept_name'       => 'Department Name',
+            'sub_module_name' => 'Sub-Module',
+            'description'     => 'Issue Description',
+            'attachment'      => 'Attachment',
+            'status'          => 'Status',
+        ];
+        $requestedKeys = array_filter(explode(',', (string) $request->query('columns', '')));
+        $activeKeys    = $requestedKeys
+            ? array_values(array_intersect(array_keys($columnDefs), $requestedKeys))
+            : array_keys($columnDefs);
+
+        return response()->stream(function () use ($reports, $columnDefs, $activeKeys) {
             $h = fopen('php://output', 'w');
             fprintf($h, chr(0xEF) . chr(0xBB) . chr(0xBF));
-            fputcsv($h, ['S.No.', 'Date', 'Department Name', 'Sub-Module', 'Issue Description', 'Status']);
+            fputcsv($h, array_map(fn ($key) => $columnDefs[$key], $activeKeys));
             foreach ($reports as $i => $r) {
                 $label = in_array((int) $r->status, [IssueReport::STATUS_OPEN, IssueReport::STATUS_IN_PROGRESS])
                     ? 'Active' : 'Fixed Issue';
-                fputcsv($h, [
-                    $i + 1,
-                    $r->created_at ? Carbon::parse($r->created_at)->format('d-m-Y') : '',
-                    $r->module_name ?? '',
-                    $r->sub_module  ?? '',
-                    $r->description ?? '',
-                    $label,
-                ]);
+                $row = [
+                    'sno'             => $i + 1,
+                    'date'            => $r->created_at ? Carbon::parse($r->created_at)->format('d-m-Y') : '',
+                    'dept_name'       => $r->module_name ?? '',
+                    'sub_module_name' => $r->sub_module  ?? '',
+                    'description'     => $r->description ?? '',
+                    'attachment'      => $r->attachment ? url('storage/' . $r->attachment) : '',
+                    'status'          => $label,
+                ];
+                fputcsv($h, array_map(fn ($key) => $row[$key], $activeKeys));
             }
             fclose($h);
         }, 200, [
@@ -275,24 +291,41 @@ class IssueReportController extends Controller
         $reports  = $query->orderBy('issue_reports.id', 'desc')->get();
         $filename = 'issue_reports_' . date('Ymd_His') . '.csv';
 
-        return response()->stream(function () use ($reports) {
+        $columnDefs = [
+            'sno'             => 'S.No.',
+            'date'            => 'Date',
+            'dept_name'       => 'Department Name',
+            'sub_module_name' => 'Sub-Module',
+            'reporter'        => 'Issue Raised By',
+            'description'     => 'Issue Description',
+            'attachment'      => 'Attachment',
+            'status'          => 'Status',
+        ];
+        $requestedKeys = array_filter(explode(',', (string) $request->query('columns', '')));
+        $activeKeys    = $requestedKeys
+            ? array_values(array_intersect(array_keys($columnDefs), $requestedKeys))
+            : array_keys($columnDefs);
+
+        return response()->stream(function () use ($reports, $columnDefs, $activeKeys) {
             $h = fopen('php://output', 'w');
             fprintf($h, chr(0xEF) . chr(0xBB) . chr(0xBF));
-            fputcsv($h, ['S.No.', 'Date', 'Department Name', 'Sub-Module', 'Issue Raised By', 'Issue Description', 'Status']);
+            fputcsv($h, array_map(fn ($key) => $columnDefs[$key], $activeKeys));
             foreach ($reports as $i => $r) {
                 $name  = trim(($r->reporter_first ?? '') . ' ' . ($r->reporter_last ?? ''));
                 if ($name === '') $name = $r->reporter_username ?? ('User #' . $r->reported_by);
                 $label = in_array((int) $r->status, [IssueReport::STATUS_OPEN, IssueReport::STATUS_IN_PROGRESS])
                     ? 'Active' : 'Fixed Issue';
-                fputcsv($h, [
-                    $i + 1,
-                    $r->created_at ? Carbon::parse($r->created_at)->format('d-m-Y') : '',
-                    $r->module_name ?? '',
-                    $r->sub_module  ?? '',
-                    $name,
-                    $r->description ?? '',
-                    $label,
-                ]);
+                $row = [
+                    'sno'             => $i + 1,
+                    'date'            => $r->created_at ? Carbon::parse($r->created_at)->format('d-m-Y') : '',
+                    'dept_name'       => $r->module_name ?? '',
+                    'sub_module_name' => $r->sub_module  ?? '',
+                    'reporter'        => $name,
+                    'description'     => $r->description ?? '',
+                    'attachment'      => $r->attachment ? url('storage/' . $r->attachment) : '',
+                    'status'          => $label,
+                ];
+                fputcsv($h, array_map(fn ($key) => $row[$key], $activeKeys));
             }
             fclose($h);
         }, 200, [
