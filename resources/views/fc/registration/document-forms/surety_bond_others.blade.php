@@ -106,24 +106,33 @@
                 </p>
 
                 <div class="sb-lines">
-                    Dated <input type="text" name="bond_dated_at" class="blank blank--sm" value="{{ $val('bond_dated_at') }}">
+                    <div style="text-align:center;">Dated <input type="text" name="bond_dated_at" class="blank blank--sm" value="{{ $val('bond_dated_at') }}">
                     this <input type="text" name="bond_dated_day" class="blank blank--sm" value="{{ $val('bond_dated_day') }}">
-                    day of <input type="text" name="bond_dated_month" class="blank blank--mid" value="{{ $val('bond_dated_month') }}">
-                    <div class="sb-sign mt-3">Signature of the Probationer ______________________</div>
-                    <div>Signed by the Probationer in the presence of —</div>
-                    <div>Name of Witness: <input type="text" name="prob_witness_name" class="blank blank--mid" value="{{ $val('prob_witness_name') }}"></div>
-                    <div>Address: <input type="text" name="prob_witness_address" class="blank blank--wide" value="{{ $val('prob_witness_address') }}"></div>
-                    <div>Occupation: <input type="text" name="prob_witness_occupation" class="blank blank--mid" value="{{ $val('prob_witness_occupation') }}"></div>
+                    day of <input type="text" name="bond_dated_month" class="blank blank--mid" value="{{ $val('bond_dated_month') }}"></div>
 
-                    <div class="sb-sign mt-3">Signature of the Surety ______________________</div>
-                    <div>Signed by the Surety in the presence of —</div>
-                    <div>Name of Witness: <input type="text" name="surety_witness_name" class="blank blank--mid" value="{{ $val('surety_witness_name') }}"></div>
-                    <div>Address: <input type="text" name="surety_witness_address" class="blank blank--wide" value="{{ $val('surety_witness_address') }}"></div>
-                    <div>Occupation: <input type="text" name="surety_witness_occupation" class="blank blank--mid" value="{{ $val('surety_witness_occupation') }}"></div>
+                    {{-- ── Probationer signature block ── --}}
+                    <div class="sb-sign" style="text-align:center; margin-top:2rem;">Signature of the Probationer: ______________________</div>
+                    <div style="margin-top:1rem;">Signed <b>by Probationer</b> in the presence of &nbsp;(Name of Witness)
+                        <input type="text" name="prob_witness_name" class="blank blank--wide" value="{{ $val('prob_witness_name') }}"></div>
+                    <div>Address <input type="text" name="prob_witness_address" class="blank" style="min-width:560px;" value="{{ $val('prob_witness_address') }}"></div>
+                    <div>
+                        <span style="display:inline-block; min-width:200px; border-bottom:1px dotted #64748b;">&nbsp;</span>
+                        Occupation
+                        <input type="text" name="prob_witness_occupation" class="blank blank--mid" value="{{ $val('prob_witness_occupation') }}"></div>
+
+                    {{-- ── Surety signature block ── --}}
+                    <div class="sb-sign" style="text-align:center; margin-top:2rem;">Signature of the Surety: ______________________</div>
+                    <div style="margin-top:1rem;">Signed <b>by Surety</b> in the presence of &nbsp;(Name of Witness)
+                        <input type="text" name="surety_witness_name" class="blank blank--wide" value="{{ $val('surety_witness_name') }}"></div>
+                    <div>Address <input type="text" name="surety_witness_address" class="blank" style="min-width:560px;" value="{{ $val('surety_witness_address') }}"></div>
+                    <div>
+                        <span style="display:inline-block; min-width:200px; border-bottom:1px dotted #64748b;">&nbsp;</span>
+                        Occupation
+                        <input type="text" name="surety_witness_occupation" class="blank blank--mid" value="{{ $val('surety_witness_occupation') }}"></div>
                 </div>
 
                 <p class="sb-body" style="text-indent:0; margin-top:1.4rem;">
-                    I, the Surety whose signature is appended to the above agreement, do hereby declare that
+                    I (Insert name of surety) <input type="text" name="surety_decl_name" class="blank blank--wide" value="{{ $val('surety_decl_name') }}"> whose signature is appended to the above agreement, do hereby declare that —
                     <span class="sb-elig d-block">
                         <label class="d-block"><input type="radio" name="surety_eligibility" value="In the permanent service of Government" {{ $elig==='In the permanent service of Government'?'checked':'' }}>
                             (a) I am in the permanent service of the Government of <span style="border-bottom:1px dotted #64748b; min-width:160px; display:inline-block;">&nbsp;</span>; <em>or</em></label>
@@ -134,11 +143,14 @@
                 </p>
 
                 <div class="sb-lines">
-                    <div class="sb-sign mt-3">Signature of the Surety ______________________</div>
-                    <div>Signed by the Surety in the presence of —</div>
-                    <div>Name of Witness: <input type="text" name="surety_witness_name2" class="blank blank--mid" value="{{ $val('surety_witness_name2') }}"></div>
-                    <div>Address: <input type="text" name="surety_witness_address2" class="blank blank--wide" value="{{ $val('surety_witness_address2') }}"></div>
-                    <div>Occupation: <input type="text" name="surety_witness_occupation2" class="blank blank--mid" value="{{ $val('surety_witness_occupation2') }}"></div>
+                    <div class="sb-sign" style="text-align:center; margin-top:2rem;">Signature of the Surety: ______________________</div>
+                    <div style="margin-top:1rem;">Signed <b>by Surety</b> in the presence of &nbsp;(Name of Witness)
+                        <input type="text" name="surety_witness_name2" class="blank blank--wide" value="{{ $val('surety_witness_name2') }}"></div>
+                    <div>Address <input type="text" name="surety_witness_address2" class="blank" style="min-width:560px;" value="{{ $val('surety_witness_address2') }}"></div>
+                    <div>
+                        <span style="display:inline-block; min-width:200px; border-bottom:1px dotted #64748b;">&nbsp;</span>
+                        Occupation
+                        <input type="text" name="surety_witness_occupation2" class="blank blank--mid" value="{{ $val('surety_witness_occupation2') }}"></div>
                 </div>
             </div>
 
