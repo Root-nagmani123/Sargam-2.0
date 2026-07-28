@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers\Mess;
 
+use App\Exports\SellingVoucherMasterExport;
 use App\Http\Controllers\Controller;
 use App\Support\DataTableRedisCache;
 use App\Support\DataTableSearchHelper;
 use App\Models\Mess\SellingVoucherDateRangeReport;
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Excel as ExcelFormat;
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Mess\SellingVoucherDateRangeReportItem;
 use App\Services\Mess\AvailableQuantityService;
 use App\Models\Mess\Store;
@@ -314,7 +318,7 @@ class SellingVoucherDateRangeController extends Controller
     {
         return DataTableRedisCache::serveCachedAjax(
             $request,
-            'sv_date_range_dt:v2:',
+            'sv_date_range_dt:v3:',
             self::SV_DATE_RANGE_DT_LIST_EPOCH,
             [
                 'enabled' => 'SELLING_VOUCHER_DATE_RANGE_DATATABLE_CACHE_ENABLED',
@@ -324,6 +328,207 @@ class SellingVoucherDateRangeController extends Controller
             fn () => $this->buildSellingVoucherDateRangeDatatableResponse($request),
             $this->sellingVoucherDateRangeDatatableFilterFingerprint($request)
         );
+    }
+
+    /**
+     * Branded Selling Voucher (Date Range) report — Print (inline PDF) and Download
+     * (styled .xlsx). Reuses the exact same filtered query as the list.
+     */
+    public function export(Request $request)
+    {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
+
+        $format = strtolower((string) $request->get('format', 'excel'));
+        if (! in_array($format, ['csv', 'excel', 'xlsx', 'pdf'], true)) {
+            $format = 'excel';
+        }
+
+        $searchRaw = '';
+        $searchPayload = $request->input('search');
+        if (is_string($searchPayload)) {
+            $searchRaw = $searchPayload;
+        } elseif (is_array($searchPayload) && isset($searchPayload['value'])) {
+            $searchRaw = (string) $searchPayload['value'];
+        }
+
+        $query = $this->sellingVoucherDateRangeItemRowsBaseQuery($request);
+        $this->applySellingVoucherDateRangeItemSearch($query, $searchRaw);
+        $this->applySellingVoucherDateRangeDatatableOrder($query, $request);
+
+        $records = [];
+        foreach ($query->get() as $row) {
+            $records[] = $this->buildSellingVoucherDateRangeExportRow($row);
+        }
+
+        $title = 'Selling Voucher with Date Range';
+        $visibleColumns = $this->parseVisibleColumns($request->get('columns'));
+        $export = new SellingVoucherMasterExport($records, $this->buildExportFilterLine($request), $visibleColumns, $title);
+        $fileName = 'selling-voucher-date-range-' . now()->format('Y-m-d_H-i-s');
+
+        if ($format === 'pdf') {
+            $pdf = Pdf::loadView('mess.kitchen-issues.export_pdf', array_merge([
+                'headings' => $export->activeHeadings(),
+                'rows' => $export->pdfRows(),
+                'filterLine' => $this->buildExportFilterLine($request),
+                'printedOn' => now()->format('d-m-Y H:i'),
+                'reportTitle' => $title,
+            ], $this->buildExportHeaderData()))
+                ->setPaper('a4', 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'isPhpEnabled' => true,
+                    'dpi' => 96,
+                ]);
+
+            return $request->boolean('inline')
+                ? $pdf->stream($fileName . '.pdf')
+                : $pdf->download($fileName . '.pdf');
+        }
+
+        return Excel::download($export, $fileName . '.xlsx', ExcelFormat::XLSX);
+    }
+
+    /**
+     * Map a joined date-range query row to the plain-text export columns.
+     *
+     * @return array<string,string>
+     */
+    private function buildSellingVoucherDateRangeExportRow(\stdClass $row): array
+    {
+        $clientTypeLabel = trim((string) ($row->category_client_type ?? ''));
+        if ($clientTypeLabel === '') {
+            $clientTypeLabel = trim((string) ($row->client_type_slug ?? ''));
+        }
+        $clientTypeLabel = $clientTypeLabel !== '' ? ucfirst($clientTypeLabel) : '—';
+
+        $displayClientName = in_array((string) ($row->client_type_slug ?? ''), ['ot', 'course'], true)
+            ? trim((string) ($row->course_name ?? ''))
+            : trim((string) ($row->category_client_name ?? ''));
+        if ($displayClientName === '') {
+            $displayClientName = '—';
+        }
+
+        $paymentType = isset($row->payment_type) ? (int) $row->payment_type : -1;
+        $payment = '—';
+        if ($paymentType === 1) {
+            $payment = 'Credit';
+        } elseif ($paymentType === 0) {
+            $payment = 'Cash';
+        } elseif ($paymentType === 2) {
+            $payment = 'UPI';
+        }
+
+        $status = isset($row->status) ? (int) $row->status : -1;
+        $statusLabel = 'Final';
+        if ($status === 0) {
+            $statusLabel = 'Pending';
+        } elseif ($status === 2) {
+            $statusLabel = 'Approved';
+        } elseif ($status === 4) {
+            $statusLabel = 'Completed';
+        }
+        if (isset($row->return_quantity) && (float) $row->return_quantity > 0) {
+            $statusLabel .= ' / Returned';
+        }
+
+        $requestDate = '—';
+        $effectiveRequestDate = $row->issue_date ?? $row->date_from ?? null;
+        if (! empty($effectiveRequestDate)) {
+            try {
+                $requestDate = Carbon::parse($effectiveRequestDate)->format('d/m/Y');
+            } catch (\Exception $e) {
+                $requestDate = '—';
+            }
+        }
+
+        return [
+            'item_name'    => (string) ($row->item_name ?? '—'),
+            'item_qty'     => (string) ($row->quantity ?? 0),
+            'return_qty'   => (string) ($row->return_quantity ?? 0),
+            'store'        => (string) ($row->resolved_store_name ?? 'N/A'),
+            'client_type'  => $clientTypeLabel,
+            'client_name'  => $displayClientName,
+            'payment'      => $payment,
+            'request_date' => $requestDate,
+            'status'       => $statusLabel,
+        ];
+    }
+
+    /**
+     * `columns=0,1,2,…` → clean list of exportable data-column indexes (0..9).
+     *
+     * @return array<int,int>|null
+     */
+    private function parseVisibleColumns($raw): ?array
+    {
+        if (! is_string($raw) || trim($raw) === '') {
+            return null;
+        }
+
+        $cols = array_values(array_unique(array_filter(
+            array_map('intval', explode(',', $raw)),
+            static fn ($v) => $v >= 0 && $v <= 9
+        )));
+
+        return $cols !== [] ? $cols : null;
+    }
+
+    /** "Applied Filters: …" line for the PDF/Excel header, or '' when unfiltered. */
+    private function buildExportFilterLine(Request $request): string
+    {
+        $parts = [];
+        if ($request->filled('start_date') || $request->filled('end_date')) {
+            $parts[] = 'Period: ' . ($request->get('start_date') ?: '…') . ' to ' . ($request->get('end_date') ?: '…');
+        }
+        $return = strtolower(trim((string) $request->input('return_status', '')));
+        if ($return === 'returned') {
+            $parts[] = 'Return: Returned';
+        } elseif ($return === 'not_returned') {
+            $parts[] = 'Return: Not returned';
+        }
+        $search = $request->input('search');
+        $searchVal = is_array($search) ? ($search['value'] ?? '') : (is_string($search) ? $search : '');
+        if (trim((string) $searchVal) !== '') {
+            $parts[] = 'Search: ' . trim((string) $searchVal);
+        }
+
+        return $parts === [] ? '' : 'Applied Filters:   ' . implode('   |   ', $parts);
+    }
+
+    /**
+     * @return array{logoLeft:?string,logoRight:?string,titleHindi:?string,courseName:string,courseDuration:string}
+     */
+    private function buildExportHeaderData(): array
+    {
+        $toDataUri = static function (string $path): ?string {
+            if (! is_file($path) || ! is_readable($path)) {
+                return null;
+            }
+            $raw = @file_get_contents($path);
+            if ($raw === false) {
+                return null;
+            }
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = match ($ext) {
+                'svg' => 'image/svg+xml',
+                'jpg', 'jpeg' => 'image/jpeg',
+                default => 'image/png',
+            };
+
+            return 'data:' . $mime . ';base64,' . base64_encode($raw);
+        };
+
+        return [
+            'logoLeft' => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
+            'logoRight' => $toDataUri(public_path('admin_assets/images/logos/constitution-75.png'))
+                ?: $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
+            'titleHindi' => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
+            'courseName' => '',
+            'courseDuration' => '',
+        ];
     }
 
     /**
@@ -2079,7 +2284,9 @@ class SellingVoucherDateRangeController extends Controller
      */
     private function applySellingVoucherDateRangeDatatableOrder(Builder $query, Request $request): void
     {
-        $orderCol = DataTableSearchHelper::orderColumnIndex($request, 9);
+        // Column indexes match the on-screen table (S.No, Item, Qty, Return Qty,
+        // Store, Client Type, Client Name, Payment, Request Date, Status, Action).
+        $orderCol = DataTableSearchHelper::orderColumnIndex($request, 8);
         $orderDir = DataTableSearchHelper::orderDirection($request, 'desc');
 
         $effectiveDateExpr = DB::raw('COALESCE(sri.issue_date, sv.date_from)');
@@ -2097,11 +2304,9 @@ class SellingVoucherDateRangeController extends Controller
             6 => DB::raw("(CASE
                 WHEN sv.client_type_slug IN ('ot', 'course') AND cm.course_name IS NOT NULL THEN cm.course_name
                 ELSE COALESCE(mct.client_name, '') END)"),
-            7 => 'sv.client_name',
-            8 => 'sv.payment_type',
-            9 => $effectiveDateExpr,
-            10 => 'sv.status',
-            11 => 'sri.return_quantity',
+            7 => 'sv.payment_type',
+            8 => $effectiveDateExpr,
+            9 => 'sv.status',
         ];
 
         if (isset($sortMap[$orderCol])) {
@@ -2565,22 +2770,22 @@ class SellingVoucherDateRangeController extends Controller
             $displayClientName = '—';
         }
 
-        $paymentHtml = '<span class="badge text-bg-light border border-light-subtle fw-semibold">—</span>';
+        $paymentHtml = '<span class="text-muted">—</span>';
         if ($paymentType === 1) {
-            $paymentHtml = '<span class="badge text-bg-light border border-light-subtle fw-semibold">Credit</span>';
+            $paymentHtml = '<span class="sv-pill sv-pill--amber">Credit</span>';
         } elseif ($paymentType === 0) {
-            $paymentHtml = '<span class="badge text-bg-light border border-light-subtle fw-semibold">Cash</span>';
+            $paymentHtml = '<span class="sv-pill sv-pill--gray">Cash</span>';
         } elseif ($paymentType === 2) {
-            $paymentHtml = '<span class="badge text-bg-light border border-light-subtle fw-semibold">UPI</span>';
+            $paymentHtml = '<span class="sv-pill sv-pill--blue">UPI</span>';
         }
 
-        $statusHtml = '<span class="badge rounded-1 text-bg-secondary">Final</span>';
+        $statusHtml = '<span class="sv-pill sv-pill--gray">Final</span>';
         if ($status === 0) {
-            $statusHtml = '<span class="badge rounded-1 text-bg-warning">Pending</span>';
+            $statusHtml = '<span class="sv-pill sv-pill--amber">Pending</span>';
         } elseif ($status === 2) {
-            $statusHtml = '<span class="badge rounded-1 text-bg-success">Approved</span>';
+            $statusHtml = '<span class="sv-pill sv-pill--green">Approved</span>';
         } elseif ($status === 4) {
-            $statusHtml = '<span class="badge rounded-1 text-bg-primary">Completed</span>';
+            $statusHtml = '<span class="sv-pill sv-pill--blue">Completed</span>';
         }
 
         $requestDate = '—';
@@ -2593,48 +2798,47 @@ class SellingVoucherDateRangeController extends Controller
             }
         }
 
-        // View / Edit / Return / Delete are voucher-level (report_id). Show on every item
-        // row so actions stay visible regardless of sort order or which line is MIN(id).
-        $returnHtml = '<div class="d-flex flex-wrap align-items-center gap-1">';
+        // Returned indicator now sits under the Status pill (mock layout).
+        $returnBadge = '';
         if ($rq > 0) {
-            $returnHtml .= '<span class="badge rounded-1 text-bg-info">Returned</span>';
+            $returnBadge = '<div class="mt-1"><span class="sv-pill sv-pill--orange">Returned</span></div>';
         }
-        $returnHtml .= '<button type="button" class="btn btn-sm btn-outline-secondary btn-return-report d-inline-flex align-items-center gap-1 rounded-2 px-2" data-report-id="'.e((string) $reportId).'" title="Return"><i class="material-symbols-rounded" style="font-size: 1rem;">assignment_return</i><span>Return</span></button>';
-        $returnHtml .= '</div>';
 
         $editDisabled = $status === SellingVoucherDateRangeReport::STATUS_APPROVED ? ' disabled' : '';
         $editTitle = $status === SellingVoucherDateRangeReport::STATUS_APPROVED
             ? e('Edit is disabled for approved voucher')
             : 'Edit';
 
-        $actionHtml = '<div class="d-inline-flex flex-wrap align-items-center justify-content-end gap-1">'
-            .'<button type="button" class="btn btn-sm btn-outline-primary btn-view-report voucher-icon-btn rounded-2" data-report-id="'.e((string) $reportId).'" title="View"><i class="material-symbols-rounded">visibility</i></button>'
-            .'<button type="button" class="btn btn-sm btn-outline-warning btn-edit-report voucher-icon-btn rounded-2" data-report-id="'.e((string) $reportId).'" title="'.$editTitle.'"'.$editDisabled.'><i class="material-symbols-rounded">edit</i></button>';
+        // View / Edit / Return / Delete are voucher-level (report_id). Shown on every item row.
+        $viewBtn = '<button type="button" class="sv-action-btn btn-view-report text-primary" data-report-id="'.e((string) $reportId).'" title="View"><i class="material-symbols-rounded">visibility</i><span>View</span></button>';
+        $editBtn = '<button type="button" class="sv-action-btn btn-edit-report text-primary" data-report-id="'.e((string) $reportId).'" title="'.$editTitle.'"'.$editDisabled.'><i class="material-symbols-rounded">edit</i><span>Edit</span></button>';
+        $returnBtn = '<button type="button" class="sv-action-btn btn-return-report text-warning" data-report-id="'.e((string) $reportId).'" title="Return"><i class="material-symbols-rounded">undo</i><span>Return</span></button>';
 
+        $deleteBtn = '';
         if ($canDeleteSellingVoucherDateRange) {
             $destroyUrl = route('admin.mess.selling-voucher-date-range.destroy', $reportId);
-            $actionHtml .= '<form action="'.e($destroyUrl).'" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this report?\');">'
+            $deleteBtn = '<form action="'.e($destroyUrl).'" method="POST" class="mess-delete-form" '
+                .'data-confirm-title="Delete Selling Voucher?" '
+                .'data-confirm-message="Are you sure you want to delete this selling voucher?">'
                 .csrf_field()
                 .method_field('DELETE')
-                .'<button type="submit" class="btn btn-sm btn-outline-danger voucher-icon-btn rounded-2" title="Delete"><i class="material-symbols-rounded">delete</i></button></form>';
+                .'<button type="submit" class="sv-action-btn text-danger" title="Delete"><i class="material-symbols-rounded">delete</i><span>Delete</span></button></form>';
         }
 
-        $actionHtml .= '</div>';
+        $actionHtml = '<div class="sv-actions d-flex align-items-start justify-content-center">'.$viewBtn.$editBtn.$returnBtn.$deleteBtn.'</div>';
 
         return [
-            '<span class="text-body-secondary">'.e((string) $serial).'</span>',
-            '<span class="cell-item-name fw-semibold text-wrap text-break">'.e((string) ($row->item_name ?? '—')).'</span>',
+            '<span class="fw-medium">'.e((string) $serial).'</span>',
+            '<span class="sv-name-primary text-wrap text-break">'.e((string) ($row->item_name ?? '—')).'</span>',
             '<span class="text-end font-monospace d-block">'.e((string) ($row->quantity ?? 0)).'</span>',
             '<span class="text-end font-monospace d-block">'.e((string) ($row->return_quantity ?? 0)).'</span>',
             '<span class="text-wrap text-break">'.e((string) ($row->resolved_store_name ?? 'N/A')).'</span>',
             e($clientTypeLabel),
             '<span class="text-wrap text-break">'.e($displayClientName).'</span>',
-            '<span class="text-wrap text-break">'.e((string) ($row->voucher_client_name ?? '—')).'</span>',
             $paymentHtml,
             '<span class="text-body-secondary">'.e($requestDate).'</span>',
-            '<div class="text-center">'.$statusHtml.'</div>',
-            $returnHtml,
-            '<div class="text-end pe-3">'.$actionHtml.'</div>',
+            '<div class="text-center">'.$statusHtml.$returnBadge.'</div>',
+            $actionHtml,
         ];
     }
 

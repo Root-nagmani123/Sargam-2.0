@@ -1,0 +1,959 @@
+/* Selling Voucher (Date Range) — extracted from index.blade.php (was 5 inline <style> blocks). */
+/* Load order preserved: block1 (page chrome) → block2..5 (modal + view-modal styles). */
+
+/* ===== block 1 (was @push styles) ===== */
+    /* ── Selling Voucher (Date Range) — new design chrome (built on --ds-* tokens + programme-dt system) ── */
+    .svdr-master-page .svdr-master-card {
+        background: var(--ds-surface, #fff);
+        border-radius: var(--ds-radius-card, 8px);
+        box-shadow: var(--ds-shadow, 0 1px 3px rgba(16, 24, 40, .1));
+    }
+
+    .svdr-master-page .svdr-master-export-btn {
+        height: var(--ds-control-h, 40px);
+        display: inline-flex; align-items: center; gap: .5rem;
+        padding: 0 1.1rem; font-size: .9375rem; font-weight: 500;
+        color: var(--ds-primary, #004a93);
+        border: 1px solid var(--ds-line, #d0d5dd);
+        border-radius: var(--ds-radius-2, 8px);
+        background: var(--ds-surface, #fff);
+    }
+    .svdr-master-page .svdr-master-export-btn:hover { background: #f2f7fc; border-color: var(--ds-primary, #004a93); color: var(--ds-primary, #004a93); }
+    .svdr-master-page .svdr-master-export-btn i { font-size: 1.15rem; line-height: 1; }
+
+    /* Native single-select filter pill + date */
+    .svdr-master-page .sv-filter-select-native, .svdr-master-page .sv-filter-date {
+        min-height: 40px; border-radius: 8px; border: 1px solid #d0d5dd; font-size: .9375rem; color: #344054; box-shadow: none;
+    }
+    .svdr-master-page .sv-filter-select-native { width: 150px; }
+    .svdr-master-page .sv-filter-date { width: 150px; padding: .5rem .6rem; }
+    .svdr-master-page .sv-filter-select-native:focus, .svdr-master-page .sv-filter-date:focus { border-color: var(--ds-primary, #004a93); box-shadow: 0 0 0 3px rgba(0, 74, 147, .12); }
+    .svdr-master-page .sv-filter-dash { color: #98a2b3; }
+
+    /* Single-row responsive toolbar */
+    .svdr-master-page .sv-toolbar { flex-wrap: nowrap; }
+    .svdr-master-page .sv-filter-form { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; overflow: visible; }
+    .svdr-master-page .sv-filter-items { flex-wrap: nowrap; flex-shrink: 0; overflow: visible; }
+    .svdr-master-page .sv-filter-item { flex-shrink: 0; }
+    .svdr-master-page .sv-filter-item .sv-filter-item-label { display: none; }
+
+    .svdr-master-page .sv-more-filters {
+        flex-shrink: 0; color: #004a93; font-weight: 600; font-size: .9375rem; text-decoration: none;
+        white-space: nowrap; padding: 0 .35rem; height: 40px; display: inline-flex; align-items: center; border-radius: 8px;
+    }
+    .svdr-master-page .sv-more-filters:hover { text-decoration: underline; }
+    .svdr-master-page .sv-more-filters.dropdown-toggle::after { display: none !important; }
+    .sv-more-menu { min-width: 280px; }
+    .sv-more-menu .sv-more-header { font-size: .95rem; font-weight: 700; color: #101828; padding-bottom: .6rem; margin-bottom: .75rem; border-bottom: 1px solid #eef2f6; }
+    .sv-more-menu .sv-filter-item { display: block; margin-bottom: .85rem; }
+    .sv-more-menu .sv-filter-item:last-child { margin-bottom: 0; }
+    .sv-more-menu .sv-filter-item .sv-filter-item-label { display: block; font-size: .8rem; color: #667085; margin-bottom: .25rem; }
+    .sv-more-menu .sv-filter-item .form-select, .sv-more-menu .sv-filter-item .sv-filter-date { width: 100% !important; }
+    .sv-more-menu .sv-filter-item[data-filter="date"] .sv-filter-date { flex: 1 1 0; }
+
+    .svdr-master-page .dt-top:empty, .svdr-master-page .dt-foot:empty { display: none; margin: 0; }
+    .svdr-master-page .mess-col-manager-dropdown { display: none !important; }
+    #svdrColumnToggleGrid .colvis-item { cursor: pointer; transition: border-color 0.15s ease, background-color 0.15s ease; }
+    #svdrColumnToggleGrid .colvis-item:hover { border-color: var(--ds-primary, #004a93) !important; background-color: rgba(0, 74, 147, 0.04); }
+    #svdrColumnToggleGrid .colvis-item .form-check-input { cursor: pointer; flex-shrink: 0; }
+
+    .svdr-master-page .sv-name-primary { font-weight: 600; color: var(--ds-ink, #1f2937); }
+
+    /* Soft status / payment pills (rendered server-side) */
+    .svdr-master-page .sv-pill { display: inline-block; font-size: .8125rem; font-weight: 500; padding: .3rem .7rem; border-radius: 6px; line-height: 1.2; }
+    .svdr-master-page .sv-pill--green  { background: #ecfdf3; color: #027a48; }
+    .svdr-master-page .sv-pill--amber  { background: #fffaeb; color: #b54708; }
+    .svdr-master-page .sv-pill--orange { background: #fff4ed; color: #c4320a; }
+    .svdr-master-page .sv-pill--blue   { background: #eff8ff; color: #175cd3; }
+    .svdr-master-page .sv-pill--gray   { background: #f2f4f7; color: #475467; }
+
+    /* Row actions */
+    .svdr-master-page .sv-actions { gap: .9rem; }
+    .svdr-master-page .sv-actions form { margin: 0; }
+    .svdr-master-page .sv-action-btn {
+        display: inline-flex; flex-direction: column; align-items: center; gap: .1rem;
+        padding: 0; border: 0; background: transparent; line-height: 1.1; font-size: .72rem; font-weight: 500;
+    }
+    .svdr-master-page .sv-action-btn i { font-size: 1.15rem; line-height: 1; }
+    .svdr-master-page .sv-action-btn.text-primary { color: var(--ds-primary, #004a93) !important; }
+    .svdr-master-page .sv-action-btn.text-warning { color: #dc6803 !important; }
+    .svdr-master-page .sv-action-btn.text-danger  { color: var(--ds-secondary, #d92d20) !important; }
+    .svdr-master-page .sv-action-btn:hover { opacity: .78; }
+    .svdr-master-page .sv-action-btn:disabled { opacity: .4; pointer-events: none; }
+
+    /* Pagination arrows */
+    .svdr-master-page .programme-dt-footer .paginate_button.first,
+    .svdr-master-page .programme-dt-footer .paginate_button.last { display: none; }
+    .svdr-master-page .programme-dt-footer .paginate_button.previous .page-link,
+    .svdr-master-page .programme-dt-footer .paginate_button.next .page-link { font-size: 0; }
+    .svdr-master-page .programme-dt-footer .paginate_button.previous .page-link::before { content: "\2039"; font-size: 1.1rem; }
+    .svdr-master-page .programme-dt-footer .paginate_button.next .page-link::before { content: "\203A"; font-size: 1.1rem; }
+
+    /* ── Clean modern Add / Edit / View / Return modals (reskin legacy chrome) ── */
+    #addReportModal .modal-content, #editReportModal .modal-content, #viewReportModal .modal-content, #returnItemModal .modal-content {
+        border-radius: 16px !important; border: 0 !important; box-shadow: 0 24px 48px rgba(16, 24, 40, .18) !important;
+    }
+    #addReportModal .modal-header, #editReportModal .modal-header, #viewReportModal .modal-header, #returnItemModal .modal-header {
+        background: #fff !important; background-image: none !important; border-top: 0 !important;
+        border-bottom: 1px solid var(--ds-line, #eef2f6) !important; padding: 1.15rem 1.5rem !important;
+    }
+    #addReportModal .modal-title, #editReportModal .modal-title, #viewReportModal .modal-title, #returnItemModal .modal-title {
+        color: var(--ds-ink, #1f2937) !important; font-size: 1.4rem !important; font-weight: 700 !important;
+    }
+    #addReportModal .modal-body, #editReportModal .modal-body, #viewReportModal .modal-body, #returnItemModal .modal-body {
+        background: #fff !important; background-image: none !important;
+    }
+    #addReportModal .modal-body .card, #editReportModal .modal-body .card, #viewReportModal .modal-body .card, #returnItemModal .modal-body .card {
+        border: 1px solid var(--ds-line, #eef2f6) !important; border-radius: 12px !important; box-shadow: none !important;
+    }
+    #addReportModal .modal-body .card-header, #editReportModal .modal-body .card-header, #viewReportModal .modal-body .card-header, #returnItemModal .modal-body .card-header,
+    #addReportModal .modal-body .card-footer, #editReportModal .modal-body .card-footer, #viewReportModal .modal-body .card-footer, #returnItemModal .modal-body .card-footer {
+        background: #fff !important; background-image: none !important; border-color: var(--ds-line, #eef2f6) !important;
+    }
+    #addReportModal .modal-body .card-header [class*="bg-"], #editReportModal .modal-body .card-header [class*="bg-"],
+    #viewReportModal .modal-body .card-header [class*="bg-"], #returnItemModal .modal-body .card-header [class*="bg-"] {
+        background: rgba(0, 74, 147, .1) !important; color: var(--ds-primary, #004a93) !important;
+    }
+    #addReportModal .modal-footer, #editReportModal .modal-footer, #viewReportModal .modal-footer, #returnItemModal .modal-footer {
+        background: #fff !important; background-image: none !important;
+        border-top: 1px solid var(--ds-line, #eef2f6) !important; padding: 1rem 1.5rem 1.25rem !important;
+    }
+    #addReportModal .modal-footer .btn[type="submit"], #editReportModal .modal-footer .btn[type="submit"], #returnItemModal .modal-footer .btn[type="submit"] {
+        background: var(--ds-primary, #004a93) !important; border: 1px solid var(--ds-primary, #004a93) !important;
+        color: #fff !important; border-radius: 8px !important; font-weight: 600 !important;
+    }
+    #addReportModal .modal-footer .btn[data-bs-dismiss="modal"], #editReportModal .modal-footer .btn[data-bs-dismiss="modal"], #returnItemModal .modal-footer .btn[data-bs-dismiss="modal"] {
+        color: var(--ds-secondary, #d92d20) !important; border: 1px solid var(--ds-secondary, #d92d20) !important;
+        background: #fff !important; border-radius: 8px !important; font-weight: 600 !important;
+    }
+
+    /* ── Modal field & section polish (Add / Edit / Return / View) ── */
+    #addReportModal .voucher-section-card, #editReportModal .voucher-section-card, #returnItemModal .voucher-section-card {
+        border: 1px solid var(--ds-line, #eef2f6) !important; border-radius: 12px !important; box-shadow: none !important; overflow: hidden;
+    }
+    #addReportModal .voucher-section-card .card-header, #editReportModal .voucher-section-card .card-header, #returnItemModal .voucher-section-card .card-header {
+        background: #fff !important; border-bottom: 1px solid var(--ds-line, #eef2f6) !important;
+    }
+    #addReportModal .voucher-section-card .card-header h6, #editReportModal .voucher-section-card .card-header h6, #returnItemModal .voucher-section-card .card-header h6 {
+        color: var(--ds-primary, #004a93) !important; font-weight: 700 !important;
+    }
+    /* Labels */
+    #addReportModal .voucher-label, #editReportModal .voucher-label, #returnItemModal .voucher-label, #viewReportModal .voucher-label {
+        font-weight: 600 !important; font-size: .875rem !important; color: var(--ds-ink, #1f2937) !important; margin-bottom: .375rem;
+    }
+    /* Inputs / selects → token radius + focus ring */
+    #addReportModal .modal-body .form-control, #addReportModal .modal-body .form-select,
+    #editReportModal .modal-body .form-control, #editReportModal .modal-body .form-select,
+    #returnItemModal .modal-body .form-control, #returnItemModal .modal-body .form-select {
+        border-radius: 8px; border-color: var(--ds-line, #d0d5dd);
+    }
+    #addReportModal .modal-body .form-control:focus, #addReportModal .modal-body .form-select:focus,
+    #editReportModal .modal-body .form-control:focus, #editReportModal .modal-body .form-select:focus,
+    #returnItemModal .modal-body .form-control:focus, #returnItemModal .modal-body .form-select:focus {
+        border-color: var(--ds-primary, #004a93); box-shadow: 0 0 0 3px rgba(0, 74, 147, .12);
+    }
+    /* Client-type radios → brand blue */
+    #addReportModal .form-check-input:checked, #editReportModal .form-check-input:checked {
+        background-color: var(--ds-primary, #004a93); border-color: var(--ds-primary, #004a93);
+    }
+    /* Line-item table header → clean brand-blue band (replaces the legacy branded red) */
+    #addReportModal .voucher-brand-head th, #editReportModal .voucher-brand-head th, #returnItemModal .voucher-brand-head th,
+    #viewReportModal #viewReportItemsCard .table thead th {
+        background: var(--ds-primary, #004a93) !important; color: #fff !important;
+        border-color: var(--ds-primary, #004a93) !important; font-weight: 600; font-size: .8rem; text-transform: none;
+    }
+    /* Add-line / add-item buttons inside modals → outline-blue pill */
+    #addReportModal #addModalAddItemRow, #editReportModal .btn-outline-primary {
+        border-radius: 8px;
+    }
+
+/* ===== block 2 ===== */
+.ts-dropdown {
+    z-index: 2000;
+}
+
+.selling-voucher-filter {
+    position: relative;
+    overflow: visible;
+}
+
+.selling-voucher-filter.dropdown-open {
+    z-index: 1065;
+}
+
+.selling-voucher-filter .card-body,
+.selling-voucher-filter .row,
+.selling-voucher-filter .col-12,
+.selling-voucher-filter .col,
+.selling-voucher-filter .sv-filter-fields-grid,
+.selling-voucher-filter .ts-wrapper {
+    overflow: visible;
+}
+
+.selling-voucher-filter .sv-filter-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 1rem;
+    align-items: end;
+}
+@media (max-width: 1199.98px) {
+    .selling-voucher-filter .sv-filter-fields-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+@media (max-width: 767.98px) {
+    .selling-voucher-filter .sv-filter-fields-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 575.98px) {
+    .selling-voucher-filter .sv-filter-fields-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.selling-voucher-filter .sv-filter-field {
+    min-width: 0;
+}
+.selling-voucher-filter .sv-filter-field .ts-wrapper {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Filter strip only: same look as admin theme form-select / form-control */
+.selling-voucher-filter .form-select,
+.selling-voucher-filter .form-control {
+    background-color: #fff;
+    box-shadow: none;
+    border: var(--bs-border-width) solid #e0e6eb;
+    color: #526b7a;
+}
+.selling-voucher-filter .form-select:focus,
+.selling-voucher-filter .form-control:focus {
+    background-color: #fff;
+    border-color: #b1adff;
+    color: #526b7a;
+    box-shadow: 0 0 0 0.25rem rgba(99, 91, 255, 0.25);
+}
+.selling-voucher-filter input[type="date"].form-control {
+    color-scheme: light;
+}
+
+.ts-wrapper.choices {
+    margin-bottom: 0;
+}
+
+.ts-wrapper.choices .choices__inner {
+    min-height: calc(1.5em + 0.75rem + 2px);
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    background-color: #fff;
+}
+
+.ts-wrapper.choices.is-open .choices__inner,
+.ts-wrapper.choices.is-focused .choices__inner {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.selling-voucher-filter .ts-wrapper.choices .choices__inner {
+    min-height: calc(1.5em + 0.5rem + calc(var(--bs-border-width) * 2));
+    padding: 0.25rem 2.25rem 0.25rem 0.5rem;
+    font-size: 0.765625rem;
+    line-height: 1.5;
+    border: var(--bs-border-width) solid #e0e6eb;
+    border-radius: var(--bs-border-radius-sm);
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.65rem center;
+    background-size: 16px 12px;
+    box-shadow: none;
+    color: #526b7a;
+}
+.selling-voucher-filter .ts-wrapper.choices.is-open .choices__inner,
+.selling-voucher-filter .ts-wrapper.choices.is-focused .choices__inner {
+    border-color: #b1adff;
+    box-shadow: 0 0 0 0.25rem rgba(99, 91, 255, 0.25);
+}
+
+.ts-wrapper.choices .choices__list--single {
+    padding: 0;
+}
+
+.ts-wrapper.choices[data-type*="select-one"] .choices__input {
+    display: block !important;
+    width: 100% !important;
+    min-width: 100% !important;
+}
+
+/* Niche open: search upar | Uper (flipped) open: search niche */
+.ts-wrapper.choices .choices__list--dropdown.is-active {
+    display: flex;
+    flex-direction: column;
+}
+
+.ts-wrapper.choices.is-flipped .choices__list--dropdown.is-active {
+    flex-direction: column-reverse;
+}
+
+.ts-wrapper.choices .choices__list--dropdown.is-active .choices__list {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.ts-wrapper.choices[data-type*="select-one"] .choices__list--dropdown .choices__input--cloned,
+.ts-wrapper.choices[data-type*="select-one"] .choices__list--dropdown .choices__input {
+    border-top: none !important;
+    border-bottom: 1px solid #ced4da !important;
+    margin-bottom: 0 !important;
+}
+
+.ts-wrapper.choices.is-flipped[data-type*="select-one"] .choices__list--dropdown .choices__input--cloned,
+.ts-wrapper.choices.is-flipped[data-type*="select-one"] .choices__list--dropdown .choices__input {
+    border-bottom: none !important;
+    border-top: 1px solid #ced4da !important;
+    margin-bottom: 0 !important;
+}
+
+.ts-wrapper.choices .choices__list--dropdown .choices__input--cloned {
+    display: block !important;
+    position: relative !important;
+    opacity: 1 !important;
+    flex-shrink: 0;
+    min-height: 34px;
+    width: 100% !important;
+}
+
+.selling-voucher-filter .ts-dropdown,
+.selling-voucher-filter .ts-wrapper.choices .choices__list--dropdown,
+.selling-voucher-filter .choices__list--dropdown.is-active {
+    z-index: 1066 !important;
+}
+
+.selling-voucher-filter .ts-wrapper.choices[data-type*="select-multiple"] .choices__inner {
+    min-height: calc(1.5em + 0.5rem + calc(var(--bs-border-width) * 2));
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.45rem;
+}
+
+.selling-voucher-filter .choices__list--multiple .choices__item {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%) !important;
+    border: none !important;
+    border-radius: 0.375rem !important;
+    color: #fff !important;
+    font-size: 0.8rem !important;
+    display: inline-flex !important;
+    width: auto !important;
+    max-width: 100%;
+    align-items: center;
+    margin: 0 !important;
+    padding: 0.22rem 0.5rem !important;
+}
+
+.selling-voucher-filter .ts-wrapper.choices[data-type*="select-multiple"] .choices__input--cloned {
+    margin: 0 !important;
+    padding: 0.2rem 0 !important;
+    flex: 1 1 120px;
+    min-width: 120px;
+}
+
+.selling-voucher-filter .ts-wrapper.choices[data-type*="select-multiple"] .choices__list--multiple {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0;
+}
+
+.voucher-icon-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+}
+
+.voucher-section-card {
+    border: 1px solid var(--bs-border-color-translucent);
+    border-radius: 0.75rem;
+}
+
+.voucher-section-card .card-header {
+    background: var(--bs-tertiary-bg);
+    border-bottom: 1px solid var(--bs-border-color-translucent);
+}
+
+/* ===== block 3 ===== */
+/* Hide number input up/down arrows for qty/rate fields in add/edit modals */
+#addReportModal input.dr-qty,
+#addReportModal input.dr-rate,
+#editSellingVoucherModal input.edit-dr-qty,
+#editSellingVoucherModal input.edit-dr-rate {
+    -moz-appearance: textfield;
+}
+
+#addReportModal input.dr-qty::-webkit-outer-spin-button,
+#addReportModal input.dr-qty::-webkit-inner-spin-button,
+#addReportModal input.dr-rate::-webkit-outer-spin-button,
+#addReportModal input.dr-rate::-webkit-inner-spin-button,
+#editSellingVoucherModal input.edit-dr-qty::-webkit-outer-spin-button,
+#editSellingVoucherModal input.edit-dr-qty::-webkit-inner-spin-button,
+#editSellingVoucherModal input.edit-dr-rate::-webkit-outer-spin-button,
+#editSellingVoucherModal input.edit-dr-rate::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.voucher-table thead th {
+    font-size: .76rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    color: #495057;
+}
+
+.voucher-table tbody td {
+    white-space: nowrap;
+}
+
+.voucher-table tbody td.cell-item-name {
+    white-space: normal;
+    max-width: 18rem;
+    vertical-align: middle;
+}
+
+.voucher-icon-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.voucher-label {
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .02em;
+    color: #6c757d;
+    margin-bottom: .35rem;
+}
+
+.voucher-section-card {
+    border: 0;
+    box-shadow: var(--bs-box-shadow-sm);
+}
+
+.voucher-section-card .card-header {
+    background: var(--bs-tertiary-bg);
+    border-bottom: 1px solid var(--bs-border-color-translucent);
+}
+
+/* Responsive modal sizing across viewport widths */
+#addReportModal .modal-dialog,
+#viewReportModal .modal-dialog,
+#editReportModal .modal-dialog,
+#returnItemModal .modal-dialog {
+    width: calc(100vw - 1rem);
+    max-width: min(var(--bs-modal-width), calc(100vw - 1rem));
+}
+
+@media (min-width: 576px) {
+
+    #addReportModal .modal-dialog,
+    #viewReportModal .modal-dialog,
+    #editReportModal .modal-dialog,
+    #returnItemModal .modal-dialog {
+        width: calc(100vw - 2rem);
+        max-width: min(var(--bs-modal-width), calc(100vw - 2rem));
+    }
+}
+
+#addReportModal .modal-dialog {
+    max-height: calc(100dvh - 2rem);
+    margin: 1rem auto;
+}
+
+#addReportModal .modal-content,
+#viewReportModal .modal-content,
+#editReportModal .modal-content,
+#returnItemModal .modal-content {
+    max-height: calc(100dvh - 2rem);
+    display: flex;
+    flex-direction: column;
+    border: 0;
+    box-shadow: var(--bs-box-shadow-lg);
+}
+
+#addReportModal .modal-header,
+#viewReportModal .modal-header,
+#editReportModal .modal-header,
+#returnItemModal .modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--bs-tertiary-bg) !important;
+}
+
+#addReportModal .modal-footer,
+#viewReportModal .modal-footer,
+#editReportModal .modal-footer,
+#returnItemModal .modal-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    background: #fff;
+}
+
+/* Item Name (Choices): footer/stacking + overflow — same pattern as kitchen selling voucher */
+#addReportModal .modal-body,
+#editReportModal .modal-body {
+    position: relative;
+    z-index: 2;
+}
+
+#addReportModal .modal-footer,
+#editReportModal .modal-footer {
+    z-index: 1;
+}
+
+/* Keep modal scroll stable; don't toggle overflow on dropdown open */
+#addReportModal .modal-body,
+#editReportModal .modal-body {
+    /* Important: don't let the modal-body become wider than the viewport.
+           The items table handles its own horizontal scroll. */
+    overflow-x: hidden;
+}
+
+#addReportModal .dr-item-details-table-wrap,
+#editReportModal .dr-item-details-table-wrap {
+    /* Show all item columns in one view */
+    overflow-x: auto;
+    overflow-y: hidden;
+    width: 100%;
+}
+
+#addReportModal .dr-item-details-table-wrap .table,
+#editReportModal .dr-item-details-table-wrap .table {
+    min-width: 0;
+    width: 100%;
+    table-layout: fixed;
+    margin-bottom: 0;
+}
+
+#addReportItemsTable th,
+#addReportItemsTable td,
+#editReportItemsTable th,
+#editReportItemsTable td {
+    white-space: normal;
+    padding: .35rem .4rem;
+    word-break: break-word;
+}
+
+/* Column widths tuned so all td are visible in one go */
+#addReportItemsTable th:nth-child(1) {
+    width: 28%;
+}
+
+#addReportItemsTable th:nth-child(2) {
+    width: 8%;
+}
+
+#addReportItemsTable th:nth-child(3) {
+    width: 11%;
+}
+
+#addReportItemsTable th:nth-child(4) {
+    width: 11%;
+}
+
+#addReportItemsTable th:nth-child(5) {
+    width: 10%;
+}
+
+#addReportItemsTable th:nth-child(6) {
+    width: 14%;
+}
+
+#addReportItemsTable th:nth-child(7) {
+    width: 9%;
+}
+
+#addReportItemsTable th:nth-child(8) {
+    width: 11%;
+}
+
+#editReportItemsTable th:nth-child(1) {
+    width: 16%;
+}
+
+#editReportItemsTable th:nth-child(2) {
+    width: 20%;
+}
+
+#editReportItemsTable th:nth-child(3) {
+    width: 7%;
+}
+
+#editReportItemsTable th:nth-child(4) {
+    width: 9%;
+}
+
+#editReportItemsTable th:nth-child(5) {
+    width: 9%;
+}
+
+#editReportItemsTable th:nth-child(6) {
+    width: 8%;
+}
+
+#editReportItemsTable th:nth-child(7) {
+    width: 11%;
+}
+
+#editReportItemsTable th:nth-child(8) {
+    width: 8%;
+}
+
+#editReportItemsTable th:nth-child(9) {
+    width: 9%;
+}
+
+#editReportItemsTable th:nth-child(10) {
+    width: 5%;
+}
+
+#addReportItemsTable th:nth-child(9) {
+    width: 5%;
+}
+
+@media (max-width: 991.98px) {
+
+    #addReportModal .dr-item-details-table-wrap,
+    #editReportModal .dr-item-details-table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #addReportModal .dr-item-details-table-wrap .table,
+    #editReportModal .dr-item-details-table-wrap .table {
+        min-width: 980px;
+        table-layout: auto;
+    }
+
+    #addReportItemsTable th,
+    #addReportItemsTable td,
+    #editReportItemsTable th,
+    #editReportItemsTable td {
+        white-space: nowrap;
+    }
+}
+
+/* Item dropdowns use fixed-position panel; no need to relax container overflow */
+#addReportModal .card:has(#addModalItemsBody) .card-body,
+#editReportModal .card:has(#editModalItemsBody) .card-body {
+    position: relative;
+    z-index: 2;
+}
+
+#addReportModal .card:has(#addModalItemsBody) .card-footer,
+#editReportModal .card:has(#editModalItemsBody) .card-footer {
+    position: relative;
+    z-index: 1;
+}
+
+#addReportModal .choices,
+#editReportModal .choices {
+    --choices-z-index: 6100;
+}
+
+#addModalItemsBody tr:has(.choices.is-open),
+#editModalItemsBody tr:has(.choices.is-open) {
+    position: relative;
+    z-index: 50;
+}
+
+#addReportModal .ts-dropdown,
+#addReportModal .ts-wrapper.choices .choices__list--dropdown,
+#addReportModal .choices__list--dropdown.is-active,
+#editReportModal .ts-dropdown,
+#editReportModal .ts-wrapper.choices .choices__list--dropdown,
+#editReportModal .choices__list--dropdown.is-active {
+    z-index: 6100 !important;
+}
+
+/* Limit dropdown panel size for large lists (e.g. Academy Staff) */
+#addReportModal .ts-wrapper.choices .choices__list--dropdown,
+#addReportModal .choices__list--dropdown.is-active,
+#editReportModal .ts-wrapper.choices .choices__list--dropdown,
+#editReportModal .choices__list--dropdown.is-active {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-height: min(320px, 45vh) !important;
+    overflow: hidden !important;
+}
+
+#addReportModal .ts-wrapper.choices .choices__list--dropdown .choices__list,
+#addReportModal .choices__list--dropdown.is-active .choices__list,
+#editReportModal .ts-wrapper.choices .choices__list--dropdown .choices__list,
+#editReportModal .choices__list--dropdown.is-active .choices__list {
+    max-height: min(280px, 40vh) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure the Choices container itself fills the column */
+#addReportModal .ts-wrapper.choices,
+#editReportModal .ts-wrapper.choices {
+    width: 100% !important;
+}
+
+/* Keep dropdown width aligned to its input (avoid full-modal width) */
+#addReportModal .ts-wrapper.choices[data-type*="select-one"] .choices__list--dropdown,
+#editReportModal .ts-wrapper.choices[data-type*="select-one"] .choices__list--dropdown {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    left: 0 !important;
+    right: auto !important;
+    box-sizing: border-box;
+}
+
+#addModalItemsBody .choices__list--dropdown.dr-item-choices-dropdown-fixed,
+#editModalItemsBody .choices__list--dropdown.dr-item-choices-dropdown-fixed {
+    box-sizing: border-box;
+}
+
+/* (Reserved) */
+#addModalItemsBody .choices__list--dropdown.dr-item-choices-dropdown-fixed .choices__list,
+#editModalItemsBody .choices__list--dropdown.dr-item-choices-dropdown-fixed .choices__list {
+    max-height: min(280px, 42vh) !important;
+}
+
+#addReportModal .modal-body,
+#viewReportModal .modal-body,
+#editReportModal .modal-body,
+#returnItemModal .modal-body {
+    overflow-y: auto;
+    max-height: calc(100dvh - 10rem);
+}
+
+#addReportModal .card,
+#viewReportModal .card,
+#editReportModal .card,
+#returnItemModal .card {
+    border: 0;
+    box-shadow: var(--bs-box-shadow-sm);
+}
+
+.selling-voucher-card .selling-voucher-table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow: visible;
+}
+
+#sellingVoucherDateRangeTable {
+    min-width: 1200px;
+}
+
+.selling-voucher-card #sellingVoucherDateRangeTable_wrapper .dataTables_scrollBody {
+    overflow-x: auto !important;
+}
+
+/* Table: show full cell values (no forced single-line truncation) */
+#sellingVoucherDateRangeTable th,
+#sellingVoucherDateRangeTable td {
+    white-space: normal !important;
+    vertical-align: middle;
+}
+
+/* Keep DataTable search box pinned and not floating while scrolling */
+.selling-voucher-card .dataTables_wrapper {
+    position: relative;
+}
+
+.selling-voucher-card .dataTables_wrapper .dataTables_filter {
+    display: none;
+    /* hide default DataTables search for this table */
+}
+
+.selling-voucher-search-wrapper {
+    max-width: 260px;
+}
+
+/* Keep DataTables controls in normal flow (no floating) */
+.selling-voucher-card .dataTables_wrapper .dataTables_length,
+.selling-voucher-card .dataTables_wrapper .dataTables_info,
+.selling-voucher-card .dataTables_wrapper .dataTables_paginate {
+    position: static;
+    background-color: transparent;
+}
+
+/* ===== block 4 ===== */
+#viewReportModal .modal-dialog {
+    max-height: calc(100dvh - 2rem);
+    margin: 1rem auto;
+}
+
+#viewReportModal .modal-content {
+    max-height: calc(100dvh - 2rem);
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    color: #212529;
+}
+
+#viewReportModal .modal-header {
+    background: #f8f9fa !important;
+    color: #212529 !important;
+}
+
+#viewReportModal .modal-header * {
+    color: #212529 !important;
+}
+
+#viewReportModal .modal-title {
+    color: #212529 !important;
+}
+
+#viewReportModal .modal-body {
+    overflow-y: auto;
+    max-height: calc(100dvh - 10rem);
+    background: #fff;
+    color: #212529 !important;
+}
+
+#viewReportModal .modal-body *,
+#viewReportModal .modal-body p,
+#viewReportModal .modal-body span {
+    color: inherit;
+}
+
+#viewReportModal .card {
+    background: #fff;
+    color: #212529;
+}
+
+#viewReportModal .card-header {
+    background: #fff !important;
+    color: #212529 !important;
+    border-color: #dee2e6;
+}
+
+#viewReportModal .card-header h6 {
+    color: #0d6efd !important;
+}
+
+#viewReportModal .card-body {
+    background: #fff !important;
+    color: #212529 !important;
+}
+
+#viewReportModal .card-body table th {
+    color: #495057 !important;
+    font-weight: 600;
+}
+
+#viewReportModal .card-body table td {
+    color: #212529 !important;
+}
+
+#viewReportModal .card-body .table-borderless th {
+    background: transparent !important;
+}
+
+#viewReportModal .card-body .table-borderless td {
+    background: transparent !important;
+}
+
+#viewReportModal #viewReportItemsCard .table thead th {
+    color: #fff !important;
+    background: #004a93 !important;
+    border-color: #004a93;
+    /* Freeze header while tbody scrolls */
+    position: sticky;
+    top: 0;
+    z-index: 3;
+}
+
+#viewReportModal #viewReportItemsCard .table tbody td {
+    color: #212529 !important;
+    background: #fff !important;
+}
+
+#viewReportModal #viewReportGrandTotal {
+    color: #212529 !important;
+}
+
+#viewReportModal .text-muted {
+    color: #495057 !important;
+}
+
+#viewReportModal .card-footer {
+    background: #f8f9fa !important;
+    color: #212529 !important;
+}
+
+#viewReportModal .card-footer strong {
+    color: #212529 !important;
+}
+
+#viewReportModal .badge {
+    font-weight: 600;
+}
+
+#viewReportModal .modal-footer {
+    background: #fff;
+    border-color: #dee2e6;
+}
+
+/* ── Item Details list scrolls under a frozen header ── */
+/* modal-dialog-scrollable bounds the modal to the viewport, so the Grand Total
+   footer is always reachable and never clipped. The item list gets its own
+   inner scroll with a sticky header (see thead rule above). */
+#viewReportModal #viewReportItemsCard .card-body {
+    padding: 0 !important;
+}
+#viewReportModal #viewReportItemsCard .table-responsive {
+    max-height: 42vh;
+    overflow-y: auto;
+}
+
+/* ===== block 5 ===== */
+#editReportModal .modal-dialog {
+    max-height: calc(100dvh - 2rem);
+    margin: 1rem auto;
+}
+
+#editReportModal .modal-content {
+    max-height: calc(100dvh - 2rem);
+    display: flex;
+    flex-direction: column;
+}
+
+#editReportModal .modal-body {
+    overflow-y: auto;
+    max-height: calc(100dvh - 10rem);
+}
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked,
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .choices,
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .ts-wrapper,
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .form-check-input {
+    pointer-events: none !important;
+}
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .form-control,
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .form-select,
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .choices__inner {
+    background-color: var(--bs-secondary-bg, #e9ecef) !important;
+    cursor: not-allowed;
+}
+#editReportModal.edit-client-identity-frozen .edit-client-identity-locked .form-check-label {
+    cursor: not-allowed;
+    opacity: 0.85;
+}

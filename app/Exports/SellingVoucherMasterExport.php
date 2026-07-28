@@ -22,6 +22,7 @@ class SellingVoucherMasterExport implements FromCollection, WithColumnWidths, Wi
     /** @var array<int,array<string,string>> */
     protected array $records;
     protected string $filterLine;
+    protected string $reportTitle;
 
     /**
      * On-screen data-column indexes (0..9) left visible via the Column Visibility
@@ -36,11 +37,12 @@ class SellingVoucherMasterExport implements FromCollection, WithColumnWidths, Wi
     /**
      * @param array<int,array<string,string>> $records
      */
-    public function __construct(array $records, string $filterLine = '', ?array $visibleColumns = null)
+    public function __construct(array $records, string $filterLine = '', ?array $visibleColumns = null, string $reportTitle = 'Selling Voucher')
     {
         $this->records = array_values($records);
         $this->filterLine = $filterLine;
         $this->visibleColumns = ($visibleColumns === null || $visibleColumns === []) ? null : array_values($visibleColumns);
+        $this->reportTitle = $reportTitle;
     }
 
     /**
@@ -127,7 +129,7 @@ class SellingVoucherMasterExport implements FromCollection, WithColumnWidths, Wi
 
     public function title(): string
     {
-        return 'Selling Voucher';
+        return substr($this->reportTitle, 0, 31);
     }
 
     public function columnWidths(): array
@@ -152,7 +154,7 @@ class SellingVoucherMasterExport implements FromCollection, WithColumnWidths, Wi
 
                 $metaLines = [];
                 $metaLines[] = ['text' => 'Lal Bahadur Shastri National Academy of Administration, Mussoorie', 'style' => 'inst'];
-                $metaLines[] = ['text' => 'Selling Voucher', 'style' => 'title'];
+                $metaLines[] = ['text' => $this->reportTitle, 'style' => 'title'];
 
                 if (trim($this->filterLine) !== '') {
                     $metaLines[] = ['text' => $this->filterLine, 'style' => 'meta'];

@@ -1545,6 +1545,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     Route::get('selling-voucher-date-range/filter-buyer-names', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'filterBuyerNames'])->name('selling-voucher-date-range.filter-buyer-names');
     Route::get('selling-voucher-date-range/store/{storeIdentifier}/items', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'getStoreItems'])->name('selling-voucher-date-range.store.items');
     Route::get('selling-voucher-date-range/datatable', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'datatable'])->name('selling-voucher-date-range.datatable');
+    Route::get('selling-voucher-date-range/export', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'export'])->name('selling-voucher-date-range.export');
     Route::resource('selling-voucher-date-range', \App\Http\Controllers\Mess\SellingVoucherDateRangeController::class);
     Route::get('selling-voucher-date-range/{id}/return', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'returnData'])->name('selling-voucher-date-range.return');
     Route::put('selling-voucher-date-range/{id}/return', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'updateReturn'])->name('selling-voucher-date-range.update-return');
