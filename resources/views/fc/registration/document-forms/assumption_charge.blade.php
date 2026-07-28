@@ -88,7 +88,7 @@
                         पदनाम / Designation: <input type="text" name="designation" class="blank blank--mid" value="{{ $val('designation') }}">
                     </div>
                     <div>स्थान / Place: <strong>मसूरी / Mussoorie</strong></div>
-                    <div>दिनांक / Dated: <input type="date" name="declaration_date" class="blank blank--sm" value="{{ old('declaration_date', $data['declaration_date'] ?? '2026-07-24') }}" readonly></div>
+                    <div>दिनांक / Dated: <input type="date" name="declaration_date" class="blank blank--sm" value="{{ old('declaration_date', '2026-07-24') }}" readonly></div>
                     <div style="clear:both;"></div>
                 </div>
 

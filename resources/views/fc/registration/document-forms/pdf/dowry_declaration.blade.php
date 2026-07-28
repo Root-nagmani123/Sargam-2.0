@@ -62,7 +62,7 @@
     <div class="body">मैंने यह बात भली-भांति जानते हुए इस घोषणा पर हस्ताक्षर किए हैं कि दहेज से संबंधित नियमों अथवा विधि का उल्लंघन करने पर मेरे विरुद्ध उपयुक्त कार्रवाई की जा सकती है।</div>
     <div class="sign">
         <table style="width:100%;"><tr>
-            <td>स्थान: {!! $blank(($hi['place'] ?? '') ?: 'Mussoorie', '45mm') !!}</td>
+            <td>स्थान: {!! $blank(($hi['place'] ?? '') ?: 'मसूरी', '45mm') !!}</td>
             <td style="text-align:right;">हस्ताक्षर: @if($sigSrc)<img src="{{ $sigSrc }}" class="sig-img">@else {!! $blank('', '50mm') !!} @endif</td>
         </tr></table>
         <table style="width:100%; margin-top:6pt;"><tr>

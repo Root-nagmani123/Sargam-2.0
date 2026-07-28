@@ -94,11 +94,11 @@
 
                 <table class="dw-signtbl">
                     <tr>
-                        <td>स्थान: <input type="text" name="hi[place]" class="blank" value="{{ $data['_hi']['place'] ?? '' }}" autocomplete="off"></td>
+                        <td>स्थान: <input type="text" name="hi[place]" class="blank" value="{{ old('hi.place', 'मसूरी') }}" autocomplete="off" readonly></td>
                         <td>हस्ताक्षर: <span class="dw-ruled">&nbsp;</span></td>
                     </tr>
                     <tr>
-                        <td>तारीख: <input type="text" name="hi[ddate]" class="blank blank--sm" value="{{ $data['_hi']['ddate'] ?? '' }}" autocomplete="off"></td>
+                        <td>तारीख: <input type="text" name="hi[ddate]" class="blank blank--sm" value="{{ old('hi.ddate', '24-08-2026') }}" autocomplete="off" readonly></td>
                         <td>(नाम साफ अक्षरों में): <span class="mirror-out" data-mirror-out="hi_name">&nbsp;</span></td>
                     </tr>
                 </table>
@@ -159,11 +159,11 @@
 
                 <table class="dw-signtbl">
                     <tr>
-                        <td>Place: <input type="text" name="place" class="blank" value="{{ old('place', $data['place'] ?? 'Mussoorie') }}" data-mirror="place" readonly></td>
+                        <td>Place: <input type="text" name="place" class="blank" value="{{ old('place', 'Mussoorie') }}" data-mirror="place" readonly></td>
                         <td>Signature: <span class="dw-ruled">&nbsp;</span></td>
                     </tr>
                     <tr>
-                        <td>Dated: <input type="date" name="declaration_date" class="blank blank--sm" value="{{ old('declaration_date', $data['declaration_date'] ?? '2026-08-24') }}" data-mirror="ddate" readonly></td>
+                        <td>Dated: <input type="date" name="declaration_date" class="blank blank--sm" value="{{ old('declaration_date', '2026-08-24') }}" data-mirror="ddate" readonly></td>
                         <td>(Name of Officer in Block Letters): <span class="mirror-out" data-mirror-out="name">&nbsp;</span></td>
                     </tr>
                 </table>
