@@ -211,6 +211,33 @@ Master set (`StoreController@export`, `app/Exports/StoreMasterExport.php`,
 
 ---
 
+## Delete confirmation + success toast
+
+Destructive actions use a branded confirm dialog, and all success feedback renders
+as one global toast — never a native `confirm()` or a per-page inline alert.
+
+- **Confirm dialog** — reuse the global `programme-confirm-*` design system
+  (`public/css/custom.css`): a centred card with a red outlined `!` icon
+  (`programme-confirm-icon--danger`), title, message, and two buttons —
+  *outlined-red* **Cancel, Keep it** (`programme-confirm-cancel--danger`) + *solid-red*
+  **Yes, Delete** (`programme-confirm-ok--danger`). The design-system title is brand
+  blue; the mock wants it dark, so override `.…-title{color:#101828}`. Course Master
+  (`admin/programme/index.blade.php`) is the original; the reusable mess version is
+  `resources/views/mess/partials/delete-confirm.blade.php`.
+- **Success toast** — SweetAlert2 + `public/js/sargam-success-toast.js` (both loaded
+  globally in the master layout) turn **any** `Swal.fire({icon:'success', …})` into a
+  top-right green-check "Success" card. So flash a `session('success')` and fire it as
+  a success Swal on load — do **not** render your own inline `alert-success`
+  (`[[global-success-toast]]`).
+- **Reusable mess partial** — `@include('mess.partials.delete-confirm')` once per
+  listing page. Give each delete `<form>` the class `mess-delete-form` (drop any native
+  `onsubmit="return confirm(...)"`) plus optional `data-confirm-title` /
+  `data-confirm-message`; a capture-phase submit interceptor shows the dialog and only
+  the OK button re-submits the form. The same partial fires the success toast from
+  `session('success')`, so the page must not also print an inline success alert.
+
+---
+
 ## Add / Edit form modals
 
 The new-design create/edit dialog (reference: the Add Store / Edit Store modals in
@@ -259,3 +286,6 @@ See also:
   the "Branded report exports" section above.
 - The Add Store / Edit Store modals in `resources/views/mess/stores/index.blade.php`
   — reference implementation of the "Add / Edit form modals" section above.
+- `resources/views/mess/partials/delete-confirm.blade.php` — reusable
+  delete-confirmation dialog + success toast (the "Delete confirmation + success
+  toast" section above); `public/js/sargam-success-toast.js` is the toast engine.

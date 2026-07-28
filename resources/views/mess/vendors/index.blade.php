@@ -89,6 +89,98 @@
 
     .vendor-master-page .programme-dt-footer .paginate_button.previous .page-link::before { content: "\2039"; font-size: 1.1rem; }
     .vendor-master-page .programme-dt-footer .paginate_button.next .page-link::before { content: "\203A"; font-size: 1.1rem; }
+
+    /* ── Add / Edit Vendor modals (clean rounded card, labelled fields, red Cancel + blue submit) ── */
+    .vendor-modal .modal-dialog { max-height: calc(100vh - 2rem); }
+
+    /* Bound the modal to the viewport and make the BODY scroll, so the tall vendor
+       form never pushes the Cancel / Add Vendor footer below the fold. */
+    .vendor-modal .modal-content {
+        border-radius: 16px;
+        box-shadow: 0 24px 48px rgba(16, 24, 40, .18);
+        overflow: hidden;
+        max-height: calc(100vh - 2rem);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .vendor-modal .modal-header,
+    .vendor-modal .modal-footer { flex-shrink: 0; }
+
+    .vendor-modal .modal-header {
+        padding: 1.25rem 1.5rem 1rem;
+        border-bottom: 1px solid var(--ds-line, #eef2f6);
+    }
+
+    .vendor-modal .modal-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--ds-ink, #1f2937);
+    }
+
+    .vendor-modal .modal-body {
+        padding: 1.25rem 1.5rem;
+        overflow-y: auto;
+    }
+
+    .vendor-modal .vendor-modal-label {
+        font-weight: 600;
+        font-size: .875rem;
+        color: var(--ds-ink, #1f2937);
+        margin-bottom: .375rem;
+    }
+
+    .vendor-modal .vendor-modal-control {
+        min-height: 44px;
+        border-radius: 8px;
+        border: 1px solid var(--ds-line, #d0d5dd);
+        font-size: .9375rem;
+        color: var(--ds-ink, #1f2937);
+        padding: .5rem .875rem;
+    }
+
+    .vendor-modal textarea.vendor-modal-control { min-height: 92px; }
+    .vendor-modal .vendor-modal-control::placeholder { color: #98a2b3; }
+
+    .vendor-modal .vendor-modal-control:focus {
+        border-color: var(--ds-primary, #004a93);
+        box-shadow: 0 0 0 3px rgba(0, 74, 147, .12);
+    }
+
+    /* "Other Informations" divider heading */
+    .vendor-modal .vendor-modal-section {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--ds-ink, #1f2937);
+        border-top: 1px solid var(--ds-line, #eef2f6);
+        padding-top: 1rem;
+        margin-top: .25rem;
+    }
+
+    .vendor-modal .modal-footer {
+        padding: 1rem 1.5rem 1.5rem;
+        border-top: 1px solid var(--ds-line, #eef2f6);
+    }
+
+    .vendor-modal .vendor-modal-cancel,
+    .vendor-modal .vendor-modal-submit {
+        min-height: 44px;
+        border-radius: 8px;
+        padding: .5rem 1.75rem;
+        font-weight: 600;
+        font-size: .9375rem;
+    }
+
+    .vendor-modal .vendor-modal-cancel {
+        color: var(--ds-secondary, #d92d20);
+        background: #fff;
+        border: 1px solid var(--ds-secondary, #d92d20);
+    }
+
+    .vendor-modal .vendor-modal-cancel:hover {
+        background: #fff5f5;
+        color: var(--ds-secondary, #d92d20);
+    }
 </style>
 @endpush
 
@@ -104,12 +196,7 @@
         </button>
     </x-breadcrum>
 
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
+    {{-- Success feedback is rendered as the global green toast — see mess.partials.delete-confirm --}}
 
     {{-- Download / Print bar (branded server-side exports — see admin.mess.vendors.export) --}}
     <div class="d-flex justify-content-end gap-2 mb-3">
@@ -187,7 +274,8 @@
                                         @if($canDeleteVendor)
                                             <form method="POST"
                                                 action="{{ route('admin.mess.vendors.destroy', $vendor->id) }}"
-                                                onsubmit="return confirm('Are you sure you want to delete this vendor?');">
+                                                class="mess-delete-form" data-confirm-title="Delete Vendor?"
+                                                data-confirm-message="Are you sure you want to delete this vendor?">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="vendor-action-btn text-danger" title="Delete">
@@ -211,97 +299,103 @@
 </div>
 
 {{-- Create Vendor Modal --}}
-<div class="modal fade" id="createVendorModal" tabindex="-1" aria-labelledby="createVendorModalLabel"
+<div class="modal fade vendor-modal" id="createVendorModal" tabindex="-1" aria-labelledby="createVendorModalLabel"
     aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0">
             <form method="POST" action="{{ route('admin.mess.vendors.store') }}" enctype="multipart/form-data">
                 @csrf
-                <div class="modal-header border-bottom bg-light">
-                    <h5 class="modal-title fw-semibold" id="createVendorModalLabel">Add Vendor</h5>
+                <div class="modal-header">
+                    <h4 class="modal-title" id="createVendorModalLabel">Add Vendor</h4>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label">Vendor Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" id="create_vendor_name" class="form-control" required
-                                value="{{ old('name') }}" pattern="[a-zA-Z0-9\s\-]+" maxlength="255" autocomplete="off">
+                        <div class="col-md-6">
+                            <label class="form-label vendor-modal-label">Vendor Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" id="create_vendor_name" class="form-control vendor-modal-control" required
+                                value="{{ old('name') }}" pattern="[a-zA-Z0-9\s\-]+" maxlength="255" autocomplete="off"
+                                placeholder="e.g. LBSNAA Store">
                             <div class="text-danger small mt-1" id="create_vendor_name_error" role="alert">
                                 @error('name'){{ $message }}@enderror</div>
                         </div>
-                        <div class="col-12">
-                            <label class="form-label">Email</label>
-                            <input type="email" name="email" id="create_email" class="form-control"
-                                value="{{ old('email') }}" maxlength="255" placeholder="Optional">
-                            @error('email')<div class="text-danger small">{{ $message }}</div>@enderror
+                        <div class="col-md-6">
+                            <label class="form-label vendor-modal-label">Email</label>
+                            <input type="email" name="email" id="create_email" class="form-control vendor-modal-control"
+                                value="{{ old('email') }}" maxlength="255" placeholder="e.g. xyz@gmail.com">
+                            @error('email')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Contact Person <span class="text-danger">*</span></label>
-                            <input type="text" name="contact_person" id="create_contact_person" class="form-control"
+                            <label class="form-label vendor-modal-label">Contact Person <span class="text-danger">*</span></label>
+                            <input type="text" name="contact_person" id="create_contact_person" class="form-control vendor-modal-control"
                                 required value="{{ old('contact_person') }}" pattern="[a-zA-Z0-9\s\-]+" maxlength="255"
-                                autocomplete="off">
+                                autocomplete="off" placeholder="e.g. John Doe">
                             <div class="text-danger small mt-1" id="create_contact_person_error" role="alert">
                                 @error('contact_person'){{ $message }}@enderror</div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Phone <span class="text-danger">*</span></label>
-                            <input type="text" name="phone" id="create_phone" class="form-control" required
+                            <label class="form-label vendor-modal-label">Phone Number <span class="text-danger">*</span></label>
+                            <input type="text" name="phone" id="create_phone" class="form-control vendor-modal-control" required
                                 value="{{ old('phone') }}" inputmode="numeric" pattern="[0-9]{10}" maxlength="10"
-                                placeholder="10 digit mobile number">
+                                placeholder="e.g. 1234567890">
                             <div class="text-danger small mt-1" id="create_phone_error" role="alert">
                                 @error('phone'){{ $message }}@enderror</div>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Address <span class="text-danger">*</span></label>
-                            <textarea name="address" id="create_address" class="form-control" rows="3" required
+                            <label class="form-label vendor-modal-label">Address <span class="text-danger">*</span></label>
+                            <textarea name="address" id="create_address" class="form-control vendor-modal-control" rows="3" required
                                 maxlength="2000" autocomplete="off"
-                                placeholder="Up to 2000 characters">{{ old('address') }}</textarea>
+                                placeholder="e.g. 274, Greater Kailash, New Delhi...">{{ old('address') }}</textarea>
                             <div class="text-danger small mt-1" id="create_address_error" role="alert">
                                 @error('address'){{ $message }}@enderror</div>
                         </div>
+
+                        <div class="col-12">
+                            <div class="vendor-modal-section">Other Informations</div>
+                        </div>
+
                         <div class="col-md-6">
-                            <label class="form-label">GST Number</label>
-                            <input type="text" name="gst_number" id="create_gst_number" class="form-control"
+                            <label class="form-label vendor-modal-label">GST Number</label>
+                            <input type="text" name="gst_number" id="create_gst_number" class="form-control vendor-modal-control"
                                 value="{{ old('gst_number') }}" maxlength="15" pattern="[A-Za-z0-9]+"
-                                placeholder="Letters & numbers, max 15">
+                                placeholder="e.g. JEDG294792402234">
                             <div class="text-danger small mt-1" id="create_gst_number_error" role="alert">
                                 @error('gst_number'){{ $message }}@enderror</div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Bank Name</label>
-                            <input type="text" name="bank_name" id="create_bank_name" class="form-control"
+                            <label class="form-label vendor-modal-label">Bank Name</label>
+                            <input type="text" name="bank_name" id="create_bank_name" class="form-control vendor-modal-control"
                                 value="{{ old('bank_name') }}" maxlength="255" pattern="[a-zA-Z0-9\s\-]+"
-                                placeholder="No special characters, max 255">
+                                placeholder="e.g. SBI">
                             <div class="text-danger small mt-1" id="create_bank_name_error" role="alert">
                                 @error('bank_name'){{ $message }}@enderror</div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">IFSC Code</label>
-                            <input type="text" name="ifsc_code" id="create_ifsc_code" class="form-control"
+                            <label class="form-label vendor-modal-label">IFSC Code</label>
+                            <input type="text" name="ifsc_code" id="create_ifsc_code" class="form-control vendor-modal-control"
                                 value="{{ old('ifsc_code') }}" maxlength="11" pattern="[A-Za-z0-9]+"
-                                placeholder="Letters & numbers, max 11">
+                                placeholder="e.g. BKID927423">
                             <div class="text-danger small mt-1" id="create_ifsc_code_error" role="alert">
                                 @error('ifsc_code'){{ $message }}@enderror</div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Account Number</label>
-                            <input type="text" name="account_number" id="create_account_number" class="form-control"
+                            <label class="form-label vendor-modal-label">Account Number</label>
+                            <input type="text" name="account_number" id="create_account_number" class="form-control vendor-modal-control"
                                 value="{{ old('account_number') }}" inputmode="numeric" pattern="[0-9]*" maxlength="18"
-                                placeholder="Digits only, max 18">
+                                placeholder="e.g. 2648628462342742">
                             <div class="text-danger small mt-1" id="create_account_number_error" role="alert">
                                 @error('account_number'){{ $message }}@enderror</div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Upload Licence</label>
-                            <input type="file" name="licence_document" class="form-control">
-                            @error('licence_document')<div class="text-danger small">{{ $message }}</div>@enderror
+                        <div class="col-12">
+                            <label class="form-label vendor-modal-label">Upload Licence</label>
+                            <input type="file" name="licence_document" class="form-control vendor-modal-control">
+                            @error('licence_document')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn vendor-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary vendor-modal-submit">Add Vendor</button>
                 </div>
             </form>
         </div>
@@ -386,120 +480,90 @@
 </div>
 
 {{-- Edit Vendor Modal --}}
-<style>
-    /* Ensure body scroll works with sticky header/footer */
-    #editVendorModal .modal-dialog {
-        max-height: calc(100vh - 2rem);
-        margin: 1rem auto;
-    }
-    #editVendorModal .modal-content {
-        max-height: calc(100vh - 2rem);
-        display: flex;
-        flex-direction: column;
-    }
-    #editVendorModal .modal-body {
-        overflow-y: auto;
-    }
-</style>
-<div class="modal fade" id="editVendorModal" tabindex="-1" aria-labelledby="editVendorModalLabel" aria-hidden="true">
+<div class="modal fade vendor-modal" id="editVendorModal" tabindex="-1" aria-labelledby="editVendorModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+        <div class="modal-content border-0">
             <form id="editVendorForm" method="POST" action="" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
-                <div class="modal-header bg-body border-bottom py-3 px-3 px-lg-4 position-sticky top-0 z-3">
-                    <div class="d-flex align-items-center gap-3">
-                        <span class="rounded-circle bg-primary-subtle text-primary d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
-                            <i class="material-symbols-rounded" style="font-size: 1.35rem;">storefront</i>
-                        </span>
-                        <div class="lh-sm">
-                            <h5 class="modal-title fw-semibold mb-0" id="editVendorModalLabel">Edit Vendor</h5>
-                            <div class="small text-muted">Update vendor details and click Update.</div>
-                        </div>
-                    </div>
+                <div class="modal-header">
+                    <h4 class="modal-title" id="editVendorModalLabel">Edit Vendor</h4>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body p-3 p-lg-4 bg-body-tertiary">
-                    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-                        <div class="card-body p-3 p-lg-4">
-                            <div class="row g-3">
-                                <div class="col-12">
-                                    <label class="form-label fw-medium">Vendor Name <span
-                                            class="text-danger">*</span></label>
-                                    <input type="text" name="name" id="edit_vendor_name" class="form-control form-control-sm" required
-                                        pattern="[a-zA-Z0-9\s\-]+" maxlength="255" autocomplete="off">
-                                    <div class="text-danger small mt-1" id="edit_vendor_name_error" role="alert"></div>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label fw-medium">Email</label>
-                                    <input type="email" name="email" id="edit_vendor_email" class="form-control form-control-sm"
-                                        maxlength="255" placeholder="Optional">
-                                </div>
-                                <div class="col-12 col-md-6">
-                                    <label class="form-label fw-medium">Contact Person <span
-                                            class="text-danger">*</span></label>
-                                    <input type="text" name="contact_person" id="edit_vendor_contact_person"
-                                        class="form-control form-control-sm" required pattern="[a-zA-Z0-9\s\-]+" maxlength="255"
-                                        autocomplete="off">
-                                    <div class="text-danger small mt-1" id="edit_vendor_contact_person_error"
-                                        role="alert"></div>
-                                </div>
-                                <div class="col-12 col-md-6">
-                                    <label class="form-label fw-medium">Phone <span class="text-danger">*</span></label>
-                                    <input type="text" name="phone" id="edit_vendor_phone" class="form-control form-control-sm" required
-                                        inputmode="numeric" pattern="[0-9]{10}" maxlength="10"
-                                        placeholder="10 digit mobile number">
-                                    <div class="text-danger small mt-1" id="edit_phone_error" role="alert"></div>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label fw-medium">Address <span
-                                            class="text-danger">*</span></label>
-                                    <textarea name="address" id="edit_vendor_address" class="form-control form-control-sm" rows="3"
-                                        required maxlength="2000" autocomplete="off"
-                                        placeholder="Up to 2000 characters"></textarea>
-                                    <div class="text-danger small mt-1" id="edit_vendor_address_error" role="alert">
-                                    </div>
-                                </div>
-                                <div class="col-12 col-md-6">
-                                    <label class="form-label fw-medium">GST Number</label>
-                                    <input type="text" name="gst_number" id="edit_vendor_gst_number"
-                                        class="form-control form-control-sm" maxlength="15" pattern="[A-Za-z0-9]+"
-                                        placeholder="Letters & numbers, max 15">
-                                    <div class="text-danger small mt-1" id="edit_gst_number_error" role="alert"></div>
-                                </div>
-                                <div class="col-12 col-md-6">
-                                    <label class="form-label fw-medium">Bank Name</label>
-                                    <input type="text" name="bank_name" id="edit_vendor_bank_name" class="form-control form-control-sm"
-                                        maxlength="255" pattern="[a-zA-Z0-9\s\-]+"
-                                        placeholder="No special characters, max 255">
-                                    <div class="text-danger small mt-1" id="edit_bank_name_error" role="alert"></div>
-                                </div>
-                                <div class="col-12 col-md-6">
-                                    <label class="form-label fw-medium">IFSC Code</label>
-                                    <input type="text" name="ifsc_code" id="edit_vendor_ifsc_code"
-                                        class="form-control form-control-sm text-uppercase" maxlength="11" pattern="[A-Za-z0-9]+"
-                                        placeholder="Letters & numbers, max 11">
-                                    <div class="text-danger small mt-1" id="edit_ifsc_code_error" role="alert"></div>
-                                </div>
-                                <div class="col-12 col-md-6">
-                                    <label class="form-label fw-medium">Account Number</label>
-                                    <input type="text" name="account_number" id="edit_vendor_account_number"
-                                        class="form-control form-control-sm" inputmode="numeric" pattern="[0-9]*" maxlength="18"
-                                        placeholder="Digits only, max 18">
-                                    <div class="text-danger small mt-1" id="edit_account_number_error" role="alert">
-                                    </div>
-                                </div>
-                                <div class="col-12 col-md-6">
-                                    <label class="form-label fw-medium">Upload Licence</label>
-                                    <input type="file" name="licence_document" class="form-control form-control-sm">
-                                </div>
-                            </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label vendor-modal-label">Vendor Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" id="edit_vendor_name" class="form-control vendor-modal-control" required
+                                pattern="[a-zA-Z0-9\s\-]+" maxlength="255" autocomplete="off" placeholder="e.g. LBSNAA Store">
+                            <div class="text-danger small mt-1" id="edit_vendor_name_error" role="alert"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label vendor-modal-label">Email</label>
+                            <input type="email" name="email" id="edit_vendor_email" class="form-control vendor-modal-control"
+                                maxlength="255" placeholder="e.g. xyz@gmail.com">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label vendor-modal-label">Contact Person <span class="text-danger">*</span></label>
+                            <input type="text" name="contact_person" id="edit_vendor_contact_person"
+                                class="form-control vendor-modal-control" required pattern="[a-zA-Z0-9\s\-]+" maxlength="255"
+                                autocomplete="off" placeholder="e.g. John Doe">
+                            <div class="text-danger small mt-1" id="edit_vendor_contact_person_error" role="alert"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label vendor-modal-label">Phone Number <span class="text-danger">*</span></label>
+                            <input type="text" name="phone" id="edit_vendor_phone" class="form-control vendor-modal-control" required
+                                inputmode="numeric" pattern="[0-9]{10}" maxlength="10" placeholder="e.g. 1234567890">
+                            <div class="text-danger small mt-1" id="edit_phone_error" role="alert"></div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label vendor-modal-label">Address <span class="text-danger">*</span></label>
+                            <textarea name="address" id="edit_vendor_address" class="form-control vendor-modal-control" rows="3"
+                                required maxlength="2000" autocomplete="off"
+                                placeholder="e.g. 274, Greater Kailash, New Delhi..."></textarea>
+                            <div class="text-danger small mt-1" id="edit_vendor_address_error" role="alert"></div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="vendor-modal-section">Other Informations</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label vendor-modal-label">GST Number</label>
+                            <input type="text" name="gst_number" id="edit_vendor_gst_number"
+                                class="form-control vendor-modal-control" maxlength="15" pattern="[A-Za-z0-9]+"
+                                placeholder="e.g. JEDG294792402234">
+                            <div class="text-danger small mt-1" id="edit_gst_number_error" role="alert"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label vendor-modal-label">Bank Name</label>
+                            <input type="text" name="bank_name" id="edit_vendor_bank_name" class="form-control vendor-modal-control"
+                                maxlength="255" pattern="[a-zA-Z0-9\s\-]+" placeholder="e.g. SBI">
+                            <div class="text-danger small mt-1" id="edit_bank_name_error" role="alert"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label vendor-modal-label">IFSC Code</label>
+                            <input type="text" name="ifsc_code" id="edit_vendor_ifsc_code"
+                                class="form-control vendor-modal-control text-uppercase" maxlength="11" pattern="[A-Za-z0-9]+"
+                                placeholder="e.g. BKID927423">
+                            <div class="text-danger small mt-1" id="edit_ifsc_code_error" role="alert"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label vendor-modal-label">Account Number</label>
+                            <input type="text" name="account_number" id="edit_vendor_account_number"
+                                class="form-control vendor-modal-control" inputmode="numeric" pattern="[0-9]*" maxlength="18"
+                                placeholder="e.g. 2648628462342742">
+                            <div class="text-danger small mt-1" id="edit_account_number_error" role="alert"></div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label vendor-modal-label">Upload Licence</label>
+                            <input type="file" name="licence_document" class="form-control vendor-modal-control">
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer bg-body border-top py-3 px-3 px-lg-4 position-sticky bottom-0 z-3">
-                    <button type="button" class="btn btn-outline-secondary btn-sm px-4" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary btn-sm px-4">Update</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn vendor-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary vendor-modal-submit">Update Vendor</button>
                 </div>
             </form>
         </div>
@@ -524,6 +588,9 @@
         </div>
     </div>
 </div>
+
+{{-- Branded delete-confirmation dialog + global success toast --}}
+@include('mess.partials.delete-confirm')
 
 @include('components.mess-master-datatables', [
     'tableId' => 'vendorsTable',

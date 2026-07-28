@@ -182,12 +182,7 @@
         </button>
     </x-breadcrum>
 
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
+    {{-- Success feedback is rendered as the global green toast — see mess.partials.delete-confirm --}}
 
     {{-- Download / Print bar (branded server-side exports — see admin.mess.stores.export) --}}
     <div class="d-flex justify-content-end gap-2 mb-3">
@@ -253,7 +248,8 @@
                                                     title="Edit"><i class="material-symbols-rounded">edit</i><span>Edit</span></button>
                                             @if($canDeleteStore)
                                                 <form method="POST" action="{{ route('admin.mess.stores.destroy', $store->id) }}"
-                                                      onsubmit="return confirm('Are you sure you want to delete this store?');">
+                                                      class="mess-delete-form" data-confirm-title="Delete Store?"
+                                                      data-confirm-message="Are you sure you want to delete this store?">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="store-action-btn text-danger" title="Delete"><i class="material-symbols-rounded">delete</i><span>Delete</span></button>
@@ -410,6 +406,9 @@
         </div>
     </div>
 </div>
+
+{{-- Branded delete-confirmation dialog + global success toast --}}
+@include('mess.partials.delete-confirm')
 
 @include('components.mess-master-datatables', [
     'tableId' => 'storesTable',
