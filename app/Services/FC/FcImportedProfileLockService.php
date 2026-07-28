@@ -147,6 +147,13 @@ class FcImportedProfileLockService
      *
      * Mirrors fc_user_val(): staged /fc/login users have a negative auth id equal to
      * -roster.pk; migrated users are linked via user_credentials.user_name = roster.user_id.
+     *
+     * A positive id that resolves to no user_credentials row is not a credentials pk at
+     * all — it is a roster pk on a record FcReconcileRosterIds has not rekeyed yet, which
+     * is exactly how the tracker tables still store some rows. Falling back to pk keeps
+     * this in step with the reporting SQL (which reaches the same row through
+     * `frm.pk = tracker.user_id`); without it the trainee-facing flow and the admin
+     * report disagreed about who a conditional step applies to.
      */
     private function rosterRow(int $userId): ?object
     {
@@ -154,15 +161,27 @@ class FcImportedProfileLockService
             return $this->rosterRowCache[$userId];
         }
 
-        $query = DB::table('fc_registration_master');
+        $query = fn () => DB::table('fc_registration_master');
 
         if ($userId < 0) {
-            $row = $query->where('pk', abs($userId))->first();
-        } else {
-            $username = fc_user_name_for_id($userId);
-            $row = ($username !== null && trim((string) $username) !== '')
-                ? $query->where('user_id', trim((string) $username))->first()
-                : null;
+            return $this->rosterRowCache[$userId] = $query()->where('pk', abs($userId))->first();
+        }
+
+        // '' and null both mean "no login name resolved", so both must take the pk fallback.
+        // Treating only null as unresolved left an empty username finding no roster row at
+        // all — precisely the roster-pk-keyed case the fallback exists for. The reporting SQL
+        // applies the same widened test (see FcStepApplicabilityService::ruleSqlFor()), so
+        // the two sides stay in step.
+        $username = trim((string) (fc_user_name_for_id($userId) ?? ''));
+
+        $row = $username !== ''
+            ? $query()->where('user_id', $username)->first()
+            : null;
+
+        // Only when NO login name resolved: a real username that simply matches no roster row
+        // means the id IS a credentials pk, and falling back to pk would pull a stranger's row.
+        if ($row === null && $username === '') {
+            $row = $query()->where('pk', $userId)->first();
         }
 
         return $this->rosterRowCache[$userId] = $row;

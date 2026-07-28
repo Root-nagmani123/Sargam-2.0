@@ -2,13 +2,11 @@
 
 namespace App\Services\FC;
 
-use App\Models\FrontPage;
 use App\Models\FoundationCourseStatus;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class FcRegistrationStatusService
 {
@@ -30,26 +28,9 @@ class FcRegistrationStatusService
         self::TAB_INCOMPLETE,
     ];
 
-    public function courseMeta(): array
-    {
-        $front = FrontPage::query()->first();
-
-        $title = trim((string) ($front->course_title ?? '')) ?: 'Foundation Course';
-        $start = $front?->course_start_date ? Carbon::parse($front->course_start_date) : null;
-        $end = $front?->course_end_date ? Carbon::parse($front->course_end_date) : null;
-
-        $dateLine = '';
-        if ($start && $end) {
-            $dateLine = '[ '.$start->format('F j, Y').' to '.$end->format('F j, Y').' ]';
-        } elseif ($start) {
-            $dateLine = '[ From '.$start->format('F j, Y').' ]';
-        }
-
-        return [
-            'title' => $title,
-            'date_line' => $dateLine,
-        ];
-    }
+    // courseMeta() removed: the status hero now carries the academy masthead instead of a
+    // course title / date line, so nothing rendered its output. It read the whole
+    // fc_front_pages row on every page load to build two strings no view asked for.
 
     public function counts(): array
     {
@@ -120,6 +101,8 @@ class FcRegistrationStatusService
                 'label' => 'Service wise List',
                 'list_title' => 'Service wise List Report',
                 'theme' => 'service',
+                // This badge counts SERVICES, not people — every other tab counts people.
+                'count_unit' => 'services',
             ],
             self::TAB_EXEMPTION => [
                 'label' => 'Applied for Exemption',
