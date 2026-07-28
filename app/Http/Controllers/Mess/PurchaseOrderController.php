@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Mess;
 
+use App\Exports\PurchaseOrderMasterExport;
 use App\Http\Controllers\Controller;
 use App\Support\DataTableRedisCache;
 use App\Support\DataTableSearchHelper;
@@ -8,6 +9,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\Mess\PurchaseOrder;
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Excel as ExcelFormat;
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Mess\PurchaseOrderItem;
 use App\Models\Mess\Vendor;
 use App\Models\Mess\VendorItemMapping;
@@ -37,7 +41,7 @@ class PurchaseOrderController extends Controller
         if ($request->ajax() && $request->has('draw')) {
             return DataTableRedisCache::serveCachedAjax(
                 $request,
-                'purchase_order_dt:v1:',
+                'purchase_order_dt:v2:',
                 self::PURCHASE_ORDER_DT_LIST_EPOCH,
                 [
                     'enabled' => 'PURCHASE_ORDER_DATATABLE_CACHE_ENABLED',
@@ -73,6 +77,139 @@ class PurchaseOrderController extends Controller
             'vendors', 'stores', 'itemSubcategories', 'po_number', 'paymentModes',
             'filterDateFrom', 'filterDateTo', 'filterVendorIds', 'filterStoreIds'
         ));
+    }
+
+    /**
+     * Branded Purchase Order report — Print (inline PDF) and Download (styled .xlsx).
+     * Both carry the official LBSNAA header and respect the date / vendor / store /
+     * search filters. See {@see \App\Exports\PurchaseOrderMasterExport}.
+     */
+    public function export(Request $request)
+    {
+        $format = strtolower((string) $request->get('format', 'excel'));
+        if (! in_array($format, ['csv', 'excel', 'xlsx', 'pdf'], true)) {
+            $format = 'excel';
+        }
+
+        $search = $request->get('search');
+        $vendorIds = $this->normalizeFilterIdList($request->input('vendor_id'));
+        $storeIds = $this->normalizeFilterIdList($request->input('store_id'));
+        $dateFrom = $request->get('date_from');
+        $dateTo = $request->get('date_to');
+        $visibleColumns = $this->parseVisibleColumns($request->get('columns'));
+
+        $export = new PurchaseOrderMasterExport($search, $vendorIds, $storeIds, $dateFrom, $dateTo, $visibleColumns);
+        $fileName = 'purchase-order-' . now()->format('Y-m-d_H-i-s');
+
+        if ($format === 'pdf') {
+            @ini_set('memory_limit', '256M');
+            @set_time_limit(120);
+
+            $pdf = Pdf::loadView('mess.purchaseorders.export_pdf', array_merge([
+                'headings' => $export->activeHeadings(),
+                'rows' => $export->pdfRows(),
+                'filterLine' => $this->buildExportFilterLine($request, $vendorIds, $storeIds),
+                'printedOn' => now()->format('d-m-Y H:i'),
+                'reportTitle' => 'Purchase Order',
+            ], $this->buildExportHeaderData()))
+                ->setPaper('a4', 'portrait')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'isPhpEnabled' => true,
+                    'dpi' => 96,
+                ]);
+
+            return $request->boolean('inline')
+                ? $pdf->stream($fileName . '.pdf')
+                : $pdf->download($fileName . '.pdf');
+        }
+
+        return Excel::download($export, $fileName . '.xlsx', ExcelFormat::XLSX);
+    }
+
+    /**
+     * `columns=0,1,2,…` → clean list of exportable data-column indexes (0..4).
+     * Action (5) is never exported.
+     *
+     * @return array<int,int>|null
+     */
+    private function parseVisibleColumns($raw): ?array
+    {
+        if (! is_string($raw) || trim($raw) === '') {
+            return null;
+        }
+
+        $cols = array_values(array_unique(array_filter(
+            array_map('intval', explode(',', $raw)),
+            static fn ($v) => $v >= 0 && $v <= 4
+        )));
+
+        return $cols !== [] ? $cols : null;
+    }
+
+    /**
+     * @param array<int,int> $vendorIds
+     * @param array<int,int> $storeIds
+     */
+    private function buildExportFilterLine(Request $request, array $vendorIds, array $storeIds): string
+    {
+        $parts = [];
+        if ($request->filled('date_from') || $request->filled('date_to')) {
+            $parts[] = 'Period: ' . ($request->get('date_from') ?: '…') . ' to ' . ($request->get('date_to') ?: '…');
+        }
+        if ($vendorIds !== []) {
+            $names = Vendor::whereIn('id', $vendorIds)->pluck('name')->all();
+            if ($names !== []) {
+                $parts[] = 'Vendor: ' . implode(', ', $names);
+            }
+        }
+        if ($storeIds !== []) {
+            $names = Store::whereIn('id', $storeIds)->pluck('store_name')->all();
+            if ($names !== []) {
+                $parts[] = 'Store: ' . implode(', ', $names);
+            }
+        }
+        $search = $request->get('search');
+        if ($search !== null && trim((string) $search) !== '') {
+            $parts[] = 'Search: ' . trim($search);
+        }
+
+        return $parts === [] ? '' : 'Applied Filters:   ' . implode('   |   ', $parts);
+    }
+
+    /**
+     * @return array{logoLeft:?string,logoRight:?string,titleHindi:?string,courseName:string,courseDuration:string}
+     */
+    private function buildExportHeaderData(): array
+    {
+        $toDataUri = static function (string $path): ?string {
+            if (! is_file($path) || ! is_readable($path)) {
+                return null;
+            }
+            $raw = @file_get_contents($path);
+            if ($raw === false) {
+                return null;
+            }
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = match ($ext) {
+                'svg' => 'image/svg+xml',
+                'jpg', 'jpeg' => 'image/jpeg',
+                default => 'image/png',
+            };
+
+            return 'data:' . $mime . ';base64,' . base64_encode($raw);
+        };
+
+        return [
+            'logoLeft' => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
+            'logoRight' => $toDataUri(public_path('admin_assets/images/logos/constitution-75.png'))
+                ?: $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
+            'titleHindi' => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
+            'courseName' => '',
+            'courseDuration' => '',
+        ];
     }
 
     /**
@@ -183,40 +320,43 @@ class PurchaseOrderController extends Controller
         $rowStart = $start + 1;
 
         $data = $purchaseOrders->map(function ($po, $index) use ($canDeletePurchaseOrder, $rowStart, $forPrint) {
-            $statusBadgeClass = $po->status === 'approved'
-                ? 'text-bg-success'
-                : ($po->status === 'rejected' ? 'text-bg-danger' : ($po->status === 'completed' ? 'text-bg-primary' : 'text-bg-warning'));
+            // approved/completed → soft green, rejected → soft red, pending → soft amber.
+            $statusMod = in_array($po->status, ['approved', 'completed'], true)
+                ? 'active'
+                : ($po->status === 'rejected' ? 'inactive' : 'pending');
 
             $row = [
-                '<span class="ps-4 d-inline-block text-body-secondary fw-medium">' . ($rowStart + $index) . '</span>',
-                '<span class="fw-semibold text-body">' . e($po->po_number) . '</span>',
+                '<span class="fw-medium">' . ($rowStart + $index) . '</span>',
+                '<span class="po-order-no fw-semibold">' . e($po->po_number) . '</span>',
                 '<span class="text-body-secondary">' . e(optional($po->vendor)->name ?? 'N/A') . '</span>',
                 '<span class="text-body-secondary">' . e(optional($po->store)->store_name ?? 'N/A') . '</span>',
-                '<span class="badge rounded-1 ' . $statusBadgeClass . ' px-3 py-1 fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.02em;">' . e(ucfirst($po->status)) . '</span>',
+                '<span class="badge programme-status-badge programme-status-badge--' . $statusMod . '">' . e(ucfirst($po->status)) . '</span>',
             ];
 
             if (! $forPrint) {
-                $viewBtn = '<button type="button" class="btn btn-sm btn-outline-primary btn-view-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="View">'
-                    . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">visibility</i>'
+                $viewBtn = '<button type="button" class="po-action-btn btn-view-po text-primary" data-po-id="' . $po->id . '" title="View">'
+                    . '<i class="material-symbols-rounded">visibility</i><span>View</span>'
                     . '</button>';
-                $editBtn = '<button type="button" class="btn btn-sm btn-outline-info btn-edit-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="Edit">'
-                    . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">edit</i>'
+                $editBtn = '<button type="button" class="po-action-btn btn-edit-po text-primary" data-po-id="' . $po->id . '" title="Edit">'
+                    . '<i class="material-symbols-rounded">edit</i><span>Edit</span>'
                     . '</button>';
                 $deleteForm = '';
 
                 if ($canDeletePurchaseOrder) {
                     $deleteUrl = route('admin.mess.purchaseorders.destroy', $po->id);
                     $csrf = csrf_token();
-                    $deleteForm = '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this purchase order?\');">'
+                    $deleteForm = '<form action="' . e($deleteUrl) . '" method="POST" class="mess-delete-form" '
+                        . 'data-confirm-title="Delete Purchase Order?" '
+                        . 'data-confirm-message="Are you sure you want to delete this purchase order?">'
                         . '<input type="hidden" name="_token" value="' . e($csrf) . '">'
                         . '<input type="hidden" name="_method" value="DELETE">'
-                        . '<button type="submit" class="btn btn-sm btn-outline-danger rounded-2 po-action-btn" title="Delete">'
-                        . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">delete</i>'
+                        . '<button type="submit" class="po-action-btn text-danger" title="Delete">'
+                        . '<i class="material-symbols-rounded">delete</i><span>Delete</span>'
                         . '</button>'
                         . '</form>';
                 }
 
-                $row[] = '<div class="po-actions-cell d-inline-flex align-items-center justify-content-end gap-1">' . $viewBtn . $editBtn . $deleteForm . '</div>';
+                $row[] = '<div class="po-actions-cell d-flex align-items-start justify-content-start">' . $viewBtn . $editBtn . $deleteForm . '</div>';
             }
 
             return $row;

@@ -1517,6 +1517,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     Route::resource('number-configs', \App\Http\Controllers\Mess\NumberConfigController::class);
 
     // Purchase Order Management
+    Route::get('purchaseorders/export', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'export'])->name('purchaseorders.export');
     Route::resource('purchaseorders', \App\Http\Controllers\Mess\PurchaseOrderController::class)->except(['edit', 'update', 'destroy']);
     Route::get('purchaseorders/{id}/edit', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'edit'])->name('purchaseorders.edit');
     Route::put('purchaseorders/{id}', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'update'])->name('purchaseorders.update');

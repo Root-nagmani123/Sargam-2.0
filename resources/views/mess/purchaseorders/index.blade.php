@@ -1,251 +1,317 @@
 @extends('admin.layouts.master')
-@section('title', 'Purchase Orders')
+@section('title', 'Purchase Order')
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<style>
+    /* ── Purchase Order — new design chrome (built on --ds-* tokens + programme-dt system) ── */
+    .po-master-page .po-master-card {
+        background: var(--ds-surface, #fff);
+        border-radius: var(--ds-radius-card, 8px);
+        box-shadow: var(--ds-shadow, 0 1px 3px rgba(16, 24, 40, .1));
+    }
+
+    .po-master-page .po-master-export-btn {
+        height: var(--ds-control-h, 40px);
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        padding: 0 1.1rem;
+        font-size: .9375rem;
+        font-weight: 500;
+        color: var(--ds-primary, #004a93);
+        border: 1px solid var(--ds-line, #d0d5dd);
+        border-radius: var(--ds-radius-2, 8px);
+        background: var(--ds-surface, #fff);
+    }
+
+    .po-master-page .po-master-export-btn:hover {
+        background: #f2f7fc;
+        border-color: var(--ds-primary, #004a93);
+        color: var(--ds-primary, #004a93);
+    }
+
+    .po-master-page .po-master-export-btn i { font-size: 1.15rem; line-height: 1; }
+
+    /* Native filter pills (Vendor / Store selects + date inputs) */
+    .po-master-page .programme-dt-filter-select .form-select,
+    .po-master-page .po-filter-date {
+        min-height: 40px;
+        border-radius: 8px;
+        border: 1px solid #d0d5dd;
+        font-size: .9375rem;
+        color: #344054;
+        box-shadow: none;
+    }
+    .po-master-page .po-filter-date { padding: .5rem .75rem; width: 165px; }
+    .po-master-page .programme-dt-filter-select .form-select:focus,
+    .po-master-page .po-filter-date:focus {
+        border-color: var(--ds-primary, #004a93);
+        box-shadow: 0 0 0 3px rgba(0, 74, 147, .12);
+    }
+    .po-master-page .po-filter-dash { color: #98a2b3; }
+
+    .po-master-page .dt-top:empty,
+    .po-master-page .dt-foot:empty { display: none; margin: 0; }
+
+    .po-master-page .mess-col-manager-dropdown { display: none !important; }
+
+    #poColumnToggleGrid .colvis-item {
+        cursor: pointer;
+        transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+    #poColumnToggleGrid .colvis-item:hover {
+        border-color: var(--ds-primary, #004a93) !important;
+        background-color: rgba(0, 74, 147, 0.04);
+    }
+    #poColumnToggleGrid .colvis-item .form-check-input { cursor: pointer; flex-shrink: 0; }
+
+    .po-master-page .po-order-no { color: var(--ds-ink, #1f2937); }
+
+    /* Pending status pill (amber) — approved/completed reuse --active, rejected --inactive */
+    .po-master-page .programme-status-badge--pending { background: #fffaeb !important; color: #b54708 !important; }
+
+    /* Row actions — icon over label (blue View/Edit, red Delete). */
+    .po-master-page .po-actions-cell { gap: 1.1rem; }
+    .po-master-page .po-actions-cell form { margin: 0; }
+
+    .po-master-page .po-action-btn {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        gap: .1rem;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        line-height: 1.1;
+        font-size: .75rem;
+        font-weight: 500;
+        width: auto;
+        height: auto;
+    }
+    .po-master-page .po-action-btn i { font-size: 1.2rem; line-height: 1; }
+    .po-master-page .po-action-btn.text-primary { color: var(--ds-primary, #004a93) !important; }
+    .po-master-page .po-action-btn.text-danger { color: var(--ds-secondary, #d92d20) !important; }
+    .po-master-page .po-action-btn:hover { opacity: .78; transform: none; box-shadow: none; }
+
+    /* Pagination → arrows + numbers only. */
+    .po-master-page .programme-dt-footer .paginate_button.first,
+    .po-master-page .programme-dt-footer .paginate_button.last { display: none; }
+    .po-master-page .programme-dt-footer .paginate_button.previous .page-link,
+    .po-master-page .programme-dt-footer .paginate_button.next .page-link { font-size: 0; }
+    .po-master-page .programme-dt-footer .paginate_button.previous .page-link::before { content: "\2039"; font-size: 1.1rem; }
+    .po-master-page .programme-dt-footer .paginate_button.next .page-link::before { content: "\203A"; font-size: 1.1rem; }
+
+    /* ── Clean modern Create / Edit / View PO modals ──
+       Reskins the legacy gradient/colored modal chrome to the design system.
+       Stylesheet !important overrides the modals' inline gradient styles; markup
+       and every JS hook (line-items, Choices, ids/names) are left untouched. */
+    #createPurchaseOrderModal .modal-content,
+    #editPurchaseOrderModal .modal-content,
+    #viewPurchaseOrderModal .modal-content {
+        border-radius: 16px !important;
+        border: 0 !important;
+        box-shadow: 0 24px 48px rgba(16, 24, 40, .18) !important;
+        overflow: hidden;
+    }
+
+    #createPurchaseOrderModal .modal-header,
+    #editPurchaseOrderModal .modal-header,
+    #viewPurchaseOrderModal .modal-header {
+        background: #fff !important;
+        background-image: none !important;
+        border-top: 0 !important;
+        border-bottom: 1px solid var(--ds-line, #eef2f6) !important;
+        padding: 1.15rem 1.5rem !important;
+    }
+
+    #createPurchaseOrderModal .modal-title,
+    #editPurchaseOrderModal .modal-title,
+    #viewPurchaseOrderModal .modal-title {
+        color: var(--ds-ink, #1f2937) !important;
+        font-size: 1.4rem !important;
+        font-weight: 700 !important;
+    }
+
+    #createPurchaseOrderModal .modal-body,
+    #editPurchaseOrderModal .modal-body,
+    #viewPurchaseOrderModal .modal-body {
+        background: #fff !important;
+        background-image: none !important;
+        padding: 1.25rem 1.5rem !important;
+    }
+
+    /* Section cards inside the body → clean white with hairline border */
+    #createPurchaseOrderModal .modal-body .card,
+    #editPurchaseOrderModal .modal-body .card,
+    #viewPurchaseOrderModal .modal-body .card {
+        border: 1px solid var(--ds-line, #eef2f6) !important;
+        border-radius: 12px !important;
+        box-shadow: none !important;
+    }
+
+    #createPurchaseOrderModal .modal-body .card-header,
+    #editPurchaseOrderModal .modal-body .card-header,
+    #viewPurchaseOrderModal .modal-body .card-header,
+    #createPurchaseOrderModal .modal-body .card-footer,
+    #editPurchaseOrderModal .modal-body .card-footer,
+    #viewPurchaseOrderModal .modal-body .card-footer {
+        background: #fff !important;
+        background-image: none !important;
+        border-color: var(--ds-line, #eef2f6) !important;
+    }
+
+    /* Colored icon squares in section headers → brand-tinted neutral */
+    #createPurchaseOrderModal .modal-body .card-header [class*="bg-"],
+    #editPurchaseOrderModal .modal-body .card-header [class*="bg-"],
+    #viewPurchaseOrderModal .modal-body .card-header [class*="bg-"] {
+        background: rgba(0, 74, 147, .1) !important;
+        color: var(--ds-primary, #004a93) !important;
+    }
+
+    /* Grand-total accents → brand blue */
+    #editPoGrandTotal, #poGrandTotal, #viewPoGrandTotal { color: var(--ds-primary, #004a93) !important; }
+
+    /* Inputs / selects → token radius */
+    #createPurchaseOrderModal .form-control, #createPurchaseOrderModal .form-select,
+    #editPurchaseOrderModal .form-control, #editPurchaseOrderModal .form-select {
+        border-radius: 8px;
+    }
+
+    /* Footers → clean; submit = blue, cancel = red outline */
+    #createPurchaseOrderModal .modal-footer,
+    #editPurchaseOrderModal .modal-footer,
+    #viewPurchaseOrderModal .modal-footer {
+        background: #fff !important;
+        background-image: none !important;
+        border-top: 1px solid var(--ds-line, #eef2f6) !important;
+        padding: 1rem 1.5rem 1.25rem !important;
+    }
+
+    #createPurchaseOrderModal .modal-footer .btn[type="submit"],
+    #editPurchaseOrderModal .modal-footer .btn[type="submit"] {
+        background: var(--ds-primary, #004a93) !important;
+        border: 1px solid var(--ds-primary, #004a93) !important;
+        color: #fff !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+    }
+
+    #createPurchaseOrderModal .modal-footer .btn[data-bs-dismiss="modal"],
+    #editPurchaseOrderModal .modal-footer .btn[data-bs-dismiss="modal"] {
+        color: var(--ds-secondary, #d92d20) !important;
+        border: 1px solid var(--ds-secondary, #d92d20) !important;
+        background: #fff !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+    }
+</style>
+@endpush
+
 @section('content')
 @php
 $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
+$filterVendorId = ($filterVendorIds ?? [])[0] ?? '';
+$filterStoreId = ($filterStoreIds ?? [])[0] ?? '';
+$hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' || $filterVendorId !== '' || $filterStoreId !== '';
 @endphp
-<div class="container-fluid py-3 py-md-4 po-ux">
-    <div class="no-print">
-        <x-breadcrum title="Purchase Orders"></x-breadcrum>
-    </div>
-    <div class="datatables">
-        <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
-            <div class="card-header border-0 py-3 px-3 px-md-4 position-relative" style="background:#004a93;">
-                <div
-                    class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 no-print">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="rounded-3 bg-white bg-opacity-15 d-none d-sm-flex align-items-center justify-content-center flex-shrink-0"
-                            style="width: 2.75rem; height: 2.75rem;">
-                            <i class="material-icons material-symbol-rounded" style="font-size: 1.4rem;"
-                                aria-hidden="true">receipt_long</i>
-                        </div>
-                        <div>
-                            <h4 class="mb-0 fw-bold text-white">Purchase Orders</h4>
-                            <p class="mb-0 text-white-50 small">Filter, view, or create a new purchase order</p>
-                        </div>
-                    </div>
-                    <div class="d-flex flex-wrap align-items-center gap-2">
-                        <button type="button"
-                            class="btn btn-outline-light px-3 py-2 rounded-2 d-inline-flex align-items-center gap-2 fw-semibold"
-                            id="poPrintListBtn" title="Print purchase order list">
-                            <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;"
-                                aria-hidden="true">print</i>
-                            <span class="d-none d-sm-inline">Print List</span>
-                        </button>
-                        <button type="button"
-                            class="btn btn-light text-primary px-4 py-2 rounded-2 d-inline-flex align-items-center gap-2 shadow-sm fw-semibold po-btn-create"
-                            data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
-                            <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;"
-                                aria-hidden="true">add</i>
-                            <span class="d-none d-sm-inline">Create Purchase Order</span>
-                            <span class="d-inline d-sm-none">New</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="card-body p-3 p-md-4">
-                @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show shadow-lg border-0 rounded-4 d-flex align-items-start gap-3 bg-gradient"
-                    role="alert"
-                    style="background: linear-gradient(135deg, #d1f4e0 0%, #a8e6cf 100%); border-left: 4px solid #28a745 !important;">
-                    <i class="material-icons material-symbol-rounded flex-shrink-0 text-success"
-                        style="font-size: 1.5rem;" aria-hidden="true">check_circle</i>
-                    <div class="flex-grow-1 fw-medium">{{ session('success') }}</div>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-                @endif
+<div class="container-fluid po-ux po-master-page">
+    <x-breadcrum title="Purchase Order" :showBack="false">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
+            <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
+            <span>Create Purchase Order</span>
+        </button>
+    </x-breadcrum>
 
-                {{-- Filters --}}
-                <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}"
-                    class="card border-0 shadow-sm rounded-3 mb-4 no-print po-filter-card"
-                    aria-label="Purchase order list filters">
-                    <div class="card-header bg-white border-bottom border-light-subtle py-3 px-3 px-md-4 position-relative"
-                        style="border-top:3px solid #0b4a7e !important;">
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="material-symbols-rounded text-primary" style="font-size:1.5rem;"
-                                    aria-hidden="true">tune</span>
-                                <div>
-                                    <h6 class="mb-0 fw-semibold text-body">Refine Results</h6>
-                                    <p class="mb-0 small text-body-secondary">Filter by period, vendor & store</p>
-                                </div>
-                            </div>
-                        </div>
+    {{-- Success feedback is rendered as the global green toast — see mess.partials.delete-confirm --}}
+
+    {{-- Download / Print bar (branded server-side exports — see admin.mess.purchaseorders.export) --}}
+    <div class="d-flex justify-content-end gap-2 mb-3">
+        <button type="button" class="btn po-master-export-btn border-0" id="poDownloadBtn">
+            <i class="material-symbols-rounded">download</i>
+            <span>Download</span>
+        </button>
+        <button type="button" class="btn po-master-export-btn border-0" id="poPrintBtn">
+            <i class="material-symbols-rounded">print</i>
+            <span>Print</span>
+        </button>
+    </div>
+
+    <div class="card po-master-card border-0">
+        <div class="card-body">
+            {{-- Toolbar: Vendor / Store / date-range filters (left) + Columns & search (right) --}}
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-3 programme-dt-toolbar">
+                <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}" id="poFilterForm"
+                      class="d-flex flex-wrap align-items-center gap-2">
+                    <span class="programme-dt-filters-label">Filter</span>
+                    <div class="programme-dt-filter-select" style="width:170px;">
+                        <select name="vendor_id" class="form-select" aria-label="Filter by vendor" onchange="document.getElementById('poFilterForm').submit()">
+                            <option value="">Vendor</option>
+                            @foreach($vendors as $v)
+                                <option value="{{ $v->id }}" {{ (string) $filterVendorId === (string) $v->id ? 'selected' : '' }}>{{ $v->name }}</option>
+                            @endforeach
+                        </select>
                     </div>
-                    <div class="card-body p-3 p-md-4 bg-body-tertiary">
-                        <div class="row g-4 align-items-stretch">
-                            <div class="col-12 col-lg-5 col-xl-4">
-                                <div class="h-100 rounded-3 border border-light-subtle bg-white p-3 p-md-4">
-                                    <div class="d-flex align-items-center gap-2 mb-3">
-                                        <span
-                                            class="badge rounded-1 bg-primary-subtle text-primary-emphasis fw-semibold px-3"
-                                            style="font-size: 0.7rem; letter-spacing: 0.06em;">Period</span>
-                                        <span class="small text-body-secondary">Order date range</span>
-                                    </div>
-                                    <div class="row g-3">
-                                        <div class="col-sm-6">
-                                            <label class="form-label fw-bold small mb-2 text-dark"
-                                                for="poFilterDateFrom">From</label>
-                                            <div class="rounded-3 overflow-hidden">
-                                                <div class="input-group input-group-sm shadow">
-                                                    <span class="input-group-text bg-light border-end-0 px-3"
-                                                        id="poFilterDateFrom-addon">
-                                                        <i class="material-icons material-symbol-rounded text-primary"
-                                                            style="font-size: 1.125rem;" aria-hidden="true">event</i>
-                                                    </span>
-                                                    <input type="date" name="date_from" id="poFilterDateFrom"
-                                                        class="form-control border-start-0 ps-0"
-                                                        value="{{ $filterDateFrom }}"
-                                                        aria-describedby="poFilterDateFrom-addon">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-sm-6">
-                                            <label class="form-label fw-bold small mb-2 text-dark"
-                                                for="poFilterDateTo">To</label>
-                                            <div class="rounded-3 overflow-hidden">
-                                                <div class="input-group input-group-sm shadow">
-                                                    <span class="input-group-text bg-light border-end-0 px-3"
-                                                        id="poFilterDateTo-addon">
-                                                        <i class="material-icons material-symbol-rounded text-primary"
-                                                            style="font-size: 1.125rem;" aria-hidden="true">event</i>
-                                                    </span>
-                                                    <input type="date" name="date_to" id="poFilterDateTo"
-                                                        class="form-control border-start-0 ps-0"
-                                                        value="{{ $filterDateTo }}"
-                                                        aria-describedby="poFilterDateTo-addon">
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-12 col-lg-7 col-xl-8">
-                                <div class="h-100 rounded-3 border border-light-subtle bg-white p-3 p-md-4">
-                                    <div class="d-flex align-items-center gap-2 mb-3">
-                                        <span
-                                            class="badge rounded-1 bg-success-subtle text-success-emphasis fw-semibold px-3"
-                                            style="font-size: 0.7rem; letter-spacing: 0.06em;">Scope</span>
-                                        <span class="small text-body-secondary">Vendors & stores <span
-                                                class="d-none d-sm-inline">(leave blank for all)</span></span>
-                                    </div>
-                                    <div class="row g-3 align-items-start">
-                                        <div class="col-12 col-md-6">
-                                            <label class="form-label fw-bold small mb-2 text-dark"
-                                                for="poFilterVendor">Vendors</label>
-                                            <div
-                                                class="input-group input-group-sm shadow rounded-3 po-filter-multiselect-wrap">
-                                                <span class="input-group-text bg-light border-end-0"
-                                                    id="poFilterVendor-addon" aria-hidden="true">
-                                                    <i class="material-icons material-symbol-rounded text-primary"
-                                                        style="font-size: 1.125rem;">local_shipping</i>
-                                                </span>
-                                                <select name="vendor_id[]" id="poFilterVendor" multiple
-                                                    class="form-select form-select-sm rounded-0 border-start-0 po-filter-ts-vendor"
-                                                    data-placeholder="All vendors"
-                                                    aria-label="Filter by one or more vendors"
-                                                    aria-describedby="poFilterVendor-addon">
-                                                    @foreach($vendors as $v)
-                                                    <option value="{{ $v->id }}"
-                                                        {{ in_array((int) $v->id, $filterVendorIds ?? [], true) ? 'selected' : '' }}>
-                                                        {{ $v->name }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            <div class="form-text mt-1 mb-0 fst-italic">All vendors when none selected.
-                                                Type to search.</div>
-                                        </div>
-                                        <div class="col-12 col-md-6">
-                                            <label class="form-label fw-bold small mb-2 text-dark"
-                                                for="poFilterStore">Stores</label>
-                                            <div
-                                                class="input-group input-group-sm shadow rounded-3 po-filter-multiselect-wrap">
-                                                <span class="input-group-text bg-light border-end-0"
-                                                    id="poFilterStore-addon" aria-hidden="true">
-                                                    <i class="material-icons material-symbol-rounded text-primary"
-                                                        style="font-size: 1.125rem;">storefront</i>
-                                                </span>
-                                                <select name="store_id[]" id="poFilterStore" multiple
-                                                    class="form-select form-select-sm rounded-0 border-start-0"
-                                                    data-placeholder="All stores"
-                                                    aria-label="Filter by one or more stores"
-                                                    aria-describedby="poFilterStore-addon">
-                                                    @foreach($stores as $s)
-                                                    <option value="{{ $s->id }}"
-                                                        {{ in_array((int) $s->id, $filterStoreIds ?? [], true) ? 'selected' : '' }}>
-                                                        {{ $s->store_name }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            <div class="form-text mt-1 mb-0 fst-italic">All stores when none selected.
-                                                Type to search.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-12">
-                                <div
-                                    class="d-flex flex-column flex-md-row flex-wrap align-items-stretch align-items-md-center justify-content-between gap-3 pt-3 mt-2 border-top">
-                                    <div class="d-flex flex-wrap gap-2">
-                                        <button type="submit"
-                                            class="btn btn-primary rounded-2 d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 shadow-sm fw-semibold">
-                                            <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;"
-                                                aria-hidden="true">filter_alt</i>
-                                            <span>Apply filters</span>
-                                        </button>
-                                        <a href="{{ route('admin.mess.purchaseorders.index') }}"
-                                            class="btn btn-outline-secondary rounded-2 d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 fw-semibold">
-                                            <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;"
-                                                aria-hidden="true">restart_alt</i>
-                                            <span>Clear</span>
-                                        </a>
-                                    </div>
-                                    <p class="mb-0 small text-body-secondary text-center text-md-end ms-md-auto flex-shrink-0 fst-italic"
-                                        style="max-width: 28rem;">Tip: use the search field in each dropdown to find
-                                        vendors or stores. Remove chips to clear a selection; leave both empty for all.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="programme-dt-filter-select" style="width:170px;">
+                        <select name="store_id" class="form-select" aria-label="Filter by store" onchange="document.getElementById('poFilterForm').submit()">
+                            <option value="">Store</option>
+                            @foreach($stores as $s)
+                                <option value="{{ $s->id }}" {{ (string) $filterStoreId === (string) $s->id ? 'selected' : '' }}>{{ $s->store_name }}</option>
+                            @endforeach
+                        </select>
                     </div>
+                    <input type="date" name="date_from" class="form-control po-filter-date" value="{{ $filterDateFrom }}"
+                           aria-label="From date" max="{{ date('Y-m-d') }}" onchange="document.getElementById('poFilterForm').submit()">
+                    <span class="po-filter-dash">–</span>
+                    <input type="date" name="date_to" class="form-control po-filter-date" value="{{ $filterDateTo }}"
+                           aria-label="To date" max="{{ date('Y-m-d') }}" onchange="document.getElementById('poFilterForm').submit()">
+                    <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn programme-dt-btn-reset d-inline-flex align-items-center justify-content-center">Remove Filter</a>
                 </form>
 
-                {{-- Printable area: isolation in @media print shows only header + table (LBSNAA branding + list) --}}
-                <div class="po-print-area">
-                    {{-- Print header: LBSNAA / Sargam branding (shown only when printing) --}}
-                    <div class="print-only report-header text-center mb-3" style="display: none;">
-                        <div
-                            class="logo-container mb-2 d-flex justify-content-center align-items-center gap-3 flex-wrap">
-                            <img src="{{ asset('images/ashoka.webp') }}" alt="" class="po-print-emblem" width="52"
-                                height="52" style="height: 52px; width: auto; object-fit: contain;">
-                            <img src="{{ asset('admin_assets/images/logos/logo.svg') }}"
-                                alt="Lal Bahadur Shastri National Academy of Administration" class="po-print-wordmark"
-                                style="height: 44px; width: auto;">
-                        </div>
-                        <h3 class="report-mess-title mb-1">OFFICER'S MESS LBSNAA MUSSOORIE</h3>
-                        <p class="small text-muted mb-2 mb-md-3">Sargam 2.0</p>
-                        <div class="report-title-bar">Purchase Orders</div>
-                        <div class="report-print-date small text-muted mt-1">Printed on
-                            {{ now()->format('d-m-Y, h:i A') }}</div>
-                    </div>
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="btnPoColumns"
+                            data-bs-toggle="modal" data-bs-target="#poColumnVisibilityModal" title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div class="programme-dt-search" data-dt-search-for="purchaseOrdersTable"></div>
+                </div>
+            </div>
 
+            <div class="po-print-area">
+                {{-- Print header: LBSNAA / Sargam branding (shown only when printing) --}}
+                <div class="print-only report-header text-center mb-3" style="display: none;">
+                    <div class="logo-container mb-2 d-flex justify-content-center align-items-center gap-3 flex-wrap">
+                        <img src="{{ asset('images/ashoka.webp') }}" alt="" class="po-print-emblem" width="52" height="52" style="height: 52px; width: auto; object-fit: contain;">
+                        <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="Lal Bahadur Shastri National Academy of Administration" class="po-print-wordmark" style="height: 44px; width: auto;">
+                    </div>
+                    <h3 class="report-mess-title mb-1">OFFICER'S MESS LBSNAA MUSSOORIE</h3>
+                    <p class="small text-muted mb-2 mb-md-3">Sargam 2.0</p>
+                    <div class="report-title-bar">Purchase Orders</div>
+                    <div class="report-print-date small text-muted mt-1">Printed on {{ now()->format('d-m-Y, h:i A') }}</div>
+                </div>
+
+                <div class="programme-dt-panel">
                     <div class="table-responsive">
-                        <table id="purchaseOrdersTable" class="table align-middle mb-0 w-100 po-data-table">
+                        <table id="purchaseOrdersTable" class="table programme-dt-table align-middle mb-0 w-100 po-data-table">
                             <thead>
-                                <tr class="small">
-                                    <th scope="col" class="po-th border-0 py-3 ps-4">#</th>
-                                    <th scope="col" class="po-th border-0 py-3">Order No.</th>
-                                    <th scope="col" class="po-th border-0 py-3">Vendor</th>
-                                    <th scope="col" class="po-th border-0 py-3">Store</th>
-                                    <th scope="col" class="po-th border-0 py-3">Status</th>
-                                    <th scope="col" class="po-th border-0 py-3 pe-4 text-end d-print-none">Actions</th>
+                                <tr>
+                                    <th scope="col">S. No.</th>
+                                    <th scope="col">Order No.</th>
+                                    <th scope="col">Vendor</th>
+                                    <th scope="col">Store</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col" class="d-print-none">Action</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
                         </table>
                     </div>
-                </div>{{-- /.po-print-area --}}
-            </div>
+                </div>
+            </div>{{-- /.po-print-area --}}
+
+            {{-- Footer: pagination (left) + "Showing [N] of M items" (right), populated by the global enhancer --}}
+            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3" data-dt-footer-for="purchaseOrdersTable"></div>
         </div>
     </div>
 </div>
@@ -573,16 +639,135 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 }
 </style>
 
+{{-- Column Visibility Modal (programme/attendance style) --}}
+<div class="modal fade" id="poColumnVisibilityModal" tabindex="-1" aria-labelledby="poColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="poColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="poColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Branded delete-confirmation dialog + global success toast --}}
+@include('mess.partials.delete-confirm')
+
 @include('components.mess-master-datatables', [
 'tableId' => 'purchaseOrdersTable',
-'searchPlaceholder' => 'Search purchase orders...',
+'searchPlaceholder' => 'Search',
 'orderColumn' => 1,
 'actionColumnIndex' => 5,
-'infoLabel' => 'purchase orders',
+'infoLabel' => 'items',
 'serverSide' => true,
-'ajaxUrlBase' => route('admin.mess.purchaseorders.index')
+'ajaxUrlBase' => route('admin.mess.purchaseorders.index'),
+'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
 ])
 @include('mess.partials.modal-dropdown-stability')
+
+@push('scripts')
+{{-- Download / Print → branded server-side report (admin.mess.purchaseorders.export). --}}
+<script>
+(function () {
+    var TABLE_ID = 'purchaseOrdersTable';
+    var BASE = @json(route('admin.mess.purchaseorders.export'));
+    var $ = window.jQuery;
+
+    function buildUrl(format, inline) {
+        var params = ['format=' + format];
+        var dt = ($ && $.fn.DataTable && $.fn.DataTable.isDataTable('#' + TABLE_ID))
+            ? $('#' + TABLE_ID).DataTable() : null;
+        var search = dt ? dt.search() : '';
+        if (search) params.push('search=' + encodeURIComponent(search));
+
+        var form = document.getElementById('poFilterForm');
+        if (form) {
+            ['vendor_id', 'store_id', 'date_from', 'date_to'].forEach(function (n) {
+                var el = form.elements[n];
+                if (el && el.value) params.push(n + '=' + encodeURIComponent(el.value));
+            });
+        }
+
+        var cols = (window.MessColumnManager && typeof window.MessColumnManager.resolveExportIndexes === 'function')
+            ? window.MessColumnManager.resolveExportIndexes(TABLE_ID) : null;
+        if (cols && cols.length) params.push('columns=' + encodeURIComponent(cols.join(',')));
+
+        if (inline) params.push('inline=1');
+        return BASE + '?' + params.join('&');
+    }
+
+    var downloadBtn = document.getElementById('poDownloadBtn');
+    if (downloadBtn) downloadBtn.addEventListener('click', function () { window.location.href = buildUrl('excel', false); });
+    var printBtn = document.getElementById('poPrintBtn');
+    if (printBtn) printBtn.addEventListener('click', function () { window.open(buildUrl('pdf', true), '_blank'); });
+})();
+</script>
+{{-- Column Visibility modal ⇄ mess Column-manager bridge --}}
+<script>
+(function () {
+    var TABLE_ID = 'purchaseOrdersTable';
+    var $ = window.jQuery;
+    var grid = document.getElementById('poColumnToggleGrid');
+    var modalEl = document.getElementById('poColumnVisibilityModal');
+    if (!$ || !grid || !modalEl) return;
+
+    function getMgr() {
+        return (window.MessColumnManager && typeof window.MessColumnManager.get === 'function')
+            ? window.MessColumnManager.get(TABLE_ID) : null;
+    }
+    function visibleCount(mgr) {
+        return mgr.baseColumns.filter(function (c) { return mgr.state.visibility[String(c.index)] !== false; }).length;
+    }
+    function buildGrid() {
+        var mgr = getMgr();
+        if (!mgr || !mgr.baseColumns || !mgr.baseColumns.length) return false;
+        grid.innerHTML = '';
+        (mgr.state.order || []).forEach(function (idx) {
+            var col = mgr.baseColumns.filter(function (c) { return c.index === idx; })[0];
+            if (!col) return;
+            var isVisible = mgr.state.visibility[String(col.index)] !== false;
+            var inputId = 'pocolvis_' + col.index;
+            var cell = document.createElement('div');
+            cell.className = 'col-12 col-sm-6 col-md-4';
+            var label = document.createElement('label');
+            label.className = 'colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100';
+            label.setAttribute('for', inputId);
+            var cb = document.createElement('input');
+            cb.type = 'checkbox'; cb.className = 'form-check-input m-0'; cb.id = inputId; cb.checked = isVisible;
+            if (col.locked) cb.disabled = true;
+            cb.addEventListener('change', function () {
+                var m = getMgr(); if (!m) return;
+                if (!cb.checked && visibleCount(m) <= 1) {
+                    cb.checked = true;
+                    window.alert('At least one column must remain visible.');
+                    return;
+                }
+                m.state.visibility[String(col.index)] = cb.checked;
+                m.saveState();
+                m.apply();
+            });
+            var span = document.createElement('span'); span.textContent = col.label;
+            label.appendChild(cb); label.appendChild(span);
+            cell.appendChild(label); grid.appendChild(cell);
+        });
+        return true;
+    }
+    modalEl.addEventListener('show.bs.modal', function () {
+        if (buildGrid()) return;
+        var tries = 0;
+        var timer = setInterval(function () { if (buildGrid() || ++tries > 20) clearInterval(timer); }, 100);
+    });
+})();
+</script>
+@endpush
 
 @push('scripts')
 <script>
