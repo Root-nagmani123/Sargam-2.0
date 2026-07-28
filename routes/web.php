@@ -1495,6 +1495,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     Route::delete('storeallocations/{id}', [\App\Http\Controllers\Mess\StoreAllocationController::class, 'destroy'])->name('storeallocations.destroy');
 
     // Store Management
+    Route::get('stores/export', [\App\Http\Controllers\Mess\StoreController::class, 'export'])->name('stores.export');
     Route::resource('stores', \App\Http\Controllers\Mess\StoreController::class)->except(['show']);
 
     Route::resource('sub-stores', \App\Http\Controllers\Mess\SubStoreController::class)->except(['show']);
