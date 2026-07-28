@@ -1531,6 +1531,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     Route::get('material-management/buyer-names', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getBuyerNames'])->name('material-management.buyer-names');
     Route::get('material-management/store/{storeIdentifier}/items', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getStoreItems'])->name('material-management.store.items');
     Route::get('material-management/selling-vouchers/datatable', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'sellingVouchersDatatable'])->name('material-management.selling-vouchers-datatable');
+    Route::get('material-management/selling-vouchers/export', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'export'])->name('material-management.selling-vouchers-export');
     Route::resource('material-management', \App\Http\Controllers\Mess\KitchenIssueController::class);
     Route::get('material-management/{id}/return', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'returnData'])->name('material-management.return');
     Route::put('material-management/{id}/return', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'updateReturn'])->name('material-management.update-return');

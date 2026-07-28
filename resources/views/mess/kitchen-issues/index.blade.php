@@ -1,18 +1,180 @@
 @extends('admin.layouts.master')
 @section('title', 'Selling Voucher')
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<style>
+    /* ── Selling Voucher — new design chrome (built on --ds-* tokens + programme-dt system) ── */
+    .sv-master-page .sv-master-card {
+        background: var(--ds-surface, #fff);
+        border-radius: var(--ds-radius-card, 8px);
+        box-shadow: var(--ds-shadow, 0 1px 3px rgba(16, 24, 40, .1));
+    }
+
+    .sv-master-page .sv-master-export-btn {
+        height: var(--ds-control-h, 40px);
+        display: inline-flex; align-items: center; gap: .5rem;
+        padding: 0 1.1rem; font-size: .9375rem; font-weight: 500;
+        color: var(--ds-primary, #004a93);
+        border: 1px solid var(--ds-line, #d0d5dd);
+        border-radius: var(--ds-radius-2, 8px);
+        background: var(--ds-surface, #fff);
+    }
+    .sv-master-page .sv-master-export-btn:hover { background: #f2f7fc; border-color: var(--ds-primary, #004a93); color: var(--ds-primary, #004a93); }
+    .sv-master-page .sv-master-export-btn i { font-size: 1.15rem; line-height: 1; }
+
+    /* Filter pills */
+    .sv-master-page .sv-filter-select .form-select,
+    .sv-master-page .sv-filter-date {
+        min-height: 40px; border-radius: 8px; border: 1px solid #d0d5dd;
+        font-size: .9375rem; color: #344054; box-shadow: none;
+    }
+    .sv-master-page .sv-filter-select { width: 150px; }
+    .sv-master-page .sv-filter-date { padding: .5rem .6rem; width: 150px; }
+    .sv-master-page .sv-filter-select .form-select:focus,
+    .sv-master-page .sv-filter-date:focus { border-color: var(--ds-primary, #004a93); box-shadow: 0 0 0 3px rgba(0, 74, 147, .12); }
+    .sv-master-page .sv-filter-dash { color: #98a2b3; }
+    .sv-master-page .sv-filter-apply {
+        height: 40px; border-radius: 8px; padding: 0 1rem; font-weight: 600; font-size: .9375rem;
+        background: var(--ds-primary, #004a93); border: 1px solid var(--ds-primary, #004a93); color: #fff;
+        display: inline-flex; align-items: center; gap: .35rem;
+    }
+
+    /* Native single-select filter pill */
+    .sv-master-page .sv-filter-select-native {
+        min-height: 40px; width: 150px; border-radius: 8px; border: 1px solid #d0d5dd;
+        font-size: .9375rem; color: #344054; box-shadow: none;
+    }
+    .sv-master-page .sv-filter-select-native:focus { border-color: var(--ds-primary, #004a93); box-shadow: 0 0 0 3px rgba(0, 74, 147, .12); }
+
+    /* Single-row responsive toolbar: never wrap; filters overflow into "+Filter". */
+    .sv-master-page .sv-toolbar { flex-wrap: nowrap; }
+    .sv-master-page .sv-filter-form { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; overflow: visible; }
+    /* Pinned (flex-shrink:0) so trailing filters overflow the FORM cleanly — the JS
+       then measures that overflow and moves them into "+Filter" (no visual overlap). */
+    .sv-master-page .sv-filter-items { flex-wrap: nowrap; flex-shrink: 0; overflow: visible; }
+    .sv-master-page .sv-filter-item { flex-shrink: 0; }
+    .sv-master-page .sv-filter-item .sv-filter-item-label { display: none; }   /* inline: label hidden (placeholder carries it) */
+
+    /* "+N Filter" popover trigger — clearly separated pill */
+    .sv-master-page .sv-more-filters {
+        flex-shrink: 0; color: #004a93; font-weight: 600; font-size: .9375rem;
+        text-decoration: none; white-space: nowrap; padding: 0 .35rem; height: 40px;
+        display: inline-flex; align-items: center; border-radius: 8px;
+    }
+    .sv-master-page .sv-more-filters:hover { text-decoration: underline; }
+    .sv-master-page .sv-more-filters.dropdown-toggle::after { display: none !important; }
+    .sv-more-menu { min-width: 280px; }
+    .sv-more-menu .sv-more-header { font-size: .95rem; font-weight: 700; color: #101828; padding-bottom: .6rem; margin-bottom: .75rem; border-bottom: 1px solid #eef2f6; }
+    /* Filters moved into the popover: full-width block with label above */
+    .sv-more-menu .sv-filter-item { display: block; margin-bottom: .85rem; }
+    .sv-more-menu .sv-filter-item:last-child { margin-bottom: 0; }
+    .sv-more-menu .sv-filter-item .sv-filter-item-label { display: block; font-size: .8rem; color: #667085; margin-bottom: .25rem; }
+    .sv-more-menu .sv-filter-item .form-select,
+    .sv-more-menu .sv-filter-item .sv-filter-date { width: 100% !important; }
+    .sv-more-menu .sv-filter-item[data-filter="date"] .sv-filter-date { flex: 1 1 0; }
+
+    .sv-master-page .dt-top:empty, .sv-master-page .dt-foot:empty { display: none; margin: 0; }
+    .sv-master-page .mess-col-manager-dropdown { display: none !important; }
+    #svColumnToggleGrid .colvis-item { cursor: pointer; transition: border-color 0.15s ease, background-color 0.15s ease; }
+    #svColumnToggleGrid .colvis-item:hover { border-color: var(--ds-primary, #004a93) !important; background-color: rgba(0, 74, 147, 0.04); }
+    #svColumnToggleGrid .colvis-item .form-check-input { cursor: pointer; flex-shrink: 0; }
+
+    .sv-master-page .sv-name-primary { font-weight: 600; color: var(--ds-ink, #1f2937); }
+
+    /* Soft status / payment pills (rendered server-side) */
+    .sv-master-page .sv-pill { display: inline-block; font-size: .8125rem; font-weight: 500; padding: .3rem .7rem; border-radius: 6px; line-height: 1.2; }
+    .sv-master-page .sv-pill--green  { background: #ecfdf3; color: #027a48; }
+    .sv-master-page .sv-pill--amber  { background: #fffaeb; color: #b54708; }
+    .sv-master-page .sv-pill--orange { background: #fff4ed; color: #c4320a; }
+    .sv-master-page .sv-pill--blue   { background: #eff8ff; color: #175cd3; }
+    .sv-master-page .sv-pill--gray   { background: #f2f4f7; color: #475467; }
+
+    /* Row actions — icon over label (blue View/Edit, amber Return, red Delete) */
+    .sv-master-page .sv-actions { gap: .9rem; }
+    .sv-master-page .sv-actions form { margin: 0; }
+    .sv-master-page .sv-action-btn {
+        display: inline-flex; flex-direction: column; align-items: center; gap: .1rem;
+        padding: 0; border: 0; background: transparent; line-height: 1.1; font-size: .72rem; font-weight: 500;
+    }
+    .sv-master-page .sv-action-btn i { font-size: 1.15rem; line-height: 1; }
+    .sv-master-page .sv-action-btn.text-primary { color: var(--ds-primary, #004a93) !important; }
+    .sv-master-page .sv-action-btn.text-warning { color: #dc6803 !important; }
+    .sv-master-page .sv-action-btn.text-danger  { color: var(--ds-secondary, #d92d20) !important; }
+    .sv-master-page .sv-action-btn:hover { opacity: .78; }
+    .sv-master-page .sv-action-btn:disabled { opacity: .4; pointer-events: none; }
+
+    /* Pagination → arrows + numbers only. */
+    .sv-master-page .programme-dt-footer .paginate_button.first,
+    .sv-master-page .programme-dt-footer .paginate_button.last { display: none; }
+    .sv-master-page .programme-dt-footer .paginate_button.previous .page-link,
+    .sv-master-page .programme-dt-footer .paginate_button.next .page-link { font-size: 0; }
+    .sv-master-page .programme-dt-footer .paginate_button.previous .page-link::before { content: "\2039"; font-size: 1.1rem; }
+    .sv-master-page .programme-dt-footer .paginate_button.next .page-link::before { content: "\203A"; font-size: 1.1rem; }
+
+    /* ── Clean modern Add / Edit / View / Return SV modals (reskin legacy chrome) ── */
+    #addSellingVoucherModal .modal-content, #editSellingVoucherModal .modal-content,
+    #viewSellingVoucherModal .modal-content, #returnItemModal .modal-content {
+        border-radius: 16px !important; border: 0 !important; box-shadow: 0 24px 48px rgba(16, 24, 40, .18) !important;
+    }
+    #addSellingVoucherModal .modal-header, #editSellingVoucherModal .modal-header,
+    #viewSellingVoucherModal .modal-header, #returnItemModal .modal-header {
+        background: #fff !important; background-image: none !important; border-top: 0 !important;
+        border-bottom: 1px solid var(--ds-line, #eef2f6) !important; padding: 1.15rem 1.5rem !important;
+    }
+    #addSellingVoucherModal .modal-title, #editSellingVoucherModal .modal-title,
+    #viewSellingVoucherModal .modal-title, #returnItemModal .modal-title {
+        color: var(--ds-ink, #1f2937) !important; font-size: 1.4rem !important; font-weight: 700 !important;
+    }
+    #addSellingVoucherModal .modal-body, #editSellingVoucherModal .modal-body,
+    #viewSellingVoucherModal .modal-body, #returnItemModal .modal-body {
+        background: #fff !important; background-image: none !important;
+    }
+    #addSellingVoucherModal .modal-body .card, #editSellingVoucherModal .modal-body .card,
+    #viewSellingVoucherModal .modal-body .card, #returnItemModal .modal-body .card {
+        border: 1px solid var(--ds-line, #eef2f6) !important; border-radius: 12px !important; box-shadow: none !important;
+    }
+    #addSellingVoucherModal .modal-body .card-header, #editSellingVoucherModal .modal-body .card-header,
+    #viewSellingVoucherModal .modal-body .card-header, #returnItemModal .modal-body .card-header,
+    #addSellingVoucherModal .modal-body .card-footer, #editSellingVoucherModal .modal-body .card-footer,
+    #viewSellingVoucherModal .modal-body .card-footer, #returnItemModal .modal-body .card-footer {
+        background: #fff !important; background-image: none !important; border-color: var(--ds-line, #eef2f6) !important;
+    }
+    #addSellingVoucherModal .modal-body .card-header [class*="bg-"], #editSellingVoucherModal .modal-body .card-header [class*="bg-"],
+    #viewSellingVoucherModal .modal-body .card-header [class*="bg-"], #returnItemModal .modal-body .card-header [class*="bg-"] {
+        background: rgba(0, 74, 147, .1) !important; color: var(--ds-primary, #004a93) !important;
+    }
+    #addSellingVoucherModal .modal-footer, #editSellingVoucherModal .modal-footer,
+    #viewSellingVoucherModal .modal-footer, #returnItemModal .modal-footer {
+        background: #fff !important; background-image: none !important;
+        border-top: 1px solid var(--ds-line, #eef2f6) !important; padding: 1rem 1.5rem 1.25rem !important;
+    }
+    #addSellingVoucherModal .modal-footer .btn[type="submit"], #editSellingVoucherModal .modal-footer .btn[type="submit"],
+    #returnItemModal .modal-footer .btn[type="submit"] {
+        background: var(--ds-primary, #004a93) !important; border: 1px solid var(--ds-primary, #004a93) !important;
+        color: #fff !important; border-radius: 8px !important; font-weight: 600 !important;
+    }
+    #addSellingVoucherModal .modal-footer .btn[data-bs-dismiss="modal"], #editSellingVoucherModal .modal-footer .btn[data-bs-dismiss="modal"],
+    #returnItemModal .modal-footer .btn[data-bs-dismiss="modal"] {
+        color: var(--ds-secondary, #d92d20) !important; border: 1px solid var(--ds-secondary, #d92d20) !important;
+        background: #fff !important; border-radius: 8px !important; font-weight: 600 !important;
+    }
+</style>
+@endpush
+
 @section('content')
 @php
     $canDeleteSellingVoucher = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
-<div class="container-fluid py-3">
-    <x-breadcrum title="Selling Voucher" />
+<div class="container-fluid py-3 sv-master-page">
+    <x-breadcrum title="Selling Voucher" :showBack="false">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addSellingVoucherModal">
+            <span class="material-symbols-rounded" style="font-size: 1.1rem;">add</span>
+            <span>Add Selling Voucher</span>
+        </button>
+    </x-breadcrum>
 
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show shadow-sm border-0 mt-2" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
+    {{-- Success/error feedback is rendered as the global toast — see mess.partials.delete-confirm --}}
     @if(session('error'))
         <div class="alert alert-danger alert-dismissible fade show shadow-sm border-0 mt-2" role="alert">
             {{ session('error') }}
@@ -20,170 +182,347 @@
         </div>
     @endif
 
-    <div class="card mb-3 border-0 shadow-sm rounded-3">
+    {{-- Download / Print bar (branded server-side exports — see admin.mess.material-management.selling-vouchers-export) --}}
+    <div class="d-flex justify-content-end gap-2 mb-3">
+        <button type="button" class="btn sv-master-export-btn border-0" id="svDownloadBtn">
+            <i class="material-symbols-rounded">download</i>
+            <span>Download</span>
+        </button>
+        <button type="button" class="btn sv-master-export-btn border-0" id="svPrintBtn">
+            <i class="material-symbols-rounded">print</i>
+            <span>Print</span>
+        </button>
+    </div>
+
+    <div class="card sv-master-card border-0">
         <div class="card-body">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                <div>
-                    <h5 class="mb-1 fw-semibold">Selling Voucher</h5>
-                    <p class="text-muted mb-0 small">Quickly filter and manage selling vouchers from here.</p>
-                </div>
-                <button type="button"
-                        class="btn btn-primary d-inline-flex align-items-center gap-2"
-                        data-bs-toggle="modal"
-                        data-bs-target="#addSellingVoucherModal">
-                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">add</span>
-                    <span class="fw-semibold">Add Selling Voucher</span>
-                </button>
-            </div>
-            <div class="border rounded-3 bg-light p-3 sv-selling-voucher-filters">
-                <form method="GET" action="{{ route('admin.mess.material-management.index') }}">
-                    <div class="sv-filter-fields-grid">
-                        <div class="sv-filter-field">
-                            <label class="form-label small text-muted mb-1">Status</label>
-                            <select name="status[]" id="filter_status" class="form-select w-100" multiple>
-                                @php
-                                    $selectedStatuses = request('status', []);
-                                    if (!is_array($selectedStatuses)) {
-                                        $selectedStatuses = $selectedStatuses !== null ? [$selectedStatuses] : [];
-                                    }
-                                @endphp
-                                <option value="0" {{ in_array('0', $selectedStatuses) || in_array(0, $selectedStatuses) ? 'selected' : '' }}>Pending</option>
-                                <option value="2" {{ in_array('2', $selectedStatuses) || in_array(2, $selectedStatuses) ? 'selected' : '' }}>Approved</option>
-                            </select>
+            @php
+                $selectedStatuses = request('status', []);
+                if (!is_array($selectedStatuses)) { $selectedStatuses = $selectedStatuses !== null ? [$selectedStatuses] : []; }
+                $selectedStores = request('store', []);
+                if (!is_array($selectedStores)) { $selectedStores = $selectedStores !== null ? [$selectedStores] : []; }
+                $hasSvFilter = request()->hasAny(['status', 'store', 'client_type', 'client_type_pk', 'buyer_name', 'return_status', 'start_date', 'end_date'])
+                    && collect(request()->only(['status', 'store', 'client_type', 'client_type_pk', 'buyer_name', 'return_status', 'start_date', 'end_date']))
+                        ->flatten()->filter(fn ($v) => $v !== null && $v !== '')->isNotEmpty();
+            @endphp
+            @php
+                $svSelStatus = is_array(request('status')) ? (string) (request('status')[0] ?? '') : (string) request('status', '');
+                $svSelStore  = is_array(request('store'))  ? (string) (request('store')[0] ?? '')  : (string) request('store', '');
+                $filterClientTypes = [
+                    (string) \App\Models\KitchenIssueMaster::CLIENT_EMPLOYEE => 'Employee',
+                    (string) \App\Models\KitchenIssueMaster::CLIENT_OT => 'OT',
+                    (string) \App\Models\KitchenIssueMaster::CLIENT_COURSE => 'Course',
+                    (string) \App\Models\KitchenIssueMaster::CLIENT_SECTION => 'Section',
+                    (string) \App\Models\KitchenIssueMaster::CLIENT_OTHER => 'Other',
+                ];
+            @endphp
+            {{-- Responsive single-row toolbar: filters auto-apply on change; overflow spills into "+Filter"; Columns + search on the same row. --}}
+            <div class="d-flex align-items-center gap-2 mb-3 programme-dt-toolbar sv-toolbar">
+                <form method="GET" action="{{ route('admin.mess.material-management.index') }}" id="svFilterForm"
+                      class="d-flex align-items-center gap-2 sv-filter-form">
+                    <span class="programme-dt-filters-label flex-shrink-0">Filter</span>
+
+                    <div id="svFilterItems" class="d-flex align-items-center gap-2 sv-filter-items">
+                        <div class="sv-filter-item" data-filter="date">
+                            <label class="sv-filter-item-label">Date Range</label>
+                            <div class="d-flex align-items-center gap-1">
+                                <input type="date" name="start_date" id="filter_start_date" class="form-control sv-filter-date sv-auto-filter" value="{{ request('start_date') }}" aria-label="Start date">
+                                <span class="sv-filter-dash">–</span>
+                                <input type="date" name="end_date" id="filter_end_date" class="form-control sv-filter-date sv-auto-filter" value="{{ request('end_date') }}" aria-label="End date" @if(request()->filled('start_date')) min="{{ request('start_date') }}" @endif>
+                            </div>
                         </div>
-                        <div class="sv-filter-field">
-                            <label class="form-label small text-muted mb-1">Store</label>
-                            <select name="store[]" id="filter_store" class="form-select w-100" multiple>
-                                @php
-                                    $selectedStores = request('store', []);
-                                    if (!is_array($selectedStores)) {
-                                        $selectedStores = $selectedStores !== null ? [$selectedStores] : [];
-                                    }
-                                @endphp
+
+                        <div class="sv-filter-item" data-filter="store">
+                            <label class="sv-filter-item-label">Store</label>
+                            <select name="store" id="filter_store" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Store">
+                                <option value="">Store</option>
                                 @foreach($stores as $store)
-                                    <option value="{{ $store['id'] }}" {{ in_array($store['id'], $selectedStores) ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
+                                    <option value="{{ $store['id'] }}" {{ $svSelStore === (string) $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        @php
-                            $filterClientTypes = [
-                                (string) \App\Models\KitchenIssueMaster::CLIENT_EMPLOYEE => 'Employee',
-                                (string) \App\Models\KitchenIssueMaster::CLIENT_OT => 'OT',
-                                (string) \App\Models\KitchenIssueMaster::CLIENT_COURSE => 'Course',
-                                (string) \App\Models\KitchenIssueMaster::CLIENT_SECTION => 'Section',
-                                (string) \App\Models\KitchenIssueMaster::CLIENT_OTHER => 'Other',
-                            ];
-                        @endphp
-                        <div class="sv-filter-field">
-                            <label class="form-label small text-muted mb-1">Client type</label>
-                            <select name="client_type" id="filter_client_type" class="form-select w-100">
-                                <option value="" {{ $selectedClientType === '' ? 'selected' : '' }}>All</option>
-                                @foreach($filterClientTypes as $value => $label)
-                                    <option value="{{ $value }}" {{ $selectedClientType === $value ? 'selected' : '' }}>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="sv-filter-field">
-                            <label class="form-label small text-muted mb-1">Client category</label>
-                            <select name="client_type_pk" id="filter_client_type_pk" class="form-select w-100">
-                                <option value="">All categories</option>
-                                @foreach(($filterClientTypePkOptions ?? collect()) as $option)
-                                    <option value="{{ $option['value'] }}" {{ (string) ($selectedClientTypePk ?? '') === (string) $option['value'] ? 'selected' : '' }}>
-                                        {{ $option['text'] }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="sv-filter-field">
-                            <label class="form-label small text-muted mb-1">Buyer name</label>
-                            <select name="buyer_name" id="filter_buyer_name" class="form-select w-100">
-                                <option value="">All Buyers</option>
+
+                        <div class="sv-filter-item" data-filter="buyer">
+                            <label class="sv-filter-item-label">Buyer Name</label>
+                            <select name="buyer_name" id="filter_buyer_name" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Buyer name">
+                                <option value="">Buyer Name</option>
                                 @foreach(($filterBuyerNames ?? collect()) as $buyerName)
                                 @php
                                     $buyerValue = is_array($buyerName) ? (string) ($buyerName['value'] ?? '') : (string) $buyerName;
                                     $buyerLabel = is_array($buyerName) ? (string) ($buyerName['text'] ?? $buyerValue) : (string) $buyerName;
                                 @endphp
-                                    <option value="{{ $buyerValue }}" {{ (string) ($selectedBuyerName ?? '') === $buyerValue ? 'selected' : '' }}>
-                                        {{ $buyerLabel }}
-                                    </option>
+                                    <option value="{{ $buyerValue }}" {{ (string) ($selectedBuyerName ?? '') === $buyerValue ? 'selected' : '' }}>{{ $buyerLabel }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="sv-filter-field">
-                            <label class="form-label small text-muted mb-1">Return status</label>
-                            <select name="return_status" id="filter_return_status" class="form-select w-100">
-                                <option value="" {{ request('return_status', '') === '' ? 'selected' : '' }}>All</option>
+
+                        <div class="sv-filter-item" data-filter="status">
+                            <label class="sv-filter-item-label">Status</label>
+                            <select name="status" id="filter_status" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Status">
+                                <option value="">Status</option>
+                                <option value="0" {{ $svSelStatus === '0' ? 'selected' : '' }}>Pending</option>
+                                <option value="2" {{ $svSelStatus === '2' ? 'selected' : '' }}>Approved</option>
+                            </select>
+                        </div>
+
+                        <div class="sv-filter-item" data-filter="client_type">
+                            <label class="sv-filter-item-label">Client Type</label>
+                            <select name="client_type" id="filter_client_type" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Client type" data-clears="filter_client_type_pk,filter_buyer_name">
+                                <option value="" {{ $selectedClientType === '' ? 'selected' : '' }}>Client Type</option>
+                                @foreach($filterClientTypes as $value => $label)
+                                    <option value="{{ $value }}" {{ $selectedClientType === $value ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="sv-filter-item" data-filter="client_type_pk">
+                            <label class="sv-filter-item-label">Client Category</label>
+                            <select name="client_type_pk" id="filter_client_type_pk" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Client category" data-clears="filter_buyer_name">
+                                <option value="">Client Category</option>
+                                @foreach(($filterClientTypePkOptions ?? collect()) as $option)
+                                    <option value="{{ $option['value'] }}" {{ (string) ($selectedClientTypePk ?? '') === (string) $option['value'] ? 'selected' : '' }}>{{ $option['text'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="sv-filter-item" data-filter="return_status">
+                            <label class="sv-filter-item-label">Return Status</label>
+                            <select name="return_status" id="filter_return_status" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Return status">
+                                <option value="" {{ request('return_status', '') === '' ? 'selected' : '' }}>Return Status</option>
                                 <option value="returned" {{ request('return_status') === 'returned' ? 'selected' : '' }}>Returned</option>
                                 <option value="not_returned" {{ request('return_status') === 'not_returned' ? 'selected' : '' }}>Not returned</option>
                             </select>
                         </div>
-                        <div class="sv-filter-field">
-                            <label class="form-label small text-muted mb-1">Start Date</label>
-                            <input type="date" name="start_date" id="filter_start_date" class="form-control w-100" value="{{ request('start_date') }}">
-                        </div>
-                        <div class="sv-filter-field">
-                            <label class="form-label small text-muted mb-1">End Date</label>
-                            <input type="date" name="end_date" id="filter_end_date" class="form-control w-100" value="{{ request('end_date') }}" @if(request()->filled('start_date')) min="{{ request('start_date') }}" @endif>
+                    </div>
+
+                    {{-- Overflow "+N Filter" popover (populated by the toolbar overflow manager) --}}
+                    <div class="dropdown flex-shrink-0 d-none" id="svMoreFilterWrap">
+                        <a href="javascript:void(0)" class="sv-more-filters dropdown-toggle" id="svMoreFilterToggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">+ Filter</a>
+                        <div class="dropdown-menu sv-more-menu p-3 shadow border rounded-3">
+                            <div class="sv-more-header">Filters</div>
+                            <div id="svMoreFilterItems"></div>
                         </div>
                     </div>
-                    <div class="d-flex flex-wrap gap-2 justify-content-lg-end align-items-center mt-3 pt-2 border-top border-light-subtle">
-                        <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
-                            <span class="material-symbols-rounded" style="font-size: 1rem;">filter_list</span>
-                            <span>Filter</span>
-                        </button>
-                        <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
-                            <span class="material-symbols-rounded" style="font-size: 1rem;">refresh</span>
-                            <span>Clear</span>
-                        </a>
-                    </div>
+
+                    <a href="{{ route('admin.mess.material-management.index') }}" class="btn programme-dt-btn-reset flex-shrink-0 d-inline-flex align-items-center justify-content-center">Remove Filter</a>
                 </form>
+
+                <div class="d-flex align-items-center gap-2 ms-auto flex-shrink-0">
+                    <button type="button" class="btn programme-dt-btn-columns" id="btnSvColumns"
+                            data-bs-toggle="modal" data-bs-target="#svColumnVisibilityModal" title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div class="programme-dt-search" data-dt-search-for="sellingVouchersTable"></div>
+                </div>
+            </div>
+
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    <table class="table programme-dt-table align-middle mb-0 w-100" id="sellingVouchersTable">
+                        <thead>
+                            <tr>
+                                <th scope="col">S. No.</th>
+                                <th scope="col">Item Name</th>
+                                <th scope="col" class="text-end">Item Qty</th>
+                                <th scope="col" class="text-end">Return Qty</th>
+                                <th scope="col">Transfer From Store</th>
+                                <th scope="col">Client Type</th>
+                                <th scope="col">Client Name</th>
+                                <th scope="col">Payment</th>
+                                <th scope="col" class="text-nowrap">Request Date</th>
+                                <th scope="col" class="text-center">Status</th>
+                                <th scope="col" class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            {{-- Footer: pagination (left) + "Showing [N] of M items" (right), populated by the global enhancer --}}
+            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3" data-dt-footer-for="sellingVouchersTable"></div>
+        </div>
+    </div>
+
+    {{-- Column Visibility Modal (programme/attendance style) --}}
+    <div class="modal fade" id="svColumnVisibilityModal" tabindex="-1" aria-labelledby="svColumnVisibilityLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-0 pb-2">
+                    <h5 class="modal-title fw-bold" id="svColumnVisibilityLabel">Column Visibility</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-0">
+                    <hr class="mt-0">
+                    <div class="row g-3" id="svColumnToggleGrid"></div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table align-middle mb-0 w-100" id="sellingVouchersTable">
-                    <thead class="table-light">
-                         <tr class="small">
-                            <th scope="col" class="text-center text-secondary fw-semibold text-uppercase" style="width: 3.5rem;">S. No.</th>
-                            <th scope="col" class="text-secondary fw-semibold text-uppercase">Item Name</th>
-                            <th scope="col" class="text-end text-secondary fw-semibold text-uppercase">Item Qty</th>
-                            <th scope="col" class="text-end text-secondary fw-semibold text-uppercase">Return Qty</th>
-                            <th scope="col" class="text-secondary fw-semibold text-uppercase">Transfer From Store</th>
-                            <th scope="col" class="text-secondary fw-semibold text-uppercase">Client Type</th>
-                            <th scope="col" class="text-secondary fw-semibold text-uppercase">Client Name</th>
-                            <th scope="col" class="text-secondary fw-semibold text-uppercase">Name</th>
-                            <th scope="col" class="text-secondary fw-semibold text-uppercase">Payment</th>
-                            <th scope="col" class="text-nowrap text-secondary fw-semibold text-uppercase">Request Date</th>
-                            <th scope="col" class="text-center text-secondary fw-semibold text-uppercase">Status</th>
-                            <th scope="col" class="text-center text-secondary fw-semibold text-uppercase">Return Item</th>
-                            <th scope="col" class="text-center text-secondary fw-semibold text-uppercase" style="width: 1%;">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody class="small"></tbody>
-                </table>
-            </div>
-    </div>
-   </div>
+    {{-- Branded delete-confirmation dialog + global success toast --}}
+    @include('mess.partials.delete-confirm')
 
     @include('components.mess-master-datatables', [
         'tableId' => 'sellingVouchersTable',
-        'searchPlaceholder' => 'Search selling vouchers...',
-        'actionColumnIndex' => 12,
-        'infoLabel' => 'selling vouchers',
+        'searchPlaceholder' => 'Search',
+        'actionColumnIndex' => 10,
+        'infoLabel' => 'items',
         'searchDelay' => 0,
         'searchSmart' => false,
         'serverSide' => true,
         'ajaxUrlBase' => route('admin.mess.material-management.selling-vouchers-datatable'),
+        'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
         'serverSideColumnDefs' => [
-            ['className' => 'text-center text-muted', 'targets' => [0]],
             ['className' => 'text-end', 'targets' => [2, 3]],
-            ['className' => 'text-center', 'targets' => [10, 11, 12]],
+            ['className' => 'text-center', 'targets' => [9, 10]],
         ],
     ])
     @include('mess.partials.modal-dropdown-stability')
+
+    @push('scripts')
+    {{-- Download / Print → branded server-side report (admin.mess.material-management.selling-vouchers-export). --}}
+    <script>
+    (function () {
+        var TABLE_ID = 'sellingVouchersTable';
+        var BASE = @json(route('admin.mess.material-management.selling-vouchers-export'));
+        var $ = window.jQuery;
+
+        function buildUrl(format, inline) {
+            var params = ['format=' + format];
+            var dt = ($ && $.fn.DataTable && $.fn.DataTable.isDataTable('#' + TABLE_ID)) ? $('#' + TABLE_ID).DataTable() : null;
+            var search = dt ? dt.search() : '';
+            if (search) params.push('search=' + encodeURIComponent(search));
+
+            var form = document.getElementById('svFilterForm');
+            if (form) {
+                new FormData(form).forEach(function (value, key) {
+                    if (value !== '' && value !== null) params.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+                });
+            }
+
+            var cols = (window.MessColumnManager && typeof window.MessColumnManager.resolveExportIndexes === 'function')
+                ? window.MessColumnManager.resolveExportIndexes(TABLE_ID) : null;
+            if (cols && cols.length) params.push('columns=' + encodeURIComponent(cols.join(',')));
+
+            if (inline) params.push('inline=1');
+            return BASE + '?' + params.join('&');
+        }
+
+        var downloadBtn = document.getElementById('svDownloadBtn');
+        if (downloadBtn) downloadBtn.addEventListener('click', function () { window.location.href = buildUrl('excel', false); });
+        var printBtn = document.getElementById('svPrintBtn');
+        if (printBtn) printBtn.addEventListener('click', function () { window.open(buildUrl('pdf', true), '_blank'); });
+    })();
+    </script>
+    {{-- Column Visibility modal ⇄ mess Column-manager bridge --}}
+    <script>
+    (function () {
+        var TABLE_ID = 'sellingVouchersTable';
+        var $ = window.jQuery;
+        var grid = document.getElementById('svColumnToggleGrid');
+        var modalEl = document.getElementById('svColumnVisibilityModal');
+        if (!$ || !grid || !modalEl) return;
+        function getMgr() { return (window.MessColumnManager && typeof window.MessColumnManager.get === 'function') ? window.MessColumnManager.get(TABLE_ID) : null; }
+        function visibleCount(mgr) { return mgr.baseColumns.filter(function (c) { return mgr.state.visibility[String(c.index)] !== false; }).length; }
+        function buildGrid() {
+            var mgr = getMgr();
+            if (!mgr || !mgr.baseColumns || !mgr.baseColumns.length) return false;
+            grid.innerHTML = '';
+            (mgr.state.order || []).forEach(function (idx) {
+                var col = mgr.baseColumns.filter(function (c) { return c.index === idx; })[0];
+                if (!col) return;
+                var isVisible = mgr.state.visibility[String(col.index)] !== false;
+                var inputId = 'svcolvis_' + col.index;
+                var cell = document.createElement('div'); cell.className = 'col-12 col-sm-6 col-md-4';
+                var label = document.createElement('label');
+                label.className = 'colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100';
+                label.setAttribute('for', inputId);
+                var cb = document.createElement('input'); cb.type = 'checkbox'; cb.className = 'form-check-input m-0'; cb.id = inputId; cb.checked = isVisible;
+                if (col.locked) cb.disabled = true;
+                cb.addEventListener('change', function () {
+                    var m = getMgr(); if (!m) return;
+                    if (!cb.checked && visibleCount(m) <= 1) { cb.checked = true; window.alert('At least one column must remain visible.'); return; }
+                    m.state.visibility[String(col.index)] = cb.checked; m.saveState(); m.apply();
+                });
+                var span = document.createElement('span'); span.textContent = col.label;
+                label.appendChild(cb); label.appendChild(span); cell.appendChild(label); grid.appendChild(cell);
+            });
+            return true;
+        }
+        modalEl.addEventListener('show.bs.modal', function () {
+            if (buildGrid()) return;
+            var tries = 0;
+            var timer = setInterval(function () { if (buildGrid() || ++tries > 20) clearInterval(timer); }, 100);
+        });
+    })();
+    </script>
+    {{-- Auto-apply filters + responsive "+Filter" overflow (filters spill into the popover when the row is tight) --}}
+    <script>
+    (function () {
+        var form = document.getElementById('svFilterForm');
+        if (!form) return;
+
+        // ── Auto-apply: any filter change submits the form (clearing dependent children first) ──
+        form.addEventListener('change', function (e) {
+            var t = e.target;
+            if (!t || !t.classList || !t.classList.contains('sv-auto-filter')) return;
+            var clears = t.getAttribute('data-clears');
+            if (clears) {
+                clears.split(',').forEach(function (id) {
+                    var el = document.getElementById(id.trim());
+                    if (el) el.value = ''; // programmatic reset — does not re-fire change
+                });
+            }
+            form.submit();
+        });
+
+        // ── Responsive overflow: keep the toolbar to one row; move trailing filters into "+Filter" ──
+        var itemsWrap = document.getElementById('svFilterItems');
+        var moreWrap = document.getElementById('svMoreFilterWrap');
+        var moreMenu = document.getElementById('svMoreFilterItems');
+        var moreToggle = document.getElementById('svMoreFilterToggle');
+        if (!itemsWrap || !moreWrap || !moreMenu || !moreToggle) return;
+
+        var allItems = Array.prototype.slice.call(itemsWrap.querySelectorAll('.sv-filter-item'));
+
+        function fits() { return form.scrollWidth <= form.clientWidth + 1; }
+
+        function layout() {
+            // 1. All filters back inline, popover hidden.
+            allItems.forEach(function (it) { itemsWrap.appendChild(it); });
+            moreWrap.classList.add('d-none');
+            if (fits()) { return; }
+            // 2. Overflow: reveal "+Filter" and move trailing items into it until the row fits.
+            moreWrap.classList.remove('d-none');
+            var moved = 0;
+            for (var i = allItems.length - 1; i >= 0; i--) {
+                if (fits()) break;
+                moreMenu.insertBefore(allItems[i], moreMenu.firstChild); // prepend keeps original order
+                moved++;
+            }
+            moreToggle.textContent = moved > 0 ? ('+' + moved + ' Filter') : '+ Filter';
+            if (moved === 0) { moreWrap.classList.add('d-none'); }
+        }
+
+        var raf = null;
+        function scheduleLayout() {
+            if (raf) return;
+            raf = window.requestAnimationFrame(function () { raf = null; layout(); });
+        }
+
+        layout();
+        window.addEventListener('resize', scheduleLayout);
+        // Re-run once styles/fonts settle so the first measurement is accurate.
+        window.setTimeout(layout, 150);
+        window.setTimeout(layout, 500);
+    })();
+    </script>
+    @endpush
 </div>
 
 {{-- Choices.js (Bootstrap-aligned styling below) --}}
@@ -1608,8 +1947,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Filter dropdowns (Choices.js): same exact word-token search as selling voucher modals
     if (typeof Choices !== 'undefined') {
-        var filterStatus = document.getElementById('filter_status');
-        var filterStore = document.getElementById('filter_store');
+        // Selling Voucher filters are now plain native single-selects with auto-submit,
+        // so the Choices multi-select init below is intentionally skipped.
+        var filterStatus = null;
+        var filterStore = null;
 
         if (filterStatus) {
             try {
@@ -1745,6 +2086,10 @@ document.addEventListener('DOMContentLoaded', function() {
         var typePkEl = document.getElementById('filter_client_type_pk');
         var buyerEl = document.getElementById('filter_buyer_name');
         if (!typeEl || !typePkEl || !buyerEl) return;
+        // Auto-submit + server-side rendering now drive the Client Type → Category → Buyer
+        // cascade (changing a parent reloads with the child options), so the legacy
+        // client-side cascade is disabled to avoid double-handling.
+        return;
 
         var selectedClientType = @json((string) ($selectedClientType ?? ''));
         var selectedTypePk = @json((string) ($selectedClientTypePk ?? ''));

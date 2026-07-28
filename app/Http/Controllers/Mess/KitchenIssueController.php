@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers\Mess;
 
+use App\Exports\SellingVoucherMasterExport;
 use App\Http\Controllers\Controller;
 use App\Support\DataTableRedisCache;
 use App\Support\DataTableSearchHelper;
 use App\Models\KitchenIssueMaster;
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Excel as ExcelFormat;
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\Mess\AvailableQuantityService;
 use App\Models\KitchenIssueItem;
 use App\Models\KitchenIssuePaymentDetail;
@@ -417,7 +421,7 @@ class KitchenIssueController extends Controller
     {
         return DataTableRedisCache::serveCachedAjax(
             $request,
-            'selling_voucher_dt:v1:',
+            'selling_voucher_dt:v2:',
             self::SELLING_VOUCHER_DT_LIST_EPOCH,
             [
                 'enabled' => 'SELLING_VOUCHER_DATATABLE_CACHE_ENABLED',
@@ -427,6 +431,201 @@ class KitchenIssueController extends Controller
             fn () => $this->buildSellingVouchersDatatableResponse($request),
             $this->sellingVoucherDatatableFilterFingerprint($request)
         );
+    }
+
+    /**
+     * Branded Selling Voucher report — Print (inline PDF) and Download (styled .xlsx).
+     * Reuses the exact same filtered query as the on-screen list so both stay in sync.
+     */
+    public function export(Request $request)
+    {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
+
+        $format = strtolower((string) $request->get('format', 'excel'));
+        if (! in_array($format, ['csv', 'excel', 'xlsx', 'pdf'], true)) {
+            $format = 'excel';
+        }
+
+        $searchRaw = '';
+        $searchPayload = $request->input('search');
+        if (is_string($searchPayload)) {
+            $searchRaw = $searchPayload;
+        } elseif (is_array($searchPayload) && isset($searchPayload['value'])) {
+            $searchRaw = (string) $searchPayload['value'];
+        }
+
+        $query = $this->sellingVoucherItemRowsBaseQuery($request);
+        $this->applySellingVoucherItemSearch($query, $searchRaw);
+        $this->applySellingVoucherDatatableOrder($query, $request);
+
+        $records = [];
+        foreach ($query->get() as $row) {
+            $records[] = $this->buildSellingVoucherExportRow($row);
+        }
+
+        $visibleColumns = $this->parseVisibleColumns($request->get('columns'));
+        $export = new SellingVoucherMasterExport($records, $this->buildExportFilterLine($request), $visibleColumns);
+        $fileName = 'selling-voucher-' . now()->format('Y-m-d_H-i-s');
+
+        if ($format === 'pdf') {
+            $pdf = Pdf::loadView('mess.kitchen-issues.export_pdf', array_merge([
+                'headings' => $export->activeHeadings(),
+                'rows' => $export->pdfRows(),
+                'filterLine' => $this->buildExportFilterLine($request),
+                'printedOn' => now()->format('d-m-Y H:i'),
+                'reportTitle' => 'Selling Voucher',
+            ], $this->buildExportHeaderData()))
+                ->setPaper('a4', 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'isPhpEnabled' => true,
+                    'dpi' => 96,
+                ]);
+
+            return $request->boolean('inline')
+                ? $pdf->stream($fileName . '.pdf')
+                : $pdf->download($fileName . '.pdf');
+        }
+
+        return Excel::download($export, $fileName . '.xlsx', ExcelFormat::XLSX);
+    }
+
+    /**
+     * Map a joined selling-voucher query row to the plain-text export columns.
+     *
+     * @return array<string,string>
+     */
+    private function buildSellingVoucherExportRow(\stdClass $row): array
+    {
+        $itemName = trim((string) ($row->item_name ?? ''));
+        if ($itemName === '') {
+            $itemName = trim((string) (($row->sub_item_name ?? null) ?: ($row->sub_name ?? '') ?: ''));
+        }
+        if ($itemName === '') {
+            $itemName = '—';
+        }
+
+        $paymentType = isset($row->payment_type) ? (int) $row->payment_type : -1;
+        $payment = '—';
+        if ($paymentType === KitchenIssueMaster::PAYMENT_CREDIT) {
+            $payment = 'Credit';
+        } elseif ($paymentType === KitchenIssueMaster::PAYMENT_CASH) {
+            $payment = 'Cash';
+        } elseif ($paymentType === KitchenIssueMaster::PAYMENT_ONLINE) {
+            $payment = 'UPI';
+        }
+
+        $status = isset($row->status) ? (int) $row->status : -1;
+        $statusLabel = (string) $status;
+        if ($status === KitchenIssueMaster::STATUS_PENDING) {
+            $statusLabel = 'Pending';
+        } elseif ($status === KitchenIssueMaster::STATUS_APPROVED) {
+            $statusLabel = 'Approved';
+        } elseif ($status === KitchenIssueMaster::STATUS_COMPLETED) {
+            $statusLabel = 'Completed';
+        }
+        if (isset($row->return_quantity) && (float) $row->return_quantity > 0) {
+            $statusLabel .= ' / Returned';
+        }
+
+        $reqDate = '—';
+        $reqDateRaw = $row->issue_date ?? $row->created_at ?? '';
+        if ($reqDateRaw) {
+            try {
+                $reqDate = Carbon::parse($reqDateRaw)->format('d/m/Y');
+            } catch (\Exception $e) {
+                $reqDate = '—';
+            }
+        }
+
+        return [
+            'item_name'    => $itemName,
+            'item_qty'     => (string) ($row->quantity ?? ''),
+            'return_qty'   => (string) ($row->return_quantity ?? 0),
+            'store'        => (string) ($row->resolved_store_name ?? 'N/A'),
+            'client_type'  => (string) ($row->client_type_label ?? '—'),
+            'client_name'  => (string) ($row->display_client_name ?? '—'),
+            'payment'      => $payment,
+            'request_date' => $reqDate,
+            'status'       => $statusLabel,
+        ];
+    }
+
+    /**
+     * `columns=0,1,2,…` → clean list of exportable data-column indexes (0..9).
+     *
+     * @return array<int,int>|null
+     */
+    private function parseVisibleColumns($raw): ?array
+    {
+        if (! is_string($raw) || trim($raw) === '') {
+            return null;
+        }
+
+        $cols = array_values(array_unique(array_filter(
+            array_map('intval', explode(',', $raw)),
+            static fn ($v) => $v >= 0 && $v <= 9
+        )));
+
+        return $cols !== [] ? $cols : null;
+    }
+
+    /** "Applied Filters: …" line for the PDF/Excel header, or '' when unfiltered. */
+    private function buildExportFilterLine(Request $request): string
+    {
+        $parts = [];
+        if ($request->filled('start_date') || $request->filled('end_date')) {
+            $parts[] = 'Period: ' . ($request->get('start_date') ?: '…') . ' to ' . ($request->get('end_date') ?: '…');
+        }
+        $return = strtolower(trim((string) $request->input('return_status', '')));
+        if ($return === 'returned') {
+            $parts[] = 'Return: Returned';
+        } elseif ($return === 'not_returned') {
+            $parts[] = 'Return: Not returned';
+        }
+        $search = $request->input('search');
+        $searchVal = is_array($search) ? ($search['value'] ?? '') : (is_string($search) ? $search : '');
+        if (trim((string) $searchVal) !== '') {
+            $parts[] = 'Search: ' . trim((string) $searchVal);
+        }
+
+        return $parts === [] ? '' : 'Applied Filters:   ' . implode('   |   ', $parts);
+    }
+
+    /**
+     * @return array{logoLeft:?string,logoRight:?string,titleHindi:?string,courseName:string,courseDuration:string}
+     */
+    private function buildExportHeaderData(): array
+    {
+        $toDataUri = static function (string $path): ?string {
+            if (! is_file($path) || ! is_readable($path)) {
+                return null;
+            }
+            $raw = @file_get_contents($path);
+            if ($raw === false) {
+                return null;
+            }
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = match ($ext) {
+                'svg' => 'image/svg+xml',
+                'jpg', 'jpeg' => 'image/jpeg',
+                default => 'image/png',
+            };
+
+            return 'data:' . $mime . ';base64,' . base64_encode($raw);
+        };
+
+        return [
+            'logoLeft' => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
+            'logoRight' => $toDataUri(public_path('admin_assets/images/logos/constitution-75.png'))
+                ?: $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
+            'titleHindi' => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
+            'courseName' => '',
+            'courseDuration' => '',
+        ];
     }
 
     /**
@@ -510,10 +709,12 @@ class KitchenIssueController extends Controller
      */
     private function applySellingVoucherDatatableOrder(Builder $query, Request $request): void
     {
-        $orderCol = DataTableSearchHelper::orderColumnIndex($request, 9);
+        $orderCol = DataTableSearchHelper::orderColumnIndex($request, 8);
         $orderDir = DataTableSearchHelper::orderDirection($request, 'desc');
         $misLabelSql = $this->messSubcategoryDisplayCoalesceSql();
 
+        // Column indexes match the on-screen table (S.No, Item, Qty, Return Qty,
+        // Store, Client Type, Client Name, Payment, Request Date, Status, Action).
         $sortMap = [
             0 => 'kim.issue_date',
             1 => DB::raw("COALESCE(NULLIF(TRIM(kii.item_name), ''), {$misLabelSql})"),
@@ -527,11 +728,9 @@ class KitchenIssueController extends Controller
             6 => DB::raw("(CASE
                 WHEN kim.client_type IN (2, 3) AND cm.course_name IS NOT NULL THEN cm.course_name
                 ELSE COALESCE(mct.client_name, '') END)"),
-            7 => 'kim.client_name',
-            8 => 'kim.payment_type',
-            9 => 'kim.issue_date',
-            10 => 'kim.status',
-            11 => 'kii.return_quantity',
+            7 => 'kim.payment_type',
+            8 => 'kim.issue_date',
+            9 => 'kim.status',
         ];
 
         if (isset($sortMap[$orderCol])) {
@@ -1061,20 +1260,20 @@ class KitchenIssueController extends Controller
 
         $paymentHtml = '<span class="text-muted">—</span>';
         if ($paymentType === KitchenIssueMaster::PAYMENT_CREDIT) {
-            $paymentHtml = '<span class="badge rounded-1 text-bg-warning">Credit</span>';
+            $paymentHtml = '<span class="sv-pill sv-pill--amber">Credit</span>';
         } elseif ($paymentType === KitchenIssueMaster::PAYMENT_CASH) {
-            $paymentHtml = '<span class="badge rounded-1 text-bg-secondary">Cash</span>';
+            $paymentHtml = '<span class="sv-pill sv-pill--gray">Cash</span>';
         } elseif ($paymentType === KitchenIssueMaster::PAYMENT_ONLINE) {
-            $paymentHtml = '<span class="badge rounded-1 text-bg-info">UPI</span>';
+            $paymentHtml = '<span class="sv-pill sv-pill--blue">UPI</span>';
         }
 
-        $statusHtml = '<span class="badge rounded-1 text-bg-secondary">'.e((string) $status).'</span>';
+        $statusHtml = '<span class="sv-pill sv-pill--gray">'.e((string) $status).'</span>';
         if ($status === KitchenIssueMaster::STATUS_PENDING) {
-            $statusHtml = '<span class="badge rounded-1 text-bg-warning">Pending</span>';
+            $statusHtml = '<span class="sv-pill sv-pill--amber">Pending</span>';
         } elseif ($status === KitchenIssueMaster::STATUS_APPROVED) {
-            $statusHtml = '<span class="badge rounded-1 text-bg-success">Approved</span>';
+            $statusHtml = '<span class="sv-pill sv-pill--green">Approved</span>';
         } elseif ($status === KitchenIssueMaster::STATUS_COMPLETED) {
-            $statusHtml = '<span class="badge rounded-1 text-bg-primary">Completed</span>';
+            $statusHtml = '<span class="sv-pill sv-pill--blue">Completed</span>';
         }
 
         $reqDateRaw = $row->issue_date ?? $row->created_at ?? '';
@@ -1087,41 +1286,41 @@ class KitchenIssueController extends Controller
             }
         }
 
+        // Returned indicator now sits under the Status pill (mock layout).
         $returnBadge = '';
         if ($rq > 0) {
-            $returnBadge = '<span class="badge rounded-1 text-bg-info">Returned</span>';
+            $returnBadge = '<div class="mt-1"><span class="sv-pill sv-pill--orange">Returned</span></div>';
         }
 
-        $deleteForm = '';
+        $deleteBtn = '';
         if ($canDeleteSellingVoucher) {
             $destroyUrl = route('admin.mess.material-management.destroy', $pk);
-            $deleteForm = '<form action="'.e($destroyUrl).'" method="POST" class="d-inline m-0" onsubmit="return confirm(\'Are you sure you want to delete this Selling Voucher?\');">'
+            $deleteBtn = '<form action="'.e($destroyUrl).'" method="POST" class="mess-delete-form" '
+                .'data-confirm-title="Delete Selling Voucher?" '
+                .'data-confirm-message="Are you sure you want to delete this selling voucher?">'
                 .csrf_field()
                 .method_field('DELETE')
-                .'<button type="submit" class="btn btn-sm btn-light border rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" title="Delete" aria-label="Delete voucher"><i class="material-symbols-rounded text-danger" style="font-size: 1.125rem;">delete</i></button></form>';
+                .'<button type="submit" class="sv-action-btn text-danger" title="Delete"><i class="material-symbols-rounded">delete</i><span>Delete</span></button></form>';
         }
 
         $editDisabled = $status === KitchenIssueMaster::STATUS_APPROVED ? ' disabled' : '';
 
+        $viewBtn = '<button type="button" class="sv-action-btn btn-view-sv text-primary" data-voucher-id="'.e((string) $pk).'" title="View"><i class="material-symbols-rounded">visibility</i><span>View</span></button>';
+        $editBtn = '<button type="button" class="sv-action-btn btn-edit-sv text-primary" data-voucher-id="'.e((string) $pk).'" title="'.($status === KitchenIssueMaster::STATUS_APPROVED ? e('Edit is disabled for approved voucher') : 'Edit').'"'.$editDisabled.'><i class="material-symbols-rounded">edit</i><span>Edit</span></button>';
+        $returnBtn = '<button type="button" class="sv-action-btn btn-return-sv text-warning" data-voucher-id="'.e((string) $pk).'" title="Return"><i class="material-symbols-rounded">undo</i><span>Return</span></button>';
+
         return [
-            '<span class="text-muted font-monospace">'.e((string) $serial).'</span>',
-            '<span class="fw-medium">'.$itemCell.'</span>',
+            '<span class="fw-medium">'.e((string) $serial).'</span>',
+            '<span class="sv-name-primary">'.$itemCell.'</span>',
             '<span class="font-monospace">'.e((string) ($row->quantity ?? '')).'</span>',
             '<span class="font-monospace">'.e((string) ($row->return_quantity ?? 0)).'</span>',
             e((string) ($row->resolved_store_name ?? 'N/A')),
             e((string) ($row->client_type_label ?? '—')),
             e((string) ($row->display_client_name ?? '—')),
-            e((string) ($row->voucher_client_name ?? '—')),
             $paymentHtml,
             '<span class="text-nowrap">'.e($reqDate).'</span>',
-            $statusHtml,
-            '<div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">'.$returnBadge
-                .'<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 btn-return-sv" data-voucher-id="'.e((string) $pk).'" title="Return">Return</button></div>',
-            '<div class="d-inline-flex align-items-center justify-content-center gap-1">'
-                .'<button type="button" class="btn btn-sm btn-light border btn-view-sv rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" data-voucher-id="'.e((string) $pk).'" title="View" aria-label="View voucher"><i class="material-symbols-rounded text-primary" style="font-size: 1.125rem;">visibility</i></button>'
-                .'<button type="button" class="btn btn-sm btn-light border btn-edit-sv rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" data-voucher-id="'.e((string) $pk).'" title="'.($status === KitchenIssueMaster::STATUS_APPROVED ? e('Edit is disabled for approved voucher') : 'Edit').'" aria-label="Edit voucher"'.$editDisabled.'><i class="material-symbols-rounded text-warning" style="font-size: 1.125rem;">edit</i></button>'
-                .$deleteForm
-                .'</div>',
+            $statusHtml.$returnBadge,
+            '<div class="sv-actions d-flex align-items-start justify-content-center">'.$viewBtn.$editBtn.$returnBtn.$deleteBtn.'</div>',
         ];
     }
 
