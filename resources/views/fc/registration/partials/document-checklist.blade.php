@@ -60,10 +60,15 @@
         // Show the "Blank Form" column only for sections that actually have one
         // (e.g. Accounts Section) — hide it for sections with no static blank form.
         $sectionHasBlank = $sectionFields->contains(fn ($f) => isset($staticBlankForms[$f->field_name]));
+
+        // Envelope label next to the section heading (Admin = Envelope 1, Accounts = Envelope 2).
+        $envelope = null;
+        if (stripos($section, 'Administration') !== false)  { $envelope = 'Envelope 1'; }
+        elseif (stripos($section, 'Account') !== false)      { $envelope = 'Envelope 2'; }
     @endphp
     <div class="card mb-4" style="border-left:4px solid #004a93;">
         <div class="card-body p-3">
-            <h6 class="fw-bold text-primary mb-3 text-uppercase" style="letter-spacing:0.3px;">{{ $section }}</h6>
+            <h6 class="fw-bold text-primary mb-3 text-uppercase" style="letter-spacing:0.3px;">{{ $section }}@if($envelope) <span class="badge bg-warning text-dark ms-2 align-middle" style="letter-spacing:0.5px;">{{ $envelope }}</span>@endif</h6>
             <div class="table-responsive">
                 <table class="table table-bordered align-middle table-hover table-striped mb-0">
                     <thead class="table-light text-center">
@@ -71,7 +76,7 @@
                             <th style="width:60px;">Sr.No.</th>
                             <th class="text-start">Document Title</th>
                             <th style="width:260px;">Upload</th>
-                            <th style="width:120px;">View Uploaded</th>
+                            <th style="width:140px;">View Uploaded forms</th>
                             @if($sectionHasBlank)<th style="width:120px;">Blank Form</th>@endif
                             <th style="width:120px;">Sample Document</th>
                             <th style="width:110px;">Status</th>
