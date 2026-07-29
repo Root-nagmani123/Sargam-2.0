@@ -66,21 +66,6 @@
         </div>
         <hr>
         <div class="container-fluid px-0 px-md-2">
-            <div class="text-center mb-4">
-                <h2 class="fc-eyebrow mt-3">Congratulations</h2>
-                <h3 class="fc-course-title">
-                    {!! isset($data) && ! empty($data->course_title) ? $data->course_title : 'Foundation Course' !!}
-                </h3>
-            </div>
-
-            @if (! empty($programmeIntentLabel))
-                <div class="alert alert-info border-0 shadow-sm py-2 px-3 small mb-4 mx-auto" style="max-width: 42rem;" role="status">
-                    <span class="fw-semibold" style="color: #084298;">Programme link recognised.</span>
-                    After you complete sign-in, you will continue to
-                    <span class="fw-semibold">{{ $programmeIntentLabel }}</span>.
-                </div>
-            @endif
-
             @php
                 // Display-only: raise the ordinal suffix (st/nd/rd/th) in formatted dates,
                 // e.g. "June 27th, 2026" -> "June 27<sup>th</sup>, 2026". Does not change stored data.

@@ -14,12 +14,13 @@
     $pwn = $g('prob_witness_name');   $pwa = $g('prob_witness_address');   $pwo = $g('prob_witness_occupation');
     $swn = $g('surety_witness_name'); $swa = $g('surety_witness_address'); $swo = $g('surety_witness_occupation');
     $dated = $fmt($data['declaration_date'] ?? '');
+    $dAt   = $g('bond_dated_at');   $dDay = $g('bond_dated_day');   $dMon = $g('bond_dated_month');
     $sigs  = $data['_signature_src'] ?? [];
     $hi    = $data['_hi'] ?? [];   // candidate-typed Hindi values (blank if none)
 
-    $blank = function ($v, $w = '150px') {
+    $blank = function ($v, $w = '150pt') {
         $val = ($v !== '' && $v !== null) ? e($v) : '&nbsp;';
-        return '<span style="display:inline-block; min-width:'.$w.'; border-bottom:1px solid #000; text-align:center; font-weight:bold; padding:0 4px;">'.$val.'</span>';
+        return '<span style="display:inline-block; min-width:'.$w.'; border-bottom:1px solid #000; text-align:center; font-weight:bold; padding:0 4pt;">'.$val.'</span>';
     };
     $isPerm = $elig === 'In the permanent service of Government';
     $isRes  = $elig === 'Ordinarily resident in India';
@@ -30,16 +31,17 @@
 <head>
 <meta charset="utf-8">
 <style>
-    body { font-family: 'DejaVu Sans', sans-serif; font-size: 11px; color: #000; line-height: 1.9; }
-    .docno { text-align: right; font-weight: bold; font-size: 11px; }
-    .title { text-align: center; font-weight: bold; font-size: 12px; text-decoration: underline; line-height: 1.5; margin-top: 4px; }
-    .subtitle { text-align: center; font-weight: bold; font-size: 11px; margin-top: 3px; }
-    .to { margin-top: 14px; }
-    .body { text-align: justify; margin-top: 12px; text-indent: 28px; }
-    .lines { margin-top: 18px; }
-    .sign { margin-top: 12px; font-weight: bold; }
-    .sig-img { max-height: 34px; }
-    .elig { margin-top: 10px; }
+    @page { margin: 10mm 13mm 10mm 13mm; }
+    body { font-family: 'DejaVu Sans', sans-serif; font-size: 11pt; color: #000; line-height: 1.42; }
+    .docno { text-align: right; font-weight: bold; font-size: 11pt; }
+    .title { text-align: center; font-weight: bold; font-size: 12pt; text-decoration: underline; line-height: 1.5; margin-top: 4pt; }
+    .subtitle { text-align: center; font-weight: bold; font-size: 11pt; margin-top: 3pt; }
+    .to { margin-top: 7pt; }
+    .body { text-align: justify; margin-top: 5pt; text-indent: 28pt; }
+    .lines { margin-top: 7pt; }
+    .sign { margin-top: 6pt; font-weight: bold; }
+    .sig-img { max-height: 34pt; }
+    .elig { margin-top: 5pt; }
 </style>
 </head>
 <body>
@@ -52,9 +54,9 @@
     <div class="to">To,<br>&emsp;&emsp;The President of India,</div>
 
     <div class="body">
-        Whereas I, {!! $blank($name, '320px') !!} (full name &amp; address of the Probationer), a probationer in the
-        {!! $blank($svc, '90px') !!} (Indian Administrative Service / Indian Police Service / Indian Forest Service) (hereinafter
-        referred to as &lsquo;the Probationer&rsquo;), being entitled — subject to compliance with the {!! $blank($srule, '190px') !!}
+        Whereas I, {!! $blank($name, '320pt') !!} (full name &amp; address of the Probationer), a probationer in the
+        {!! $blank($svc, '90pt') !!} (Indian Administrative Service / Indian Police Service / Indian Forest Service) (hereinafter
+        referred to as &lsquo;the Probationer&rsquo;), being entitled — subject to compliance with the {!! $blank($srule, '190pt') !!}
         [Indian Administrative Service (Probation) Rules, 1954 / Indian Police Service (Probation) Rules, 1954 / Indian Forest
         Service (Probation) Rules, 1968] — to receive from the President of India (hereinafter referred to as the Central
         Government) or from the Government of the State to which I may be posted, pay and allowances during the period in which I
@@ -62,8 +64,8 @@
     </div>
 
     <div class="body">
-        Now, we, the Probationer, and {!! $blank($sname, '200px') !!} residing at {!! $blank($saddr, '260px') !!}, working as
-        {!! $blank($socc, '160px') !!} (hereinafter referred to as &lsquo;the Surety&rsquo;), jointly and severally, do hereby, in
+        Now, we, the Probationer, and {!! $blank($sname, '200pt') !!} residing at {!! $blank($saddr, '260pt') !!}, working as
+        {!! $blank($socc, '160pt') !!} (hereinafter referred to as &lsquo;the Surety&rsquo;), jointly and severally, do hereby, in
         pursuance of the said rules, promise and agree that in the event of the failure of the Probationer to complete probation
         to the satisfaction of the Central Government, to refund to the Central Government on demand any moneys paid to him/her,
         including the pay and travelling expenses to join appointment.
@@ -76,25 +78,30 @@
     </div>
 
     <div class="lines">
-        Dated {!! $blank($dated, '150px') !!}.
-        <div class="sign">Signature of the Probationer:
-            @if(!empty($sigs[0]))<img src="{{ $sigs[0] }}" class="sig-img">@else {!! $blank('', '200px') !!} @endif
-        </div>
-        <div>Signed by the Probationer in the presence of — Name of Witness: {!! $blank($pwn, '200px') !!}</div>
-        <div>Address: {!! $blank($pwa, '300px') !!} &nbsp; Occupation: {!! $blank($pwo, '160px') !!}</div>
+        Dated {!! $blank($dAt, '130pt') !!} this {!! $blank($dDay, '110pt') !!} day of {!! $blank($dMon, '150pt') !!}
 
-        <div class="sign">Signature of the Surety:
-            @if(!empty($sigs[1]))<img src="{{ $sigs[1] }}" class="sig-img">@else {!! $blank('', '200px') !!} @endif
+        <div class="sign" style="text-align:center; margin-top:22pt;">Signature of the Probationer:
+            @if(!empty($sigs[0]))<img src="{{ $sigs[0] }}" class="sig-img">@else {!! $blank('', '200pt') !!} @endif
         </div>
-        <div>Signed by the Surety in the presence of — Name of Witness: {!! $blank($swn, '200px') !!}</div>
-        <div>Address: {!! $blank($swa, '300px') !!} &nbsp; Occupation: {!! $blank($swo, '160px') !!}</div>
+        <div style="margin-top:10pt;">Signed <b>by Probationer</b> in the presence of &nbsp;(Name of Witness) {!! $blank($pwn, '220pt') !!}</div>
+        <div>Address {!! $blank($pwa, '420pt') !!}</div>
+        <div>{!! $blank('', '200pt') !!} Occupation {!! $blank($pwo, '200pt') !!}</div>
     </div>
 
-    <div class="body" style="text-indent:0; margin-top:14px;">
+    <div class="body" style="text-indent:0; margin-top:14pt;">
         I, the Surety whose signature is appended to the above agreement, do hereby declare that —
-        <div class="elig">{!! $box($isPerm) !!} (a) I am in the permanent service of the Government of {!! $blank('', '180px') !!}; <i>or</i></div>
+        <div class="elig">{!! $box($isPerm) !!} (a) I am in the permanent service of the Government of {!! $blank('', '180pt') !!}; <i>or</i></div>
         <div class="elig">{!! $box($isRes) !!} (b) I am ordinarily resident in India and possess means which will enable me to repay to the Central Government the sums of money referred to, in the event of my being called upon to do so in accordance with the terms of the agreement.</div>
-        <div style="margin-top:6px;"><i>(Strike out whichever is not applicable.)</i></div>
+        <div style="margin-top:6pt;"><i>(Strike out whichever is not applicable.)</i></div>
+    </div>
+
+    <div class="lines">
+        <div class="sign" style="text-align:center; margin-top:22pt;">Signature of the Surety:
+            @if(!empty($sigs[1]))<img src="{{ $sigs[1] }}" class="sig-img">@else {!! $blank('', '200pt') !!} @endif
+        </div>
+        <div style="margin-top:10pt;">Signed <b>by Surety</b> in the presence of &nbsp;(Name of Witness) {!! $blank($swn, '220pt') !!}</div>
+        <div>Address {!! $blank($swa, '420pt') !!}</div>
+        <div>{!! $blank('', '200pt') !!} Occupation {!! $blank($swo, '200pt') !!}</div>
     </div>
 
     <pagebreak />
@@ -106,7 +113,7 @@
     <div class="to">सेवा में,<br>&emsp;&emsp;भारत के राष्ट्रपति,</div>
 
     <div class="body">
-        मैं, {!! $blank($hi['pname'] ?? '', '300px') !!} (परिवीक्षाधीन का नाम और पता), {!! $blank($hi['svc'] ?? '', '90px') !!} सेवा में परिवीक्षाधीन व्यक्ति
+        मैं, {!! $blank($hi['pname'] ?? '', '300pt') !!} (परिवीक्षाधीन का नाम और पता), {!! $blank($hi['svc'] ?? '', '90pt') !!} सेवा में परिवीक्षाधीन व्यक्ति
         (जिसे इसमें आगे &lsquo;परिवीक्षाधीन&rsquo; कहा गया है), राष्ट्रपति (जिन्हें इसमें आगे &lsquo;केन्द्र सरकार&rsquo; कहा गया है) अथवा जिस
         राज्य में मुझे नियुक्त किया जाए, उस राज्य सरकार से प्रशिक्षण की अवधि के लिए (भारतीय प्रशासनिक सेवा (परिवीक्षा) नियमावली, 1954
         अथवा भारतीय पुलिस सेवा (परिवीक्षा) नियमावली, 1954 अथवा भारतीय वन सेवा (परिवीक्षा) नियमावली, 1968 के अध्यधीन) वेतन और भत्ते
@@ -114,8 +121,8 @@
     </div>
 
     <div class="body">
-        अब, परिवीक्षाधीन और मैं, {!! $blank($hi['sname'] ?? '', '200px') !!} निवासी {!! $blank($hi['saddr'] ?? '', '240px') !!},
-        {!! $blank($hi['socc'] ?? '', '150px') !!} (प्रतिभू का नाम और पता, जिसे इसमें आगे &lsquo;प्रतिभू&rsquo; कहा गया है), उक्त नियमों के अनुसरण में
+        अब, परिवीक्षाधीन और मैं, {!! $blank($hi['sname'] ?? '', '200pt') !!} निवासी {!! $blank($hi['saddr'] ?? '', '240pt') !!},
+        {!! $blank($hi['socc'] ?? '', '150pt') !!} (प्रतिभू का नाम और पता, जिसे इसमें आगे &lsquo;प्रतिभू&rsquo; कहा गया है), उक्त नियमों के अनुसरण में
         संयुक्त रूप से और पृथक-पृथक एतद्द्वारा वचन देते हैं और करार करते हैं कि यदि परिवीक्षाधीन व्यक्ति केन्द्र सरकार की संतुष्टि के अनुसार
         परिवीक्षा की अवधि पूरी नहीं कर पाता है, तो वेतन और नियुक्ति पर जाने के लिए यात्रा व्यय सहित परिवीक्षाधीन व्यक्ति को भुगतान की गई
         किसी भी राशि की मांग किए जाने पर हम उसका भुगतान करेंगे।
@@ -127,21 +134,23 @@
     </div>
 
     <div class="lines">
-        दिनांक {!! $blank($hi['ddate'] ?? '', '150px') !!}
-        <div class="sign">परिवीक्षाधीन के हस्ताक्षर: {!! $blank('', '200px') !!}</div>
-        <div>साक्षी की उपस्थिति में परिवीक्षाधीन द्वारा हस्ताक्षरित — साक्षी का नाम: {!! $blank($hi['pwname'] ?? '', '200px') !!}</div>
-        <div>पता: {!! $blank($hi['pwaddr'] ?? '', '280px') !!} &nbsp; व्यवसाय: {!! $blank($hi['pwocc'] ?? '', '150px') !!}</div>
-
-        <div class="sign">प्रतिभू के हस्ताक्षर: {!! $blank('', '200px') !!}</div>
-        <div>साक्षी की उपस्थिति में प्रतिभू द्वारा हस्ताक्षरित — साक्षी का नाम: {!! $blank($hi['swname'] ?? '', '200px') !!}</div>
-        <div>पता: {!! $blank($hi['swaddr'] ?? '', '280px') !!} &nbsp; व्यवसाय: {!! $blank($hi['swocc'] ?? '', '150px') !!}</div>
+        दिनांक {!! $blank($hi['ddate'] ?? '', '150pt') !!}
+        <div class="sign">परिवीक्षाधीन के हस्ताक्षर: {!! $blank('', '200pt') !!}</div>
+        <div>साक्षी की उपस्थिति में परिवीक्षाधीन द्वारा हस्ताक्षरित — साक्षी का नाम: {!! $blank($hi['pwname'] ?? '', '200pt') !!}</div>
+        <div>पता: {!! $blank($hi['pwaddr'] ?? '', '280pt') !!} &nbsp; व्यवसाय: {!! $blank($hi['pwocc'] ?? '', '150pt') !!}</div>
     </div>
 
-    <div class="body" style="text-indent:0; margin-top:14px;">
+    <div class="body" style="text-indent:0; margin-top:14pt;">
         मैं, प्रतिभू, जिसके हस्ताक्षर उपर्युक्त करार में दिए गए हैं, एतद्द्वारा घोषणा करता/करती हूँ कि —
-        <div class="elig">{!! $box($isPerm) !!} (क) मैं {!! $blank('', '170px') !!} सरकार की स्थायी सेवा में हूँ; <b>अथवा</b></div>
+        <div class="elig">{!! $box($isPerm) !!} (क) मैं {!! $blank('', '170pt') !!} सरकार की स्थायी सेवा में हूँ; <b>अथवा</b></div>
         <div class="elig">{!! $box($isRes) !!} (ख) मैं साधारणतया भारत का निवासी हूँ और मेरे पास ऐसे साधन हैं जिनसे करार के निबंधनों के अनुसार राशि की मांग किए जाने पर मैं केन्द्र सरकार को वह राशि चुका सकता/सकती हूँ।</div>
-        <div style="margin-top:6px;">(जो लागू न हो उसे काट दें।)</div>
+        <div style="margin-top:6pt;">(जो लागू न हो उसे काट दें।)</div>
+    </div>
+
+    <div class="lines">
+        <div class="sign">प्रतिभू के हस्ताक्षर: {!! $blank('', '200pt') !!}</div>
+        <div>साक्षी की उपस्थिति में प्रतिभू द्वारा हस्ताक्षरित — साक्षी का नाम: {!! $blank($hi['swname'] ?? '', '200pt') !!}</div>
+        <div>पता: {!! $blank($hi['swaddr'] ?? '', '280pt') !!} &nbsp; व्यवसाय: {!! $blank($hi['swocc'] ?? '', '150pt') !!}</div>
     </div>
 
 </body>

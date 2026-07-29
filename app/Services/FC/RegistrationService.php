@@ -484,6 +484,11 @@ class RegistrationService
                     'key' => strtolower((string) $step->step_slug).'_group_'.(string) $group->id,
                     'title_en' => (string) $step->step_name.' - '.(string) $group->group_label,
                     'title_hi' => $this->hindiSectionTitle((string) $step->step_slug, (string) $step->step_name).' - '.$this->hindiLabel((string) $group->group_label),
+                    // The group label on its own. The PDF prints this instead of title_en so
+                    // headers do not all begin "Descriptive Roll Continue... - "; the screen
+                    // report keeps the fully-qualified title.
+                    'group_label' => (string) $group->group_label,
+                    'group_label_hi' => $this->hindiLabel((string) $group->group_label),
                     'type' => 'table',
                     'columns' => $groupFields->map(fn ($f) => (string) ($f->label ?: $f->field_name))->all(),
                     'head_hi' => $groupFields->map(fn () => '')->all(),

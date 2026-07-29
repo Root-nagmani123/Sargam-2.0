@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\FC;
 
 use App\Http\Controllers\Controller;
+use App\Services\FC\FcRegistrationFlowService;
+use App\Services\FC\FcStepApplicabilityService;
 use App\Services\FC\RegistrationService;
 use App\DataTables\FC\FcFormOverviewDataTable;
 use App\Models\FC\FcForm;
@@ -15,6 +17,7 @@ use App\Models\FC\{
     FcJoiningRelatedDocumentsMaster
 };
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -137,30 +140,13 @@ class ReportController extends Controller
         $trackerTable = $form->trackerStorageTable();
         $userKey      = $form->user_identifier ?: 'user_id';
 
-        $hasFormIdCol = fc_schema_has_column($trackerTable, 'form_id');
-
-        $baseCount = fn () => DB::table($trackerTable)
-            ->when($hasFormIdCol, fn ($q) => $q->where('form_id', $form->id));
-
-        // Complete = all step columns are 1; Incomplete = at least one is not
-        $completeQuery = $baseCount();
-        foreach ($steps as $step) {
-            $completeQuery->where($step->tracker_column, 1);
-        }
-        $completeCount   = $completeQuery->count();
-        $totalCount      = $baseCount()->count();
-        $incompleteCount = $totalCount - $completeCount;
-
-        // Summary counts — always computed from DB (not paginated)
-        $summary = [
-            'total'      => $totalCount,
-            'complete'   => $completeCount,
-            'incomplete' => $incompleteCount,
-        ];
-        foreach ($steps as $step) {
-            $summary[$step->tracker_column] = $baseCount()
-                ->where($step->tracker_column, 1)->count();
-        }
+        // Summary counts — always computed from DB (not paginated), in ONE aggregate
+        // query. This used to be a count() per step inside a foreach (G5) plus two more,
+        // and "Complete" required every tracker column = 1, which no trainee with a
+        // not-applicable step could ever satisfy. Each step now reports done + the number
+        // of trainees it actually applies to.
+        $summary = app(FcStepApplicabilityService::class)
+            ->overviewSummary($steps, $trackerTable, $form->id);
 
         $services = DB::table('service_master')
             ->orderBy('service_name')
@@ -269,15 +255,27 @@ class ReportController extends Controller
             'email'         => $step1->email ?? null,
         ];
 
-        // Whether all tracked steps are complete
+        // Whether every step that APPLIES to this trainee is complete. Requiring all
+        // tracker columns = 1 left anyone with a not-applicable step (e.g. Special
+        // Assistant without a ph_value) permanently badged INCOMPLETE.
         $registrationComplete = false;
         if ($reportForm && $master) {
-            $stepCols = $reportForm->activeSteps()
+            $trackedSteps = $reportForm->activeSteps()
                 ->whereNotNull('tracker_column')
-                ->pluck('tracker_column')
-                ->filter(fn ($c) => preg_match('/^[a-zA-Z0-9_]+$/', $c));
-            if ($stepCols->isNotEmpty()) {
-                $registrationComplete = $stepCols->every(fn ($c) => ($master->{$c} ?? 0) == 1);
+                ->orderBy('step_number')
+                // Only the columns the applicability check reads (G1) — this replaced a
+                // pluck('tracker_column'), so it must not become a SELECT *. The list is owned
+                // by FcStepApplicabilityService because applicability_rule has to be selected
+                // conditionally: naming it outright throws SQLSTATE[42S22] on any database where
+                // 2026_07_27_000000 has not run yet, which breaks this whole page whenever code
+                // is deployed ahead of its migrations.
+                ->get(FcStepApplicabilityService::stepColumns())
+                ->filter(fn ($s) => preg_match('/^[a-zA-Z0-9_]+$/', (string) $s->tracker_column))
+                ->values();
+
+            if ($trackedSteps->isNotEmpty()) {
+                $registrationComplete = app(FcStepApplicabilityService::class)
+                    ->isCompleteForRow($trackedSteps, $master, (int) $userId);
             }
         }
 
@@ -614,8 +612,52 @@ class ReportController extends Controller
      * @param  list<array<string,mixed>>  $sections
      * @return list<array<string,mixed>>
      */
+    /**
+     * Steps that are deliberately left OUT of the printed registration profile: the PDF is
+     * the descriptive profile, and these two carry only uploaded-file names, which are
+     * meaningless on paper. Matched on the step slug, not the display name, because every
+     * copied form prefixes it (fc-101-bank / fc99-bank / fc_copy-bank).
+     *
+     * Only the PDF is filtered — the on-screen report at /admin/reports/student still shows
+     * both sections, with working document links.
+     */
+    private function fcPdfSectionIsExcluded(array $sec): bool
+    {
+        $slug = (string) ($sec['key'] ?? '');
+        // key = "{step_slug}_flat" | "{step_slug}_group_{id}" — recover the slug.
+        $slug = (string) preg_replace('/_(flat|group_\d+)$/', '', $slug);
+
+        return str_ends_with($slug, 'bank') || str_contains($slug, 'document');
+    }
+
+    /**
+     * Name for the PDF header. student_master_firsts.full_name is NULL on records created
+     * through the dynamic form (it is only populated by the legacy flow), which printed an
+     * empty "Name / नाम" row — so fall back to the name parts, exactly as the report list
+     * query already does with COALESCE(NULLIF(full_name,''), CONCAT(first, last)).
+     */
+    private function fcPdfDisplayName(?object $step1): string
+    {
+        $full = trim((string) ($step1->full_name ?? ''));
+        if ($full !== '') {
+            return $full;
+        }
+
+        $parts = array_filter(
+            [$step1->first_name ?? null, $step1->middle_name ?? null, $step1->last_name ?? null],
+            fn ($p) => trim((string) $p) !== ''
+        );
+
+        return trim(implode(' ', array_map(fn ($p) => trim((string) $p), $parts)));
+    }
+
     private function fcStudentPdfSanitizeSections(array $sections): array
     {
+        $sections = array_values(array_filter(
+            $sections,
+            fn ($sec) => ! $this->fcPdfSectionIsExcluded((array) $sec)
+        ));
+
         foreach ($sections as &$sec) {
             if (($sec['type'] ?? '') === 'fields' && ! empty($sec['rows'])) {
                 foreach ($sec['rows'] as &$row) {
@@ -644,6 +686,14 @@ class ReportController extends Controller
             }
             $sec['title_en'] = $this->fcPdfSanitizeText((string) ($sec['title_en'] ?? ''));
             $sec['title_hi'] = $this->fcPdfSanitizeText((string) ($sec['title_hi'] ?? ''));
+            // The PDF prints these instead of title_en for grouped sections, so they need
+            // the same sanitisation — otherwise they would bypass it entirely.
+            if (isset($sec['group_label'])) {
+                $sec['group_label'] = $this->fcPdfSanitizeText((string) $sec['group_label']);
+            }
+            if (isset($sec['group_label_hi'])) {
+                $sec['group_label_hi'] = $this->fcPdfSanitizeText((string) $sec['group_label_hi']);
+            }
         }
         unset($sec);
 
@@ -1335,13 +1385,24 @@ class ReportController extends Controller
             $i = 0;
             $query->orderBy('s1.full_name')->chunk(200, function ($rows) use ($out, $steps, $totalSteps, &$i) {
                 foreach ($rows as $r) {
-                    $stepCols  = $steps->map(fn ($s) => ($r->{$s->tracker_column} ?? 0) ? 'Yes' : 'No')->toArray();
-                    $totalDone = $steps->filter(fn ($s) => ($r->{$s->tracker_column} ?? 0))->count();
+                    // A step that does not apply to this trainee exports as "N/A", never
+                    // "No", and drops out of the progress denominator — same rule as the
+                    // on-screen table, so the CSV and the report can't disagree.
+                    $stepCols = $steps->map(function ($s) use ($r) {
+                        if ($r->{$s->tracker_column} ?? 0) {
+                            return 'Yes';
+                        }
+
+                        return ((int) ($r->{'waived_'.$s->tracker_column} ?? 0) === 1) ? 'N/A' : 'No';
+                    })->toArray();
+
+                    $totalDone  = $steps->filter(fn ($s) => ($r->{$s->tracker_column} ?? 0))->count();
+                    $applicable = max(0, (int) ($r->steps_applicable ?? $totalSteps));
 
                     // Mirror the blade's status logic: derive from steps_done, not raw DB status
                     if (($r->status ?? '') === 'SUBMITTED') {
                         $statusLabel = 'SUBMITTED';
-                    } elseif ($totalSteps > 0 && $totalDone >= $totalSteps) {
+                    } elseif ($totalSteps > 0 && $applicable > 0 && $totalDone >= $applicable) {
                         $statusLabel = 'COMPLETE';
                     } else {
                         $statusLabel = 'INCOMPLETE';
@@ -1358,7 +1419,7 @@ class ReportController extends Controller
                             $r->mobile_no ?? '',
                         ],
                         $stepCols,
-                        ["{$totalDone}/{$totalSteps}", $statusLabel]
+                        ["{$totalDone}/{$applicable}", $statusLabel]
                     ));
                 }
             });
@@ -1378,19 +1439,14 @@ class ReportController extends Controller
         $hasFrm       = fc_schema_has_table('fc_registration_master');
 
         if ($request->filled('status')) {
+            // Same applicability rule as the DataTable badge and the summary cards: a step
+            // that does not apply to a trainee must not keep them out of COMPLETE.
+            $applicability = app(FcStepApplicabilityService::class);
+
             if ($request->status === 'COMPLETE') {
-                foreach ($steps as $step) {
-                    $query->where("{$trackerTable}.{$step->tracker_column}", 1);
-                }
+                $applicability->whereComplete($query, $steps, $trackerTable);
             } elseif ($request->status === 'INCOMPLETE') {
-                $query->where(function ($q) use ($trackerTable, $steps) {
-                    foreach ($steps as $step) {
-                        $q->orWhere(function ($q2) use ($trackerTable, $step) {
-                            $q2->where("{$trackerTable}.{$step->tracker_column}", '!=', 1)
-                               ->orWhereNull("{$trackerTable}.{$step->tracker_column}");
-                        });
-                    }
-                });
+                $applicability->whereIncomplete($query, $steps, $trackerTable);
             } else {
                 $query->where("{$trackerTable}.status", $request->status);
             }
@@ -1713,6 +1769,57 @@ class ReportController extends Controller
         abort_unless($bytes !== null, 404, "Student '{$username}' not found.");
 
         $filename = 'Descriptive_Roll_'.$username.'_'.now()->format('Ymd_His').'.pdf';
+
+        return response($bytes, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
+    }
+
+    /**
+     * Trainee-facing download of their OWN descriptive roll, offered on the form dashboard
+     * once every applicable step is complete.
+     *
+     * Deliberately takes NO username: the identity comes from Auth::id() alone, so this
+     * cannot be pointed at another trainee's profile. (The admin equivalent,
+     * admin.reports.descriptive-roll.student.pdf, does accept a username — it sits behind
+     * the admin report routes.)
+     *
+     * The gate is intentionally STRICTER than the document. The PDF renders only the first
+     * two steps (FIRST_TWO_STEP_LIMIT — the descriptive roll proper, matching the admin PDF
+     * and both ZIP exports), but the download is withheld until every APPLICABLE step is
+     * done. That is an academy policy — a trainee should have finished their registration
+     * before self-printing from it — not a constraint of the document's contents. Do not
+     * "fix" the two to agree by relaxing the gate: the stricter check is the requirement.
+     */
+    public function myDescriptiveRollPdf(FcForm $form)
+    {
+        $userId = (int) Auth::id();
+        abort_unless($userId !== 0, 403);
+
+        $flow  = app(FcRegistrationFlowService::class);
+        // Explicit column list (G1) — only what the completion and applicability checks read.
+        $steps = $form->activeSteps()->get(FcStepApplicabilityService::stepColumns());
+        $status = $flow->buildStepCompletionByStepId($form, $steps, $userId);
+
+        [$done, $total] = app(FcStepApplicabilityService::class)->progress($steps, $userId, $status);
+
+        if ($total < 1 || $done < $total) {
+            return redirect()
+                ->route('fc-reg.forms.dashboard', $form)
+                ->with('error', 'Please complete all the steps before downloading your descriptive roll.');
+        }
+
+        $identifier = (string) fc_user_val('student_master_firsts', $userId);
+        $bytes = $this->fcStudentRegistrationPdfBytes($identifier, self::FIRST_TWO_STEP_LIMIT);
+
+        if ($bytes === null) {
+            return redirect()
+                ->route('fc-reg.forms.dashboard', $form)
+                ->with('error', 'Your registration details could not be found. Please contact the academy.');
+        }
+
+        $filename = 'Descriptive_Roll_'.$identifier.'_'.now()->format('Ymd_His').'.pdf';
 
         return response($bytes, 200, [
             'Content-Type'        => 'application/pdf',
@@ -2115,7 +2222,7 @@ class ReportController extends Controller
             'username'       => $this->fcPdfSanitizeText($username),
             'userId'         => $this->fcPdfSanitizeText($username),
             'step1'          => $step1,
-            'pdfFullName'    => $this->fcPdfSanitizeText((string) ($step1->full_name ?? '')),
+            'pdfFullName'    => $this->fcPdfSanitizeText($this->fcPdfDisplayName($step1)),
             'printedAt'      => $printedAt,
             'photoDataUri'   => $photoDataUri,
             'pdfFontFaceCss' => $pdfFontFaceCss,
@@ -2169,7 +2276,7 @@ class ReportController extends Controller
         return [
             'sections'     => $sections,
             'userId'       => $this->fcPdfSanitizeText($username),
-            'pdfFullName'  => $this->fcPdfSanitizeText((string) ($step1->full_name ?? '')),
+            'pdfFullName'  => $this->fcPdfSanitizeText($this->fcPdfDisplayName($step1)),
             'printedAt'    => $this->fcPdfSanitizeText(now()->format('d/m/Y H:i')),
             'photoDataUri' => $this->fcRegistrationPhotoDataUri($step1->photo_path),
         ];

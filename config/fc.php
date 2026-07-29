@@ -65,4 +65,22 @@ return [
     */
     'migrate_match_cache_ttl' => (int) env('FC_MIGRATE_MATCH_CACHE_TTL', 300),
 
+    /*
+    |--------------------------------------------------------------------------
+    | FC form structure cache (feature-flagged, default OFF)
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, the SHARED form structure (steps / fields / groups) rendered by
+    | GenericFormController is cached in Redis with a per-form epoch, following the
+    | Programme (Course) module pattern. Only structure that is identical for every
+    | trainee is cached — per-user data (a trainee's own answers) is NEVER cached here.
+    | Invalidated instantly on an admin form edit (epoch bump) and by the TTL backstop.
+    |
+    | Leave OFF until validated on staging. Enable with FC_FORM_STRUCTURE_CACHE_ENABLED=true
+    | (and re-run `php artisan config:cache` if you cache config on prod).
+    |
+    */
+    'form_structure_cache_enabled' => (bool) env('FC_FORM_STRUCTURE_CACHE_ENABLED', false),
+    'form_structure_cache_ttl' => (int) env('FC_FORM_STRUCTURE_CACHE_TTL', 3600),
+
 ];

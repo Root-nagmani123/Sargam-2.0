@@ -13,12 +13,27 @@ class FcForm extends Model
 {
     protected $fillable = [
         'form_name', 'form_slug', 'description', 'icon',
-        'consolidation_table', 'user_identifier', 'is_active', 'course_master_pk',
+        'consolidation_table', 'user_identifier', 'registration_requires_all_steps',
+        'is_active', 'course_master_pk',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'registration_requires_all_steps' => 'boolean',
     ];
+
+    /**
+     * Whether fc_registration_master.is_registered for this form means "every applicable
+     * step done" rather than the default "first two steps done". Opt-in per form so the
+     * rule can change for an upcoming intake without touching existing cohorts.
+     *
+     * Reads defensively: the column is absent until the migration runs, and a form loaded
+     * from a cache written before it would not carry the attribute.
+     */
+    public function registrationRequiresAllSteps(): bool
+    {
+        return (bool) ($this->registration_requires_all_steps ?? false);
+    }
 
     public function courseMaster(): BelongsTo
     {

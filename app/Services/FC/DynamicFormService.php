@@ -708,11 +708,11 @@ class DynamicFormService
             }
         }
 
-        if ($rosterPk && \Illuminate\Support\Facades\Schema::hasTable('fc_registration_master')) {
+        if ($rosterPk && fc_schema_has_table('fc_registration_master')) {
             $courseMasterPk = \Illuminate\Support\Facades\DB::table('fc_registration_master')
                 ->where('pk', $rosterPk)
                 ->value('course_master_pk');
-            if ($courseMasterPk && \Illuminate\Support\Facades\Schema::hasTable('course_master')) {
+            if ($courseMasterPk && fc_schema_has_table('course_master')) {
                 $courseName = trim((string) (\Illuminate\Support\Facades\DB::table('course_master')
                     ->where('pk', $courseMasterPk)
                     ->value('course_name') ?? ''));
@@ -755,17 +755,19 @@ class DynamicFormService
         $uCol = $this->userCol($targetTable);
         $uVal = $this->userVal($targetTable, $userId);
 
-        DB::table($targetTable)->updateOrInsert(
-            [$uCol => $uVal],
-            [
-                $field->target_column => $path,
-                'updated_at' => now(),
-            ]
-        );
-
+        // One read, then update or insert — created_at on insert / back-filled if missing,
+        // updated_at always. Replaces updateOrInsert + a re-read + a conditional update.
+        $write    = [$field->target_column => $path, 'updated_at' => now()];
         $existing = DB::table($targetTable)->where($uCol, $uVal)->first();
-        if ($existing && empty($existing->created_at)) {
-            DB::table($targetTable)->where($uCol, $uVal)->update(['created_at' => now()]);
+        if ($existing) {
+            if (empty($existing->created_at)) {
+                $write['created_at'] = now();
+            }
+            DB::table($targetTable)->where($uCol, $uVal)->update($write);
+        } else {
+            $write[$uCol] = $uVal;
+            $write['created_at'] = now();
+            DB::table($targetTable)->insert($write);
         }
     }
 
@@ -816,7 +818,7 @@ class DynamicFormService
             $userKey = fc_user_col($trackerTable);
             $trackerKey = [$userKey => fc_user_val($trackerTable, $userId)];
             $trackerData = [$step->tracker_column => 1, 'updated_at' => now()];
-            if (Schema::hasColumn($trackerTable, 'form_id')) {
+            if (fc_schema_has_column($trackerTable, 'form_id')) {
                 $trackerKey['form_id'] = $form->id;
                 $trackerData['form_id'] = $form->id;
             }
@@ -913,14 +915,18 @@ class DynamicFormService
                     $data[$step->completion_column] = 1;
                 }
 
-                DB::table($table)->updateOrInsert(
-                    [$uCol => $uVal],
-                    array_merge($data, ['updated_at' => now()])
-                );
-
-                $existing = DB::table($table)->where($uCol, $uVal)->first();
-                if ($existing && empty($existing->created_at)) {
-                    DB::table($table)->where($uCol, $uVal)->update(['created_at' => now()]);
+                // Reuse $existing (already read above) to update-or-insert without a second
+                // read — skips updateOrInsert's internal SELECT and the re-read. created_at is
+                // written on insert and back-filled for legacy rows missing it; updated_at always.
+                $write = array_merge($data, ['updated_at' => now()]);
+                if ($existing) {
+                    if (empty($existing->created_at)) {
+                        $write['created_at'] = now();
+                    }
+                    DB::table($table)->where($uCol, $uVal)->update($write);
+                } else {
+                    $write['created_at'] = now();
+                    DB::table($table)->insert($write);
                 }
             }
 
@@ -941,7 +947,7 @@ class DynamicFormService
                 $trackerTable = $form->trackerStorageTable();
                 $userKey = fc_user_col($trackerTable);
                 $trackerKey = [$userKey => fc_user_val($trackerTable, $userId)];
-                if (Schema::hasColumn($trackerTable, 'form_id')) {
+                if (fc_schema_has_column($trackerTable, 'form_id')) {
                     $trackerKey['form_id'] = $form->id;
                     $trackerData['form_id'] = $form->id;
                 }
@@ -1012,13 +1018,20 @@ class DynamicFormService
             if (! $useUpsert) {
                 DB::table($gt)->where($uCol, $uVal)->delete();
 
+                // Build every row first, then insert in a SINGLE statement instead of one
+                // INSERT per row. Same rows are written (identical columns per row), just
+                // one round-trip instead of N — cheaper under concurrent registration saves.
+                $bulk = [];
                 foreach ($rows as $row) {
                     $data = [$uCol => $uVal, 'created_at' => now(), 'updated_at' => now()];
                     foreach ($fields as $field) {
                         $value = $row[$field->field_name] ?? null;
                         $data[$field->target_column] = $this->normalizeGroupFieldStoredValue($field, $value);
                     }
-                    DB::table($gt)->insert($data);
+                    $bulk[] = $data;
+                }
+                if ($bulk !== []) {
+                    DB::table($gt)->insert($bulk);
                 }
             } else {
                 // upsert mode (single-row tables like spouse, hobbies, dress sizes)
@@ -1043,10 +1056,18 @@ class DynamicFormService
                     return;
                 }
 
-                DB::table($gt)->updateOrInsert([$uCol => $uVal], $data);
+                // One read, then update or insert — replaces updateOrInsert + a re-read + a
+                // conditional created_at update (3-4 queries -> 2). created_at is written on
+                // insert and back-filled for legacy rows missing it; updated_at always. Same result.
                 $existing = DB::table($gt)->where($uCol, $uVal)->first();
-                if ($existing && ! $existing->created_at) {
-                    DB::table($gt)->where($uCol, $uVal)->update(['created_at' => now()]);
+                if ($existing) {
+                    if (empty($existing->created_at)) {
+                        $data['created_at'] = now();
+                    }
+                    DB::table($gt)->where($uCol, $uVal)->update($data);
+                } else {
+                    $data['created_at'] = now();
+                    DB::table($gt)->insert($data);
                 }
             }
         });
@@ -1632,10 +1653,10 @@ class DynamicFormService
     {
         $key = $table.'.'.$column;
         if (! array_key_exists($key, self::$columnTypeCache)) {
-            if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $column)) {
+            if (! fc_schema_has_table($table) || ! fc_schema_has_column($table, $column)) {
                 self::$columnTypeCache[$key] = null;
             } else {
-                self::$columnTypeCache[$key] = $this->fetchMysqlColumnType($table, $column);
+                self::$columnTypeCache[$key] = $this->cachedColumnType($table, $column);
             }
         }
 
@@ -1666,6 +1687,38 @@ class DynamicFormService
         }
 
         return strtolower((string) $row->data_type);
+    }
+
+    /**
+     * Column data type, cached ACROSS requests (keyed by the schema cache version so a
+     * runtime ALTER still invalidates it, with a TTL backstop). Without this the per-field
+     * type check runs a fresh information_schema query per column on every save — the
+     * dominant cost of saving a wide step (e.g. Descriptive Roll ~200 metadata queries).
+     * fc_schema_has_* already guards existence, so only real columns reach here.
+     */
+    protected function cachedColumnType(string $table, string $column): ?string
+    {
+        $ttl = (int) config('fc.schema_cache_ttl', 86400);
+        $ttl = $ttl > 0 ? $ttl : 86400;
+        $cacheKey = 'fc_col_type:'.DB::getDatabaseName().':v'.fc_schema_cache_version().':'.$table.'.'.$column;
+
+        try {
+            $cached = Cache::get($cacheKey);
+            if ($cached !== null) {
+                return $cached;
+            }
+
+            // Only ever cache a real result — never persist a null (a transient failure or a
+            // missing column), so a hiccup can't poison the type for the whole TTL (cf. F-02).
+            $type = $this->fetchMysqlColumnType($table, $column);
+            if ($type !== null) {
+                Cache::put($cacheKey, $type, $ttl);
+            }
+
+            return $type;
+        } catch (\Throwable $e) {
+            return $this->fetchMysqlColumnType($table, $column);
+        }
     }
 
     protected function coerceToBoolInt(mixed $value): bool

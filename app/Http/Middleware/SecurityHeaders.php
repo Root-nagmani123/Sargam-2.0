@@ -63,13 +63,29 @@ class SecurityHeaders
 
         // Prevent caching of authenticated / dynamic HTML so sensitive pages are
         // not restored via Back / Forward / Refresh, and emit a single consistent
-        // Cache-Control. Limited to HTML responses so JSON APIs, file downloads
-        // and static assets are untouched; any explicit public/max-age caching a
-        // route sets is preserved.
+        // Cache-Control. Also covers generated file downloads (Excel/PDF exports
+        // sent as attachments): these are built per-request from the current
+        // filters, so a browser/proxy-cached copy re-serves a stale export (e.g.
+        // last month's Sale Voucher rows) even though the live HTML report is
+        // correct. JSON APIs and static assets are untouched; any explicit
+        // public/max-age caching a route sets is preserved.
         $contentType = (string) $headers->get('Content-Type');
+        $disposition = strtolower((string) $headers->get('Content-Disposition'));
+        $isAttachment = strpos($disposition, 'attachment') !== false;
+        $existing = strtolower((string) $headers->get('Cache-Control'));
+
         if (stripos($contentType, 'text/html') !== false) {
-            $existing = strtolower((string) $headers->get('Cache-Control'));
             if ($existing === '' || (strpos($existing, 'max-age') === false && strpos($existing, 'public') === false)) {
+                $headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+                $headers->set('Pragma', 'no-cache');
+            }
+        } elseif ($isAttachment) {
+            // Generated exports (BinaryFileResponse) default to "Cache-Control:
+            // public"; that lets the browser/proxy re-serve a stale download for
+            // the same URL. Force no-store unless the route deliberately opted
+            // into caching via an explicit max-age (bare "public" is only the
+            // framework default, not an intentional caching choice).
+            if (strpos($existing, 'max-age') === false) {
                 $headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
                 $headers->set('Pragma', 'no-cache');
             }
