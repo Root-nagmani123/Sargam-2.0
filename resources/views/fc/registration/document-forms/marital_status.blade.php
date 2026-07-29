@@ -100,11 +100,11 @@
 
                 <div class="ms-sign">
                     <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:.5rem;">
-                        <span>दिनांक / Date: <input type="date" name="declaration_date" class="blank blank--sm" value="{{ old('declaration_date', '2026-08-24') }}" readonly></span>
+                        <span>दिनांक / Date: <input type="date" name="declaration_date" class="blank blank--sm" value="{{ old('declaration_date', fc_document_date('iso')) }}" readonly></span>
                         <span>हस्ताक्षर / Full Signature: ______________________</span>
                     </div>
                     <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:.5rem; margin-top:.4rem;">
-                        <span>स्थान / Place: <input type="text" name="place" class="blank" value="{{ old('place', 'Mussoorie') }}" readonly></span>
+                        <span>स्थान / Place: <input type="text" name="place" class="blank" value="{{ old('place', config('fc.document_place')) }}" readonly></span>
                         <span>नाम स्पष्ट अक्षरों में / Name (in Block Letters): <span class="mirror-out" data-mirror-out="name">&nbsp;</span></span>
                     </div>
                     <div style="text-align:right; margin-top:.4rem;">पदनाम / Designation: <input type="text" name="designation" class="blank blank--wide" value="{{ $val('designation') }}" placeholder="name of service followed by (Probationer)"></div>

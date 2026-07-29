@@ -5,7 +5,7 @@
     };
     $g       = fn ($k) => trim((string) ($data[$k] ?? ''));
     $desig   = $g('designation');
-    $dated   = '24-08-2026';   // hard-frozen date, overrides any saved value
+    $dated   = fc_document_date();   // hard-frozen date, overrides any saved value
     $sigSrc  = $data['_signature_src'][0] ?? null;
     $relations = [
         ['Father', 'पिता / Father'],

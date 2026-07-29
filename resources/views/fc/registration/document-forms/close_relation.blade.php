@@ -133,7 +133,7 @@
                 <div class="col-md-6 text-md-end">
                     <div>हस्ताक्षर / Signature: ______________________</div>
                     <div>पदनाम / Designation: <input type="text" name="designation" class="blank" value="{{ $val('designation') }}" style="width:200px;"></div>
-                    <div>तारीख / Date: <input type="date" name="declaration_date" class="blank" value="{{ old('declaration_date', '2026-08-24') }}" style="width:200px;" readonly></div>
+                    <div>तारीख / Date: <input type="date" name="declaration_date" class="blank" value="{{ old('declaration_date', fc_document_date('iso')) }}" style="width:200px;" readonly></div>
                 </div>
             </div>
 

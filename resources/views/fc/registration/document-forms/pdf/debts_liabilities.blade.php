@@ -7,7 +7,7 @@
     $name    = $g('officer_name');
     $service = $g('service');
     $ason    = $fmt($data['as_on_date'] ?? '');
-    $dated   = '24-08-2026';   // hard-frozen date, overrides any saved value
+    $dated   = fc_document_date();   // hard-frozen date, overrides any saved value
     $rows    = $data['_tables']['liabilities'] ?? [];
     $sigSrc  = $data['_signature_src'][0] ?? null;
     $blank = function ($v, $w = '150pt') {

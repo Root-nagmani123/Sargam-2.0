@@ -114,8 +114,8 @@
 
             <div class="fm-sign row">
                 <div class="col-md-6">
-                    <div>Place / स्थान: <input type="text" name="place" class="fm-blank" value="{{ old('place', 'Mussoorie') }}" readonly></div>
-                    <div>Date / दिनांक: <input type="date" name="declaration_date" class="fm-blank" value="{{ old('declaration_date', '2026-08-24') }}" readonly></div>
+                    <div>Place / स्थान: <input type="text" name="place" class="fm-blank" value="{{ old('place', config('fc.document_place')) }}" readonly></div>
+                    <div>Date / दिनांक: <input type="date" name="declaration_date" class="fm-blank" value="{{ old('declaration_date', fc_document_date('iso')) }}" readonly></div>
                 </div>
                 <div class="col-md-6 text-md-end">Signature of the Government Servant / सरकारी कर्मचारी के हस्ताक्षर<br>______________________</div>
             </div>

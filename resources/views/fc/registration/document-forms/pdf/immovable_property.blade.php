@@ -8,7 +8,7 @@
     $post    = $g('present_post');
     $cadre   = $g('cadre');
     $pay     = $g('present_pay');
-    $dated   = '24-08-2026';   // hard-frozen date, overrides any saved value
+    $dated   = fc_document_date();   // hard-frozen date, overrides any saved value
     $asOn    = $fmt($data['as_on_date'] ?? '');
     $rows    = $data['_tables']['properties'] ?? [];
     $sigSrc  = $data['_signature_src'][0] ?? null;

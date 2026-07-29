@@ -6,7 +6,7 @@
     $name    = trim((string) ($data['officer_name'] ?? ''));
     $desig   = trim((string) ($data['designation'] ?? ''));
     $place   = trim((string) ($data['place'] ?? ''));
-    $dated   = '24-08-2026';   // hard-frozen date, overrides any saved value
+    $dated   = fc_document_date();   // hard-frozen date, overrides any saved value
     $variant = (string) ($data['form_variant'] ?? '');
     $isForm7 = strpos($variant, 'Form 7') === 0;
     $tag     = $isForm7 ? 'UNMARRIED' : (strpos($variant,'Form 8')===0 ? 'MARRIED' : '');

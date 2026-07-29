@@ -8,7 +8,7 @@
     $service = trim((string) ($data['service'] ?? ''));
     $adate   = $fmt($data['date_of_assumption'] ?? '');
     $time    = trim((string) ($data['time_of_assumption'] ?? ''));
-    $ddate   = '24-08-2026';   // hard-frozen date, overrides any saved value
+    $ddate   = fc_document_date();   // hard-frozen date, overrides any saved value
     $sigSrc  = $data['_signature_src'][0] ?? null;
     $hi      = $data['_hi'] ?? [];   // candidate-typed Hindi values (blank if none)
 
@@ -69,7 +69,7 @@
         <table class="foot">
             <tr>
                 <td class="lft" style="width:45%;">
-                    स्थान / Place: <b>मसूरी / Mussoorie</b><br>
+                    स्थान / Place: <b>{{ config('fc.document_place_hi') }} / {{ config('fc.document_place') }}</b><br>
                     दिनांक / Dated: <b>{{ $ddate ?: ' ' }}</b>
                 </td>
                 <td class="rgt" style="width:55%;">

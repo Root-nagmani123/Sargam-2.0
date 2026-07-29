@@ -87,9 +87,9 @@
                         <input type="text" name="designation" class="blank" value="{{ $val('designation') }}" placeholder="name of your service followed by (Probationer)"></div>
                     <div style="margin-top:.5rem;">
                         <span style="display:inline-block; width:42%; vertical-align:top;">स्थान / Place:
-                            <input type="text" name="place" class="blank" value="{{ old('place', $data['place'] ?? 'Mussoorie') }}"></span>
+                            <input type="text" name="place" class="blank" value="{{ old('place', $data['place'] ?? config('fc.document_place')) }}"></span>
                         <span>तारीख / Dated:
-                            <input type="date" name="declaration_date" class="blank blank--sm" value="{{ old('declaration_date', '2026-08-24') }}" readonly></span>
+                            <input type="date" name="declaration_date" class="blank blank--sm" value="{{ old('declaration_date', fc_document_date('iso')) }}" readonly></span>
                     </div>
                 </div>
 

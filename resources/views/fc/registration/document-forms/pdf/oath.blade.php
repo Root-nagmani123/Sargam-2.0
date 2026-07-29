@@ -5,7 +5,7 @@
     };
     $name    = trim((string) ($data['officer_name'] ?? ''));
     $service = trim((string) ($data['service'] ?? ''));
-    $dated   = '24-08-2026';   // hard-frozen date, overrides any saved value
+    $dated   = fc_document_date();   // hard-frozen date, overrides any saved value
     $sigSrc  = $data['_signature_src'][0] ?? null;
     $hi      = $data['_hi'] ?? [];   // candidate-typed Hindi values (blank if none)
 
