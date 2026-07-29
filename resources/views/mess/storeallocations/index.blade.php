@@ -1,49 +1,235 @@
 @extends('admin.layouts.master')
 @section('title', 'Mess Store Allocation')
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<style>
+    /* ── Mess Store Allocation — new design chrome (built on --ds-* tokens + programme-dt system) ── */
+    .mess-store-allocation-page .store-alloc-card {
+        background: var(--ds-surface, #fff);
+        border-radius: var(--ds-radius-card, 8px);
+        box-shadow: var(--ds-shadow, 0 1px 3px rgba(16, 24, 40, .1));
+    }
+
+    /* Download / Print bar (matches the Attendance / Store Master download button) */
+    .mess-store-allocation-page .store-alloc-export-btn {
+        height: var(--ds-control-h, 40px);
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        padding: 0 1.1rem;
+        font-size: .9375rem;
+        font-weight: 500;
+        color: var(--ds-primary, #004a93);
+        border: 1px solid var(--ds-line, #d0d5dd);
+        border-radius: var(--ds-radius-2, 8px);
+        background: var(--ds-surface, #fff);
+    }
+
+    .mess-store-allocation-page .store-alloc-export-btn:hover {
+        background: #f2f7fc;
+        border-color: var(--ds-primary, #004a93);
+        color: var(--ds-primary, #004a93);
+    }
+
+    .mess-store-allocation-page .store-alloc-export-btn i { font-size: 1.15rem; line-height: 1; }
+
+    /* Collapse the leftover (now-emptied) DataTables control wrappers once the
+       global enhancer has relocated search / pagination into the slots below. */
+    .mess-store-allocation-page .dt-top:empty,
+    .mess-store-allocation-page .dt-foot:empty { display: none; margin: 0; }
+
+    /* Column visibility is presented as a programme-style modal (see below), so
+       the mess Column-manager's own injected dropdown stays hidden — it remains
+       the underlying state engine that keeps Download/Print column-sync correct. */
+    .mess-store-allocation-page .mess-col-manager-dropdown { display: none !important; }
+
+    /* Column Visibility modal grid tiles (mirrors programme / attendance). */
+    #storeAllocColumnToggleGrid .colvis-item {
+        cursor: pointer;
+        transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    #storeAllocColumnToggleGrid .colvis-item:hover {
+        border-color: var(--ds-primary, #004a93) !important;
+        background-color: rgba(0, 74, 147, 0.04);
+    }
+
+    #storeAllocColumnToggleGrid .colvis-item .form-check-input { cursor: pointer; flex-shrink: 0; }
+
+    /* Row actions cell */
+    .mess-store-allocation-page #storeAllocationTable .store-alloc-actions-cell { vertical-align: middle !important; }
+    .mess-store-allocation-page #storeAllocationTable .store-alloc-actions-cell .btn-edit-allocation { color: var(--ds-primary, #004a93) !important; }
+
+    /* Pagination → arrows + numbers only (drop First/Last, swap word labels). */
+    .mess-store-allocation-page .programme-dt-footer .paginate_button.first,
+    .mess-store-allocation-page .programme-dt-footer .paginate_button.last { display: none; }
+
+    .mess-store-allocation-page .programme-dt-footer .paginate_button.previous .page-link,
+    .mess-store-allocation-page .programme-dt-footer .paginate_button.next .page-link { font-size: 0; }
+
+    .mess-store-allocation-page .programme-dt-footer .paginate_button.previous .page-link::before { content: "\2039"; font-size: 1.1rem; }
+    .mess-store-allocation-page .programme-dt-footer .paginate_button.next .page-link::before { content: "\203A"; font-size: 1.1rem; }
+
+    /* ── Add / Edit Store Allocation modals (clean rounded card, per design.md) ──
+       Scoped under .store-alloc-modal because the modals sit OUTSIDE the
+       .mess-store-allocation-page wrapper. */
+    .store-alloc-modal .modal-content {
+        border-radius: 16px;
+        box-shadow: 0 24px 48px rgba(16, 24, 40, .18);
+    }
+
+    .store-alloc-modal .modal-header {
+        padding: 1.25rem 1.5rem 1rem;
+        border-bottom: 1px solid var(--ds-line, #eef2f6);
+        background: #fff;
+        border-top-left-radius: 16px;
+        border-top-right-radius: 16px;
+    }
+
+    .store-alloc-modal .modal-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--ds-ink, #1f2937);
+    }
+
+    .store-alloc-modal .modal-body { padding: 1.25rem 1.5rem; }
+
+    .store-alloc-modal .modal-footer {
+        padding: 1rem 1.5rem 1.5rem;
+        border-top: 1px solid var(--ds-line, #eef2f6);
+        background: #fff;
+        border-bottom-left-radius: 16px;
+        border-bottom-right-radius: 16px;
+    }
+
+    /* Field labels above inputs */
+    .store-alloc-modal .modal-body .form-label {
+        font-weight: 600;
+        font-size: .875rem;
+        color: var(--ds-ink, #1f2937);
+        margin-bottom: .375rem;
+    }
+
+    /* Top "Allocation Details" controls — date input + Choices-enhanced store select */
+    .store-alloc-modal .alloc-details-card .form-control,
+    .store-alloc-modal .alloc-details-card .choices__inner {
+        min-height: 44px;
+        border-radius: 8px;
+        border: 1px solid var(--ds-line, #d0d5dd);
+        font-size: .9375rem;
+        color: var(--ds-ink, #1f2937);
+        padding: .5rem .875rem;
+    }
+
+    .store-alloc-modal .alloc-details-card .choices__inner {
+        display: flex;
+        align-items: center;
+        background: #fff;
+    }
+
+    .store-alloc-modal .alloc-details-card .form-control::placeholder { color: #98a2b3; }
+
+    .store-alloc-modal .alloc-details-card .form-control:focus,
+    .store-alloc-modal .alloc-details-card .choices.is-focused .choices__inner {
+        border-color: var(--ds-primary, #004a93);
+        box-shadow: 0 0 0 3px rgba(0, 74, 147, .12);
+    }
+
+    /* Section cards: soften the theme card to a hairline + white header */
+    .store-alloc-modal .modal-body .card {
+        border: 1px solid var(--ds-line, #e5e7eb);
+        border-radius: 10px;
+        box-shadow: none;
+    }
+
+    .store-alloc-modal .modal-body .card-header {
+        background: #fff;
+        border-bottom: 1px solid var(--ds-line, #e5e7eb);
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+    }
+
+    /* Footer buttons — red-outlined Cancel + solid blue submit (both 44px / 8px / 600) */
+    .store-alloc-modal .store-alloc-modal-cancel,
+    .store-alloc-modal .store-alloc-modal-submit {
+        min-height: 44px;
+        border-radius: 8px;
+        padding: .5rem 1.75rem;
+        font-weight: 600;
+        font-size: .9375rem;
+    }
+
+    .store-alloc-modal .store-alloc-modal-cancel {
+        color: var(--ds-secondary, #d92d20);
+        background: #fff;
+        border: 1px solid var(--ds-secondary, #d92d20);
+    }
+
+    .store-alloc-modal .store-alloc-modal-cancel:hover {
+        background: #fff5f5;
+        color: var(--ds-secondary, #d92d20);
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="container-fluid mess-store-allocation-page">
-    <x-breadcrum title="Mess Store Allocation"></x-breadcrum>
-
-   <div class="card border-0 shadow-sm rounded-3">
-    <div class="card-body">
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <div>
-            <h4 class="mb-1 fw-bold text-dark">Mess Store Allocation</h4>
-            <p class="mb-0 text-muted small">View and manage allocation of items from sub stores to mess.</p>
-        </div>
-        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#createStoreAllocationModal">
-            <span class="material-symbols-rounded" style="font-size: 1.1rem;">add</span>
+    <x-breadcrum title="Mess Store Allocation" :showBack="false">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createStoreAllocationModal">
+            <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
             <span>Add Mess Store Allocation</span>
         </button>
+    </x-breadcrum>
+
+    {{-- Download / Print bar (branded server-side exports — see admin.mess.storeallocations.export) --}}
+    <div class="d-flex justify-content-end gap-2 mb-3">
+        <button type="button" class="btn store-alloc-export-btn border-0" id="storeAllocDownloadBtn">
+            <i class="material-symbols-rounded">download</i>
+            <span>Download</span>
+        </button>
+        <button type="button" class="btn store-alloc-export-btn border-0" id="storeAllocPrintBtn">
+            <i class="material-symbols-rounded">print</i>
+            <span>Print</span>
+        </button>
     </div>
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+
+    <div class="card store-alloc-card border-0">
+        <div class="card-body">
+            {{-- Toolbar: Columns modal trigger + search (the global enhancer relocates the search box here) --}}
+            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3">
+                <button type="button" class="btn programme-dt-btn-columns" id="btnStoreAllocColumns"
+                        data-bs-toggle="modal" data-bs-target="#storeAllocColumnVisibilityModal" title="Show / hide columns">
+                    <span>Columns</span>
+                    <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                </button>
+                <div class="programme-dt-search" data-dt-search-for="storeAllocationTable"></div>
+            </div>
+
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    <table class="table programme-dt-table align-middle w-100 mb-0" id="storeAllocationTable">
+                        <thead>
+                            <tr>
+                                <th>S. No.</th>
+                                <th>Store Name</th>
+                                <th>Item Name</th>
+                                <th>Item Type</th>
+                                <th>Number of Items</th>
+                                <th>Date</th>
+                                <th>Total</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            {{-- Footer: pagination (left) + "Showing [N] of M items" (right), populated by the global enhancer --}}
+            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3" data-dt-footer-for="storeAllocationTable"></div>
         </div>
-    @endif
-    <hr class="my-2">
-
-    {{-- DataTables-style top: length (left) + search (right) --}}
-
-    <div class="table-responsive">
-        <table class="table align-middle mb-0 w-100" id="storeAllocationTable">
-            <thead>
-                <tr>
-                    <th style="width: 60px;">S.No</th>
-                    <th>Store Name</th>
-                    <th>Item Name</th>
-                    <th>Item Type</th>
-                    <th>Number of Items</th>
-                    <th>Date</th>
-                    <th class="text-center">Action</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
     </div>
-    </div>
-   </div>
 </div>
 
 @include('components.mess-master-datatables', [
@@ -51,14 +237,16 @@
     'searchPlaceholder' => 'Search store allocations...',
     'orderColumn' => 5,
     'orderDir' => 'desc',
-    'actionColumnIndex' => 6,
-    'infoLabel' => 'store allocations',
+    'actionColumnIndex' => 7,
+    'infoLabel' => 'items',
     'searchDelay' => 0,
     'searchSmart' => false,
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.storeallocations.index'),
+    'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
     'serverSideColumnDefs' => [
-        ['className' => 'text-center align-middle store-alloc-actions-cell', 'targets' => [6]],
+        ['className' => 'text-end align-middle', 'targets' => [6]],
+        ['className' => 'text-center align-middle store-alloc-actions-cell', 'targets' => [7]],
     ],
 ])
 @include('mess.partials.modal-dropdown-stability')
@@ -202,17 +390,17 @@
 {{-- Choices.js for enhanced dropdowns --}}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
 <script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
-<div class="modal fade" id="createStoreAllocationModal" tabindex="-1" aria-labelledby="createStoreAllocationModalLabel" aria-hidden="true">
+<div class="modal fade store-alloc-modal" id="createStoreAllocationModal" tabindex="-1" aria-labelledby="createStoreAllocationModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
             <form method="POST" action="{{ route('admin.mess.storeallocations.store') }}" id="createAllocationForm" novalidate>
                 @csrf
-                <div class="modal-header border-bottom bg-light">
-                    <h5 class="modal-title fw-semibold" id="createStoreAllocationModalLabel">Add Mess Store Allocation</h5>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createStoreAllocationModalLabel">Add Mess Store Allocation</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="card mb-4">
+                    <div class="card alloc-details-card mb-4">
                         <div class="card-header bg-white py-2">
                             <h6 class="mb-0 fw-semibold text-primary">Allocation Details</h6>
                         </div>
@@ -275,9 +463,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Store Allocation</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn store-alloc-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary store-alloc-modal-submit">Save Store Allocation</button>
                 </div>
             </form>
         </div>
@@ -285,18 +473,18 @@
 </div>
 
 {{-- Edit Store Allocation Modal --}}
-<div class="modal fade" id="editStoreAllocationModal" tabindex="-1" aria-labelledby="editStoreAllocationModalLabel" aria-hidden="true">
+<div class="modal fade store-alloc-modal" id="editStoreAllocationModal" tabindex="-1" aria-labelledby="editStoreAllocationModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
             <form method="POST" id="editAllocationForm" action="" novalidate>
                 @csrf
                 @method('PUT')
-                <div class="modal-header border-bottom bg-light">
-                    <h5 class="modal-title fw-semibold" id="editStoreAllocationModalLabel">Edit Mess Store Allocation</h5>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editStoreAllocationModalLabel">Edit Mess Store Allocation</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="card mb-4">
+                    <div class="card alloc-details-card mb-4">
                         <div class="card-header bg-white py-2">
                             <h6 class="mb-0 fw-semibold text-primary">Allocation Details</h6>
                         </div>
@@ -342,9 +530,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update Store Allocation</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn store-alloc-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary store-alloc-modal-submit">Update Store Allocation</button>
                 </div>
             </form>
         </div>
@@ -850,6 +1038,150 @@
     document.addEventListener('DOMContentLoaded', function() {
         initChoices(document.getElementById('createStoreAllocationModal'));
         initChoices(document.getElementById('editStoreAllocationModal'));
+    });
+})();
+</script>
+{{-- Column Visibility Modal (programme/attendance style). It toggles the mess
+     Column-manager state so Download / Print exports stay in sync with the view. --}}
+<div class="modal fade" id="storeAllocColumnVisibilityModal" tabindex="-1" aria-labelledby="storeAllocColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="storeAllocColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="storeAllocColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Download / Print → branded server-side report (admin.mess.storeallocations.export).
+     Passes the live search term + the Column-Visibility-chosen columns so the report
+     matches what's on screen. Print opens the PDF inline for printing. --}}
+<script>
+(function () {
+    var TABLE_ID = 'storeAllocationTable';
+    var BASE = @json(route('admin.mess.storeallocations.export'));
+    var $ = window.jQuery;
+
+    function buildUrl(format, inline) {
+        var params = ['format=' + format];
+
+        var dt = ($ && $.fn.DataTable && $.fn.DataTable.isDataTable('#' + TABLE_ID))
+            ? $('#' + TABLE_ID).DataTable() : null;
+        var search = dt ? dt.search() : '';
+        if (search) params.push('search=' + encodeURIComponent(search));
+
+        var cols = (window.MessColumnManager && typeof window.MessColumnManager.resolveExportIndexes === 'function')
+            ? window.MessColumnManager.resolveExportIndexes(TABLE_ID) : null;
+        if (cols && cols.length) params.push('columns=' + encodeURIComponent(cols.join(',')));
+
+        if (inline) params.push('inline=1');
+        return BASE + '?' + params.join('&');
+    }
+
+    var downloadBtn = document.getElementById('storeAllocDownloadBtn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', function () {
+            window.location.href = buildUrl('excel', false);
+        });
+    }
+
+    var printBtn = document.getElementById('storeAllocPrintBtn');
+    if (printBtn) {
+        printBtn.addEventListener('click', function () {
+            window.open(buildUrl('pdf', true), '_blank');
+        });
+    }
+})();
+</script>
+
+{{-- Column Visibility modal ⇄ mess Column-manager bridge.
+     The mess Column-manager owns the visibility state (and drives export column
+     sync); this modal is just its programme-styled UI. --}}
+<script>
+(function () {
+    var TABLE_ID = 'storeAllocationTable';
+    var $ = window.jQuery;
+    var grid = document.getElementById('storeAllocColumnToggleGrid');
+    var modalEl = document.getElementById('storeAllocColumnVisibilityModal');
+    if (!$ || !grid || !modalEl) return;
+
+    function getMgr() {
+        return (window.MessColumnManager && typeof window.MessColumnManager.get === 'function')
+            ? window.MessColumnManager.get(TABLE_ID)
+            : null;
+    }
+
+    function visibleCount(mgr) {
+        return mgr.baseColumns.filter(function (c) {
+            return mgr.state.visibility[String(c.index)] !== false;
+        }).length;
+    }
+
+    function buildGrid() {
+        var mgr = getMgr();
+        if (!mgr || !mgr.baseColumns || !mgr.baseColumns.length) return false;
+
+        grid.innerHTML = '';
+        (mgr.state.order || []).forEach(function (idx) {
+            var col = mgr.baseColumns.filter(function (c) { return c.index === idx; })[0];
+            if (!col) return;
+
+            var isVisible = mgr.state.visibility[String(col.index)] !== false;
+            var inputId = 'storealloccolvis_' + col.index;
+
+            var cell = document.createElement('div');
+            cell.className = 'col-12 col-sm-6 col-md-4';
+
+            var label = document.createElement('label');
+            label.className = 'colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100';
+            label.setAttribute('for', inputId);
+
+            var cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.className = 'form-check-input m-0';
+            cb.id = inputId;
+            cb.checked = isVisible;
+            if (col.locked) cb.disabled = true;
+
+            cb.addEventListener('change', function () {
+                var m = getMgr();
+                if (!m) return;
+                if (!cb.checked && visibleCount(m) <= 1) {
+                    cb.checked = true;
+                    window.alert('At least one column must remain visible.');
+                    return;
+                }
+                m.state.visibility[String(col.index)] = cb.checked;
+                m.saveState();
+                m.apply();
+            });
+
+            var span = document.createElement('span');
+            span.textContent = col.label;
+
+            label.appendChild(cb);
+            label.appendChild(span);
+            cell.appendChild(label);
+            grid.appendChild(cell);
+        });
+        return true;
+    }
+
+    modalEl.addEventListener('show.bs.modal', function () {
+        if (buildGrid()) return;
+        // Column-manager still initialising — retry briefly.
+        var tries = 0;
+        var timer = setInterval(function () {
+            if (buildGrid() || ++tries > 20) clearInterval(timer);
+        }, 100);
     });
 })();
 </script>

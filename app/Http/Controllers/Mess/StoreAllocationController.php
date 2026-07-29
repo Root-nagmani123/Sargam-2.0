@@ -2,16 +2,20 @@
 
 namespace App\Http\Controllers\Mess;
 
+use App\Exports\StoreAllocationMasterExport;
 use App\Http\Controllers\Controller;
 use App\Models\Mess\StoreAllocation;
 use App\Models\Mess\StoreAllocationItem;
 use App\Models\Mess\SubStore;
 use App\Models\Mess\ItemSubcategory;
 use App\Support\DataTableSearchHelper;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Maatwebsite\Excel\Excel as ExcelFormat;
+use Maatwebsite\Excel\Facades\Excel;
 
 class StoreAllocationController extends Controller
 {
@@ -101,6 +105,7 @@ class StoreAllocationController extends Controller
                 DB::raw("{$itemLabelSql} as item_name"),
                 'mic.category_name',
                 'sai.quantity',
+                'sai.total_price',
                 'sa.allocation_date',
             ]);
     }
@@ -138,6 +143,7 @@ class StoreAllocationController extends Controller
             3 => 'mic.category_name',
             4 => 'sai.quantity',
             5 => 'sa.allocation_date',
+            6 => 'sai.total_price',
         ];
 
         if (isset($sortMap[$orderCol])) {
@@ -155,6 +161,9 @@ class StoreAllocationController extends Controller
         $itemName = e($row->item_name ?? 'N/A');
         $categoryName = e($row->category_name ?? 'N/A');
         $quantity = e((string) $row->quantity);
+        $totalDisplay = ($row->total_price !== null && $row->total_price !== '')
+            ? e(number_format((float) $row->total_price, 2))
+            : '—';
         $dateDisplay = '—';
         if (! empty($row->allocation_date)) {
             try {
@@ -190,6 +199,7 @@ class StoreAllocationController extends Controller
             $categoryName,
             $quantity,
             $dateDisplay,
+            $totalDisplay,
             '<div class="text-center align-middle store-alloc-actions-cell">' . $actions . '</div>',
         ];
     }
@@ -208,6 +218,118 @@ class StoreAllocationController extends Controller
         }
 
         return 'COALESCE(' . implode(', ', $parts) . ", '—')";
+    }
+
+    /**
+     * Branded server-side export (Print PDF + styled .xlsx) carrying the official
+     * LBSNAA header. Respects the live search term + the Column-Visibility choice.
+     * See {@see \App\Exports\StoreAllocationMasterExport}.
+     */
+    public function export(Request $request)
+    {
+        $format = strtolower((string) $request->get('format', 'excel'));
+        if (! in_array($format, ['csv', 'excel', 'xlsx', 'pdf'], true)) {
+            $format = 'excel';
+        }
+
+        $search = $request->get('search');
+        $visibleColumns = $this->parseVisibleColumns($request->get('columns'));
+
+        $export = new StoreAllocationMasterExport($search, $visibleColumns);
+        $fileName = 'mess-store-allocation-' . now()->format('Y-m-d_H-i-s');
+
+        if ($format === 'pdf') {
+            @ini_set('memory_limit', '256M');
+            @set_time_limit(120);
+
+            $pdf = Pdf::loadView('mess.storeallocations.export_pdf', array_merge([
+                'headings' => $export->activeHeadings(),
+                'rows' => $export->pdfRows(),
+                'filterLine' => $this->buildExportFilterLine($request),
+                'printedOn' => now()->format('d-m-Y H:i'),
+                'reportTitle' => 'Mess Store Allocation',
+            ], $this->buildExportHeaderData()))
+                ->setPaper('a4', 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'isPhpEnabled' => true,
+                    'dpi' => 96,
+                ]);
+
+            return $request->boolean('inline')
+                ? $pdf->stream($fileName . '.pdf')
+                : $pdf->download($fileName . '.pdf');
+        }
+
+        return Excel::download($export, $fileName . '.xlsx', ExcelFormat::XLSX);
+    }
+
+    /**
+     * On-screen data-column indexes (0..6) the user left visible, or null when
+     * every column shows. S.No (0) is always kept; Action (7) is never exported.
+     *
+     * @return array<int,int>|null
+     */
+    private function parseVisibleColumns($raw): ?array
+    {
+        if (! is_string($raw) || trim($raw) === '') {
+            return null;
+        }
+
+        $cols = array_values(array_unique(array_filter(
+            array_map('intval', explode(',', $raw)),
+            static fn ($v) => $v >= 0 && $v <= 6
+        )));
+
+        return $cols !== [] ? $cols : null;
+    }
+
+    /** "Applied Filters: …" line for the PDF header, or '' when unfiltered. */
+    private function buildExportFilterLine(Request $request): string
+    {
+        $search = $request->get('search');
+
+        return ($search !== null && trim((string) $search) !== '')
+            ? 'Applied Filters:   Search: ' . trim((string) $search)
+            : '';
+    }
+
+    /**
+     * Branded LBSNAA header assets for the PDF export — emblem / Hindi title /
+     * 75-years logo used by the official report layout.
+     *
+     * @return array{logoLeft:?string,logoRight:?string,titleHindi:?string,courseName:string,courseDuration:string}
+     */
+    private function buildExportHeaderData(): array
+    {
+        $toDataUri = static function (string $path): ?string {
+            if (! is_file($path) || ! is_readable($path)) {
+                return null;
+            }
+            $raw = @file_get_contents($path);
+            if ($raw === false) {
+                return null;
+            }
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = match ($ext) {
+                'svg' => 'image/svg+xml',
+                'jpg', 'jpeg' => 'image/jpeg',
+                default => 'image/png',
+            };
+
+            return 'data:' . $mime . ';base64,' . base64_encode($raw);
+        };
+
+        return [
+            'logoLeft' => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
+            'logoRight' => $toDataUri(public_path('admin_assets/images/logos/constitution-75.png'))
+                ?: $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
+            'titleHindi' => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
+            'courseName' => '',
+            'courseDuration' => '',
+        ];
     }
 
     public function store(Request $request)
