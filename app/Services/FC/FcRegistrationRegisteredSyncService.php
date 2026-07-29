@@ -68,7 +68,6 @@ class FcRegistrationRegisteredSyncService
             }
 
             $wasRegistered = (int) ($registration->is_registered ?? 0) === 1;
-            $isRegistered = $this->firstTwoStepsComplete($userCredentialsPk, $form);
             // No form resolved, but this deployment tracks steps per form: the legacy
             // step1_done/step2_done assumption does not hold (a form's second step may use
             // any tracker column — form 21 uses step3_done), so guessing here would write a

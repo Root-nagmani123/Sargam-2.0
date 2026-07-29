@@ -76,13 +76,17 @@ class FcNotifyService
         return ['otp' => $code, 'sent' => $sent];
     }
 
-    /** A2 — Credentials Created */
+    /**
+     * A2 — Credentials Created.
+     * Password is intentionally NOT included (CWE-312: Cleartext Transmission of
+     * Sensitive Information) — the candidate just set their own password and
+     * already knows it. Only the username and login link are sent.
+     */
     public function credentialsCreated(
         ?string $mobile,
         string $participantName,
         string $programmeName,
         string $username,
-        string $password,
         ?int $registrationPk = null,
         ?string $email = null,
     ): void {
@@ -96,7 +100,6 @@ class FcNotifyService
             'Participant_Name' => $participantName !== '' ? $participantName : 'Candidate',
             'Programme_Name' => $this->programme($programmeName),
             'Registration_ID' => $username,
-            'Password' => $password,
             'Portal_Link' => $this->portal($registrationPk),
             'Institute_Name' => $this->institute(),
         ];
@@ -205,18 +208,18 @@ class FcNotifyService
         return $code;
     }
 
-    /** B1 — Individual Form Step Incomplete */
+    /** B1 — Individual Form Step Incomplete. Returns true if at least one channel delivered. */
     public function formStepIncomplete(
         ?string $mobile,
         string $participantName,
         string $stepName,
         ?int $registrationPk = null,
         ?string $email = null,
-    ): void {
+    ): bool {
         $mobile = trim((string) $mobile);
         $email = $this->resolveEmail($email, $registrationPk);
         if ($mobile === '' && $email === null) {
-            return;
+            return false;
         }
 
         $replacements = [
@@ -226,15 +229,18 @@ class FcNotifyService
             'Institute_Name' => $this->institute(),
         ];
 
+        $delivered = false;
         if ($mobile !== '') {
-            $this->sendSms('form_step_incomplete', $mobile, $replacements, $registrationPk);
+            $delivered = $this->sendSms('form_step_incomplete', $mobile, $replacements, $registrationPk) || $delivered;
         }
         if ($email !== null) {
-            $this->sendEmail('form_step_incomplete', $email, $replacements, $registrationPk);
+            $delivered = $this->sendEmail('form_step_incomplete', $email, $replacements, $registrationPk) || $delivered;
         }
+
+        return $delivered;
     }
 
-    /** B2 — Registration Steps Pending */
+    /** B2 — Registration Steps Pending. Returns true if at least one channel delivered. */
     public function registrationPending(
         ?string $mobile,
         string $participantName,
@@ -243,11 +249,11 @@ class FcNotifyService
         ?int $registrationPk = null,
         ?string $email = null,
         ?string $pendingSteps = null,
-    ): void {
+    ): bool {
         $mobile = trim((string) $mobile);
         $email = $this->resolveEmail($email, $registrationPk);
         if ($mobile === '' && $email === null) {
-            return;
+            return false;
         }
 
         $replacements = [
@@ -261,12 +267,15 @@ class FcNotifyService
             'Institute_Name' => $this->institute(),
         ];
 
+        $delivered = false;
         if ($mobile !== '') {
-            $this->sendSms('registration_pending', $mobile, $replacements, $registrationPk);
+            $delivered = $this->sendSms('registration_pending', $mobile, $replacements, $registrationPk) || $delivered;
         }
         if ($email !== null) {
-            $this->sendEmail('registration_pending', $email, $replacements, $registrationPk);
+            $delivered = $this->sendEmail('registration_pending', $email, $replacements, $registrationPk) || $delivered;
         }
+
+        return $delivered;
     }
 
     /** C1 — Exemption Confirmation */

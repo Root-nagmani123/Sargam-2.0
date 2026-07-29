@@ -137,6 +137,27 @@ class FcStepApplicabilityService
     }
 
     /**
+     * Same as notApplicable() but reads ph_value from the roster row already in hand.
+     *
+     * Bulk SMS classification already resolved the exact fc_registration_master row;
+     * re-resolving via credentials pk → username can hit a different duplicate row and
+     * disagree with the form overview report.
+     */
+    public function notApplicableForRoster(FcFormStep $step, object $roster): bool
+    {
+        $rule = $this->ruleFor($step);
+
+        if ($rule === null) {
+            return false;
+        }
+
+        return match ($rule) {
+            self::RULE_PH_VALUE => ! $this->rosterPhValuePresent($roster),
+            default => false,
+        };
+    }
+
+    /**
      * Steps that count towards this trainee's progress denominator.
      *
      * @param  Collection<int, FcFormStep>  $steps
@@ -194,6 +215,13 @@ class FcStepApplicabilityService
     private function hasPhValue(int $userId): bool
     {
         return $this->importedProfileLock->hasPhValue($userId);
+    }
+
+    private function rosterPhValuePresent(object $roster): bool
+    {
+        $value = $roster->ph_value ?? null;
+
+        return $value !== null && $value !== '';
     }
 
     /**

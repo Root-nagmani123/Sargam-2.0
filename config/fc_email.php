@@ -17,7 +17,7 @@ return [
 
         'credentials_created' => [
             'subject' => 'Login Credentials Created Successfully',
-            'body' => "Dear {Participant_Name},\n\nYour login credentials for the Training Portal have been created successfully.\n\nUsername: {Registration_ID}\nPassword: {Password}\nProgramme: {Programme_Name}\n\nYou may now log in and complete the remaining sections of your registration form.\n\nClick here to login:\n{Portal_Link}\n\n{Institute_Name}",
+            'body' => "Dear {Participant_Name},\n\nYour login credentials for the Training Portal have been created successfully.\n\nUsername: {Registration_ID}\nProgramme: {Programme_Name}\n\nUse the password you set while creating your credentials to log in. You may now log in and complete the remaining sections of your registration form.\n\nClick here to login:\n{Portal_Link}\n\n{Institute_Name}",
         ],
 
         'registration_successful' => [

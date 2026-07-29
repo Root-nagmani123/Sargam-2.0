@@ -113,7 +113,7 @@ class GupshupSmsService
         Log::info('GupshupSmsService [log driver] SMS captured (not sent).', [
             'send_to' => $sendTo,
             'dlt_template_id' => $dltTemplateId,
-            'msg' => $message,
+            'msg' => $this->redactForLog($message),
         ]);
 
         return true;
@@ -148,7 +148,7 @@ class GupshupSmsService
             Log::info('GupshupSmsService: SMS gateway response.', [
                 'send_to' => $sendTo,
                 'dlt_template_id' => $dltTemplateId,
-                'msg' => $message,
+                'msg' => $this->redactForLog($message),
                 'http_status' => $response->status(),
                 'response' => $body,
             ]);
@@ -179,6 +179,16 @@ class GupshupSmsService
             ]);
             return false;
         }
+    }
+
+    /**
+     * Mask 6-digit OTPs before a rendered message body is written to any log.
+     * Passwords are never included in outbound message bodies (see
+     * FcNotifyService::credentialsCreated()); this only guards the OTP flows.
+     */
+    protected function redactForLog(string $message): string
+    {
+        return preg_replace('/\b\d{6}\b/', '[REDACTED]', $message) ?? $message;
     }
 
     protected function unsupportedDriver(): bool

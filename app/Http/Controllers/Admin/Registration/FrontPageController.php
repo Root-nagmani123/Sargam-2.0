@@ -452,7 +452,6 @@ class FrontPageController extends Controller
             trim((string) ($registration->display_name ?? '')),
             $programmeName,
             $request->reg_name,
-            $request->reg_password,
             isset($registration->pk) ? (int) $registration->pk : null,
             $registration->email ?? null,
         );
@@ -1248,20 +1247,19 @@ class FrontPageController extends Controller
                 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/',
             ],
             'confirm_password' => 'required|same:new_password',
-            'otp' => 'nullable|string',
+            'otp' => 'required|string',
         ], [
             'new_password.min' => 'The password must be at least 8 characters.',
             'new_password.regex' => 'Password must include uppercase, lowercase, a number and a special character.',
             'confirm_password.same' => 'The confirm password and password must match.',
+            'otp.required' => 'Please verify web auth again to receive an OTP.',
         ]);
 
-        // A4: if forgot-password OTP was issued, require it (backward compatible when none sent).
-        if ($this->fcOtp->hasPending('forgot_password', $request->mobile_number)) {
-            if (!$this->fcOtp->verify('forgot_password', $request->mobile_number, $request->input('otp'))) {
-                return back()
-                    ->withErrors(['otp' => 'Invalid or expired OTP. Please verify web auth again to receive a new OTP.'])
-                    ->withInput();
-            }
+        // A4: a verified forgot_password OTP is mandatory — no bypass when none is pending.
+        if (!$this->fcOtp->verify('forgot_password', $request->mobile_number, $request->input('otp'))) {
+            return back()
+                ->withErrors(['otp' => 'Invalid or expired OTP. Please verify web auth again to receive a new OTP.'])
+                ->withInput();
         }
 
         // Check user exists by mobile number
@@ -1275,22 +1273,26 @@ class FrontPageController extends Controller
                 ->withInput();
         }
 
-        // Also update staged FC roster password when present (same mobile).
-        $roster = DB::table('fc_registration_master')
-            ->where('contact_no', $request->mobile_number)
-            ->first();
-        if ($roster) {
-            DB::table('fc_registration_master')
-                ->where('pk', $roster->pk)
-                ->update(['password' => Hash::make($request->new_password)]);
-        }
+        $hashed = Hash::make($request->new_password);
 
-        // Update password
-        DB::table('user_credentials')
-            ->where('mobile_no', $request->mobile_number)
-            ->update([
-                'jbp_password' => Hash::make($request->new_password),
-            ]);
+        DB::transaction(function () use ($request, $hashed) {
+            // Also update staged FC roster password when present (same mobile).
+            $roster = DB::table('fc_registration_master')
+                ->where('contact_no', $request->mobile_number)
+                ->first();
+            if ($roster) {
+                DB::table('fc_registration_master')
+                    ->where('pk', $roster->pk)
+                    ->update(['password' => $hashed]);
+            }
+
+            // Update password
+            DB::table('user_credentials')
+                ->where('mobile_no', $request->mobile_number)
+                ->update([
+                    'jbp_password' => $hashed,
+                ]);
+        });
 
         // return redirect()->route('fc.login')->with('success', 'Password reset successful. Please login with new credentials.');
         return redirect()->route('fc.login', $this->intentQueryForFcFormLinks())
@@ -1408,13 +1410,20 @@ class FrontPageController extends Controller
 
         $hashed = Hash::make($request->new_password);
 
-        DB::table('fc_registration_master')
-            ->where('contact_no', $mobile)
-            ->update(['password' => $hashed]);
+        DB::transaction(function () use ($mobile, $hashed) {
+            $roster = DB::table('fc_registration_master')
+                ->where('contact_no', $mobile)
+                ->first();
+            if ($roster) {
+                DB::table('fc_registration_master')
+                    ->where('pk', $roster->pk)
+                    ->update(['password' => $hashed]);
+            }
 
-        DB::table('user_credentials')
-            ->where('mobile_no', $mobile)
-            ->update(['jbp_password' => $hashed]);
+            DB::table('user_credentials')
+                ->where('mobile_no', $mobile)
+                ->update(['jbp_password' => $hashed]);
+        });
 
         return back()->with('sweet_success', 'Password changed successfully.');
     }

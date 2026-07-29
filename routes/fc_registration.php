@@ -77,7 +77,7 @@ Route::middleware(['auth'])->prefix('fc-reg')->name('fc-reg.')->group(function (
 // FC REG ADMIN ROUTES
 // ─────────────────────────────────────────────────────────────────────────────
 
-Route::middleware(['auth'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->group(function () {
+Route::middleware(['auth', 'fc.reg.admin'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->group(function () {
 
     // Step field editor (opened from Form Management → Edit form → Fields)
     Route::prefix('form-builder')->name('form-builder.')->group(function () {

@@ -48,7 +48,7 @@ return [
         'credentials_created' => [
             'dlt_name' => 'FC-CRED-I',
             'dlt_template_id' => env('GUPSHUP_DLT_A2_CREDENTIALS', '1477178461144840794'),
-            'body' => 'Dear {Participant_Name}, your login credentials for {Programme_Name} are created. Username: {Registration_ID} Password :{Password}. Login at {Portal_Link} - {Institute_Name}',
+            'body' => 'Dear {Participant_Name}, your login credentials for {Programme_Name} are created. Username: {Registration_ID}. Login at {Portal_Link} - {Institute_Name}',
         ],
 
         // FC-REG-S — A3

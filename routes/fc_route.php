@@ -213,11 +213,15 @@ Route::get('/fc/status/data', [FrontPageController::class, 'student_statusFragme
 Route::get('/fc/forgot-password', [FrontPageController::class, 'showForgotPasswordForm'])->name('fc.password.forgot');
 
 
-//reset password 
-Route::post('/fc/password-reset', [FrontPageController::class, 'resetPassword'])->name('fc.password.reset');
+//reset password
+Route::post('/fc/password-reset', [FrontPageController::class, 'resetPassword'])
+    ->middleware('throttle:6,1')
+    ->name('fc.password.reset');
 
 //reset web-auth form verify
-Route::post('/fc/verify-web-auth', [FrontPageController::class, 'verifyWebAuth'])->name('fc.verify_web_auth');
+Route::post('/fc/verify-web-auth', [FrontPageController::class, 'verifyWebAuth'])
+    ->middleware('throttle:6,1')
+    ->name('fc.verify_web_auth');
 
 // A5 — logged-in / staged FC password change with OTP
 Route::post('/fc/password-change/send-otp', [FrontPageController::class, 'sendPasswordChangeOtp'])

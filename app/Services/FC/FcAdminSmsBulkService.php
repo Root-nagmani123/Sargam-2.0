@@ -273,7 +273,7 @@ class FcAdminSmsBulkService
 
             try {
                 if ($template === self::TEMPLATE_B1) {
-                    $this->notify->formStepIncomplete(
+                    $delivered = $this->notify->formStepIncomplete(
                         $row['mobile'],
                         $row['name'],
                         $row['step_name'] ?? 'registration',
@@ -281,7 +281,7 @@ class FcAdminSmsBulkService
                         $row['email'] ?? null,
                     );
                 } else {
-                    $this->notify->registrationPending(
+                    $delivered = $this->notify->registrationPending(
                         $row['mobile'],
                         $row['name'],
                         $programme,
@@ -291,7 +291,12 @@ class FcAdminSmsBulkService
                         $row['pending_steps'] ?? null,
                     );
                 }
-                $sent++;
+
+                if ($delivered) {
+                    $sent++;
+                } else {
+                    $failed++;
+                }
 
                 if ($matched === 1 || $matched % 50 === 0) {
                     Log::info('FC admin bulk send progress.', [
@@ -332,8 +337,11 @@ class FcAdminSmsBulkService
 
         $label = $template === self::TEMPLATE_B1 ? 'Form step incomplete' : 'Registration pending';
         $message = $registrationPks !== null
-            ? "{$label} sent to {$sent} selected trainee(s)."
-            : "{$label} processed for {$sent} trainee(s).";
+            ? "{$label} delivered to {$sent} of {$matched} selected trainee(s)."
+            : "{$label} delivered to {$sent} of {$matched} trainee(s).";
+        if ($failed > 0) {
+            $message .= " {$failed} failed to deliver.";
+        }
 
         if (strtolower((string) config('gupshup.driver')) === 'log') {
             $message .= ' SMS_DRIVER=log (SMS written to laravel.log only — not sent to phones).';
@@ -485,8 +493,7 @@ class FcAdminSmsBulkService
         $stepName = null;
 
         if ($tracker) {
-            $userId = $this->resolveApplicabilityUserId($roster, $tracker, $form);
-            $progress = $this->stepProgressFromTracker($form, $steps, $tracker, $userId);
+            $progress = $this->stepProgressFromTracker($form, $steps, $tracker, $roster);
             if ($progress['pending_step'] === null) {
                 return null;
             }
@@ -520,7 +527,7 @@ class FcAdminSmsBulkService
     ): array {
         try {
             if ($template === self::TEMPLATE_B1) {
-                $this->notify->formStepIncomplete(
+                $delivered = $this->notify->formStepIncomplete(
                     $row['mobile'],
                     $row['name'],
                     $row['step_name'] ?? 'registration',
@@ -528,7 +535,7 @@ class FcAdminSmsBulkService
                     $row['email'] ?? null,
                 );
             } else {
-                $this->notify->registrationPending(
+                $delivered = $this->notify->registrationPending(
                     $row['mobile'],
                     $row['name'],
                     $programme,
@@ -540,8 +547,8 @@ class FcAdminSmsBulkService
             }
 
             return [
-                'sent' => true,
-                'failed' => false,
+                'sent' => $delivered,
+                'failed' => ! $delivered,
                 'email_skipped' => $this->notify->isEmailCircuitOpen(),
             ];
         } catch (\Throwable $e) {
@@ -628,8 +635,7 @@ class FcAdminSmsBulkService
 
                 $tracker = $trackersByRosterPk->get($pk);
                 if ($tracker) {
-                    $userId = $this->resolveApplicabilityUserId($roster, $tracker, $form);
-                    $progress = $this->stepProgressFromTracker($form, $steps, $tracker, $userId);
+                    $progress = $this->stepProgressFromTracker($form, $steps, $tracker, $roster);
                     if ($progress['pending_step'] === null || $progress['done'] >= 1) {
                         continue;
                     }
@@ -671,7 +677,7 @@ class FcAdminSmsBulkService
         }
 
         $query = DB::table('fc_registration_master')
-            ->select(['pk', 'display_name', 'contact_no', 'user_id', 'email', 'is_registered', 'application_type'])
+            ->select(['pk', 'display_name', 'contact_no', 'user_id', 'email', 'is_registered', 'application_type', 'ph_value'])
             ->where('course_master_pk', $coursePk);
 
         // Same as Registration Master "Active" tab.
@@ -877,8 +883,7 @@ class FcAdminSmsBulkService
             return null;
         }
 
-        $userId = $this->resolveApplicabilityUserId($roster, $trackerRow, $form);
-        $progress = $this->stepProgressFromTracker($form, $steps, $trackerRow, $userId);
+        $progress = $this->stepProgressFromTracker($form, $steps, $trackerRow, $roster);
         $rosterPk = (int) $roster->pk;
 
         // Form fully submitted — exclude from both B1 and B2.
@@ -1007,40 +1012,13 @@ class FcAdminSmsBulkService
     }
 
     /**
-     * Resolve the auth id used by FcStepApplicabilityService (credentials pk, or -roster pk).
-     */
-    protected function resolveApplicabilityUserId(object $roster, object $trackerRow, FcForm $form): ?int
-    {
-        $login = trim((string) ($roster->user_id ?? ''));
-        if ($login !== '' && Schema::hasTable('user_credentials')) {
-            $credPk = DB::table('user_credentials')->where('user_name', $login)->value('pk');
-            if ($credPk) {
-                return (int) $credPk;
-            }
-        }
-
-        $rosterPk = (int) ($roster->pk ?? 0);
-        if ($rosterPk > 0) {
-            return -$rosterPk;
-        }
-
-        $userCol = fc_user_col($form->trackerStorageTable());
-        $key = $trackerRow->{$userCol} ?? null;
-        if (is_numeric($key) && (int) $key > 0) {
-            return (int) $key;
-        }
-
-        return null;
-    }
-
-    /**
      * @return array{done: int, pending_step: ?string, pending_steps: ?string}
      */
     protected function stepProgressFromTracker(
         ?FcForm $form,
         Collection $steps,
         ?object $trackerRow,
-        ?int $userId = null,
+        ?object $roster = null,
     ): array {
         if (! $form || $steps->isEmpty()) {
             return ['done' => 0, 'pending_step' => 'Basic Information', 'pending_steps' => 'Basic Information'];
@@ -1059,7 +1037,7 @@ class FcAdminSmsBulkService
             // Same waiver rule as the form overview report: a step that does not apply
             // to this trainee (e.g. Special Assistant without ph_value) is ignored when
             // incomplete, so they are not listed as "Form step incomplete".
-            if (! $complete && $userId !== null && $this->applicability->notApplicable($step, $userId)) {
+            if (! $complete && $roster !== null && $this->applicability->notApplicableForRoster($step, $roster)) {
                 continue;
             }
 
