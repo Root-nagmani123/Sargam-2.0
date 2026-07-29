@@ -19,7 +19,7 @@ class RegistrationStep1Controller extends Controller
     // ── Dashboard (home after login) ─────────────────────────────────
     public function dashboard()
     {
-        $dynamicForm = FcForm::activeRegistrationDynamicForm();
+        $dynamicForm = FcForm::strictActiveRegistrationForm();
         if ($dynamicForm) {
             return redirect()->route('fc-reg.forms.dashboard', $dynamicForm);
         }

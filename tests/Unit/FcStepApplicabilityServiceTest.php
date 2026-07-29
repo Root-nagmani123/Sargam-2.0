@@ -142,6 +142,25 @@ class FcStepApplicabilityServiceTest extends TestCase
         $this->assertFalse($this->service([500])->notApplicable($step, 500));
     }
 
+    public function test_not_applicable_for_roster_reads_ph_value_from_the_row_in_hand(): void
+    {
+        $step = $this->step(1, 'Special Assistant', FcStepApplicabilityService::RULE_PH_VALUE);
+
+        $withoutPh = (object) ['pk' => 100, 'ph_value' => null];
+        $withPh = (object) ['pk' => 101, 'ph_value' => '1.00'];
+
+        $this->assertTrue($this->service()->notApplicableForRoster($step, $withoutPh));
+        $this->assertFalse($this->service()->notApplicableForRoster($step, $withPh));
+    }
+
+    public function test_not_applicable_for_roster_treats_empty_ph_value_as_missing(): void
+    {
+        $step = $this->step(1, 'Special Assistant', FcStepApplicabilityService::RULE_PH_VALUE);
+        $roster = (object) ['pk' => 100, 'ph_value' => ''];
+
+        $this->assertTrue($this->service()->notApplicableForRoster($step, $roster));
+    }
+
     public function test_an_unknown_rule_fails_open(): void
     {
         // A rule this version does not understand must never hide a step.
