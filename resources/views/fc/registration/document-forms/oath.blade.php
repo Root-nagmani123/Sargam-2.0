@@ -112,7 +112,7 @@
                 <div class="oath-line">
                     <span class="oath-line__lbl" style="min-width:60px;">Dated</span>
                     <input type="date" name="declaration_date" class="blank blank--sm"
-                           value="{{ $val('declaration_date') }}" data-mirror="date">
+                           value="{{ old('declaration_date', fc_document_date('iso')) }}" data-mirror="date" readonly>
                 </div>
 
                 <p class="oath-note">(Conscientious objectors of Oath-taking may make a solemn affirmation in the form indicated above).</p>

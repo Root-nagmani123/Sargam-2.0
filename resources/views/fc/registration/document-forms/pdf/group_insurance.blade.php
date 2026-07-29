@@ -6,7 +6,7 @@
     $name    = trim((string) ($data['officer_name'] ?? ''));
     $desig   = trim((string) ($data['designation'] ?? ''));
     $place   = trim((string) ($data['place'] ?? ''));
-    $dated   = $fmt($data['declaration_date'] ?? '');
+    $dated   = fc_document_date();   // hard-frozen date, overrides any saved value
     $variant = (string) ($data['form_variant'] ?? '');
     $isForm7 = strpos($variant, 'Form 7') === 0;
     $tag     = $isForm7 ? 'UNMARRIED' : (strpos($variant,'Form 8')===0 ? 'MARRIED' : '');
@@ -24,7 +24,7 @@
     $earlier   = trim((string) ($data['earlier_member'] ?? ''));
     $tick = fn ($opt, $sel) => (((string) $opt === (string) $sel) ? '&#9745;' : '&#9744;').' '.e($opt);
     $blank = function ($v, $w='150pt') {
-        $val = ($v !== '' && $v !== null) ? e($v) : '&nbsp;';
+        $val = ($v !== '' && $v !== null) ? e($v) : str_repeat('_', max(12, (int) round((strpos($w, 'mm') !== false ? (float) $w * 2.83465 : (float) $w) / 6)));
         return '<span style="display:inline-block; min-width:'.$w.'; border-bottom:1px solid #000; text-align:center; font-weight:bold;">'.$val.'</span>';
     };
 @endphp

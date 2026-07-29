@@ -94,11 +94,11 @@
 
                 <table class="dw-signtbl">
                     <tr>
-                        <td>स्थान: <input type="text" name="hi[place]" class="blank" value="{{ $data['_hi']['place'] ?? '' }}" autocomplete="off"></td>
+                        <td>स्थान: <input type="text" name="hi[place]" class="blank" value="{{ old('hi.place', config('fc.document_place_hi')) }}" autocomplete="off" readonly></td>
                         <td>हस्ताक्षर: <span class="dw-ruled">&nbsp;</span></td>
                     </tr>
                     <tr>
-                        <td>तारीख: <input type="text" name="hi[ddate]" class="blank blank--sm" value="{{ $data['_hi']['ddate'] ?? '' }}" autocomplete="off"></td>
+                        <td>तारीख: <input type="text" name="hi[ddate]" class="blank blank--sm" value="{{ old('hi.ddate', fc_document_date()) }}" autocomplete="off" readonly></td>
                         <td>(नाम साफ अक्षरों में): <span class="mirror-out" data-mirror-out="hi_name">&nbsp;</span></td>
                     </tr>
                 </table>
@@ -159,11 +159,11 @@
 
                 <table class="dw-signtbl">
                     <tr>
-                        <td>Place: <input type="text" name="place" class="blank" value="{{ $val('place') }}" data-mirror="place"></td>
+                        <td>Place: <input type="text" name="place" class="blank" value="{{ old('place', config('fc.document_place')) }}" data-mirror="place" readonly></td>
                         <td>Signature: <span class="dw-ruled">&nbsp;</span></td>
                     </tr>
                     <tr>
-                        <td>Dated: <input type="date" name="declaration_date" class="blank blank--sm" value="{{ $val('declaration_date') }}" data-mirror="ddate"></td>
+                        <td>Dated: <input type="date" name="declaration_date" class="blank blank--sm" value="{{ old('declaration_date', fc_document_date('iso')) }}" data-mirror="ddate" readonly></td>
                         <td>(Name of Officer in Block Letters): <span class="mirror-out" data-mirror-out="name">&nbsp;</span></td>
                     </tr>
                 </table>

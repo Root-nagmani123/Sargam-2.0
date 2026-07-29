@@ -113,7 +113,7 @@
                 <div class="mb-2"><span class="gi-lbl">6. Were you earlier a member of the CGEGIS? If so, the monthly subscription and the name &amp; address of the office maintaining the account / क्या आप पहले सीजीईजीआईएस के सदस्य थे? यदि हाँ, तो मासिक अंशदान तथा खाता रखने वाले कार्यालय का नाम एवं पता:</span>
                     <textarea name="earlier_member" rows="2" class="form-control mt-1" style="border:1px solid #cbd5e1;border-radius:6px;">{{ $val('earlier_member') }}</textarea></div>
                 <div class="d-flex justify-content-between mt-3">
-                    <div>Date / दिनांक: <input type="date" name="declaration_date" class="blank" value="{{ $val('declaration_date') }}"></div>
+                    <div>Date / दिनांक: <input type="date" name="declaration_date" class="blank" value="{{ old('declaration_date', fc_document_date('iso')) }}" readonly></div>
                     <div>Signature of Trainee / प्रशिक्षु के हस्ताक्षर</div>
                 </div>
             </div>

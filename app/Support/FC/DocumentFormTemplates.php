@@ -855,6 +855,7 @@ class DocumentFormTemplates
                     'heading' => 'Surety / प्रतिभू',
                     'fields'  => [
                         ['name' => 'surety_name', 'label' => 'Full Name of Surety / प्रतिभू का पूरा नाम', 'type' => 'text', 'width' => 'col-md-6'],
+                        ['name' => 'surety_decl_name', 'label' => 'Name of Surety (in declaration) / प्रतिभू का नाम (घोषणा में)', 'type' => 'text', 'width' => 'col-md-6'],
                         ['name' => 'surety_address', 'label' => 'Address of Surety / प्रतिभू का पता', 'type' => 'textarea', 'width' => 'col-md-6'],
                         ['name' => 'surety_occupation', 'label' => 'Occupation of Surety / प्रतिभू का व्यवसाय', 'type' => 'text', 'width' => 'col-md-6'],
                         ['name' => 'surety_eligibility', 'label' => 'Surety is / प्रतिभू है', 'type' => 'select', 'options' => ['In the permanent service of Government', 'Ordinarily resident in India'], 'width' => 'col-md-6'],
@@ -882,6 +883,14 @@ class DocumentFormTemplates
                         ['name' => 'surety_witness_name', 'label' => 'Name of Witness / साक्षी का नाम', 'type' => 'text', 'width' => 'col-md-4'],
                         ['name' => 'surety_witness_address', 'label' => 'Address / पता', 'type' => 'text', 'width' => 'col-md-4'],
                         ['name' => 'surety_witness_occupation', 'label' => 'Occupation / व्यवसाय', 'type' => 'text', 'width' => 'col-md-4'],
+                    ],
+                ],
+                [
+                    'heading' => 'Witness to Surety (Declaration) / प्रतिभू के साक्षी (घोषणा)',
+                    'fields'  => [
+                        ['name' => 'surety_witness_name2', 'label' => 'Name of Witness / साक्षी का नाम', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'surety_witness_address2', 'label' => 'Address / पता', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'surety_witness_occupation2', 'label' => 'Occupation / व्यवसाय', 'type' => 'text', 'width' => 'col-md-4'],
                     ],
                 ],
             ],

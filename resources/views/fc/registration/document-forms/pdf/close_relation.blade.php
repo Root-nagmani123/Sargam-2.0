@@ -5,7 +5,7 @@
     };
     $g       = fn ($k) => trim((string) ($data[$k] ?? ''));
     $desig   = $g('designation');
-    $dated   = $fmt($data['declaration_date'] ?? '');
+    $dated   = fc_document_date();   // hard-frozen date, overrides any saved value
     $sigSrc  = $data['_signature_src'][0] ?? null;
     $relations = [
         ['Father', 'पिता / Father'],
@@ -44,7 +44,7 @@
     .cert { margin-top: 9pt; text-align: justify; }
     .sign { margin-top: 11pt; }
     .sig-img { max-height: 32pt; }
-    .notes { margin-top: 9pt; font-size: 9.5pt; line-height: 1.4; }
+    .notes { margin-top: 9pt; font-size: 11pt; line-height: 1.45; }
     .notes td { vertical-align: top; padding: 2pt 4pt 2pt 0; }
 </style>
 </head>
@@ -92,11 +92,9 @@
     <div class="cert">मैं प्रमाणित करता/करती हूँ कि जहाँ तक मेरी जानकारी और विश्वास है, पूर्वोक्त सूचना सही और पूर्ण है।<br>I certify that the foregoing information is correct and complete to the best of my knowledge and belief.</div>
 
     <div class="sign">
-        <table style="width:100%;"><tr>
-            <td>तारीख / Date: <b>{{ $dated }}</b></td>
-            <td style="text-align:right;">हस्ताक्षर / Signature: @if($sigSrc)<img src="{{ $sigSrc }}" class="sig-img">@else <span style="display:inline-block;min-width:180pt;border-bottom:1px solid #000;">&nbsp;</span> @endif</td>
-        </tr></table>
-        <div style="text-align:right; margin-top:6pt;">पदनाम / Designation: <b>{{ $desig ?: ' ' }}</b></div>
+        <div style="text-align:right;">हस्ताक्षर / Signature: @if($sigSrc)<img src="{{ $sigSrc }}" class="sig-img">@else <span style="display:inline-block;min-width:180pt;border-bottom:1px solid #000;font-weight:bold;text-align:center;">{!! str_repeat('_', 30) !!}</span> @endif</div>
+        <div style="text-align:right; margin-top:6pt;">पदनाम / Designation: <span style="display:inline-block; min-width:180pt; border-bottom:1px solid #000; font-weight:bold; text-align:center;">{!! $desig !== '' ? e($desig) : str_repeat('_', 30) !!}</span></div>
+        <div style="text-align:right; margin-top:6pt;">तारीख / Date: <b>{{ $dated }}</b></div>
     </div>
 
     <table class="notes">

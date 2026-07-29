@@ -65,9 +65,9 @@
             <div class="im-docno">Document-6(a)</div>
             <div class="im-formline">[Form 1 — See Government of India's Instruction (1) and (2) below Rule 16]</div>
             <div class="im-title-hi">प्रथम नियुक्ति के समय भरा जाने वाला अचल संपत्ति के विवरण का फार्म</div>
-            <div class="im-title">STATEMENT OF IMMOVABLE PROPERTY ON FIRST APPOINTMENT</div>
-            <div style="text-align:center; font-weight:600; margin:.5rem 0 .2rem;">as on date / जिस तिथि तक:
-                <input type="date" name="as_on_date" class="im-blank" value="{{ $val('as_on_date') }}" style="min-width:150px;"></div>
+            <div class="im-title">STATEMENT OF IMMOVABLE PROPERTY ON FIRST APPOINTMENT
+                <span style="text-decoration:none; font-weight:600; white-space:nowrap;">&nbsp; as on date / जिस तिथि तक:
+                    <input type="date" name="as_on_date" class="im-blank" value="{{ $val('as_on_date') }}" style="min-width:150px;"></span></div>
 
             <div class="im-item"><span class="lbl">1.</span> अधिकारी का पूरा नाम, तथा सेवा जिससे वह संबंधित है / Name of the Officer (in full) and service to which the officer belongs:
                 <input type="text" name="officer_name" class="im-blank" required value="{{ $val('officer_name') }}" style="min-width:260px;"></div>
@@ -114,7 +114,7 @@
 
             <div class="im-footer row">
                 <div class="col-md-6">दिनांक / Dated:
-                    <input type="date" name="declaration_date" class="im-blank" value="{{ $val('declaration_date') }}" style="min-width:150px;"></div>
+                    <input type="date" name="declaration_date" class="im-blank" value="{{ old('declaration_date', fc_document_date('iso')) }}" style="min-width:150px;" readonly></div>
                 <div class="col-md-6 text-md-end">हस्ताक्षर / Signature: ______________________</div>
             </div>
 
