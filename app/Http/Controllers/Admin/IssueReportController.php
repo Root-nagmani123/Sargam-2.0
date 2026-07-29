@@ -87,9 +87,27 @@ class IssueReportController extends Controller
             'status' => 'required|integer|in:' . implode(',', array_keys(self::STATUS_LABELS)),
         ]);
 
-        $report = IssueReport::findOrFail($id);
+        $report   = IssueReport::findOrFail($id);
+        $wasFixed = in_array((int) $report->status, [IssueReport::STATUS_RESOLVED, IssueReport::STATUS_CLOSED], true);
         $report->status = (int) $validated['status'];
         $report->save();
+
+        $isNowFixed = in_array($report->status, [IssueReport::STATUS_RESOLVED, IssueReport::STATUS_CLOSED], true);
+        if ($isNowFixed && !$wasFixed && (int) $report->reported_by > 0) {
+            try {
+                app(\App\Services\NotificationService::class)->create(
+                    (int) $report->reported_by,
+                    'issue_report',
+                    'IssueReport',
+                    (int) $report->id,
+                    'Issue #' . $report->id . ' resolved',
+                    'Your reported issue (' . trim($report->module_name) . ') has been marked '
+                        . (self::STATUS_LABELS[$report->status] ?? 'Resolved') . '.'
+                );
+            } catch (\Throwable $e) {
+                \Log::error('Failed to send issue report resolution notification: ' . $e->getMessage());
+            }
+        }
 
         return response()->json([
             'success'      => true,
@@ -379,6 +397,32 @@ class IssueReportController extends Controller
                 'page_url'      => $validated['page_url'] ?? $request->headers->get('referer'),
                 'status'        => IssueReport::STATUS_OPEN,
             ]);
+
+            try {
+                $senderId = (int) (Auth::user()->user_id ?? Auth::id() ?? 0);
+                $reporter = DB::table('user_credentials')->where('user_id', $senderId)
+                    ->first(['first_name', 'last_name', 'user_name']);
+                $reporterName = $reporter
+                    ? trim(($reporter->first_name ?? '') . ' ' . ($reporter->last_name ?? ''))
+                    : '';
+                if ($reporterName === '') {
+                    $reporterName = $reporter->user_name ?? ('User #' . $senderId);
+                }
+
+                $adminUserIds = app(\App\Services\NotificationReceiverService::class)->getIssueReportAdminReceivers();
+                $notificationService = app(\App\Services\NotificationService::class);
+                $message = $reporterName . ' reported an issue in ' . trim($group->name) . '.';
+
+                foreach ($adminUserIds as $rid) {
+                    $rid = (int) $rid;
+                    if ($senderId > 0 && $rid === $senderId) {
+                        continue;
+                    }
+                    $notificationService->create($rid, 'issue_report', 'IssueReport', (int) $report->id, 'New issue reported', $message);
+                }
+            } catch (\Throwable $e) {
+                \Log::error('Failed to send issue report admin notifications: ' . $e->getMessage());
+            }
 
             return response()->json([
                 'success' => true,
