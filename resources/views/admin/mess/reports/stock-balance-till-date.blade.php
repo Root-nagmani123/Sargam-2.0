@@ -14,87 +14,58 @@
 @include('admin.mess.reports.partials.report-styles')
 <div class="container-fluid stock-balance-report min-vh-100 d-flex flex-column">
     <x-breadcrum title="Stock Balance as of Till Date"></x-breadcrum>
-    <!-- Header Section -->
-    <div class="card mb-4 border-0 shadow-sm no-print">
-        <div class="card-header bg-white border-0 pb-0">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <h5 class="mb-0 fw-semibold text-dark">Filter Stock Balance as of Till Date</h5>
-                <span class="text-muted small">Refine results by till date &amp; store</span>
-            </div>
-        </div>
-        <div class="card-body p-3 p-lg-4">
-            <form method="GET" action="{{ route('admin.mess.reports.stock-balance-till-date') }}">
-                <div class="row g-3 g-lg-4 align-items-end">
-                    <div class="col-12 col-md-6 col-xl-3">
-                        <label for="till_date" class="form-label small fw-semibold text-uppercase mb-1">Till Date</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-body-secondary" id="till_date_addon">
-                                <span class="material-symbols-rounded" style="font-size: 20px;" aria-hidden="true">event</span>
-                            </span>
-                            <input type="date"
-                                   name="till_date"
-                                   id="till_date"
-                                   class="form-control"
-                                   value="{{ $tillDate }}"
-                                   aria-describedby="till_date_addon">
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-6 col-xl-3">
-                        <label for="store_id" class="form-label small fw-semibold text-uppercase mb-1">Select Store Name</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-body-secondary" id="store_id_addon">
-                                <span class="material-symbols-rounded" style="font-size: 20px;" aria-hidden="true">storefront</span>
-                            </span>
-                            <select name="store_id[]"
-                                    id="store_id"
-                                    class="form-select stock-balance-store-multiselect"
-                                    multiple
-                                    data-placeholder="All Stores"
-                                    aria-describedby="store_id_addon">
-                                @foreach($stores as $store)
-                                    <option value="{{ $store->id }}" @selected(in_array((int) $store->id, $storeIds, true))>
-                                        {{ $store->store_name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-12 col-xl-6">
-                        <div class="d-flex flex-column flex-sm-row flex-wrap gap-2 align-items-stretch align-items-sm-center justify-content-xl-end">
-                            <div class="btn-group shadow-sm" role="group" aria-label="Filter actions">
-                                <button type="submit" name="refresh" value="1" class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-1 px-3">
-                                    <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">filter_list</span>
-                                    <span>Apply Filters</span>
-                                </button>
-                                <a href="{{ route('admin.mess.reports.stock-balance-till-date') }}" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-1 px-3">
-                                    <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">refresh</span>
-                                    <span>Reset</span>
-                                </a>
-                            </div>
-                            <div class="vr d-none d-sm-block text-body-secondary opacity-25 align-self-stretch"></div>
-                            <div class="btn-group shadow-sm" role="group" aria-label="Export actions">
-                                <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center justify-content-center gap-1 px-3" onclick="printStockBalance()" title="Print or Save as PDF">
-                                    <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">print</span>
-                                    <span>Print</span>
-                                </button>
-                                <a href="{{ route('admin.mess.reports.stock-balance-till-date.pdf', request()->query()) }}" class="btn btn-danger d-inline-flex align-items-center justify-content-center gap-1 px-3" title="Download PDF">
-                                    <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">picture_as_pdf</span>
-                                    <span>Download PDF</span>
-                                </a>
-                                <a href="{{ route('admin.mess.reports.stock-balance-till-date.excel', request()->query()) }}" class="btn btn-success d-inline-flex align-items-center justify-content-center gap-1 px-3" title="Export to Excel">
-                                    <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">table_view</span>
-                                    <span>Export Excel</span>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
+    @php $sbExportQ = request()->query(); $sbExportQuery = $sbExportQ ? '?' . http_build_query($sbExportQ) : ''; @endphp
+    {{-- Download / Print bar --}}
+    <div class="d-flex justify-content-end gap-2 mb-3 no-print">
+        <a href="{{ route('admin.mess.reports.stock-balance-till-date.excel') }}{{ $sbExportQuery }}" class="btn sb-export-btn border-0" title="Download (Excel)">
+            <i class="material-symbols-rounded">download</i><span>Download</span>
+        </a>
+        <button type="button" class="btn sb-export-btn border-0" onclick="printStockBalance()" title="Print (or Save as PDF)">
+            <i class="material-symbols-rounded">print</i><span>Print</span>
+        </button>
     </div>
-
 <div class="card border-0 shadow-sm flex-grow-1 d-flex flex-column min-h-0">
     <div class="card-body d-flex flex-column flex-grow-1 min-h-0">
+        <div class="mb-3">
+            <div class="d-flex align-items-center gap-2 sb-filter-toolbar">
+                <form method="GET" action="{{ route('admin.mess.reports.stock-balance-till-date') }}" id="sbFilterForm" class="d-flex align-items-center gap-2 flex-wrap sb-filter-form">
+                    <input type="hidden" name="refresh" value="1">
+                    <span class="programme-dt-filters-label flex-shrink-0">Filter</span>
+                    <div class="sb-filter-item">
+                        <input type="date" name="till_date" id="till_date" class="form-control sb-filter-date sb-auto-filter" value="{{ $tillDate }}" aria-label="Till date">
+                    </div>
+                    <div class="sb-filter-item">
+                        <select name="store_id[]" id="store_id" class="form-select stock-balance-store-multiselect sb-auto-filter" multiple data-placeholder="All Stores">
+                            @foreach($stores as $store)
+                                <option value="{{ $store->id }}" @selected(in_array((int) $store->id, $storeIds, true))>{{ $store->store_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <input type="hidden" name="search" id="sbSearchHidden" value="{{ request('search') }}">
+                    <input type="hidden" name="per_page" id="sbPerPageHidden" value="{{ (int) request('per_page', 10) }}">
+                    <a href="{{ route('admin.mess.reports.stock-balance-till-date') }}" id="sbRemoveFilter" class="programme-dt-btn-reset flex-shrink-0 d-inline-flex align-items-center justify-content-center text-decoration-none" title="Remove all filters">Remove Filter</a>
+                </form>
+                <div class="d-flex align-items-center gap-2 ms-auto flex-shrink-0">
+                    <button type="button" class="btn programme-dt-btn-columns" id="sbColumnsBtn" data-bs-toggle="modal" data-bs-target="#sbColumnsModal" title="Show / hide columns">
+                        <i class="material-symbols-rounded">view_column</i><span>Columns</span>
+                    </button>
+                    <input type="search" id="sbSearch" class="form-control sb-search-input" placeholder="Search item…" autocomplete="off">
+                </div>
+            </div>
+            {{-- Column visibility modal --}}
+            <div class="modal fade" id="sbColumnsModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered"><div class="modal-content rounded-4 border-0 shadow">
+                    <div class="modal-header border-0 pb-2"><h5 class="modal-title fw-bold">Column Visibility</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                    <div class="modal-body pt-0"><hr class="mt-0"><div class="d-flex flex-column gap-2">
+                        <label class="d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input type="checkbox" class="form-check-input m-0 sb-col-toggle" data-col="code" checked> <span>Item Code</span></label>
+                        <label class="d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input type="checkbox" class="form-check-input m-0 sb-col-toggle" data-col="unit" checked> <span>Unit</span></label>
+                        <label class="d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input type="checkbox" class="form-check-input m-0 sb-col-toggle" data-col="rate" checked> <span>Avg Rate</span></label>
+                        <label class="d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input type="checkbox" class="form-check-input m-0 sb-col-toggle" data-col="amt" checked> <span>Amount</span></label>
+                    </div></div>
+                    <div class="modal-footer border-0"><button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button></div>
+                </div></div>
+            </div>
+        </div>
         <!-- Report Heading -->
         <div class="report-header text-center mb-4 pb-3 border-bottom border-body-secondary border-opacity-25">
             <h4 class="fw-bold text-uppercase mb-3 fs-5 text-body-emphasis">Stock Balance as of Till Date</h4>
@@ -140,12 +111,12 @@
                         <thead>
                             <tr>
                                 @include('admin.mess.reports.partials.report-sno-th')
-                                <th>Item Code</th>
+                                <th data-col="code">Item Code</th>
                                 @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'item_name', 'label' => 'Item Name', 'defaultDir' => 'asc', 'defaultSort' => 'item_name'])
                                 <th class="text-end">Remaining Quantity</th>
-                                <th>Unit</th>
-                                <th class="text-end">Avg rate</th>
-                                <th class="text-end">Amount</th>
+                                <th data-col="unit">Unit</th>
+                                <th class="text-end" data-col="rate">Avg rate</th>
+                                <th class="text-end" data-col="amt">Amount</th>
                             </tr>
                         </thead>
                     </table>
@@ -165,12 +136,12 @@
                             @forelse(($reportPage ?? collect()) as $index => $item)
                                 <tr>
                                     <td class="text-center mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $reportPage ?? null, 'index' => $index])</td>
-                                    <td>{{ $item['item_code'] ?? '—' }}</td>
+                                    <td data-col="code">{{ $item['item_code'] ?? '—' }}</td>
                                     <td>{{ $item['item_name'] }}</td>
                                     <td class="text-end">{{ number_format($item['remaining_qty'], 2) }}</td>
-                                    <td>{{ $item['unit'] ?? 'Unit' }}</td>
-                                    <td class="text-end">₹{{ number_format($item['rate'], 2) }}</td>
-                                    <td class="text-end">₹{{ number_format($item['amount'], 2) }}</td>
+                                    <td data-col="unit">{{ $item['unit'] ?? 'Unit' }}</td>
+                                    <td class="text-end" data-col="rate">₹{{ number_format($item['rate'], 2) }}</td>
+                                    <td class="text-end" data-col="amt">₹{{ number_format($item['amount'], 2) }}</td>
                                 </tr>
                             @empty
                                 <tr>
@@ -180,16 +151,21 @@
                             @if(($reportLineCount ?? 0) > 0)
                                 <tr class="table-light fw-bold">
                                     <td colspan="6" class="text-end">Total Amount:</td>
-                                    <td class="text-end">₹{{ number_format(($reportTotalAmount ?? 0), 2) }}</td>
+                                    <td class="text-end" data-col="amt">₹{{ number_format(($reportTotalAmount ?? 0), 2) }}</td>
                                 </tr>
                             @endif
                         </tbody>
                     </table>
                 </div>
             </div>
-            @if(isset($reportPage) && $reportPage->hasPages())
-                <div class="px-3 py-3 border-top no-print">
-                    {{ $reportPage->appends(request()->query())->links('pagination::bootstrap-5') }}
+            @if(isset($reportPage))
+                <div class="px-3 py-3 border-top no-print d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div class="sb-pagination-links">
+                        @if($reportPage->hasPages())
+                            {{ $reportPage->appends(request()->query())->links('pagination::bootstrap-5') }}
+                        @endif
+                    </div>
+                    <div class="sb-count-text ms-auto">Showing {{ number_format($reportPage->count()) }} of {{ number_format($reportPage->total()) }} items</div>
                 </div>
             @endif
         </div>
@@ -313,6 +289,43 @@
         text-align: left;
     }
 
+    /* ── New-design chrome: Download/Print bar + single-row filter toolbar (token-based per design.md) ── */
+    .stock-balance-report .sb-export-btn {
+        background: var(--ds-surface, #fff); border: 1px solid var(--ds-line, #e5e7eb);
+        color: var(--ds-primary, #004a93); border-radius: var(--ds-radius, 4px);
+        min-height: var(--ds-control-h, 40px); padding: 0 1rem; font-weight: 500; font-size: 0.875rem;
+        display: inline-flex; align-items: center; gap: 0.4rem;
+    }
+    .stock-balance-report .sb-export-btn:hover { background: var(--ds-surface-2, #f8fafc); border-color: var(--ds-primary, #004a93); }
+    .stock-balance-report .sb-export-btn .material-symbols-rounded { font-size: 1.15rem; }
+    .stock-balance-report .sb-filter-toolbar,
+    .stock-balance-report .sb-filter-form { flex-wrap: wrap; gap: 0.5rem; }
+    .stock-balance-report .sb-filter-item { flex-shrink: 0; }
+    .stock-balance-report .sb-filter-date {
+        min-height: var(--ds-control-h, 40px); height: var(--ds-control-h, 40px); width: 11rem;
+        border-radius: var(--ds-radius, 4px); border: 1px solid var(--ds-line, #e5e7eb); font-size: 0.85rem;
+    }
+    .stock-balance-report .sb-filter-toolbar .form-select,
+    .stock-balance-report .sb-filter-toolbar .ts-wrapper { min-width: 11rem; }
+    .stock-balance-report .sb-search-input {
+        min-height: var(--ds-control-h, 40px); height: var(--ds-control-h, 40px); width: 13rem;
+        border-radius: var(--ds-radius, 4px); border: 1px solid var(--ds-line, #e5e7eb); font-size: 0.85rem;
+    }
+    /* On-screen: hide the print-oriented report header + the inner "Stock Balance Details" bar (count moves to footer) */
+    .stock-balance-report .report-header { display: none !important; }
+    .stock-balance-report .card .card-header.bg-light { display: none !important; }
+    .stock-balance-report .sb-count-text { color: var(--ds-ink-muted, #667085); font-size: 0.85rem; }
+    .stock-balance-report .sb-pagination-links p { display: none !important; }
+    .stock-balance-report .sb-pagination-links nav > div { justify-content: flex-start !important; }
+    /* Match the mock: a plain flowing table (drop the full-height flex + internal scroll on screen) */
+    .stock-balance-report.min-vh-100 { min-height: auto !important; }
+    .stock-balance-report.d-flex,
+    .stock-balance-report .card-body.d-flex,
+    .stock-balance-report .card.d-flex,
+    .stock-balance-report .stock-balance-table-split.d-flex { display: block !important; }
+    .stock-balance-report .card.flex-grow-1 { flex: none !important; }
+    .stock-balance-report .stock-balance-table-body-scroll { overflow: visible !important; max-height: none !important; }
+
 </style>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
@@ -331,6 +344,38 @@
                 sortField: { field: 'text', direction: 'asc' }
             });
             el.dataset.tomselectInitialized = 'true';
+        });
+    });
+
+    // New-design toolbar: debounced auto-apply (this report reloads via GET) + client-side item search.
+    document.addEventListener('DOMContentLoaded', function () {
+        var form = document.getElementById('sbFilterForm');
+        if (form) {
+            var sbTimer = null;
+            form.addEventListener('change', function (e) {
+                if (!e.target || !e.target.classList || !e.target.classList.contains('sb-auto-filter')) return;
+                if (sbTimer) clearTimeout(sbTimer);
+                sbTimer = setTimeout(function () { form.submit(); }, 500);
+            });
+        }
+        var sbSearch = document.getElementById('sbSearch');
+        if (sbSearch) {
+            sbSearch.addEventListener('input', function () {
+                var q = sbSearch.value.trim().toLowerCase();
+                document.querySelectorAll('.stock-balance-report .stock-balance-table-body-scroll tbody tr').forEach(function (tr) {
+                    if (tr.querySelector('td[colspan]')) return; // keep the total row
+                    tr.style.display = (!q || tr.textContent.toLowerCase().indexOf(q) !== -1) ? '' : 'none';
+                });
+            });
+        }
+        // Column visibility — directly show/hide the tagged header + body cells.
+        document.querySelectorAll('.sb-col-toggle').forEach(function (cb) {
+            cb.addEventListener('change', function () {
+                var col = cb.getAttribute('data-col');
+                document.querySelectorAll('.stock-balance-report [data-col="' + col + '"]').forEach(function (el) {
+                    el.style.display = cb.checked ? '' : 'none';
+                });
+            });
         });
     });
 </script>
