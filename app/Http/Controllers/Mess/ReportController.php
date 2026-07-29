@@ -685,9 +685,19 @@ class ReportController extends Controller
             'closing_amount' => 'closing_amount',
         ], 'item_name', 'asc'));
 
-        // Simple server-side pagination (per-page can be tuned). print_all=1 returns full table for browser print.
+        // Server-side search on item name / code (applied post-cache; no cache-key impact)
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $searchLower = mb_strtolower($search);
+            $reportCollection = $reportCollection->filter(function ($r) use ($searchLower) {
+                return str_contains(mb_strtolower((string) ($r['item_name'] ?? '')), $searchLower)
+                    || str_contains(mb_strtolower((string) ($r['item_code'] ?? '')), $searchLower);
+            })->values();
+        }
+
+        // Simple server-side pagination. print_all=1 returns full table for browser print.
         $printAll = $request->boolean('print_all');
-        $perPage = $printAll ? max(1, $reportCollection->count()) : 10;
+        $perPage = $printAll ? max(1, $reportCollection->count()) : min(100, max(4, (int) $request->input('per_page', 10)));
         $currentPage = $printAll ? 1 : LengthAwarePaginator::resolveCurrentPage();
         $pageItems = $reportCollection
             ->slice(($currentPage - 1) * $perPage, $perPage)
@@ -704,8 +714,9 @@ class ReportController extends Controller
             ]
         );
 
-        // Grand totals across all items (not just current page) - cached to speed up pagination
-        $reportTotals = $cachedTotals ?? [
+        // Grand totals across all items (not just current page). When searching, totals reflect
+        // the filtered set; otherwise use the cached full-set totals for speed.
+        $reportTotals = ($search === '' && $cachedTotals) ? $cachedTotals : [
             'opening_amount' => (float) $reportCollection->sum('opening_amount'),
             'purchase_amount' => (float) $reportCollection->sum('purchase_amount'),
             'sale_amount' => (float) $reportCollection->sum('sale_amount'),

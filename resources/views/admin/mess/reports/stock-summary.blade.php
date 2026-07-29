@@ -8,127 +8,85 @@
 @endphp
 <div class="container-fluid stock-summary-report pb-4">
     <div id="stock-summary-print-meta" class="d-none" hidden data-store-name="{{ e($selectedStoreName ?? ($storeType == 'main' ? 'Officer\'s Main Mess(Primary)' : 'All Sub Stores')) }}"></div>
-    <x-breadcrum title="Stock Summary Report"></x-breadcrum>
+    <x-breadcrum title="Stock Summary Report" :showBack="false"></x-breadcrum>
 
-    <div class="row no-print mb-3 mb-md-4">
-        <div class="col-12 col-lg-10 col-xl-8">
-            <div class="d-flex align-items-start gap-2 p-3 rounded-3 bg-primary-subtle bg-opacity-50 border border-primary-subtle ssr-info-banner">
-                <span class="material-symbols-rounded text-primary flex-shrink-0" style="font-size:1.25rem;margin-top:1px;" aria-hidden="true">info</span>
-                <p class="mb-0 text-primary-emphasis small lh-sm">
-                    Opening, purchase, sale, and closing stock for the selected period and stores. Use filters to narrow the view, then print or export if needed.
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Filters Section (Hide on Print) -->
-    <div class="card mb-4 border-0 shadow-sm rounded-3 no-print stock-summary-filter-card">
-        <div class="rounded-top-3" style="height:3px;background:linear-gradient(90deg,#0b4a7e 0%,#2980b9 50%,#0b4a7e 100%);" aria-hidden="true"></div>
-        <div class="card-header bg-body-tertiary border-0 py-3 px-3 px-lg-4">
-            <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
-                <div class="d-flex align-items-start gap-3">
-                    <span class="d-none d-sm-flex align-items-center justify-content-center flex-shrink-0 rounded-3 bg-primary-subtle text-primary p-2" aria-hidden="true">
-                        <span class="material-symbols-rounded" style="font-size: 1.5rem;">tune</span>
-                    </span>
-                    <div>
-                        <h5 class="mb-1 fw-semibold text-body">Filters</h5>
-                        <p class="mb-0 small text-body-secondary">Refine results by date, store type, and store selection.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="card-body p-3 p-lg-4">
-            <form method="GET" action="{{ route('admin.mess.reports.stock-summary') }}" id="stockSummaryFilterForm">
-                <div class="row g-3">
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <label for="stock_summary_from_date" class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">From Date</label>
-                        <input type="date" name="from_date" id="stock_summary_from_date" class="form-control rounded-2"
-                               value="{{ $fromDate }}" required>
-                    </div>
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <label for="stock_summary_to_date" class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">To Date</label>
-                        <input type="date" name="to_date" id="stock_summary_to_date" class="form-control rounded-2"
-                               value="{{ $toDate }}" required>
-                    </div>
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <label for="store_type" class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">Store Type</label>
-                        <select name="store_type" id="store_type" class="form-select rounded-2 stock-summary-store-type" data-placeholder="Select Store Type">
-                            <option value="main" @selected($storeType == 'main')>Main Store</option>
-                            <option value="sub" @selected($storeType == 'sub')>Sub Store</option>
-                        </select>
-                    </div>
-                    <div class="col-12 col-sm-6 col-xl-3{{ $storeType == 'main' ? '' : ' d-none' }}" id="main_store_div">
-                        <label for="stock_summary_main_store" class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">Main Store</label>
-                        <select name="main_store_id[]" id="stock_summary_main_store" class="form-select form-select-sm rounded-2 stock-summary-store-multiselect" multiple data-placeholder="All Main Stores">
-                            @foreach($stores as $store)
-                                <option value="{{ $store->id }}" @selected($storeType === 'main' && in_array((int) $store->id, $storeIds, true))>
-                                    {{ $store->store_name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-12 col-sm-6 col-xl-3{{ $storeType == 'sub' ? '' : ' d-none' }}" id="sub_store_div">
-                        <label for="stock_summary_sub_store" class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">Sub Store</label>
-                        <select name="sub_store_id[]" id="stock_summary_sub_store" class="form-select form-select-sm rounded-2 stock-summary-store-multiselect" multiple data-placeholder="All Sub Stores">
-                            @foreach($subStores as $subStore)
-                                <option value="{{ $subStore->id }}" @selected($storeType === 'sub' && in_array((int) $subStore->id, $storeIds, true))>
-                                    {{ $subStore->sub_store_name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <div class="d-flex flex-wrap align-items-center gap-2 pt-3 mt-3 border-top border-light-subtle">
-                    <button type="submit" name="refresh" value="1" class="btn btn-primary btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3">
-                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">filter_list</span>
-                        <span>Apply filters</span>
-                    </button>
-                    <a href="{{ route('admin.mess.reports.stock-summary') }}" class="btn btn-outline-secondary btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3">
-                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">refresh</span>
-                        <span>Reset</span>
-                    </a>
-                    <div class="vr d-none d-md-block text-secondary mx-1 align-self-stretch my-1" role="separator" aria-hidden="true"></div>
-                    <div class="btn-group shadow-sm rounded-2" role="group" aria-label="Print or download PDF">
-                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3 rounded-0 rounded-start-2" onclick="printStockSummary()" title="Print report or choose Save as PDF in print dialog">
-                            <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;" aria-hidden="true">print</span>
-                            <span>Print</span>
-                        </button>
-                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3 rounded-0 rounded-end-2" title="Download PDF" data-stock-summary-pdf-url="{{ route('admin.mess.reports.stock-summary.pdf', request()->query()) }}" onclick="window.location.href=this.getAttribute('data-stock-summary-pdf-url')">
-                            <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;" aria-hidden="true">picture_as_pdf</span>
-                            <span>PDF</span>
-                        </button>
-                    </div>
-                    <a href="{{ route('admin.mess.reports.stock-summary.excel', request()->query()) }}" class="btn btn-success btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3" title="Export to Excel">
-                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">table_view</span>
-                        <span>Export Excel</span>
-                    </a>
-                </div>
-            </form>
-        </div>
+    {{-- Download / Print bar --}}
+    <div class="d-flex justify-content-end gap-2 mb-3 no-print">
+        <a href="{{ route('admin.mess.reports.stock-summary.excel', request()->query()) }}" class="btn ssr-export-btn border-0" title="Download (Excel)">
+            <i class="material-symbols-rounded">download</i><span>Download</span>
+        </a>
+        <button type="button" class="btn ssr-export-btn border-0" onclick="printStockSummary()" title="Print (or Save as PDF)">
+            <i class="material-symbols-rounded">print</i><span>Print</span>
+        </button>
     </div>
 
     <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3 p-lg-4">
-            <!-- Report Header -->
-            <div class="report-header text-center mb-4 rounded-3 p-4" style="background:linear-gradient(135deg,#f0f4f8 0%,#e8edf4 50%,#f0f4f8 100%);border:1px solid #e2e8f0;">
-                <div class="d-flex align-items-center justify-content-center gap-2 mb-3">
-                    <span class="material-symbols-rounded text-primary" style="font-size:1.75rem;" aria-hidden="true">assessment</span>
-                    <h4 class="fw-bold text-uppercase mb-0 text-body">Stock Summary Report</h4>
-                </div>
-                <div class="d-flex flex-column flex-sm-row flex-wrap align-items-center justify-content-center gap-2">
-                    <span class="badge rounded-1 bg-white text-body-emphasis fw-normal px-3 py-2 shadow-sm border">
-                        <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">date_range</span>
-                        Period: {{ date('d-F-Y', strtotime($fromDate)) }} to {{ date('d-F-Y', strtotime($toDate)) }}
-                    </span>
-                    <span class="badge rounded-1 bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-normal px-3 py-2 text-wrap text-start shadow-sm" style="max-width: min(100%, 42rem);">
-                        <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">store</span>
-                        <span class="fw-semibold">Store:</span>
-                        {{ $selectedStoreName ?? ($storeType == 'main' ? "Officer's Main Mess(Primary)" : 'All Sub Stores') }}
-                    </span>
+            {{-- Filter toolbar (single row, auto-apply via AJAX — no page reload) --}}
+            <div class="d-flex align-items-center gap-2 mb-4 ssr-filter-toolbar no-print">
+                <form method="GET" action="{{ route('admin.mess.reports.stock-summary') }}" id="stockSummaryFilterForm" class="d-flex align-items-center gap-2 ssr-filter-form">
+                    <input type="hidden" name="refresh" value="1">
+                    <span class="programme-dt-filters-label flex-shrink-0">Filter</span>
+                    <div class="ssr-filter-item">
+                        <input type="text" id="ssr_date_range" class="form-control ssr-filter-range" placeholder="Select date range" autocomplete="off" readonly>
+                        {{-- Range picker fills these; IDs/names preserved for the backend + existing JS. --}}
+                        <input type="hidden" name="from_date" id="stock_summary_from_date" value="{{ $fromDate }}">
+                        <input type="hidden" name="to_date" id="stock_summary_to_date" value="{{ $toDate }}">
+                    </div>
+                    <div class="ssr-filter-item">
+                        <select name="store_type" id="store_type" class="form-select stock-summary-store-type ssr-auto-filter" data-placeholder="Store Type">
+                            <option value="main" @selected($storeType == 'main')>Main Store</option>
+                            <option value="sub" @selected($storeType == 'sub')>Sub Store</option>
+                        </select>
+                    </div>
+                    <div class="ssr-filter-item{{ $storeType == 'main' ? '' : ' d-none' }}" id="main_store_div">
+                        <select name="main_store_id[]" id="stock_summary_main_store" class="form-select stock-summary-store-multiselect ssr-auto-filter" multiple data-placeholder="All Main Stores">
+                            @foreach($stores as $store)
+                                <option value="{{ $store->id }}" @selected($storeType === 'main' && in_array((int) $store->id, $storeIds, true))>{{ $store->store_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="ssr-filter-item{{ $storeType == 'sub' ? '' : ' d-none' }}" id="sub_store_div">
+                        <select name="sub_store_id[]" id="stock_summary_sub_store" class="form-select stock-summary-store-multiselect ssr-auto-filter" multiple data-placeholder="All Sub Stores">
+                            @foreach($subStores as $subStore)
+                                <option value="{{ $subStore->id }}" @selected($storeType === 'sub' && in_array((int) $subStore->id, $storeIds, true))>{{ $subStore->sub_store_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <input type="hidden" name="search" id="ssrSearchHidden" value="{{ request('search') }}">
+                    <input type="hidden" name="per_page" id="ssrPerPageHidden" value="{{ (int) request('per_page', 10) }}">
+                    <a href="{{ route('admin.mess.reports.stock-summary') }}" id="ssrRemoveFilter" class="programme-dt-btn-reset flex-shrink-0 d-inline-flex align-items-center justify-content-center text-decoration-none" title="Remove all filters">Remove Filter</a>
+                </form>
+                <div class="d-flex align-items-center gap-2 ms-auto flex-shrink-0">
+                    <button type="button" class="btn programme-dt-btn-columns" id="ssrColumnsBtn" data-bs-toggle="modal" data-bs-target="#ssrColumnsModal" title="Show / hide columns">
+                        <i class="material-symbols-rounded">view_column</i><span>Columns</span>
+                    </button>
+                    <input type="search" id="ssrSearch" class="form-control ssr-search-input" placeholder="Search item…" autocomplete="off" value="{{ request('search') }}">
                 </div>
             </div>
 
-            <!-- Report Table -->
+            {{-- Column-group visibility modal --}}
+            <div class="modal fade" id="ssrColumnsModal" tabindex="-1" aria-labelledby="ssrColumnsLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content rounded-4 border-0 shadow">
+                        <div class="modal-header border-0 pb-2">
+                            <h5 class="modal-title fw-bold" id="ssrColumnsLabel">Column Visibility</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body pt-0">
+                            <hr class="mt-0">
+                            <div class="d-flex flex-column gap-2">
+                                <label class="ssr-colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input type="checkbox" class="form-check-input m-0 ssr-col-toggle" data-group="opening" checked> <span>Opening</span></label>
+                                <label class="ssr-colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input type="checkbox" class="form-check-input m-0 ssr-col-toggle" data-group="purchase" checked> <span>Purchase</span></label>
+                                <label class="ssr-colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input type="checkbox" class="form-check-input m-0 ssr-col-toggle" data-group="sale" checked> <span>Sale</span></label>
+                                <label class="ssr-colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input type="checkbox" class="form-check-input m-0 ssr-col-toggle" data-group="closing" checked> <span>Closing</span></label>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0"><button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button></div>
+                    </div>
+                </div>
+            </div>
+
             <div id="stock-summary-table-wrap">
                 @include('admin.mess.reports.partials.stock-summary-table', [
                     'reportPage' => $reportPage,
@@ -408,6 +366,114 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     hookLinks();
+
+    // ===== New-design filter toolbar: apply via AJAX (no page reload) =====
+    var ssrForm = document.getElementById('stockSummaryFilterForm');
+    function ssrApplyFilters() {
+        if (!ssrForm) return;
+        if (ssrForm.reportValidity && !ssrForm.reportValidity()) return;
+        var params = new URLSearchParams();
+        new FormData(ssrForm).forEach(function (v, k) {
+            if (v === '' || v === null) return;
+            params.append(k, v);
+        });
+        var qs = params.toString();
+        var url = ssrForm.action + (qs ? '?' + qs : '');
+        if (window.history && window.history.pushState) { try { window.history.pushState({ ssrFilter: true }, '', url); } catch (e) {} }
+        ajaxLoad(url);
+    }
+    window.ssrApplyFilters = ssrApplyFilters;
+
+    window.addEventListener('popstate', function () { ajaxLoad(window.location.href); });
+
+    if (ssrForm) {
+        var ssrTimer = null;
+        ssrForm.addEventListener('change', function (e) {
+            var t = e.target;
+            if (!t || !t.classList || !t.classList.contains('ssr-auto-filter')) return;
+            if (ssrTimer) clearTimeout(ssrTimer);
+            ssrTimer = setTimeout(ssrApplyFilters, 500);
+        });
+    }
+
+    // Reset / Remove filters via AJAX — clears controls, no reload.
+    var ssrRemove = document.getElementById('ssrRemoveFilter');
+    if (ssrRemove) {
+        ssrRemove.addEventListener('click', function (e) {
+            e.preventDefault();
+            var baseUrl = this.getAttribute('href');
+            document.querySelectorAll('#stockSummaryFilterForm select.stock-summary-store-multiselect').forEach(function (el) {
+                if (el.tomselect) { try { el.tomselect.clear(true); } catch (e2) {} }
+                else { Array.prototype.forEach.call(el.options, function (o) { o.selected = false; }); }
+            });
+            var st = document.getElementById('store_type');
+            if (st) { if (st.tomselect) { try { st.tomselect.setValue('main', true); } catch (e3) {} } else { st.value = 'main'; } }
+            var mainDiv = document.getElementById('main_store_div'), subDiv = document.getElementById('sub_store_div');
+            if (mainDiv) mainDiv.classList.remove('d-none');
+            if (subDiv) subDiv.classList.add('d-none');
+            var td = new Date();
+            var todayStr = td.getFullYear() + '-' + String(td.getMonth() + 1).padStart(2, '0') + '-' + String(td.getDate()).padStart(2, '0');
+            var fromEl = document.getElementById('stock_summary_from_date');
+            var toEl = document.getElementById('stock_summary_to_date');
+            if (fromEl) fromEl.value = todayStr;
+            if (toEl) toEl.value = todayStr;
+            var rangeEl = document.getElementById('ssr_date_range');
+            if (rangeEl && rangeEl._flatpickr) rangeEl._flatpickr.setDate([todayStr, todayStr], false);
+            if (window.history && window.history.pushState) { try { window.history.pushState({ ssrFilter: true }, '', baseUrl); } catch (e4) {} }
+            ajaxLoad(baseUrl);
+        });
+    }
+
+    // Combined From–To dual-month range picker → fills hidden dates, then auto-applies.
+    (function initSsrRange(tries) {
+        if (typeof flatpickr === 'undefined') {
+            if ((tries || 0) < 20) { setTimeout(function () { initSsrRange((tries || 0) + 1); }, 100); }
+            return;
+        }
+        var rangeEl = document.getElementById('ssr_date_range');
+        var fromEl = document.getElementById('stock_summary_from_date');
+        var toEl = document.getElementById('stock_summary_to_date');
+        if (!rangeEl) return;
+        var defaults = (fromEl && fromEl.value && toEl && toEl.value) ? [fromEl.value, toEl.value] : null;
+        flatpickr(rangeEl, {
+            mode: 'range', showMonths: 2, dateFormat: 'Y-m-d', allowInput: false,
+            defaultDate: defaults, locale: { rangeSeparator: ' – ' },
+            onChange: function (sel, str, inst) {
+                if (sel.length === 2) {
+                    if (fromEl) fromEl.value = inst.formatDate(sel[0], 'Y-m-d');
+                    if (toEl) toEl.value = inst.formatDate(sel[1], 'Y-m-d');
+                    ssrApplyFilters();
+                }
+            }
+        });
+    })(0);
+
+    // Search box (server-side, debounced) → hidden search field → AJAX apply
+    var ssrSearchEl = document.getElementById('ssrSearch');
+    var ssrSearchHidden = document.getElementById('ssrSearchHidden');
+    if (ssrSearchEl && ssrSearchHidden) {
+        var searchTimer = null;
+        ssrSearchEl.addEventListener('input', function () {
+            ssrSearchHidden.value = ssrSearchEl.value;
+            if (searchTimer) clearTimeout(searchTimer);
+            searchTimer = setTimeout(ssrApplyFilters, 400);
+        });
+    }
+
+    // Rows-per-page select (re-rendered on each AJAX load) → delegated change
+    document.addEventListener('change', function (e) {
+        if (!e.target || e.target.id !== 'ssrPerPage') return;
+        var hidden = document.getElementById('ssrPerPageHidden');
+        if (hidden) hidden.value = e.target.value;
+        ssrApplyFilters();
+    });
+
+    // Column-group visibility — toggle a class on the (persistent) table wrap so it survives AJAX reloads.
+    document.querySelectorAll('.ssr-col-toggle').forEach(function (cb) {
+        cb.addEventListener('change', function () {
+            container.classList.toggle('ssr-hide-' + cb.getAttribute('data-group'), !cb.checked);
+        });
+    });
 });
 </script>
 
@@ -1179,6 +1245,56 @@ document.addEventListener('DOMContentLoaded', function () {
         transform: translateY(-1px);
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
     }
+
+    /* ── New-design chrome: Download/Print bar + single-row filter toolbar (token-based per design.md) ── */
+    .stock-summary-report .ssr-export-btn {
+        background: var(--ds-surface, #fff);
+        border: 1px solid var(--ds-line, #e5e7eb);
+        color: var(--ds-primary, #004a93);
+        border-radius: var(--ds-radius, 4px);
+        min-height: var(--ds-control-h, 40px);
+        padding: 0 1rem;
+        font-weight: 500;
+        font-size: 0.875rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .stock-summary-report .ssr-export-btn:hover { background: var(--ds-surface-2, #f8fafc); border-color: var(--ds-primary, #004a93); }
+    .stock-summary-report .ssr-export-btn .material-symbols-rounded { font-size: 1.15rem; }
+    .stock-summary-report .ssr-filter-toolbar,
+    .stock-summary-report .ssr-filter-form { flex-wrap: wrap; gap: 0.5rem; }
+    .stock-summary-report .ssr-filter-item { flex-shrink: 0; }
+    .stock-summary-report .ssr-filter-range {
+        min-width: 15rem;
+        min-height: var(--ds-control-h, 40px);
+        height: var(--ds-control-h, 40px);
+        border-radius: var(--ds-radius, 4px);
+        border: 1px solid var(--ds-line, #e5e7eb);
+        font-size: 0.85rem;
+        background: var(--ds-surface, #fff);
+        cursor: pointer;
+    }
+    .stock-summary-report .ssr-filter-toolbar .form-select,
+    .stock-summary-report .ssr-filter-toolbar .ts-wrapper { min-width: 11rem; }
+    .stock-summary-report .ssr-search-input {
+        min-height: var(--ds-control-h, 40px);
+        height: var(--ds-control-h, 40px);
+        width: 13rem;
+        border-radius: var(--ds-radius, 4px);
+        border: 1px solid var(--ds-line, #e5e7eb);
+        font-size: 0.85rem;
+    }
+    .stock-summary-report .ssr-perpage-select { width: auto; min-width: 4.25rem; }
+    .stock-summary-report .ssr-colvis-item { cursor: pointer; }
+    /* Column-group visibility — class toggled on the persistent #stock-summary-table-wrap (survives AJAX reloads) */
+    #stock-summary-table-wrap.ssr-hide-opening .ssr-grp-opening,
+    #stock-summary-table-wrap.ssr-hide-purchase .ssr-grp-purchase,
+    #stock-summary-table-wrap.ssr-hide-sale .ssr-grp-sale,
+    #stock-summary-table-wrap.ssr-hide-closing .ssr-grp-closing { display: none !important; }
+    /* Keep only the page-number links from Laravel's paginator (drop its "Showing X to Y of Z results" text — we render our own on the right) */
+    .stock-summary-report .ssr-pagination-links p { display: none !important; }
+    .stock-summary-report .ssr-pagination-links nav > div { justify-content: flex-start !important; }
 </style>
 
 <script>
@@ -1281,6 +1397,8 @@ document.addEventListener('DOMContentLoaded', function () {
 {{-- Tom Select: store type (single); main/sub stores (multiselect; inactive side cleared + disabled so it is not submitted) --}}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr" defer></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         if (typeof window.TomSelect === 'undefined') return;

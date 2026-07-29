@@ -1,25 +1,5 @@
 <div class="card border-0 stock-summary-table-root ssr-card">
-    <div class="ssr-card-topbar" aria-hidden="true"></div>
-    <div class="ssr-toolbar px-3 px-lg-4 py-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
-        <div class="d-flex align-items-center gap-3 min-w-0">
-            <div class="ssr-toolbar-icon d-none d-sm-flex" aria-hidden="true">
-                <span class="material-symbols-rounded">table_chart</span>
-            </div>
-            <div class="min-w-0">
-                <p class="ssr-toolbar-title mb-0 text-truncate">Stock movement summary</p>
-                <p class="ssr-toolbar-sub mb-0 small text-body-secondary">Opening, purchase, sale and closing by item</p>
-            </div>
-        </div>
-        <div class="d-flex align-items-center gap-2 flex-shrink-0">
-            <span class="ssr-count-badge" title="Total items in this report">
-                <span class="material-symbols-rounded ssr-count-badge-icon" aria-hidden="true">inventory_2</span>
-                <span class="ssr-count-badge-label">{{ isset($reportPage) ? $reportPage->total() : (isset($reportData) ? count($reportData) : 0) }}</span>
-                <span class="ssr-count-badge-text">items</span>
-            </span>
-        </div>
-    </div>
-
-    <p class="stock-summary-scroll-hint no-print d-md-none mb-0 px-3 pb-2 small" role="note">
+    <p class="stock-summary-scroll-hint no-print d-md-none mb-0 px-3 pt-3 pb-2 small" role="note">
         <span class="ssr-scroll-hint-inner">
             <span class="material-symbols-rounded ssr-scroll-hint-icon" aria-hidden="true">swap_horiz</span>
             Swipe sideways for all columns
@@ -37,18 +17,18 @@
                 <col style="width: 52px;">  {{-- SR. No. --}}
                 <col style="width: 180px;"> {{-- Item Name --}}
                 <col style="width: 56px;">  {{-- Unit --}}
-                <col style="width: 72px;">  {{-- Opening Qty --}}
-                <col style="width: 76px;">  {{-- Opening Rate --}}
-                <col style="width: 100px;"> {{-- Opening Amount --}}
-                <col style="width: 72px;">  {{-- Purchase Qty --}}
-                <col style="width: 76px;">  {{-- Purchase Rate --}}
-                <col style="width: 100px;"> {{-- Purchase Amount --}}
-                <col style="width: 72px;">  {{-- Sale Qty --}}
-                <col style="width: 76px;">  {{-- Sale Rate --}}
-                <col style="width: 100px;"> {{-- Sale Amount --}}
-                <col style="width: 72px;">  {{-- Closing Qty --}}
-                <col style="width: 76px;">  {{-- Closing Rate --}}
-                <col style="width: 100px;"> {{-- Closing Amount --}}
+                <col class="ssr-grp-opening" style="width: 72px;">  {{-- Opening Qty --}}
+                <col class="ssr-grp-opening" style="width: 76px;">  {{-- Opening Rate --}}
+                <col class="ssr-grp-opening" style="width: 100px;"> {{-- Opening Amount --}}
+                <col class="ssr-grp-purchase" style="width: 72px;">  {{-- Purchase Qty --}}
+                <col class="ssr-grp-purchase" style="width: 76px;">  {{-- Purchase Rate --}}
+                <col class="ssr-grp-purchase" style="width: 100px;"> {{-- Purchase Amount --}}
+                <col class="ssr-grp-sale" style="width: 72px;">  {{-- Sale Qty --}}
+                <col class="ssr-grp-sale" style="width: 76px;">  {{-- Sale Rate --}}
+                <col class="ssr-grp-sale" style="width: 100px;"> {{-- Sale Amount --}}
+                <col class="ssr-grp-closing" style="width: 72px;">  {{-- Closing Qty --}}
+                <col class="ssr-grp-closing" style="width: 76px;">  {{-- Closing Rate --}}
+                <col class="ssr-grp-closing" style="width: 100px;"> {{-- Closing Amount --}}
             </colgroup>
             <thead class="ssr-thead">
                 <tr>
@@ -138,9 +118,22 @@
             </tbody>
         </table>
     </div>
-    @if(isset($reportPage) && $reportPage->hasPages())
-        <div class="ssr-pagination-bar px-3 px-lg-4 py-3 border-top">
-            {{ $reportPage->appends(request()->query())->links('pagination::bootstrap-5') }}
+    @if(isset($reportPage))
+        <div class="ssr-pagination-bar px-3 px-lg-4 py-3 border-top d-flex flex-wrap align-items-center justify-content-between gap-3">
+            @if($reportPage->hasPages())
+                <div class="ssr-pagination-links order-2 order-md-1">{{ $reportPage->appends(request()->query())->links('pagination::bootstrap-5') }}</div>
+            @else
+                <span class="order-2 order-md-1"></span>
+            @endif
+            <div class="d-flex align-items-center gap-2 small text-body-secondary order-1 order-md-2 ms-md-auto">
+                <span>Showing</span>
+                <select id="ssrPerPage" class="form-select form-select-sm ssr-perpage-select" aria-label="Rows per page">
+                    @foreach([4, 10, 25, 50, 100] as $pp)
+                        <option value="{{ $pp }}" {{ (int) $reportPage->perPage() === $pp ? 'selected' : '' }}>{{ $pp }}</option>
+                    @endforeach
+                </select>
+                <span>of {{ number_format($reportPage->total()) }} items</span>
+            </div>
         </div>
     @endif
 </div>
