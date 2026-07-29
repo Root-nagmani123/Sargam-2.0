@@ -56,6 +56,11 @@
 @endif
 
 @foreach($grouped as $section => $sectionFields)
+    @php
+        // Show the "Blank Form" column only for sections that actually have one
+        // (e.g. Accounts Section) — hide it for sections with no static blank form.
+        $sectionHasBlank = $sectionFields->contains(fn ($f) => isset($staticBlankForms[$f->field_name]));
+    @endphp
     <div class="card mb-4" style="border-left:4px solid #004a93;">
         <div class="card-body p-3">
             <h6 class="fw-bold text-primary mb-3 text-uppercase" style="letter-spacing:0.3px;">{{ $section }}</h6>
@@ -67,7 +72,7 @@
                             <th class="text-start">Document Title</th>
                             <th style="width:260px;">Upload</th>
                             <th style="width:120px;">View Uploaded</th>
-                            <th style="width:120px;">Blank Form</th>
+                            @if($sectionHasBlank)<th style="width:120px;">Blank Form</th>@endif
                             <th style="width:120px;">Sample Document</th>
                             <th style="width:110px;">Status</th>
                         </tr>
@@ -162,6 +167,7 @@
                                         <span class="text-muted small">No file uploaded</span>
                                     @endif
                                 </td>
+                                @if($sectionHasBlank)
                                 <td class="text-center">
                                     @if($blankUrl)
                                         <a href="{{ $blankUrl }}" target="_blank" rel="noopener"
@@ -172,6 +178,7 @@
                                         <span class="text-muted small">—</span>
                                     @endif
                                 </td>
+                                @endif
                                 <td class="text-center">
                                     @if($sampleUrl)
                                         <a href="{{ $sampleUrl }}" target="_blank" rel="noopener"
