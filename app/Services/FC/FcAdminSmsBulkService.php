@@ -568,7 +568,7 @@ class FcAdminSmsBulkService
         $form = $form ?? FcForm::activeRegistrationDynamicForm();
         $steps = $this->trackableSteps($form);
 
-        /** @var array<int, true> $skipB2 Roster pks already in B1 bucket. */
+        /** @var array<int, true> $skipB2 Roster pks excluded from B2 (B1, form complete, or started). */
         $skipB2 = [];
         /** @var array<int, true> $emitted Already yielded (avoid double B2). */
         $emitted = [];
@@ -607,14 +607,32 @@ class FcAdminSmsBulkService
 
         $this->eligibleRosterQuery($form)->orderBy('pk')->chunkById(self::CHUNK_SIZE, function ($rows) use (
             $callback,
+            $form,
+            $steps,
             &$skipB2,
             &$emitted,
             $pendingStepsLabel
         ) {
+            $trackersByRosterPk = $this->loadTrackersForRosters(collect($rows), $form);
+
             foreach ($rows as $roster) {
                 $pk = (int) ($roster->pk ?? 0);
                 if ($pk <= 0 || isset($skipB2[$pk]) || isset($emitted[$pk])) {
                     continue;
+                }
+
+                if (Schema::hasColumn('fc_registration_master', 'is_registered')
+                    && (int) ($roster->is_registered ?? 0) === 1) {
+                    continue;
+                }
+
+                $tracker = $trackersByRosterPk->get($pk);
+                if ($tracker) {
+                    $userId = $this->resolveApplicabilityUserId($roster, $tracker, $form);
+                    $progress = $this->stepProgressFromTracker($form, $steps, $tracker, $userId);
+                    if ($progress['pending_step'] === null || $progress['done'] >= 1) {
+                        continue;
+                    }
                 }
 
                 $mobile = trim((string) ($roster->contact_no ?? ''));
@@ -863,10 +881,10 @@ class FcAdminSmsBulkService
         $progress = $this->stepProgressFromTracker($form, $steps, $trackerRow, $userId);
         $rosterPk = (int) $roster->pk;
 
-        // Form fully submitted — not B1. It will still appear in the fallback
-        // roster pass (B2 bucket) so the visible pool stays aligned with
-        // selected template course + active roster query.
+        // Form fully submitted — exclude from both B1 and B2.
         if ($progress['pending_step'] === null) {
+            $skipB2[$rosterPk] = true;
+
             return null;
         }
 
@@ -904,6 +922,88 @@ class FcAdminSmsBulkService
         }
 
         return null;
+    }
+
+    /**
+     * Batch-load tracker rows keyed by roster pk (roster pk, login, or credentials pk).
+     *
+     * @param  Collection<int, object>  $rosters
+     * @return Collection<int, object>
+     */
+    protected function loadTrackersForRosters(Collection $rosters, FcForm $form): Collection
+    {
+        if ($rosters->isEmpty()) {
+            return collect();
+        }
+
+        $table = $form->trackerStorageTable();
+        if (! fc_schema_has_table($table)) {
+            return collect();
+        }
+
+        $userCol = fc_user_col($table);
+        $keys = [];
+
+        foreach ($rosters as $roster) {
+            $pk = (int) ($roster->pk ?? 0);
+            if ($pk > 0) {
+                $keys[] = $pk;
+            }
+
+            $login = trim((string) ($roster->user_id ?? ''));
+            if ($login === '') {
+                continue;
+            }
+
+            $keys[] = $login;
+
+            if (Schema::hasTable('user_credentials')) {
+                $credPk = DB::table('user_credentials')->where('user_name', $login)->value('pk');
+                if ($credPk) {
+                    $keys[] = (int) $credPk;
+                }
+            }
+        }
+
+        $keys = array_values(array_unique(array_filter($keys, fn ($v) => $v !== '' && $v !== null)));
+        if ($keys === []) {
+            return collect();
+        }
+
+        $query = DB::table($table)->whereIn($userCol, $keys);
+        if (fc_schema_has_column($table, 'form_id')) {
+            $query->where('form_id', $form->id);
+        }
+
+        $byKey = $query->get()->keyBy(fn ($row) => (string) ($row->{$userCol} ?? ''));
+
+        $result = collect();
+        foreach ($rosters as $roster) {
+            $pk = (int) ($roster->pk ?? 0);
+            if ($pk <= 0) {
+                continue;
+            }
+
+            $tracker = $byKey->get((string) $pk);
+            $login = trim((string) ($roster->user_id ?? ''));
+
+            if (! $tracker && $login !== '') {
+                $tracker = $byKey->get($login);
+            }
+
+            if (! $tracker && $login !== '' && Schema::hasTable('user_credentials')) {
+                $credPk = DB::table('user_credentials')->where('user_name', $login)->value('pk');
+                if ($credPk) {
+                    $tracker = $byKey->get((string) $credPk);
+                }
+            }
+
+            if ($tracker) {
+                $result->put($pk, $tracker);
+            }
+        }
+
+        return $result;
     }
 
     /**
