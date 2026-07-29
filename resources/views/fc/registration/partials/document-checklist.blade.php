@@ -166,7 +166,7 @@
                                     @if($isDone && $fileUrl)
                                         <a href="{{ $fileUrl }}" target="_blank" rel="noopener"
                                            class="btn btn-link btn-sm p-0 text-primary">
-                                            <i class="bi bi-eye me-1"></i>View
+                                            <i class="bi bi-eye me-1"></i>View/Download
                                         </a>
                                     @else
                                         <span class="text-muted small">No file uploaded</span>
