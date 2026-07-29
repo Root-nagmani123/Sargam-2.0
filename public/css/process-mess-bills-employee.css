@@ -541,3 +541,8 @@
 .pmbe-page .pmbe-more-menu .form-select,
 .pmbe-page .pmbe-more-menu .pmbe-filter-range { width: 100%; min-width: 0; }
 .pmbe-page .pmbe-more-filters.pmbe-more-filters-active { border-color: var(--ds-primary, #004a93); color: var(--ds-primary, #004a93); background: rgba(0,74,147,.06); }
+
+/* ---- Alignment: labels only inside the +Filter popover; main row = clean single-height controls ---- */
+.pmbe-page .pmbe-filter-items .pmbe-filter-item-label { display: none; }
+.pmbe-page .pmbe-more-menu .pmbe-filter-item-label { display: block; }
+.pmbe-page .pmbe-filter-items .pmbe-filter-item { flex-direction: row; align-items: center; }

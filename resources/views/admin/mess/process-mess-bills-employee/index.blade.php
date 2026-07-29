@@ -78,11 +78,11 @@
     <div class="card border-0 shadow">
         <div class="card-body p-3 p-lg-4">
             {{-- Filter toolbar (auto-apply; filters wrap on narrow screens) --}}
-            <div class="d-flex align-items-end gap-2 mb-3 pmbe-toolbar no-print">
-                <form method="GET" action="{{ route('admin.mess.process-mess-bills-employee.index') }}" id="mainFilterForm" class="d-flex align-items-end gap-2 pmbe-filter-form">
+            <div class="d-flex align-items-center gap-2 mb-3 pmbe-toolbar no-print">
+                <form method="GET" action="{{ route('admin.mess.process-mess-bills-employee.index') }}" id="mainFilterForm" class="d-flex align-items-center gap-2 pmbe-filter-form">
                     <input type="hidden" name="refresh" value="1">
                     <span class="programme-dt-filters-label flex-shrink-0 align-self-center">Filter</span>
-                    <div id="pmbeFilterItems" class="d-flex align-items-end gap-2 pmbe-filter-items">
+                    <div id="pmbeFilterItems" class="d-flex align-items-center gap-2 pmbe-filter-items">
                         <div class="pmbe-filter-item" data-filter="date">
                             <input type="text" id="pmbe_date_range" class="form-control pmbe-filter-range" placeholder="Select date range" autocomplete="off" readonly>
                             {{-- Range picker fills these; names preserved for the backend + existing JS. --}}
@@ -129,15 +129,15 @@
                     </div>
 
                     {{-- Overflow: filters that don't fit collapse into this "+N Filter" popover --}}
-                    <div class="dropdown flex-shrink-0 align-self-end d-none" id="pmbeMoreFilterWrap">
-                        <a href="javascript:void(0)" class="pmbe-more-filters dropdown-toggle" id="pmbeMoreFilterToggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">+ Filter</a>
+                    <div class="dropdown flex-shrink-0 align-self-center d-none" id="pmbeMoreFilterWrap">
+                        <a href="javascript:void(0)" class="pmbe-more-filters dropdown-toggle border-0 bg-transparent" id="pmbeMoreFilterToggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">+ Filter</a>
                         <div class="dropdown-menu pmbe-more-menu shadow border rounded-1">
                             <div class="pmbe-more-header mb-2 fw-semibold text-muted small">Filters</div>
                             <div id="pmbeMoreFilterItems"></div>
                         </div>
                     </div>
 
-                    <a href="{{ route('admin.mess.process-mess-bills-employee.index') }}" class="programme-dt-btn-reset flex-shrink-0 align-self-center text-decoration-none" title="Remove all filters">Remove Filter</a>
+                    <a href="{{ route('admin.mess.process-mess-bills-employee.index') }}" class="programme-dt-btn-reset flex-shrink-0 align-self-center text-decoration-none d-inline-flex align-items-center justify-content-center" title="Remove all filters">Reset</a>
                 </form>
                 <div class="d-flex align-items-center gap-2 ms-auto flex-shrink-0 align-self-center">
                     <button type="button" class="btn programme-dt-btn-columns" id="pmbeColumnsBtn" data-bs-toggle="modal" data-bs-target="#pmbeColumnVisibilityModal" title="Show / hide columns">
