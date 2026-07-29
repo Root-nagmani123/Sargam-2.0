@@ -153,8 +153,9 @@
                                             <input type="hidden" name="upload_single" value="{{ $field->field_name }}">
                                             <input type="file"
                                                    name="{{ $field->field_name }}"
-                                                   class="form-control form-control-sm py-0 @error($field->field_name) is-invalid @enderror"
+                                                   class="form-control form-control-sm py-0 fc-doc-upload-input @error($field->field_name) is-invalid @enderror"
                                                    accept="{{ $accept }}"
+                                                   data-max-kb="{{ \App\Rules\SafeUploadedDocument::maxKilobytes((int) ($field->file_max_kb ?: 5120)) }}"
                                                    {{ $isDone ? '' : 'required' }}>
                                             <button type="submit" class="btn btn-sm btn-primary py-0 px-2 text-nowrap">
                                                 <i class="bi bi-upload me-1"></i>{{ $isDone ? 'Replace' : 'Upload' }}
@@ -247,4 +248,91 @@
         <i class="bi bi-info-circle me-1"></i>{{ $uploadedCount }} / {{ $fileFieldCount }} uploaded.
         Use <strong>Save &amp; Continue</strong> when all mandatory documents are on file.
     </p>
+
+    {{--
+        Client-side pre-check: reject a disallowed selection the instant it is
+        picked, so the trainee gets immediate feedback instead of a round-trip.
+
+        This is a CONVENIENCE, not a security control — the browser `accept`
+        attribute only filters the file dialog and can be bypassed, and JS can be
+        disabled entirely. The authoritative check is server-side
+        (App\Rules\SafeUploadedDocument on every upload route), which verifies the
+        file's actual bytes, not just its name. Here we only mirror the extension
+        and size rules to save the user a failed submit.
+    --}}
+    @once
+        <script>
+            (function () {
+                function labelFromAccept(accept) {
+                    return (accept || '')
+                        .split(',')
+                        .map(function (s) { return s.trim().replace(/^\./, '').toUpperCase(); })
+                        .filter(Boolean)
+                        .join(' / ');
+                }
+
+                function feedbackEl(input) {
+                    var next = input.nextElementSibling;
+                    // Reuse our own message node; never clobber a server-rendered one.
+                    if (next && next.classList && next.classList.contains('fc-doc-upload-js-error')) {
+                        return next;
+                    }
+                    var el = document.createElement('div');
+                    el.className = 'fc-doc-upload-js-error text-danger small mt-1';
+                    input.parentNode.insertBefore(el, input.nextSibling);
+                    return el;
+                }
+
+                function clearError(input) {
+                    input.classList.remove('is-invalid');
+                    var next = input.nextElementSibling;
+                    if (next && next.classList && next.classList.contains('fc-doc-upload-js-error')) {
+                        next.textContent = '';
+                    }
+                }
+
+                function reject(input, message) {
+                    input.value = '';
+                    input.classList.add('is-invalid');
+                    feedbackEl(input).textContent = message;
+                }
+
+                // Extensions we never accept regardless of the field's accept list —
+                // mirrors the server's dangerous-extension guard so a double
+                // extension (report.php.pdf) is caught before submit too.
+                var BLOCKED = /\.(php\d?|phtml|phps|pht|phar|cgi|pl|py|rb|jsp|asp|aspx|sh|bash|exe|com|bat|cmd|msi|dll|htaccess|htm|html|svg|js)(\.|$)/i;
+
+                document.addEventListener('change', function (e) {
+                    var input = e.target;
+                    if (!input.classList || !input.classList.contains('fc-doc-upload-input')) {
+                        return;
+                    }
+
+                    clearError(input);
+
+                    var file = input.files && input.files[0];
+                    if (!file) {
+                        return;
+                    }
+
+                    var name = file.name || '';
+                    var accept = input.getAttribute('accept') || '';
+                    var allowed = accept.split(',').map(function (s) { return s.trim().toLowerCase(); }).filter(Boolean);
+                    var dot = name.lastIndexOf('.');
+                    var ext = dot >= 0 ? name.slice(dot).toLowerCase() : '';
+
+                    if (BLOCKED.test(name) || (allowed.length && allowed.indexOf(ext) === -1)) {
+                        reject(input, 'Only ' + labelFromAccept(accept) + ' files are allowed. "' + name + '" was not accepted.');
+                        return;
+                    }
+
+                    var maxKb = parseInt(input.getAttribute('data-max-kb'), 10);
+                    if (maxKb > 0 && file.size > maxKb * 1024) {
+                        var shown = maxKb >= 1024 ? (Math.round(maxKb / 102.4) / 10) + ' MB' : maxKb + ' KB';
+                        reject(input, 'File is too large. Maximum allowed size is ' + shown + '.');
+                    }
+                }, true);
+            })();
+        </script>
+    @endonce
 @endif

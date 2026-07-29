@@ -9,6 +9,7 @@ use App\Models\FC\FcFormFieldGroup;
 use App\Models\FC\FcFormGroupField;
 use App\Models\FC\FcPreHistory;
 use App\Models\FC\StudentMasterFirst;
+use App\Rules\SafeUploadedDocument;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -1222,11 +1223,15 @@ class DynamicFormService
     /**
      * @param  FcFormField|FcFormGroupField  $field
      */
+    /**
+     * @return string|array<int, mixed> file fields return a rule LIST so the
+     *                                  content-verifying rule object can ride along
+     */
     private function resolveFieldValidationRules(
         FcFormField|FcFormGroupField $field,
         ?object $existingData = null,
         mixed $existingFilePath = null
-    ): string {
+    ): string|array {
         if ($field->field_type === 'file') {
             if ($existingFilePath === null && $existingData !== null) {
                 $col = $field->target_column ?: $field->field_name;
@@ -1321,7 +1326,10 @@ class DynamicFormService
     /**
      * @param  FcFormField|FcFormGroupField  $field
      */
-    private function buildFileValidationRules(FcFormField|FcFormGroupField $field, bool $hasExistingUpload): string
+    /**
+     * @return array<int, mixed> rule list (ends with the content-verifying rule)
+     */
+    private function buildFileValidationRules(FcFormField|FcFormGroupField $field, bool $hasExistingUpload): array
     {
         $rules = $field->validation_rules ?: ($field->is_required ? 'required' : 'nullable');
 
@@ -1342,13 +1350,24 @@ class DynamicFormService
             $rules .= '|mimes:'.str_replace(' ', '', $ext);
         }
 
+        // Never promise more than php.ini accepts: a file above upload_max_filesize
+        // is discarded before validation runs, which reads to the trainee as a
+        // form that silently did nothing (CWE-434 retest finding on row 1).
+        $maxKb = SafeUploadedDocument::maxKilobytes($maxKb);
+
         if (preg_match('/max:\d+/', $rules)) {
             $rules = preg_replace('/max:\d+/', 'max:'.$maxKb, $rules) ?? $rules;
         } else {
             $rules .= '|max:'.$maxKb;
         }
 
-        return $this->cleanValidationRules($rules);
+        // `mimes` only maps the guessed MIME back to an extension. SafeUploadedDocument
+        // is what verifies the bytes actually are that type, rejects a script
+        // extension anywhere in the submitted name, and blocks image/PHP polyglots.
+        return array_merge(
+            explode('|', $this->cleanValidationRules($rules)),
+            [new SafeUploadedDocument(explode(',', str_replace(' ', '', $ext)))]
+        );
     }
 
     /**
