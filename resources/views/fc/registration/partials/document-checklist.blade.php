@@ -210,6 +210,38 @@
     </div>
 @endforeach
 
+@if(! $readonly)
+    <div class="card border-0 shadow-sm mb-3" style="border-left:5px solid #004a93 !important; background:#f6faff;">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center mb-3">
+                <span class="d-inline-flex align-items-center justify-content-center rounded-circle me-2"
+                      style="width:32px;height:32px;background:#004a93;color:#fff;"><i class="bi bi-info-lg"></i></span>
+                <h6 class="fw-bold text-primary mb-0 text-uppercase" style="letter-spacing:0.5px;">Important Instructions</h6>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="p-3 rounded h-100" style="background:#fff;border:1px solid #dbe7f5;">
+                        <span class="badge bg-warning text-dark mb-2" style="letter-spacing:0.5px;">ENVELOPE&ndash;1</span>
+                        <p class="small mb-0 text-secondary">At the time of online registration, complete all the forms/documents pertaining to <strong class="text-dark">Envelope&ndash;1</strong>, download them, and bring the duly signed hard copies in <strong class="text-dark">Envelope&ndash;1</strong> while reporting to the Academy.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 rounded h-100" style="background:#fff;border:1px solid #dbe7f5;">
+                        <span class="badge bg-warning text-dark mb-2" style="letter-spacing:0.5px;">ENVELOPE&ndash;2</span>
+                        <p class="small mb-0 text-secondary">Download all the prescribed forms/documents for <strong class="text-dark">Envelope&ndash;2</strong>, complete them, upload the duly signed &amp; scanned copies to the portal, and also bring the duly signed hard copies in <strong class="text-dark">Envelope&ndash;2</strong> at the time of reporting to the Academy.</p>
+                    </div>
+                </div>
+            </div>
+
+            <ul class="small mb-0 ps-3 text-secondary">
+                <li class="mb-1">The checklist of the forms/documents to be submitted in <strong class="text-dark">Envelope&ndash;1</strong> and <strong class="text-dark">Envelope&ndash;2</strong> is provided in <strong class="text-dark">Annexure&ndash;V</strong>.</li>
+                <li>You are required to submit all <strong class="text-dark">15 documents</strong>. If any document is not applicable, fill <strong class="text-dark">NA</strong> and submit on the online portal.</li>
+            </ul>
+        </div>
+    </div>
+@endif
+
 @if(! $readonly && $fileFieldCount > 0)
     <p class="text-muted small mt-2 mb-0">
         <i class="bi bi-info-circle me-1"></i>{{ $uploadedCount }} / {{ $fileFieldCount }} uploaded.
