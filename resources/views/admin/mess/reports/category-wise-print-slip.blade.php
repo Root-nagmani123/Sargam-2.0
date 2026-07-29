@@ -5,8 +5,8 @@
     $cwBuyerReqTop = is_array(request('buyer_name')) ? request('buyer_name') : (request('buyer_name') !== null && request('buyer_name') !== '' ? [request('buyer_name')] : []);
     $preservedBuyerNames = array_values(array_filter(array_map(static fn ($n) => trim((string) $n), $cwBuyerReqTop), static fn ($n) => $n !== ''));
 @endphp
-<div class="container-fluid py-3 py-md-4 {{ request('print_all') ? 'print-all-mode' : '' }}">
-    <x-breadcrum title="Sale Voucher Report"></x-breadcrum>
+<div class="container-fluid py-3 py-md-4 cw-report-page {{ request('print_all') ? 'print-all-mode' : '' }}">
+    <x-breadcrum title="Sale Voucher Report" :showBack="false"></x-breadcrum>
     @if(session('error'))
         <div class="alert alert-danger alert-dismissible fade show no-print" role="alert">
             {{ session('error') }}
@@ -14,21 +14,18 @@
         </div>
     @endif
     @if(!request('print_all'))
-    <!-- Header Section -->
+    @php $cwExportQ = request()->query(); $cwExportQuery = $cwExportQ ? '?' . http_build_query($cwExportQ) : ''; @endphp
+    {{-- Download / Print bar --}}
+    <div class="d-flex justify-content-end gap-2 mb-3 no-print">
+        <a href="{{ route('admin.mess.reports.category-wise-print-slip.excel') }}{{ $cwExportQuery }}" class="btn cw-export-btn" title="Download (Excel)">
+            <i class="material-symbols-rounded">download</i><span>Download</span>
+        </a>
+        <button type="button" class="btn cw-export-btn" id="cwPrintBtn" title="Print (or Save as PDF)">
+            <i class="material-symbols-rounded">print</i><span>Print</span>
+        </button>
+    </div>
     <div class="card mb-4 border-0 shadow-sm rounded-3 no-print cw-sale-voucher-filter-card">
-        <div class="card-header bg-white border-0 pb-0">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <div>
-                    <h5 class="mb-0 fw-semibold text-dark">Filter Sale Voucher Report</h5>
-                    <p class="mb-0 text-muted small">Refine results by date, client type &amp; buyer name</p>
-                </div>
-                <span class="badge bg-light text-secondary fw-normal d-flex align-items-center">
-                    <span class="material-icons me-1" style="font-size: 16px;">info</span>
-                    Smart filters
-                </span>
-            </div>
-        </div>
-        <div class="card-body pt-3">
+        <div class="card-body p-3 p-lg-4">
             @php
                 $cwSlugs = array_values(array_unique(array_filter(array_map(
                     static fn ($s) => strtolower(trim((string) $s)),
@@ -49,8 +46,9 @@
                 }
                 $cwMergedCats = $cwMergedCats->unique('id')->values();
             @endphp
-            <form method="GET" action="{{ route('admin.mess.reports.category-wise-print-slip') }}" id="filterForm">
-                <div class="row g-3 g-md-4">
+            <form method="GET" action="{{ route('admin.mess.reports.category-wise-print-slip') }}" id="filterForm" class="d-flex flex-wrap align-items-end gap-2 cw-filter-form">
+                <span class="programme-dt-filters-label flex-shrink-0 align-self-center">Filter</span>
+                <div class="d-flex flex-wrap align-items-end gap-2 cw-filter-grid">
                     <div class="col-12 col-md-3 col-lg-2">
                         <label class="form-label fw-semibold small text-uppercase text-muted mb-1">From Date</label>
                         <input type="date" name="from_date" class="form-control" value="{{ request('from_date') }}">
@@ -122,28 +120,9 @@
                         </select>
                     </div>
                 </div>
-                <div class="mt-3 pt-2 border-top d-flex flex-wrap gap-2 align-items-center">
-                    <button type="submit" name="refresh" value="1" class="btn btn-primary d-inline-flex align-items-center">
-                        <span class="material-icons me-1" style="font-size: 18px;">filter_list</span>
-                        Apply Filters
-                    </button>
-                    <a href="{{ route('admin.mess.reports.category-wise-print-slip') }}" class="btn btn-outline-secondary d-inline-flex align-items-center">
-                        <span class="material-icons me-1" style="font-size: 18px;">refresh</span>
-                        Reset
-                    </a>
-                    <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center" id="btnPrintAll" title="Print or Save as PDF">
-                        <span class="material-symbols-rounded me-1" style="font-size: 18px;">print</span>
-                        Print
-                    </button>
-                    @php $cwExportQs = request()->query(); $cwExportQuery = $cwExportQs ? '?' . http_build_query($cwExportQs) : ''; @endphp
-                    <a href="{{ route('admin.mess.reports.category-wise-print-slip.excel') }}{{ $cwExportQuery }}" class="btn btn-success d-inline-flex align-items-center" title="Export to Excel">
-                        <span class="material-symbols-rounded me-1" style="font-size: 18px;">table_view</span>
-                        Export Excel
-                    </a>
-                    <a href="{{ route('admin.mess.reports.category-wise-print-slip.pdf') }}{{ $cwExportQuery }}" class="btn btn-danger d-inline-flex align-items-center" title="Download PDF">
-                        <span class="material-symbols-rounded me-1" style="font-size: 18px;">picture_as_pdf</span>
-                        Download PDF
-                    </a>
+                <a href="{{ route('admin.mess.reports.category-wise-print-slip') }}" id="cwRemoveFilter" class="programme-dt-btn-reset flex-shrink-0 align-self-center d-inline-flex align-items-center justify-content-center text-decoration-none" title="Remove all filters">Remove Filter</a>
+                <div class="d-flex align-items-center gap-2 ms-auto flex-shrink-0 align-self-center">
+                    <input type="search" name="search" id="cwSearch" class="form-control cw-search-input" placeholder="Search item…" autocomplete="off" value="{{ request('search') }}">
                 </div>
             </form>
         </div>
@@ -456,6 +435,45 @@
             border-top: 3px solid #004a93;
         }
     }
+
+    /* ── New-design chrome: Download/Print bar + single-row filter toolbar (token-based per design.md) ── */
+    .cw-report-page .cw-export-btn {
+        background: var(--ds-surface, #fff);
+        border: 1px solid var(--ds-line, #e5e7eb);
+        color: var(--ds-primary, #004a93);
+        border-radius: var(--ds-radius, 4px);
+        min-height: var(--ds-control-h, 40px);
+        padding: 0 1rem;
+        font-weight: 500;
+        font-size: 0.875rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .cw-report-page .cw-export-btn:hover { background: var(--ds-surface-2, #f8fafc); border-color: var(--ds-primary, #004a93); }
+    .cw-report-page .cw-export-btn .material-symbols-rounded { font-size: 1.15rem; }
+    /* filter grid → compact single-row toolbar: hide the tall labels, use the control's own placeholder */
+    .cw-report-page .cw-filter-grid { row-gap: 0.5rem; }
+    .cw-report-page .cw-filter-grid > [class*="col-"] { flex: 0 0 auto; width: auto; }
+    .cw-report-page .cw-filter-grid .form-label { display: none; }
+    .cw-report-page .cw-filter-grid .form-control,
+    .cw-report-page .cw-filter-grid .form-select,
+    .cw-report-page .cw-filter-grid .ts-wrapper { min-width: 10rem; min-height: var(--ds-control-h, 40px); }
+    .cw-report-page .cw-filter-grid input[type="date"] { min-width: 8.5rem; width: auto; }
+    .cw-report-page .cw-search-input {
+        min-height: var(--ds-control-h, 40px);
+        height: var(--ds-control-h, 40px);
+        width: 13rem;
+        border-radius: var(--ds-radius, 4px);
+        border: 1px solid var(--ds-line, #e5e7eb);
+        font-size: 0.85rem;
+    }
+    /* LBSNAA branding header + blue title band are for the PRINT/PDF layout — hide them on the
+       normal on-screen view (the clean mock goes straight to the buyer sections). They still show
+       in print_all mode (browser print) and the dedicated print window builds its own header. */
+    .cw-report-page:not(.print-all-mode) #cw-sale-voucher-report-wrap .report-header { display: none !important; }
+    /* Trim the debug timing hint on screen */
+    .cw-report-page #cw-sale-voucher-timing-hint { display: none !important; }
 </style>
 
 @if(request('print_all'))
@@ -490,52 +508,74 @@ document.addEventListener('DOMContentLoaded', function() {
     @endif
 
     var reportWrap = document.getElementById('cw-sale-voucher-report-wrap');
-    if (reportWrap) {
-        function ajaxLoadReport(url) {
-            if (!url) return;
-            var targetUrl = url;
-            if (!/[?&]ajax=1(?:&|$)/.test(url)) {
-                var sep = url.indexOf('?') === -1 ? '?' : '&';
-                targetUrl = url + sep + 'ajax=1';
-            }
-            reportWrap.style.opacity = '0.55';
-            fetch(targetUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(function (r) {
-                    var ms = r.headers.get('X-Sale-Voucher-Report-Ms');
-                    var cache = r.headers.get('X-Sale-Voucher-Report-Cache');
-                    if (ms) console.info('[Sale Voucher Report] page ' + ms + ' ms' + (cache ? ', cache ' + cache : ''));
-                    return r.text();
-                })
-                .then(function (html) {
-                    reportWrap.innerHTML = html;
-                    reportWrap.style.opacity = '';
-                    hookReportPagination();
-                })
-                .catch(function (e) {
-                    reportWrap.style.opacity = '';
-                    console.error('Sale voucher report pagination failed', e);
-                });
-        }
 
-        function hookReportPagination() {
-            reportWrap.querySelectorAll('.pagination a').forEach(function (a) {
-                a.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    ajaxLoadReport(this.href);
-                });
-            });
-        }
-
-        hookReportPagination();
-    }
-
-    var btnPrintAll = document.getElementById('btnPrintAll');
-    if (btnPrintAll) {
-        btnPrintAll.addEventListener('click', function(e) {
-            e.preventDefault();
-            printCategoryWiseSlip();
+    function hookReportPagination() {
+        if (!reportWrap) return;
+        reportWrap.querySelectorAll('.pagination a').forEach(function (a) {
+            a.addEventListener('click', function (e) { e.preventDefault(); ajaxLoadReport(this.href); });
         });
     }
+    function ajaxLoadReport(url) {
+        if (!reportWrap || !url) return;
+        var targetUrl = url;
+        if (!/[?&]ajax=1(?:&|$)/.test(url)) {
+            var sep = url.indexOf('?') === -1 ? '?' : '&';
+            targetUrl = url + sep + 'ajax=1';
+        }
+        reportWrap.style.opacity = '0.55';
+        fetch(targetUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) {
+                var ms = r.headers.get('X-Sale-Voucher-Report-Ms');
+                var cache = r.headers.get('X-Sale-Voucher-Report-Cache');
+                if (ms) console.info('[Sale Voucher Report] page ' + ms + ' ms' + (cache ? ', cache ' + cache : ''));
+                return r.text();
+            })
+            .then(function (html) { reportWrap.innerHTML = html; reportWrap.style.opacity = ''; hookReportPagination(); })
+            .catch(function (e) { reportWrap.style.opacity = ''; console.error('Sale voucher report failed', e); });
+    }
+    hookReportPagination();
+
+    // Apply filters via AJAX — updates the report in place, no full page reload.
+    var cwForm = document.getElementById('filterForm');
+    function cwApplyFilters() {
+        if (!cwForm || !reportWrap) return;
+        var params = new URLSearchParams();
+        new FormData(cwForm).forEach(function (v, k) { if (v === '' || v === null) return; params.append(k, v); });
+        var qs = params.toString();
+        var url = cwForm.action + (qs ? '?' + qs : '');
+        if (window.history && window.history.pushState) { try { window.history.pushState({ cw: true }, '', url); } catch (e) {} }
+        ajaxLoadReport(url);
+    }
+    window.cwApplyFilters = cwApplyFilters;
+    window.addEventListener('popstate', function () { ajaxLoadReport(window.location.href); });
+
+    if (cwForm) {
+        var cwTimer = null;
+        cwForm.addEventListener('change', function (e) {
+            if (!e.target || !e.target.name || e.target.name === 'search') return;
+            if (cwTimer) clearTimeout(cwTimer);
+            cwTimer = setTimeout(cwApplyFilters, 500);
+        });
+        var cwSearchEl = document.getElementById('cwSearch');
+        if (cwSearchEl) {
+            var cwSearchTimer = null;
+            cwSearchEl.addEventListener('input', function () {
+                if (cwSearchTimer) clearTimeout(cwSearchTimer);
+                cwSearchTimer = setTimeout(cwApplyFilters, 400);
+            });
+        }
+    }
+    var cwRemove = document.getElementById('cwRemoveFilter');
+    if (cwRemove) {
+        cwRemove.addEventListener('click', function (e) {
+            e.preventDefault();
+            var baseUrl = this.getAttribute('href');
+            if (window.history && window.history.pushState) { try { window.history.pushState({ cw: true }, '', baseUrl); } catch (e2) {} }
+            window.location.href = baseUrl; // full reset (clears cascade + tom-selects cleanly)
+        });
+    }
+    var cwPrintBtn = document.getElementById('cwPrintBtn');
+    if (cwPrintBtn) { cwPrintBtn.addEventListener('click', function (e) { e.preventDefault(); printCategoryWiseSlip(); }); }
 
     var filtersAlreadyApplied = {{ ($filtersApplied ?? false) ? 'true' : 'false' }};
 
