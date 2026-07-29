@@ -36,6 +36,15 @@
     } catch (\Throwable $e) {
         $sampleDocs = collect();
     }
+
+    // Static blank-form fallbacks — always available even where the sample-document
+    // master row is absent/inactive (e.g. environments where that migration hasn't
+    // run). Maps field_name => public-relative PDF path. Takes precedence over the DB.
+    $staticBlankForms = [
+        'doc_group_insurance' => 'admin_assets/sample/joining_documents/group_insurance_blank_form.pdf',
+        'doc_nps_subscription' => 'admin_assets/sample/joining_documents/nps_blank_form.pdf',
+        'doc_employee_info_sheet' => 'admin_assets/sample/joining_documents/employee_info_blank_form.pdf',
+    ];
 @endphp
 
 @if(! $readonly)
@@ -58,6 +67,7 @@
                             <th class="text-start">Document Title</th>
                             <th style="width:260px;">Upload</th>
                             <th style="width:120px;">View Uploaded</th>
+                            <th style="width:120px;">Blank Form</th>
                             <th style="width:120px;">Sample Document</th>
                             <th style="width:110px;">Status</th>
                         </tr>
@@ -77,6 +87,11 @@
                                 $sampleUrl  = ($sample && $sample->sample_file_path)
                                     ? asset(ltrim((string) $sample->sample_file_path, '/'))
                                     : null;
+                                // Static blank-form link takes precedence, then the DB sample.
+                                $staticBlank = $staticBlankForms[$field->field_name] ?? null;
+                                $blankUrl    = ($staticBlank && file_exists(public_path($staticBlank)))
+                                    ? asset($staticBlank)
+                                    : $sampleUrl;
                             @endphp
                             <tr>
                                 <td class="text-center">{{ $i + 1 }}</td>
@@ -145,6 +160,16 @@
                                         </a>
                                     @else
                                         <span class="text-muted small">No file uploaded</span>
+                                    @endif
+                                </td>
+                                <td class="text-center">
+                                    @if($blankUrl)
+                                        <a href="{{ $blankUrl }}" target="_blank" rel="noopener"
+                                           class="btn btn-link btn-sm p-0 text-primary">
+                                            <i class="bi bi-file-earmark-text me-1"></i>View Blank Form
+                                        </a>
+                                    @else
+                                        <span class="text-muted small">—</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
