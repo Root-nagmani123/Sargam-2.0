@@ -39,79 +39,15 @@
 <div class="container-fluid stock-purchase-report">
     <div id="stock-purchase-print-config" class="d-none" hidden
          data-config="{{ htmlspecialchars($stockPurchasePrintConfigJson, ENT_QUOTES, 'UTF-8') }}"></div>
-    <x-breadcrum title="Stock Purchase Details Report"></x-breadcrum>
-    <!-- Filters Section (Top - same pattern as other report pages) -->
-
-    <div class="card mb-4 border-0 shadow-sm rounded-3 overflow-hidden no-print">
-        <div style="height:3px;background:linear-gradient(90deg,#0b4a7e 0%,#2980b9 50%,#0b4a7e 100%);" aria-hidden="true"></div>
-        <div class="card-header bg-body-tertiary border-0 py-3 px-3 px-lg-4">
-            <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
-                <div class="d-flex align-items-start gap-3">
-                    <span class="d-none d-sm-flex align-items-center justify-content-center flex-shrink-0 rounded-3 bg-primary-subtle text-primary p-2" aria-hidden="true">
-                        <span class="material-symbols-rounded" style="font-size: 1.5rem;">tune</span>
-                    </span>
-                    <div>
-                        <h5 class="mb-1 fw-semibold text-body">Filter Purchases</h5>
-                        <p class="mb-0 small text-body-secondary">Refine results by date, vendor &amp; store</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="card-body pt-3 p-3 p-lg-4">
-            <form method="GET" action="{{ route('admin.mess.reports.stock-purchase-details') }}">
-                <div class="row g-3">
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <label class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">From Date</label>
-                        <input type="date" name="from_date" class="form-control" value="{{ $fromDate }}" required>
-                    </div>
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <label class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">To Date</label>
-                        <input type="date" name="to_date" class="form-control" value="{{ $toDate }}" required>
-                    </div>
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <label class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">Vendor Name</label>
-                        <select name="vendor_id[]" class="form-select choices-select" multiple data-placeholder="All Vendors">
-                            @foreach($vendors as $vendor)
-                                <option value="{{ $vendor->id }}" @selected(in_array((int) $vendor->id, $selectedVendorIds, true))>{{ $vendor->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <label class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">Store Name</label>
-                        <select name="store_id[]" class="form-select choices-select" multiple data-placeholder="All Stores">
-                            @foreach($stores as $store)
-                                <option value="{{ $store->id }}" @selected(in_array((int) $store->id, $selectedStoreIds, true))>{{ $store->store_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <div class="d-flex flex-wrap align-items-center gap-2 pt-3 mt-3 border-top border-light-subtle">
-                    <button type="submit" name="refresh" value="1" class="btn btn-primary btn-sm rounded-1 d-inline-flex align-items-center gap-1 px-3">
-                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">filter_list</span>
-                        <span>Apply filters</span>
-                    </button>
-                    <a href="{{ route('admin.mess.reports.stock-purchase-details') }}" class="btn btn-outline-secondary btn-sm rounded-1 d-inline-flex align-items-center gap-1 px-3">
-                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">refresh</span>
-                        <span>Reset</span>
-                    </a>
-                    <div class="vr d-none d-md-block text-secondary mx-1 align-self-stretch my-1" role="separator" aria-hidden="true"></div>
-                    <div class="btn-group shadow-sm rounded-1" role="group" aria-label="Print or download PDF">
-                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3 rounded-0 rounded-start-2" onclick="printStockPurchaseTable()" title="Print report or choose Save as PDF in print dialog">
-                            <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;" aria-hidden="true">print</span>
-                            <span>Print</span>
-                        </button>
-                        <a href="{{ route('admin.mess.reports.stock-purchase-details.pdf', request()->query()) }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3 rounded-0 rounded-end-2" title="Download PDF">
-                            <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;" aria-hidden="true">picture_as_pdf</span>
-                            <span>PDF</span>
-                        </a>
-                    </div>
-                    <a href="{{ route('admin.mess.reports.stock-purchase-details.excel', request()->query()) }}" class="btn btn-success btn-sm rounded-1 d-inline-flex align-items-center gap-1 px-3" title="Export to Excel">
-                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">table_view</span>
-                        <span>Export Excel</span>
-                    </a>
-                </div>
-            </form>
-        </div>
+    <x-breadcrum title="Stock Purchase Details Report" :showBack="false"></x-breadcrum>
+    {{-- Download / Print bar --}}
+    <div class="d-flex justify-content-end gap-2 mb-3 no-print">
+        <a href="{{ route('admin.mess.reports.stock-purchase-details.excel', request()->query()) }}" class="btn spr-export-btn border-0" title="Download (Excel)">
+            <i class="material-symbols-rounded">download</i><span>Download</span>
+        </a>
+        <button type="button" class="btn spr-export-btn border-0" onclick="printStockPurchaseTable()" title="Print (or Save as PDF)">
+            <i class="material-symbols-rounded">print</i><span>Print</span>
+        </button>
     </div>
 
     <!-- Report Area (full width below filters) -->
@@ -119,48 +55,35 @@
             <!-- Report content -->
             <div class="report-content card border-0 shadow-sm rounded-3">
                 <div class="card-body p-3 p-lg-4">
-                    <!-- Report header (title centered, date bar, vendor) -->
-                    <div class="report-header text-center mb-4 rounded-3 p-4" style="background:linear-gradient(135deg,#f0f4f8 0%,#e8edf4 50%,#f0f4f8 100%);border:1px solid #e2e8f0;">
-                        <div class="d-flex align-items-center justify-content-center gap-2 mb-3">
-                            <span class="material-symbols-rounded text-primary" style="font-size:1.75rem;" aria-hidden="true">receipt_long</span>
-                            <h4 class="fw-bold mb-0 text-body text-uppercase mess-title-tracking">Stock Purchase Details</h4>
-                        </div>
-                        <div class="d-flex flex-column flex-sm-row flex-wrap align-items-center justify-content-center gap-2 mb-2">
-                            <span class="badge rounded-1 bg-white text-body-emphasis fw-normal px-3 py-2 shadow-sm border">
-                                <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">date_range</span>
-                                {{ date('d-F-Y', strtotime($fromDate)) }} to {{ date('d-F-Y', strtotime($toDate)) }}
-                            </span>
-                        </div>
-                        @if(config('app.debug') && isset($reportTimingMs))
-                            <p class="small text-body-secondary mb-2 no-print" id="stock-purchase-timing-hint">
-                                Server: {{ $reportTimingMs }} ms
-                                @if(isset($reportCacheStatus))
-                                    · cache {{ $reportCacheStatus }}
-                                @endif
-                                @if(isset($reportLineCount))
-                                    · {{ $reportLineCount }} line(s)
-                                @endif
-                            </p>
-                        @endif
-                        <div class="d-flex flex-column flex-sm-row flex-wrap align-items-center justify-content-center gap-2">
-                            <span class="badge rounded-1 bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-normal px-3 py-2 shadow-sm text-wrap text-start" style="max-width: min(100%, 42rem);">
-                                <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">person</span>
-                                <span class="fw-semibold">{{ $stockPurchasePrintVendorHeaderLabel }}</span> {{ $stockPurchasePrintVendorLine }}
-                            </span>
-                            <span class="badge rounded-1 bg-success-subtle text-success-emphasis border border-success-subtle fw-normal px-3 py-2 shadow-sm">
-                                <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">store</span>
-                                <span class="fw-semibold">Store:</span> {{ $stockPurchasePrintStoreDetails }}
-                            </span>
-                        </div>
+                    {{-- Filter toolbar (single row, auto-apply) --}}
+                    <div class="d-flex align-items-center gap-2 mb-4 spr-toolbar no-print">
+                        <form method="GET" action="{{ route('admin.mess.reports.stock-purchase-details') }}" id="sprFilterForm" class="d-flex align-items-center gap-2 spr-filter-form">
+                            <input type="hidden" name="refresh" value="1">
+                            <span class="programme-dt-filters-label flex-shrink-0">Filter</span>
+                            <div class="spr-filter-item">
+                                <input type="text" id="spr_date_range" class="form-control spr-filter-range" placeholder="Select date range" autocomplete="off" readonly>
+                                {{-- Range picker fills these; names preserved for the backend. --}}
+                                <input type="hidden" name="from_date" id="from_date" value="{{ $fromDate }}">
+                                <input type="hidden" name="to_date" id="to_date" value="{{ $toDate }}">
+                            </div>
+                            <div class="spr-filter-item">
+                                <select name="vendor_id[]" class="form-select choices-select spr-auto-filter" multiple data-placeholder="All Vendors">
+                                    @foreach($vendors as $vendor)
+                                        <option value="{{ $vendor->id }}" @selected(in_array((int) $vendor->id, $selectedVendorIds, true))>{{ $vendor->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="spr-filter-item">
+                                <select name="store_id[]" class="form-select choices-select spr-auto-filter" multiple data-placeholder="All Stores">
+                                    @foreach($stores as $store)
+                                        <option value="{{ $store->id }}" @selected(in_array((int) $store->id, $selectedStoreIds, true))>{{ $store->store_name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <a href="{{ route('admin.mess.reports.stock-purchase-details') }}" id="sprRemoveFilter" class="programme-dt-btn-reset flex-shrink-0 d-inline-flex align-items-center justify-content-center text-decoration-none" title="Remove all filters">Reset</a>
+                        </form>
                     </div>
 
-                    @if(isset($reportLineCount) && $reportLineCount > 0)
-                        <p class="small text-body-secondary mb-2 no-print">
-                            Showing page {{ $reportPage->currentPage() }} of {{ $reportPage->lastPage() }}
-                            ({{ $reportPage->count() }} of {{ $reportLineCount }} lines).
-                            Use PDF/Excel for full export; print uses current page only.
-                        </p>
-                    @endif
                     <div id="stock-purchase-table-wrap">
                         @include('admin.mess.reports.partials.stock-purchase-details-table', [
                             'purchaseDetailLines' => $purchaseDetailLines,
@@ -177,6 +100,8 @@
     {{-- Tom Select for vendor & store dropdowns (deferred so table paints first) --}}
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js" defer></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr" defer></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             @if(isset($reportTimingMs))
@@ -192,46 +117,68 @@
             @endif
 
             var tableWrap = document.getElementById('stock-purchase-table-wrap');
-            if (tableWrap) {
-                function ajaxLoad(url) {
-                    if (!url) return;
-                    var targetUrl = url;
-                    if (!/[?&]ajax=1(?:&|$)/.test(url)) {
-                        var sep = url.indexOf('?') === -1 ? '?' : '&';
-                        targetUrl = url + sep + 'ajax=1';
-                    }
-                    tableWrap.style.opacity = '0.55';
-                    fetch(targetUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                        .then(function (r) {
-                            var ms = r.headers.get('X-Stock-Purchase-Details-Ms');
-                            var cache = r.headers.get('X-Stock-Purchase-Details-Cache');
-                            if (ms) {
-                                console.info('[Stock Purchase Details] page ' + ms + ' ms' + (cache ? ', cache ' + cache : ''));
-                            }
-                            return r.text();
-                        })
-                        .then(function (html) {
-                            tableWrap.innerHTML = html;
-                            tableWrap.style.opacity = '';
-                            hookPagination();
-                        })
-                        .catch(function (e) {
-                            tableWrap.style.opacity = '';
-                            console.error('Stock purchase pagination failed', e);
-                        });
-                }
 
-                function hookPagination() {
-                    tableWrap.querySelectorAll('.pagination a').forEach(function (a) {
-                        a.addEventListener('click', function (e) {
-                            e.preventDefault();
-                            ajaxLoad(this.href);
-                        });
+            function hookPagination() {
+                if (!tableWrap) return;
+                tableWrap.querySelectorAll('.pagination a').forEach(function (a) {
+                    a.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        ajaxLoad(this.href);
                     });
-                }
-
-                hookPagination();
+                });
             }
+
+            function ajaxLoad(url) {
+                if (!tableWrap || !url) return;
+                var targetUrl = url;
+                if (!/[?&]ajax=1(?:&|$)/.test(url)) {
+                    var sep = url.indexOf('?') === -1 ? '?' : '&';
+                    targetUrl = url + sep + 'ajax=1';
+                }
+                tableWrap.style.opacity = '0.55';
+                fetch(targetUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function (r) {
+                        var ms = r.headers.get('X-Stock-Purchase-Details-Ms');
+                        var cache = r.headers.get('X-Stock-Purchase-Details-Cache');
+                        if (ms) {
+                            console.info('[Stock Purchase Details] page ' + ms + ' ms' + (cache ? ', cache ' + cache : ''));
+                        }
+                        return r.text();
+                    })
+                    .then(function (html) {
+                        tableWrap.innerHTML = html;
+                        tableWrap.style.opacity = '';
+                        hookPagination();
+                    })
+                    .catch(function (e) {
+                        tableWrap.style.opacity = '';
+                        console.error('Stock purchase pagination failed', e);
+                    });
+            }
+
+            // Apply the filter form via AJAX — updates the table in place, no full page reload.
+            function sprApplyFilters() {
+                var form = document.getElementById('sprFilterForm');
+                if (!form || !tableWrap) return;
+                if (form.reportValidity && !form.reportValidity()) return;
+                var params = new URLSearchParams();
+                new FormData(form).forEach(function (v, k) {
+                    if (v === '' || v === null) return;
+                    params.append(k, v);
+                });
+                var qs = params.toString();
+                var url = form.action + (qs ? '?' + qs : '');
+                if (window.history && window.history.pushState) {
+                    try { window.history.pushState({ sprFilter: true }, '', url); } catch (e) {}
+                }
+                ajaxLoad(url);
+            }
+
+            window.addEventListener('popstate', function () {
+                if (tableWrap) ajaxLoad(window.location.href);
+            });
+
+            hookPagination();
 
             function initTomSelect() {
                 if (typeof window.TomSelect === 'undefined') return;
@@ -252,6 +199,71 @@
                 requestIdleCallback(initTomSelect, { timeout: 1500 });
             } else {
                 setTimeout(initTomSelect, 100);
+            }
+
+            // Combined From–To dual-month range picker → fills hidden from_date/to_date, then auto-applies.
+            (function initSprRangePicker(tries) {
+                if (typeof flatpickr === 'undefined') {
+                    if ((tries || 0) < 20) { setTimeout(function () { initSprRangePicker((tries || 0) + 1); }, 100); }
+                    return;
+                }
+                var rangeEl = document.getElementById('spr_date_range');
+                var fromEl = document.getElementById('from_date');
+                var toEl = document.getElementById('to_date');
+                if (!rangeEl) return;
+                var defaults = (fromEl && fromEl.value && toEl && toEl.value) ? [fromEl.value, toEl.value] : null;
+                flatpickr(rangeEl, {
+                    mode: 'range',
+                    showMonths: 2,
+                    dateFormat: 'Y-m-d',
+                    allowInput: false,
+                    defaultDate: defaults,
+                    locale: { rangeSeparator: ' – ' },
+                    onChange: function (selectedDates, dateStr, instance) {
+                        if (selectedDates.length === 2) {
+                            if (fromEl) fromEl.value = instance.formatDate(selectedDates[0], 'Y-m-d');
+                            if (toEl) toEl.value = instance.formatDate(selectedDates[1], 'Y-m-d');
+                            sprApplyFilters();
+                        }
+                    }
+                });
+            })(0);
+
+            // New-design filter toolbar: debounced auto-apply on any filter change.
+            var sprForm = document.getElementById('sprFilterForm');
+            if (sprForm) {
+                var sprTimer = null;
+                sprForm.addEventListener('change', function (e) {
+                    var t = e.target;
+                    if (!t || !t.classList || !t.classList.contains('spr-auto-filter')) return;
+                    if (sprTimer) clearTimeout(sprTimer);
+                    sprTimer = setTimeout(sprApplyFilters, 500);
+                });
+            }
+
+            // Reset / Remove filters via AJAX — clears controls, no page reload.
+            var sprRemove = document.getElementById('sprRemoveFilter');
+            if (sprRemove) {
+                sprRemove.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    var baseUrl = this.getAttribute('href');
+                    // Clear vendor / store tom-selects
+                    document.querySelectorAll('.stock-purchase-report select.choices-select').forEach(function (el) {
+                        if (el.tomselect) { el.tomselect.clear(true); }
+                        else { Array.prototype.forEach.call(el.options, function (o) { o.selected = false; }); }
+                    });
+                    // Reset date range to the server default (today–today)
+                    var td = new Date();
+                    var todayStr = td.getFullYear() + '-' + String(td.getMonth() + 1).padStart(2, '0') + '-' + String(td.getDate()).padStart(2, '0');
+                    var fromEl = document.getElementById('from_date');
+                    var toEl = document.getElementById('to_date');
+                    if (fromEl) fromEl.value = todayStr;
+                    if (toEl) toEl.value = todayStr;
+                    var rangeEl = document.getElementById('spr_date_range');
+                    if (rangeEl && rangeEl._flatpickr) rangeEl._flatpickr.setDate([todayStr, todayStr], false);
+                    if (window.history && window.history.pushState) { try { window.history.pushState({ sprFilter: true }, '', baseUrl); } catch (e2) {} }
+                    ajaxLoad(baseUrl);
+                });
             }
         });
     </script>
@@ -566,11 +578,11 @@ function printStockPurchaseTable() {
         position: sticky !important;
         top: 0;
         z-index: 10;
-        background: #0b4a7e !important;
-        color: #fff !important;
+        background: #E8E8E8 !important;
+        color: #323232 !important;
         font-weight: 600;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        border-bottom: 2px solid #004a93;
+        border-bottom: 2px solid #E8E8E8;
         /* fill gap caused by border-collapse:separate */
         border-top: none;
         border-left: 1px solid rgba(255,255,255,0.15);
@@ -613,12 +625,12 @@ function printStockPurchaseTable() {
 
 /* Vendor section header */
 .stock-purchase-report .vendor-section-header-row .vendor-section-header {
-    background: linear-gradient(135deg, #eef2f6 0%, #e8edf2 100%);
-    color: #0f172a;
+    background: #E4EBFF !important;
+    color: #004D9D !important;
     font-weight: 700;
     padding: 0.6rem 0.75rem;
-    border-top: 2px solid #cbd5e1;
-    border-bottom: 1px solid #d8dee6;
+    border-top: 2px solid #E4EBFF;
+    border-bottom: 1px solid #E4EBFF;
     font-size: 0.8125rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -635,11 +647,11 @@ function printStockPurchaseTable() {
 
 /* Bill header */
 .stock-purchase-report .bill-header-row .bill-header {
-    background: linear-gradient(135deg, #475569 0%, #334155 100%);
-    color: #fff;
+    background: #E4EBFF !important;
+    color: #323232 !important;
     font-weight: 600;
     padding: 0.5rem 0.75rem;
-    border-color: #475569;
+    border-color: #E4EBFF !important;
 }
 
 /* Bill total row */
@@ -788,6 +800,63 @@ function printStockPurchaseTable() {
     .stock-purchase-report .vendor-total-row td { background: #e8edf4 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .stock-purchase-report .grand-total-row td { background: #0b4a7e !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .stock-purchase-report .spr-sticky-head { display: none !important; }
+}
+
+/* ── New-design chrome: Download/Print bar + single-row filter toolbar ── */
+.stock-purchase-report .spr-export-btn {
+    background: var(--ds-surface, #fff);
+    border: 1px solid var(--ds-line, #e5e7eb);
+    color: var(--ds-primary, #004a93);
+    border-radius: var(--ds-radius, 4px);
+    min-height: var(--ds-control-h, 40px);
+    padding: 0 1rem;
+    font-weight: 500;
+    font-size: .875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+}
+.stock-purchase-report .spr-export-btn:hover { background: var(--ds-surface-2, #f8fafc); border-color: var(--ds-primary, #004a93); }
+.stock-purchase-report .spr-export-btn .material-symbols-rounded { font-size: 1.15rem; }
+.stock-purchase-report .spr-toolbar,
+.stock-purchase-report .spr-filter-form { flex-wrap: wrap; gap: .5rem; }
+.stock-purchase-report .spr-filter-item { flex-shrink: 0; }
+.stock-purchase-report .spr-filter-date {
+    min-height: var(--ds-control-h, 40px); height: var(--ds-control-h, 40px);
+    width: 9.5rem; border-radius: var(--ds-radius, 4px); border: 1px solid var(--ds-line, #e5e7eb); font-size: .85rem;
+}
+.stock-purchase-report .spr-filter-dash { color: var(--ds-ink-muted, #667085); }
+.stock-purchase-report .spr-filter-range {
+    min-width: 15rem;
+    min-height: var(--ds-control-h, 40px); height: var(--ds-control-h, 40px);
+    border-radius: var(--ds-radius, 4px); border: 1px solid var(--ds-line, #e5e7eb);
+    font-size: .85rem; background: var(--ds-surface, #fff); cursor: pointer;
+}
+.stock-purchase-report .spr-toolbar .ts-wrapper,
+.stock-purchase-report .spr-toolbar .form-select { min-width: 11rem; }
+/* Report context strip — clean, token-based (print/PDF export keeps its own template) */
+.stock-purchase-report .spr-report-header {
+    background: var(--ds-surface-2, #f8fafc);
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-radius: var(--ds-radius-card, 8px);
+    padding: var(--ds-space-3, 1rem);
+    text-align: left;
+}
+.stock-purchase-report .spr-context-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-1, 0.25rem);
+    background: var(--ds-surface, #fff);
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-radius: var(--ds-radius, 4px);
+    padding: 0.35rem 0.75rem;
+    font-size: 0.82rem;
+    color: var(--ds-ink, #1f2937);
+}
+.stock-purchase-report .spr-context-chip--wrap { max-width: min(100%, 42rem); }
+.stock-purchase-report .spr-context-chip .material-symbols-rounded {
+    font-size: 1rem;
+    color: var(--ds-primary, #004a93);
 }
 </style>
 

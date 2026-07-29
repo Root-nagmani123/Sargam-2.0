@@ -1,5 +1,21 @@
-<div class="table-responsive rounded-3 border border-light-subtle shadow-sm bg-white stock-purchase-table-wrapper" role="region" aria-label="Stock purchase table" tabindex="0">
-    <table class="table table-bordered align-middle mb-0 stock-purchase-table" style="width:100%;">
+@php
+    $sprSelVendors = $selectedVendors ?? collect();
+    $sprSelStores = $selectedStores ?? collect();
+    $sprVendorLine = $sprSelVendors->isEmpty() ? 'All Vendors' : $sprSelVendors->pluck('name')->implode(', ');
+    $sprStoreDetails = $sprSelStores->isEmpty() ? 'All Stores' : $sprSelStores->pluck('store_name')->implode(', ');
+    $sprVendorHeaderLabel = ($sprSelVendors->isEmpty() || $sprSelVendors->count() === 1) ? 'Vendor:' : 'Filtered vendors:';
+@endphp
+{{-- Report context strip (inside the AJAX-updated wrap so it stays in sync with filters) --}}
+
+@if(isset($reportLineCount) && $reportLineCount > 0 && isset($reportPage))
+    <p class="small text-body-secondary mb-2 no-print">
+        Showing page {{ $reportPage->currentPage() }} of {{ $reportPage->lastPage() }}
+        ({{ $reportPage->count() }} of {{ $reportLineCount }} lines).
+        Use PDF/Excel for full export; print uses current page only.
+    </p>
+@endif
+<div class="table-responsive stock-purchase-table-wrapper" role="region" aria-label="Stock purchase table" tabindex="0">
+    <table class="table align-middle mb-0 stock-purchase-table" style="width:100%;">
         <thead class="stock-purchase-thead">
             <tr>
                 @include('admin.mess.reports.partials.report-sno-th', ['class' => 'spr-th'])
