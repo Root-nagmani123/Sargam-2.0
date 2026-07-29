@@ -229,6 +229,8 @@ class CourseController extends Controller
                     'course_year' => $course->course_year,
                     'start_date' => $course->start_year ? \Carbon\Carbon::parse($course->start_year)->format('Y-m-d') : 'Not Set',
                     'end_date' => $course->end_date ? \Carbon\Carbon::parse($course->end_date)->format('Y-m-d') : 'Not Set',
+                    'pt_start_time' => $course->pt_start_time ? \Carbon\Carbon::parse($course->pt_start_time)->format('H:i') : null,
+                    'pt_end_time' => $course->pt_end_time ? \Carbon\Carbon::parse($course->pt_end_time)->format('H:i') : null,
                     'coordinator_name' => $coordinatorName,
                     'assistant_coordinators' => $assistantCoordinators,
                     'coordinator_photo' => $coordinatorFaculty ? ($coordinatorFaculty->photo_uplode_path ?? null) : null,
