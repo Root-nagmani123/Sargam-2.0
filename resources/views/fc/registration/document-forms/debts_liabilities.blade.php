@@ -115,7 +115,7 @@
             <div class="dc-footer">
                 <div class="row">
                     <div class="col-md-6">Dated / दिनांक:
-                        <input type="date" name="declaration_date" class="dc-blank" value="{{ $val('declaration_date') }}" style="min-width:150px;">
+                        <input type="date" name="declaration_date" class="dc-blank" value="{{ old('declaration_date', fc_document_date('iso')) }}" style="min-width:150px;" readonly>
                     </div>
                     <div class="col-md-6">
                         <div>Signature / हस्ताक्षर: ______________________</div>

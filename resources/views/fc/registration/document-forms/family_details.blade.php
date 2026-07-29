@@ -114,8 +114,8 @@
 
             <div class="fm-sign row">
                 <div class="col-md-6">
-                    <div>Place / स्थान: <input type="text" name="place" class="fm-blank" value="{{ old('place', $data['place'] ?? 'Mussoorie') }}" readonly></div>
-                    <div>Date / दिनांक: <input type="date" name="declaration_date" class="fm-blank" value="{{ old('declaration_date', $data['declaration_date'] ?? '2026-08-24') }}" readonly></div>
+                    <div>Place / स्थान: <input type="text" name="place" class="fm-blank" value="{{ old('place', config('fc.document_place')) }}" readonly></div>
+                    <div>Date / दिनांक: <input type="date" name="declaration_date" class="fm-blank" value="{{ old('declaration_date', fc_document_date('iso')) }}" readonly></div>
                 </div>
                 <div class="col-md-6 text-md-end">Signature of the Government Servant / सरकारी कर्मचारी के हस्ताक्षर<br>______________________</div>
             </div>
@@ -124,6 +124,15 @@
                 <div><b>* Family</b> for this purpose means family as defined in clause (b) of sub-rule of Rule 54 of the CCS (Pension) Rule, 1972 (Mention overleaf for ready reference)</div>
                 <div class="mt-1"><b>** Please attach an ID proof of Date of birth (in each case, except your own).</b></div>
                 <div class="mt-1"><b>Note:</b> Additions/alterations are recorded in Column (7) under the Head of Office's signature; details of spouse, all children and parents, and disabled siblings may be given. / <b>नोट:</b> परिवर्धन/परिवर्तन कॉलम (7) में कार्यालय प्रमुख के हस्ताक्षर के तहत दर्ज किए जाते हैं। (Full instructions are reproduced on the generated PDF.)</div>
+
+                <div class="mt-2"><b>*Family for this purpose means family as defined in clause (b) of sub-rule (14) of Rule 54 of the CCS (Pension) Rules, 1972 (as amended from time to time).</b></div>
+                <div class="mt-1">As soon as a Government servant enters Government service, he/she shall give details of his/her family in Form 3 to the Head of Office. If the Government servant has no family, he/she shall furnish the details in Form 3 as soon as he acquires a family.</div>
+                <div class="mt-1">&lsquo;Family&rsquo; in relation to a Government servant means —</div>
+                <div style="margin:.3rem 0 0 1.2rem;">14(b) Wife in the case of a male Government servant, or husband in the case of a female Government servant.</div>
+                <div style="margin:.2rem 0 0 1.2rem;">(ia) a judicially separated wife or husband, such separation not being granted on the ground of adultery and the person surviving was not held guilty of committing adultery.</div>
+                <div style="margin:.2rem 0 0 1.2rem;">(ii) unmarried son who has not attained the age of twenty-five years and unmarried or widowed or divorced daughter, including such son and daughter adopted legally;</div>
+                <div style="margin:.2rem 0 0 1.2rem;">(iii) dependent parents;</div>
+                <div style="margin:.2rem 0 0 1.2rem;">(iv) dependent disabled siblings (i.e. brother or sister) of a Government servant.</div>
             </div>
         </div>
 

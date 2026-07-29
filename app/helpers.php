@@ -2008,3 +2008,27 @@ if (! function_exists('resolve_default_discipline_memo_template_pk')) {
             ->value('pk');
     }
 }
+
+if (! function_exists('fc_document_date')) {
+    /**
+     * Batch-frozen ceremony date for FC joining documents (single source:
+     * config('fc.document_declaration_date')).
+     *
+     * @param  string  $format  'iso' → Y-m-d (for <input type="date">);
+     *                          'display' → d-m-Y (the form the PDFs print).
+     */
+    function fc_document_date(string $format = 'display'): string
+    {
+        $iso = (string) config('fc.document_declaration_date');
+
+        if ($format === 'iso') {
+            return $iso;
+        }
+
+        try {
+            return \Carbon\Carbon::parse($iso)->format('d-m-Y');
+        } catch (\Throwable $e) {
+            return $iso;
+        }
+    }
+}

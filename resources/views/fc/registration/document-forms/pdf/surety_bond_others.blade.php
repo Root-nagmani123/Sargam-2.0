@@ -14,13 +14,14 @@
     $elig    = $g('surety_eligibility');
     $pwn = $g('prob_witness_name');   $pwa = $g('prob_witness_address');   $pwo = $g('prob_witness_occupation');
     $swn = $g('surety_witness_name'); $swa = $g('surety_witness_address'); $swo = $g('surety_witness_occupation');
+    $swn2 = $g('surety_witness_name2'); $swa2 = $g('surety_witness_address2'); $swo2 = $g('surety_witness_occupation2');
     $dated = $fmt($data['declaration_date'] ?? '');
     $dAt   = $g('bond_dated_at');   $dDay = $g('bond_dated_day');   $dMon = $g('bond_dated_month');
     $sigs  = $data['_signature_src'] ?? [];
     $hi    = $data['_hi'] ?? [];   // candidate-typed Hindi values (blank if none)
 
     $blank = function ($v, $w = '150pt') {
-        $val = ($v !== '' && $v !== null) ? e($v) : '&nbsp;';
+        $val = ($v !== '' && $v !== null) ? e($v) : str_repeat('_', max(12, (int) round((strpos($w, 'mm') !== false ? (float) $w * 2.83465 : (float) $w) / 6)));
         return '<span style="display:inline-block; min-width:'.$w.'; border-bottom:1px solid #000; text-align:center; font-weight:bold; padding:0 4pt;">'.$val.'</span>';
     };
     $isPerm = $elig === 'In the permanent service of Government';
@@ -79,27 +80,35 @@
     </div>
 
     <div class="lines">
-        Dated {!! $blank($dAt, '130pt') !!} this {!! $blank($dDay, '110pt') !!} day of {!! $blank($dMon, '150pt') !!}
-        <div class="sign">Signature of the Probationer:
+        <div style="text-align:center;">Dated {!! $blank($dAt, '130pt') !!} this {!! $blank($dDay, '110pt') !!} day of {!! $blank($dMon, '150pt') !!}</div>
+
+        <div class="sign" style="text-align:center; margin-top:22pt;">Signature of the Probationer:
             @if(!empty($sigs[0]))<img src="{{ $sigs[0] }}" class="sig-img">@else {!! $blank('', '200pt') !!} @endif
         </div>
-        <div>Signed by the Probationer in the presence of — Name of Witness: {!! $blank($pwn, '200pt') !!}</div>
-        <div>Address: {!! $blank($pwa, '300pt') !!} &nbsp; Occupation: {!! $blank($pwo, '160pt') !!}</div>
+        <div style="margin-top:10pt;">Signed <b>by Probationer</b> in the presence of &nbsp;(Name of Witness) {!! $blank($pwn, '220pt') !!}</div>
+        <div>Address {!! $blank($pwa, '420pt') !!}</div>
+        <div>{!! $blank('', '200pt') !!} Occupation {!! $blank($pwo, '200pt') !!}</div>
+
+        <div class="sign" style="text-align:center; margin-top:22pt;">Signature of the Surety:
+            @if(!empty($sigs[1]))<img src="{{ $sigs[1] }}" class="sig-img">@else {!! $blank('', '200pt') !!} @endif
+        </div>
+        <div style="margin-top:10pt;">Signed <b>by Surety</b> in the presence of &nbsp;(Name of Witness) {!! $blank($swn, '220pt') !!}</div>
+        <div>Address {!! $blank($swa, '420pt') !!}</div>
+        <div>{!! $blank('', '200pt') !!} Occupation {!! $blank($swo, '200pt') !!}</div>
     </div>
 
     <div class="body" style="text-indent:0; margin-top:14pt;">
-        I, the Surety whose signature is appended to the above agreement, do hereby declare that —
+        I (Insert name of surety) {!! $blank($g('surety_decl_name'), '220pt') !!} whose signature is appended to the above agreement, do hereby declare that —
         <div class="elig">{!! $box($isPerm) !!} (a) I am in the permanent service of the Government of {!! $blank('', '180pt') !!}; <i>or</i></div>
         <div class="elig">{!! $box($isRes) !!} (b) I am ordinarily resident in India and possess means which will enable me to repay to the Central Government the sums of money referred to, in the event of my being called upon to do so in accordance with the terms of the agreement.</div>
         <div style="margin-top:6pt;"><i>(Strike out whichever is not applicable.)</i></div>
     </div>
 
     <div class="lines">
-        <div class="sign">Signature of the Surety:
-            @if(!empty($sigs[1]))<img src="{{ $sigs[1] }}" class="sig-img">@else {!! $blank('', '200pt') !!} @endif
-        </div>
-        <div>Signed by the Surety in the presence of — Name of Witness: {!! $blank($swn, '200pt') !!}</div>
-        <div>Address: {!! $blank($swa, '300pt') !!} &nbsp; Occupation: {!! $blank($swo, '160pt') !!}</div>
+        <div class="sign" style="text-align:center; margin-top:22pt;">Signature of the Surety: {!! $blank('', '200pt') !!}</div>
+        <div style="margin-top:10pt;">Signed <b>by Surety</b> in the presence of &nbsp;(Name of Witness) {!! $blank($swn2, '220pt') !!}</div>
+        <div>Address {!! $blank($swa2, '420pt') !!}</div>
+        <div>{!! $blank('', '200pt') !!} Occupation {!! $blank($swo2, '200pt') !!}</div>
     </div>
 
     <pagebreak />
@@ -148,6 +157,12 @@
         <div class="elig">{!! $box($isPerm) !!} (क) मैं {!! $blank('', '170pt') !!} सरकार की स्थायी सेवा में हूँ; <b>अथवा</b></div>
         <div class="elig">{!! $box($isRes) !!} (ख) मैं साधारणतया भारत का निवासी हूँ और मेरे पास ऐसे साधन हैं जिनसे करार के निबंधनों के अनुसार राशि की मांग किए जाने पर मैं केन्द्र सरकार को वह राशि चुका सकता/सकती हूँ।</div>
         <div style="margin-top:6pt;">(जो लागू न हो उसे काट दें।)</div>
+    </div>
+
+    <div class="lines">
+        <div class="sign" style="margin-top:14pt;">प्रतिभू के हस्ताक्षर: {!! $blank('', '200pt') !!}</div>
+        <div>साक्षी की उपस्थिति में प्रतिभू द्वारा हस्ताक्षरित — साक्षी का नाम: {!! $blank($hi['swname2'] ?? '', '200pt') !!}</div>
+        <div>पता: {!! $blank($hi['swaddr2'] ?? '', '280pt') !!} &nbsp; व्यवसाय: {!! $blank($hi['swocc2'] ?? '', '150pt') !!}</div>
     </div>
 
 </body>

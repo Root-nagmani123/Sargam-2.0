@@ -6,13 +6,13 @@
     $g      = fn ($k) => trim((string) ($data[$k] ?? ''));
     $name   = $g('officer_name');
     $desig  = $g('designation');
-    $place  = $g('place');
+    $place  = config('fc.document_place');   // hard-frozen: always Mussoorie, overrides any saved value
     $reasons= $g('exemption_reasons');
-    $dated  = $fmt($data['declaration_date'] ?? '');
+    $dated  = fc_document_date();   // hard-frozen date, overrides any saved value
     $sc     = $g('status_clause');
     $sigSrc = $data['_signature_src'][0] ?? null;
     $blank = function ($v, $w = '160pt') {
-        $val = ($v !== '' && $v !== null) ? e($v) : '&nbsp;';
+        $val = ($v !== '' && $v !== null) ? e($v) : str_repeat('_', max(12, (int) round((strpos($w, 'mm') !== false ? (float) $w * 2.83465 : (float) $w) / 6)));
         return '<span style="display:inline-block; min-width:'.$w.'; border-bottom:1px solid #000; text-align:center; font-weight:bold; padding:0 4pt;">'.$val.'</span>';
     };
     $box = fn ($on) => $on ? '&#9745;' : '&#9744;';
@@ -73,8 +73,11 @@
             <td>दिनांक / Date: {!! $blank($dated, '150pt') !!}</td>
             <td style="text-align:right;">हस्ताक्षर / Full Signature: @if($sigSrc)<img src="{{ $sigSrc }}" class="sig-img">@else {!! $blank('', '180pt') !!} @endif</td>
         </tr></table>
-        <div style="margin-top:6pt;">स्थान / Place: {!! $blank($place, '160pt') !!} &nbsp;&nbsp; नाम स्पष्ट अक्षरों में / Name (in Block Letters): {!! $blank($name, '220pt') !!}</div>
-        <div>पदनाम / Designation: {!! $blank($desig, '320pt') !!}</div>
+        <table style="width:100%; margin-top:6pt;"><tr>
+            <td>स्थान / Place: {!! $blank($place, '150pt') !!}</td>
+            <td style="text-align:right;">नाम स्पष्ट अक्षरों में / Name (in Block Letters): {!! $blank($name, '200pt') !!}</td>
+        </tr></table>
+        <div style="text-align:right; margin-top:6pt;">पदनाम / Designation: {!! $blank($desig, '200pt') !!}</div>
     </div>
 
     <div class="note">टिप्पणी: कृपया उपर्युक्त कथनों में से जो लागू न हों उन्हें काट दें।<br>(*Note: Please delete clause/clauses not applicable.)</div>
@@ -85,7 +88,10 @@
     <div class="ex-title">रियायत प्रदान करने के लिए आवेदन पत्र<br>APPLICATION FOR GRANT OF EXEMPTION</div>
     <div style="text-align:center; font-size:9.5pt;">(घोषणा का पैरा 1(iii) / 1(iv) देखें) &middot; (Vide para 1(iii) / 1(iv) of the Declaration)</div>
 
-    <div style="margin-top:14pt;">सेवा में / To,<br>&emsp;The Secretary, Department of Personnel &amp; Training (DoPT), New Delhi</div>
+    <div style="margin-top:14pt;">सेवा में / To,<br>
+        &emsp;The Secretary,<br>
+        &emsp;Department of Personnel &amp; Training (DoPT),<br>
+        &emsp;New Delhi</div>
     <div class="ex-body">
         महोदय / Sir,<br>
         मेरा अनुरोध है कि नीचे बताए गए कारणों को ध्यान में रखते हुए, मुझे एक से अधिक जीवित पत्नी रखने / ऐसी महिला जिसका ऐसे व्यक्ति से विवाह हुआ हो जिसकी पहले से एक या अधिक जीवित पत्नियाँ हों — की सेवा में भर्ती पर प्रतिबंध से छूट प्रदान की जाए।<br>

@@ -8,7 +8,7 @@
     $service = trim((string) ($data['service'] ?? ''));
     $adate   = $fmt($data['date_of_assumption'] ?? '');
     $time    = trim((string) ($data['time_of_assumption'] ?? ''));
-    $ddate   = $fmt($data['declaration_date'] ?? '');
+    $ddate   = fc_document_date();   // hard-frozen date, overrides any saved value
     $sigSrc  = $data['_signature_src'][0] ?? null;
     $hi      = $data['_hi'] ?? [];   // candidate-typed Hindi values (blank if none)
 
@@ -19,7 +19,7 @@
           : ($time === 'Afternoon' ? 'forenoon / <b>afternoon</b>' : '<b>forenoon / afternoon</b>');
 
     $blank = function ($v, $w = '150pt') {
-        $val = ($v !== '' && $v !== null) ? e($v) : '&nbsp;';
+        $val = ($v !== '' && $v !== null) ? e($v) : str_repeat('_', max(12, (int) round((strpos($w, 'mm') !== false ? (float) $w * 2.83465 : (float) $w) / 6)));
         return '<span style="display:inline-block; min-width:'.$w.'; border-bottom:1px solid #000; text-align:center; font-weight:bold; padding:0 4pt;">'.$val.'</span>';
     };
 @endphp
@@ -69,7 +69,7 @@
         <table class="foot">
             <tr>
                 <td class="lft" style="width:45%;">
-                    स्थान / Place: <b>मसूरी / Mussoorie</b><br>
+                    स्थान / Place: <b>{{ config('fc.document_place_hi') }} / {{ config('fc.document_place') }}</b><br>
                     दिनांक / Dated: <b>{{ $ddate ?: ' ' }}</b>
                 </td>
                 <td class="rgt" style="width:55%;">

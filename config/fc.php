@@ -83,4 +83,25 @@ return [
     'form_structure_cache_enabled' => (bool) env('FC_FORM_STRUCTURE_CACHE_ENABLED', false),
     'form_structure_cache_ttl' => (int) env('FC_FORM_STRUCTURE_CACHE_TTL', 3600),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Joining-document ceremony date & place (batch-frozen — single source)
+    |--------------------------------------------------------------------------
+    |
+    | The FC joining declarations (oath, surety bonds, property & dowry
+    | declarations, assumption of charge, …) print ONE ceremony date and place
+    | for the whole intake. These are frozen here so the on-screen default and
+    | the generated PDF stay in lock-step, and the per-batch change is a single
+    | edit instead of ~22 view files.
+    |
+    | document_declaration_date is stored ISO (Y-m-d) for <input type="date">;
+    | use fc_document_date('display') for the d-m-Y form the PDFs print.
+    | This does NOT change the fixed LBSNAA academy address ("… Mussoorie"),
+    | which is institutional text, not the batch-variable ceremony place.
+    |
+    */
+    'document_declaration_date' => env('FC_DOCUMENT_DECLARATION_DATE', '2026-08-24'),
+    'document_place'            => env('FC_DOCUMENT_PLACE', 'Mussoorie'),
+    'document_place_hi'         => env('FC_DOCUMENT_PLACE_HI', 'मसूरी'),
+
 ];

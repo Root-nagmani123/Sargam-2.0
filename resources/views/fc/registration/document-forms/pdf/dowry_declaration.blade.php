@@ -9,12 +9,12 @@
     $mc      = $g('marital_choice');
     $pgname  = $g('parent_guardian_name');
     $pgaddr  = $g('parent_guardian_address');
-    $place   = $g('place');
-    $dated   = $fmt($data['declaration_date'] ?? '');
+    $place   = config('fc.document_place');   // hard-frozen, overrides any saved value
+    $dated   = fc_document_date();  // hard-frozen date, overrides any saved value
     $sigSrc  = $data['_signature_src'][0] ?? null;
     $hi      = $data['_hi'] ?? [];   // candidate-typed Hindi values (blank if none)
     $blank = function ($v, $w = '45mm') {
-        $val = ($v !== '' && $v !== null) ? e($v) : '&nbsp;';
+        $val = ($v !== '' && $v !== null) ? e($v) : str_repeat('_', max(12, (int) round((strpos($w, 'mm') !== false ? (float) $w * 2.83465 : (float) $w) / 6)));
         return '<span style="display:inline-block; min-width:'.$w.'; border-bottom:1px solid #000; text-align:center; font-weight:bold; padding:0 4px;">'.$val.'</span>';
     };
     $maritalHi = $mc === 'Unmarried' ? 'अविवाहित' : ($mc === 'Married' ? 'विवाहित' : 'अविवाहित / विवाहित');
@@ -62,10 +62,13 @@
     <div class="body">मैंने यह बात भली-भांति जानते हुए इस घोषणा पर हस्ताक्षर किए हैं कि दहेज से संबंधित नियमों अथवा विधि का उल्लंघन करने पर मेरे विरुद्ध उपयुक्त कार्रवाई की जा सकती है।</div>
     <div class="sign">
         <table style="width:100%;"><tr>
-            <td>स्थान: {!! $blank($hi['place'] ?? '', '45mm') !!}</td>
+            <td>स्थान: {!! $blank(config('fc.document_place_hi'), '45mm') !!}</td>
             <td style="text-align:right;">हस्ताक्षर: @if($sigSrc)<img src="{{ $sigSrc }}" class="sig-img">@else {!! $blank('', '50mm') !!} @endif</td>
         </tr></table>
-        <div style="margin-top:6pt;">तारीख: {!! $blank($hi['ddate'] ?? '', '42mm') !!} &nbsp;&nbsp; (नाम साफ अक्षरों में): {!! $blank($hi['name'] ?? '', '64mm') !!}</div>
+        <table style="width:100%; margin-top:6pt;"><tr>
+            <td>तारीख: {!! $blank(fc_document_date(), '42mm') !!}</td>
+            <td style="text-align:right;">(नाम साफ अक्षरों में): {!! $blank($hi['name'] ?? '', '64mm') !!}</td>
+        </tr></table>
     </div>
     <div class="copy">प्रतिलिपि:
         <div>(माता-पिता / अभिभावक का नाम): {!! $blank($hi['pgname'] ?? '', '78mm') !!}</div>
@@ -94,7 +97,7 @@
 
     {{-- ═══════════ PAGE 3 · ENGLISH DECLARATION ═══════════ --}}
     <div class="docno">Document-3</div>
-    <div class="title">D E C L A R A T I O N</div>
+    <div class="title" style="text-decoration:underline;">DECLARATION</div>
     <div class="body">WHEREAS the provisions of Rule 11-A of the All India Services (Conduct) Rules, 1968 / Rule 13-A of the Central Civil Services (Conduct) Rules, 1964 have been specifically brought to my notice;</div>
     <div class="body">AND WHEREAS on date I am <b>{{ $maritalEn }}</b>:</div>
     <div class="body">Now therefore, I, {!! $blank($name, '72mm') !!} ({!! $blank($service, '50mm') !!}), Probationer, do hereby undertake that I shall not —</div>
@@ -107,7 +110,10 @@
             <td>Place: {!! $blank($place, '45mm') !!}</td>
             <td style="text-align:right;">Signature: @if($sigSrc)<img src="{{ $sigSrc }}" class="sig-img">@else {!! $blank('', '50mm') !!} @endif</td>
         </tr></table>
-        <div style="margin-top:6pt;">Dated: {!! $blank($dated, '42mm') !!} &nbsp;&nbsp; (Name of Officer in Block Letters): {!! $blank($name, '64mm') !!}</div>
+        <table style="width:100%; margin-top:6pt;"><tr>
+            <td>Dated: {!! $blank($dated, '42mm') !!}</td>
+            <td style="text-align:right;">(Name of Officer in Block Letters): {!! $blank($name, '64mm') !!}</td>
+        </tr></table>
     </div>
     <div class="copy"><i>Copy of the declaration to:</i>
         <div>(Name of Parent / Guardian): {!! $blank($pgname, '78mm') !!}</div>

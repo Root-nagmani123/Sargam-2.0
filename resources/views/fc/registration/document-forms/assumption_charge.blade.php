@@ -87,8 +87,8 @@
                         नाम / Name: <input type="text" name="officer_name" class="blank blank--mid" required value="{{ $val('officer_name') }}"><br>
                         पदनाम / Designation: <input type="text" name="designation" class="blank blank--mid" value="{{ $val('designation') }}">
                     </div>
-                    <div>स्थान / Place: <strong>मसूरी / Mussoorie</strong></div>
-                    <div>दिनांक / Dated: <input type="date" name="declaration_date" class="blank blank--sm" value="{{ $val('declaration_date') }}"></div>
+                    <div>स्थान / Place: <strong>{{ config('fc.document_place_hi') }} / {{ config('fc.document_place') }}</strong></div>
+                    <div>दिनांक / Dated: <input type="date" name="declaration_date" class="blank blank--sm" value="{{ old('declaration_date', fc_document_date('iso')) }}" readonly></div>
                     <div style="clear:both;"></div>
                 </div>
 
