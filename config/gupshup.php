@@ -37,66 +37,66 @@ return [
     */
     'templates' => [
 
-        // FC-OTP — A1 (programme name is fixed in DLT text)
+        // FC-REG1 — A1 (programme name is fixed in DLT text)
         'registration_otp' => [
-            'dlt_name' => 'FC-OTP',
-            'dlt_template_id' => env('GUPSHUP_DLT_A1_REGISTRATION_OTP', '1477170161102987810'),
+            'dlt_name' => 'FC-REG1',
+            'dlt_template_id' => env('GUPSHUP_DLT_A1_REGISTRATION_OTP', '1477178461100263808'),
             'body' => 'Dear {Applicant_Name}, your OTP to register for Foundation Course 2026 Batch-I is {OTP}. Valid for {OTP_Validity} minutes. Do not share this OTP. - {Institute_Name}',
         ],
 
-        // FC-CRED-I — A2
+        // FC-CRED1 — A2
         'credentials_created' => [
-            'dlt_name' => 'FC-CRED-I',
+            'dlt_name' => 'FC-CRED1',
             'dlt_template_id' => env('GUPSHUP_DLT_A2_CREDENTIALS', '1477178461144840794'),
             'body' => 'Dear {Participant_Name}, your login credentials for {Programme_Name} are created. Username: {Registration_ID}. Login at {Portal_Link} - {Institute_Name}',
         ],
 
-        // FC-REG-S — A3
+        // FC-REG1-S — A3
         'registration_successful' => [
-            'dlt_name' => 'FC-REG-S',
-            'dlt_template_id' => env('GUPSHUP_DLT_A3_REGISTRATION', '1477170161150204131'),
+            'dlt_name' => 'FC-REG1-S',
+            'dlt_template_id' => env('GUPSHUP_DLT_A3_REGISTRATION', '1477178461158204831'),
             'body' => 'Dear {Participant_Name}, your registration for {Programme_Name} is successful. Reg ID: {Registration_ID}. Login at {Portal_Link} - {Institute_Name}',
         ],
 
-        // FC-RF — A4
+        // FC-PF — A4
         'forgot_password_otp' => [
-            'dlt_name' => 'FC-RF',
-            'dlt_template_id' => env('GUPSHUP_DLT_A4_FORGOT_PASSWORD_OTP', '1477170161211515712'),
+            'dlt_name' => 'FC-PF',
+            'dlt_template_id' => env('GUPSHUP_DLT_A4_FORGOT_PASSWORD_OTP', '1477178461231145722'),
             'body' => 'Dear {Participant_Name}, your OTP to reset your forgotten password is {OTP}. Valid for {OTP_Validity} minutes. Do not share this OTP. - {Institute_Name}',
         ],
 
-        // FC-F-OTP — A5
+        // FC-PCOTP — A5
         'password_change_otp' => [
-            'dlt_name' => 'FC-F-OTP',
-            'dlt_template_id' => env('GUPSHUP_DLT_A5_PASSWORD_CHANGE_OTP', '1477170161214227912'),
+            'dlt_name' => 'FC-PCOTP',
+            'dlt_template_id' => env('GUPSHUP_DLT_A5_PASSWORD_CHANGE_OTP', '1477178461257395562'),
             'body' => 'Dear {Participant_Name}, your OTP for password reset is {OTP}. Valid for {OTP_Validity} minutes. Do not share this OTP with anyone. - {Institute_Name}',
         ],
 
         // FC-IFM — B1
         'form_step_incomplete' => [
             'dlt_name' => 'FC-IFM',
-            'dlt_template_id' => env('GUPSHUP_DLT_B1_STEP_INCOMPLETE', '1477170161237295562'),
+            'dlt_template_id' => env('GUPSHUP_DLT_B1_STEP_INCOMPLETE', '1477178461322515097'),
             'body' => 'Dear {Participant_Name}, the \'{Step_Name}\' section of your Foundation Course registration is incomplete. Complete it at {Portal_Link} - {Institute_Name}',
         ],
 
-        // FC-R-P — B2
+        // FC-RSP — B2
         'registration_pending' => [
-            'dlt_name' => 'FC-R-P',
-            'dlt_template_id' => env('GUPSHUP_DLT_B2_REGISTRATION_PENDING', '1477170161251515867'),
+            'dlt_name' => 'FC-RSP',
+            'dlt_template_id' => env('GUPSHUP_DLT_B2_REGISTRATION_PENDING', '1477178461353333216'),
             'body' => 'Dear {Participant_Name}, your registration for {Programme_Name} is incomplete. Complete pending steps by {Last_Date}. Portal: {Portal_Link} - {Institute_Name}',
         ],
 
-        // FC-EX — C1 (approved wording: "asked for")
+        // FC-EC — C1 (approved wording: "asked for")
         'exemption_confirmation' => [
-            'dlt_name' => 'FC-EX',
-            'dlt_template_id' => env('GUPSHUP_DLT_C1_EXEMPTION', '1477170161270034735'),
+            'dlt_name' => 'FC-EC',
+            'dlt_template_id' => env('GUPSHUP_DLT_C1_EXEMPTION', '1477178461379104735'),
             'body' => 'Dear {Applicant_Name}, you have asked for exemption from {Programme_Name} under the category \'{Exemption_Category}\'. App No: {Application_No}. - {Institute_Name}',
         ],
 
         // PC-FB — D6 (skipped for now — not used from Admin or auto flows)
         // 'feedback_request' => [
         //     'dlt_name' => 'PC-FB',
-        //     'dlt_template_id' => env('GUPSHUP_DLT_D6_FEEDBACK', '1477170161515505030'),
+        //     'dlt_template_id' => env('GUPSHUP_DLT_D6_FEEDBACK', '1477178461631580688'),
         //     'body' => 'Dear {Participant_Name}, please submit your feedback for {Programme_Name} by {Last_Date}. Your feedback is important. Submit here: {Feedback_Link} - {Institute_Name}',
         // ],
 

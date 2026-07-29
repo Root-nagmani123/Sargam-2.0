@@ -77,7 +77,7 @@ Route::middleware(['auth'])->prefix('fc-reg')->name('fc-reg.')->group(function (
 // FC REG ADMIN ROUTES
 // ─────────────────────────────────────────────────────────────────────────────
 
-Route::middleware(['auth', 'fc.reg.admin'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->group(function () {
+Route::middleware(['auth'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->group(function () {
 
     // Step field editor (opened from Form Management → Edit form → Fields)
     Route::prefix('form-builder')->name('form-builder.')->group(function () {
@@ -114,7 +114,7 @@ Route::middleware(['auth', 'fc.reg.admin'])->prefix('fc-reg/admin')->name('fc-re
     });
 
     // ── FC SMS bulk send (B1 / B2 only; no recipient picker) ──
-    Route::prefix('sms')->name('sms.')->group(function () {
+    Route::prefix('sms')->middleware(['fc.reg.admin'])->name('sms.')->group(function () {
         Route::get('/',  [FcAdminSmsController::class, 'index'])->name('index');
         Route::get('/recipients', [FcAdminSmsController::class, 'recipients'])->name('recipients');
         Route::post('/', [FcAdminSmsController::class, 'send'])->name('send');
