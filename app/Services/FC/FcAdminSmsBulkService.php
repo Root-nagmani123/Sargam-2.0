@@ -35,6 +35,7 @@ class FcAdminSmsBulkService
 
     public function __construct(
         private FcNotifyService $notify,
+        private FcStepApplicabilityService $applicability,
     ) {
     }
 
@@ -484,7 +485,8 @@ class FcAdminSmsBulkService
         $stepName = null;
 
         if ($tracker) {
-            $progress = $this->stepProgressFromTracker($form, $steps, $tracker);
+            $userId = $this->resolveApplicabilityUserId($roster, $tracker, $form);
+            $progress = $this->stepProgressFromTracker($form, $steps, $tracker, $userId);
             if ($progress['pending_step'] === null) {
                 return null;
             }
@@ -676,7 +678,7 @@ class FcAdminSmsBulkService
         return $form->activeSteps()
             ->whereNotNull('tracker_column')
             ->orderBy('step_number')
-            ->get()
+            ->get(FcStepApplicabilityService::stepColumns())
             ->filter(fn ($s) => preg_match('/^[a-zA-Z0-9_]+$/', (string) $s->tracker_column))
             ->values();
     }
@@ -857,7 +859,8 @@ class FcAdminSmsBulkService
             return null;
         }
 
-        $progress = $this->stepProgressFromTracker($form, $steps, $trackerRow);
+        $userId = $this->resolveApplicabilityUserId($roster, $trackerRow, $form);
+        $progress = $this->stepProgressFromTracker($form, $steps, $trackerRow, $userId);
         $rosterPk = (int) $roster->pk;
 
         // Form fully submitted — not B1. It will still appear in the fallback
@@ -904,12 +907,40 @@ class FcAdminSmsBulkService
     }
 
     /**
+     * Resolve the auth id used by FcStepApplicabilityService (credentials pk, or -roster pk).
+     */
+    protected function resolveApplicabilityUserId(object $roster, object $trackerRow, FcForm $form): ?int
+    {
+        $login = trim((string) ($roster->user_id ?? ''));
+        if ($login !== '' && Schema::hasTable('user_credentials')) {
+            $credPk = DB::table('user_credentials')->where('user_name', $login)->value('pk');
+            if ($credPk) {
+                return (int) $credPk;
+            }
+        }
+
+        $rosterPk = (int) ($roster->pk ?? 0);
+        if ($rosterPk > 0) {
+            return -$rosterPk;
+        }
+
+        $userCol = fc_user_col($form->trackerStorageTable());
+        $key = $trackerRow->{$userCol} ?? null;
+        if (is_numeric($key) && (int) $key > 0) {
+            return (int) $key;
+        }
+
+        return null;
+    }
+
+    /**
      * @return array{done: int, pending_step: ?string, pending_steps: ?string}
      */
     protected function stepProgressFromTracker(
         ?FcForm $form,
         Collection $steps,
         ?object $trackerRow,
+        ?int $userId = null,
     ): array {
         if (! $form || $steps->isEmpty()) {
             return ['done' => 0, 'pending_step' => 'Basic Information', 'pending_steps' => 'Basic Information'];
@@ -923,6 +954,13 @@ class FcAdminSmsBulkService
             $complete = false;
             if ($col && $trackerRow !== null && isset($trackerRow->{$col})) {
                 $complete = (bool) $trackerRow->{$col};
+            }
+
+            // Same waiver rule as the form overview report: a step that does not apply
+            // to this trainee (e.g. Special Assistant without ph_value) is ignored when
+            // incomplete, so they are not listed as "Form step incomplete".
+            if (! $complete && $userId !== null && $this->applicability->notApplicable($step, $userId)) {
+                continue;
             }
 
             if ($complete) {
