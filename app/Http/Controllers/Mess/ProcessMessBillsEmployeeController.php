@@ -2929,7 +2929,8 @@ class ProcessMessBillsEmployeeController extends Controller
             $kitchenIssueQuery->where('issue_date', '<=', $dateTo);
         }
 
-        [$combinedBills] = $this->queryAndGroupBillsForProcessIndexLight(
+        // Fetch full models (with items) and group them — same helper the index uses.
+        [$combinedBills, $bills] = $this->queryAndGroupBillsForProcessIndex(
             $dateFrom,
             $dateTo,
             $dateRangeQuery,
@@ -2939,24 +2940,6 @@ class ProcessMessBillsEmployeeController extends Controller
         if ($search) {
             $combinedBills = $this->filterCombinedBillsForProcessIndexSearch($combinedBills, $search)->values();
         }
-        $bills = $rowsRaw->map(function ($bill) use ($dateFrom, $dateTo) {
-            if ($bill->source_type === 'date_range') {
-                $model = SellingVoucherDateRangeReport::with([
-                    'clientTypeCategory',
-                    'items' => function ($itemQ) use ($dateFrom, $dateTo) {
-                        $this->applySvDateRangeReportItemsIssueDateConstraint($itemQ, $dateFrom, $dateTo);
-                    },
-                    'items.itemSubcategory',
-                ])->find($bill->id);
-                if ($model) $model->setAttribute('source_type', 'date_range');
-                return $model;
-            }
-            $model = KitchenIssueMaster::with(['clientTypeCategory', 'items'])->where('pk', $bill->id)->first();
-            if ($model) $model->setAttribute('source_type', 'kitchen_issue');
-            return $model;
-        })->filter()->values();
-
-        $combinedBills = $this->groupBillsByBuyer($bills, $dateFrom, $dateTo);
 
         // Optional status filter on combined bills for export as well
         if ($statusFilter !== null && $statusFilter !== '') {
