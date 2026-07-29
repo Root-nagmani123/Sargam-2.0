@@ -235,6 +235,12 @@
                         <span class="hide-menu small small-sm-normal text-nowrap">Form Management</span>
                     </a>
                 </li>
+                <li class="sidebar-item {{ request()->routeIs('fc-reg.admin.sms.*') ? 'active' : '' }}">
+                    <a class="sidebar-link {{ request()->routeIs('fc-reg.admin.sms.*') ? 'active' : '' }}"
+                        href="{{ route('fc-reg.admin.sms.index') }}">
+                        <span class="hide-menu small small-sm-normal text-nowrap">FC SMS — Bulk Send</span>
+                    </a>
+                </li>
                 <li class="sidebar-item {{ request()->routeIs('fc-reg.admin.activities.*') && !request()->routeIs('fc-reg.admin.activities.reports.*', 'fc-reg.admin.activities.medical.*', 'fc-reg.admin.activities.status.*') && !request()->routeIs('fc-reg.admin.activity-setup.*') ? 'active' : '' }}">
                     <a class="sidebar-link {{ request()->routeIs('fc-reg.admin.activities.*') && !request()->routeIs('fc-reg.admin.activities.reports.*', 'fc-reg.admin.activities.medical.*', 'fc-reg.admin.activities.status.*') && !request()->routeIs('fc-reg.admin.activity-setup.*') ? 'active' : '' }}"
                         href="{{ route('fc-reg.admin.activities.index') }}">

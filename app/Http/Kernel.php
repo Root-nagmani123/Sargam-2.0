@@ -71,5 +71,6 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'fc.activity.coordinator' => \App\Http\Middleware\EnsureFcActivityCoordinator::class,
         'fc.activity.matrix' => \App\Http\Middleware\EnsureFcActivityMatrixAccess::class,
+        'fc.reg.admin' => \App\Http\Middleware\EnsureFcRegAdmin::class,
     ];
 }
