@@ -81,10 +81,20 @@
                 <button class="issue-tab"        data-filter="fixed">Fixed Issues</button>
             </div>
             <div class="d-flex gap-2 no-print">
-                <a id="myDownloadBtn" href="{{ route('my.issue-reports.export') }}"
-                   class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1">
-                    <i class="bi bi-download" aria-hidden="true"></i> Download
-                </a>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 dropdown-toggle"
+                            type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-download" aria-hidden="true"></i> Export
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li><a id="myDownloadCsvBtn" class="dropdown-item" href="{{ route('my.issue-reports.export') }}">
+                            <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i> CSV
+                        </a></li>
+                        <li><a id="myDownloadExcelBtn" class="dropdown-item" href="{{ route('my.issue-reports.export-excel') }}">
+                            <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Excel
+                        </a></li>
+                    </ul>
+                </div>
                 <button id="myPrintBtn" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1">
                     <i class="bi bi-printer" aria-hidden="true"></i> Print
                 </button>
@@ -323,9 +333,8 @@ $(document).ready(function () {
     };
 
     function updateDownloadLink() {
-        var base = '{{ route('my.issue-reports.export') }}';
-        var p    = filterParams();
-        var qs   = Object.entries(p)
+        var p  = filterParams();
+        var qs = Object.entries(p)
             .filter(function (e) { return e[1] !== ''; })
             .map(function (e) { return encodeURIComponent(e[0]) + '=' + encodeURIComponent(e[1]); });
 
@@ -337,7 +346,9 @@ $(document).ready(function () {
             qs.push('columns=' + encodeURIComponent(visibleKeys.join(',')));
         }
 
-        $('#myDownloadBtn').attr('href', base + (qs.length ? '?' + qs.join('&') : ''));
+        var suffix = qs.length ? '?' + qs.join('&') : '';
+        $('#myDownloadCsvBtn').attr('href', '{{ route('my.issue-reports.export') }}' + suffix);
+        $('#myDownloadExcelBtn').attr('href', '{{ route('my.issue-reports.export-excel') }}' + suffix);
     }
 
     function buildFooter() {

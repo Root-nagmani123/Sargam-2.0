@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\DataTables\IssueReportDataTable;
 use App\DataTables\UserIssueReportDataTable;
+use App\Exports\IssueReportExport;
+use App\Exports\UserIssueReportExport;
 use App\Http\Controllers\Controller;
 use App\Models\IssueReport;
 use App\Models\SidebarMenu\MenuGroup;
@@ -13,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Maatwebsite\Excel\Facades\Excel;
 
 class IssueReportController extends Controller
 {
@@ -238,6 +241,30 @@ class IssueReportController extends Controller
     }
 
     /**
+     * Excel (.xlsx) export for the user's own issues (same filter params as the CSV export).
+     */
+    public function myExportExcel(Request $request)
+    {
+        $userId  = Auth::user()->user_id ?? Auth::id();
+        $filters = [
+            'status_filter'    => $request->query('status_filter', 'all'),
+            'dept_filter'      => $request->query('dept_filter', ''),
+            'submodule_filter' => $request->query('submodule_filter', ''),
+            'date_from'        => $request->query('date_from', ''),
+            'date_to'          => $request->query('date_to', ''),
+        ];
+
+        $validKeys     = ['sno', 'date', 'dept_name', 'sub_module_name', 'description', 'attachment', 'status'];
+        $requestedKeys = array_filter(explode(',', (string) $request->query('columns', '')));
+        $activeKeys    = $requestedKeys
+            ? array_values(array_intersect($validKeys, $requestedKeys))
+            : $validKeys;
+        $filename      = 'my_issue_reports_' . date('Ymd_His') . '.xlsx';
+
+        return Excel::download(new UserIssueReportExport($userId, $filters, $activeKeys), $filename);
+    }
+
+    /**
      * Delete a reported issue (and its attachment if present).
      */
     public function destroy($id)
@@ -350,6 +377,29 @@ class IssueReportController extends Controller
             'Content-Type'        => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
+    }
+
+    /**
+     * Excel (.xlsx) export of issue reports (respects the same filters/columns as the CSV export).
+     */
+    public function exportExcel(Request $request)
+    {
+        $filters = [
+            'status_filter'    => $request->query('status_filter', 'all'),
+            'dept_filter'      => $request->query('dept_filter', ''),
+            'submodule_filter' => $request->query('submodule_filter', ''),
+            'date_from'        => $request->query('date_from', ''),
+            'date_to'          => $request->query('date_to', ''),
+        ];
+
+        $validKeys     = ['sno', 'date', 'dept_name', 'sub_module_name', 'reporter', 'description', 'attachment', 'status'];
+        $requestedKeys = array_filter(explode(',', (string) $request->query('columns', '')));
+        $activeKeys    = $requestedKeys
+            ? array_values(array_intersect($validKeys, $requestedKeys))
+            : $validKeys;
+        $filename      = 'issue_reports_' . date('Ymd_His') . '.xlsx';
+
+        return Excel::download(new IssueReportExport($filters, $activeKeys), $filename);
     }
 
     public function store(Request $request)
