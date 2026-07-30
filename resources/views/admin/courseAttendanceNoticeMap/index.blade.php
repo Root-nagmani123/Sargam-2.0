@@ -252,8 +252,8 @@
     <div class="card shadow-sm border-0 overflow-hidden">
         <div class="card-body p-3 p-md-4">
             <form method="GET" action="{{ route('memo.notice.management.index') }}" id="filterForm">
-                <div class="mnm-filter-bar mb-3">
-                    <span class="mnm-filter-label">Filters</span>
+                <div class="mnm-filter-bar programme-dt-toolbar mb-3">
+                    <span class="mnm-filter-label programme-dt-filters-label">Filters</span>
 
                     <select class="form-select" id="program_name" name="program_name" aria-label="Program Name">
                         <option value="">Program Name</option>
@@ -285,7 +285,7 @@
                     <input type="hidden" id="from_date" name="from_date" value="{{ $fromDateFilter }}">
                     <input type="hidden" id="to_date" name="to_date" value="{{ $toDateFilter }}">
 
-                    <a href="{{ route('memo.notice.management.index') }}" class="mnm-reset">Reset Filters</a>
+                    <a href="{{ route('memo.notice.management.index') }}" class="mnm-reset programme-dt-btn-reset">Reset Filters</a>
 
                     <div class="ms-auto d-flex align-items-center gap-2">
                         <button type="button" class="mnm-icon-btn" data-bs-toggle="modal" data-bs-target="#mnmColumnModal">
@@ -304,8 +304,14 @@
                 </div>
             </form>
             <div id="mnmListContainer">
+            <div class="programme-dt-panel">
             <div class="table-responsive">
-                <table id="mnmTable" class="table align-middle mb-0">
+                {{-- Laravel paginates this list; the DataTable below is decorative
+                     (column sorting only, paging/searching/info off). Without this
+                     opt-out the global enhancer claims the programme-dt-footer and
+                     empties the hand-written pagination. --}}
+                <table id="mnmTable" class="table table-hover align-middle mb-0 w-100 programme-dt-table"
+                       data-sargam-dt-ui="false">
                     <thead>
                         <tr class="align-middle">
                             <th>S. No.</th>
@@ -455,19 +461,19 @@
 
                 </table>
 
-                <!-- Pagination -->
-                <div class="d-flex justify-content-between align-items-center mt-3 gap-2 flex-wrap">
-
-                    <div class="text-muted small mb-0">
-                        Showing {{ $memos->firstItem() ?? 0 }}
-                        to {{ $memos->lastItem() }}
-                        of {{ $memos->total() }} items
-                    </div>
-
-                    <div class="ms-auto">
+            </div>
+                {{-- Footer variant B: Laravel paginates, so the markup is written by
+                     hand and reuses the DataTables class names for the styling. --}}
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div class="programme-dt-pagination">
                         {{ $memos->links('vendor.pagination.custom') }}
                     </div>
-
+                    <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                        <div class="dataTables_info">
+                            Showing {{ $memos->firstItem() ?? 0 }}&ndash;{{ $memos->lastItem() ?? 0 }}
+                            of {{ number_format($memos->total()) }} items
+                        </div>
+                    </div>
                 </div>
             </div>
             </div><!-- /#mnmListContainer -->

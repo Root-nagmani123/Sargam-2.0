@@ -217,8 +217,8 @@
             $today = \Carbon\Carbon::today()->toDateString();
             @endphp
             <form method="GET" action="{{ route('memo.discipline.index') }}" id="filterForm">
-                <div class="disc-filter-bar mb-3">
-                    <span class="disc-filter-label">Filters</span>
+                <div class="disc-filter-bar programme-dt-toolbar mb-3">
+                    <span class="disc-filter-label programme-dt-filters-label">Filters</span>
 
                     <select class="form-select" id="program_name" name="program_name" aria-label="Program Name">
                         <option value="">Program Name</option>
@@ -271,16 +271,16 @@
                     <input type="hidden" id="from_date" name="from_date" value="{{ $fromDateFilter }}">
                     <input type="hidden" id="to_date" name="to_date" value="{{ $toDateFilter }}">
 
-                    <a href="{{ route('memo.discipline.index') }}" class="disc-reset">Reset Filters</a>
+                    <a href="{{ route('memo.discipline.index') }}" class="btn programme-dt-btn-reset">Reset Filters</a>
 
                     <div class="ms-auto d-flex align-items-center gap-2">
-                        <button type="button" class="disc-icon-btn" data-bs-toggle="modal" data-bs-target="#discColumnModal">
+                        <button type="button" class="btn programme-dt-btn-columns" data-bs-toggle="modal" data-bs-target="#discColumnModal">
                             <i class="bi bi-layout-three-columns"></i> Columns
                         </button>
                         <button type="button" class="disc-icon-btn" id="discSearchToggle" aria-label="Search"><i
                                 class="bi bi-search"></i></button>
                         <div class="disc-search-wrap {{ $searchFilter ? '' : 'd-none' }}" id="discSearchWrap" style="position:relative;">
-                            <input type="text" class="disc-search-input" id="search" name="search"
+                            <input type="text" class="disc-search-input form-control" id="search" name="search"
                                 placeholder="Search..." value="{{ $searchFilter }}" autocomplete="off" style="padding-right:1.9rem;">
                             <button type="button" id="discSearchClear" aria-label="Clear search" title="Clear"
                                 style="position:absolute;top:50%;right:.35rem;transform:translateY(-50%);border:0;background:transparent;color:#94a3b8;line-height:1;padding:.15rem;{{ $searchFilter ? '' : 'display:none;' }}">
@@ -497,6 +497,7 @@
                 @endif
             </div>
             <div id="memoDisciplineListContainer">
+                <div class="programme-dt-panel">
                 <div class="table-responsive">
                     {{-- data-sargam-dt-ui="false": this page uses server-side Laravel
                          pagination with its own .programme-dt-footer below. Opt out of the
@@ -505,7 +506,7 @@
                          re-reads it from the DOM on every draw rather than closing over a
                          page-load value, because an AJAX filter swaps a fresh table in here
                          (and always resets to page 1). --}}
-                    <table id="discTable" class="table align-middle mb-0 text-nowrap" data-sargam-dt-ui="false"
+                    <table id="discTable" class="table table-hover align-middle mb-0 text-nowrap w-100 programme-dt-table" data-sargam-dt-ui="false"
                         data-first-item="{{ $memos->firstItem() ?? 1 }}">
                         <thead>
                             <tr>
@@ -682,6 +683,7 @@
                         <div class="dataTables_info">of {{ number_format($memos->total()) }} items</div>
                     </div>
                 </div>
+                </div>{{-- /.programme-dt-panel --}}
             </div>
         </div>
     </div>

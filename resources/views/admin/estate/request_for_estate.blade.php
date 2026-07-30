@@ -12,24 +12,20 @@
 @endphp
 @section($estateSelfHomeTab ? 'content' : 'setup_content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
-   <x-breadcrum title="Request For Estate" />
+   <x-breadcrum title="Request For Estate">
+       <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
+               id="btn-open-add-request-estate" title="Add Estate Request">
+           <i class="bi bi-plus-lg" aria-hidden="true"></i>
+           <span>Add Estate Request</span>
+       </button>
+   </x-breadcrum>
    <x-estate-workflow-stepper current="request-for-estate" />
 
     <x-session_message />
 
-    <div class="card shadow-sm border-0 rounded-3">
-        <div class="card-body p-4 p-lg-5">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
-                <div class="flex-grow-1">
-                    <h1 class="h4 fw-bold text-dark mb-1">Request For Estate</h1>
-                    <p class="text-body-secondary small mb-0">This page displays all list of request details added in the system, and provides options to manage records such as add, edit, delete etc.</p>
-                </div>
-                <div class="flex-shrink-0 d-flex flex-wrap gap-2">
-                    <!-- <a href="{{ route('admin.estate.put-in-hac') }}" class="btn btn-outline-primary px-3" title="Put In HAC"><i class="bi bi-building-check me-1"></i> Put In HAC</a>
-                    <a href="{{ route('admin.estate.change-request-hac-approved') }}" class="btn btn-outline-primary px-3" title="HAC Approved"><i class="bi bi-check2-square me-1"></i> HAC Approved</a> -->
-                    <button type="button" class="btn btn-primary px-3" id="btn-open-add-request-estate" title="Add Estate Request"><i class="bi bi-plus-lg me-1"></i> Add Estate Request</button>
-                </div>
-            </div>
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
+            <p class="text-body-secondary small mb-4">This page displays all list of request details added in the system, and provides options to manage records such as add, edit, delete etc.</p>
 
             <div id="request-for-estate-card-body">
             @php
@@ -53,27 +49,37 @@
             </div>
             @endif
 
-            <div class="row align-items-end mb-3">
-                <div class="col-12 col-md-4 col-lg-3">
-                    <label for="estateStatusFilter" class="form-label fw-semibold small mb-1">Status</label>
-                    <select id="estateStatusFilter" class="form-select form-select-sm">
-                        <option value="">All</option>
-                        <option value="0">Pending</option>
-                        <option value="1">Allotted</option>
-                        <option value="3">Returned</option>
-                    </select>
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="programme-dt-filters-label">Filters</span>
+
+                    <div class="programme-dt-filter-select">
+                        <label for="estateStatusFilter" class="visually-hidden">Status</label>
+                        <select id="estateStatusFilter" class="form-select">
+                            <option value="">Status</option>
+                            <option value="0">Pending</option>
+                            <option value="1">Allotted</option>
+                            <option value="3">Returned</option>
+                        </select>
+                    </div>
+
+                    <button type="button" id="estateStatusClear" class="btn programme-dt-btn-reset">Reset Filters</button>
                 </div>
-                <div class="col-auto mt-2 mt-md-0">
-                    <button type="button" id="estateStatusClear" class="btn btn-outline-secondary btn-sm">
-                        Clear
-                    </button>
+
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <div id="rfeDtSearch" class="programme-dt-search" data-dt-search-for="requestForEstateTable"></div>
                 </div>
             </div>
-            <div class="table-responsive request-for-estate-table-wrap">
-                {!! $dataTable->table([
-                    'class' => 'table text-nowrap align-middle mb-0',
-                    'aria-describedby' => 'request-for-estate-caption'
-                ]) !!}
+
+            <div class="programme-dt-panel">
+                <div class="table-responsive request-for-estate-table-wrap">
+                    {!! $dataTable->table([
+                        'class' => 'table table-hover text-nowrap align-middle mb-0 w-100 programme-dt-table',
+                        'aria-describedby' => 'request-for-estate-caption'
+                    ]) !!}
+                </div>
+                <div id="rfeDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                     data-dt-footer-for="requestForEstateTable"></div>
             </div>
             <div id="request-for-estate-caption" class="visually-hidden">Request For Estate list</div>
             </div>
