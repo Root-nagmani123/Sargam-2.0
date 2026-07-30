@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Security;
 
+use App\DataTables\Security\VisitorPassDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\SecVisitorCardGenerated;
 use App\Models\SecVisitorName;
@@ -13,13 +14,9 @@ use Illuminate\Support\Facades\DB;
 
 class VisitorPassController extends Controller
 {
-    public function index()
+    public function index(VisitorPassDataTable $dataTable)
     {
-        $visitorPasses = SecVisitorCardGenerated::with(['employee', 'visitorNames', 'createdBy'])
-            ->orderBy('created_date', 'desc')
-            ->paginate(10);
-
-        return view('admin.security.visitor_pass.index', compact('visitorPasses'));
+        return $dataTable->render('admin.security.visitor_pass.index');
     }
 
     public function create()

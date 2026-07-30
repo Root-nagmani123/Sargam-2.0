@@ -22,7 +22,9 @@ class VehiclePassConfigDataTable extends DataTable
         return (new EloquentDataTable($query))
             ->addIndexColumn()
             ->addColumn('vehicle_type', fn ($row) => e($row->vehicleType->vehicle_type ?? '--'))
-            ->addColumn('charges', fn ($row) => number_format((float) $row->charges, 2))
+            // Charges live on sec_vehicle_type, not sec_vehcl_pass_config — reading
+            // $row->charges here rendered 0.00 for every row.
+            ->addColumn('charges', fn ($row) => number_format((float) ($row->vehicleType->charges ?? 0), 2))
             ->addColumn('start_counter', fn ($row) => e($row->start_counter))
             ->addColumn('preview', function ($row) use ($datePrefix) {
                 $id = 'VP' . $datePrefix . str_pad((string) $row->start_counter, 4, '0', STR_PAD_LEFT);
@@ -63,7 +65,9 @@ class VehiclePassConfigDataTable extends DataTable
                 });
             })
             ->filterColumn('charges', function ($query, $keyword) {
-                $query->where('charges', 'like', "%{$keyword}%");
+                $query->whereHas('vehicleType', function ($v) use ($keyword) {
+                    $v->where('charges', 'like', "%{$keyword}%");
+                });
             })
             ->filterColumn('start_counter', function ($query, $keyword) {
                 $query->where('start_counter', 'like', "%{$keyword}%");

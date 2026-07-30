@@ -82,7 +82,8 @@ class VehiclePassDataTable extends DataTable
                         $e->where('first_name', 'like', "%{$keyword}%")
                             ->orWhere('last_name', 'like', "%{$keyword}%");
                     })
-                    ->orWhere('applicant_name', 'like', "%{$keyword}%")
+                    // vehicle_pass_tw_apply has no applicant_name column; the
+                    // card number is what identifies a non-linked applicant.
                     ->orWhere('employee_id_card', 'like', "%{$keyword}%");
                 });
             })

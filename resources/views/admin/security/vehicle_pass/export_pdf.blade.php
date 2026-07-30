@@ -1,69 +1,161 @@
-<!DOCTYPE html>
-<html>
+@php
+    $headings    = $headings ?? [];
+    $rows        = $rows ?? collect();
+    $filterLine  = $filterLine ?? '';
+    $printedOn   = $printedOn ?? now()->format('d-m-Y H:i');
+    $reportTitle = $reportTitle ?? 'Vehicle Pass Request';
+    $logoLeft    = $logoLeft ?? null;
+    $logoRight   = $logoRight ?? null;
+    $titleHindi  = $titleHindi ?? null;
+    $mode        = $mode ?? 'pdf';           // 'pdf' (DomPDF) or 'print' (browser)
+    $isPrint     = $mode === 'print';
+    $bodyFont    = $isPrint ? 11 : 9;
+    $headFont    = $isPrint ? 10 : 8;
+    $centerHeadings = ['S.No.', 'Requested Date', 'Status'];
+@endphp
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Vehicle Pass Requests Report</title>
+    <meta charset="utf-8">
+    <title>{{ $reportTitle }} — LBSNAA</title>
     <style>
-        body { font-family: DejaVu Sans, sans-serif; font-size: 10px; }
-        .header { text-align: center; margin-bottom: 15px; border-bottom: 1px solid #000; padding-bottom: 8px; }
-        .header h2 { margin: 0; font-size: 16px; }
-        .meta { margin-bottom: 10px; font-size: 9px; }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: #122442; color: #fff; font-weight: bold; padding: 5px 6px; border: 1px solid #000; font-size: 9px; }
-        td { padding: 5px 6px; border: 1px solid #ccc; font-size: 9px; }
-        .text-center { text-align: center; }
-        .footer { margin-top: 15px; text-align: center; font-size: 8px; border-top: 1px solid #000; padding-top: 5px; }
+        @page { size: A4 landscape; margin: 10mm 8mm; }
+        * { font-family: 'DejaVu Sans', Arial, sans-serif; }
+        *, *::before, *::after { box-sizing: border-box; }
+        body { margin: 0; padding: {{ $isPrint ? '16px' : '0' }}; color: #1f2937; font-size: {{ $bodyFont }}px; }
+
+        table.pdf-hdr { width: 100%; border-collapse: collapse; margin-bottom: 2px; }
+        table.pdf-hdr td { vertical-align: middle; }
+        table.pdf-hdr .logo { width: {{ $isPrint ? '90px' : '78px' }}; text-align: center; }
+        table.pdf-hdr .logo img { max-height: {{ $isPrint ? '60px' : '52px' }}; max-width: {{ $isPrint ? '84px' : '74px' }}; }
+        table.pdf-hdr .center { text-align: center; padding: 0 6px; }
+        .inst-hi-img { height: {{ $isPrint ? '18px' : '14px' }}; width: auto; margin-bottom: 1px; }
+        .inst-en { font-size: {{ $isPrint ? '16px' : '12px' }}; font-weight: bold; color: #102a43; line-height: 1.25; }
+
+        .report-title {
+            text-align: center;
+            font-size: {{ $isPrint ? '19px' : '15px' }};
+            font-weight: bold;
+            color: #004a93;
+            margin: 6px 0 4px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #004a93;
+        }
+
+        .meta { font-size: {{ $isPrint ? '10px' : '8px' }}; color: #444; margin: 0 0 6px; text-align: center; }
+
+        table.data-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        table.data-table th,
+        table.data-table td {
+            border: 0.8px solid #8fa3bd;
+            padding: {{ $isPrint ? '6px 8px' : '3px 4px' }};
+            text-align: left;
+            vertical-align: top;
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+        table.data-table thead th {
+            background: #004a93 !important;
+            color: #fff !important;
+            font-weight: bold;
+            font-size: {{ $headFont }}px;
+            text-align: center;
+            border-color: #004a93;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        table.data-table tbody tr:nth-child(even) {
+            background: #eef2f8;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .col-sno { width: 5%; }
+        .col-employee { width: 24%; }
+        .col-pass { width: 15%; }
+        .col-type { width: 14%; }
+        .col-veh { width: 14%; }
+        .col-date { width: 14%; }
+        .col-status { width: 10%; }
+        .cell-center { text-align: center; }
+
+        .footer { margin-top: 8px; text-align: center; font-size: {{ $isPrint ? '9px' : '7px' }}; color: #666; }
     </style>
 </head>
-<body>
-<div class="header">
-    <h2>Vehicle Pass Requests Report</h2>
-</div>
-<div class="meta">
-    <strong>Type:</strong> {{ ucfirst($tab) }} Requests<br>
-    <strong>Generated On:</strong> {{ $export_date }}<br>
-    <strong>Total Records:</strong> {{ $passes->count() }}
-</div>
-@if($passes->count())
-<table>
-    <thead>
+<body @if($isPrint) onload="window.focus(); window.print();" @endif>
+
+    @unless($isPrint)
+    {{-- Page numbers on every page (DomPDF; needs isPhpEnabled). --}}
+    <script type="text/php">
+        if (isset($pdf)) {
+            $text = "Page {PAGE_NUM} of {PAGE_COUNT}";
+            $size = 7;
+            $font = $fontMetrics->getFont("DejaVu Sans", "normal");
+            $w    = $fontMetrics->getTextWidth($text, $font, $size);
+            $pdf->page_text($pdf->get_width() - $w - 20, $pdf->get_height() - 18, $text, $font, $size, array(0.4, 0.4, 0.4));
+        }
+    </script>
+    @endunless
+
+    {{-- Institution header --}}
+    <table class="pdf-hdr">
         <tr>
-            <th width="5%">S.No.</th>
-            <th width="18%">Employee Name</th>
-            <th width="12%">Vehicle Pass No.</th>
-            <th width="12%">Vehicle Type</th>
-            <th width="12%">Vehicle Number</th>
-            <th width="15%">Requested Date</th>
-            <th width="10%">Status</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach($passes as $i => $record)
-        <tr>
-            <td class="text-center">{{ $i + 1 }}</td>
-            <td>{{ $record->display_name }}</td>
-            <td>{{ $record->vehicle_req_id ?? '--' }}</td>
-            <td>{{ $record->vehicleType->vehicle_type ?? '--' }}</td>
-            <td>{{ $record->vehicle_no ?? '--' }}</td>
-            <td>{{ $record->created_date ? $record->created_date->format('d/m/Y H:i') : '--' }}</td>
-            <td>
-                @if($record->vech_card_status == 1)
-                    Pending
-                @elseif($record->vech_card_status == 2)
-                    Approved
-                @else
-                    Rejected
-                @endif
+            <td class="logo">@if($logoLeft)<img src="{{ $logoLeft }}" alt="">@endif</td>
+            <td class="center">
+                @if($titleHindi)<img class="inst-hi-img" src="{{ $titleHindi }}" alt="">@endif
+                <div class="inst-en">Lal Bahadur Shastri National Academy of Administration, Mussoorie</div>
             </td>
+            <td class="logo">@if($logoRight)<img src="{{ $logoRight }}" alt="">@endif</td>
         </tr>
-        @endforeach
-    </tbody>
-</table>
-@else
-<p style="text-align:center;">No vehicle pass requests found.</p>
-@endif
-<div class="footer">
-    Generated by {{ config('app.name') }} &bull; System generated report
-</div>
+    </table>
+
+    <div class="report-title">{{ $reportTitle }}</div>
+
+    <div class="meta">
+        @if($filterLine)<div>{{ $filterLine }}</div>@endif
+        <div>Generated on: {{ $printedOn }} &nbsp;|&nbsp; Total records: {{ $rows->count() }}</div>
+    </div>
+
+    @php
+        $headingClassMap = [
+            'S.No.' => 'col-sno',
+            'Employee Name' => 'col-employee',
+            'Vehicle Pass No' => 'col-pass',
+            'Vehicle Type' => 'col-type',
+            'Vehicle Number' => 'col-veh',
+            'Requested Date' => 'col-date',
+            'Status' => 'col-status',
+        ];
+    @endphp
+    <table class="data-table">
+        <thead>
+            <tr>
+                @foreach($headings as $heading)
+                    <th class="{{ $headingClassMap[$heading] ?? '' }}">{{ $heading }}</th>
+                @endforeach
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($rows as $row)
+                @php $cells = array_values((array) $row); @endphp
+                <tr>
+                    @foreach($cells as $ci => $value)
+                        @php
+                            $heading = $headings[$ci] ?? '';
+                            $colClass = $headingClassMap[$heading] ?? '';
+                            $isCenter = in_array($heading, $centerHeadings, true);
+                        @endphp
+                        <td class="{{ $colClass }}{{ $isCenter ? ' cell-center' : '' }}">{{ $value }}</td>
+                    @endforeach
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="{{ max(count($headings), 1) }}" style="text-align:center;">No records found.</td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    <div class="footer">LBSNAA — {{ $reportTitle }} Report</div>
 </body>
 </html>

@@ -52,9 +52,6 @@ class VehicleTypeDataTable extends DataTable
             ->filterColumn('vehicle_type', function ($query, $keyword) {
                 $query->where('vehicle_type', 'like', "%{$keyword}%");
             })
-            ->filterColumn('description', function ($query, $keyword) {
-                $query->where('description', 'like', "%{$keyword}%");
-            })
             ->rawColumns(['status', 'action']);
     }
 
@@ -118,7 +115,10 @@ class VehicleTypeDataTable extends DataTable
         return [
             Column::computed('DT_RowIndex')->title('S. No.')->searchable(false)->orderable(false)->addClass('text-center'),
             Column::make('vehicle_type')->title('Vehicle Type')->orderable(false),
-            Column::make('description')->title('Description')->orderable(false),
+            // sec_vehicle_type has no description column — the value is always '--'
+            // (same as the previous page). Not searchable, or the global search
+            // would build a WHERE against a column that does not exist.
+            Column::make('description')->title('Description')->searchable(false)->orderable(false),
             Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center'),
             Column::computed('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center')->width(130),
         ];
