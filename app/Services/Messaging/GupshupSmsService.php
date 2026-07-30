@@ -32,13 +32,19 @@ class GupshupSmsService
             && filled(config('gupshup.principal_entity_id'));
     }
 
+    /** Replacement keys whose values must never appear in plaintext in any log. */
+    protected const SENSITIVE_REPLACEMENT_KEYS = ['Password'];
+
     /**
      * Send one SMS. Best-effort callers may ignore false.
      *
      * @param  string  $to  10-digit or 91XXXXXXXXXX (normalized internally)
      * @param  string|null  $dltTemplateId  Required for gupshup driver (per DLT template)
+     * @param  array<int, string>  $sensitiveValues  Literal values (e.g. a real password) to
+     *         redact from the message before it is ever written to a log, regardless of the
+     *         surrounding template wording.
      */
-    public function send(string $to, string $message, ?string $dltTemplateId = null): bool
+    public function send(string $to, string $message, ?string $dltTemplateId = null, array $sensitiveValues = []): bool
     {
         $message = trim($message);
         $sendTo = $this->normalizeSendTo($to);
@@ -55,8 +61,8 @@ class GupshupSmsService
         }
 
         return match ($this->driver()) {
-            'log' => $this->sendViaLog($sendTo, $message, $dltTemplateId),
-            'gupshup' => $this->sendViaGupshup($sendTo, $message, $dltTemplateId),
+            'log' => $this->sendViaLog($sendTo, $message, $dltTemplateId, $sensitiveValues),
+            'gupshup' => $this->sendViaGupshup($sendTo, $message, $dltTemplateId, $sensitiveValues),
             default => $this->unsupportedDriver(),
         };
     }
@@ -77,11 +83,16 @@ class GupshupSmsService
         $maxLengths = is_array($template['max_lengths'] ?? null) ? $template['max_lengths'] : [];
 
         $body = (string) $template['body'];
+        $sensitiveValues = [];
         foreach ($replacements as $key => $value) {
             $value = (string) ($value ?? '');
 
             if (isset($maxLengths[$key])) {
                 $value = $this->fitToDltFieldWidth($templateKey, $key, $value, (int) $maxLengths[$key]);
+            }
+
+            if ($value !== '' && in_array($key, self::SENSITIVE_REPLACEMENT_KEYS, true)) {
+                $sensitiveValues[] = $value;
             }
 
             $body = str_replace('{'.$key.'}', $value, $body);
@@ -91,7 +102,7 @@ class GupshupSmsService
             ? trim((string) $template['dlt_template_id'])
             : '';
 
-        return $this->send($to, $body, $dltTemplateId !== '' ? $dltTemplateId : null);
+        return $this->send($to, $body, $dltTemplateId !== '' ? $dltTemplateId : null, $sensitiveValues);
     }
 
     /**
@@ -148,18 +159,24 @@ class GupshupSmsService
         return $digits;
     }
 
-    protected function sendViaLog(string $sendTo, string $message, ?string $dltTemplateId): bool
+    /**
+     * @param  array<int, string>  $sensitiveValues
+     */
+    protected function sendViaLog(string $sendTo, string $message, ?string $dltTemplateId, array $sensitiveValues = []): bool
     {
         Log::info('GupshupSmsService [log driver] SMS captured (not sent).', [
             'send_to' => $sendTo,
             'dlt_template_id' => $dltTemplateId,
-            'msg' => $this->redactForLog($message),
+            'msg' => $this->redactForLog($message, $sensitiveValues),
         ]);
 
         return true;
     }
 
-    protected function sendViaGupshup(string $sendTo, string $message, ?string $dltTemplateId): bool
+    /**
+     * @param  array<int, string>  $sensitiveValues
+     */
+    protected function sendViaGupshup(string $sendTo, string $message, ?string $dltTemplateId, array $sensitiveValues = []): bool
     {
         if ($dltTemplateId === null || trim($dltTemplateId) === '') {
             Log::error('GupshupSmsService: dltTemplateId is required for gupshup driver.');
@@ -188,7 +205,7 @@ class GupshupSmsService
             Log::info('GupshupSmsService: SMS gateway response.', [
                 'send_to' => $sendTo,
                 'dlt_template_id' => $dltTemplateId,
-                'msg' => $this->redactForLog($message),
+                'msg' => $this->redactForLog($message, $sensitiveValues),
                 'http_status' => $response->status(),
                 'response' => $body,
             ]);
@@ -222,14 +239,24 @@ class GupshupSmsService
     }
 
     /**
-     * Mask 6-digit OTPs and the credentials-created Password value before a
-     * rendered message body is written to any log.
+     * Mask 6-digit OTPs and any known-sensitive replacement values (e.g. the
+     * credentials-created password) before a rendered message body is written to any log.
+     *
+     * $sensitiveValues are redacted by their literal value, not by guessing a "Password:"
+     * label in the surrounding template text — a wording change in the DLT-approved template
+     * (subject, label text, punctuation) can never cause a real password to slip through.
+     *
+     * @param  array<int, string>  $sensitiveValues
      */
-    protected function redactForLog(string $message): string
+    protected function redactForLog(string $message, array $sensitiveValues = []): string
     {
-        $message = preg_replace('/\b\d{6}\b/', '[REDACTED]', $message) ?? $message;
+        foreach ($sensitiveValues as $value) {
+            if ($value !== '') {
+                $message = str_replace($value, '[REDACTED]', $message);
+            }
+        }
 
-        return preg_replace('/(Password\s*:)\S+/', '$1[REDACTED]', $message) ?? $message;
+        return preg_replace('/\b\d{6}\b/', '[REDACTED]', $message) ?? $message;
     }
 
     protected function unsupportedDriver(): bool
