@@ -4,6 +4,7 @@ namespace App\DataTables\Security;
 
 use App\Models\SecVisitorCardGenerated;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
@@ -22,6 +23,17 @@ class VisitorPassDataTable extends DataTable
             ->addIndexColumn()
             ->addColumn('pass_number', fn ($row) => e($row->pass_number ?? '--'))
             ->addColumn('visitors', function ($row) {
+                // sec_visitor_names may not exist (its migration has not been run on
+                // every environment). Fall back to the visitor count, which lives on
+                // sec_visitor_card_generated itself, instead of failing the request.
+                if (! self::hasVisitorNamesTable()) {
+                    $count = (int) ($row->included_no_person ?? 0);
+
+                    return $count > 0
+                        ? '<span class="text-muted">' . $count . ' ' . ($count === 1 ? 'visitor' : 'visitors') . '</span>'
+                        : '<span class="text-muted">--</span>';
+                }
+
                 $names = $row->visitorNames;
                 if ($names->isEmpty()) {
                     return '<span class="text-muted">--</span>';
@@ -95,6 +107,14 @@ class VisitorPassDataTable extends DataTable
                 $query->where('purpose', 'like', "%{$keyword}%");
             })
             ->filterColumn('visitors', function ($query, $keyword) {
+                if (! self::hasVisitorNamesTable()) {
+                    // Nothing to match against; contribute no rows rather than
+                    // building a WHERE against a table that isn't there.
+                    $query->whereRaw('1 = 0');
+
+                    return;
+                }
+
                 $query->whereHas('visitorNames', function ($v) use ($keyword) {
                     $v->where('visitor_name', 'like', "%{$keyword}%");
                 });
@@ -113,9 +133,33 @@ class VisitorPassDataTable extends DataTable
      */
     public function query(SecVisitorCardGenerated $model): QueryBuilder
     {
+        $with = ['employee', 'createdBy'];
+        if (self::hasVisitorNamesTable()) {
+            $with[] = 'visitorNames';
+        }
+
         return $model->newQuery()
-            ->with(['employee', 'visitorNames', 'createdBy'])
+            ->with($with)
             ->orderBy('created_date', 'desc');
+    }
+
+    /**
+     * Whether the sec_visitor_names table exists. Its migration
+     * (2026_01_22_000006_create_sec_visitor_names_table) has not been run on every
+     * environment, and eager-loading the relation without it fails the whole
+     * DataTables request with "Base table or view not found".
+     *
+     * Memoised because it is consulted once per rendered row.
+     */
+    public static function hasVisitorNamesTable(): bool
+    {
+        static $exists = null;
+
+        if ($exists === null) {
+            $exists = Schema::hasTable('sec_visitor_names');
+        }
+
+        return $exists;
     }
 
     /**

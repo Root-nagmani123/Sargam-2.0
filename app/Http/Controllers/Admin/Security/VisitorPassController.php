@@ -103,8 +103,14 @@ class VisitorPassController extends Controller
             abort(404);
         }
 
-        $visitorPass = SecVisitorCardGenerated::with(['employee', 'visitorNames', 'createdBy'])
-            ->findOrFail($pk);
+        // visitorNames is only eager-loaded where sec_visitor_names exists; see
+        // VisitorPassDataTable::hasVisitorNamesTable().
+        $with = ['employee', 'createdBy'];
+        if (VisitorPassDataTable::hasVisitorNamesTable()) {
+            $with[] = 'visitorNames';
+        }
+
+        $visitorPass = SecVisitorCardGenerated::with($with)->findOrFail($pk);
 
         return view('admin.security.visitor_pass.show', compact('visitorPass'));
     }
@@ -117,7 +123,9 @@ class VisitorPassController extends Controller
             abort(404);
         }
 
-        $visitorPass = SecVisitorCardGenerated::with('visitorNames')->findOrFail($pk);
+        $visitorPass = VisitorPassDataTable::hasVisitorNamesTable()
+            ? SecVisitorCardGenerated::with('visitorNames')->findOrFail($pk)
+            : SecVisitorCardGenerated::findOrFail($pk);
         $employees = EmployeeMaster::where('status', 1)->get();
 
         return view('admin.security.visitor_pass.edit', compact('visitorPass', 'employees'));

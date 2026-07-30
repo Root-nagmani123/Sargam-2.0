@@ -41,7 +41,7 @@
 
 @section('content')
 <div class="container-fluid idcard-index-page">
-    <x-breadcrum title="Employee ID Card List">
+    <x-breadcrum title="Employee ID Card List" :showBack="false">
         <a href="{{ route('admin.employee_idcard.create') }}"
            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
             <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
@@ -58,7 +58,34 @@
             'list_status' => ($list_status ?? 'all') !== 'all' ? ($list_status ?? '') : '',
         ]);
     @endphp
-
+<div class="d-flex justify-content-end mb-3 gap-2 flex-wrap">
+<button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="idcardPrintBtn" title="Print">
+                        <i class="bi bi-printer" aria-hidden="true"></i> <span>Print</span>
+                    </button>
+                    <div class="dropdown">
+                        <button type="button" class="btn programme-dt-btn-columns dropdown-toggle border-0 text-primary" id="idcardDownloadBtn"
+                            data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                            <i class="bi bi-download" aria-hidden="true"></i> <span>Download</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 py-2" aria-labelledby="idcardDownloadBtn">
+                            <li>
+                                <a href="#" class="dropdown-item d-flex align-items-center gap-2 py-2 export-link"
+                                   data-format="pdf"
+                                   data-base-url="{{ route('admin.employee_idcard.export', array_merge(['format' => 'pdf'], $exportParams)) }}">
+                                    <i class="bi bi-file-earmark-pdf text-danger" aria-hidden="true"></i> Download PDF
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" class="dropdown-item d-flex align-items-center gap-2 py-2 export-link"
+                                   data-format="xlsx"
+                                   data-base-url="{{ route('admin.employee_idcard.export', array_merge(['format' => 'xlsx'], $exportParams)) }}">
+                                    <i class="bi bi-file-earmark-spreadsheet text-success" aria-hidden="true"></i> Download Excel
+                                </a>
+                            </li>
+                        </ul>
+                        <span id="exportHeaderLabel" class="d-none">Active (with current filter)</span>
+                    </div>
+</div>
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
 
@@ -81,7 +108,7 @@
                     <div>
                         <label class="form-label small text-muted mb-1">Time Period</label>
                         <div class="dropdown">
-                            <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 idcp-toggle dropdown-toggle"
+                            <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1 idcp-toggle dropdown-toggle"
                                     id="idcardTimePeriodToggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                                 <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">calendar_month</i>
                                 <span id="idcardTimePeriodLabel">Time Period</span>
@@ -115,32 +142,6 @@
 
                 {{-- Print · Download · Columns · Search --}}
                 <div class="d-flex flex-wrap align-items-center gap-2">
-                    <button type="button" class="btn programme-dt-btn-columns" id="idcardPrintBtn" title="Print">
-                        <i class="bi bi-printer" aria-hidden="true"></i> <span>Print</span>
-                    </button>
-                    <div class="dropdown">
-                        <button type="button" class="btn programme-dt-btn-columns dropdown-toggle" id="idcardDownloadBtn"
-                            data-bs-toggle="dropdown" aria-expanded="false" title="Download">
-                            <i class="bi bi-download" aria-hidden="true"></i> <span>Download</span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 py-2" aria-labelledby="idcardDownloadBtn">
-                            <li>
-                                <a href="#" class="dropdown-item d-flex align-items-center gap-2 py-2 export-link"
-                                   data-format="pdf"
-                                   data-base-url="{{ route('admin.employee_idcard.export', array_merge(['format' => 'pdf'], $exportParams)) }}">
-                                    <i class="bi bi-file-earmark-pdf text-danger" aria-hidden="true"></i> Download PDF
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#" class="dropdown-item d-flex align-items-center gap-2 py-2 export-link"
-                                   data-format="xlsx"
-                                   data-base-url="{{ route('admin.employee_idcard.export', array_merge(['format' => 'xlsx'], $exportParams)) }}">
-                                    <i class="bi bi-file-earmark-spreadsheet text-success" aria-hidden="true"></i> Download Excel
-                                </a>
-                            </li>
-                        </ul>
-                        <span id="exportHeaderLabel" class="d-none">Active (with current filter)</span>
-                    </div>
                     <button type="button" class="btn programme-dt-btn-columns" id="idcardBtnColumns"
                         data-bs-toggle="modal" data-bs-target="#idcardColumnVisibilityModal" title="Show / hide columns">
                         <span>Columns</span><i class="bi bi-layout-three-columns" aria-hidden="true"></i>

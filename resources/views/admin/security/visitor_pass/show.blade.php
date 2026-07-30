@@ -55,9 +55,10 @@
                     <div class="mb-3">
                         <label class="form-label fw-bold">Visitor Name(s)</label>
                         <div class="form-control bg-light">
-                            @if($visitorPass->visitorNames && count($visitorPass->visitorNames) > 0)
+                            @php $visitorNameList = $visitorPass->visitorNamesSafe(); @endphp
+                            @if($visitorNameList->isNotEmpty())
                                 <ul class="mb-0">
-                                    @foreach($visitorPass->visitorNames as $name)
+                                    @foreach($visitorNameList as $name)
                                         <li>{{ $name->visitor_name }}</li>
                                     @endforeach
                                 </ul>

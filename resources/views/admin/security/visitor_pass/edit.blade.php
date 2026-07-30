@@ -43,7 +43,7 @@
                                 Visitor Name(s) <span class="text-danger">*</span>
                             </label>
                             <div id="visitorNamesContainer">
-                                @foreach($visitorPass->visitorNames as $index => $visitorName)
+                                @foreach($visitorPass->visitorNamesSafe() as $index => $visitorName)
                                     <div class="input-group mb-2 {{ $index > 0 ? 'visitor-name-row' : '' }}">
                                         <input type="text" name="visitor_names[]" class="form-control" 
                                             placeholder="Enter visitor name" value="{{ old('visitor_names.'.$index, $visitorName->visitor_name) }}" required>
@@ -249,7 +249,7 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    let visitorCount = {{ count($visitorPass->visitorNames) }};
+    let visitorCount = {{ $visitorPass->visitorNamesSafe()->count() }};
     
     // Add more visitor names
     $('#addVisitorBtn').on('click', function() {
