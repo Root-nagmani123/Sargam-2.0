@@ -15,7 +15,14 @@
     <div class="card dmc-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3 p-md-4">
             <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-end gap-3 mb-4">
-                <div id="dmcDtSearch" class="programme-dt-search ms-lg-auto" data-dt-search-for="discipline-table"></div>
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="dmcBtnColumns"
+                        data-bs-toggle="modal" data-bs-target="#dmcColumnVisibilityModal"
+                        title="Show / hide columns">
+                        <span>Columns</span><i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div id="dmcDtSearch" class="programme-dt-search" data-dt-search-for="discipline-table"></div>
+                </div>
             </div>
 
             <div class="programme-dt-panel dmc-dt-scroll">
@@ -25,6 +32,25 @@
         </div>
     </div>
 </div>
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="dmcColumnVisibilityModal" tabindex="-1" aria-labelledby="dmcColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="dmcColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="dmcColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
@@ -147,12 +173,82 @@
             decorateDmcRows();
         });
 
+        /* ---- Column show / hide (DataTables API, persisted per browser) ---- */
+        const dmcColStorageKey = 'dmcGrid:hiddenColumns:v1';
+
+        function dmcGetHiddenCols() {
+            try {
+                const raw = localStorage.getItem(dmcColStorageKey);
+                const arr = raw ? JSON.parse(raw) : [];
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function dmcPersistHiddenCols(arr) {
+            try { localStorage.setItem(dmcColStorageKey, JSON.stringify(arr)); } catch (e) {}
+        }
+
+        function setupDmcColumns(dt) {
+            if (!dt) {
+                return;
+            }
+            const hidden = dmcGetHiddenCols();
+
+            dt.columns().every(function() {
+                const idx = this.index();
+                this.visible(hidden.indexOf(idx) === -1, false);
+            });
+            dt.columns.adjust();
+
+            const $grid = $('#dmcColumnToggleGrid');
+            if (!$grid.length) {
+                return;
+            }
+            $grid.empty();
+
+            dt.columns().every(function() {
+                const idx = this.index();
+                const title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+                if (!title) {
+                    return;
+                }
+
+                const inputId = 'dmccolvis_' + idx;
+                const $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
+                const $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                    .attr('for', inputId);
+                const $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                    .attr('id', inputId)
+                    .prop('checked', hidden.indexOf(idx) === -1);
+
+                $cb.on('change', function() {
+                    const h = dmcGetHiddenCols();
+                    const pos = h.indexOf(idx);
+                    if (this.checked) {
+                        if (pos !== -1) h.splice(pos, 1);
+                    } else {
+                        if (pos === -1) h.push(idx);
+                    }
+                    dmcPersistHiddenCols(h);
+                    dt.column(idx).visible(this.checked, false);
+                    dt.columns.adjust();
+                });
+
+                $label.append($cb).append($('<span></span>').text(title));
+                $cell.append($label);
+                $grid.append($cell);
+            });
+        }
+
         $(tableSelector).on('init.dt', function() {
             const api = $(tableSelector).DataTable();
             if (api.settings()[0].oScroll.sX) {
                 api.columns.adjust();
             }
             decorateDmcRows();
+            setupDmcColumns(api);
         });
 
         if ($.fn.DataTable.isDataTable(tableSelector)) {

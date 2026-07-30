@@ -264,6 +264,9 @@ body.custom-loaded {
 #ftColumnToggleGrid .colvis-item,
 #facultyColumnToggleGrid .colvis-item,
 #usersColumnToggleGrid .colvis-item,
+#mmtColumnToggleGrid .colvis-item,
+#mcmColumnToggleGrid .colvis-item,
+#dmcColumnToggleGrid .colvis-item,
 #estateBillReportColumnGrid .colvis-item {
     cursor: pointer;
     transition: border-color 0.15s ease, background-color 0.15s ease;
@@ -298,6 +301,9 @@ body.custom-loaded {
 #ftColumnToggleGrid .colvis-item:hover,
 #facultyColumnToggleGrid .colvis-item:hover,
 #usersColumnToggleGrid .colvis-item:hover,
+#mmtColumnToggleGrid .colvis-item:hover,
+#mcmColumnToggleGrid .colvis-item:hover,
+#dmcColumnToggleGrid .colvis-item:hover,
 #estateBillReportColumnGrid .colvis-item:hover {
     border-color: #004a93 !important;
     background-color: rgba(0, 74, 147, 0.04);
@@ -332,6 +338,9 @@ body.custom-loaded {
 #ftColumnToggleGrid .colvis-item .form-check-input,
 #facultyColumnToggleGrid .colvis-item .form-check-input,
 #usersColumnToggleGrid .colvis-item .form-check-input,
+#mmtColumnToggleGrid .colvis-item .form-check-input,
+#mcmColumnToggleGrid .colvis-item .form-check-input,
+#dmcColumnToggleGrid .colvis-item .form-check-input,
 #estateBillReportColumnGrid .colvis-item .form-check-input {
     cursor: pointer;
     flex-shrink: 0;

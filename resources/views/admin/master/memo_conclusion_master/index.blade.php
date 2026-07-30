@@ -17,12 +17,38 @@
     <div class="card mcm-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3 p-md-4">
             <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-end gap-3 mb-4">
-                <div id="mcmDtSearch" class="programme-dt-search ms-lg-auto" data-dt-search-for="memoconclusionmaster-table"></div>
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="mcmBtnColumns"
+                        data-bs-toggle="modal" data-bs-target="#mcmColumnVisibilityModal"
+                        title="Show / hide columns">
+                        <span>Columns</span><i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div id="mcmDtSearch" class="programme-dt-search" data-dt-search-for="memoconclusionmaster-table"></div>
+                </div>
             </div>
 
             <div class="programme-dt-panel mcm-dt-scroll">
                 {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
                 <div id="mcmDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="memoconclusionmaster-table"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="mcmColumnVisibilityModal" tabindex="-1" aria-labelledby="mcmColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="mcmColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="mcmColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -271,12 +297,82 @@
             decorateMcmRows();
         });
 
+        /* ---- Column show / hide (DataTables API, persisted per browser) ---- */
+        const mcmColStorageKey = 'mcmGrid:hiddenColumns:v1';
+
+        function mcmGetHiddenCols() {
+            try {
+                const raw = localStorage.getItem(mcmColStorageKey);
+                const arr = raw ? JSON.parse(raw) : [];
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function mcmPersistHiddenCols(arr) {
+            try { localStorage.setItem(mcmColStorageKey, JSON.stringify(arr)); } catch (e) {}
+        }
+
+        function setupMcmColumns(dt) {
+            if (!dt) {
+                return;
+            }
+            const hidden = mcmGetHiddenCols();
+
+            dt.columns().every(function() {
+                const idx = this.index();
+                this.visible(hidden.indexOf(idx) === -1, false);
+            });
+            dt.columns.adjust();
+
+            const $grid = $('#mcmColumnToggleGrid');
+            if (!$grid.length) {
+                return;
+            }
+            $grid.empty();
+
+            dt.columns().every(function() {
+                const idx = this.index();
+                const title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+                if (!title) {
+                    return;
+                }
+
+                const inputId = 'mcmcolvis_' + idx;
+                const $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
+                const $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                    .attr('for', inputId);
+                const $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                    .attr('id', inputId)
+                    .prop('checked', hidden.indexOf(idx) === -1);
+
+                $cb.on('change', function() {
+                    const h = mcmGetHiddenCols();
+                    const pos = h.indexOf(idx);
+                    if (this.checked) {
+                        if (pos !== -1) h.splice(pos, 1);
+                    } else {
+                        if (pos === -1) h.push(idx);
+                    }
+                    mcmPersistHiddenCols(h);
+                    dt.column(idx).visible(this.checked, false);
+                    dt.columns.adjust();
+                });
+
+                $label.append($cb).append($('<span></span>').text(title));
+                $cell.append($label);
+                $grid.append($cell);
+            });
+        }
+
         $(tableSelector).on('init.dt', function() {
             const api = $(tableSelector).DataTable();
             if (api.settings()[0].oScroll.sX) {
                 api.columns.adjust();
             }
             decorateMcmRows();
+            setupMcmColumns(api);
         });
 
         if ($.fn.DataTable.isDataTable(tableSelector)) {
