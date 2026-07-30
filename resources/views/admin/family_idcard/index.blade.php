@@ -1,5 +1,5 @@
 @extends('admin.layouts.master')
-@section('title', 'Request For Family Id Card - Sargam | Lal Bahadur Shastri')
+@section('title', 'Request For Family Id Card')
 
 @push('styles')
 <style>
@@ -83,7 +83,7 @@
             </li>
         </ul>
         <div class="dropdown">
-            <button type="button" class="btn programme-dt-btn-columns family-download-btn dropdown-toggle" id="familyDownloadBtn"
+            <button type="button" class="btn programme-dt-btn-columns family-download-btn dropdown-toggle border-0 text-primary" id="familyDownloadBtn"
                 data-bs-toggle="dropdown" aria-expanded="false" title="Download">
                 <i class="bi bi-download" aria-hidden="true"></i> <span>Download</span>
             </button>
