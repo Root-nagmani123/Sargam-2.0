@@ -7,7 +7,10 @@
 @endpush
 
 @section('setup_content')
-<div class="container-fluid">
+{{-- cmdm-master-page is the scope for this page's rules in custom.css (~L2150-2260),
+     including the ones that visually hide the raw status checkbox and show only one
+     of the two toggle icons. Without it those 33 rules never match. --}}
+<div class="container-fluid cmdm-master-page">
     <x-breadcrum title="Course Memo Decision Mapping">
         <button type="button" id="showConclusionAlert"
             class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">

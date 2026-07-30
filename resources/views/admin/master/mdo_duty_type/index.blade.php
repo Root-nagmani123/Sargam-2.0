@@ -3,7 +3,9 @@
 @section('title', 'MDO Duty Type')
 
 @section('setup_content')
-<div class="container-fluid">
+{{-- mdt-master-page scopes this page's rules in custom.css (the #mdodutytypemaster-table
+     delete-button styling); without the class none of them match. --}}
+<div class="container-fluid mdt-master-page">
     <x-breadcrum title="MDO Duty Type"></x-breadcrum>
     <div class="datatables">
         <!-- start Zero Configuration -->
