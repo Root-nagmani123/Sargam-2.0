@@ -21,111 +21,77 @@
         <p class="text-muted mb-0 small">Generated on: {{ now()->format('d-m-Y H:i:s') }}</p>
     </div>
 
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 no-print p-4 rounded-3 shadow-sm" style="background: #004a93; color: white;">
-        <div>
-            <h4 class="mb-2 fw-bold d-flex align-items-center gap-2">
-                <i class="material-symbols-rounded" style="font-size: 2rem;">receipt_long</i>
-                My Mess Bills
-            </h4>
-            <p class="mb-0 small opacity-90 text-white">View your mess bill totals and line items (with dates) for the selected period. Use the same date range as Process Mess Bills.</p>
-        </div>
-    </div>
+    {{-- The page heading is the breadcrum above; this is just the supporting line. --}}
+    <p class="text-muted mb-4 no-print">
+        View your mess bill totals and line items (with dates) for the selected period.
+        Use the same date range as Process Mess Bills.
+    </p>
 
     <div class="no-print">
         @php $stats = $stats ?? ['total_bills' => 0, 'paid_count' => 0, 'unpaid_count' => 0, 'total_amount' => 0]; @endphp
+        {{-- KPI tiles use the design-system .ds-stat-card component (sargam-app.css). --}}
         <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 mb-4">
-            <div class="col">
-                <div class="card border-0 shadow h-100">
-                    <div class="card-body d-flex align-items-center gap-3">
-                        <div class="rounded-3 bg-primary bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                            <i class="material-symbols-rounded text-primary" style="font-size: 2rem;">description</i>
-                        </div>
+            @foreach ([
+                ['label' => 'Total Bills',  'value' => number_format($stats['total_bills']),          'icon' => 'description',  'tone' => 'primary'],
+                ['label' => 'Unpaid',       'value' => number_format($stats['unpaid_count']),         'icon' => 'schedule',     'tone' => 'warning'],
+                ['label' => 'Paid',         'value' => number_format($stats['paid_count']),           'icon' => 'check_circle', 'tone' => 'success'],
+                ['label' => 'Total Amount', 'value' => '₹ ' . number_format($stats['total_amount'], 2), 'icon' => 'payments', 'tone' => 'info'],
+            ] as $tile)
+                <div class="col">
+                    <div class="ds-stat-card h-100">
                         <div>
-                            <div class="text-muted small text-uppercase fw-semibold mb-1">Total Bills</div>
-                            <div class="fs-3 fw-bold text-dark">{{ number_format($stats['total_bills']) }}</div>
+                            <p class="ds-stat-label">{{ $tile['label'] }}</p>
+                            <div class="ds-stat-value">{{ $tile['value'] }}</div>
                         </div>
+                        <span class="ds-stat-icon bg-{{ $tile['tone'] }} bg-opacity-10 text-{{ $tile['tone'] }}">
+                            <i class="material-symbols-rounded" aria-hidden="true">{{ $tile['icon'] }}</i>
+                        </span>
                     </div>
                 </div>
-            </div>
-            <div class="col">
-                <div class="card border-0 shadow h-100">
-                    <div class="card-body d-flex align-items-center gap-3">
-                        <div class="rounded-3 bg-warning bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                            <i class="material-symbols-rounded text-warning" style="font-size: 2rem;">schedule</i>
-                        </div>
-                        <div>
-                            <div class="text-muted small text-uppercase fw-semibold mb-1">Unpaid</div>
-                            <div class="fs-3 fw-bold text-dark">{{ number_format($stats['unpaid_count']) }}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col">
-                <div class="card border-0 shadow h-100">
-                    <div class="card-body d-flex align-items-center gap-3">
-                        <div class="rounded-3 bg-success bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                            <i class="material-symbols-rounded text-success" style="font-size: 2rem;">check_circle</i>
-                        </div>
-                        <div>
-                            <div class="text-muted small text-uppercase fw-semibold mb-1">Paid</div>
-                            <div class="fs-3 fw-bold text-dark">{{ number_format($stats['paid_count']) }}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col">
-                <div class="card border-0 shadow h-100">
-                    <div class="card-body d-flex align-items-center gap-3">
-                        <div class="rounded-3 bg-info bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                            <i class="material-symbols-rounded text-info" style="font-size: 2rem;">payments</i>
-                        </div>
-                        <div>
-                            <div class="text-muted small text-uppercase fw-semibold mb-1">Total Amount</div>
-                            <div class="fs-3 fw-bold text-dark">₹ {{ number_format($stats['total_amount'], 2) }}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            @endforeach
         </div>
     </div>
 
-    <div class="card border-0 shadow mb-4 no-print" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+    <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-lg-4">
-            <form method="GET" action="{{ route('admin.mess.my-bills.index') }}" id="myBillsFilterForm">
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">event</i>Date From <span class="text-danger">*</span></label>
-                        <input type="text" name="date_from" id="date_from" class="form-select"
+
+            <form method="GET" action="{{ route('admin.mess.my-bills.index') }}" id="myBillsFilterForm"
+                  class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 no-print programme-dt-toolbar">
+
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="programme-dt-filters-label">Filters</span>
+
+                    <div class="programme-dt-filter-select">
+                        <label for="date_from" class="visually-hidden">Date from</label>
+                        <input type="text" name="date_from" id="date_from" class="form-control"
                                value="{{ $effectiveDateFrom ?? request('date_from', now()->startOfMonth()->format('d-m-Y')) }}"
                                data-default-ymd="{{ $effectiveDateFromYmd ?? now()->startOfMonth()->format('Y-m-d') }}"
-                               placeholder="dd-mm-yyyy" autocomplete="off">
+                               placeholder="Date from (dd-mm-yyyy)" autocomplete="off">
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">event</i>Date To <span class="text-danger">*</span></label>
-                        <input type="text" name="date_to" id="date_to" class="form-select"
+                    <div class="programme-dt-filter-select">
+                        <label for="date_to" class="visually-hidden">Date to</label>
+                        <input type="text" name="date_to" id="date_to" class="form-control"
                                value="{{ $effectiveDateTo ?? request('date_to', now()->endOfMonth()->format('d-m-Y')) }}"
                                data-default-ymd="{{ $effectiveDateToYmd ?? now()->endOfMonth()->format('Y-m-d') }}"
-                               placeholder="dd-mm-yyyy" autocomplete="off">
+                               placeholder="Date to (dd-mm-yyyy)" autocomplete="off">
                     </div>
-                    <div class="col-md-2 d-flex gap-1">
-                        <button type="submit" class="btn btn-primary flex-grow-1">
-                            <i class="material-symbols-rounded align-middle">filter_list</i>
-                            Apply
-                        </button>
-                        <a href="{{ route('admin.mess.my-bills.index') }}" class="btn btn-outline-secondary shadow-sm" title="Clear filters">
-                            <i class="material-symbols-rounded" style="font-size: 1.1rem;">filter_list_off</i>
-                        </a>
-                    </div>
+
+                    <button type="submit" class="btn btn-primary rounded-1 px-3">Apply</button>
+                    <a href="{{ route('admin.mess.my-bills.index') }}" class="btn programme-dt-btn-reset">Reset Filters</a>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <div id="myBillsDtSearch" class="programme-dt-search" data-dt-search-for="myMessBillsTable"></div>
                 </div>
             </form>
-        </div>
-    </div>
 
-    <div class="card border-0 shadow">
-        <div class="card-body p-3 p-lg-4">
-            <div class="table-responsive">
-                <table class="table table-sm table-striped table-hover text-nowrap align-middle mb-0" id="myMessBillsTable">
-                    <thead class="table-light">
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                {{-- Not paginated server-side: the global `.datatable` init pages and
+                     searches it in the browser, and the enhancer fills the slots. --}}
+                <table class="table table-hover text-nowrap align-middle mb-0 w-100 programme-dt-table datatable" id="myMessBillsTable"
+                       data-export="false" data-page-length="10">
+                    <thead>
                         <tr>
                             <th class="py-2">S.No.</th>
                             <th class="py-2">Slip No.</th>
@@ -183,6 +149,9 @@
                         @endforelse
                     </tbody>
                 </table>
+                </div>
+                <div id="myBillsDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 no-print"
+                     data-dt-footer-for="myMessBillsTable"></div>
             </div>
         </div>
     </div>

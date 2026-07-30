@@ -29,8 +29,8 @@
     <div class="card border-0 shadow-sm rounded-3">
         <div class="card-body p-3 p-md-4">
 
-            <div class="sn-filter-bar mb-3">
-                <span class="sn-filter-label">Filters</span>
+            <div class="sn-filter-bar programme-dt-toolbar mb-3">
+                <span class="sn-filter-label programme-dt-filters-label">Filters</span>
 
                 {{-- Course Name --}}
                 <select id="snCourse" class="sn-control" aria-label="Course Name">
@@ -89,12 +89,15 @@
                         <i class="bi bi-layout-three-columns"></i> Columns
                     </button>
                     {{-- Search --}}
-                    <input type="search" id="snSearch" class="sn-search-input" placeholder="Search...">
+                    <div class="programme-dt-search">
+                        <input type="search" id="snSearch" class="sn-search-input form-control" placeholder="Search" aria-label="Search sessions">
+                    </div>
                 </div>
             </div>
 
-            <div class="table-responsive">
-                <table id="sendNoticeTable" class="table table-hover align-middle w-100 mb-0">
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                <table id="sendNoticeTable" class="table table-hover align-middle w-100 mb-0 programme-dt-table">
                     <thead>
                         <tr>
                             <th>S. No.</th>
@@ -111,6 +114,9 @@
                     </thead>
                     <tbody></tbody>
                 </table>
+                </div>
+                <div id="snDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                     data-dt-footer-for="sendNoticeTable"></div>
             </div>
         </div>
     </div>
@@ -208,7 +214,6 @@ $(function() {
             [10, 25, 50, 100]
         ],
         order: [],
-        dom: 'rt<"d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3"i<"d-flex align-items-center gap-2"lp>>',
         language: {
             processing: '<div class="spinner-border text-primary" role="status"></div>',
             emptyTable: 'No sessions found.',

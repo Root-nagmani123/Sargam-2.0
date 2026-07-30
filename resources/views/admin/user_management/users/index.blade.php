@@ -7,10 +7,8 @@
 <style>
     #usersTableContainer { transition: opacity .15s ease; }
     #usersTableContainer.users-loading { opacity: .55; pointer-events: none; }
-    /* Column Visibility modal items */
-    #usersColumnToggleGrid .colvis-item { cursor: pointer; transition: border-color .15s ease, background-color .15s ease; }
-    #usersColumnToggleGrid .colvis-item:hover { border-color: #004a93 !important; background-color: rgba(0,74,147,.04); }
-    #usersColumnToggleGrid .colvis-item .form-check-input { cursor: pointer; flex-shrink: 0; }
+    /* Column Visibility modal items are styled centrally in custom.css, which
+       now lists #usersColumnToggleGrid alongside every other colvis grid. */
 
     /* ===== Reference-matched polish (presentation only) ===== */
     /* Print / Download utility buttons */
@@ -104,8 +102,8 @@
             <form method="GET" id="usersFilterForm" class="mb-3 mb-md-4">
                 <input type="hidden" name="per_page" value="{{ $perPage }}" id="usersFilterPerPage">
 
-                <div class="d-flex flex-wrap align-items-center gap-2 gap-md-3">
-                    <span class="users-filters-label me-1">Filters</span>
+                <div class="d-flex flex-wrap align-items-center gap-2 gap-md-3 programme-dt-toolbar">
+                    <span class="users-filters-label programme-dt-filters-label me-1">Filters</span>
 
                     <label for="User_type" class="visually-hidden">User type</label>
                     <select name="User_type" id="User_type" class="form-select users-filter-select" aria-label="Filter by user type">
@@ -114,12 +112,12 @@
                         <option value="E" {{ $user_type === 'E' ? 'selected' : '' }}>Employee</option>
                     </select>
 
-                    <button type="button" class="users-reset-btn" id="resetUsersFilters">
+                    <button type="button" class="users-reset-btn programme-dt-btn-reset" id="resetUsersFilters">
                         Reset Filters
                     </button>
 
                     <div class="ms-md-auto d-flex align-items-center gap-2">
-                        <button type="button" class="users-tool-btn"
+                        <button type="button" class="users-tool-btn programme-dt-btn-columns"
                             id="btnUsersColumns" data-bs-toggle="modal" data-bs-target="#usersColumnVisibilityModal"
                             title="Show / hide columns">
                             <span>Columns</span>

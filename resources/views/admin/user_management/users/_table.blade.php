@@ -1,5 +1,5 @@
 {{-- Table --}}
-<div class="users-table-outer">
+<div class="users-table-outer programme-dt-panel">
     <div class="table-responsive users-dt-scroll">
         <table class="table align-middle mb-0 programme-dt-table users-table" id="zero_config_table">
             <thead>
