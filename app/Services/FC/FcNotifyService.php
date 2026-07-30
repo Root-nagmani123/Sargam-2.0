@@ -218,6 +218,7 @@ class FcNotifyService
         string $stepName,
         ?int $registrationPk = null,
         ?string $email = null,
+        string $programmeName = '',
     ): bool {
         $mobile = trim((string) $mobile);
         $email = $this->resolveEmail($email, $registrationPk);
@@ -228,6 +229,7 @@ class FcNotifyService
         $replacements = [
             'Participant_Name' => $participantName !== '' ? $participantName : 'Candidate',
             'Step_Name' => $stepName !== '' ? $stepName : 'registration',
+            'Programme_Name' => $this->programme($programmeName),
             'Portal_Link' => $this->portal($registrationPk),
             'Institute_Name' => $this->institute(),
         ];

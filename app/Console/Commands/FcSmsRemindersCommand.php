@@ -96,7 +96,7 @@ class FcSmsRemindersCommand extends Command
             }
 
             match ($type) {
-                'b1' => $notify->formStepIncomplete($mobile, $name, $step, $pk),
+                'b1' => $notify->formStepIncomplete($mobile, $name, $step, $pk, null, $programme),
                 'b2' => $notify->registrationPending($mobile, $name, $programme, $lastDate, $pk),
                 // 'd6' => $notify->feedbackRequest($mobile, $name, $programme, $lastDate, $feedbackLink, $pk),
             };
