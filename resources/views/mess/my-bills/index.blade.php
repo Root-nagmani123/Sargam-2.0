@@ -104,7 +104,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($combinedBills ?? [] as $index => $cb)
+                        @foreach($combinedBills ?? [] as $index => $cb)
                             <tr class="{{ ($cb->status ?? 0) == 2 ? '' : 'table-warning table-warning-subtle' }}">
                                 <td>{{ $index + 1 }}</td>
                                 <td>{{ $cb->combined_invoice_no ?? '—' }}</td>
@@ -138,15 +138,11 @@
                                     </a>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="text-center py-5 text-muted">
-                                    <i class="material-symbols-rounded d-block mb-3 text-primary" style="font-size: 4rem;">inbox</i>
-                                    <div class="fw-semibold fs-5 mb-1">No Generated Mess Bills</div>
-                                    <div class="small">Try another date range, or confirm your mess account is linked to your employee or student record.</div>
-                                </td>
-                            </tr>
-                        @endforelse
+                        {{-- No @empty row: a single colspan cell in an otherwise empty
+                             tbody makes DataTables count 1 cell against 8 headers and
+                             abort with "Incorrect column count" (tn/18). The empty
+                             state is rendered by DataTables via emptyTable instead. --}}
+                        @endforeach
                     </tbody>
                 </table>
                 </div>

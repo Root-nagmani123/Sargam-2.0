@@ -83,7 +83,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse ($submissions as $index => $data)
+                            @foreach ($submissions as $index => $data)
                                 <tr>
                                     <td class="text-center">{{ $index + 1 }}</td>
                                     <td>
@@ -133,11 +133,9 @@
                                         {{ $data->created_date ? \Carbon\Carbon::parse($data->created_date)->format('d-m-Y') : '--' }}
                                     </td>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="9" class="text-center text-muted py-4">No data found.</td>
-                                </tr>
-                            @endforelse
+                            {{-- No @empty row: see my-bills - a lone colspan cell breaks
+                                 the DataTables column count. --}}
+                            @endforeach
                         </tbody>
                     </table>
                 </div>
