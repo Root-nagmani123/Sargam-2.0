@@ -78,15 +78,17 @@ class FcNotifyService
 
     /**
      * A2 — Credentials Created.
-     * Password is intentionally NOT included (CWE-312: Cleartext Transmission of
-     * Sensitive Information) — the candidate just set their own password and
-     * already knows it. Only the username and login link are sent.
+     * The DLT-approved FC-CRED1 template (id 1477178461144840794) has a Password
+     * variable slot; omitting it sends a 5-variable message against a 6-variable
+     * approved template, which the gateway rejects as a template mismatch. Password
+     * is therefore included here to match the approved text exactly.
      */
     public function credentialsCreated(
         ?string $mobile,
         string $participantName,
         string $programmeName,
         string $username,
+        string $password,
         ?int $registrationPk = null,
         ?string $email = null,
     ): void {
@@ -100,6 +102,7 @@ class FcNotifyService
             'Participant_Name' => $participantName !== '' ? $participantName : 'Candidate',
             'Programme_Name' => $this->programme($programmeName),
             'Registration_ID' => $username,
+            'Password' => $password,
             'Portal_Link' => $this->portal($registrationPk),
             'Institute_Name' => $this->institute(),
         ];

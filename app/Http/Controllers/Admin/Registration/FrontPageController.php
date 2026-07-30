@@ -452,6 +452,7 @@ class FrontPageController extends Controller
             trim((string) ($registration->display_name ?? '')),
             $programmeName,
             $request->reg_name,
+            $request->reg_password,
             isset($registration->pk) ? (int) $registration->pk : null,
             $registration->email ?? null,
         );

@@ -74,9 +74,17 @@ class GupshupSmsService
             return false;
         }
 
+        $maxLengths = is_array($template['max_lengths'] ?? null) ? $template['max_lengths'] : [];
+
         $body = (string) $template['body'];
         foreach ($replacements as $key => $value) {
-            $body = str_replace('{'.$key.'}', (string) ($value ?? ''), $body);
+            $value = (string) ($value ?? '');
+
+            if (isset($maxLengths[$key])) {
+                $value = $this->fitToDltFieldWidth($templateKey, $key, $value, (int) $maxLengths[$key]);
+            }
+
+            $body = str_replace('{'.$key.'}', $value, $body);
         }
 
         $dltTemplateId = isset($template['dlt_template_id'])
@@ -84,6 +92,38 @@ class GupshupSmsService
             : '';
 
         return $this->send($to, $body, $dltTemplateId !== '' ? $dltTemplateId : null);
+    }
+
+    /**
+     * Truncate a placeholder value to its DLT-registered tag width (e.g. #alp# = 40
+     * chars). URL-shaped values are never truncated — a cut-off link is broken and
+     * useless, so an oversized URL is sent as-is and logged rather than mangled.
+     */
+    protected function fitToDltFieldWidth(string $templateKey, string $placeholder, string $value, int $maxLength): string
+    {
+        if ($maxLength <= 0 || mb_strlen($value) <= $maxLength) {
+            return $value;
+        }
+
+        if (preg_match('#^https?://#i', $value)) {
+            Log::warning('GupshupSmsService: URL placeholder exceeds DLT field width, sending untruncated.', [
+                'template' => $templateKey,
+                'placeholder' => $placeholder,
+                'length' => mb_strlen($value),
+                'max_length' => $maxLength,
+            ]);
+
+            return $value;
+        }
+
+        Log::warning('GupshupSmsService: placeholder truncated to fit DLT field width.', [
+            'template' => $templateKey,
+            'placeholder' => $placeholder,
+            'original_length' => mb_strlen($value),
+            'max_length' => $maxLength,
+        ]);
+
+        return mb_substr($value, 0, $maxLength);
     }
 
     /**
@@ -182,13 +222,14 @@ class GupshupSmsService
     }
 
     /**
-     * Mask 6-digit OTPs before a rendered message body is written to any log.
-     * Passwords are never included in outbound message bodies (see
-     * FcNotifyService::credentialsCreated()); this only guards the OTP flows.
+     * Mask 6-digit OTPs and the credentials-created Password value before a
+     * rendered message body is written to any log.
      */
     protected function redactForLog(string $message): string
     {
-        return preg_replace('/\b\d{6}\b/', '[REDACTED]', $message) ?? $message;
+        $message = preg_replace('/\b\d{6}\b/', '[REDACTED]', $message) ?? $message;
+
+        return preg_replace('/(Password\s*:)\S+/', '$1[REDACTED]', $message) ?? $message;
     }
 
     protected function unsupportedDriver(): bool
