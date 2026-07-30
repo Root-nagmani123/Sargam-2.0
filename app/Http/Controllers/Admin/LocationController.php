@@ -9,7 +9,8 @@ class LocationController extends Controller
 {
     public function countryIndex()
     {
-        $countries = Country::paginate(10);
+        // Rendered in full; the list paginates / searches client-side (DataTables).
+        $countries = Country::orderBy('country_name')->get();
 
         return view('admin.country.index', compact('countries'));
     }
@@ -78,9 +79,12 @@ class LocationController extends Controller
     // State
     public function stateIndex()
     {
-        $states = State::paginate(10);
-        // print_r($states);die;
-        return view('admin.state.index', compact('states'));
+        // Rendered in full; the list paginates / searches client-side (DataTables).
+        // $countries feeds the in-page create/edit modals.
+        $states = State::with('country')->orderBy('state_name')->get();
+        $countries = Country::orderBy('country_name')->get();
+
+        return view('admin.state.index', compact('states', 'countries'));
     }
 
     public function stateCreate()
@@ -148,8 +152,14 @@ class LocationController extends Controller
     // District
     public function districtIndex()
     {
-        $districts = District::paginate(10);
-        return view('admin.district.index', compact('districts'));
+        // Rendered in full; the list paginates / searches client-side (DataTables).
+        // $countries/$states feed the in-page create/edit modals and the name lookups
+        // (District has no Eloquent relations, so names are resolved from these).
+        $districts = District::orderBy('district_name')->get();
+        $countries = Country::orderBy('country_name')->get();
+        $states = State::orderBy('state_name')->get();
+
+        return view('admin.district.index', compact('districts', 'countries', 'states'));
     }
 
     public function districtCreate()
@@ -218,8 +228,15 @@ class LocationController extends Controller
     // City
     public function cityIndex()
     {
-        $cities = City::with(['state', 'district'])->paginate(10);
-        return view('admin.city.index', compact('cities'));
+        // Rendered in full; the list paginates / searches client-side (DataTables).
+        // $countries/$states/$districts feed the in-page create/edit modals
+        // (including the cascading Country → State → District selects).
+        $cities = City::with(['state', 'district'])->orderBy('city_name')->get();
+        $countries = Country::orderBy('country_name')->get();
+        $states = State::orderBy('state_name')->get();
+        $districts = District::orderBy('district_name')->get();
+
+        return view('admin.city.index', compact('cities', 'countries', 'states', 'districts'));
     }
 
     public function cityCreate()
