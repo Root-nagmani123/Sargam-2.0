@@ -105,7 +105,9 @@ class EmployeeIDCardRequestController extends Controller
         $extensionRequests->withQueryString();
 
         return view('admin.employee_idcard.index', [
-            'allRequests' => $allRequestsPaged,
+            // Full (unpaginated) merged collection: the index renders every row and lets
+            // the client-side DataTable handle paging / search / sort in the browser.
+            'allRequests' => $allRequests,
             'activeRequests' => $activeRequests,
             'archivedRequests' => $archivedRequests,
             'duplicationRequests' => $duplicationRequests,
@@ -181,6 +183,11 @@ class EmployeeIDCardRequestController extends Controller
 
         $permRows = $permQuery->get();
         $contRows = $contQuery->get();
+
+        // Batch-load contractual approval history once (avoids a per-row query in the DTO mapper).
+        IdCardSecurityMapper::prefetchContractualApprovals($contRows->pluck('emp_id_apply')->all());
+        // Index employee names once so beneficiary matching is in-memory, not a scan per row.
+        IdCardSecurityMapper::prefetchEmployeeNameIndex();
 
         $permDto = $permRows->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
         $contDto = $contRows->map(fn ($r) => IdCardSecurityMapper::toContractualRequestDto($r));
@@ -1914,6 +1921,11 @@ class EmployeeIDCardRequestController extends Controller
 
         $permRows = $permQuery->get();
         $contRows = $contQuery->get();
+
+        // Batch-load contractual approval history once (avoids a per-row query in the DTO mapper).
+        IdCardSecurityMapper::prefetchContractualApprovals($contRows->pluck('emp_id_apply')->all());
+        // Index employee names once so beneficiary matching is in-memory, not a scan per row.
+        IdCardSecurityMapper::prefetchEmployeeNameIndex();
 
         $permDto = $permRows->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
         $contDto = $contRows->map(fn ($r) => IdCardSecurityMapper::toContractualRequestDto($r));

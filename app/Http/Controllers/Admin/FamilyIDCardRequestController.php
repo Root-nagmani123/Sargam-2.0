@@ -35,7 +35,7 @@ class FamilyIDCardRequestController extends Controller
     /**
      * @return Collection<int, SecurityFamilyIdApply>
      */
-    private function fetchFamilyIdcardApplicantRows(mixed $createdBy, string $search): Collection
+    private function fetchFamilyIdcardApplicantRows(mixed $createdBy, string $search, string $dateFrom = '', string $dateTo = ''): Collection
     {
         $query = SecurityFamilyIdApply::query()
             ->where('created_by', $createdBy)
@@ -47,6 +47,13 @@ class FamilyIDCardRequestController extends Controller
                     ->orWhere('family_name', 'LIKE', "%{$search}%")
                     ->orWhere('family_relation', 'LIKE', "%{$search}%");
             });
+        }
+
+        if ($dateFrom !== '') {
+            $query->whereDate('created_date', '>=', $dateFrom);
+        }
+        if ($dateTo !== '') {
+            $query->whereDate('created_date', '<=', $dateTo);
         }
 
         return $query->orderBy('created_date', 'desc')->get();
@@ -138,9 +145,9 @@ class FamilyIDCardRequestController extends Controller
     /**
      * @return array{active: Collection<int, object>, archive: Collection<int, object>}
      */
-    private function buildFamilyIdcardIndexGroupLists(mixed $createdBy, string $search, string $cardType): array
+    private function buildFamilyIdcardIndexGroupLists(mixed $createdBy, string $search, string $cardType, string $dateFrom = '', string $dateTo = ''): array
     {
-        $rows = $this->fetchFamilyIdcardApplicantRows($createdBy, $search);
+        $rows = $this->fetchFamilyIdcardApplicantRows($createdBy, $search, $dateFrom, $dateTo);
         $activeRows = $rows->filter(fn ($r) => (int) ($r->id_status ?? 1) === 1)->values();
         $archiveRows = $rows->filter(fn ($r) => in_array((int) ($r->id_status ?? 0), [2, 3], true))->values();
 
@@ -167,17 +174,16 @@ class FamilyIDCardRequestController extends Controller
     public function index(Request $request)
     {
         $createdBy = Auth::user()->user_id;
-        $search = trim((string) $request->get('search', ''));
-        $cardType = trim((string) $request->get('card_type', ''));
-        $perPage = (int) $request->get('per_page', 10);
-        $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 10;
+        // The index now renders full collections and paginates / searches / filters
+        // by date entirely client-side (Yajra-free client DataTables). We only keep
+        // the requested date range to seed the "Time Period" picker on load.
+        $dateFrom = trim((string) $request->get('date_from', ''));
+        $dateTo = trim((string) $request->get('date_to', ''));
 
         $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_family_idcard_index:v1:' . md5(json_encode([
+        $cacheKey = 'admin_family_idcard_index:v2:' . md5(json_encode([
             'epoch' => $epoch,
             'created_by' => $createdBy,
-            'search' => $search,
-            'card_type' => $cardType,
         ]));
 
         $lists = DataTableRedisCache::remember(
@@ -187,40 +193,19 @@ class FamilyIDCardRequestController extends Controller
                 'seconds' => 'FAMILY_IDCARD_INDEX_CACHE_SECONDS',
             ],
             'FamilyIDCardRequestController@index',
-            fn () => $this->buildFamilyIdcardIndexGroupLists($createdBy, $search, $cardType)
+            fn () => $this->buildFamilyIdcardIndexGroupLists($createdBy, '', '')
         );
         if (! is_array($lists) || ! isset($lists['active'], $lists['archive'])) {
-            $lists = $this->buildFamilyIdcardIndexGroupLists($createdBy, $search, $cardType);
+            $lists = $this->buildFamilyIdcardIndexGroupLists($createdBy, '', '');
         }
-        $activeGroups = $lists['active'] instanceof Collection ? $lists['active'] : collect($lists['active'] ?? []);
-        $archiveGroups = $lists['archive'] instanceof Collection ? $lists['archive'] : collect($lists['archive'] ?? []);
-
-        $queryParams = $request->query();
-        $activePage = (int) $request->get('page', 1) ?: 1;
-        $archivePage = (int) $request->get('archive_page', 1) ?: 1;
-
-        $activeRequests = static::paginateGroupCollection(
-            $activeGroups,
-            $perPage,
-            $activePage,
-            $request->url(),
-            'page',
-            $queryParams
-        );
-        $activeRequests->withQueryString();
-        $archivedRequests = static::paginateGroupCollection(
-            $archiveGroups,
-            $perPage,
-            $archivePage,
-            $request->url(),
-            'archive_page',
-            $queryParams
-        );
-        $archivedRequests->withQueryString();
+        $activeRequests = $lists['active'] instanceof Collection ? $lists['active'] : collect($lists['active'] ?? []);
+        $archivedRequests = $lists['archive'] instanceof Collection ? $lists['archive'] : collect($lists['archive'] ?? []);
 
         return view('admin.family_idcard.index', [
             'activeRequests' => $activeRequests,
             'archivedRequests' => $archivedRequests,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
         ]);
     }
 
@@ -1192,7 +1177,9 @@ class FamilyIDCardRequestController extends Controller
         $format = $request->get('format', 'xlsx');
         $search = $request->get('search', '');
         $cardType = $request->get('card_type', '');
-        
+        $dateFrom = trim((string) $request->get('date_from', ''));
+        $dateTo = trim((string) $request->get('date_to', ''));
+
         if (!in_array($tab, ['active', 'archive', 'all'])) {
             $tab = 'active';
         }
@@ -1203,10 +1190,10 @@ class FamilyIDCardRequestController extends Controller
             'all' => SecurityFamilyIdApply::query(),
             default => SecurityFamilyIdApply::where('id_status', 1),
         };
-        
+
         // Filter by current user
         $query->where('created_by', Auth::user()->user_id);
-        
+
         // Apply search filter
         if (!empty($search)) {
             $query->where(function ($q) use ($search) {
@@ -1215,12 +1202,20 @@ class FamilyIDCardRequestController extends Controller
                   ->orWhere('family_relation', 'LIKE', "%{$search}%");
             });
         }
-        
+
         // Apply card type filter
         if (!empty($cardType)) {
             $query->where('card_type', $cardType);
         }
-        
+
+        // Apply Time Period (request date) filter
+        if ($dateFrom !== '') {
+            $query->whereDate('created_date', '>=', $dateFrom);
+        }
+        if ($dateTo !== '') {
+            $query->whereDate('created_date', '<=', $dateTo);
+        }
+
         $query->orderBy('created_date', 'desc');
         $rows = $query->get();
         $requests = $rows->map(fn ($r) => IdCardSecurityMapper::toFamilyRequestDto($r));
@@ -1230,7 +1225,7 @@ class FamilyIDCardRequestController extends Controller
                 'requests' => $requests,
                 'tab' => $tab,
                 'export_date' => now()->format('d/m/Y H:i'),
-                'filters' => compact('search', 'cardType'),
+                'filters' => compact('search', 'cardType', 'dateFrom', 'dateTo'),
             ])
                 ->setPaper('a4', 'landscape')
                 ->setOption('isHtml5ParserEnabled', true)
@@ -1239,7 +1234,7 @@ class FamilyIDCardRequestController extends Controller
         }
 
         return Excel::download(
-            new FamilyIDCardExport($tab, true, $search, $cardType),
+            new FamilyIDCardExport($tab, true, $search, $cardType, $dateFrom, $dateTo),
             $filename . ($format === 'csv' ? '.csv' : '.xlsx'),
             $format === 'csv' ? \Maatwebsite\Excel\Excel::CSV : \Maatwebsite\Excel\Excel::XLSX
         );

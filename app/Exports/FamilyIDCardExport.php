@@ -16,13 +16,17 @@ class FamilyIDCardExport implements FromCollection, WithHeadings
     protected bool $useSecurity;
     protected string $search;
     protected string $cardType;
+    protected string $dateFrom;
+    protected string $dateTo;
 
-    public function __construct(string $tab = 'active', bool $useSecurity = false, string $search = '', string $cardType = '')
+    public function __construct(string $tab = 'active', bool $useSecurity = false, string $search = '', string $cardType = '', string $dateFrom = '', string $dateTo = '')
     {
         $this->tab = $tab;
         $this->useSecurity = $useSecurity;
         $this->search = $search;
         $this->cardType = $cardType;
+        $this->dateFrom = $dateFrom;
+        $this->dateTo = $dateTo;
     }
 
     public function collection(): Collection
@@ -50,7 +54,15 @@ class FamilyIDCardExport implements FromCollection, WithHeadings
             if (!empty($this->cardType)) {
                 $query->where('card_type', $this->cardType);
             }
-            
+
+            // Apply Time Period (request date) filter
+            if ($this->dateFrom !== '') {
+                $query->whereDate('created_date', '>=', $this->dateFrom);
+            }
+            if ($this->dateTo !== '') {
+                $query->whereDate('created_date', '<=', $this->dateTo);
+            }
+
             $query->orderBy('created_date', 'desc');
             $data = $query->get()->map(fn ($r) => IdCardSecurityMapper::toFamilyRequestDto($r));
         } else {
