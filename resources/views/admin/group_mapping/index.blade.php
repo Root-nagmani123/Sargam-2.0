@@ -152,7 +152,18 @@
 
             <div class="programme-dt-panel gm-dt-panel">
                 <div class="table-responsive">
-                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
+                    {{-- data-sargam-dt-ui="false": this page builds #gmDtFooter itself
+                         (self-managed count text, and its own change handler on the
+                         relocated length select). datatable-global-ui.js would other-
+                         wise run its own pass on a setTimeout after init.dt, call
+                         $footer.empty() and leave the footer blank — the page's
+                         dtReady flag is already set by then, so it never rebuilds.
+                         The sortable-header patch still applies when opted out, and
+                         GroupMappingDataTable already supplies its own `dom`. --}}
+                    {!! $dataTable->table([
+                        'class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table',
+                        'data-sargam-dt-ui' => 'false',
+                    ]) !!}
                 </div>
                 <div id="gmDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"></div>
             </div>
