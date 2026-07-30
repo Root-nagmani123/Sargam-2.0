@@ -692,6 +692,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::put('/update/{id}', 'update')->name('update');
         Route::delete('/delete/{id}', 'destroy')->name('delete');
+        Route::get('/export', 'export')->name('export');
         Route::get('/api/vehicle-details', 'getVehicleDetails')->name('api.vehicle_details');
     });
 
