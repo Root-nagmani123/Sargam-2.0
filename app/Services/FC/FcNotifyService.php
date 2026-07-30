@@ -470,8 +470,12 @@ class FcNotifyService
                 return false;
             }
 
+            $emailReplacements = $replacements;
+            $emailReplacements['Institute_Signature'] = "Lal Bahadur Shastri National Academy of Administration (LBSNAA)\nMussoorie – 248179, Uttarakhand";
+            $emailReplacements['Login_Link_Label'] = 'Login Link:';
+
             $subject = $this->applyReplacements((string) $template['subject'], $replacements);
-            $body = $this->applyReplacements((string) $template['body'], $replacements);
+            $body = $this->applyReplacements((string) $template['body'], $emailReplacements, markForBold: true);
             $htmlBody = $this->formatEmailBodyAsHtml($body);
             $fromAddress = config('mail.from.address') ?: 'no-reply@lbsnaa.gov.in';
             $fromName = config('mail.from.name') ?: $this->institute();
@@ -506,13 +510,29 @@ class FcNotifyService
         }
     }
 
+    /** Sentinel markers wrapped around a replacement value (or static label text in
+     *  the template itself) so it can be made bold after HTML-escaping, without ever
+     *  HTML-escaping the markers themselves. */
+    private const BOLD_MARK_OPEN = "\x01B\x01";
+
+    private const BOLD_MARK_CLOSE = "\x01/B\x01";
+
+    /** Replacement keys whose value must stay plain text even when markForBold is on
+     *  — a URL is functional content, not emphasis, and shouldn't compete visually
+     *  with the actually-important bolded fields (name, OTP, programme, etc.). */
+    private const BOLD_EXCLUDED_KEYS = ['Portal_Link'];
+
     /**
      * @param  array<string, string|int|float|null>  $replacements
      */
-    protected function applyReplacements(string $text, array $replacements): string
+    protected function applyReplacements(string $text, array $replacements, bool $markForBold = false): string
     {
         foreach ($replacements as $key => $value) {
-            $text = str_replace('{'.$key.'}', (string) ($value ?? ''), $text);
+            $value = (string) ($value ?? '');
+            if ($markForBold && $value !== '' && ! in_array($key, self::BOLD_EXCLUDED_KEYS, true)) {
+                $value = self::BOLD_MARK_OPEN.$value.self::BOLD_MARK_CLOSE;
+            }
+            $text = str_replace('{'.$key.'}', $value, $text);
         }
 
         return $text;
@@ -521,6 +541,11 @@ class FcNotifyService
     protected function formatEmailBodyAsHtml(string $body): string
     {
         $escaped = htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $escaped = str_replace(
+            [self::BOLD_MARK_OPEN, self::BOLD_MARK_CLOSE],
+            ['<strong>', '</strong>'],
+            $escaped
+        );
         $escaped = nl2br($escaped, false);
 
         return preg_replace_callback(
