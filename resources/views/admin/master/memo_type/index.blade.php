@@ -281,7 +281,7 @@
 
                 $statusCell.empty().append(
                     $('<span>', {
-                        class: 'badge rounded-pill programme-status-badge mmt-status-badge ' + badgeClass,
+                        class: 'badge rounded-1 programme-status-badge mmt-status-badge ' + badgeClass,
                         text: isActive ? 'Active' : 'Inactive'
                     })
                 );

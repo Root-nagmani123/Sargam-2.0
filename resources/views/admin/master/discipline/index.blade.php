@@ -116,7 +116,7 @@
 
                 $statusCell.empty().append(
                     $('<span>', {
-                        class: 'badge rounded-pill programme-status-badge dmc-status-badge ' +
+                        class: 'badge rounded-1 programme-status-badge dmc-status-badge ' +
                             (isActive ? 'programme-status-badge--active' : 'programme-status-badge--inactive'),
                         text: isActive ? 'Active' : 'Inactive'
                     })

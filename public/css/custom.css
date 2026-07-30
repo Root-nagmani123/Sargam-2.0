@@ -2763,3 +2763,66 @@ body.custom-loaded {
     font-size: 1.125rem;
     line-height: 1;
 }
+
+/* ==========================================================================
+   Discipline Master (Master) - #discipline-table
+   The page's JS moves the row's status checkbox into a label and appends both a
+   bi-toggle-off and a bi-toggle-on icon, expecting CSS to clip the raw checkbox
+   and reveal exactly one icon. Those rules existed for the memo-type,
+   memo-conclusion and course-memo-decision tables but were never written for
+   this one, so the switch AND both icons rendered together.
+   ========================================================================== */
+
+.dmc-master-page #discipline-table .programme-action-toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    line-height: 1;
+    margin: 0;
+    position: relative;
+}
+
+.dmc-master-page #discipline-table .dmc-status-toggle-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.dmc-master-page #discipline-table .dmc-toggle-icon {
+    font-size: 1.35rem;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.dmc-master-page #discipline-table .dmc-toggle-icon--on {
+    display: none;
+    color: #d4a012;
+}
+
+.dmc-master-page #discipline-table .dmc-toggle-icon--off {
+    display: inline-flex;
+    color: #12b76a;
+}
+
+.dmc-master-page #discipline-table .dmc-status-toggle-input:checked ~ .dmc-toggle-icon--on {
+    display: inline-flex;
+}
+
+.dmc-master-page #discipline-table .dmc-status-toggle-input:checked ~ .dmc-toggle-icon--off {
+    display: none;
+}
+
+.dmc-master-page #discipline-table .programme-action-toggle-icon:hover .dmc-toggle-icon--on {
+    color: #b8860b;
+}
+
+.dmc-master-page #discipline-table .programme-action-toggle-icon:hover .dmc-toggle-icon--off {
+    color: #027a48;
+}
