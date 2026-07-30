@@ -268,354 +268,11 @@
                 </div>
             </form>
 
-            <!-- Add this JavaScript for enhanced UX -->
-            <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                // Update active filter count badge
-                function updateFilterCount() {
-                    const form = document.getElementById('filterForm');
-                    if (!form) return;
-                    const inputs = form.querySelectorAll('select, input[type="text"], input[type="date"]');
-                    let activeCount = 0;
-                    inputs.forEach(function(input) {
-                        if ((input.tagName === 'SELECT' && input.value !== '') ||
-                            (input.type === 'text' && input.value.trim() !== '') ||
-                            (input.type === 'date' && input.value !== '')) {
-                            activeCount++;
-                        }
-                    });
-                    const badge = document.getElementById('activeFilterCount');
-                    if (badge) badge.textContent = activeCount;
-                }
-
-                // Fetch a fully-formed list URL and swap ONLY the list container.
-                // The filter form lives OUTSIDE this container, so its values are never
-                // touched — that is what keeps filters intact across pagination.
-                function discFetchAndRender(url) {
-                    const form = document.getElementById('filterForm');
-                    const listContainer = document.getElementById('memoDisciplineListContainer');
-                    if (!listContainer) return;
-                    listContainer.style.opacity = '0.5';
-                    fetch(url, {
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        })
-                        .then(function(r) {
-                            return r.text();
-                        })
-                        .then(function(html) {
-                            const parser = new DOMParser();
-                            const doc = parser.parseFromString(html, 'text/html');
-                            const newSummary = doc.querySelector('#filterSummary');
-                            const currentSummary = document.getElementById('filterSummary');
-                            if (newSummary) {
-                                if (currentSummary) currentSummary.replaceWith(newSummary.cloneNode(true));
-                                else if (form) {
-                                    const anchor = form.querySelector('.row, .disc-filter-bar');
-                                    if (anchor) anchor.appendChild(newSummary.cloneNode(true));
-                                }
-                            } else if (currentSummary) {
-                                currentSummary.remove();
-                            }
-                            const newList = doc.querySelector('#memoDisciplineListContainer');
-                            // Tear down the current DataTable BEFORE its DOM is removed, so its
-                            // settings don't leak and block a clean re-init (which can blank the rows).
-                            if (window.jQuery && $.fn.DataTable && $.fn.DataTable.isDataTable('#discTable')) {
-                                $('#discTable').DataTable().destroy();
-                            }
-                            if (newList) listContainer.innerHTML = newList.innerHTML;
-                            window.history.replaceState({}, '', url);
-                            updateFilterCount();
-
-                            // The Download link is a static server-rendered href from page
-                            // load — without this, it would keep pointing at whatever
-                            // filters were active on that initial load (e.g. today-only)
-                            // even after AJAX-applying different filters, silently
-                            // exporting the wrong/empty dataset. Reuse this fetch's own
-                            // query string (minus per_page, which the export doesn't use).
-                            const downloadLink = document.getElementById('discDownloadLink');
-                            if (downloadLink) {
-                                const listParams = new URLSearchParams(url.split('?')[1] || '');
-                                listParams.delete('per_page');
-                                downloadLink.href = "{{ route('memo.discipline.export_csv') }}" + '?' + listParams.toString();
-                            }
-                        })
-                        .catch(function() {
-                            alert('Failed to load records');
-                        })
-                        .finally(function() {
-                            listContainer.style.opacity = '1';
-                            if (typeof window.reinitDiscTable === 'function') {
-                                window.reinitDiscTable();
-                            }
-                        });
-                }
-                window.discFetchAndRender = discFetchAndRender;
-
-                // Apply the filter form (+ current page size) via AJAX — always page 1.
-                function applyFiltersAjax() {
-                    const form = document.getElementById('filterForm');
-                    if (!form) return;
-                    const params = new URLSearchParams(new FormData(form));
-                    const pp = document.getElementById('discPerPage');
-                    if (pp && pp.value) params.set('per_page', pp.value);
-                    const q = params.toString();
-                    discFetchAndRender("{{ route('memo.discipline.index') }}" + (q ? '?' + q : ''));
-                }
-                window.applyFiltersAjax = applyFiltersAjax;
-
-                // Pagination is a NORMAL full-page navigation (no AJAX). The links now
-                // carry every RESOLVED filter (controller ->appends()), so a reload
-                // reproduces the same filtered view on the requested page — filters are
-                // preserved and the server returns the rows directly. (AJAX-swapping the
-                // DataTable-managed table proved unreliable and could blank the rows.)
-
-                // Page-size dropdown → reload from page 1 with the new size + current filters.
-                document.addEventListener('change', function(e) {
-                    if (e.target && e.target.id === 'discPerPage') {
-                        const form = document.getElementById('filterForm');
-                        const params = new URLSearchParams(form ? new FormData(form) : undefined);
-                        params.set('per_page', e.target.value);
-                        window.location.href = "{{ route('memo.discipline.index') }}" + '?' + params.toString();
-                    }
-                });
-
-                // Submit form via AJAX instead of full page reload
-                const filterForm = document.getElementById('filterForm');
-                if (filterForm) {
-                    filterForm.addEventListener('submit', function(e) {
-                        e.preventDefault();
-                        applyFiltersAjax();
-                    });
-                }
-
-                // Initialize filter count
-                updateFilterCount();
-
-                // Update count on input change
-                document.querySelectorAll('#filterForm select, #filterForm input').forEach(function(input) {
-                    input.addEventListener('change', updateFilterCount);
-                    input.addEventListener('input', updateFilterCount);
-                });
-
-                // Clear Filters button
-                const clearFiltersBtn = document.getElementById('clearFiltersBtn');
-                if (clearFiltersBtn && filterForm) {
-                    clearFiltersBtn.addEventListener('click', function() {
-                        filterForm.querySelectorAll('select').forEach(function(s) {
-                            s.value = '';
-                        });
-                        filterForm.querySelectorAll('input[type="text"]').forEach(function(i) {
-                            i.value = '';
-                        });
-                        filterForm.querySelectorAll('input[type="date"]').forEach(function(i) {
-                            i.value = '';
-                        });
-                        applyFiltersAjax();
-                    });
-                }
-
-                // Toggle Active Filters alert visibility
-                document.addEventListener('click', function(e) {
-                    const summary = document.getElementById('filterSummary');
-                    if (!summary) return;
-                    const alertEl = summary.querySelector('.filter-summary-alert');
-                    const linkEl = summary.querySelector('.show-filter-details-link');
-                    if (!alertEl || !linkEl) return;
-                    if (e.target.closest('.filter-summary-close')) {
-                        e.preventDefault();
-                        alertEl.classList.add('d-none');
-                        linkEl.classList.remove('d-none');
-                    } else if (e.target.closest('.show-filter-details-link')) {
-                        e.preventDefault();
-                        alertEl.classList.remove('d-none');
-                        linkEl.classList.add('d-none');
-                    }
-                });
-            });
-
-            // Remove specific filter and resubmit
-            function removeFilter(filterName) {
-                const input = document.querySelector('[name="' + filterName + '"]');
-                if (input) input.value = '';
-                if (typeof window.applyFiltersAjax === 'function') {
-                    window.applyFiltersAjax();
-                } else {
-                    document.getElementById('filterForm').submit();
-                }
-            }
-
-            // Remove date filters and resubmit
-            function removeDateFilters() {
-                document.getElementById('from_date').value = '';
-                document.getElementById('to_date').value = '';
-                if (typeof window.applyFiltersAjax === 'function') {
-                    window.applyFiltersAjax();
-                } else {
-                    document.getElementById('filterForm').submit();
-                }
-            }
-            </script>
-
             <hr class="my-3">
-            <div id="memoDisciplineListContainer">
-                <div class="table-responsive">
-                    {{-- data-sargam-dt-ui="false": this page uses server-side Laravel
-                         pagination with its own .programme-dt-footer below. Opt out of the
-                         global DataTables UI enhancer so it doesn't hijack + empty that footer. --}}
-                    <table id="discTable" class="table align-middle mb-0 text-nowrap" data-sargam-dt-ui="false">
-                        <thead>
-                            <tr>
-                                <th>S. No.</th>
-                                <th>Program Name</th>
-                                <th>Name</th>
-                                <th>OT/Participant Code</th>
-                                <th>Cadre</th>
-                                <th>Date of Infraction</th>
-                                <th>Infraction</th>
-                                <th class="text-center">Submitted</th>
-                                <th class="text-center">Final</th>
-                                <th>Remarks</th>
-                                <th>Created Date</th>
-                                <th>Status</th>
-                                @if(! hasRole('Officer Trainee'))
-                                <th class="text-end">Action</th>
-                                @endif
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            @forelse ($memos as $index => $memo)
-                            <tr>
-                                <td class="fw-semibold text-muted">{{ $memos->firstItem() + $index }}</td>
-                                <td class="fw-semibold">{{ $memo->course->course_name ?? 'N/A' }}</td>
-                                <td class="fw-semibold">{{ $memo->student->display_name ?? 'N/A' }}</td>
-                                <td class="text-muted">{{ $memo->student->generated_OT_code ?? 'N/A' }}</td>
-                                <td class="text-muted">{{ $memo->student->cadre->cadre_name ?? 'N/A' }}</td>
-                                <td class="text-muted">{{ $memo->date ? \Carbon\Carbon::parse($memo->date)->format('d M Y') : 'N/A' }}</td>
-                                <td><span class="badge bg-info-subtle text-info">{{ $memo->discipline->discipline_name ?? 'N/A' }}</span></td>
-                                <td class="text-center fw-semibold text-warning">{{ $memo->mark_deduction_submit }}</td>
-                                <td class="text-center fw-semibold text-danger">{{ $memo->final_mark_deduction }}</td>
-                                <td class="text-muted">{{ $memo->remarks ?? '—' }}</td>
-                                <td class="text-muted">{{ !empty($memo->created_date) ? \Carbon\Carbon::parse($memo->created_date)->format('d M Y') : 'N/A' }}</td>
-
-                                <!-- Status -->
-                                <td>
-                                    @if ($memo->status == 1)
-                                    <span class="badge bg-success-subtle text-success">
-                                        <i class="bi bi-check-circle me-1"></i> Recorded
-                                    </span>
-                                    <div class="mt-1 d-flex gap-2">
-                                        <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
-                                            class="link-primary small fw-medium">
-                                            View Memo
-                                        </a>
-                                    </div>
-                                    @elseif ($memo->status == 2)
-                                    <span class="badge bg-warning-subtle text-warning">
-                                        <i class="bi bi-envelope me-1"></i> Memo Sent
-                                    </span>
-                                    <div class="mt-1 d-flex gap-2">
-                                        <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
-                                            class="link-primary small fw-medium">
-                                            View Memo
-                                        </a>
-                                        <a class="text-success view-conversation" data-bs-toggle="offcanvas"
-                                            data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
-                                            data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction')) ? 'admin' : 'OT' }}">
-                                            <i class="material-icons material-symbols-rounded fs-5">chat</i>
-                                        </a>
-                                    </div>
-                                    @else
-                                    <span class="badge bg-secondary-subtle text-secondary">
-                                        <i class="bi bi-lock me-1"></i> Closed
-                                    </span>
-                                    <div class="mt-1 d-flex gap-2">
-                                        <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
-                                            class="link-primary small fw-medium">
-                                            View Memo
-                                        </a>
-                                        <a class="text-success view-conversation" data-bs-toggle="offcanvas"
-                                            data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
-                                            data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction')) ? 'admin' : 'OT' }}">
-                                            <i class="material-icons material-symbols-rounded fs-5">chat</i>
-                                        </a>
-                                    </div>
-                                    @endif
-                                </td>
-
-                                <!-- Action -->
-                                @if(! hasRole('Officer Trainee'))
-                                <td class="text-end">
-                                    @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction'))
-                                    @if($memo->status == 1)
-                                    <button class="btn btn-sm btn-outline-secondary btn-edit-memo me-1"
-                                        data-id="{{ $memo->pk }}" title="Edit">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-primary border-0 bg-transparent text-primary" data-discipline="{{ $memo->pk }}"
-                                        id="sendMemoBtn">
-                                        <i class="material-icons material-symbols-rounded fs-5">send</i>
-                                    </button>
-                                    @elseif($memo->status == 2)
-                                    <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
-                                        class="btn btn-sm btn-outline-danger border-0 bg-transparent text-primary">
-                                        <i class="material-icons material-symbols-rounded fs-5">close</i> Close
-                                    </a>
-                                    @else
-                                    <span class="text-muted small">—</span>
-                                    @endif
-                                    {{-- Delete: admins/faculty only, hard-deletes the discipline memo + its chat.
-                                         Active only while the memo is open (Recorded/Memo Sent); disabled once closed. --}}
-                                    @php $isMemoClosed = !in_array($memo->status, [1, 2]); @endphp
-                                    <a href="javascript:void(0)"
-                                        class="btn btn-sm btn-outline-danger discipline-delete-record ms-1 border-0 bg-transparent text-primary {{ $isMemoClosed ? 'disabled' : '' }}"
-                                        data-id="{{ $memo->pk }}"
-                                        title="{{ $isMemoClosed ? 'Cannot delete a closed memo' : 'Delete' }}"
-                                        @if($isMemoClosed) aria-disabled="true" tabindex="-1" style="pointer-events:none;opacity:.45;" @endif>
-                                        <i class="material-icons material-symbols-rounded fs-5">delete</i>
-                                    </a>
-                                    @else
-                                    <span class="text-muted small">—</span>
-                                    @endif
-                                </td>
-                                @endif
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="{{ hasRole('Officer Trainee') ? 12 : 13 }}" class="text-center py-5 text-muted">
-                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                                    <span class="fw-medium">No memo records available</span>
-                                </td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-                <!-- Pagination (design-system footer: numbered pages + "Showing [N] of M items") -->
-                @php
-                    $discPerPage = (int) request('per_page', 10);
-                    if (!in_array($discPerPage, [10, 25, 50, 100, 200], true)) $discPerPage = 10;
-                @endphp
-                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
-                    <div class="programme-dt-pagination">
-                        {{ $memos->links('vendor.pagination.custom') }}
-                    </div>
-                    <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
-                        <div class="dataTables_length">
-                            <label class="mb-0">Showing
-                                <select id="discPerPage" class="form-select form-select-sm" aria-label="Rows per page">
-                                    @foreach([10, 25, 50, 100, 200] as $pp)
-                                    <option value="{{ $pp }}" {{ $discPerPage === $pp ? 'selected' : '' }}>{{ $pp }}</option>
-                                    @endforeach
-                                </select>
-                            </label>
-                        </div>
-                        <div class="dataTables_info">of {{ number_format($memos->total()) }} items</div>
-                    </div>
-                </div>
+            <div class="table-responsive">
+                {!! $dataTable->table(['class' => 'table align-middle mb-0 text-nowrap']) !!}
             </div>
+            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3"></div>
         </div>
     </div>
     <!-- end Zero Configuration -->
@@ -734,33 +391,7 @@
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
 @push('scripts')
-<script>
-$(document).ready(function() {
-
-    @php
-        $discActionTargets = hasRole('Officer Trainee') ? '[0]' : '[0, -1]';
-    @endphp
-
-    window.reinitDiscTable = function () {
-        if ($.fn.DataTable.isDataTable('#discTable')) {
-            $('#discTable').DataTable().destroy();
-        }
-        if ($('#discTable tbody tr td[colspan]').length === 0) {
-            $('#discTable').DataTable({
-                paging: false,
-                searching: false,
-                ordering: true,
-                info: false,
-                columnDefs: [
-                    { orderable: false, targets: {!! $discActionTargets !!} }
-                ]
-            });
-        }
-    };
-
-    window.reinitDiscTable();
-});
-</script>
+{!! $dataTable->scripts() !!}
 @endpush
 
 @push('scripts')
@@ -808,15 +439,59 @@ $(document).ready(function() {
     initDisciplineChoices();
 
     /* ===============================
-       FILTER (AJAX - no page refresh)
+       FILTER (reload the DataTable via ajax — no page refresh)
     =============================== */
-    function discRunFilter() {
-        if (typeof window.applyFiltersAjax === 'function') {
-            window.applyFiltersAjax();
-        } else {
-            $('#filterForm')[0].submit();
+    // `search` is renamed to `search_filter` to avoid colliding with DataTables'
+    // own reserved `search[value]` ajax parameter (native searching is disabled
+    // on this table, but the reserved key is still sent on every request).
+    $('#discTable').on('preXhr.dt', function (e, settings, data) {
+        data.program_name = $('#program_name').val() || '';
+        data.discipline_master_pk = $('#discipline_master_pk').val() || '';
+        data.status = $('#status').val() || '';
+        data.from_date = $('#from_date').val() || '';
+        data.to_date = $('#to_date').val() || '';
+        data.search_filter = $('#search').val() || '';
+    });
+
+    function reloadDiscTable() {
+        if ($.fn.DataTable.isDataTable('#discTable')) {
+            $('#discTable').DataTable().ajax.reload();
         }
     }
+    window.reloadDiscTable = reloadDiscTable;
+
+    // The Download link is a static server-rendered href from page load — without
+    // this, it would keep pointing at whatever filters were active on that initial
+    // load (e.g. today-only) even after live-filtering, silently exporting the
+    // wrong/empty dataset.
+    function updateDiscDownloadLink() {
+        var downloadLink = document.getElementById('discDownloadLink');
+        if (!downloadLink) { return; }
+        var params = new URLSearchParams({
+            program_name: $('#program_name').val() || '',
+            discipline_master_pk: $('#discipline_master_pk').val() || '',
+            status: $('#status').val() || '',
+            from_date: $('#from_date').val() || '',
+            to_date: $('#to_date').val() || '',
+            search: $('#search').val() || ''
+        }).toString();
+        downloadLink.href = "{{ route('memo.discipline.export_csv') }}" + '?' + params;
+        return params;
+    }
+
+    function discRunFilter() {
+        var params = updateDiscDownloadLink();
+        // Keep the URL in sync so a page refresh preserves the active filters
+        // (DataTables' own ajax uses the URL captured at page load, not this one —
+        // this is purely for bookmarking/refresh).
+        window.history.replaceState({}, '', "{{ route('memo.discipline.index') }}" + (params ? '?' + params : ''));
+        reloadDiscTable();
+    }
+
+    $('#filterForm').on('submit', function (e) {
+        e.preventDefault();
+        discRunFilter();
+    });
 
     $('#program_name, #discipline_master_pk, #status, #from_date, #to_date').on('change', discRunFilter);
 
@@ -845,7 +520,7 @@ $(document).ready(function() {
             from = discFmt(new Date(today.getFullYear(), today.getMonth(), 1));
             to = discFmt(today);
         }
-        // v === 'all' → leave both empty (controller returns all when params present but empty)
+        // v === 'all' → leave both empty (query() returns all when both are empty)
         $('#from_date').val(from);
         $('#to_date').val(to);
         discRunFilter();
@@ -882,25 +557,76 @@ $(document).ready(function() {
         $s.trigger('focus');
     });
 
-    /* ── Column Visibility modal (built from the actual header cells) ── */
-    var $discGrid = $('#discColumnGrid');
-    $('#discTable thead th').each(function(i) {
-        var label = $(this).text().trim() || ('Column ' + (i + 1));
-        var id = 'discCol' + i;
-        $discGrid.append(
-            '<label class="sn-colvis-chip" for="' + id + '" title="' + label + '">' +
-            '<input type="checkbox" class="form-check-input disc-col-toggle" id="' + id +
-            '" data-col="' + i + '" checked> ' +
-            '<span>' + label + '</span></label>'
-        );
-    });
-    $discGrid.on('change', '.disc-col-toggle', function() {
-        var nth = parseInt($(this).data('col'), 10) + 1;
-        var show = this.checked;
-        $('#discTable tr').each(function() {
-            $(this).children(':nth-child(' + nth + ')').toggle(show);
+    /* ── Column Visibility modal — wait for Yajra's own DataTable init, then wire
+       proper column().visible() toggling (survives ajax redraws, unlike the old
+       raw nth-child DOM toggling this replaced). ── */
+    var discColStorageKey = 'discGrid:hiddenColumns:v1';
+
+    function discGetHiddenCols() {
+        try {
+            var raw = localStorage.getItem(discColStorageKey);
+            var arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function discPersistHiddenCols(arr) {
+        try { localStorage.setItem(discColStorageKey, JSON.stringify(arr)); } catch (e) {}
+    }
+
+    function setupDiscColumns(dt) {
+        if (!dt) { return; }
+        var hidden = discGetHiddenCols();
+
+        dt.columns().every(function () {
+            var idx = this.index();
+            this.visible(hidden.indexOf(idx) === -1, false);
         });
-    });
+        dt.columns.adjust();
+
+        var $grid = $('#discColumnGrid');
+        if (!$grid.length) { return; }
+        $grid.empty();
+
+        dt.columns().every(function () {
+            var idx = this.index();
+            var label = $(this.header()).text().trim() || ('Column ' + (idx + 1));
+            var id = 'discCol' + idx;
+            $grid.append(
+                '<label class="sn-colvis-chip" for="' + id + '" title="' + label + '">' +
+                '<input type="checkbox" class="form-check-input disc-col-toggle" id="' + id + '" data-col="' + idx + '"' +
+                (hidden.indexOf(idx) === -1 ? ' checked' : '') + '> ' +
+                '<span>' + label + '</span></label>'
+            );
+        });
+
+        $grid.off('change', '.disc-col-toggle').on('change', '.disc-col-toggle', function () {
+            var idx = parseInt($(this).data('col'), 10);
+            var show = this.checked;
+            var h = discGetHiddenCols();
+            var pos = h.indexOf(idx);
+            if (show) {
+                if (pos !== -1) { h.splice(pos, 1); }
+            } else if (pos === -1) {
+                h.push(idx);
+            }
+            discPersistHiddenCols(h);
+            dt.column(idx).visible(show, false);
+            dt.columns.adjust();
+        });
+    }
+
+    function initDiscColumnsWhenReady(attempts) {
+        if (typeof jQuery === 'undefined' || !jQuery.fn.DataTable) { return; }
+        if (!jQuery.fn.DataTable.isDataTable('#discTable')) {
+            if (attempts > 0) { setTimeout(function () { initDiscColumnsWhenReady(attempts - 1); }, 100); }
+            return;
+        }
+        setupDiscColumns(jQuery('#discTable').DataTable());
+    }
+    initDiscColumnsWhenReady(50);
 
     /* ── Guarantee a full page reload when switching tabs ── */
     $(document).on('click', '.js-nav-tab', function(e) {

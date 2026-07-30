@@ -305,174 +305,9 @@
                     </div>
                 </div>
             </form>
-            <div id="mnmListContainer">
             <div class="table-responsive">
-                <table id="mnmTable" class="table align-middle mb-0">
-                    <thead>
-                        <tr class="align-middle">
-                            <th>S. No.</th>
-                            <th>Program Name</th>
-                            <th>Participant Name</th>
-                            <th>Type</th>
-                            <th>Session Date</th>
-                            <th>Topic</th>
-                            <th>Conclusion Type</th>
-                            <th>Conclusion Remark</th>
-                            <th>Created Date</th>
-                            <th>Status</th>
-                            <th class="text-center">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($memos as $index => $memo)
-                        @php
-                            $role = session()->get('role_name');
-                            $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
-                            $isNotice = $memo->type_notice_memo == 'Notice';
-                            $st = $memo->status ?? null;
-                            $cs = $memo->communication_status ?? null;
-                            if ($isNotice) {
-                                $stLabel = $st == 1 ? 'Notice Sent' : 'Notice Chat Closed';
-                                $stClass = $st == 1 ? 'mnm-status--notice' : 'mnm-status--closed';
-                            } elseif ($cs == 1) {
-                                $stLabel = 'Memo Chat Open'; $stClass = 'mnm-status--memo-open';
-                            } elseif ($cs == 2) {
-                                $stLabel = 'Memo Chat Closed'; $stClass = 'mnm-status--closed';
-                            } else {
-                                $stLabel = 'Memo Sent'; $stClass = 'mnm-status--memo-sent';
-                            }
-                            $sessionDate = $memo->session_date ?? $memo->date_ ?? null;
-                            $hasBell = $isNotice && isset($noticeCount[$noticeKey]) && $noticeCount[$noticeKey] >= 2;
-                        @endphp
-                        <tr>
-                            <td>{{ $memos->firstItem() + $index }}</td>
-                            <td class="fw-medium">{{ $memo->course_name ?? 'N/A' }}</td>
-                            <td class="fw-medium">{{ $memo->student_name ?? 'N/A' }}</td>
-                            <td>
-                                @if($isNotice)
-                                    <span class="badge bg-primary-subtle text-primary"><i class="bi bi-file-earmark-text me-1"></i> Notice</span>
-                                @else
-                                    <span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-file-earmark me-1"></i> Memo</span>
-                                @endif
-                            </td>
-                            <td>{{ $sessionDate ? date('d-m-Y', strtotime($sessionDate)) : 'N/A' }}</td>
-                            <td>{{ $memo->topic_name ?? 'N/A' }}</td>
-                            <td>{{ ($memo->discussion_name ?? '') !== '' ? $memo->discussion_name : 'N/A' }}</td>
-                            <td>{{ ($memo->conclusion_remark ?? '') !== '' ? $memo->conclusion_remark : 'N/A' }}</td>
-                            <td>{{ !empty($memo->created_date) ? date('d-m-Y', strtotime($memo->created_date)) : 'N/A' }}</td>
-                            <td><span class="mnm-status {{ $stClass }}">{{ $stLabel }}</span></td>
-                            <td>
-                                <div class="mnm-actions justify-content-center">
-                                    {{-- Notice: view the notice conversation/document --}}
-                                    @if($memo->notice_id)
-                                    <a class="mnm-action" href="{{ route('memo.notice.management.conversation', ['id' => $memo->notice_id, 'type' => 'notice']) }}" title="View Notice">
-                                        <i class="bi bi-file-earmark-text"></i><span>Notice</span>
-                                    </a>
-                                    @else
-                                    <span class="mnm-action disabled" title="No notice"><i class="bi bi-file-earmark-text"></i><span>Notice</span></span>
-                                    @endif
-
-                                    {{-- Memo: view the memo conversation/document page (same as Notice above) --}}
-                                    @if(!empty($memo->memo_id))
-                                    <a class="mnm-action" href="{{ route('memo.notice.management.conversation', ['id' => $memo->memo_id, 'type' => 'memo']) }}" title="View Memo Document">
-                                        <i class="bi bi-file-earmark"></i><span>Memo Doc</span>
-                                    </a>
-                                    @else
-                                    <span class="mnm-action disabled" title="No memo yet"><i class="bi bi-file-earmark"></i><span>Memo Doc</span></span>
-                                    @endif
-
-                                    {{-- Edit Notice: template only, and only while still open --}}
-                                    @if($isNotice && $canManageMemoNotice && $st == 1)
-                                    <a href="javascript:void(0)" class="mnm-action edit-notice-btn" data-notice-id="{{ $memo->notice_id }}"
-                                        data-bs-toggle="modal" data-bs-target="#editNoticeModal" title="Edit Notice">
-                                        <i class="bi bi-pencil"></i><span>Edit</span>
-                                    </a>
-                                    @endif
-
-                                    {{-- Chats: open the conversation offcanvas --}}
-                                    @if($isNotice)
-                                    <a class="mnm-action view-conversation" data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas"
-                                        data-type="notice" data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}" data-participant="{{ $memo->student_name }}" data-closed="{{ $stClass === 'mnm-status--closed' ? '1' : '0' }}" title="Open chat">
-                                        <i class="bi bi-chat-dots"></i><span>Chats</span>
-                                        @if($hasBell)<span class="mnm-dot"></span>@endif
-                                    </a>
-                                    @else
-                                    <a class="mnm-action view-conversation" data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas"
-                                        data-type="memo" data-id="{{ $memo->memo_id }}" data-topic="{{ $memo->topic_name }}" data-participant="{{ $memo->student_name }}" data-closed="{{ $stClass === 'mnm-status--closed' ? '1' : '0' }}" title="Open chat">
-                                        <i class="bi bi-chat-dots"></i><span>Chats</span>
-                                        @if($cs == 1)<span class="mnm-dot"></span>@endif
-                                    </a>
-                                    @endif
-
-                                    {{-- Memo: generate (notice→status 2) or preview (memo) --}}
-                                    @if($isNotice && $st == 2)
-                                    <a href="javascript:void(0)" class="mnm-action generate-memo-btn" data-id="{{ $memo->memo_notice_id }}"
-                                        data-bs-toggle="modal" data-bs-target="#memo_generate" title="Generate Memo">
-                                        <i class="bi bi-file-earmark-plus"></i><span>Memo</span>
-                                    </a>
-                                    @elseif(!$isNotice)
-                                    <a href="javascript:void(0)" class="mnm-action preview-memo-btn" data-notice-id="{{ $memo->notice_id }}" data-memo-id="{{ $memo->memo_id }}"
-                                        data-bs-toggle="modal" data-bs-target="#memo_generate" title="View Memo">
-                                        <i class="bi bi-file-earmark-check"></i><span>Memo</span>
-                                        @if($cs == 1)<span class="mnm-dot"></span>@endif
-                                    </a>
-                                    @if($canManageMemoNotice && $cs != 2)
-                                    <a href="javascript:void(0)" class="mnm-action edit-memo-btn" data-memo-id="{{ $memo->memo_id }}"
-                                        data-bs-toggle="modal" data-bs-target="#memo_generate" title="Edit Memo">
-                                        <i class="bi bi-pencil"></i><span>Edit</span>
-                                    </a>
-                                    @endif
-                                    @else
-                                    <span class="mnm-action disabled" title="Memo not available yet"><i class="bi bi-file-earmark"></i><span>Memo</span></span>
-                                    @endif
-
-                                    {{-- Delete: admins/faculty only, hard-deletes the notice/memo + its chat.
-                                         Only allowed while the notice/memo is still open — disabled once it's
-                                         closed ($stClass is 'mnm-status--closed' for Notice/Memo Chat Closed). --}}
-                                    @if($canManageMemoNotice)
-                                        @if($stClass === 'mnm-status--closed')
-                                        <span class="mnm-action disabled" title="Cannot delete a closed {{ $isNotice ? 'notice' : 'memo' }}">
-                                            <i class="bi bi-trash3"></i><span>Delete</span>
-                                        </span>
-                                        @else
-                                        <a href="javascript:void(0)" class="mnm-action mnm-delete-record" style="color:#d92d20;"
-                                            data-id="{{ $isNotice ? $memo->notice_id : $memo->memo_id }}"
-                                            data-type="{{ $isNotice ? 'notice' : 'memo' }}" title="Delete">
-                                            <i class="bi bi-trash3"></i><span>Delete</span>
-                                        </a>
-                                        @endif
-                                    @endif
-                                </div>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr class="align-middle">
-                            <td colspan="11" class="text-center text-muted py-5">
-                                <i class="bi bi-inbox fs-3 d-block mb-2"></i>
-                                No records found
-                            </td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-
-                </table>
-
-                <!-- Pagination -->
-                <div class="d-flex justify-content-between align-items-center mt-3 gap-2 flex-wrap">
-
-                    <div class="text-muted small mb-0">
-                        Showing {{ $memos->firstItem() ?? 0 }}
-                        to {{ $memos->lastItem() }}
-                        of {{ $memos->total() }} items
-                    </div>
-
-                    <div class="ms-auto">
-                        {{ $memos->links('vendor.pagination.custom') }}
-                    </div>
-
-                </div>
+                {!! $dataTable->table(['class' => 'table align-middle mb-0']) !!}
             </div>
-            </div><!-- /#mnmListContainer -->
 
         </div>
     </div>
@@ -977,12 +812,10 @@ $(document).ready(function() {
         loadMemoTemplates(courseId, null, $(this).val());
     });
 
-    // Filter form submission on change → AJAX (no full page reload)
+    // Filter change → reload the DataTable (no full page reload)
     $('#program_name, #type, #status, #from_date, #to_date').on('change', function() {
-        if (typeof window.applyMnmFiltersAjax === 'function') {
-            window.applyMnmFiltersAjax();
-        } else {
-            $('#filterForm').get(0).submit();
+        if (typeof window.reloadMnmTable === 'function') {
+            window.reloadMnmTable();
         }
     });
 
@@ -1294,80 +1127,76 @@ $(document).ready(function() {
 @endpush
 
 @push('scripts')
+{!! $dataTable->scripts() !!}
 <script>
 $(function () {
-    // ── DataTable sorting for #mnmTable (reusable so AJAX filtering can re-init) ──
-    window.reinitMnmTable = function () {
-        if ($.fn.DataTable.isDataTable('#mnmTable')) {
-            $('#mnmTable').DataTable().destroy();
-        }
-        if ($('#mnmTable tbody tr td[colspan]').length === 0) {
-            $('#mnmTable').DataTable({
-                paging: false,
-                searching: false,
-                ordering: true,
-                info: false,
-                columnDefs: [
-                    { orderable: false, targets: [0, 10] }
-                ]
-            });
-        }
-    };
-    window.reinitMnmTable();
-});
-</script>
-@endpush
-
-@push('scripts')
-<script>
-$(function () {
-    // ── AJAX filter/search: swap only the table container, no full page reload ──
-    function applyMnmFiltersAjax() {
-        var form = document.getElementById('filterForm');
-        var listContainer = document.getElementById('mnmListContainer');
-        if (!form || !listContainer) { $('#filterForm').get(0).submit(); return; }
-        var params = new URLSearchParams(new FormData(form)).toString();
-        var url = "{{ route('memo.notice.management.index') }}" + (params ? '?' + params : '');
-        listContainer.style.opacity = '0.5';
-        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(function (r) { return r.text(); })
-            .then(function (html) {
-                var doc = new DOMParser().parseFromString(html, 'text/html');
-                var newList = doc.querySelector('#mnmListContainer');
-                if (newList) { listContainer.innerHTML = newList.innerHTML; }
-                window.history.replaceState({}, '', url);
-
-                // The Download link is a static server-rendered href from page load —
-                // without this, it would keep pointing at whatever filters were active
-                // on that initial load (e.g. today-only) even after AJAX-applying
-                // different filters, silently exporting the wrong/empty dataset.
-                var downloadLink = document.getElementById('mnmDownloadLink');
-                if (downloadLink) {
-                    downloadLink.href = "{{ route('memo.notice.management.export_csv') }}" + (params ? '?' + params : '');
-                }
-            })
-            .catch(function () { alert('Failed to apply filters'); })
-            .finally(function () {
-                listContainer.style.opacity = '1';
-                if (typeof window.reinitMnmTable === 'function') { window.reinitMnmTable(); }
-            });
-    }
-    window.applyMnmFiltersAjax = applyMnmFiltersAjax;
-
-    // Any native form submit (e.g. Enter key) → AJAX instead of full reload.
-    $('#filterForm').on('submit', function (e) {
-        e.preventDefault();
-        applyMnmFiltersAjax();
+    // ── Feed the current filter bar values into every DataTables AJAX request.
+    // `search` is renamed to `search_filter` to avoid colliding with DataTables'
+    // own reserved `search[value]` ajax parameter (native searching is disabled
+    // on this table, but the reserved key is still sent on every request).
+    $('#mnmTable').on('preXhr.dt', function (e, settings, data) {
+        data.program_name = $('#program_name').val() || '';
+        data.type = $('#type').val() || '';
+        data.status = $('#status').val() || '';
+        data.from_date = $('#from_date').val() || '';
+        data.to_date = $('#to_date').val() || '';
+        data.search_filter = $('#search').val() || '';
     });
 
-    // ── Time Period presets → from/to dates, then submit ──
+    function reloadMnmTable() {
+        if ($.fn.DataTable.isDataTable('#mnmTable')) {
+            $('#mnmTable').DataTable().ajax.reload();
+        }
+    }
+    window.reloadMnmTable = reloadMnmTable;
+
+    function currentMnmFilterParams() {
+        return new URLSearchParams({
+            program_name: $('#program_name').val() || '',
+            type: $('#type').val() || '',
+            status: $('#status').val() || '',
+            from_date: $('#from_date').val() || '',
+            to_date: $('#to_date').val() || '',
+            search: $('#search').val() || ''
+        }).toString();
+    }
+
+    // The Download link is a static server-rendered href from page load — without
+    // this, it would keep pointing at whatever filters were active on that initial
+    // load (e.g. today-only) even after live-filtering, silently exporting the
+    // wrong/empty dataset.
+    function updateMnmDownloadLink(params) {
+        var downloadLink = document.getElementById('mnmDownloadLink');
+        if (!downloadLink) { return; }
+        downloadLink.href = "{{ route('memo.notice.management.export_csv') }}" + (params ? '?' + params : '');
+    }
+    window.updateMnmDownloadLink = function () { updateMnmDownloadLink(currentMnmFilterParams()); };
+
+    function applyMnmFilters() {
+        var params = currentMnmFilterParams();
+        updateMnmDownloadLink(params);
+        // Keep the URL in sync so a page refresh preserves the active filters
+        // (DataTables' own ajax uses the URL captured at page load, not this one —
+        // this is purely for bookmarking/refresh).
+        var url = "{{ route('memo.notice.management.index') }}" + (params ? '?' + params : '');
+        window.history.replaceState({}, '', url);
+        reloadMnmTable();
+    }
+
+    // Any native form submit (e.g. Enter key) → reload instead of full page reload.
+    $('#filterForm').on('submit', function (e) {
+        e.preventDefault();
+        applyMnmFilters();
+    });
+
+    // ── Time Period presets → from/to dates, then reload ──
     function mnmFmt(d) { return d.toISOString().split('T')[0]; }
     $('#mnmTimePeriod').on('change', function () {
         var v = $(this).val();
         var today = new Date();
         if (v === 'custom') {
             $('#from_date, #to_date').removeClass('d-none');
-            return; // wait for the user to pick dates (their change submits the form)
+            return; // wait for the user to pick dates (their own change reloads)
         }
         var from = '', to = mnmFmt(today);
         if (v === 'today') {
@@ -1379,7 +1208,7 @@ $(function () {
         }
         $('#from_date').val(from);
         $('#to_date').val(to);
-        applyMnmFiltersAjax();
+        applyMnmFilters();
     });
 
     // ── Search: toggle, search-as-you-type (debounced), Enter, clear ──
@@ -1393,11 +1222,10 @@ $(function () {
     $('#search').on('input', function () {
         $('#mnmSearchClear').toggle(this.value.length > 0);
         clearTimeout(mnmSearchTimer);
-        // Debounced AJAX search: only the table container reloads, not the page.
-        mnmSearchTimer = setTimeout(function () { applyMnmFiltersAjax(); }, 500);
+        mnmSearchTimer = setTimeout(function () { applyMnmFilters(); }, 500);
     });
     $('#search').on('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); clearTimeout(mnmSearchTimer); applyMnmFiltersAjax(); }
+        if (e.key === 'Enter') { e.preventDefault(); clearTimeout(mnmSearchTimer); applyMnmFilters(); }
     });
     $('#mnmSearchClear').on('click', function () {
         var $s = $('#search');
@@ -1405,38 +1233,78 @@ $(function () {
         clearTimeout(mnmSearchTimer);
         if ($s.val() === '') { $s.trigger('focus'); return; }
         $s.val('');
-        applyMnmFiltersAjax();
+        applyMnmFilters();
     });
 
-    // After a search reload, put the cursor back in the search box (at the end)
-    // so typing continues uninterrupted despite the full-page submit.
-    (function restoreSearchFocus() {
-        var el = document.getElementById('search');
-        var wrap = document.getElementById('mnmSearchWrap');
-        if (el && wrap && !wrap.classList.contains('d-none') && el.value) {
-            el.focus();
-            var v = el.value; el.value = ''; el.value = v; // move caret to end
+    // ── Column Visibility modal — wait for Yajra's own DataTable init, then wire
+    // proper column().visible() toggling (survives ajax redraws, unlike the old
+    // raw nth-child DOM toggling this replaced). ──
+    var mnmLabels = ['S. No.', 'Program Name', 'Participant Name', 'Type', 'Session Date', 'Topic', 'Conclusion Type', 'Conclusion Remark', 'Created Date', 'Status', 'Action'];
+    var mnmColStorageKey = 'mnmGrid:hiddenColumns:v1';
+
+    function mnmGetHiddenCols() {
+        try {
+            var raw = localStorage.getItem(mnmColStorageKey);
+            var arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) {
+            return [];
         }
-    })();
+    }
 
-    // ── Column Visibility modal (static, server-paginated table) ──
-    var mnmLabels = ['S. No.', 'Program Name', 'Participant Name', 'Type', 'Session Date', 'Topic', 'Conclusion Type', 'Conclusion Remark', 'Status', 'Action'];
-    var $mnmGrid = $('#mnmColumnGrid');
-    mnmLabels.forEach(function (label, i) {
-        var id = 'mnmCol' + i;
-        $mnmGrid.append(
-            '<label class="sn-colvis-chip" for="' + id + '" title="' + label + '">' +
-            '<input type="checkbox" class="form-check-input mnm-col-toggle" id="' + id + '" data-col="' + i + '" checked> ' +
-            '<span>' + label + '</span></label>'
-        );
-    });
-    $mnmGrid.on('change', '.mnm-col-toggle', function () {
-        var nth = parseInt($(this).data('col'), 10) + 1;
-        var show = this.checked;
-        $('#mnmTable tr').each(function () {
-            $(this).children(':nth-child(' + nth + ')').toggle(show);
+    function mnmPersistHiddenCols(arr) {
+        try { localStorage.setItem(mnmColStorageKey, JSON.stringify(arr)); } catch (e) {}
+    }
+
+    function setupMnmColumns(dt) {
+        if (!dt) { return; }
+        var hidden = mnmGetHiddenCols();
+
+        dt.columns().every(function () {
+            var idx = this.index();
+            this.visible(hidden.indexOf(idx) === -1, false);
         });
-    });
+        dt.columns.adjust();
+
+        var $grid = $('#mnmColumnGrid');
+        if (!$grid.length) { return; }
+        $grid.empty();
+
+        mnmLabels.forEach(function (label, idx) {
+            var id = 'mnmCol' + idx;
+            $grid.append(
+                '<label class="sn-colvis-chip" for="' + id + '" title="' + label + '">' +
+                '<input type="checkbox" class="form-check-input mnm-col-toggle" id="' + id + '" data-col="' + idx + '"' +
+                (hidden.indexOf(idx) === -1 ? ' checked' : '') + '> ' +
+                '<span>' + label + '</span></label>'
+            );
+        });
+
+        $grid.off('change', '.mnm-col-toggle').on('change', '.mnm-col-toggle', function () {
+            var idx = parseInt($(this).data('col'), 10);
+            var show = this.checked;
+            var h = mnmGetHiddenCols();
+            var pos = h.indexOf(idx);
+            if (show) {
+                if (pos !== -1) { h.splice(pos, 1); }
+            } else if (pos === -1) {
+                h.push(idx);
+            }
+            mnmPersistHiddenCols(h);
+            dt.column(idx).visible(show, false);
+            dt.columns.adjust();
+        });
+    }
+
+    function initMnmColumnsWhenReady(attempts) {
+        if (typeof jQuery === 'undefined' || !jQuery.fn.DataTable) { return; }
+        if (!jQuery.fn.DataTable.isDataTable('#mnmTable')) {
+            if (attempts > 0) { setTimeout(function () { initMnmColumnsWhenReady(attempts - 1); }, 100); }
+            return;
+        }
+        setupMnmColumns(jQuery('#mnmTable').DataTable());
+    }
+    initMnmColumnsWhenReady(50);
 
     // Guarantee a full page reload when switching tabs
     $(document).on('click', '.js-nav-tab', function (e) {

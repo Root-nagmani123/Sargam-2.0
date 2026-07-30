@@ -3,6 +3,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\DataTables\MemoDisciplineDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\MemoNoticeTemplate;
 use App\Models\CourseMaster;
@@ -18,7 +19,7 @@ use Carbon\Carbon;
 
 class MemoDisciplineController extends Controller
 {
- public function index(Request $request)
+ public function index(Request $request, MemoDisciplineDataTable $dataTable)
 {
     // Officer Trainees are managed on their own dedicated page (view own records + chat),
     // not this admin management page.
@@ -44,7 +45,8 @@ class MemoDisciplineController extends Controller
         $courses = $courseQuery->orderBy('course_name')->get();
     }
 
-    // Filters
+    // Filter values are only needed here to pre-fill the filter bar on initial load;
+    // the DataTable's own query() re-resolves them fresh on every AJAX request.
     $programNameFilter   = $request->program_name;
     $statusFilter        = $request->status;
     $searchFilter        = $request->search;
@@ -65,84 +67,11 @@ class MemoDisciplineController extends Controller
         ->orderBy('discipline_name')
         ->get();
 
-    // Page size (design-system footer "Showing [N] of M items" dropdown).
-    $allowedPerPage = [10, 25, 50, 100, 200];
-    $perPage = (int) $request->get('per_page', 10);
-    if (!in_array($perPage, $allowedPerPage, true)) {
-        $perPage = 10;
-    }
-
-    $memos = MemoDiscipline::with([
-            'course:pk,course_name',
-            'discipline:pk,discipline_name,active_inactive',
-            'student:pk,display_name,generated_OT_code,cadre_master_pk',
-            'student.cadre:pk,cadre_name',
-        ])
-
-        ->when(hasRole('Student-OT'), function ($q) use ($courses) {
-            $q->where('student_master_pk', Auth::user()->user_id);
-            $q->whereIn('course_master_pk', $courses->pluck('pk'));
-        })
-        ->when(!hasRole('Student-OT') && !empty($data_course_id ?? null), function ($q) use ($data_course_id) {
-            $q->whereIn('course_master_pk', $data_course_id);
-        })
-        ->when($programNameFilter, function ($q) use ($programNameFilter) {
-            $q->where('course_master_pk', $programNameFilter);
-        })
-        ->when($statusFilter !== null && $statusFilter !== '', function ($q) use ($statusFilter) {
-            $q->where('status', $statusFilter);
-        })
-        ->when($disciplineFilter, function ($q) use ($disciplineFilter) {
-            $q->whereHas('discipline', fn($d) => $d->where('discipline_name', $disciplineFilter));
-        })
-        ->when($searchFilter, function ($q) use ($searchFilter) {
-            $q->where(function ($sub) use ($searchFilter) {
-                $sub->whereHas('student', function ($s) use ($searchFilter) {
-                        $s->where('display_name', 'like', "%{$searchFilter}%")
-                          ->orWhere('generated_OT_code', 'like', "%{$searchFilter}%")
-                          ->orWhereHas('cadre', function ($c) use ($searchFilter) {
-                              $c->where('cadre_name', 'like', "%{$searchFilter}%");
-                          });
-                    })
-                    ->orWhereHas('course', function ($c) use ($searchFilter) {
-                        $c->where('course_name', 'like', "%{$searchFilter}%");
-                    })
-                    ->orWhereHas('discipline', function ($d) use ($searchFilter) {
-                        $d->where('discipline_name', 'like', "%{$searchFilter}%");
-                    })
-                    ->orWhere('remarks', 'like', "%{$searchFilter}%")
-                    ->orWhere('mark_deduction_submit', 'like', "%{$searchFilter}%")
-                    ->orWhere('final_mark_deduction', 'like', "%{$searchFilter}%")
-                    ->orWhere('date', 'like', "%{$searchFilter}%");
-            });
-        })
-        ->when($fromDateFilter && $toDateFilter, function ($q) use ($fromDateFilter, $toDateFilter) {
-            $q->whereBetween('date', [$fromDateFilter, $toDateFilter]);
-        })
-        ->whereHas('discipline', function ($q) {
-            $q->where('active_inactive', 1);
-        })
-        ->orderBy('pk', 'desc')
-        ->paginate($perPage)
-        // Append the RESOLVED filter values (not just $request->all()) so every
-        // pagination link reproduces the exact filtered view on a full reload —
-        // otherwise the server-defaulted date filter is dropped and filters "reset".
-        ->appends([
-            'program_name'         => $programNameFilter ?? '',
-            'discipline_master_pk' => $disciplineFilter ?? '',
-            'status'               => $statusFilter ?? '',
-            'search'               => $searchFilter ?? '',
-            'from_date'            => $fromDateFilter ?? '',
-            'to_date'              => $toDateFilter ?? '',
-            'per_page'             => $perPage,
-        ]);
-
     // Optional Session/Venue selects shown in the Generate Discipline Memo modal.
     $sessions = \App\Models\ClassSessionMaster::all();
     $venues   = \App\Models\VenueMaster::where('active_inactive', 1)->orderBy('venue_name')->get();
 
-    return view('admin.memo_discipline.index', compact(
-        'memos',
+    return $dataTable->render('admin.memo_discipline.index', compact(
         'courses',
         'disciplines',
         'programNameFilter',

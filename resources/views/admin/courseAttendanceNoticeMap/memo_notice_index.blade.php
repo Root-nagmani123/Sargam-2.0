@@ -13,10 +13,10 @@
     <!-- Filter Card -->
     <div class="card mb-4">
         <div class="card-body">
-            <form action="{{ route('admin.memo-notice.index') }}" method="GET" class="row g-3">
+            <form id="memoTemplateFilterForm" class="row g-3" onsubmit="return false;">
                 <div class="col-md-4">
                     <label class="form-label">Filter by Course</label>
-                    <select name="course_master_pk" class="form-select">
+                    <select id="memoTemplateCourseFilter" class="form-select">
                         <option value="">All Courses</option>
                         @foreach ($courses as $course)
                         <option value="{{ $course->pk }}"
@@ -27,7 +27,7 @@
                     </select>
                 </div>
                 <div class="col-md-4 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary me-2">
+                    <button type="button" id="memoTemplateFilterApply" class="btn btn-primary me-2">
                         <i class="fas fa-filter me-1"></i> Filter
                     </button>
                     <a href="{{ route('admin.memo-notice.index') }}" class="btn btn-secondary">
@@ -52,101 +52,9 @@
             </a>
         </div>
         <div class="card-body">
-            @if ($templates->isEmpty())
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i> No templates found. Create your first template!
-            </div>
-            @else
             <div class="table-responsive">
-                <table id="memoTemplatesTable" class="table text-nowrap">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Course</th>
-                            <th>Title</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($templates as $template)
-                        <tr>
-                            <td>{{ $loop->iteration + ($templates->currentPage() - 1) * $templates->perPage() }}
-                            </td>
-                            <td>
-                                @if ($template->course)
-                                {{ $template->course->course_name }}
-                                @else
-                                General
-                                @endif
-                            </td>
-                            <td>{{ $template->title }}</td>
-                            <td>{{ $template->memo_notice_type }}</td>
-                            <td>
-                                <div class="form-check form-switch d-inline-block ms-2">
-                                    <input class="form-check-input status-toggle-data"
-                                        type="checkbox"
-                                        role="switch"
-                                        data-id="{{ $template->pk }}"
-                                        data-course="{{ $template->course_master_pk }}"
-                                        data-type="{{ $template->memo_notice_type }}"
-                                        {{ $template->active_inactive == 1 ? 'checked' : '' }}>
-
-                                </div>
-                            </td>
-                            <td>
-                                <div class="d-inline-flex align-items-center gap-2"
-                                    role="group"
-                                    aria-label="Memo notice template actions">
-
-                                    <!-- Edit -->
-                                    <a href="{{ route('admin.memo-notice.edit', $template->pk) }}"
-                                        class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-primary"
-                                        aria-label="Edit memo notice template">
-                                        <i class="material-icons material-symbols-rounded"
-                                            style="font-size:18px;"
-                                            aria-hidden="true">edit</i>
-                                    </a>
-
-                                    <!-- Delete (only for inactive templates) -->
-                                    @if($template->active_inactive == 0)
-                                    <form action="{{ route('admin.memo-notice.destroy', $template->pk) }}"
-                                        method="POST"
-                                        class="d-inline"
-                                        onsubmit="return confirm('Are you sure you want to delete this template?')">
-                                        @csrf
-                                        @method('DELETE')
-
-                                        <button type="submit"
-                                            class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-danger"
-                                            aria-label="Delete memo notice template">
-                                            <i class="material-icons material-symbols-rounded"
-                                                style="font-size:18px;"
-                                                aria-hidden="true">delete</i>
-                                        </button>
-                                    </form>
-                                    @else
-                                    <span title="Deactivate first to delete" style="cursor:not-allowed; opacity:0.4;">
-                                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                                    </span>
-                                    @endif
-
-                                </div>
-
-                            </td>
-
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                {!! $dataTable->table(['class' => 'table text-nowrap']) !!}
             </div>
-
-            <!-- Pagination -->
-            <div class="mt-3">
-                {{ $templates->links() }}
-            </div>
-            @endif
         </div>
     </div>
 </div>
@@ -170,19 +78,24 @@
 
 
 @section('scripts')
+{!! $dataTable->scripts() !!}
 <script>
 $(document).ready(function () {
-    if ($('#memoTemplatesTable tbody tr td[colspan]').length === 0) {
-        $('#memoTemplatesTable').DataTable({
-            paging: false,
-            searching: false,
-            ordering: true,
-            info: false,
-            columnDefs: [
-                { orderable: false, targets: [0, 5] }
-            ]
-        });
+    $('#memoTemplatesTable').on('preXhr.dt', function (e, settings, data) {
+        data.course_master_pk = $('#memoTemplateCourseFilter').val() || '';
+    });
+
+    function reloadMemoTemplatesTable() {
+        if ($.fn.DataTable.isDataTable('#memoTemplatesTable')) {
+            $('#memoTemplatesTable').DataTable().ajax.reload();
+        }
     }
+
+    $('#memoTemplateFilterApply').on('click', reloadMemoTemplatesTable);
+    $('#memoTemplateFilterForm').on('submit', function (e) {
+        e.preventDefault();
+        reloadMemoTemplatesTable();
+    });
 });
 </script>
 <script>

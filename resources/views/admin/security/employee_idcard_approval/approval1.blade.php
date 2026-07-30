@@ -25,35 +25,27 @@
                     <h6 class="mb-0 fw-semibold">Filters & Search</h6>
                 </div>
                 <div class="card-body">
-                    <form method="GET" action="{{ route('admin.security.employee_idcard_approval.approval1') }}" id="filterForm" class="mb-0">
+                    <form id="approval1FilterForm" class="mb-0" onsubmit="return false;">
                         <div class="row g-3 align-items-end">
                             <div class="col-md-4">
-                                <label for="search" class="form-label">Search</label>
-                                <input type="text" name="search" id="search" class="form-control" placeholder="Search by Employee Name, ID Card No..." value="{{ request('search', '') }}">
+                                <label for="approval1SearchFilter" class="form-label">Search</label>
+                                <input type="text" name="search" id="approval1SearchFilter" class="form-control" placeholder="Search by Employee Name, ID Card No..." value="{{ request('search', '') }}">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Request Date From</label>
-                                <input type="date" name="date_from" class="form-control" value="{{ request('date_from') }}">
+                                <input type="date" name="date_from" id="approval1DateFromFilter" class="form-control" value="{{ request('date_from') }}">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Request Date To</label>
-                                <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
+                                <input type="date" name="date_to" id="approval1DateToFilter" class="form-control" value="{{ request('date_to') }}">
                             </div>
-                            <div class="col-md-2">
-                                <label for="per_page" class="form-label">Show Entries</label>
-                                <select name="per_page" id="per_page" class="form-select">
-                                    @foreach([10, 25, 50, 100] as $n)
-                                        <option value="{{ $n }}" {{ request('per_page', 10) == $n ? 'selected' : '' }}>{{ $n }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-3 d-flex gap-2">
-                                <button type="submit" class="btn btn-primary flex-grow-1">
+                            <div class="col-md-2 d-flex gap-2">
+                                <button type="button" id="approval1FilterApply" class="btn btn-primary flex-grow-1">
                                     <i class="material-icons material-symbols-rounded" style="font-size:18px;">search</i> Search
                                 </button>
-                                <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}" class="btn btn-outline-secondary">
+                                <button type="button" id="approval1FilterClear" class="btn btn-outline-secondary">
                                     <i class="material-icons material-symbols-rounded" style="font-size:18px;">restart_alt</i>
-                                </a>
+                                </button>
                             </div>
                         </div>
                     </form>
@@ -69,8 +61,8 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 py-2" aria-labelledby="exportDropdown">
                         <li><h6 class="dropdown-header text-muted small text-uppercase">Export with Current Filters</h6></li>
-                        <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.security.employee_idcard_approval.export', array_merge(['stage' => '1', 'format' => 'xlsx'], request()->query())) }}"><i class="material-icons material-symbols-rounded text-success" style="font-size:18px;">table_chart</i> Excel</a></li>
-                        <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.security.employee_idcard_approval.export', array_merge(['stage' => '1', 'format' => 'pdf'], request()->query())) }}"><i class="material-icons material-symbols-rounded text-danger" style="font-size:18px;">picture_as_pdf</i> PDF</a></li>
+                        <li><a id="exportExcelLink" class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.security.employee_idcard_approval.export', array_merge(['stage' => '1', 'format' => 'xlsx'], request()->query())) }}"><i class="material-icons material-symbols-rounded text-success" style="font-size:18px;">table_chart</i> Excel</a></li>
+                        <li><a id="exportPdfLink" class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.security.employee_idcard_approval.export', array_merge(['stage' => '1', 'format' => 'pdf'], request()->query())) }}"><i class="material-icons material-symbols-rounded text-danger" style="font-size:18px;">picture_as_pdf</i> PDF</a></li>
                     </ul>
                 </div>
             </div>
@@ -88,11 +80,8 @@
                 </div>
             @endif
 
-            @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $requests, 'approvalStage' => 1])
-
-            <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <small class="text-muted">Showing {{ $requests->firstItem() ?? 0 }} to {{ $requests->lastItem() ?? 0 }} of {{ $requests->total() }} entries</small>
-                {{ $requests->withQueryString()->links() }}
+            <div class="table-responsive">
+                {!! $dataTable->table(['class' => 'table text-nowrap align-middle mb-0']) !!}
             </div>
         </div>
     </div>
@@ -125,20 +114,74 @@
 </div>
 @endsection
 
-@push('scripts')
+@section('scripts')
+{!! $dataTable->scripts() !!}
 <script>
-document.querySelectorAll('.reject-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        document.getElementById('rejectModalEmployeeName').textContent = 'Rejecting: ' + (this.dataset.name || '');
-        document.getElementById('rejectForm').action = this.dataset.url || '#';
-        document.getElementById('rejection_reason').value = '';
-        new bootstrap.Modal(document.getElementById('rejectModal')).show();
-    });
+$(document).on('preXhr.dt', '#approval1Table', function (e, settings, data) {
+    data.search_filter = $('#approval1SearchFilter').val() || '';
+    data.date_from_filter = $('#approval1DateFromFilter').val() || '';
+    data.date_to_filter = $('#approval1DateToFilter').val() || '';
 });
 
-// Auto-submit when per_page changes
-document.getElementById('per_page').addEventListener('change', function() {
-    document.getElementById('filterForm').submit();
+$(document).ready(function () {
+    var $table = $('#approval1Table');
+
+    function reload() {
+        if ($.fn.DataTable.isDataTable('#approval1Table')) {
+            $table.DataTable().ajax.reload();
+        }
+    }
+
+    function updateExportLinks() {
+        var search = $('#approval1SearchFilter').val() || '';
+        var dateFrom = $('#approval1DateFromFilter').val() || '';
+        var dateTo = $('#approval1DateToFilter').val() || '';
+
+        ['exportExcelLink', 'exportPdfLink'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (!el) {
+                return;
+            }
+            var url = new URL(el.href, window.location.origin);
+            search ? url.searchParams.set('search', search) : url.searchParams.delete('search');
+            dateFrom ? url.searchParams.set('date_from', dateFrom) : url.searchParams.delete('date_from');
+            dateTo ? url.searchParams.set('date_to', dateTo) : url.searchParams.delete('date_to');
+            el.href = url.toString();
+        });
+    }
+
+    $('#approval1FilterApply').on('click', function () {
+        updateExportLinks();
+        reload();
+    });
+
+    $('#approval1SearchFilter').on('keypress', function (e) {
+        if (e.which === 13) {
+            e.preventDefault();
+            updateExportLinks();
+            reload();
+        }
+    });
+
+    $('#approval1FilterClear').on('click', function () {
+        $('#approval1FilterForm')[0].reset();
+        updateExportLinks();
+        reload();
+    });
+
+    updateExportLinks();
+});
+
+// Reject button opens the modal. Delegated on document since rows are re-rendered by the DataTable ajax reload.
+document.addEventListener('click', function (event) {
+    var btn = event.target.closest('.reject-btn');
+    if (!btn) {
+        return;
+    }
+    document.getElementById('rejectModalEmployeeName').textContent = 'Rejecting: ' + (btn.dataset.name || '');
+    document.getElementById('rejectForm').action = btn.dataset.url || '#';
+    document.getElementById('rejection_reason').value = '';
+    new bootstrap.Modal(document.getElementById('rejectModal')).show();
 });
 </script>
-@endpush
+@endsection

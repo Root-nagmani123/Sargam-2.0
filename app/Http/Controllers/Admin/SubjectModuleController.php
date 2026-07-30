@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
+use App\DataTables\Master\SubjectModuleMasterDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\SubjectModuleMaster;
 use Illuminate\Http\Request;
@@ -8,29 +9,9 @@ use Illuminate\Http\Request;
 
 class SubjectModuleController extends Controller
 {
-    public function index()
+    public function index(SubjectModuleMasterDataTable $dataTable)
     {
-        $search = request('search');
-
-        $perPage = (int) request('per_page', 10);
-        if (!in_array($perPage, [10, 25, 50, 100, 200], true)) {
-            $perPage = 10;
-        }
-
-        $modules = SubjectModuleMaster::when($search, function ($q) use ($search) {
-                $q->where('module_name', 'like', "%$search%");
-            })
-            ->orderBy('created_date', 'desc')
-            ->paginate($perPage)
-            ->appends(['search' => $search, 'per_page' => $perPage]);
-
         $smModuleEditData = [];
-        foreach ($modules as $module) {
-            $smModuleEditData[$module->pk] = [
-                'module_name' => $module->module_name,
-                'active_inactive' => $module->active_inactive,
-            ];
-        }
         if (request()->filled('open_edit_module')) {
             $extra = SubjectModuleMaster::find(request('open_edit_module'));
             if ($extra) {
@@ -41,7 +22,7 @@ class SubjectModuleController extends Controller
             }
         }
 
-        return view('admin.subject_module.index', compact('modules', 'smModuleEditData'));
+        return $dataTable->render('admin.subject_module.index', compact('smModuleEditData'));
     }
 
     public function create()
