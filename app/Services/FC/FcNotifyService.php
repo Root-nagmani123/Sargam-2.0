@@ -328,11 +328,17 @@ class FcNotifyService
             : (string) config('gupshup.default_programme_name', 'Foundation Course');
     }
 
+    /**
+     * Portal link sent in SMS/email. Must be the query-string landing page
+     * (…/registration/foundation-course?form=TOKEN), not the path-based dashboard
+     * URL (…/fc-reg/forms/TOKEN) — BSNL's CTA whitelisting only accepts a dynamic
+     * URL whose variable part is a "?"-prefixed query string with no "/" in it.
+     */
     protected function portal(?int $registrationPk = null): string
     {
         $form = $this->resolveFormForPortal($registrationPk);
         if ($form) {
-            return rtrim($form->formUrlForUsers(), '/');
+            return $form->landingPageUrl();
         }
 
         return rtrim((string) config('gupshup.portal_url'), '/');
