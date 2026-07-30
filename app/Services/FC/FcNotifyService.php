@@ -78,15 +78,17 @@ class FcNotifyService
 
     /**
      * A2 — Credentials Created.
-     * Password is intentionally NOT included (CWE-312: Cleartext Transmission of
-     * Sensitive Information) — the candidate just set their own password and
-     * already knows it. Only the username and login link are sent.
+     * The DLT-approved FC-CRED1 template (id 1477178461144840794) has a Password
+     * variable slot; omitting it sends a 5-variable message against a 6-variable
+     * approved template, which the gateway rejects as a template mismatch. Password
+     * is therefore included here to match the approved text exactly.
      */
     public function credentialsCreated(
         ?string $mobile,
         string $participantName,
         string $programmeName,
         string $username,
+        string $password,
         ?int $registrationPk = null,
         ?string $email = null,
     ): void {
@@ -100,6 +102,7 @@ class FcNotifyService
             'Participant_Name' => $participantName !== '' ? $participantName : 'Candidate',
             'Programme_Name' => $this->programme($programmeName),
             'Registration_ID' => $username,
+            'Password' => $password,
             'Portal_Link' => $this->portal($registrationPk),
             'Institute_Name' => $this->institute(),
         ];
@@ -215,6 +218,7 @@ class FcNotifyService
         string $stepName,
         ?int $registrationPk = null,
         ?string $email = null,
+        string $programmeName = '',
     ): bool {
         $mobile = trim((string) $mobile);
         $email = $this->resolveEmail($email, $registrationPk);
@@ -225,6 +229,7 @@ class FcNotifyService
         $replacements = [
             'Participant_Name' => $participantName !== '' ? $participantName : 'Candidate',
             'Step_Name' => $stepName !== '' ? $stepName : 'registration',
+            'Programme_Name' => $this->programme($programmeName),
             'Portal_Link' => $this->portal($registrationPk),
             'Institute_Name' => $this->institute(),
         ];
@@ -465,8 +470,12 @@ class FcNotifyService
                 return false;
             }
 
+            $emailReplacements = $replacements;
+            $emailReplacements['Institute_Signature'] = "Lal Bahadur Shastri National Academy of Administration (LBSNAA)\nMussoorie – 248179, Uttarakhand";
+            $emailReplacements['Login_Link_Label'] = 'Login Link:';
+
             $subject = $this->applyReplacements((string) $template['subject'], $replacements);
-            $body = $this->applyReplacements((string) $template['body'], $replacements);
+            $body = $this->applyReplacements((string) $template['body'], $emailReplacements, markForBold: true);
             $htmlBody = $this->formatEmailBodyAsHtml($body);
             $fromAddress = config('mail.from.address') ?: 'no-reply@lbsnaa.gov.in';
             $fromName = config('mail.from.name') ?: $this->institute();
@@ -501,13 +510,29 @@ class FcNotifyService
         }
     }
 
+    /** Sentinel markers wrapped around a replacement value (or static label text in
+     *  the template itself) so it can be made bold after HTML-escaping, without ever
+     *  HTML-escaping the markers themselves. */
+    private const BOLD_MARK_OPEN = "\x01B\x01";
+
+    private const BOLD_MARK_CLOSE = "\x01/B\x01";
+
+    /** Replacement keys whose value must stay plain text even when markForBold is on
+     *  — a URL is functional content, not emphasis, and shouldn't compete visually
+     *  with the actually-important bolded fields (name, OTP, programme, etc.). */
+    private const BOLD_EXCLUDED_KEYS = ['Portal_Link'];
+
     /**
      * @param  array<string, string|int|float|null>  $replacements
      */
-    protected function applyReplacements(string $text, array $replacements): string
+    protected function applyReplacements(string $text, array $replacements, bool $markForBold = false): string
     {
         foreach ($replacements as $key => $value) {
-            $text = str_replace('{'.$key.'}', (string) ($value ?? ''), $text);
+            $value = (string) ($value ?? '');
+            if ($markForBold && $value !== '' && ! in_array($key, self::BOLD_EXCLUDED_KEYS, true)) {
+                $value = self::BOLD_MARK_OPEN.$value.self::BOLD_MARK_CLOSE;
+            }
+            $text = str_replace('{'.$key.'}', $value, $text);
         }
 
         return $text;
@@ -516,6 +541,11 @@ class FcNotifyService
     protected function formatEmailBodyAsHtml(string $body): string
     {
         $escaped = htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $escaped = str_replace(
+            [self::BOLD_MARK_OPEN, self::BOLD_MARK_CLOSE],
+            ['<strong>', '</strong>'],
+            $escaped
+        );
         $escaped = nl2br($escaped, false);
 
         return preg_replace_callback(

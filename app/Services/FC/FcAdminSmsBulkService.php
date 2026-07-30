@@ -279,6 +279,7 @@ class FcAdminSmsBulkService
                         $row['step_name'] ?? 'registration',
                         $row['pk'],
                         $row['email'] ?? null,
+                        $programme,
                     );
                 } else {
                     $delivered = $this->notify->registrationPending(
@@ -533,6 +534,7 @@ class FcAdminSmsBulkService
                     $row['step_name'] ?? 'registration',
                     $row['pk'],
                     $row['email'] ?? null,
+                    $programme,
                 );
             } else {
                 $delivered = $this->notify->registrationPending(
