@@ -20,7 +20,7 @@
                         <span>Columns</span>
                         <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
-                    <div id="cgtDtSearch" class="programme-dt-search"></div>
+                    <div id="cgtDtSearch" class="programme-dt-search" data-dt-search-for="coursegrouptype"></div>
                 </div>
             </div>
 
@@ -37,7 +37,8 @@
                         </thead>
                     </table>
                 </div>
-                <div id="cgtDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"></div>
+                <div id="cgtDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                     data-dt-footer-for="coursegrouptype"></div>
             </div>
         </div>
     </div>
@@ -333,68 +334,14 @@ $(function() {
         }
     }
 
-    function enhanceCgtDtControls() {
-        const $wrapper = $('#coursegrouptype_wrapper');
-        if (!$wrapper.length) {
-            return;
-        }
-
-        const $searchSlot = $('#cgtDtSearch');
-        const $footer = $('#cgtDtFooter');
-
-        if (!$searchSlot.find('.dataTables_filter').length) {
-            const $filter = $wrapper.find('.dataTables_filter').first();
-            if ($filter.length) {
-                $filter.find('input')
-                    .addClass('form-control shadow-none')
-                    .attr('placeholder', 'Search')
-                    .attr('aria-label', 'Search course group types');
-                $filter.find('label').contents().filter(function() {
-                    return this.nodeType === 3;
-                }).remove();
-                $searchSlot.append($filter);
-            }
-        }
-
-        if ($footer.data('dtReady')) {
-            updateCgtDtCount();
-            return;
-        }
-
-        const $paginate = $wrapper.find('.dataTables_paginate').first();
-        const $length = $wrapper.find('.dataTables_length').first();
-        const $info = $wrapper.find('.dataTables_info').first();
-
-        if (!$footer.length) {
-            return;
-        }
-
-        const $pagCol = $('<div class="programme-dt-pagination"></div>');
-        const $countCol = $('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>');
-
-        if ($paginate.length) {
-            $paginate.find('.pagination').addClass('mb-0');
-            $pagCol.append($paginate);
-        }
-
-        if ($length.length) {
-            const $select = $length.find('select').addClass('form-select form-select-sm').detach();
-            $length.find('label')
-                .empty()
-                .append(document.createTextNode('Showing '))
-                .append($select)
-                .append(document.createTextNode(' '));
-            $countCol.append($length);
-        }
-
-        if ($info.length) {
-            $info.addClass('mb-0');
-            $countCol.append($info);
-        }
-
-        $footer.append($pagCol).append($countCol);
-        $footer.data('dtReady', true);
-    }
+    // The search box, pager, length menu and "of N items" are relocated into
+    // #cgtDtSearch / #cgtDtFooter by public/js/datatable-global-ui.js.
+    //
+    // This page used to do that itself from initComplete. DataTables fires
+    // initComplete BEFORE the init.dt event the global enhancer listens on, so
+    // the page moved the controls into the footer and the global pass then found
+    // an empty wrapper, rebuilt two empty columns and called $footer.empty() -
+    // leaving no pagination and no "Showing" row. One owner only.
 
     function updateCgtDtCount() {
         if (!table) {
@@ -529,7 +476,6 @@ $(function() {
 
     if ($.fn.DataTable.isDataTable(tableSelector)) {
         table = $(tableSelector).DataTable();
-        enhanceCgtDtControls();
         decorateCgtRows();
         updateCgtDtCount();
         setupCgtColumns(table);
@@ -601,17 +547,11 @@ $(function() {
             },
             dom: '<"row d-none"<"col-sm-12"f>>rt<"row d-none"<"col-sm-12"ilp>>',
             initComplete: function() {
-                enhanceCgtDtControls();
                 decorateCgtRows();
                 updateCgtDtCount();
                 setupCgtColumns(this.api());
             },
             drawCallback: function() {
-                const $wrapper = $('#coursegrouptype_wrapper');
-                if ($wrapper.find('.dataTables_paginate').length && !$('#cgtDtFooter .dataTables_paginate').length) {
-                    $('#cgtDtFooter').empty().data('dtReady', false);
-                }
-                enhanceCgtDtControls();
                 decorateCgtRows();
                 updateCgtDtCount();
             }
