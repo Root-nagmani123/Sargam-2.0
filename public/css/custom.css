@@ -243,6 +243,7 @@ body.custom-loaded {
 #attendanceColumnToggleGrid .colvis-item,
 #dvpColumnToggleGrid .colvis-item,
 #ctColumnToggleGrid .colvis-item,
+#stColumnToggleGrid .colvis-item,
 #estateBillReportColumnGrid .colvis-item {
     cursor: pointer;
     transition: border-color 0.15s ease, background-color 0.15s ease;
@@ -256,6 +257,7 @@ body.custom-loaded {
 #attendanceColumnToggleGrid .colvis-item:hover,
 #dvpColumnToggleGrid .colvis-item:hover,
 #ctColumnToggleGrid .colvis-item:hover,
+#stColumnToggleGrid .colvis-item:hover,
 #estateBillReportColumnGrid .colvis-item:hover {
     border-color: #004a93 !important;
     background-color: rgba(0, 74, 147, 0.04);
@@ -269,6 +271,7 @@ body.custom-loaded {
 #attendanceColumnToggleGrid .colvis-item .form-check-input,
 #dvpColumnToggleGrid .colvis-item .form-check-input,
 #ctColumnToggleGrid .colvis-item .form-check-input,
+#stColumnToggleGrid .colvis-item .form-check-input,
 #estateBillReportColumnGrid .colvis-item .form-check-input {
     cursor: pointer;
     flex-shrink: 0;
@@ -2664,26 +2667,30 @@ body.custom-loaded {
 }
 
 /* ==========================================================================
-   Card Type Master (Security → ID Card) — #cardtypemaster-table
-   An Active card type can't be deleted; the DataTable renders the delete
-   control as a disabled .is-disabled button, so it needs the same dimmed
-   affordance the other master tables define for their own delete buttons.
+   ID Card masters (Security) — #cardtypemaster-table, #cardsubtypemaster-table
+   An Active card type / sub type can't be deleted; the DataTable renders the
+   delete control as a disabled .is-disabled button, so it needs the same
+   dimmed affordance the other master tables define for their delete buttons.
    ========================================================================== */
 
 .cardtype-master-page #cardtypemaster-table .programme-action-btn--danger.is-disabled,
-.cardtype-master-page #cardtypemaster-table .programme-action-btn--danger:disabled {
+.cardtype-master-page #cardtypemaster-table .programme-action-btn--danger:disabled,
+.cardsubtype-master-page #cardsubtypemaster-table .programme-action-btn--danger.is-disabled,
+.cardsubtype-master-page #cardsubtypemaster-table .programme-action-btn--danger:disabled {
     opacity: 0.35;
     pointer-events: none;
     cursor: not-allowed;
 }
 
-.cardtype-master-page #cardtypemaster-table .programme-action-btn--danger:hover:not(:disabled):not(.is-disabled) {
+.cardtype-master-page #cardtypemaster-table .programme-action-btn--danger:hover:not(:disabled):not(.is-disabled),
+.cardsubtype-master-page #cardsubtypemaster-table .programme-action-btn--danger:hover:not(:disabled):not(.is-disabled) {
     color: #b42318;
     opacity: 0.72;
     transform: translateY(-1px);
 }
 
-.cardtype-master-page #cardtypemaster-table .programme-action-btn .bi {
+.cardtype-master-page #cardtypemaster-table .programme-action-btn .bi,
+.cardsubtype-master-page #cardsubtypemaster-table .programme-action-btn .bi {
     font-size: 1.125rem;
     line-height: 1;
 }

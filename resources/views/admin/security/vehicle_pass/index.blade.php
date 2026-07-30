@@ -1,5 +1,5 @@
 @extends('admin.layouts.master')
-@section('title', 'Vehicle Pass Request - Sargam')
+@section('title', 'Vehicle Pass Request')
 @section('setup_content')
 <div class="container-fluid vehicle-pass-index-page">
     <x-breadcrum title="Vehicle Pass Request"></x-breadcrum>
