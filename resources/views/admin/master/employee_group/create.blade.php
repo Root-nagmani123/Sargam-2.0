@@ -24,12 +24,12 @@
                     <div class="col-md-4">
                         <div class="mb-3">
                             <x-input
-                                name="group_name"
-                                label="Group Name :" 
-                                placeholder="Name" 
+                                name="emp_group_name"
+                                label="Group Name :"
+                                placeholder="Name"
                                 formLabelClass="form-label"
                                 required="true"
-                                value="{{ old('group_name', $employeeGroupMaster->group_name ?? '') }}"
+                                value="{{ old('emp_group_name', $employeeGroupMaster->emp_group_name ?? '') }}"
                                 />
                         </div>
                     </div>

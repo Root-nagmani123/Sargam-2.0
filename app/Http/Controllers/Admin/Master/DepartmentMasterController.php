@@ -23,34 +23,41 @@ class DepartmentMasterController extends Controller
     }
     function store(Request $request)
     {
-
-
         $id = $request->pk ? decrypt($request->pk) : null;
 
         $rules = [
             'department_name' => [
                 'required',
                 'string',
-                'max:255',
+                // department_name is varchar(100) — keep in sync with the column.
+                'max:100',
                 Rule::unique('department_master', 'department_name')->ignore($id, 'pk'),
             ],
         ];
 
-        $request->validate($rules);
+        $request->validate($rules, [], ['department_name' => 'department name']);
 
         $department = $id ? DepartmentMaster::find($id) : new DepartmentMaster();
 
         if ($id && !$department) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['status' => 'error', 'message' => 'Department not found.'], 404);
+            }
+
             return redirect()->back()->with('error', 'Department not found.');
         }
 
         $department->department_name = $request->department_name;
+        $department->active_inactive = $department->active_inactive ?? 1;
         $department->save();
 
         $message = $id ? 'Department updated successfully.' : 'Department created successfully.';
 
-        return redirect()->route('master.department.master.index')->with('success', $message);
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['status' => 'success', 'message' => $message]);
+        }
 
+        return redirect()->route('master.department.master.index')->with('success', $message);
     }
     function edit($id)
     {

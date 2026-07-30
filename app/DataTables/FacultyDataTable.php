@@ -71,38 +71,37 @@ class FacultyDataTable extends DataTable
                 $viewUrl = route('faculty.show', ['id' => $id]);
                 $deleteUrl = route('faculty.destroy', ['id' => $id]);
                 $isActive = $row->active_inactive == 1;
+                $checked = $isActive ? 'checked' : '';
+                // Active faculty stay undeletable, same rule as before.
                 $disabledAttr = $isActive ? 'disabled' : '';
                 $deleteTitle = $isActive ? 'Deactivate faculty first to enable deletion' : 'Delete';
-                $deleteStyle = $isActive ? 'opacity:0.5;cursor:not-allowed;' : 'cursor:pointer;';
 
                 return '
-                    <div class="d-flex align-items-center gap-2" style="white-space:nowrap;">
-                        <a href="'.$editUrl.'" class="btn bg-transparent border-0 p-0 text-primary" title="Edit">
-                            <i class="material-icons" style="font-size:20px;">edit</i>
+                    <div class="d-inline-flex align-items-center justify-content-center programme-action-group" role="group" aria-label="Row actions">
+                        <a href="'.$viewUrl.'" class="programme-action-btn" title="View" aria-label="View faculty">
+                            <i class="bi bi-eye" aria-hidden="true"></i>
                         </a>
-                        <a href="'.$viewUrl.'" class="btn bg-transparent border-0 p-0 text-info" title="View">
-                            <i class="material-icons" style="font-size:20px;">visibility</i>
+                        <a href="'.$editUrl.'" class="programme-action-btn" title="Edit" aria-label="Edit faculty">
+                            <i class="bi bi-pencil" aria-hidden="true"></i>
                         </a>
-                        <button type="button" class="btn bg-transparent border-0 p-0 text-danger delete-faculty-btn"
+                        <div class="form-check form-switch programme-action-switch mb-0">
+                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                data-table="faculty_master" data-column="active_inactive" data-id="'.$row->pk.'" '.$checked.'>
+                        </div>
+                        <button type="button" class="programme-action-btn programme-action-btn--danger delete-faculty-btn"
                             data-url="'.$deleteUrl.'"
-                            data-name="'.htmlspecialchars($row->full_name, ENT_QUOTES).'"
+                            data-name="'.htmlspecialchars($row->full_name ?? '', ENT_QUOTES).'"
                             data-token="'.$csrf.'"
-                            title="'.$deleteTitle.'" '.$disabledAttr.' style="'.$deleteStyle.'">
-                            <i class="material-icons" style="font-size:20px;">delete</i>
+                            title="'.$deleteTitle.'" '.$disabledAttr.' aria-label="Delete faculty">
+                            <i class="bi bi-trash3" aria-hidden="true"></i>
                         </button>
                     </div>
                 ';
             })
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return "
-                <div class='form-check form-switch d-inline-block'>
-                    <input class='form-check-input status-toggle' type='checkbox' role='switch'
-                        data-table='faculty_master'
-                        data-column='active_inactive'
-                        data-id='{$row->pk}' {$checked}>
-                </div>
-                ";
+                return (int) $row->active_inactive === 1
+                    ? '<span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>'
+                    : '<span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>';
             })
             ->filterColumn('full_name', function ($query, $keyword) {
                 $query->where('full_name', 'like', "%{$keyword}%");
@@ -163,24 +162,29 @@ class FacultyDataTable extends DataTable
                     ->setTableId('faculty-table')
                     ->columns($this->getColumns())
                     ->minifiedAjax()
-                    //->dom('Bfrtip')
-                    ->orderBy(1)
                     ->selectStyleSingle()
+                    ->responsive(true)
                     ->parameters([
-                        'order' => [],
-                        'ordering' => true,
-                        'searching' => true,
+                        'responsive'   => true,
+                        'scrollX'      => false,
+                        'autoWidth'    => false,
+                        'ordering'     => false,
+                        'searching'    => true,
                         'lengthChange' => true,
-                        'pageLength' => 10,
-                        'sargamDtUi' => false,
-                        'dom' => "<'row mb-2 align-items-center'<'col-sm-6'l><'col-sm-6'f>>" .
-                                 "<'row'<'col-sm-12'tr>>" .
-                                 "<'row mt-2 align-items-center'<'col-sm-5'i><'col-sm-7'p>>",
-                        'language' => [
-                            'paginate' => [
-                                'previous' => '<i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">chevron_left</i>',
-                                'next' => '<i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">chevron_right</i>',
+                        'pageLength'   => 10,
+                        'lengthMenu'   => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+                        'order'        => [],
+                        'language'     => [
+                            'search'            => '',
+                            'searchPlaceholder' => 'Search',
+                            'paginate'          => [
+                                'previous' => '‹',
+                                'next'     => '›',
                             ],
+                            'lengthMenu'   => 'Showing _MENU_',
+                            'info'         => 'of _TOTAL_ items',
+                            'infoEmpty'    => 'of 0 items',
+                            'infoFiltered' => 'of _MAX_ items',
                         ],
                     ])
                     ->buttons([
@@ -201,7 +205,7 @@ class FacultyDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.'),
+            Column::computed('DT_RowIndex')->title('S. No.')->searchable(false)->orderable(false)->addClass('text-center'),
             Column::make('faculty_code')
                 ->title('Faculty Code')
                 ->searchable(true)
@@ -230,14 +234,20 @@ class FacultyDataTable extends DataTable
                 ->searchable(true)
                 ->orderable(false),
             Column::computed('status')
+                ->title('Status')
                 ->exportable(false)
                 ->printable(false)
+                ->searchable(false)
+                ->orderable(false)
                 ->addClass('text-center'),
             Column::computed('action')
+                ->title('Action')
                 ->exportable(false)
                 ->printable(false)
+                ->searchable(false)
+                ->orderable(false)
                 ->addClass('text-center')
-                ->width(120)
+                ->width(140)
         ];
     }
 
