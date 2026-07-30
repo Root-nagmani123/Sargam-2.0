@@ -80,43 +80,11 @@ class IssueSubCategoryController extends Controller
      */
     public function index(Request $request)
     {
-        $page = Paginator::resolveCurrentPage('page');
-        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_sub_categories_index:v1:' . md5(json_encode([
-            'epoch' => $epoch,
-            'category_id' => $request->filled('category_id') ? (string) $request->category_id : null,
-            'page' => $page,
-        ]));
-
-        $snapshot = DataTableRedisCache::remember(
-            $cacheKey,
-            [
-                'enabled' => 'ISSUE_SUB_CATEGORY_INDEX_CACHE_ENABLED',
-                'seconds' => 'ISSUE_SUB_CATEGORY_INDEX_CACHE_SECONDS',
-            ],
-            'IssueSubCategoryController@index',
-            fn () => $this->indexPageSnapshot($request, $page)
-        );
-
-        if (! is_array($snapshot) || ! array_key_exists('total', $snapshot) || ! array_key_exists('ids', $snapshot) || ! is_array($snapshot['ids'])) {
-            $snapshot = $this->indexPageSnapshot($request, $page);
-        }
-
-        $total = (int) $snapshot['total'];
-        $ids = array_map('intval', $snapshot['ids']);
-        $items = $this->hydrateSubCategoriesByOrderedPks($ids);
-
-        $subCategories = new LengthAwarePaginator(
-            $items,
-            $total,
-            self::INDEX_PER_PAGE,
-            $page,
-            [
-                'path' => Paginator::resolveCurrentPath(),
-                'pageName' => 'page',
-            ]
-        );
-        $subCategories->withQueryString();
+        // Rendered in full; the list paginates / searches / filters client-side
+        // (DataTables), so the page-scoped snapshot cache is no longer needed.
+        $subCategories = $this->indexFilteredQuery($request)
+            ->with('category')
+            ->get();
 
         $categories = IssueCategoryMaster::active()->orderBy('issue_category')->get();
 
