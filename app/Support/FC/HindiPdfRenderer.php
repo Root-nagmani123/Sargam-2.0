@@ -2,24 +2,20 @@
 
 namespace App\Support\FC;
 
-use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
 /**
- * Renders HTML to a PDF with correct Devanagari (Hindi) shaping.
+ * Renders HTML to a PDF with correct Devanagari (Hindi) shaping using headless Chrome
+ * (HarfBuzz). Returns null when Chrome is unavailable/fails, so the caller can fall back
+ * to its own renderer.
  *
- * mPDF's built-in Indic shaper cannot form all conjuncts/matras correctly with the
- * fonts available to it (e.g. the "क्र" rakaar and a cluster-final "है" both fail,
- * each with a different font) — so these FC document forms render Hindi wrong under
- * mPDF. Headless Chrome (HarfBuzz) shapes them correctly; Dompdf is the fallback when
- * Chrome is absent (note: Dompdf does NOT shape complex scripts either, so on a
- * Chrome-less host Hindi conjuncts will still be imperfect — Chrome is required for a
- * fully correct render).
+ * Why Chrome: mPDF's built-in Indic shaper mis-renders some Hindi here (e.g. the "क्र"
+ * rakaar and a cluster-final "है"), and Dompdf is worse still (no Indic matra reordering,
+ * so "दिनांक" becomes "दनिांक"). Only a real shaper (Chrome) renders these correctly.
  *
- * This mirrors the approach already used for FC registration report PDFs in
- * ReportController (fcRegistrationPdfRenderChrome / fcRegistrationEmbeddedFontFaceCss).
+ * This mirrors the headless-Chrome approach already used for FC registration report PDFs
+ * in ReportController (fcRegistrationPdfRenderChrome / fcRegistrationEmbeddedFontFaceCss).
  */
 class HindiPdfRenderer
 {
@@ -27,42 +23,26 @@ class HindiPdfRenderer
     private const FONT_FAMILY = 'FcHindiPdf';
 
     /**
-     * Inject the embedded Devanagari @font-face + a font-family override into $html,
-     * then render it to PDF bytes (Chrome first, Dompdf fallback).
+     * Render $html to PDF bytes via headless Chrome, or null if Chrome is not available
+     * (or failed). The Devanagari @font-face + a font-family override are injected first.
      */
-    public function render(string $html, string $title): string
+    public function renderViaChrome(string $html): ?string
     {
-        $html = $this->withEmbeddedFont($html);
-
-        $engine = strtolower((string) env('FC_REGISTRATION_PDF_ENGINE', 'auto'));
-
-        if ($engine !== 'dompdf') {
-            $chromePdf = $this->renderChrome($html);
-            if ($chromePdf !== null) {
-                return $chromePdf;
-            }
-            Log::warning('FC document PDF: Chrome unavailable/failed, falling back to Dompdf (Hindi conjuncts may be imperfect)', [
-                'engine'     => $engine,
-                'chrome_bin' => $this->chromeBinary(),
-                'title'      => $title,
+        if ($this->chromeBinary() === null) {
+            Log::info('FC document PDF: Chrome not found; caller should fall back to mPDF', [
+                'chrome_bin_env' => env('FC_REGISTRATION_CHROME_BIN'),
             ]);
+
+            return null;
         }
 
-        $this->ensureDompdfFontCacheDir();
-
-        return Pdf::loadHTML($html)
-            ->setOption('isRemoteEnabled', true)
-            ->setOption('isFontSubsettingEnabled', false)
-            ->setPaper('a4', 'portrait')
-            ->addInfo(['Title' => $title])
-            ->output();
+        return $this->renderChrome($this->withEmbeddedFont($html));
     }
 
     /**
-     * Splice the @font-face (Noto Sans Devanagari, base64 data URLs so both Chrome and
-     * Dompdf load it) plus a font-family override before </head>. The override keeps the
-     * blade's own Latin styling and only adds Noto ahead of it — Chrome does per-glyph
-     * fallback, so Latin still comes from the blade's font, Devanagari from Noto.
+     * Splice the @font-face (Noto Sans Devanagari, base64 data URLs) plus a font-family
+     * override before </head>. Chrome does per-glyph fallback, so Latin still comes from
+     * the blade's own font and only Devanagari is drawn with Noto.
      */
     public function withEmbeddedFont(string $html): string
     {
@@ -81,7 +61,6 @@ class HindiPdfRenderer
             return substr($html, 0, $pos).$style.substr($html, $pos);
         }
 
-        // No <head> (bare fragment): prepend the style.
         return $style.$html;
     }
 
@@ -109,7 +88,7 @@ class HindiPdfRenderer
         return $css;
     }
 
-    /** Headless Chrome print-to-PDF (best Hindi + Latin shaping). Returns null on failure. */
+    /** Headless Chrome print-to-PDF. Returns null on failure. */
     private function renderChrome(string $html): ?string
     {
         $bin = $this->chromeBinary();
@@ -149,7 +128,7 @@ class HindiPdfRenderer
             $process->setTimeout(120);
             $process->run();
             if (! $process->isSuccessful()) {
-                Log::warning('FC document PDF: Chrome headless failed', [
+                Log::warning('FC document PDF: Chrome headless failed, falling back to mPDF', [
                     'exit' => $process->getExitCode(),
                     'err'  => $process->getErrorOutput(),
                 ]);
@@ -159,7 +138,7 @@ class HindiPdfRenderer
                 return null;
             }
         } catch (\Throwable $e) {
-            Log::warning('FC document PDF: Chrome exception', ['message' => $e->getMessage()]);
+            Log::warning('FC document PDF: Chrome exception, falling back to mPDF', ['message' => $e->getMessage()]);
             @unlink($htmlPath);
             @unlink($pdfPath);
 
@@ -178,7 +157,7 @@ class HindiPdfRenderer
         return $binary === false ? null : $binary;
     }
 
-    private function chromeBinary(): ?string
+    public function chromeBinary(): ?string
     {
         $fromEnv = env('FC_REGISTRATION_CHROME_BIN');
         if (is_string($fromEnv) && $fromEnv !== '' && @is_executable($fromEnv)) {
@@ -199,13 +178,5 @@ class HindiPdfRenderer
         }
 
         return null;
-    }
-
-    private function ensureDompdfFontCacheDir(): void
-    {
-        $fontDir = storage_path('fonts');
-        if (! is_dir($fontDir)) {
-            File::makeDirectory($fontDir, 0775, true);
-        }
     }
 }

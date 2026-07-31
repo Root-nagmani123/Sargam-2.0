@@ -190,11 +190,14 @@ class FcJoiningDocumentFormController extends Controller
             'field'    => $formField,
         ])->render();
 
-        // Render via headless Chrome (correct Devanagari shaping) with a Dompdf fallback.
-        // mPDF's Indic shaper mis-renders Hindi here (e.g. the "क्र" rakaar and a
-        // cluster-final "है"), so it is no longer used for these forms.
-        $pdfContent = app(\App\Support\FC\HindiPdfRenderer::class)
-            ->render($html, 'FC Document - '.$formField->field_name);
+        // Prefer headless Chrome (HarfBuzz) — it shapes Devanagari correctly, including the
+        // "क्र" rakaar and a cluster-final "है" that mPDF gets wrong. When Chrome is not
+        // installed (e.g. some servers), fall back to mPDF: it is not perfect (क्र stays
+        // imperfect) but it renders matras correctly, so it never regresses the old output.
+        $pdfContent = app(\App\Support\FC\HindiPdfRenderer::class)->renderViaChrome($html);
+        if ($pdfContent === null) {
+            $pdfContent = $this->renderPdfWithMpdf($html);
+        }
 
         $relativePath = 'uploads/'.fc_upload_path_segment($userId).'/documents/'
             .$formField->field_name.'_'.time().'.pdf';
@@ -202,5 +205,30 @@ class FcJoiningDocumentFormController extends Controller
         Storage::disk('public')->put($relativePath, $pdfContent);
 
         return $relativePath;
+    }
+
+    /** Fallback renderer when headless Chrome is unavailable. mpdf renders Hindi matras
+     *  correctly (only the "क्र" rakaar stays imperfect), keeping parity with the old output. */
+    private function renderPdfWithMpdf(string $html): string
+    {
+        $tempDir = storage_path('app/mpdf-temp');
+        if (! is_dir($tempDir)) {
+            @mkdir($tempDir, 0775, true);
+        }
+
+        $mpdf = new \Mpdf\Mpdf([
+            'mode'             => 'utf-8',
+            'format'           => 'A4',
+            'tempDir'          => $tempDir,
+            'autoScriptToLang' => true,
+            'autoLangToFont'   => true,
+            'margin_top'       => 12,
+            'margin_bottom'    => 12,
+            'margin_left'      => 12,
+            'margin_right'     => 12,
+        ]);
+        $mpdf->WriteHTML($html);
+
+        return $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
     }
 }
