@@ -19,6 +19,7 @@ use App\Services\FC\DynamicFormService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Rules\SafeUploadedDocument;
 
 class RegistrationStep3Controller extends Controller
 {
@@ -207,7 +208,13 @@ class RegistrationStep3Controller extends Controller
             'hospital_history' => 'nullable|string|max:60000|no_html',
             'altitude_illness' => 'nullable|string|max:60000|no_html',
             'additional_info' => 'nullable|string|max:60000|no_html',
-            'pre_med_doc' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'pre_med_doc' => [
+                'nullable',
+                'file',
+                'mimes:pdf,jpg,jpeg,png',
+                'max:' . SafeUploadedDocument::maxKilobytes(5120),
+                new SafeUploadedDocument(['pdf', 'jpg', 'jpeg', 'png']),
+            ],
         ]);
 
         $existing = FcPreHistory::where(fc_user_col('fc_pre_history'), fc_user_val('fc_pre_history', $userId))

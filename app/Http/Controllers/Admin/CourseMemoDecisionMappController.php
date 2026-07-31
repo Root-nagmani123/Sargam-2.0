@@ -19,11 +19,11 @@ class CourseMemoDecisionMappController extends Controller
         if (!empty($data_course_id)) {
             $CourseMaster = CourseMaster::whereIn('pk', $data_course_id)
                 ->where('active_inactive', '1')
-                ->where('end_date', '>', now())
+                ->where('end_date', '>=', now()->toDateString())
                 ->get();
         } else {
             $CourseMaster = CourseMaster::where('active_inactive', '1')
-                ->where('end_date', '>', now())
+                ->where('end_date', '>=', now()->toDateString())
                 ->get();
         }
         $MemoTypeMaster = MemoTypeMaster::where('active_inactive', 1)
@@ -208,11 +208,11 @@ class CourseMemoDecisionMappController extends Controller
         if (!empty($data_course_id)) {
             $CourseMaster = CourseMaster::whereIn('pk', $data_course_id)
                 ->where('active_inactive', '1')
-                ->where('end_date', '>', now())
+                ->where('end_date', '>=', now()->toDateString())
                 ->get();
         } else {
             $CourseMaster = CourseMaster::where('active_inactive', '1')
-                ->where('end_date', '>', now())
+                ->where('end_date', '>=', now()->toDateString())
                 ->get();
         }
         $MemoTypeMaster = MemoTypeMaster::where('active_inactive', 1)
@@ -272,11 +272,11 @@ class CourseMemoDecisionMappController extends Controller
         if (!empty($data_course_id)) {
             $CourseMaster = CourseMaster::whereIn('pk', $data_course_id)
                 ->where('active_inactive', '1')
-                ->where('end_date', '>', now())
+                ->where('end_date', '>=', now()->toDateString())
                 ->get();
         } else {
             $CourseMaster = CourseMaster::where('active_inactive', '1')
-                ->where('end_date', '>', now())
+                ->where('end_date', '>=', now()->toDateString())
                 ->get();
         }
         $MemoTypeMaster = MemoTypeMaster::all();

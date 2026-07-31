@@ -20,11 +20,11 @@ class DisciplineMasterController extends Controller
         $data_course_id =  get_Role_by_course();
          if(!empty($data_course_id))
         {
-            $courses = CourseMaster::whereIn('pk',$data_course_id)->where('active_inactive',1)->where('end_date', '>', now())->get();
+            $courses = CourseMaster::whereIn('pk',$data_course_id)->where('active_inactive',1)->where('end_date', '>=', now()->toDateString())->get();
         }
         else
         {
-            $courses = CourseMaster::where('active_inactive',1)->where('end_date', '>', now())->get();
+            $courses = CourseMaster::where('active_inactive',1)->where('end_date', '>=', now()->toDateString())->get();
         }
         return view('admin.master.discipline.create_edit', compact('courses'));
     }
@@ -35,11 +35,11 @@ class DisciplineMasterController extends Controller
         $data_course_id =  get_Role_by_course();
          if(!empty($data_course_id))
         {
-            $courses = CourseMaster::whereIn('pk',$data_course_id)->where('active_inactive',1)->where('end_date', '>', now())->get();
+            $courses = CourseMaster::whereIn('pk',$data_course_id)->where('active_inactive',1)->where('end_date', '>=', now()->toDateString())->get();
         }
         else
         {
-            $courses = CourseMaster::where('active_inactive',1)->where('end_date', '>', now())->get();
+            $courses = CourseMaster::where('active_inactive',1)->where('end_date', '>=', now()->toDateString())->get();
         }
         return view('admin.master.discipline.create_edit', compact('discipline','courses'));
     }

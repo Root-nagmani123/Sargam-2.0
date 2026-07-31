@@ -19,6 +19,7 @@ use App\Services\FC\RegistrationService;
 use App\Support\DataTableRedisCache;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -375,7 +376,7 @@ class GenericFormController extends Controller
     }
 
     // ── Save group data ──────────────────────────────────────────────
-    public function saveGroup(Request $request, FcForm $form, FcFormFieldGroup $group): RedirectResponse
+    public function saveGroup(Request $request, FcForm $form, FcFormFieldGroup $group): SymfonyResponse
     {
         $step = $group->step;
         if ($step->form_id !== $form->id) {
@@ -393,7 +394,9 @@ class GenericFormController extends Controller
             : $group->groupFields;
 
         $validated = $this->validateGroupStepOrRedirect($request, $form, $step, $group, $groupFields);
-        if ($validated instanceof RedirectResponse) {
+        // On failure this is a RedirectResponse (normal POST) or a 422 JsonResponse
+        // (AJAX save) — both are Symfony responses and must be returned as-is.
+        if ($validated instanceof SymfonyResponse) {
             return $validated;
         }
 
@@ -533,6 +536,17 @@ class GenericFormController extends Controller
         $validator = Validator::make($request->all(), $rules, $customMessages, $customAttributes);
 
         if ($validator->fails()) {
+            // The group "Save & Continue" button posts each section via fetch(). A redirect
+            // there is silently followed to a 200, so the browser never learns the save was
+            // rejected and no message is shown. Return the errors as 422 JSON so the client
+            // can highlight the offending field (e.g. no_html rejecting a <script> tag).
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'message' => 'The given data was invalid.',
+                    'errors'  => $validator->errors(),
+                ], 422);
+            }
+
             return redirect()
                 ->route('fc-reg.forms.step', [$form, $step, 'group' => $group->group_name])
                 ->withErrors($validator)

@@ -24,7 +24,7 @@ class CourseMaster extends Model
      */
     public function scopeActiveRunning($query)
     {
-        return $query->where('active_inactive', 1)->where('end_date', '>', now());
+        return $query->where('active_inactive', 1)->where('end_date', '>=', now()->toDateString());
     }
 
     /**
@@ -37,7 +37,7 @@ class CourseMaster extends Model
         return $query->where(function ($q) {
             $q->where('active_inactive', '!=', 1)
                 ->orWhereNull('active_inactive')
-                ->orWhere('end_date', '<=', now())
+                ->orWhere('end_date', '<', now()->toDateString())
                 ->orWhereNull('end_date');
         });
     }

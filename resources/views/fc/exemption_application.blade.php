@@ -36,25 +36,27 @@
                                 </p>
                             </header>
 
-                            <form method="POST" action="{{ route('fc.exemption.apply', $exemption->pk) }}"
-                                enctype="multipart/form-data" id="exemptionApplicationForm" novalidate>
-                                @csrf
-                                <input type="hidden" name="exemption_category" value="{{ $exemption->pk }}">
+                    <form method="POST" action="{{ route('fc.exemption.apply', $exemption->pk) }}" enctype="multipart/form-data"
+                        id="exemptionApplicationForm" novalidate autocomplete="off">
+                        @csrf
+                        <input type="hidden" name="exemption_category" value="{{ $exemption->pk }}">
 
-                                <div class="ds-form-section">
-                                    <h2 class="ds-form-section-title">Your details</h2>
+                        <div class="row g-3 g-md-4">
+                            <div class="col-md-6">
+                                <label for="ex_mobile" class="form-label fw-semibold">Mobile Number <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control rounded-3 @error('ex_mobile') is-invalid @enderror"
+                                    id="ex_mobile" name="ex_mobile" placeholder="Enter mobile number"
+                                    value="{{ old('ex_mobile') }}" inputmode="numeric" autocomplete="off" required>
+                            </div>
 
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <label for="ex_mobile" class="fc-label">
-                                                <i class="bi bi-phone" aria-hidden="true"></i>
-                                                Mobile Number <span class="fc-req" aria-hidden="true">*</span>
-                                            </label>
-                                            <input type="tel" inputmode="numeric" pattern="[0-9]*"
-                                                class="form-control fc-input @error('ex_mobile') is-invalid @enderror"
-                                                id="ex_mobile" name="ex_mobile" placeholder="Enter mobile number"
-                                                value="{{ old('ex_mobile') }}" autocomplete="tel" required>
-                                        </div>
+                            <div class="col-md-6">
+                                <label for="reg_web_code" class="form-label fw-semibold">Web Authentication Code <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control rounded-3 @error('reg_web_code') is-invalid @enderror"
+                                    id="reg_web_code" name="reg_web_code" placeholder="Enter web auth code"
+                                    value="{{ old('reg_web_code') }}" autocomplete="off" required>
+                            </div>
 
                                         <div class="col-md-6">
                                             <label for="reg_web_code" class="fc-label">
@@ -121,29 +123,18 @@
                                             </div>
                                         @endif
 
-                                        @if ($isMedical)
-                                            <div class="col-12">
-                                                <label for="medical_doc" class="fc-label">
-                                                    <i class="bi bi-paperclip" aria-hidden="true"></i>
-                                                    Upload Medical Exemption Document
-                                                    <span class="fc-req" aria-hidden="true">*</span>
-                                                </label>
-                                                <input type="file"
-                                                    class="form-control fc-input @error('medical_doc') is-invalid @enderror"
-                                                    id="medical_doc" name="medical_doc"
-                                                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                                                    data-max-bytes="{{ $medicalDocMaxBytes ?? 5242880 }}" required>
-                                                <div class="form-text">
-                                                    Preferably a <strong>PDF</strong>. Word (.doc, .docx), JPG, JPEG and
-                                                    PNG are also accepted. Max file size:
-                                                    {{ ($medicalDocMaxKb ?? 5120) / 1024 }} MB.
-                                                </div>
-                                                <div id="medical_doc_client_error"
-                                                    class="invalid-feedback d-block @if (!$errors->has('medical_doc')) d-none @endif">
-                                                    {{ $errors->first('medical_doc') }}
-                                                </div>
-                                            </div>
-                                        @endif
+                            @if (stripos($exemption->Exemption_name, 'medical') !== false)
+                                <div class="col-12">
+                                    <label for="medical_doc" class="form-label fw-semibold">
+                                        Upload Medical Exemption Document <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="file" class="form-control rounded-3 fc-file-upload @error('medical_doc') is-invalid @enderror"
+                                        id="medical_doc" name="medical_doc" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                        data-max-bytes="{{ $medicalDocMaxBytes ?? 5242880 }}" required>
+                                    <div class="form-text">Preferably a <strong>PDF</strong>. Word (.doc, .docx), JPG, JPEG, PNG
+                                        also accepted. Max file size: {{ ($medicalDocMaxKb ?? 5120) / 1024 }} MB.</div>
+                                    <div id="medical_doc_client_error" class="invalid-feedback d-block @if (!$errors->has('medical_doc')) d-none @endif">
+                                        {{ $errors->first('medical_doc') }}
                                     </div>
                                 </div>
 
@@ -198,6 +189,11 @@
 @endsection
 
 @push('scripts')
+    {{-- Instant client-side reject of script / double-extension file names on the
+         medical upload (.fc-file-upload). Server-side SafeUploadedDocument +
+         SingleFileExtension remain the authority. --}}
+    @include('fc.registration.partials.fc-upload-extension-guard')
+    <!-- SweetAlert2 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>

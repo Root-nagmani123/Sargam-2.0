@@ -24,20 +24,26 @@
                                         @endforeach
                                     </ul>
                                 </div>
-                            @endif
-
-                            <form method="POST" action="{{ route('registration.verify') }}" autocomplete="off">
+                            @endif --}}
+                            <form class="row g-3" method="POST" action="{{ route('registration.verify') }}" autocomplete="off">
                                 @csrf
-
-                                <div class="mb-3">
-                                    <label for="reg_mobile" class="fc-label">
-                                        <i class="bi bi-phone" aria-hidden="true"></i>
-                                        Mobile No. <span class="fc-req" aria-hidden="true">*</span>
-                                    </label>
-                                    <input type="tel" inputmode="numeric" pattern="[0-9]*"
-                                        class="form-control fc-input" id="reg_mobile" name="reg_mobile"
-                                        placeholder="Enter your registered mobile number" autocomplete="tel"
-                                        value="{{ old('reg_mobile') }}" required>
+                                <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">User Authentication</h3>
+                                <hr>
+                                <!-- Mobile -->
+                                <div class="col-md-12">
+                                    <label class="form-label">Mobile No.</label>
+                                    <input type="number" class="form-control"
+                                        placeholder="Enter your registered mobile number" name="reg_mobile" required
+                                        autocomplete="off">
+                                </div>
+                                <!-- Web Code -->
+                                <div class="col-md-12">
+                                    <label class="form-label">Web Code</label>
+                                    <input type="text" class="form-control" placeholder="Enter Web Code"
+                                        name="reg_web_code" required autocomplete="off"
+                                        data-lpignore="true" data-1p-ignore>
+                                    <small class="text-muted">Web Code is sent to your registered mobile
+                                        number/Email</small>
                                 </div>
 
                                 <div class="mb-3">
@@ -87,6 +93,8 @@
                                                 name="captcha" placeholder="Enter captcha code" autocomplete="off">
                                         </div>
                                     </div>
+                                    <input type="text" class="form-control" name="captcha"
+                                        placeholder="Enter captcha code" autocomplete="off">
                                 </div>
 
                                 <button type="submit" class="btn btn-primary fc-btn-block">
