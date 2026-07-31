@@ -6,9 +6,24 @@
     <main id="content" class="flex-grow-1 py-4 py-md-5">
         <div class="container">
             <div class="row justify-content-center">
-                <div class="col-12 col-sm-10 col-md-8 col-lg-5 col-xl-4">
-                    <div class="card border-0 shadow-lg rounded-4">
-                        <div class="card-body p-4 p-md-5">
+                <div class="col-12 col-md-11 col-lg-10 col-xl-9">
+                    <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                        <div class="row g-0">
+                            {{-- Branded welcome panel — desktop only; stacks away on small screens --}}
+                            <div class="col-lg-6 d-none d-lg-flex flex-column justify-content-center p-5"
+                                style="background: linear-gradient(135deg, #004a93 0%, #0a6bb5 100%); color:#ffffff;">
+                                <h2 class="fw-bold mb-3" style="color:#ffffff;">Welcome Back</h2>
+                                <p class="mb-4" style="color:#ffffff; opacity:.85;">Foundation Course Portal — Lal Bahadur Shastri National
+                                    Academy of Administration.</p>
+                                <ul class="list-unstyled mb-0">
+                                    <li class="d-flex align-items-start mb-3" style="color:#ffffff;"><i class="bi bi-shield-lock-fill fs-5 me-3" style="color:#ffffff;"></i><span style="color:#ffffff;">Secure sign-in for registered candidates.</span></li>
+                                    <li class="d-flex align-items-start mb-3" style="color:#ffffff;"><i class="bi bi-file-earmark-text-fill fs-5 me-3" style="color:#ffffff;"></i><span style="color:#ffffff;">Continue your registration and document submission.</span></li>
+                                    <li class="d-flex align-items-start" style="color:#ffffff;"><i class="bi bi-headset fs-5 me-3" style="color:#ffffff;"></i><span style="color:#ffffff;">Need help? Visit the Contact page.</span></li>
+                                </ul>
+                            </div>
+                            {{-- Form panel --}}
+                            <div class="col-12 col-lg-6">
+                                <div class="card-body p-4 p-md-5">
                             @if (session('success'))
                                 <div class="alert alert-success alert-dismissible fade show mb-4 rounded-3" role="alert">
                                     {{ session('success') }}
@@ -69,6 +84,28 @@
                                     </div>
                                 </div>
 
+                                {{-- Captcha (bot / brute-force mitigation) — server-verified via required|captcha --}}
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold mb-2">Verification <span class="text-danger">*</span></label>
+                                    <div class="bg-light border border-light rounded-3 p-3 text-center">
+                                        <div class="d-flex flex-column align-items-center gap-3">
+                                            <div class="d-flex flex-wrap align-items-center justify-content-center gap-2">
+                                                <img src="{{ captcha_src() }}" alt="Captcha" id="captchaImage"
+                                                    class="img-fluid border rounded-3 shadow-sm bg-white p-2" style="max-height: 52px;">
+                                                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3"
+                                                    onclick="refreshCaptcha()">
+                                                    <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Refresh
+                                                </button>
+                                            </div>
+                                            <div class="w-100" style="max-width: 280px;">
+                                                <input type="text" name="captcha"
+                                                    class="form-control form-control-sm text-center rounded-3 @error('captcha') is-invalid @enderror"
+                                                    placeholder="Enter captcha code" autocomplete="off" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="col-12 pt-1">
                                     <button type="submit" class="btn btn-primary w-100 rounded-3 py-2 fw-semibold"
                                         style="background-color: #004a93; border-color: #004a93;">
@@ -76,6 +113,8 @@
                                     </button>
                                 </div>
                             </form>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -98,6 +137,11 @@
                 icon.classList.add('bi-eye');
                 btn.setAttribute('aria-label', 'Show password');
             }
+        }
+
+        function refreshCaptcha() {
+            var img = document.getElementById('captchaImage');
+            if (img) { img.src = '{{ captcha_src() }}' + '?' + Math.random(); }
         }
     </script>
 @endsection

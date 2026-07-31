@@ -11,6 +11,8 @@ use App\Services\FC\FcRosterAuthService;
 use App\Services\FC\FcNotifyService;
 use App\Services\FC\FcOtpService;
 use App\Support\FcEncryptedFormId;
+use App\Rules\SafeUploadedDocument;
+use App\Rules\SingleFileExtension;
 use Illuminate\Http\Request;
 use App\Models\FC\FcForm;
 use App\Models\FrontPage;
@@ -234,6 +236,14 @@ class FrontPageController extends Controller
             'reg_web_code' => 'required|string',
         ]);
 
+        // OTP-flooding guard: max 5 sends per number, then a 10-minute cool-down.
+        if (($wait = $this->fcOtp->sendBlockedSeconds('registration', $request->reg_mobile)) > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Too many OTP requests for this number. Please try again after '.(int) ceil($wait / 60).' minute(s).',
+            ], 429);
+        }
+
         $registration = DB::table('fc_registration_master')
             ->where('contact_no', $request->reg_mobile)
             ->where('web_auth', $request->reg_web_code)
@@ -266,6 +276,9 @@ class FrontPageController extends Controller
                 'message' => 'Unable to send OTP SMS right now. Please try again, or check SMS gateway / DLT delivery.',
             ], 502);
         }
+
+        // Count this successful send toward the 5-per-number limit.
+        $this->fcOtp->registerSend('registration', $request->reg_mobile);
 
         return response()->json([
             'success' => true,
@@ -301,6 +314,13 @@ class FrontPageController extends Controller
                 ->withInput();
         }
 
+        // Verify-attempt guard: 5 wrong OTPs per number, then a 10-minute cool-down.
+        if (($wait = $this->fcOtp->verifyBlockedSeconds('registration', $request->reg_mobile)) > 0) {
+            return back()
+                ->withErrors(['otp' => 'Too many incorrect OTP attempts. Please try again after '.(int) ceil($wait / 60).' minute(s).'])
+                ->withInput();
+        }
+
         // A1: OTP is mandatory — wrong / expired / missing OTP must block login.
         if (!$this->fcOtp->hasPending('registration', $request->reg_mobile)) {
             return back()
@@ -309,10 +329,15 @@ class FrontPageController extends Controller
         }
 
         if (!$this->fcOtp->verify('registration', $request->reg_mobile, $request->input('otp'))) {
+            $this->fcOtp->registerVerifyFailure('registration', $request->reg_mobile);
+
             return back()
                 ->withErrors(['otp' => 'Invalid or expired OTP. Please request a new OTP.'])
                 ->withInput();
         }
+
+        // Correct OTP — reset the wrong-attempt counter for this number.
+        $this->fcOtp->clearVerifyFailures('registration', $request->reg_mobile);
 
         if ($blocked = $this->rosterGuard->registrationBlockedReason($registration)) {
             return $this->redirectToChoosePathWithWarning($blocked);
@@ -493,6 +518,10 @@ class FrontPageController extends Controller
         $request->validate([
             'reg_name' => 'required|string',
             'reg_password' => 'required|string',
+            'captcha' => 'required|captcha',
+        ], [
+            'captcha.required' => 'Please enter the captcha code.',
+            'captcha.captcha'  => 'The captcha you entered is incorrect. Please try again.',
         ]);
 
         // The login page encrypts reg_password (AES-256-CBC) in the browser before
@@ -1131,6 +1160,26 @@ class FrontPageController extends Controller
             abort(404, 'Exemption category not found.');
         }
 
+        // "Registered but Now Seeking Exemption" is a chooser, not a form of its own:
+        // show the OTHER exemption categories and let the user pick one, which opens
+        // that category's existing application form (no new form, same save flow).
+        // View-only change — the save logic and flag handling are untouched.
+        if (stripos((string) $exemption->Exemption_name, 'now seeking exemption') !== false) {
+            $otherCategories = DB::table('fc_exemption_master')
+                ->where('visible', 1)
+                ->where('is_notice', false)
+                ->where('pk', '!=', $exemption->pk)
+                ->orderBy('pk')
+                ->get()
+                ->reject(fn ($c) => stripos((string) $c->Exemption_name, 'now seeking exemption') !== false)
+                ->values();
+
+            return view('fc.exemption_registered_select', [
+                'exemption'       => $exemption,
+                'otherCategories' => $otherCategories,
+            ]);
+        }
+
         return view('fc.exemption_application', [
             'exemption' => $exemption,
             'medicalDocMaxKb' => self::MEDICAL_DOC_MAX_KB,
@@ -1143,13 +1192,13 @@ class FrontPageController extends Controller
     {
         $rules = [
             'ex_mobile' => 'required|digits_between:7,15',
-            'reg_web_code' => 'required|string',
+            'reg_web_code' => 'required|string|no_html',
             'exemption_category' => 'required|exists:fc_exemption_master,Pk',
             'captcha' => 'required|captcha',
-            'course' => 'nullable|string|max:255',   // Blade field -> DB previous_fc_course_name
+            'course' => 'nullable|string|max:255|no_html',   // Blade field -> DB previous_fc_course_name
             'year' => 'nullable|digits:4',           // Blade field -> DB fc_date
-            'institution_name' => 'nullable|string|max:255', // Blade field -> DB previous_fc_institution_name
-            'roll_number' => 'nullable|string|max:50', // Blade field -> DB appearing_roll_no
+            'institution_name' => 'nullable|string|max:255|no_html', // Blade field -> DB previous_fc_institution_name
+            'roll_number' => 'nullable|string|max:50|no_html', // Blade field -> DB appearing_roll_no
         ];
 
         // Custom error messages
@@ -1185,16 +1234,23 @@ class FrontPageController extends Controller
         }
 
         if ($exemption && stripos($exemption->Exemption_name, 'completed foundation course') !== false) {
-            $rules['course'] = 'required|string|max:255';
+            $rules['course'] = 'required|string|max:255|no_html';
             $rules['year'] = 'required|digits:4';
-            $rules['institution_name'] = 'required|string|max:255';
+            $rules['institution_name'] = 'required|string|max:255|no_html';
             $messages['course.required'] = 'Course name is required for this exemption category.';
             $messages['year.required'] = 'Year is required for this exemption category.';
             $messages['institution_name.required'] = 'Institution name is required for this exemption category.';
         }
 
-        if ($exemption && strtolower($exemption->Exemption_name) === 'medical') {
-            $rules['medical_doc'] = 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:'.self::MEDICAL_DOC_MAX_KB;
+        // Match "Medical Grounds" (and any medical-named category) — the previous exact
+        // `=== 'medical'` never matched the real category name, so the file rules below
+        // (required / type / size / active-content / double-extension) were skipped.
+        if ($exemption && stripos($exemption->Exemption_name, 'medical') !== false) {
+            $rules['medical_doc'] = [
+                'required', 'file', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'max:'.self::MEDICAL_DOC_MAX_KB,
+                new SingleFileExtension(),                                   // block double extension (name.pdf.pdf)
+                new SafeUploadedDocument(['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png']), // verify bytes; block script/macro/active content
+            ];
             $messages['medical_doc.required'] = 'Medical exemption document is required for medical exemptions.';
             $messages['medical_doc.max'] = 'Medical document must not be larger than '.(self::MEDICAL_DOC_MAX_KB / 1024).' MB.';
             $messages['medical_doc.mimes'] = 'Medical document must be PDF, Word (.doc, .docx), JPG, JPEG, or PNG.';
@@ -1303,12 +1359,24 @@ class FrontPageController extends Controller
             'otp.required' => 'Please verify web auth again to receive an OTP.',
         ]);
 
+        // Verify-attempt guard: 5 wrong OTPs per number, then a 10-minute cool-down.
+        if (($wait = $this->fcOtp->verifyBlockedSeconds('forgot_password', $request->mobile_number)) > 0) {
+            return back()
+                ->withErrors(['otp' => 'Too many incorrect OTP attempts. Please try again after '.(int) ceil($wait / 60).' minute(s).'])
+                ->withInput();
+        }
+
         // A4: a verified forgot_password OTP is mandatory — no bypass when none is pending.
         if (!$this->fcOtp->verify('forgot_password', $request->mobile_number, $request->input('otp'))) {
+            $this->fcOtp->registerVerifyFailure('forgot_password', $request->mobile_number);
+
             return back()
                 ->withErrors(['otp' => 'Invalid or expired OTP. Please verify web auth again to receive a new OTP.'])
                 ->withInput();
         }
+
+        // Correct OTP — reset the wrong-attempt counter for this number.
+        $this->fcOtp->clearVerifyFailures('forgot_password', $request->mobile_number);
 
         // Check user exists by mobile number
         $user = DB::table('user_credentials')
@@ -1357,6 +1425,14 @@ class FrontPageController extends Controller
             'web_auth' => 'required|string',
         ]);
 
+        // OTP-flooding guard: max 5 sends per number, then a 10-minute cool-down.
+        if (($wait = $this->fcOtp->sendBlockedSeconds('forgot_password', $request->mobile_number)) > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Too many OTP requests for this number. Please try again after '.(int) ceil($wait / 60).' minute(s).',
+            ], 429);
+        }
+
         // Step 1: Check if the mobile number and web_auth exist in fc_registration_master
         $user = DB::table('fc_registration_master')
             ->where('contact_no', $request->mobile_number)
@@ -1383,6 +1459,9 @@ class FrontPageController extends Controller
             isset($user->pk) ? (int) $user->pk : null,
         );
 
+        // Count this successful send toward the 5-per-number limit.
+        $this->fcOtp->registerSend('forgot_password', $request->mobile_number);
+
         return response()->json([
             'success' => true,
             'user_name' => $credentials->user_name,
@@ -1404,6 +1483,14 @@ class FrontPageController extends Controller
             return response()->json(['success' => false, 'message' => 'Session expired. Please login again.'], 401);
         }
 
+        // OTP-flooding guard: max 5 sends per number, then a 10-minute cool-down.
+        if (($wait = $this->fcOtp->sendBlockedSeconds('password_change', $mobile)) > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Too many OTP requests for this number. Please try again after '.(int) ceil($wait / 60).' minute(s).',
+            ], 429);
+        }
+
         $registration = DB::table('fc_registration_master')
             ->where('contact_no', $mobile)
             ->orderByDesc('pk')
@@ -1418,6 +1505,9 @@ class FrontPageController extends Controller
             trim((string) ($registration->display_name ?? '')),
             isset($registration->pk) ? (int) $registration->pk : null,
         );
+
+        // Count this successful send toward the 5-per-number limit.
+        $this->fcOtp->registerSend('password_change', $mobile);
 
         return response()->json([
             'success' => true,
@@ -1452,9 +1542,21 @@ class FrontPageController extends Controller
             return back()->withErrors(['otp' => 'Session expired. Please login again.']);
         }
 
+        // Verify-attempt guard: 5 wrong OTPs per number, then a 10-minute cool-down.
+        if (($wait = $this->fcOtp->verifyBlockedSeconds('password_change', $mobile)) > 0) {
+            return back()
+                ->withErrors(['otp' => 'Too many incorrect OTP attempts. Please try again after '.(int) ceil($wait / 60).' minute(s).'])
+                ->withInput();
+        }
+
         if (!$this->fcOtp->verify('password_change', $mobile, $request->input('otp'))) {
+            $this->fcOtp->registerVerifyFailure('password_change', $mobile);
+
             return back()->withErrors(['otp' => 'Invalid or expired OTP.'])->withInput();
         }
+
+        // Correct OTP — reset the wrong-attempt counter for this number.
+        $this->fcOtp->clearVerifyFailures('password_change', $mobile);
 
         $hashed = Hash::make($request->new_password);
 
