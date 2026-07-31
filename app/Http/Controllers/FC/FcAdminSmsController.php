@@ -8,6 +8,8 @@ use App\Services\FC\FcAdminSmsBulkService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Illuminate\Validation\Rule;
 use Yajra\DataTables\Facades\DataTables;
@@ -160,6 +162,15 @@ class FcAdminSmsController extends Controller
             ->make(true);
     }
 
+    /**
+     * How long a "send in progress" lock is held for, as a hard ceiling — the
+     * background command itself releases the lock as soon as it finishes (success
+     * or failure), so this only matters if the process is killed/crashes in a way
+     * that skips its own cleanup. Generous enough to cover a large "send to all"
+     * cohort without expiring mid-send.
+     */
+    private const SEND_LOCK_TTL_SECONDS = 3600;
+
     public function send(Request $request, FcAdminSmsBulkService $bulk): RedirectResponse
     {
         $validated = $request->validate([
@@ -177,19 +188,157 @@ class FcAdminSmsController extends Controller
             ? array_values(array_unique(array_map('intval', $validated['registration_pks'] ?? [])))
             : null;
 
-        $result = $bulk->send($validated['template'], $pks, (int) $validated['form_id']);
+        $formId = (int) $validated['form_id'];
+        $label = $validated['template'] === FcAdminSmsBulkService::TEMPLATE_B1 ? 'Form step incomplete' : 'Registration pending';
 
-        $flash = $result['ok'] ? 'success' : 'error';
-        $detail = $result['message'];
-        if (($result['failed'] ?? 0) > 0) {
-            $detail .= ' Failed: '.$result['failed'].'.';
+        // Guards against double-sends from a double-click, a resubmitted/refreshed
+        // form, or two tabs — without this, each request spawns its own background
+        // process with no idea another one is already working through the same
+        // template+form cohort, so the same recipients could get SMS+email twice.
+        $lockKey = $this->sendLockKey($validated['template'], $formId);
+        $lock = Cache::lock($lockKey, self::SEND_LOCK_TTL_SECONDS);
+
+        if (! $lock->get()) {
+            return redirect()
+                ->route('fc-reg.admin.sms.index', array_filter([
+                    'form_id' => $formId,
+                    'menu' => $request->input('menu') ?? $request->query('menu'),
+                ]))
+                ->with('error', "{$label} is already being sent for this template — please wait for it to finish before sending again.");
         }
+
+        // Each recipient is a live SMS-gateway call plus a live SMTP send, so doing this
+        // inline blocked the page for as long as the whole cohort took to work through.
+        // Spawned as a detached one-shot background process instead — no queue worker
+        // to keep running, the browser just doesn't wait for it. The background command
+        // releases $lockKey itself when it finishes (see FcAdminSmsSendCommand).
+        $started = $this->spawnBackgroundSend($validated['template'], $formId, $pks, $lockKey);
+
+        if (! $started) {
+            $lock->release();
+        }
+
+        $detail = $started
+            ? ($pks !== null
+                ? "{$label} sending to ".count($pks)." selected trainee(s) in the background. Check back shortly."
+                : "{$label} sending to all matching trainees in the background. Check back shortly.")
+            : 'Could not start the background send. Check the server logs.';
 
         return redirect()
             ->route('fc-reg.admin.sms.index', array_filter([
-                'form_id' => (int) $validated['form_id'],
+                'form_id' => $formId,
                 'menu' => $request->input('menu') ?? $request->query('menu'),
             ]))
-            ->with($flash, $detail);
+            ->with($started ? 'success' : 'error', $detail);
+    }
+
+    private function sendLockKey(string $template, int $formId): string
+    {
+        return "fc-admin-sms-send-lock:{$formId}:{$template}";
+    }
+
+    /**
+     * Launch `php artisan fc:admin-sms-send ...` as a detached process and return
+     * immediately without waiting for it — no persistent queue worker required.
+     * $lockKey is passed through so the background command can release it itself
+     * once the send finishes (success or failure) — see FcAdminSmsSendCommand.
+     *
+     * @param  list<int>|null  $pks
+     */
+    private function spawnBackgroundSend(string $template, int $formId, ?array $pks, string $lockKey): bool
+    {
+        $php = $this->resolvePhpCliBinary();
+        if ($php === null) {
+            Log::error('FC admin bulk send: could not locate a PHP CLI binary to spawn the background send.');
+
+            return false;
+        }
+
+        $artisan = base_path('artisan');
+
+        $args = [
+            $php,
+            $artisan,
+            'fc:admin-sms-send',
+            '--template='.$template,
+            '--form-id='.$formId,
+            '--lock-key='.$lockKey,
+        ];
+        if ($pks !== null && $pks !== []) {
+            $args[] = '--pks='.implode(',', $pks);
+        }
+
+        $cmd = implode(' ', array_map(
+            fn ($a) => '"'.str_replace('"', '\\"', $a).'"',
+            $args
+        ));
+
+        $descriptors = [
+            0 => ['pipe', 'r'],
+            1 => ['file', storage_path('logs/fc-admin-sms-bg.log'), 'a'],
+            2 => ['file', storage_path('logs/fc-admin-sms-bg.log'), 'a'],
+        ];
+
+        // Windows: "start /B" detaches the child from this request's process tree
+        // so it keeps running after we close the pipes and return the redirect.
+        $isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
+        $fullCmd = $isWindows ? 'start "" /B '.$cmd : $cmd.' > /dev/null 2>&1 &';
+
+        $process = @proc_open($fullCmd, $descriptors, $pipes, base_path(), null, ['bypass_shell' => false]);
+
+        if (! is_resource($process)) {
+            Log::error('FC admin bulk send: failed to spawn background process.', [
+                'template' => $template,
+                'form_id' => $formId,
+            ]);
+
+            return false;
+        }
+
+        fclose($pipes[0]);
+        proc_close($process);
+
+        return true;
+    }
+
+    /**
+     * PHP_BINARY is only a real CLI executable path when the request itself runs
+     * under the CLI/php-server SAPI. Under Apache's mod_php (apache2handler), it
+     * resolves to httpd.exe instead — using that to spawn `php artisan ...` would
+     * silently fail. Prefer explicit config, then check next to the running SAPI's
+     * own module for a sibling php.exe, then fall back to PATH.
+     */
+    private function resolvePhpCliBinary(): ?string
+    {
+        $configured = config('services.php_cli_binary') ?: env('PHP_CLI_BINARY');
+        if (is_string($configured) && $configured !== '' && is_file($configured)) {
+            return $configured;
+        }
+
+        if (PHP_SAPI === 'cli' || PHP_SAPI === 'cli-server') {
+            if (defined('PHP_BINARY') && PHP_BINARY !== '' && is_file(PHP_BINARY)) {
+                return PHP_BINARY;
+            }
+        }
+
+        // Apache (mod_php) etc.: PHP_BINARY points at httpd.exe, not php.exe — instead
+        // look for a php.exe/php-cgi.exe next to the loaded php ini, which sits in the
+        // same PHP install directory as the CLI binary on a standard XAMPP layout.
+        $candidateDirs = array_unique(array_filter([
+            dirname(php_ini_loaded_file() ?: ''),
+            PHP_OS_FAMILY === 'Windows' ? 'C:\\xampp\\php' : null,
+            PHP_OS_FAMILY === 'Windows' ? 'C:\\xampp1\\php' : null,
+        ]));
+
+        $binaryName = PHP_OS_FAMILY === 'Windows' ? 'php.exe' : 'php';
+        foreach ($candidateDirs as $dir) {
+            $candidate = rtrim($dir, '\\/').DIRECTORY_SEPARATOR.$binaryName;
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        // Last resort: rely on PATH.
+        return $binaryName === 'php.exe' ? 'php.exe' : 'php';
     }
 }
