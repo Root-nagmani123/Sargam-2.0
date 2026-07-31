@@ -192,7 +192,9 @@
                 </p>
 
                 <div class="sb-lines">
-                    दिनांक <input type="text" name="hi[ddate]" class="blank blank--sm" value="{{ $data['_hi']['ddate'] ?? '' }}" autocomplete="off">।
+                    <div>तारीख <input type="text" name="hi[ddate]" class="blank blank--sm" value="{{ $data['_hi']['ddate'] ?? '' }}" autocomplete="off">
+                    माह <input type="text" name="hi[dmonth]" class="blank blank--sm" value="{{ $data['_hi']['dmonth'] ?? '' }}" autocomplete="off">
+                    वर्ष <input type="text" name="hi[dyear]" class="blank blank--sm" value="{{ $data['_hi']['dyear'] ?? '' }}" autocomplete="off"></div>
                     <div class="sb-sign mt-3">परिवीक्षाधीन के हस्ताक्षर ______________________</div>
                     <div>साक्षी की उपस्थिति में परिवीक्षाधीन द्वारा हस्ताक्षरित —</div>
                     <div>साक्षी का नाम: <input type="text" name="hi[pwname]" class="blank blank--mid" value="{{ $data['_hi']['pwname'] ?? '' }}" autocomplete="off"></div>

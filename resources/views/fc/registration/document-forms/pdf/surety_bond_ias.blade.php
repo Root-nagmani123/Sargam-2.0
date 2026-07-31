@@ -63,7 +63,14 @@
     </div>
 
     <div class="lines">
-        <div>तारीख {!! $blank($hi['ddate'] ?? '', '150pt') !!} माह {!! $blank('', '150pt') !!} वर्ष {!! $blank('', '90pt') !!}</div>
+        <table style="border-collapse:collapse; margin-top:2pt;"><tr style="vertical-align:bottom;">
+            <td style="padding:0;">तारीख&nbsp;</td>
+            <td style="padding:0 4pt; width:175pt; border-bottom:1px solid #000; text-align:center; font-weight:bold;">{{ $hi['ddate'] ?? '' }}</td>
+            <td style="padding:0;">&nbsp;माह&nbsp;</td>
+            <td style="padding:0 4pt; width:155pt; border-bottom:1px solid #000; text-align:center; font-weight:bold;">{{ $hi['dmonth'] ?? '' }}</td>
+            <td style="padding:0;">&nbsp;वर्ष&nbsp;</td>
+            <td style="padding:0 4pt; width:75pt; border-bottom:1px solid #000; text-align:center; font-weight:bold;">{{ $hi['dyear'] ?? '' }}</td>
+        </tr></table>
 
         <div class="sign" style="text-align:center; margin-top:12pt;">परिवीक्षाधीन के हस्ताक्षर: {!! $blank('', '200pt') !!}</div>
         <div style="margin-top:10pt;">(साक्षी का नाम) {!! $blank($hi['pwname'] ?? '', '180pt') !!} पता {!! $blank($hi['pwaddr'] ?? '', '230pt') !!} व्यवसाय {!! $blank($hi['pwocc'] ?? '', '150pt') !!} की उपस्थिति में <b>परिवीक्षाधीन द्वारा</b> हस्ताक्षर किए।</div>
