@@ -90,7 +90,7 @@
 
     <div class="body" style="text-indent:0; margin-top:10pt;">
         मैं, (प्रतिभू का नाम डालें) {!! $blank($hi['sname'] ?? '', '220pt') !!} जिसके हस्ताक्षर उपर्युक्त करार में प्रतिभू के रूप में दिए गए हैं एतद्वारा घोषणा करता हूं कि —
-        <div class="opt">[क] मैं {!! $blank('', '170pt') !!} सरकार की स्थायी सेवा में हूं।</div>
+        <div class="opt">[क] मैं {!! $blank($hi['govt'] ?? '', '170pt') !!} सरकार की स्थायी सेवा में हूं।</div>
         <div class="opt" style="text-align:center;">या</div>
         <div class="opt">[ख] मैं साधारणतया भारत का निवासी हूं और मेरे पास ऐसे साधन हैं जिनसे मैं केन्द्र सरकार द्वारा करार के निबंधनों के अनुसार राशि की मांग किए जाने पर केन्द्र सरकार को वह राशि चुका सकता/सकती हूं।</div>
     </div>
@@ -153,7 +153,7 @@
 
     <div class="body" style="text-indent:0; margin-top:10pt;">
         I (Insert name of surety) {!! $blank($sdname, '220pt') !!} whose signature is appended to the above agreement as surety, do hereby declare that
-        <div class="opt">(a) I am in the permanent service of Government of {!! $blank('', '180pt') !!}</div>
+        <div class="opt">(a) I am in the permanent service of Government of {!! $blank($g('surety_govt_name'), '180pt') !!}</div>
         <div class="opt" style="text-align:center;">Or</div>
         <div class="opt">(b) I am ordinarily resident in India and that I possess means which will enable me, to repay to the Central Government the sums of money referred to in the event of my being called upon to do so in accordance with the terms of the agreement.</div>
         <div style="margin-top:6pt;"><i>{one of those should be stroke out}</i></div>

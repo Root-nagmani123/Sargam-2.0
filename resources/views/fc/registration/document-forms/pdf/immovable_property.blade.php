@@ -118,14 +118,13 @@
 
     {{-- ═══════════ PAGE 2 · NOTES ═══════════ --}}
     <div style="text-align:center; font-weight:bold; margin-bottom:10pt;">-2-</div>
-    <div class="note-hd">टिप्पणी / Note:</div>
-    <div class="note-p">
-        अखिल भारतीय सिविल सेवा (आचरण) नियमावली 1968 के नियम 16(5) के अंतर्गत भा.प्र.सेवा/भा.पु.सेवा के प्रत्येक सदस्य को, और केन्द्रीय सिविल सेवा (आचरण) नियमावली 1965 के नियम 18(3) के अंतर्गत प्रथम एवं द्वितीय श्रेणी के सदस्यों को, इस घोषणा प्रपत्र में निजी, अर्जित की गई, विरासत में मिली, पट्टे पर ली गई या बंधक रखी गई अचल संपत्ति का विवरण — चाहे वह उसके अपने नाम पर हो या परिवार के किसी सदस्य अथवा किसी अन्य व्यक्ति के नाम पर हो — प्रथम नियुक्ति के समय भरकर प्रस्तुत करना होता है, और बाद में इस आशय की सूचना प्रत्येक 12 माह के अंतराल में दी जानी होती है।<br>
-        The declaration form is required to be filled in and submitted by every member of IAS/IPS under Rule 16(5) of the All India Services (Conduct) Rules, 1968 on first appointment to the service, and by Class-I and Class-II Service members under Rule 18(3) of the Central Civil Services (Conduct) Rules, 1965, on first appointment to the service and thereafter at an interval of every twelve months — giving particulars of all immovable property owned, acquired or inherited by him/her, or held by him/her on lease or mortgage, either in his/her own name or in the name of any member of his/her family or any other person.
-    </div>
-    <div class="note-p"><b>*</b> जहाँ सही-सही मूल्य निर्धारण संभव न हो, वहाँ वर्तमान स्थिति के अनुसार अनुमानित मूल्य दर्शाएँ। / In cases where it is not possible to assess the value accurately, the approximate value in relation to present conditions may be indicated.</div>
-    <div class="note-p"><b>**</b> जो लागू न हो, काट दें। / Inapplicable clause to be struck out.</div>
-    <div class="note-p"><b>***</b> अल्पावधि का पट्टा भी सम्मिलित है। / Includes short-term lease also.</div>
+    <div class="note-hd">टिप्पणी:</div>
+    <div class="note-p">अखिल भारतीय सिविल सेवा (आचरण) नियमावली 1968 के नियम 16(5) के अंतर्गत भा.प्र.सेवा/भा.पु.सेवा के प्रत्येक सदस्य को और केन्द्रीय सिविल सेवा (आचरण) नियमावली 1965 के नियम 18(3) के अंतर्गत प्रथम एवं द्वितीय श्रेणी के सदस्यों को इस घोषणा प्रपत्र में निजी, अर्जित की गई, विरासत में मिली, पट्टे पर ली गई या बंधक रखी गई अचल संपत्ति का विवरण चाहे वह उसके अपने नाम पर हो या परिवार के किसी सदस्य अथवा किसी अन्य व्यक्ति के नाम पर हो — प्रथम नियुक्ति के समय भरकर प्रस्तुत करना होता है और बाद में इस आशय की सूचना प्रत्येक 12 माह के अंतराल में दी जानी होती है।</div>
+    <div class="note-hd" style="margin-top:10pt;">Note:</div>
+    <div class="note-p">The declaration form is required to be filled in and submitted by every member of IAS/IPS under Rule 16(5) of the All India Services (Conduct) Rules, 1968 on first appointment to the service, and by Class-I and Class-II Service members under Rule 18(3) of the Central Civil Services (Conduct) Rules, 1965, on first appointment to the service and thereafter at an interval of every twelve months — giving particulars of all immovable property owned, acquired or inherited by him/her, or held by him/her on lease or mortgage, either in his/her own name or in the name of any member of his/her family or any other person.</div>
+    <div class="note-p"><b>*</b> <span lang="hi">जहाँ, सही-सही मूल्य निर्धारण संभव न हो, वहाँ वर्तमान स्थिति के अनुसार अनुमानित मूल्य दर्शाएँ।</span> / In cases where it is not possible to assess the value accurately, the approximate value in relation to present conditions may be indicated.</div>
+    <div class="note-p"><b>**</b> <span lang="hi">जो लागू न हो, काट दें।</span> / Inapplicable clause to be struck out.</div>
+    <div class="note-p"><b>***</b> <span lang="hi">अल्पावधि का पट्टा भी सम्मिलित है।</span> / Includes short-term lease also.</div>
 
 </body>
 </html>

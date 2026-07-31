@@ -56,7 +56,8 @@
     <div class="body">मुझे अखिल भारतीय सेवा (आचरण) नियमावली, 1968 के नियम 11-ए तथा केन्द्रीय सिविल सेवा (आचरण) नियमावली, 1964 के नियम 13-ए (इस पृष्ठ में नीचे पुनः उद्धृत) के उपबंधों की विशेष तौर पर जानकारी दी गई है;</div>
     <div class="body">और मैं आज की तारीख में <b>{{ $maritalHi }}</b> हूँ,</div>
     <div class="body">मैं, {!! $blank($hi['name'] ?? '', '78mm') !!} (परिवीक्षाधीन का नाम) {!! $blank($hi['svc'] ?? '', '56mm') !!} (सेवा का नाम), परिवीक्षाधीन एतद्द्वारा यह वचन देता/देती हूँ कि मैं —</div>
-    <div class="clause">(क) न दहेज दूँगा/दूँगी, न दहेज लूँगा/लूँगी और न ही दहेज देने अथवा लेने के लिए दुष्प्रेरित करूँगा/करूँगी, अथवा</div>
+    <div class="clause">(क) न दहेज दूँगा/दूँगी, न दहेज लूँगा/लूँगी और न ही दहेज देने अथवा लेने के लिए दुष्प्रेरित करूँगा/करूँगी;</div>
+    <div class="clause">अथवा</div>
     <div class="clause">(ख) वधू अथवा वर (जो भी लागू हो) के माता-पिता या अभिभावक से प्रत्यक्ष अथवा अप्रत्यक्ष रूप से दहेज की मांग नहीं करूँगा/करूँगी।</div>
     <div class="nb">टिप्पणी: यहाँ &ldquo;दहेज&rdquo; से वही अर्थ अभिप्रेत है जो दहेज प्रतिषेध अधिनियम, 1961 (1961 का 28) में दिया गया है।</div>
     <div class="body">मैंने यह बात भली-भांति जानते हुए इस घोषणा पर हस्ताक्षर किए हैं कि दहेज से संबंधित नियमों अथवा विधि का उल्लंघन करने पर मेरे विरुद्ध उपयुक्त कार्रवाई की जा सकती है।</div>
@@ -162,13 +163,13 @@
     <div class="clause">(ii) demand, directly or indirectly, from the parent or guardian of a bride or bridegroom, as the case may be, any dowry.</div>
     <div class="cl-body"><b>Explanation:</b> For the purposes of this rule, &ldquo;dowry&rdquo; has the same meaning as in the Dowry Prohibition Act, 1961 (28 of 1961).</div>
 
-    <div class="cl-hd" style="text-align:center; margin-top:11pt;">EXTRACT FROM &ldquo;THE DOWRY PROHIBITION ACT, 1961&rdquo; (28 OF 1961)</div>
+    <div class="cl-hd" style="text-align:center; margin-top:11pt; text-decoration:none;">EXTRACT FROM &ldquo;THE DOWRY PROHIBITION ACT, 1961&rdquo; (28 OF 1961)</div>
     <div class="cl-body"><b>Section 2. Definition of &ldquo;dowry&rdquo;</b> — In this Act, &ldquo;dowry&rdquo; means any property or valuable security given or agreed to be given either directly or indirectly —</div>
     <div class="clause">(a) by one party to a marriage to the other party to the marriage, or</div>
     <div class="clause">(b) by the parents of either party to a marriage or by any other person to either party to the marriage or to any other person; at or before or any time after the marriage in connection with the marriage of the said parties, but does not include dower or mahar in the case of persons to whom the Muslim Personal Law (Shariat) applies.</div>
     <div class="cl-body"><b>Explanation II</b> — The expression &ldquo;valuable security&rdquo; has the same meaning as in Section 30 of the Indian Penal Code (45 of 1860).</div>
 
-    <div class="cl-hd" style="text-align:center; margin-top:11pt;">EXTRACT FROM THE INDIAN PENAL CODE (45 OF 1860)</div>
+    <div class="cl-hd" style="text-align:center; margin-top:11pt; text-decoration:none;">EXTRACT FROM THE INDIAN PENAL CODE (45 OF 1860)</div>
     <div class="cl-body"><b>Section 30. &ldquo;Valuable Security&rdquo;</b> — The words &ldquo;valuable security&rdquo; denote a document which is, or purports to be, a document whereby any legal right is created, extended, transferred, restricted, extinguished or released, or whereby any person acknowledges that he lies under legal liability, or has not a certain legal right.</div>
     </div>
 

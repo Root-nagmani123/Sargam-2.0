@@ -97,7 +97,7 @@
     </table>
     <div class="ex-body">
         महोदय / Sir,<br>
-        मेरा अनुरोध है कि नीचे बताए गए कारणों को ध्यान में रखते हुए, मेरी एक से अधिक जीवित पत्नी रखने / ऐसी महिला जिसका ऐसे व्यक्ति से विवाह हुआ हो जिसकी पहले से एक या अधिक जीवित पत्नियाँ हों, की सेवा में भर्ती पर प्रतिबंध से छूट प्रदान की जाए।<br>
+        मेरा अनुरोध है कि नीचे बताए गए कारणों को ध्यान में रखते हुए, मेरी एक से अधिक जीवित पत्नी रखने / महिला जिसका ऐसे व्यक्ति से विवाह हुआ हो जिसकी पहले से एक या अधिक जीवित पत्नियाँ हों, की सेवा में भर्ती पर प्रतिबंध के कार्य से छूट दी जाए।<br>
         I request that, in view of the reasons stated below, I may be granted exemption from the operation of the restriction on recruitment to service of one having more than one wife living / a woman who is married to a person already having one wife or more living.
     </div>
     <div style="margin-top:12pt;">कारण / Reasons:</div>
