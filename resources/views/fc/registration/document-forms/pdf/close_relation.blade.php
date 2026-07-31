@@ -58,16 +58,16 @@
         <div class="secttl">
             {{ $ti + 1 }}.
             @if($ti === 0)
-                विदेशों में निवास कर रहे या विदेशी राष्ट्रीयता-प्राप्त निकट संबंधी / Close relations who are Nationals of, or are domiciled in, other countries
+                विदेशों में निवास कर रहे या विदेशी राष्ट्रीयता-प्राप्त निकट संबंधी / Close relations who are Nationals of or are domiciled in other countries
             @else
-                भारत में निवास कर रहे निकट संबंधी जो भारतीय मूल के नहीं हैं / Close relations residing in India, who are non-Indian origin
+                भारत में निवास कर रहे निकट संबंधी जो भारतीय मूल के नहीं हैं / Close relations residing in India who are non-Indian origin
             @endif
         </div>
         @php $map = $lookup($tbl['key']); @endphp
         <table class="cr">
             <thead>
                 <tr>
-                    <th class="rn">#</th>
+                    <th class="rn"></th>
                     <th class="rel">संबंध / Relation</th>
                     <th>नाम / Name</th>
                     <th>राष्ट्रीयता / Nationality</th>
@@ -98,10 +98,10 @@
     </div>
 
     <table class="notes">
-        <tr><td style="width:70pt;"><b>टिप्पणी / Note 1:</b></td>
-            <td>इस प्रपत्र में दी जाने वाली सूचना का छिपाया जाना विभागीय अपराध समझा जाएगा, जिसके लिए सेवा से बरखास्त किये जाने तक का दण्ड दिया जा सकता है।<br>Suppression of information in this form will be considered a major departmental offence, for which the punishment may extend to dismissal from service.</td></tr>
-        <tr><td><b>Note 2:</b></td>
-            <td>उपर्युक्त तारीख के बाद यदि कोई परिवर्तन होता है तो इसकी सूचना विभागाध्यक्ष / कार्यालयाध्यक्ष को प्रत्येक वर्ष के अंत में दें।<br>Subsequent changes, if any, in the above particulars should be reported to the Head of Office / Department at the end of each year.</td></tr>
+        <tr><td style="width:70pt;"><b>टिप्पणी / Note 1.</b></td>
+            <td>इस प्रपत्र में दी जाने वाली सूचना का छिपाया जाना विभागीय अपराध समझा जाएगा जिसके लिए सेवा से बरखास्त किये जाने तक का दण्ड दिया जा सकता है।<br>Suppression of information in this form will be considered a major departmental offence for which the punishment may extend to dismissal from service.</td></tr>
+        <tr><td><b>Note 2.</b></td>
+            <td>उपर्युक्त तारीख के बाद यदि कोई परिवर्तन होता है तो इसकी सूचना विभागाध्यक्ष / कार्यालयाध्यक्ष को प्रत्येक वर्ष के अंत में दें।<br>Subsequent changes if any in the above date should be reported to the Head of Office / Department at the end of each year.</td></tr>
     </table>
 </body>
 </html>

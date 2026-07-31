@@ -48,7 +48,7 @@
 
 @for($copy = 0; $copy < 2; $copy++)
     <div class="copy">
-        <div class="copytag">{{ $copy === 0 ? '(Office copy / कार्यालय प्रति)' : '(Officer copy / अधिकारी प्रति)' }}</div>
+        {{-- <div class="copytag">{{ $copy === 0 ? '(Office copy / कार्यालय प्रति)' : '(Officer copy / अधिकारी प्रति)' }}</div> --}}
         <div class="title-hi">कार्यभार-ग्रहण प्रमाणपत्र</div>
         <div class="title">CERTIFICATE OF ASSUMPTION OF CHARGE</div>
 

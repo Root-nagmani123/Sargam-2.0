@@ -71,8 +71,20 @@
         </tr></table>
     </div>
     <div class="copy">प्रतिलिपि:
-        <div>(माता-पिता / अभिभावक का नाम): {!! $blank($hi['pgname'] ?? '', '78mm') !!}</div>
-        <div>पता: {!! $blank($hi['pgaddr'] ?? '', '100mm') !!}</div>
+        <table style="width:100%; margin-top:2pt;">
+            <tr>
+                <td style="width:64mm; white-space:nowrap; text-align:right; padding-right:2mm; vertical-align:bottom;">(माता-पिता / अभिभावक का नाम):</td>
+                <td style="vertical-align:bottom;">{!! $blank($hi['pgname'] ?? '', '110mm') !!}</td>
+            </tr>
+            <tr>
+                <td style="white-space:nowrap; text-align:right; padding-right:2mm; vertical-align:bottom;">पता:</td>
+                <td style="vertical-align:bottom;">{!! $blank($hi['pgaddr'] ?? '', '110mm') !!}</td>
+            </tr>
+            <tr>
+                <td></td>
+                <td style="vertical-align:bottom;">{!! $blank('', '110mm') !!}</td>
+            </tr>
+        </table>
     </div>
 
     <pagebreak />
@@ -82,14 +94,16 @@
     <div class="cl-hd" style="text-align:center;">उल्लिखित नियम के बारे में स्पष्टीकरण</div>
     <div class="cl-rule">अखिल भारतीय सेवा (आचरण) नियमावली, 1968 का नियम 11-ए</div>
     <div class="cl-body">(क) दहेज देना अथवा लेना — इस सेवा का कोई भी सदस्य</div>
-    <div class="clause">(i) न दहेज देगा, न दहेज लेगा और न ही दहेज देने या लेने के लिए दुष्प्रेरित करेगा; अथवा</div>
+    <div class="clause">(i) न दहेज देगा, न दहेज लेगा और न ही दहेज देने या लेने के लिए दुष्प्रेरित करेगा;</div>
+    <div class="clause">अथवा</div>
     <div class="clause">(ii) वधू अथवा वर (जो भी लागू हो) के माता-पिता या अभिभावक से प्रत्यक्ष अथवा अप्रत्यक्ष रूप से किसी दहेज की मांग नहीं करेगा/करेगी।</div>
-    <div class="cl-body"><b>स्पष्टीकरण:</b> इस नियम के अंतर्गत &lsquo;दहेज&rsquo; से वही अर्थ अभिप्रेत है जो दहेज प्रतिषेध अधिनियम, 1961 (1961 का 28) में दिया गया है।</div>
+    <div class="cl-body" style="font-weight:bold;">स्पष्टीकरण: इस नियम के अंतर्गत &lsquo;दहेज&rsquo; से वही अर्थ अभिप्रेत है जो दहेज प्रतिषेध अधिनियम, 1961 (1961 का 28) में दिया गया है।</div>
     <div class="cl-rule">केन्द्रीय सिविल सेवा (आचरण) नियमावली, 1964 का नियम 13-ए — दहेज</div>
     <div class="cl-body">कोई भी सरकारी कर्मचारी —</div>
-    <div class="clause">(i) न दहेज देगा, न दहेज लेगा और न ही दहेज देने या लेने के लिए दुष्प्रेरित करेगा; अथवा</div>
+    <div class="clause">(i) न दहेज देगा, न दहेज लेगा और न ही दहेज देने या लेने के लिए दुष्प्रेरित करेगा;</div>
+    <div class="clause">अथवा</div>
     <div class="clause">(ii) वधू अथवा वर (जो भी लागू हो) के माता-पिता अथवा अभिभावक से प्रत्यक्ष अथवा अप्रत्यक्ष रूप से किसी दहेज की मांग नहीं करेगा/करेगी।</div>
-    <div class="cl-body"><b>स्पष्टीकरण:</b> इस नियम के अंतर्गत &lsquo;दहेज&rsquo; से वही अर्थ अभिप्रेत है जो दहेज प्रतिषेध अधिनियम, 1961 (1961 का 28) में दिया गया है।</div>
+    <div class="cl-body" style="font-weight:bold;">स्पष्टीकरण: इस नियम के अंतर्गत &lsquo;दहेज&rsquo; से वही अर्थ अभिप्रेत है जो दहेज प्रतिषेध अधिनियम, 1961 (1961 का 28) में दिया गया है।</div>
     <div class="sep">***</div>
     </div>
 
@@ -100,7 +114,7 @@
     <div class="title" style="text-decoration:underline;">DECLARATION</div>
     <div class="body">WHEREAS the provisions of Rule 11-A of the All India Services (Conduct) Rules, 1968 / Rule 13-A of the Central Civil Services (Conduct) Rules, 1964 have been specifically brought to my notice;</div>
     <div class="body">AND WHEREAS on date I am <b>{{ $maritalEn }}</b>:</div>
-    <div class="body">Now therefore, I, {!! $blank($name, '72mm') !!} ({!! $blank($service, '50mm') !!}), Probationer, do hereby undertake that I shall not —</div>
+    <div class="body">Now therefore, I, {!! $blank($name, '72mm') !!} ({!! $blank($service, '50mm') !!}), do hereby undertake that I shall not —</div>
     <div class="clause">(a) give or take, or abet the giving or taking of, dowry; or</div>
     <div class="clause">(b) demand, directly or indirectly, from the parents or guardians of the bride or bridegroom, as the case may be, any dowry.</div>
     <div class="nb">N.B. &mdash; &ldquo;Dowry&rdquo; shall have the same meaning as in the Dowry Prohibition Act, 1961.</div>
@@ -116,8 +130,20 @@
         </tr></table>
     </div>
     <div class="copy"><i>Copy of the declaration to:</i>
-        <div>(Name of Parent / Guardian): {!! $blank($pgname, '78mm') !!}</div>
-        <div>Address: {!! $blank($pgaddr, '100mm') !!}</div>
+        <table style="width:100%; margin-top:2pt;">
+            <tr>
+                <td style="width:60mm; white-space:nowrap; text-align:right; padding-right:2mm; vertical-align:bottom;">(Name of Parent / Guardian):</td>
+                <td style="vertical-align:bottom;">{!! $blank($pgname, '110mm') !!}</td>
+            </tr>
+            <tr>
+                <td style="white-space:nowrap; text-align:right; padding-right:2mm; vertical-align:bottom;">Address:</td>
+                <td style="vertical-align:bottom;">{!! $blank($pgaddr, '110mm') !!}</td>
+            </tr>
+            <tr>
+                <td></td>
+                <td style="vertical-align:bottom;">{!! $blank('', '110mm') !!}</td>
+            </tr>
+        </table>
     </div>
 
     <pagebreak />
@@ -131,7 +157,7 @@
     <div class="clause">(ii) demand, directly or indirectly, from the parents or guardian of a bride or bridegroom, as the case may be, any dowry.</div>
     <div class="cl-body"><b>Explanation:</b> For the purpose of this rule, &ldquo;dowry&rdquo; has the same meaning as in the Dowry Prohibition Act, 1961 (28 of 1961).</div>
     <div class="cl-rule">Rule 13-A of the Central Civil Services (Conduct) Rules, 1964</div>
-    <div class="cl-body">13-A. Dowry — No Government servant shall —</div>
+    <div class="cl-body">13-A Dowry — No Government servant shall —</div>
     <div class="clause">(i) give or take or abet the giving or taking of dowry; or</div>
     <div class="clause">(ii) demand, directly or indirectly, from the parent or guardian of a bride or bridegroom, as the case may be, any dowry.</div>
     <div class="cl-body"><b>Explanation:</b> For the purposes of this rule, &ldquo;dowry&rdquo; has the same meaning as in the Dowry Prohibition Act, 1961 (28 of 1961).</div>

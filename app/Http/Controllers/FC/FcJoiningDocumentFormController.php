@@ -190,9 +190,29 @@ class FcJoiningDocumentFormController extends Controller
             'field'    => $formField,
         ])->render();
 
-        $tempDir = storage_path('app/mpdf-temp');
+        // Fresh temp dir for the Devanagari-font override below: the older 'app/mpdf-temp'
+        // may hold stale 'freeserif' metrics from when that key still meant GNU FreeSerif,
+        // which would mismatch the Noto glyph ids we now embed under the same key.
+        $tempDir = storage_path('app/mpdf-temp-otl');
         if (! is_dir($tempDir)) {
             @mkdir($tempDir, 0775, true);
+        }
+
+        // Devanagari conjuncts (e.g. the "क्र" rakaar in "क्र. सं.") render wrong in GNU
+        // FreeSerif, which is what mpdf's autoLangToFont maps Devanagari to by default.
+        // Point that 'freeserif' slot at Noto Sans Devanagari instead — kept per-character
+        // routing (Latin -> DejaVu, Devanagari -> Noto). The -otl copies have the 3 GSUB
+        // lookups mpdf 8.2 cannot parse stripped out; see resources/fonts/mpdf-otl/README.md.
+        $fontVars   = (new \Mpdf\Config\FontVariables())->getDefaults();
+        $configVars = (new \Mpdf\Config\ConfigVariables())->getDefaults();
+        $fontData   = $fontVars['fontdata'];
+        $notoDir    = resource_path('fonts/mpdf-otl');
+        if (is_file($notoDir.'/NotoSansDevanagari-Regular.ttf')) {
+            $fontData['freeserif'] = [
+                'R'      => 'NotoSansDevanagari-Regular.ttf',
+                'B'      => 'NotoSansDevanagari-Bold.ttf',
+                'useOTL' => 0xFF,
+            ];
         }
 
         // mpdf renders Devanagari (Hindi) reliably with auto script/font detection.
@@ -202,6 +222,8 @@ class FcJoiningDocumentFormController extends Controller
             'tempDir'          => $tempDir,
             'autoScriptToLang' => true,
             'autoLangToFont'   => true,
+            'fontDir'          => array_merge($configVars['fontDir'], [$notoDir]),
+            'fontdata'         => $fontData,
             'margin_top'       => 12,
             'margin_bottom'    => 12,
             'margin_left'      => 12,
