@@ -495,6 +495,12 @@ class FrontPageController extends Controller
             'reg_password' => 'required|string',
         ]);
 
+        // The login page encrypts reg_password (AES-256-CBC) in the browser before
+        // POST, so the field is not literal plaintext in an intercepting proxy. Undo
+        // that here. When no key is configured (or the client sent plaintext), this
+        // returns the value unchanged so logins keep working during rollout.
+        $plainPassword = $this->decryptLoginPassword($request->input('reg_password'));
+
         $regName = $rosterAuth->normalizeLoginUsername($request->reg_name);
 
         $intentFormId = session(FcRegistrationIntentService::SESSION_FORM_ID);
@@ -524,7 +530,7 @@ class FrontPageController extends Controller
 
         // FC login: authenticate only against fc_registration_master (main /login uses user_credentials).
         $roster = $rosterAuth->findStagedRosterByLogin($regName);
-        if ($roster && $rosterAuth->verifyStagedPassword($roster, $request->reg_password)) {
+        if ($roster && $rosterAuth->verifyStagedPassword($roster, $plainPassword)) {
             // Reset lockout counters on success
             DB::table('fc_registration_master')
                 ->where('pk', $roster->pk)
@@ -548,6 +554,47 @@ class FrontPageController extends Controller
         }
 
         return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
+    }
+
+    /**
+     * Decrypt the AES-256-CBC login password produced by the login page (CryptoJS),
+     * mirroring fc_login.blade.php: same key (config app.password_enc_key, base64 →
+     * 32 bytes) and the same fixed IV.
+     *
+     * Rollout-safe fallbacks (all return the input unchanged, never break login):
+     *  - key not configured / malformed  → treat input as plaintext (logged once)
+     *  - input is not valid base64        → '' (auth fails naturally)
+     *  - decrypt fails (wrong/plain data) → '' (auth fails naturally)
+     */
+    private function decryptLoginPassword(?string $cipher): string
+    {
+        $cipher = (string) $cipher;
+        if ($cipher === '') {
+            return '';
+        }
+
+        $b64Key = (string) config('app.password_enc_key');
+        if ($b64Key === '') {
+            // Key not set yet — the client also skips encryption in this state, so the
+            // value really is plaintext. Keep login working; surface the misconfig.
+            logger()->warning('PASSWORD_ENC_KEY not set; FC login password treated as plaintext.');
+            return $cipher;
+        }
+
+        $key = base64_decode($b64Key, true);
+        if ($key === false || strlen($key) !== 32) {
+            logger()->warning('PASSWORD_ENC_KEY is not a base64-encoded 32-byte key; FC login treated as plaintext.');
+            return $cipher;
+        }
+
+        $raw = base64_decode($cipher, true);
+        if ($raw === false) {
+            return '';
+        }
+
+        $plain = openssl_decrypt($raw, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, '1234567890123456');
+
+        return $plain === false ? '' : $plain;
     }
 
     // FC Form Show (session-based auth for FC users)
