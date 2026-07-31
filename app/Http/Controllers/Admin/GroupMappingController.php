@@ -259,7 +259,7 @@ class GroupMappingController extends Controller
         {
             $activeCourses = $activeCourses->whereIn('pk',$data_course_id);
         }
-        $activeCourses = $activeCourses->where('end_date', '>', now())
+        $activeCourses = $activeCourses->where('end_date', '>=', now()->toDateString())
             ->orderBy('pk', 'desc')
             ->pluck('course_name', 'pk')
             ->toArray();

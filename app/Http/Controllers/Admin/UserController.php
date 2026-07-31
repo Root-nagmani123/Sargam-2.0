@@ -214,7 +214,7 @@ class UserController extends Controller
       }
 
       $totalActiveCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '<=', now()->toDateString())->where('end_date', '>=', now()->toDateString())->count();
-      $upcomingCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '>', now())->count();
+      $upcomingCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '>', now()->toDateString())->count();
       $upcomingEventsCount = Holiday::active()->where('holiday_date', '>', now())->count();
 
 
@@ -4979,7 +4979,7 @@ public function uploadPdf(Request $request)
 
         return CourseMaster::whereIn('pk', $coordinatorCourses)
             ->where('active_inactive', 1)
-            ->where('end_date', '>=', now())
+            ->where('end_date', '>=', now()->toDateString())
             ->pluck('pk');
     }
 
@@ -5011,7 +5011,7 @@ public function uploadPdf(Request $request)
 
         $activeCourseIds = CourseMaster::whereIn('pk', $groupMappings->pluck('course_name')->unique())
             ->where('active_inactive', 1)
-            ->where('end_date', '>=', now())
+            ->where('end_date', '>=', now()->toDateString())
             ->pluck('pk');
 
         if ($activeCourseIds->isEmpty()) {

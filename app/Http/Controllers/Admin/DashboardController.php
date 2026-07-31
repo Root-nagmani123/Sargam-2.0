@@ -28,7 +28,7 @@ function incoming_course(Request $request)
 {
     $incoming_courses = DB::table('course_master')
         ->where('active_inactive', 1)
-        ->where('start_year', '>', now())
+        ->where('start_year', '>', now()->toDateString())
         ->orderBy('start_year')
         ->get();
 
