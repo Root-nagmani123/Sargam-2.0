@@ -384,6 +384,22 @@ $(function () {
         $table.find('.fc-sms-page-select-all').prop('checked', allChecked);
     }
 
+    /**
+     * Tick a template's radio and keep the dependent UI in step. Fires `change`
+     * so the existing radio handler recalculates the selected-recipient count;
+     * no-ops when the template is already the active one.
+     */
+    function selectTemplate(template) {
+        if (!template) {
+            return;
+        }
+        var $radio = $('#tpl_' + template);
+        if (!$radio.length || $radio.prop('checked')) {
+            return;
+        }
+        $radio.prop('checked', true).trigger('change');
+    }
+
     function initRecipientsTable($collapse) {
         var template = $collapse.data('fc-sms-template');
         var tableId = $collapse.data('fc-sms-table');
@@ -449,6 +465,10 @@ $(function () {
             initRecipientsTable($collapse);
         }
         $collapse.on('shown.bs.collapse', function () {
+            // Expanding a template's recipient list also selects that template.
+            // Picking the radio and opening the list were two separate clicks
+            // before, so it was easy to expand one template and send another.
+            selectTemplate($collapse.data('fc-sms-template'));
             initRecipientsTable($collapse);
         });
     });
