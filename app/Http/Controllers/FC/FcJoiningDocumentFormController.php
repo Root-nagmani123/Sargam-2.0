@@ -174,7 +174,7 @@ class FcJoiningDocumentFormController extends Controller
     /** Render the template's PDF view to a file on the public disk; return its relative path. */
     private function generateAndStorePdf(array $template, $formField, int $userId, array $data): string
     {
-        // Embed signature images as base64 data URIs so the PDF renderer loads them without local-file access.
+        // Embed signature images as base64 data URIs so mpdf renders them without local-file access.
         $data['_signature_src'] = [];
         foreach ($data['_signatures'] ?? [] as $i => $rel) {
             $abs = storage_path('app/public/'.$rel);
@@ -190,32 +190,12 @@ class FcJoiningDocumentFormController extends Controller
             'field'    => $formField,
         ])->render();
 
-        // Prefer headless Chrome (HarfBuzz) — it shapes Devanagari correctly, including the
-        // "क्र" rakaar and a cluster-final "है" that mPDF gets wrong. When Chrome is not
-        // installed (e.g. some servers), fall back to mPDF: it is not perfect (क्र stays
-        // imperfect) but it renders matras correctly, so it never regresses the old output.
-        $pdfContent = app(\App\Support\FC\HindiPdfRenderer::class)->renderViaChrome($html);
-        if ($pdfContent === null) {
-            $pdfContent = $this->renderPdfWithMpdf($html);
-        }
-
-        $relativePath = 'uploads/'.fc_upload_path_segment($userId).'/documents/'
-            .$formField->field_name.'_'.time().'.pdf';
-
-        Storage::disk('public')->put($relativePath, $pdfContent);
-
-        return $relativePath;
-    }
-
-    /** Fallback renderer when headless Chrome is unavailable. mpdf renders Hindi matras
-     *  correctly (only the "क्र" rakaar stays imperfect), keeping parity with the old output. */
-    private function renderPdfWithMpdf(string $html): string
-    {
         $tempDir = storage_path('app/mpdf-temp');
         if (! is_dir($tempDir)) {
             @mkdir($tempDir, 0775, true);
         }
 
+        // mpdf renders Devanagari (Hindi) reliably with auto script/font detection.
         $mpdf = new \Mpdf\Mpdf([
             'mode'             => 'utf-8',
             'format'           => 'A4',
@@ -228,7 +208,13 @@ class FcJoiningDocumentFormController extends Controller
             'margin_right'     => 12,
         ]);
         $mpdf->WriteHTML($html);
+        $pdfContent = $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
 
-        return $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
+        $relativePath = 'uploads/'.fc_upload_path_segment($userId).'/documents/'
+            .$formField->field_name.'_'.time().'.pdf';
+
+        Storage::disk('public')->put($relativePath, $pdfContent);
+
+        return $relativePath;
     }
 }
