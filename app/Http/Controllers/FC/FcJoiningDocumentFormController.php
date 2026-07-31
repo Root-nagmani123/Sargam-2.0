@@ -174,7 +174,7 @@ class FcJoiningDocumentFormController extends Controller
     /** Render the template's PDF view to a file on the public disk; return its relative path. */
     private function generateAndStorePdf(array $template, $formField, int $userId, array $data): string
     {
-        // Embed signature images as base64 data URIs so mpdf renders them without local-file access.
+        // Embed signature images as base64 data URIs so the PDF renderer loads them without local-file access.
         $data['_signature_src'] = [];
         foreach ($data['_signatures'] ?? [] as $i => $rel) {
             $abs = storage_path('app/public/'.$rel);
@@ -190,47 +190,11 @@ class FcJoiningDocumentFormController extends Controller
             'field'    => $formField,
         ])->render();
 
-        // Fresh temp dir for the Devanagari-font override below: the older 'app/mpdf-temp'
-        // may hold stale 'freeserif' metrics from when that key still meant GNU FreeSerif,
-        // which would mismatch the Noto glyph ids we now embed under the same key.
-        $tempDir = storage_path('app/mpdf-temp-otl');
-        if (! is_dir($tempDir)) {
-            @mkdir($tempDir, 0775, true);
-        }
-
-        // Devanagari conjuncts (e.g. the "क्र" rakaar in "क्र. सं.") render wrong in GNU
-        // FreeSerif, which is what mpdf's autoLangToFont maps Devanagari to by default.
-        // Point that 'freeserif' slot at Noto Sans Devanagari instead — kept per-character
-        // routing (Latin -> DejaVu, Devanagari -> Noto). The -otl copies have the 3 GSUB
-        // lookups mpdf 8.2 cannot parse stripped out; see resources/fonts/mpdf-otl/README.md.
-        $fontVars   = (new \Mpdf\Config\FontVariables())->getDefaults();
-        $configVars = (new \Mpdf\Config\ConfigVariables())->getDefaults();
-        $fontData   = $fontVars['fontdata'];
-        $notoDir    = resource_path('fonts/mpdf-otl');
-        if (is_file($notoDir.'/NotoSansDevanagari-Regular.ttf')) {
-            $fontData['freeserif'] = [
-                'R'      => 'NotoSansDevanagari-Regular.ttf',
-                'B'      => 'NotoSansDevanagari-Bold.ttf',
-                'useOTL' => 0xFF,
-            ];
-        }
-
-        // mpdf renders Devanagari (Hindi) reliably with auto script/font detection.
-        $mpdf = new \Mpdf\Mpdf([
-            'mode'             => 'utf-8',
-            'format'           => 'A4',
-            'tempDir'          => $tempDir,
-            'autoScriptToLang' => true,
-            'autoLangToFont'   => true,
-            'fontDir'          => array_merge($configVars['fontDir'], [$notoDir]),
-            'fontdata'         => $fontData,
-            'margin_top'       => 12,
-            'margin_bottom'    => 12,
-            'margin_left'      => 12,
-            'margin_right'     => 12,
-        ]);
-        $mpdf->WriteHTML($html);
-        $pdfContent = $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
+        // Render via headless Chrome (correct Devanagari shaping) with a Dompdf fallback.
+        // mPDF's Indic shaper mis-renders Hindi here (e.g. the "क्र" rakaar and a
+        // cluster-final "है"), so it is no longer used for these forms.
+        $pdfContent = app(\App\Support\FC\HindiPdfRenderer::class)
+            ->render($html, 'FC Document - '.$formField->field_name);
 
         $relativePath = 'uploads/'.fc_upload_path_segment($userId).'/documents/'
             .$formField->field_name.'_'.time().'.pdf';
