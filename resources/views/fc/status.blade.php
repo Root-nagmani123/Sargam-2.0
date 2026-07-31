@@ -24,19 +24,11 @@
     data-initial-page="{{ $participants?->currentPage() ?? 1 }}">
     <div class="fc-status-shell py-2">
             <header class="fc-status-hero text-center">
-                <div class="row align-items-center g-3">
-                    <div class="col-lg-3 text-lg-start text-center">
-                        <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA" height="76" class="img-fluid" style="max-height:76px;">
-                    </div>
-                    <div class="col-lg-6">
-                        <h1 class="course-title">{{ $courseMeta['title'] }}</h1>
-                        @if($courseMeta['date_line'])
-                            <p class="course-dates">{{ $courseMeta['date_line'] }}</p>
-                        @endif
-                    </div>
-                    <div class="col-lg-3 text-lg-end text-center">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/3/3e/75th_Independence_Day_of_India_Logo.png" alt="Azadi Ka Amrit Mahotsav" height="58" class="img-fluid" style="max-height:58px;" onerror="this.style.display='none'">
-                    </div>
+                <div class="academy-masthead">
+                    <p class="academy-name-hi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी.</p>
+                    <p class="academy-name-en">Lal Bahadur Shastri National Academy of Administration,</p>
+                    <p class="academy-place-hi">मसूरी-248179(उत्तराखंड)</p>
+                    <p class="academy-place-en">Mussoorie-248 179 (Uttarakhand)</p>
                 </div>
             </header>
 
@@ -52,7 +44,10 @@
                            aria-selected="{{ $activeTab === $tabKey ? 'true' : 'false' }}"
                            @if($activeTab === $tabKey) aria-current="true" @endif>
                             <span>{{ $tabDef['label'] }}</span>
-                            <span class="fc-status-badge fc-status-badge--{{ $tabDef['theme'] }}">{{ number_format($counts[$tabKey] ?? 0) }}</span>
+                            {{-- Every badge but "Service wise List" counts participants; that one
+                                 counts services, so it is labelled to stop it reading as people. --}}
+                            <span class="fc-status-badge fc-status-badge--{{ $tabDef['theme'] }}"
+                                  title="{{ number_format($counts[$tabKey] ?? 0) }} {{ $tabDef['count_unit'] ?? 'participants' }}">{{ number_format($counts[$tabKey] ?? 0) }}</span>
                         </a>
                     @endforeach
                 </nav>
@@ -132,6 +127,20 @@
         window.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'auto' });
     }
 
+    /**
+     * Switching tabs replaces the whole list, so the old scroll offset is meaningless —
+     * without this the reader stays parked at the previous list's pagination and the new
+     * table opens part-scrolled, with rows cut off above the sticky header. Scroll to the
+     * board rather than the results, so the tab strip stays visible and it is obvious which
+     * tab is now active.
+     */
+    function scrollToBoard(smooth) {
+        var board = document.querySelector('.fc-status-board');
+        if (!board) { scrollToPanel(smooth); return; }
+        var top = board.getBoundingClientRect().top + window.pageYOffset - 12;
+        window.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'auto' });
+    }
+
     function bindPagination() {
         panel.querySelectorAll('a.fc-status-page-link[href]').forEach(function (link) {
             link.addEventListener('click', function (e) {
@@ -172,7 +181,9 @@
                 setActiveTab(data.tab || tab);
                 updateHistory(data.tab || tab, pageNum || 1, pushHistory);
                 bindPagination();
-                if (scroll) {
+                if (scroll === 'board') {
+                    requestAnimationFrame(function () { scrollToBoard(true); });
+                } else if (scroll) {
                     requestAnimationFrame(function () { scrollToPanel(true); });
                 }
             })
@@ -190,7 +201,7 @@
             e.preventDefault();
             var tab = tabEl.getAttribute('data-tab');
             if (!tab || tab === currentTab) return;
-            loadFragment(tab, 1, true, false);
+            loadFragment(tab, 1, true, 'board');
         });
     });
 

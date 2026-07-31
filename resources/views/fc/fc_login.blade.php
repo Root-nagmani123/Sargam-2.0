@@ -53,6 +53,7 @@
                                         <input type="password"
                                             class="form-control rounded-start-3 @error('reg_password') is-invalid @enderror"
                                             placeholder="Enter Password" name="reg_password" id="password"
+                                            style="font-size: 0.875rem;"
                                             autocomplete="off" required>
                                         <button type="button"
                                             class="btn btn-primary rounded-end-3 px-3 d-inline-flex align-items-center justify-content-center"

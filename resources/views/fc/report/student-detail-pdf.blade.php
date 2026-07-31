@@ -26,30 +26,32 @@
         .masthead {
             text-align: center;
             border: 2px solid #0a3d6b;
-            padding: 6px 8px 8px;
+            padding: 7px 8px 8px;
             margin-bottom: 6px;
             background: #f8fafc;
         }
         .masthead-hi {
-            font-size: 11pt;
+            font-size: 12.5pt;
             font-weight: bold;
             color: #0a3d6b;
-            margin: 0 0 4px;
+            margin: 0 0 3px;
+            line-height: 1.45;
         }
         .masthead-en-org {
-            font-size: 9.2pt;
-            color: #333;
-            margin: 0 0 2px;
-        }
-        .masthead-en-name {
-            font-size: 10pt;
+            font-size: 10.5pt;
             font-weight: bold;
             color: #0a3d6b;
-            margin: 0 0 4px;
+            margin: 0 0 5px;
+        }
+        .masthead-place-hi {
+            font-size: 9.5pt;
+            color: #333;
+            margin: 0 0 1px;
+            line-height: 1.45;
         }
         .masthead-place {
-            font-size: 8.5pt;
-            color: #444;
+            font-size: 9pt;
+            color: #333;
             margin: 0;
         }
         .doc-title {
@@ -82,6 +84,8 @@
             border: 1px solid #999;
             padding: 5px 8px;
             vertical-align: top;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
         .meta-bar .label {
             width: 22%;
@@ -94,10 +98,14 @@
             /* Do not avoid-break whole sections: long blocks jump to next page and leave a huge gap */
             page-break-inside: auto;
         }
+        /* Muted slate rather than the old solid navy: at this size a full-width saturated
+           bar on every section dominated the page. Desaturated fill + a darker left rule
+           keeps the hierarchy readable without shouting. */
         .section-h {
-            background: #0a3d6b;
-            color: #fff;
-            padding: 4px 8px;
+            background: #d8e2ec;
+            color: #24486e;
+            padding: 3px 8px;
+            border-left: 3px solid #6d8bab;
             font-size: 9.5pt;
             font-weight: bold;
             break-after: avoid-page;
@@ -105,43 +113,63 @@
         .section-h-sub {
             font-size: 8pt;
             font-weight: normal;
-            opacity: 0.95;
+            color: #5b7188;
         }
         table.fields {
             width: 100%;
             border-collapse: collapse;
             font-size: 8.8pt;
+            /* Fixed layout: without it a single long unbroken value (e.g. a Vision
+               Statement with no spaces) squeezes the label column to one word per line. */
+            table-layout: fixed;
         }
         table.fields td {
             border: 1px solid #bbb;
             padding: 4px 6px;
             vertical-align: top;
+            /* Long filenames / unbroken statements must wrap instead of running off the
+               page. `anywhere` also shrinks min-content width, so an unbreakable value can
+               never widen the table and trigger Chrome's shrink-to-fit. Only the two
+               columns here are affected, and both have explicit widths, so ordinary labels
+               still break at spaces. */
+            overflow-wrap: anywhere;
         }
-        table.fields .lab-en {
-            width: 26%;
-            background: #f0f4f8;
+        table.fields .lab {
+            width: 32%;
+            background: #f7f9fc;
             /* mPDF + bold + script-mix can emit tofu; keep labels regular weight */
             font-weight: normal;
             color: #0a3d6e;
         }
+        /* Hindi sits inline after the English in the SAME cell ("Gender / लिंग"), matching
+           the meta-bar convention above, and only when it differs. hindiLabel() falls back
+           to the English string when unmapped, so a second label column rendered the
+           identical text twice on almost every row — half the page width for nothing, and
+           double-height rows wherever the label was long. Inline (not stacked) keeps the
+           row on one line, which is what kept the page count down. */
         table.fields .lab-hi {
-            width: 22%;
-            font-size: 8.2pt;
-            color: #444;
-            background: #fafafa;
+            font-size: 8pt;
+            color: #555;
         }
         table.fields .val {
-            width: 52%;
+            width: 68%;
         }
+        /* Auto layout, so 5-10 columns of very uneven width size to their content — fixed
+           layout gives every column an equal share and hyphenates "Matriculation State"
+           mid-word. Overflow is instead prevented by overflow-wrap:anywhere on the cells
+           (see below), which is what stops a long filename widening the table past the
+           page and triggering Chrome's shrink-to-fit on the WHOLE document. */
         table.grid {
             width: 100%;
             border-collapse: collapse;
             font-size: 8.3pt;
         }
+        /* Column headings sit one level below a section header, so they take the same muted
+           palette a shade stronger — not the old solid navy. */
         table.grid th {
-            background: #0a3d6b;
-            color: #fff;
-            border: 1px solid #0a3d6b;
+            background: #e4ebf2;
+            color: #24486e;
+            border: 1px solid #b9c6d6;
             padding: 4px 3px;
             text-align: center;
             font-weight: bold;
@@ -150,13 +178,23 @@
             display: block;
             font-weight: normal;
             font-size: 7.5pt;
-            opacity: 0.92;
+            color: #5b7188;
             margin-top: 2px;
         }
         table.grid td {
             border: 1px solid #999;
             padding: 3px 4px;
             vertical-align: top;
+            /* `anywhere`, not `break-word`: only `anywhere` also shrinks the cell's
+               min-content width, which is what actually stops an unbreakable filename from
+               widening the table past the page. `break-word` wraps visually but still
+               reports the full word as the minimum, so the table overflows anyway. */
+            overflow-wrap: anywhere;
+        }
+        table.grid th {
+            /* Headings wrap at spaces only — never hyphenate "Matriculation" mid-word. */
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
         table.grid tr:nth-child(even) td {
             background: #fafafa;
@@ -176,13 +214,16 @@
             padding: 4px !important;
             background: #f8fafc;
         }
+        /* Fixed passport-style frame: with height:auto a landscape upload rendered wide and
+           short, so the header block changed height from student to student. Both axes must
+           be pinned for object-fit:cover to actually crop. */
         .photo-cell img {
             display: block;
             margin: 0 auto;
             width: 96px;
-            height: auto;
-            max-height: 124px;
+            height: 120px;
             object-fit: cover;
+            object-position: top center;
             border: 1px solid #999;
         }
     </style>
@@ -190,10 +231,10 @@
 <body>
 
 <div class="masthead">
-    <p class="masthead-hi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी</p>
-    <p class="masthead-en-org">Lal Bahadur Shastri National Academy of Administration</p>
-    <p class="masthead-en-name">Government of India | भारत सरकार</p>
-    <p class="masthead-place">Mussoorie - Uttarakhand &nbsp;|&nbsp; मसूरी - उत्तराखंड</p>
+    <p class="masthead-hi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी.</p>
+    <p class="masthead-en-org">Lal Bahadur Shastri National Academy of Administration,</p>
+    <p class="masthead-place-hi">मसूरी-248179(उत्तराखंड)</p>
+    <p class="masthead-place">Mussoorie-248 179 (Uttarakhand)</p>
 </div>
 
 <div class="doc-title">
@@ -231,11 +272,59 @@
     @endif
 </table>
 
+@php
+    // hindiSectionTitle() / hindiLabel() return the ENGLISH string when a term has no
+    // Hindi mapping, so a naive bilingual render prints "Bank Details | Bank Details".
+    // Show the Hindi side only when it is genuinely a different string.
+    $fcHasHindi = function ($en, $hi) {
+        $hi = trim(preg_replace('/\s+/u', ' ', (string) $hi));
+        $en = trim(preg_replace('/\s+/u', ' ', (string) $en));
+
+        return $hi !== '' && mb_strtolower($hi) !== mb_strtolower($en);
+    };
+
+    // A one-column group table restates its own name in the column heading
+    // ("Academic Distinction" / "Academic Distinction", "Hobbies" / "Hobby"), which reads
+    // as a stutter now that section headers show the bare group label. Drop the heading row
+    // in that case only — every multi-column table has genuinely distinct headings and
+    // keeps them, as does a single-column table whose heading says something different.
+    $fcHeadIsRedundant = function ($title, $columns) {
+        $columns = array_values((array) $columns);
+        if (count($columns) !== 1) {
+            return false;
+        }
+
+        $stem = function ($s) {
+            $s = mb_strtolower(trim((string) preg_replace('/[^\p{L}\p{N}]+/u', ' ', (string) $s)));
+            $s = trim((string) preg_replace('/\s+/', ' ', $s));
+            // Crude singularisation so a "Hobbies" section matches its "Hobby" column.
+            if (str_ends_with($s, 'ies')) {
+                return mb_substr($s, 0, -3).'y';
+            }
+            if (str_ends_with($s, 's') && ! str_ends_with($s, 'ss')) {
+                return mb_substr($s, 0, -1);
+            }
+
+            return $s;
+        };
+
+        return $stem($title) !== '' && $stem($title) === $stem($columns[0]);
+    };
+@endphp
+
 @foreach($sections as $sec)
+    @php
+        // Grouped sections carry a fully-qualified title ("Descriptive Roll Continue... -
+        // Hobbies"); print just the group label so headers stay short and scannable.
+        $secTitle   = filled($sec['group_label'] ?? null) ? $sec['group_label'] : ($sec['title_en'] ?? '');
+        $secTitleHi = filled($sec['group_label'] ?? null) ? ($sec['group_label_hi'] ?? '') : ($sec['title_hi'] ?? '');
+    @endphp
     <div class="section">
         <div class="section-h">
-            {{ $sec['title_en'] }}
-            <span class="section-h-sub"> | {{ $sec['title_hi'] }}</span>
+            {{ $secTitle }}
+            @if($fcHasHindi($secTitle, $secTitleHi))
+                <span class="section-h-sub"> | {{ $secTitleHi }}</span>
+            @endif
         </div>
 
         @if(($sec['type'] ?? '') === 'fields' && !empty($sec['rows']))
@@ -244,33 +333,36 @@
                 @foreach($sec['rows'] as $row)
                     @if(!empty($row['group']) && $row['group'] !== $lastGroup)
                         <tr>
-                            <td colspan="3" style="background:#eef3f9;font-weight:bold;color:#0a3d6b;">
+                            <td colspan="2" style="background:#edf2f7;font-weight:bold;color:#24486e;">
                                 {{ $row['group'] }}
                             </td>
                         </tr>
                         @php $lastGroup = $row['group']; @endphp
                     @endif
                     <tr>
-                        <td class="lab-en">{{ $row['en'] }}</td>
-                        <td class="lab-hi">{{ $row['hi'] }}</td>
+                        <td class="lab">
+                            {{ $row['en'] }}@if($fcHasHindi($row['en'] ?? '', $row['hi'] ?? ''))<span class="lab-hi"> / {{ $row['hi'] }}</span>@endif
+                        </td>
                         <td class="val">{{ $row['value'] }}</td>
                     </tr>
                 @endforeach
             </table>
         @elseif(($sec['type'] ?? '') === 'table' && !empty($sec['body']))
             <table class="grid" cellspacing="0">
+                @unless($fcHeadIsRedundant($secTitle, $sec['columns'] ?? []))
                 <thead>
                     <tr>
                         @foreach($sec['columns'] as $ci => $col)
                             <th>
                                 {{ $col }}
-                                @if(!empty($sec['head_hi'][$ci] ?? null))
+                                @if($fcHasHindi($col, $sec['head_hi'][$ci] ?? ''))
                                     <small>{{ $sec['head_hi'][$ci] }}</small>
                                 @endif
                             </th>
                         @endforeach
                     </tr>
                 </thead>
+                @endunless
                 <tbody>
                     @foreach($sec['body'] as $tr)
                         <tr>

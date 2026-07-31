@@ -75,14 +75,12 @@
 
         <div class="dc-paper">
             <div class="dc-docno">Document-6-C</div>
-            <div class="dc-title">Statement of Debts and Other Liabilities on First Appointment</div>
+            <div class="dc-title">Statement of Debts and Other Liabilities on First Appointment
+                <span style="text-decoration:none; font-weight:600; white-space:nowrap;">&nbsp; as on date / जिस तिथि तक:
+                    <input type="date" name="as_on_date" class="dc-blank" value="{{ $val('as_on_date') }}" style="min-width:150px;"></span></div>
             <div class="dc-form">Form No. 6-C</div>
             <div class="dc-title-hi">प्रथम नियुक्ति पर ऋणों तथा अन्य देयताओं का विवरण</div>
             <div class="dc-sub">[debts and other liabilities incurred by him/her directly or indirectly]</div>
-            <div class="dc-ason">
-                as on date / जिस तिथि तक:
-                <input type="date" name="as_on_date" class="dc-blank" value="{{ $val('as_on_date') }}" style="min-width:160px;">
-            </div>
 
             <div class="d-flex justify-content-end mb-1">
                 <button type="button" class="btn btn-sm btn-outline-primary" onclick="dcAddRow()"><i class="bi bi-plus-circle me-1"></i>Add Row</button>
@@ -117,7 +115,7 @@
             <div class="dc-footer">
                 <div class="row">
                     <div class="col-md-6">Dated / दिनांक:
-                        <input type="date" name="declaration_date" class="dc-blank" value="{{ $val('declaration_date') }}" style="min-width:150px;">
+                        <input type="date" name="declaration_date" class="dc-blank" value="{{ old('declaration_date', fc_document_date('iso')) }}" style="min-width:150px;" readonly>
                     </div>
                     <div class="col-md-6">
                         <div>Signature / हस्ताक्षर: ______________________</div>
@@ -136,7 +134,8 @@
             </div>
         </div>
 
-        {{-- Signature upload --}}
+        {{-- Signature upload section — commented out per request (hidden on the fill form) --}}
+        {{--
         @if(! empty($template['signatures']))
             <div class="card fc-card border-0 shadow-sm mb-3">
                 <div class="card-header bg-white py-3"><h6 class="mb-0 text-uppercase small fw-bold text-muted">Signatures / हस्ताक्षर</h6></div>
@@ -156,6 +155,7 @@
                 </div>
             </div>
         @endif
+        --}}
 
         <div class="d-flex justify-content-between mb-5">
             <a href="{{ route('fc-reg.forms.step', [$form, $step]) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Cancel</a>

@@ -106,22 +106,33 @@
                 </p>
 
                 <div class="sb-lines">
-                    Dated <input type="date" name="declaration_date" class="blank blank--sm" value="{{ $val('declaration_date') }}" data-mirror="ddate">.
-                    <div class="sb-sign mt-3">Signature of the Probationer ______________________</div>
-                    <div>Signed by the Probationer in the presence of —</div>
-                    <div>Name of Witness: <input type="text" name="prob_witness_name" class="blank blank--mid" value="{{ $val('prob_witness_name') }}"></div>
-                    <div>Address: <input type="text" name="prob_witness_address" class="blank blank--wide" value="{{ $val('prob_witness_address') }}"></div>
-                    <div>Occupation: <input type="text" name="prob_witness_occupation" class="blank blank--mid" value="{{ $val('prob_witness_occupation') }}"></div>
+                    <div style="text-align:center;">Dated <input type="text" name="bond_dated_at" class="blank blank--sm" value="{{ $val('bond_dated_at') }}">
+                    this <input type="text" name="bond_dated_day" class="blank blank--sm" value="{{ $val('bond_dated_day') }}">
+                    day of <input type="text" name="bond_dated_month" class="blank blank--mid" value="{{ $val('bond_dated_month') }}"></div>
 
-                    <div class="sb-sign mt-3">Signature of the Surety ______________________</div>
-                    <div>Signed by the Surety in the presence of —</div>
-                    <div>Name of Witness: <input type="text" name="surety_witness_name" class="blank blank--mid" value="{{ $val('surety_witness_name') }}"></div>
-                    <div>Address: <input type="text" name="surety_witness_address" class="blank blank--wide" value="{{ $val('surety_witness_address') }}"></div>
-                    <div>Occupation: <input type="text" name="surety_witness_occupation" class="blank blank--mid" value="{{ $val('surety_witness_occupation') }}"></div>
+                    {{-- ── Probationer signature block ── --}}
+                    <div class="sb-sign" style="text-align:center; margin-top:2rem;">Signature of the Probationer: ______________________</div>
+                    <div style="margin-top:1rem;">Signed <b>by Probationer</b> in the presence of &nbsp;(Name of Witness)
+                        <input type="text" name="prob_witness_name" class="blank blank--wide" value="{{ $val('prob_witness_name') }}"></div>
+                    <div>Address <input type="text" name="prob_witness_address" class="blank" style="min-width:560px;" value="{{ $val('prob_witness_address') }}"></div>
+                    <div>
+                        <span style="display:inline-block; min-width:200px; border-bottom:1px dotted #64748b;">&nbsp;</span>
+                        Occupation
+                        <input type="text" name="prob_witness_occupation" class="blank blank--mid" value="{{ $val('prob_witness_occupation') }}"></div>
+
+                    {{-- ── Surety signature block ── --}}
+                    <div class="sb-sign" style="text-align:center; margin-top:2rem;">Signature of the Surety: ______________________</div>
+                    <div style="margin-top:1rem;">Signed <b>by Surety</b> in the presence of &nbsp;(Name of Witness)
+                        <input type="text" name="surety_witness_name" class="blank blank--wide" value="{{ $val('surety_witness_name') }}"></div>
+                    <div>Address <input type="text" name="surety_witness_address" class="blank" style="min-width:560px;" value="{{ $val('surety_witness_address') }}"></div>
+                    <div>
+                        <span style="display:inline-block; min-width:200px; border-bottom:1px dotted #64748b;">&nbsp;</span>
+                        Occupation
+                        <input type="text" name="surety_witness_occupation" class="blank blank--mid" value="{{ $val('surety_witness_occupation') }}"></div>
                 </div>
 
                 <p class="sb-body" style="text-indent:0; margin-top:1.4rem;">
-                    I, the Surety whose signature is appended to the above agreement, do hereby declare that
+                    I (Insert name of surety) <input type="text" name="surety_decl_name" class="blank blank--wide" value="{{ $val('surety_decl_name') }}"> whose signature is appended to the above agreement, do hereby declare that —
                     <span class="sb-elig d-block">
                         <label class="d-block"><input type="radio" name="surety_eligibility" value="In the permanent service of Government" {{ $elig==='In the permanent service of Government'?'checked':'' }}>
                             (a) I am in the permanent service of the Government of <span style="border-bottom:1px dotted #64748b; min-width:160px; display:inline-block;">&nbsp;</span>; <em>or</em></label>
@@ -130,6 +141,17 @@
                     </span>
                     <em>(Strike out whichever is not applicable.)</em>
                 </p>
+
+                <div class="sb-lines">
+                    <div class="sb-sign" style="text-align:center; margin-top:2rem;">Signature of the Surety: ______________________</div>
+                    <div style="margin-top:1rem;">Signed <b>by Surety</b> in the presence of &nbsp;(Name of Witness)
+                        <input type="text" name="surety_witness_name2" class="blank blank--wide" value="{{ $val('surety_witness_name2') }}"></div>
+                    <div>Address <input type="text" name="surety_witness_address2" class="blank" style="min-width:560px;" value="{{ $val('surety_witness_address2') }}"></div>
+                    <div>
+                        <span style="display:inline-block; min-width:200px; border-bottom:1px dotted #64748b;">&nbsp;</span>
+                        Occupation
+                        <input type="text" name="surety_witness_occupation2" class="blank blank--mid" value="{{ $val('surety_witness_occupation2') }}"></div>
+                </div>
             </div>
 
             {{-- ─────────────── HINDI (candidate types their own Hindi; blank by default) ─────────────── --}}
@@ -188,10 +210,19 @@
                     <span class="d-block">(ख) मैं साधारणतया भारत का निवासी हूँ और मेरे पास ऐसे साधन हैं जिनसे करार के निबंधनों के अनुसार राशि की मांग किए जाने पर मैं केन्द्र सरकार को वह राशि चुका सकता/सकती हूँ।</span>
                     <em>(जो लागू न हो उसे काट दें।)</em>
                 </p>
+
+                <div class="sb-lines">
+                    <div class="sb-sign mt-3">प्रतिभू के हस्ताक्षर ______________________</div>
+                    <div>साक्षी की उपस्थिति में प्रतिभू द्वारा हस्ताक्षरित —</div>
+                    <div>साक्षी का नाम: <input type="text" name="hi[swname2]" class="blank blank--mid" value="{{ $data['_hi']['swname2'] ?? '' }}" autocomplete="off"></div>
+                    <div>पता: <input type="text" name="hi[swaddr2]" class="blank blank--wide" value="{{ $data['_hi']['swaddr2'] ?? '' }}" autocomplete="off"> &nbsp; व्यवसाय: <input type="text" name="hi[swocc2]" class="blank blank--mid" value="{{ $data['_hi']['swocc2'] ?? '' }}" autocomplete="off"></div>
+                </div>
             </div>
         </div>
 
         {{-- Signature uploads (Probationer + Surety) --}}
+        {{-- Signature upload section — commented out per request (hidden on the fill form) --}}
+        {{--
         @if(! empty($template['signatures']))
             <div class="card fc-card border-0 shadow-sm mb-3">
                 <div class="card-header bg-white py-3"><h6 class="mb-0 text-uppercase small fw-bold text-muted">Signatures / हस्ताक्षर</h6></div>
@@ -211,6 +242,7 @@
                 </div>
             </div>
         @endif
+        --}}
 
         <div class="d-flex justify-content-between mb-5">
             <a href="{{ route('fc-reg.forms.step', [$form, $step]) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Cancel</a>

@@ -8,6 +8,7 @@ use App\Http\Controllers\FC\{
     FcActivityMedicalController,
     FcActivityReportController,
     FcActivityStatusController,
+    FcAdminSmsController,
     FcTravelArrivalSlotController,
     RegistrationStep1Controller,
     RegistrationStep2Controller,
@@ -17,7 +18,6 @@ use App\Http\Controllers\FC\{
     FcJoiningSampleDocumentController,
     FcJoiningDocumentFormController,
     RegistrationStatusController,
-    FcJoiningAttendanceController,
     FormBuilderController,
     FormManagementController,
     GenericFormController,
@@ -113,13 +113,17 @@ Route::middleware(['auth'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->grou
         Route::delete('/{sample}',  [FcJoiningSampleDocumentController::class, 'destroy'])->name('destroy');
     });
 
-    Route::prefix('joining')->name('joining.')->group(function () {
-        Route::get('/attendance/{hostel}',       [FcJoiningAttendanceController::class, 'showHostelList'])->name('hostel');
-        Route::post('/attendance/{hostel}',      [FcJoiningAttendanceController::class, 'markAttendance'])->name('mark');
-        Route::post('/attendance/{hostel}/bulk', [FcJoiningAttendanceController::class, 'bulkMark'])->name('bulk');
-        Route::get('/medical/{username}',        [FcJoiningAttendanceController::class, 'showMedicalForm'])->name('medical');
-        Route::post('/medical/{username}',       [FcJoiningAttendanceController::class, 'saveMedicalDetails'])->name('medical.save');
+    // ── FC SMS bulk send (B1 / B2 only; no recipient picker) ──
+    Route::prefix('sms')->middleware(['fc.reg.admin'])->name('sms.')->group(function () {
+        Route::get('/',  [FcAdminSmsController::class, 'index'])->name('index');
+        Route::get('/recipients', [FcAdminSmsController::class, 'recipients'])->name('recipients');
+        Route::post('/', [FcAdminSmsController::class, 'send'])->name('send');
     });
+
+    // NOTE: the fc-reg/admin/joining/* attendance routes were removed — their
+    // controller (FcJoiningAttendanceController) no longer exists, so every one of
+    // them 500'd on resolution and broke `php artisan route:list`. Nothing in the
+    // app or the sidebar menus linked to them.
 
     // ── Form Management (Create / Edit / Delete forms) ───────────────
     // ── Post-arrival setup (coordinators: departments + activity master CRUD)
@@ -211,6 +215,10 @@ Route::middleware(['auth'])->prefix('fc-reg/forms')->name('fc-reg.forms.')->grou
     // Fillable joining-document forms (fill online → generates a PDF into the doc slot)
     Route::get('/{form}/step/{step}/fill/{field}',  [FcJoiningDocumentFormController::class, 'show'])->name('doc-form');
     Route::post('/{form}/step/{step}/fill/{field}', [FcJoiningDocumentFormController::class, 'save'])->name('doc-form.save');
+
+    // Trainee downloads their OWN descriptive roll once the form is complete. No username
+    // in the path on purpose — the controller resolves the trainee from Auth::id().
+    Route::get('/{form}/descriptive-roll/pdf', [ReportController::class, 'myDescriptiveRollPdf'])->name('descriptive-roll.pdf');
 });
 
 // ── FC Travel plans (admin) ────────────────────────────────────
@@ -237,6 +245,8 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     // Individual student full profile
     Route::get('/student/{username}', [ReportController::class, 'studentDetail'])->name('student');
     Route::get('/student/{username}/pdf', [ReportController::class, 'studentDetailPdf'])->name('student.pdf');
+    // Standalone per-student document verification page
+    Route::get('/student/{username}/documents', [ReportController::class, 'studentDocuments'])->name('student.documents');
     Route::post('/student/{username}/documents/{documentMasterId}/verify', [ReportController::class, 'updateStudentDocumentVerification'])
         ->name('student.documents.verify');
     Route::post('/student/{userId}/form-documents/{formFieldId}/verify', [ReportController::class, 'updateDynamicFormDocumentVerification'])
@@ -263,6 +273,8 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     Route::get('/by-state',     [ReportController::class, 'byState'])->name('state');
     Route::get('/documents',            [ReportController::class, 'documents'])->name('documents');
     Route::get('/documents/export-zip', [ReportController::class, 'documentsExportZip'])->name('documents.export');
+    // Course-wise Document Verification report (student list → per-student verify page)
+    Route::get('/document-verification', [ReportController::class, 'documentVerificationIndex'])->name('document-verification');
     Route::get('/bank-details', [ReportController::class, 'bankDetails'])->name('bank');
 
     // CSV exports

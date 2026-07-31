@@ -22,8 +22,7 @@
                             @endif --}}
                             <form class="row g-3" method="POST" action="{{ route('registration.verify') }}">
                                 @csrf
-                                <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">User Authentication -
-                                    Foundation Course Registration</h3>
+                                <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">User Authentication</h3>
                                 <hr>
                                 <!-- Mobile -->
                                 <div class="col-md-12">
@@ -43,8 +42,12 @@
                                  <!-- OTP -->
                                 <div class="col-md-12">
                                     <label class="form-label">OTP</label>
-                                    <input type="text" class="form-control" placeholder="Enter OTP"
-                                           name="otp">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" placeholder="Enter OTP"
+                                           name="otp" id="reg_otp" required maxlength="6" inputmode="numeric" autocomplete="one-time-code">
+                                        <button type="button" class="btn btn-outline-primary" id="sendRegOtpBtn"
+                                            style="border-color:#004a93;color:#004a93;">Send OTP</button>
+                                    </div>
                                     <small class="text-muted">OTP is sent to your registered mobile number</small>
                                 </div>
 
@@ -77,14 +80,47 @@
             </div>
         </div>
     </main>
+@endsection
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         function refreshCaptcha() {
             document.getElementById('captchaImage').src = '{{ captcha_src() }}' + '?' + Math.random();
         }
+
+        document.getElementById('sendRegOtpBtn')?.addEventListener('click', async function () {
+            const mobile = document.querySelector('input[name="reg_mobile"]')?.value?.trim();
+            const webCode = document.querySelector('input[name="reg_web_code"]')?.value?.trim();
+            if (!mobile || !webCode) {
+                Swal.fire({ icon: 'warning', title: 'Required', text: 'Enter mobile number and web code first.', confirmButtonColor: '#004a93' });
+                return;
+            }
+            const btn = this;
+            btn.disabled = true;
+            try {
+                const res = await fetch('{{ route('registration.send_otp') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ reg_mobile: mobile, reg_web_code: webCode }),
+                });
+                const data = await res.json();
+                Swal.fire({
+                    icon: data.success ? 'success' : 'error',
+                    title: data.success ? 'OTP Sent' : 'Failed',
+                    text: data.message || 'Unable to send OTP.',
+                    confirmButtonColor: '#004a93',
+                });
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Failed', text: 'Unable to send OTP.', confirmButtonColor: '#004a93' });
+            } finally {
+                btn.disabled = false;
+            }
+        });
     </script>
-@endsection
-@push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     @if ($errors->any())
         <script>

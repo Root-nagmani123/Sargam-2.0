@@ -164,7 +164,7 @@ class RegistrationStep3Controller extends Controller
 
         // Fallback: course_master.course_name via roster record.
         $rosterPk = $userId < 0 ? abs($userId) : null;
-        if ($rosterPk === null && \Illuminate\Support\Facades\Schema::hasTable('fc_registration_master')) {
+        if ($rosterPk === null && fc_schema_has_table('fc_registration_master')) {
             $userName = \Illuminate\Support\Facades\DB::table('user_credentials')
                 ->where('pk', $userId)
                 ->value('user_name');
@@ -175,11 +175,11 @@ class RegistrationStep3Controller extends Controller
             }
         }
 
-        if ($rosterPk && \Illuminate\Support\Facades\Schema::hasTable('fc_registration_master')) {
+        if ($rosterPk && fc_schema_has_table('fc_registration_master')) {
             $courseMasterPk = \Illuminate\Support\Facades\DB::table('fc_registration_master')
                 ->where('pk', $rosterPk)
                 ->value('course_master_pk');
-            if ($courseMasterPk && \Illuminate\Support\Facades\Schema::hasTable('course_master')) {
+            if ($courseMasterPk && fc_schema_has_table('course_master')) {
                 $courseName = trim((string) (\Illuminate\Support\Facades\DB::table('course_master')
                     ->where('pk', $courseMasterPk)
                     ->value('course_name') ?? ''));
