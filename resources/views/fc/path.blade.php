@@ -3,143 +3,126 @@
 @section('title', 'Foundation Course | Lal Bahadur Shastri National Academy of Administration')
 
 @section('content')
-    @php
-
-        $regStart = $pathPage->registration_start_date
-            ? \Carbon\Carbon::parse($pathPage->registration_start_date)
-            : null;
-        $regEnd = $pathPage->registration_end_date ? \Carbon\Carbon::parse($pathPage->registration_end_date) : null;
-
-        $exStart = $pathPage->exemption_start_date ? \Carbon\Carbon::parse($pathPage->exemption_start_date) : null;
-        $exEnd = $pathPage->exemption_end_date ? \Carbon\Carbon::parse($pathPage->exemption_end_date) : null;
-
-    @endphp
-
-    <main id="content" class="flex-grow-1 py-4 py-md-5">
+    <div class="fc-page">
         <div class="container">
+
             <!-- Guidelines -->
             <section class="mb-5" aria-labelledby="path-guidelines-heading">
-                <h2 id="path-guidelines-heading" class="h4 fw-bold text-primary mb-3">
+                <h2 id="path-guidelines-heading" class="fc-section-title">
                     Guidelines for Registration &amp; Exemption
                 </h2>
-                <div class="card border border-primary border-opacity-25 bg-primary-subtle bg-opacity-10 rounded-4 shadow-sm">
-                    <div class="card-body p-4 path-card-content">
+                <div class="fc-card fc-card--tricolor">
+                    <div class="fc-card-body fc-rte">
                         {!! $pathPage->guidelines ?? '' !!}
                     </div>
                 </div>
             </section>
 
-            <header class="text-center mb-4 mb-lg-5">
-                <h1 class="h2 fw-bold text-primary mb-3">How Would You Like to Proceed?</h1>
-                <p class="fs-6 mb-0 col-lg-8 mx-auto">
-                    Please select the appropriate option based on your current status.
-                </p>
-            </header>
+            <!-- Choice of path -->
+            <section class="mb-5" aria-labelledby="path-choice-heading">
+                <header class="fc-page-head text-center">
+                    <h1 id="path-choice-heading" class="fc-page-title">How Would You Like to Proceed?</h1>
+                    <p class="fc-page-sub">Please select the appropriate option based on your current status.</p>
+                </header>
 
-            <div class="row row-cols-1 row-cols-lg-3 g-4 g-lg-4 mb-5">
-                <!-- Register Card -->
-                <div class="col d-flex">
-                    <div class="card h-100 w-100 border-0 shadow-lg rounded-4">
-                        <div class="card-body p-4 d-flex flex-column text-start">
-                            <div
-                                class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 bg-success-subtle align-self-start"
-                                style="width: 3.5rem; height: 3.5rem;" aria-hidden="true">
-                                <i class="bi bi-person-plus-fill fs-3 text-success"></i>
+                <div class="row row-cols-1 row-cols-lg-3 g-4">
+                    <!-- Register -->
+                    <div class="col">
+                        <div class="fc-choice fc-choice--register">
+                            <div class="fc-choice-body">
+                                <span class="fc-choice-icon" aria-hidden="true">
+                                    <i class="bi bi-person-plus-fill"></i>
+                                </span>
+                                <h2 class="fc-choice-title">Register for Foundation Course</h2>
+                                <div class="fc-choice-text fc-rte">
+                                    {!! $pathPage->register_course ?? '' !!}
+                                </div>
                             </div>
-                            <h2 class="h5 fw-bold text-primary mb-3">Register for Foundation Course</h2>
-                            <div class="path-card-content small flex-grow-1">
-                                {!! $pathPage->register_course ?? '' !!}
+                            <div class="fc-choice-foot">
+                                @if ($showRegistration)
+                                    <a href="{{ route('verify.authindex', $intentQuery ?? []) }}"
+                                        class="btn btn-success fc-btn-block">
+                                        <i class="bi bi-arrow-right-circle" aria-hidden="true"></i> Start Registration
+                                    </a>
+                                @else
+                                    <button type="button" class="btn btn-secondary fc-btn-block" disabled>
+                                        Registration Closed
+                                    </button>
+                                @endif
                             </div>
                         </div>
-                        <div class="card-footer bg-transparent border-0 pt-0 px-4 pb-4">
-                            @if ($showRegistration)
-                                <a href="{{ route('verify.authindex', $intentQuery ?? []) }}" class="btn btn-success w-100 rounded-3 py-2 fw-semibold"
-                                    style="background-color: #16a32a; border-color: #16a32a;">
-                                    Start Registration
+                    </div>
+
+                    <!-- Exemption -->
+                    <div class="col">
+                        <div class="fc-choice fc-choice--exempt">
+                            <div class="fc-choice-body">
+                                <span class="fc-choice-icon" aria-hidden="true">
+                                    <i class="bi bi-file-earmark-text-fill"></i>
+                                </span>
+                                <h2 class="fc-choice-title">Apply for Exemption</h2>
+                                <div class="fc-choice-text fc-rte">
+                                    {!! $pathPage->apply_exemption ?? '' !!}
+                                </div>
+                            </div>
+                            <div class="fc-choice-foot">
+                                @if ($showExemption)
+                                    <a href="{{ route('fc.exemption_category.index', $intentQuery ?? []) }}"
+                                        class="btn btn-warning fc-btn-block">
+                                        <i class="bi bi-file-earmark-check" aria-hidden="true"></i> Apply for Exemption
+                                    </a>
+                                @else
+                                    <button type="button" class="btn btn-secondary fc-btn-block" disabled>
+                                        Exemption Closed
+                                    </button>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Login -->
+                    <div class="col">
+                        <div class="fc-choice fc-choice--login">
+                            <div class="fc-choice-body">
+                                <span class="fc-choice-icon" aria-hidden="true">
+                                    <i class="bi bi-box-arrow-in-right"></i>
+                                </span>
+                                <h2 class="fc-choice-title">Login</h2>
+                                <div class="fc-choice-text fc-rte">
+                                    {!! $pathPage->already_registered ?? '' !!}
+                                </div>
+                            </div>
+                            <div class="fc-choice-foot">
+                                <a href="{{ route('fc.login', $intentQuery ?? []) }}"
+                                    class="btn btn-primary fc-btn-block">
+                                    <i class="bi bi-person-check" aria-hidden="true"></i> Login to Dashboard
                                 </a>
-                            @else
-                                <button type="button" class="btn btn-secondary w-100 rounded-3 py-2 fw-semibold" disabled>
-                                    Registration Closed
-                                </button>
-                            @endif
+                            </div>
                         </div>
                     </div>
                 </div>
+            </section>
 
-                <!-- Exemption Card -->
-                <div class="col d-flex">
-                    <div class="card h-100 w-100 border-0 shadow-lg rounded-4">
-                        <div class="card-body p-4 d-flex flex-column text-start">
-                            <div
-                                class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 bg-warning-subtle align-self-start"
-                                style="width: 3.5rem; height: 3.5rem;" aria-hidden="true">
-                                <i class="bi bi-file-earmark-text-fill fs-3 text-warning-emphasis"></i>
-                            </div>
-                            <h2 class="h5 fw-bold text-primary mb-3">Apply for Exemption</h2>
-                            <div class="path-card-content small flex-grow-1">
-                                {!! $pathPage->apply_exemption ?? '' !!}
-                            </div>
-                        </div>
-                        <div class="card-footer bg-transparent border-0 pt-0 px-4 pb-4">
-                            @if ($showExemption)
-                                <a href="{{ route('fc.exemption_category.index', $intentQuery ?? []) }}"
-                                    class="btn btn-warning w-100 rounded-3 py-2 fw-semibold "
-                                    style="background-color: #ea5803; border-color: #ea5803;">
-                                    Apply for Exemption
-                                </a>
-                            @else
-                                <button type="button" class="btn btn-secondary w-100 rounded-3 py-2 fw-semibold" disabled>
-                                    Exemption Closed
-                                </button>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Login Card -->
-                <div class="col d-flex">
-                    <div class="card h-100 w-100 border-0 shadow-lg rounded-4">
-                        <div class="card-body p-4 d-flex flex-column text-start">
-                            <div
-                                class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 bg-primary-subtle align-self-start"
-                                style="width: 3.5rem; height: 3.5rem;" aria-hidden="true">
-                                <i class="bi bi-box-arrow-in-right fs-3 text-primary"></i>
-                            </div>
-                            <h2 class="h5 fw-bold text-primary mb-3">Login</h2>
-                            <div class="path-card-content small flex-grow-1">
-                                {!! $pathPage->already_registered ?? '' !!}
-                            </div>
-                        </div>
-                        <div class="card-footer bg-transparent border-0 pt-0 px-4 pb-4">
-                            <a href="{{ route('fc.login', $intentQuery ?? []) }}" class="btn btn-primary w-100 rounded-3 py-2 fw-semibold"
-                                style="background-color: #2563eb; border-color: #2563eb;">
-                                Login to Dashboard
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- FAQ Section -->
-            <section class="pt-2" aria-labelledby="path-faq-heading">
-                <div class="d-flex flex-column flex-md-row align-items-md-start justify-content-md-between gap-3 mb-3">
+            <!-- FAQs -->
+            <section aria-labelledby="path-faq-heading">
+                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-md-between gap-3 mb-3">
                     <div>
-                        <h2 id="path-faq-heading" class="h4 fw-bold text-primary mb-1">Frequently Asked Questions</h2>
-                        <p class="-50 small mb-0">Find your query from this list of frequently asked questions</p>
+                        <h2 id="path-faq-heading" class="fc-section-title mb-1">Frequently Asked Questions</h2>
+                        <p class="fc-page-sub">Find your query from this list of frequently asked questions</p>
                     </div>
                     <a href="{{ route('fc.faqs.all') }}"
-                        class="btn btn-outline-primary btn-sm rounded-3 px-3 align-self-start align-self-md-center">
+                        class="btn btn-outline-primary btn-sm align-self-start align-self-md-center">
                         View All FAQs
                     </a>
                 </div>
 
                 @if ($pathPage->faqs && $pathPage->faqs->count())
-                    <div class="accordion accordion-flush path-page-faq" id="faqAccordion">
+                    <div class="accordion fc-faq" id="faqAccordion">
                         @foreach ($pathPage->faqs as $index => $faq)
-                            <div class="accordion-item border-start-0 border-end-0">
+                            <div class="accordion-item">
                                 <h3 class="accordion-header m-0" id="heading{{ $index }}">
-                                    <button class="accordion-button {{ $index > 0 ? 'collapsed' : '' }} shadow-none rounded-0"
-                                        type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ $index }}"
+                                    <button class="accordion-button {{ $index > 0 ? 'collapsed' : '' }}" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#collapse{{ $index }}"
                                         aria-expanded="{{ $index === 0 ? 'true' : 'false' }}"
                                         aria-controls="collapse{{ $index }}">
                                         {{ $faq->header }}
@@ -148,7 +131,7 @@
                                 <div id="collapse{{ $index }}"
                                     class="accordion-collapse collapse {{ $index === 0 ? 'show' : '' }}"
                                     aria-labelledby="heading{{ $index }}" data-bs-parent="#faqAccordion">
-                                    <div class="accordion-body pt-0 small">
+                                    <div class="accordion-body fc-rte">
                                         {!! $faq->content !!}
                                     </div>
                                 </div>
@@ -156,41 +139,44 @@
                         @endforeach
                     </div>
                 @else
-                    <p class="-50 small mb-0">No FAQs available at the moment.</p>
+                    <div class="ds-empty-state">
+                        <i class="bi bi-question-circle fs-4 d-block mb-2" aria-hidden="true"></i>
+                        No FAQs available at the moment.
+                    </div>
                 @endif
             </section>
         </div>
-    </main>
+    </div>
 @endsection
 
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+    <script>
+        // SweetAlert takes a colour string, not a CSS variable — read the brand
+        // token off the portal scope so this stays in step with sargam-app.css.
+        var FC_BRAND = (getComputedStyle(document.body).getPropertyValue('--fc-primary') || '').trim() || '#004a93';
+    </script>
+
     @if (session('warning'))
         <script>
             Swal.fire({
                 title: 'Warning',
-                text: '{{ session('warning') }}',
+                text: @json(session('warning')),
                 icon: 'warning',
-                confirmButtonColor: '#004a93',
+                confirmButtonColor: FC_BRAND,
                 confirmButtonText: 'OK'
             });
         </script>
     @endif
 
-
     @if ($errors->any())
         <script>
-            let errorMessages = '';
-            @foreach ($errors->all() as $error)
-                errorMessages += `{{ $error }}\n`;
-            @endforeach
-
             Swal.fire({
                 title: 'Validation Error',
-                text: errorMessages.trim(),
+                text: @json(implode("\n", $errors->all())),
                 icon: 'error',
-                confirmButtonColor: '#004a93',
+                confirmButtonColor: FC_BRAND,
                 confirmButtonText: 'OK'
             });
         </script>

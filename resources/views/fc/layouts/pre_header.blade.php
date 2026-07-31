@@ -11,8 +11,10 @@
 @include('components.fonts-sargam')
 <link rel="stylesheet" href="{{ asset('css/custom.css') }}?v={{ @filemtime(public_path('css/custom.css')) ?: time() }}" />
 <link rel="stylesheet" href="{{ asset('admin_assets/css/material-icons-local.css') }}" />
-<!-- Sargam Design System — must load LAST -->
+<!-- Sargam Design System — must load LAST (carries the .fc-* portal chrome) -->
 <link rel="stylesheet" href="{{ asset('css/sargam-app.css') }}?v={{ @filemtime(public_path('css/sargam-app.css')) ?: time() }}" />
+<!-- GIGW accessibility controls for the shared FC header (text size, contrast, skip link) -->
+<script src="{{ asset('js/fc-chrome.js') }}?v={{ @filemtime(public_path('js/fc-chrome.js')) ?: time() }}" defer></script>
 
 <style>
 body {

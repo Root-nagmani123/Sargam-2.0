@@ -3,14 +3,19 @@
 @section('title', 'FC Login - Foundation Course | Lal Bahadur Shastri National Academy of Administration')
 
 @section('content')
-    <main id="content" class="flex-grow-1 py-4 py-md-5">
+    <div class="fc-page">
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-12 col-sm-10 col-md-8 col-lg-5 col-xl-4">
-                    <div class="card border-0 shadow-lg rounded-4">
-                        <div class="card-body p-4 p-md-5">
+                    <div class="fc-card fc-auth-card fc-card--tricolor">
+                        <div class="fc-card-body">
+                            <div class="fc-auth-head">
+                                <h1 class="fc-auth-title">Login to Foundation Course</h1>
+                                <p class="fc-auth-sub">Sign in with the credentials issued by the Academy</p>
+                            </div>
+
                             @if (session('success'))
-                                <div class="alert alert-success alert-dismissible fade show mb-4 rounded-3" role="alert">
+                                <div class="alert alert-success alert-dismissible fade show" role="alert">
                                     {{ session('success') }}
                                     <button type="button" class="btn-close" data-bs-dismiss="alert"
                                         aria-label="Close"></button>
@@ -18,7 +23,7 @@
                             @endif
 
                             @if ($errors->any())
-                                <div class="alert alert-danger mb-4 rounded-3" role="alert">
+                                <div class="alert alert-danger" role="alert">
                                     <ul class="mb-0 small ps-3">
                                         @foreach ($errors->all() as $error)
                                             <li>{{ $error }}</li>
@@ -27,53 +32,49 @@
                                 </div>
                             @endif
 
-                            <form class="row g-3 g-md-4" method="POST" action="{{ route('fc.login.verify') }}" autocomplete="off">
-                                {{-- ⚠️ TEMPORARY load-test only — revert with: git checkout resources/views/fc/fc_login.blade.php --}}
-                                {{-- @csrf --}}
-
-
-                                <div class="col-12 text-center">
-                                    <h1 class="h4 fw-bold text-primary mb-0">Login to Foundation Course</h1>
-                                </div>
+                            <form class="row g-3" method="POST" action="{{ route('fc.login.verify') }}"
+                                autocomplete="off">
+                                @csrf
 
                                 <div class="col-12">
-                                    <hr class="my-0 text-secondary opacity-25">
-                                </div>
-
-                                <div class="col-12">
-                                    <label for="reg_name" class="form-label fw-semibold">User Name</label>
-                                    <input type="text" class="form-control form-control-lg rounded-3 @error('reg_name') is-invalid @enderror"
+                                    <label for="reg_name" class="fc-label">
+                                        <i class="bi bi-person-fill" aria-hidden="true"></i> User Name
+                                    </label>
+                                    <input type="text"
+                                        class="form-control fc-input @error('reg_name') is-invalid @enderror"
                                         id="reg_name" name="reg_name" placeholder="Enter your User Name"
                                         value="{{ old('reg_name') }}" autocomplete="off" required>
                                 </div>
 
                                 <div class="col-12">
-                                    <label for="password" class="form-label fw-semibold">Password</label>
-                                    <div class="input-group input-group-lg">
+                                    <label for="password" class="fc-label">
+                                        <i class="bi bi-lock-fill" aria-hidden="true"></i> Password
+                                    </label>
+                                    <div class="input-group">
                                         <input type="password"
-                                            class="form-control rounded-start-3 @error('reg_password') is-invalid @enderror"
+                                            class="form-control fc-input @error('reg_password') is-invalid @enderror"
                                             placeholder="Enter Password" name="reg_password" id="password"
-                                            style="font-size: 0.875rem;"
                                             autocomplete="off" required>
-                                        <button type="button"
-                                            class="btn btn-primary rounded-end-3 px-3 d-inline-flex align-items-center justify-content-center"
-                                            style="background-color: #004a93; border-color: #004a93;"
-                                            onclick="togglePassword('password', this)"
-                                            aria-label="Show password">
-                                            <i class="bi bi-eye fs-5" aria-hidden="true"></i>
+                                        <button type="button" class="btn fc-pw-toggle" id="fcPwToggle"
+                                            aria-label="Show password" aria-controls="password">
+                                            <i class="bi bi-eye" aria-hidden="true"></i>
                                         </button>
                                     </div>
-                                    <div class="form-text mt-2">
+                                    <div class="d-flex justify-content-end mt-2">
                                         <a href="{{ route('fc.password.forgot') }}"
-                                            class="link-primary link-offset-2 link-underline-opacity-25 small">Forget Password</a>
+                                            class="small link-primary link-offset-2">Forgot Password?</a>
                                     </div>
                                 </div>
 
-                                <div class="col-12 pt-1">
-                                    <button type="submit" class="btn btn-primary w-100 rounded-3 py-2 fw-semibold"
-                                        style="background-color: #004a93; border-color: #004a93;">
-                                        Submit
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary fc-btn-block">
+                                        <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Sign In
                                     </button>
+
+                                    <div class="fc-secure-note">
+                                        <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
+                                        <span>Secure &amp; encrypted connection</span>
+                                    </div>
                                 </div>
                             </form>
                         </div>
@@ -81,53 +82,54 @@
                 </div>
             </div>
         </div>
-    </main>
-
-    <script>
-        function togglePassword(id, btn) {
-            const input = document.getElementById(id);
-            const icon = btn.querySelector('i');
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.classList.remove('bi-eye');
-                icon.classList.add('bi-eye-slash');
-                btn.setAttribute('aria-label', 'Hide password');
-            } else {
-                input.type = 'password';
-                icon.classList.remove('bi-eye-slash');
-                icon.classList.add('bi-eye');
-                btn.setAttribute('aria-label', 'Show password');
-            }
-        }
-    </script>
+    </div>
 @endsection
 
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+    <script>
+        // SweetAlert takes a colour string, not a CSS variable — read the brand
+        // token off the portal scope so this stays in step with sargam-app.css.
+        var FC_BRAND = (getComputedStyle(document.body).getPropertyValue('--fc-primary') || '').trim() || '#004a93';
+    </script>
+
+    <script>
+        (function () {
+            var btn = document.getElementById('fcPwToggle');
+            var input = document.getElementById('password');
+            if (!btn || !input) return;
+
+            btn.addEventListener('click', function () {
+                var hidden = input.type === 'password';
+                input.type = hidden ? 'text' : 'password';
+                var icon = this.querySelector('i');
+                icon.classList.toggle('bi-eye', !hidden);
+                icon.classList.toggle('bi-eye-slash', hidden);
+                this.setAttribute('aria-label', hidden ? 'Hide password' : 'Show password');
+            });
+        })();
+    </script>
+
     @if (session('sweet_success'))
         <script>
             Swal.fire({
                 title: 'Success!',
-                text: '{{ session('sweet_success') }}',
+                text: @json(session('sweet_success')),
                 icon: 'success',
-                confirmButtonColor: '#004a93',
+                confirmButtonColor: FC_BRAND,
                 confirmButtonText: 'OK'
             });
         </script>
     @endif
+
     @if ($errors->any())
         <script>
-            let errorMessages = '';
-            @foreach ($errors->all() as $error)
-                errorMessages += `{{ $error }}\n`;
-            @endforeach
-
             Swal.fire({
                 title: 'Validation Error',
-                text: errorMessages.trim(),
+                text: @json(implode("\n", $errors->all())),
                 icon: 'error',
-                confirmButtonColor: '#004a93',
+                confirmButtonColor: FC_BRAND,
                 confirmButtonText: 'OK'
             });
         </script>
