@@ -18,8 +18,8 @@ function active_course(Request $request)
 {
    $active_courses = DB::table('course_master')
         ->where('active_inactive', 1)
-        ->where('start_year', '<', now())
-        ->where('end_date', '>=', now())
+        ->where('start_year', '<=', now()->toDateString())
+        ->where('end_date', '>=', now()->toDateString())
         ->get();
     return view('admin.dashboard.active_course', compact('active_courses'));
 }

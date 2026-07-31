@@ -213,7 +213,7 @@ class UserController extends Controller
           $upcomingBirthdays = $upcomingBirthdays->merge($upcoming);
       }
 
-      $totalActiveCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '<', now())->where('end_date', '>=', now())->count();
+      $totalActiveCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '<=', now()->toDateString())->where('end_date', '>=', now()->toDateString())->count();
       $upcomingCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '>', now())->count();
       $upcomingEventsCount = Holiday::active()->where('holiday_date', '>', now())->count();
 
