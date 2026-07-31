@@ -1361,13 +1361,64 @@ class DynamicFormService
             $rules .= '|max:'.$maxKb;
         }
 
+        // Reject a name carrying more than one extension (e.g. "Document1.txt.pdf.pdf"
+        // or "scan.jpg.pdf") on the FC form steps. SafeUploadedDocument only blocks a
+        // *script* extension anywhere in the name; a VAPT "double extension" finding also
+        // covers benign stacks like .txt.pdf, so this closure enforces a single extension.
+        // Scoped here (form-steps path) so other FC uploads are not affected.
+        $singleExtensionOnly = function ($attribute, $value, $fail) {
+            if ($value instanceof \Illuminate\Http\UploadedFile
+                    && $this->hasMultipleFileExtensions((string) $value->getClientOriginalName())) {
+                $fail('The file name has more than one extension (e.g. "name.txt.pdf"). '
+                    . 'Rename it to a single extension like "name.pdf" and upload again.');
+            }
+        };
+
         // `mimes` only maps the guessed MIME back to an extension. SafeUploadedDocument
         // is what verifies the bytes actually are that type, rejects a script
         // extension anywhere in the submitted name, and blocks image/PHP polyglots.
         return array_merge(
             explode('|', $this->cleanValidationRules($rules)),
-            [new SafeUploadedDocument(explode(',', str_replace(' ', '', $ext)))]
+            [$singleExtensionOnly, new SafeUploadedDocument(explode(',', str_replace(' ', '', $ext)))]
         );
+    }
+
+    /**
+     * True when the submitted file name carries more than one extension — a
+     * "double extension" like "Document1.txt.pdf.pdf" or "scan.jpg.pdf". We count
+     * dot-segments (after the base name) that are recognised file extensions; two
+     * or more means a stacked extension. Names with incidental dots in the base
+     * ("Dr. Smith CV.pdf", "invoice.2024.pdf") have only one real extension and pass.
+     */
+    private function hasMultipleFileExtensions(string $name): bool
+    {
+        $name = basename(str_replace('\\', '/', $name));
+        $segments = explode('.', strtolower($name));
+
+        // "file.ext" = 2 segments = a single extension; nothing stacked.
+        if (count($segments) < 3) {
+            return false;
+        }
+
+        array_shift($segments); // drop the base name; only trailing segments can be extensions
+
+        $known = [
+            'pdf', 'txt', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'csv', 'rtf', 'odt', 'ods',
+            'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'tif', 'tiff', 'heic',
+            'zip', 'rar', '7z', 'gz', 'tar', 'bz2',
+            'php', 'php3', 'php4', 'php5', 'php7', 'phtml', 'phar', 'exe', 'com', 'bat', 'cmd', 'sh',
+            'bash', 'js', 'mjs', 'html', 'htm', 'xhtml', 'asp', 'aspx', 'jsp', 'pl', 'py', 'rb',
+            'dll', 'msi', 'jar', 'vbs', 'ps1',
+        ];
+
+        $extCount = 0;
+        foreach ($segments as $segment) {
+            if (in_array(trim($segment), $known, true)) {
+                $extCount++;
+            }
+        }
+
+        return $extCount >= 2;
     }
 
     /**

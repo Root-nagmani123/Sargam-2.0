@@ -160,6 +160,7 @@
     $hasSameAsPermanent = $fields->contains(fn ($f) => $f->field_name === 'same_as_permanent');
 @endphp
 @push('scripts')
+@include('fc.registration.partials.fc-upload-extension-guard')
 @include('fc.registration.partials.fc-form-validation')
 @include('fc.registration.partials.fc-scroll-to-error-script')
 @if($hasSameAsPermanent ?? false)

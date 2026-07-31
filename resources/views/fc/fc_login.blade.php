@@ -27,7 +27,7 @@
                                 </div>
                             @endif
 
-                            <form class="row g-3 g-md-4" method="POST" action="{{ route('fc.login.verify') }}" autocomplete="off">
+                            <form class="row g-3 g-md-4" method="POST" action="{{ route('fc.login.verify') }}" autocomplete="off" id="fcLoginForm">
                                 {{-- ⚠️ TEMPORARY load-test only — revert with: git checkout resources/views/fc/fc_login.blade.php --}}
                                 {{-- @csrf --}}
 
@@ -132,4 +132,46 @@
             });
         </script>
     @endif
+
+    {{-- Encrypt the password in the browser before POST so it is not literal plaintext
+         in an intercepting proxy. AES-256-CBC, mirrored server-side in
+         FrontPageController::decryptLoginPassword(). CryptoJS is SELF-HOSTED (same
+         origin), not a CDN — so it can't be blocked by a network/firewall, which lets
+         the guard below block a plaintext send without risking a CDN-outage lockout. --}}
+    <script src="{{ asset('js/crypto-js.min.js') }}"></script>
+    <script>
+        (function () {
+            var ENC_KEY = @json(config('app.password_enc_key'));
+            var form = document.getElementById('fcLoginForm');
+            var pwd  = document.getElementById('password');
+            if (!form || !pwd) { return; }
+
+            form.addEventListener('submit', function (e) {
+                // Not configured / nothing to send / already encrypted → submit as-is.
+                // (No key = rollout not active, so never block — no lockout.)
+                if (!ENC_KEY || pwd.dataset.enc === '1' || !pwd.value) {
+                    return;
+                }
+
+                // Key IS configured → encryption is required. CryptoJS is self-hosted,
+                // so a missing library means a broken deploy, not a blocked CDN: block
+                // the submit rather than fall back to sending the password in plaintext.
+                if (typeof CryptoJS === 'undefined' || !CryptoJS.AES) {
+                    e.preventDefault();
+                    pwd.classList.add('is-invalid');
+                    alert('Secure login could not initialize. Please refresh the page (Ctrl+F5) and try again.');
+                    return;
+                }
+
+                e.preventDefault();
+                var key = CryptoJS.enc.Base64.parse(ENC_KEY);
+                var iv  = CryptoJS.enc.Utf8.parse('1234567890123456');
+                pwd.value = CryptoJS.AES.encrypt(pwd.value, key, {
+                    iv: iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7
+                }).toString();
+                pwd.dataset.enc = '1'; // guard against double-encryption on resubmit
+                form.submit();
+            });
+        })();
+    </script>
 @endpush
