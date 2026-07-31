@@ -427,10 +427,9 @@ $(function () {
 
         $table.DataTable({
             processing: true,
-            serverSide: false,
+            serverSide: true,
             searching: true,
-            ordering: true,
-            order: [[2, 'asc']],
+            ordering: false,
             autoWidth: false,
             responsive: false,
             pageLength: 25,

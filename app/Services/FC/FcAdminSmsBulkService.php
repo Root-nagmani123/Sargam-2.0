@@ -110,6 +110,70 @@ class FcAdminSmsBulkService
     }
 
     /**
+     * One page of recipients for a template, stopping the underlying scan as soon as
+     * enough matches are collected — used for the DataTables first load / page turns
+     * so the admin isn't waiting on a full-roster scan for a 25-row page.
+     *
+     * @return list<array{pk: int, name: string, mobile: string, user_id: string, step_name: ?string}>
+     */
+    public function recipientsPage(string $template, int $offset, int $length, ?int $formId = null): array
+    {
+        $template = strtolower(trim($template));
+        if ($template !== self::TEMPLATE_B1 && $template !== self::TEMPLATE_B2) {
+            return [];
+        }
+
+        $offset = max(0, $offset);
+        $length = max(1, $length);
+        $needed = $offset + $length;
+
+        $out = [];
+        $seen = 0;
+        $this->eachClassifiedRecipient(function (array $item) use (&$out, &$seen, $template, $offset, $needed) {
+            if (($item['bucket'] ?? null) !== $template) {
+                return;
+            }
+
+            if ($seen >= $offset) {
+                $out[] = [
+                    'pk' => (int) $item['pk'],
+                    'name' => trim((string) ($item['name'] ?? '')),
+                    'mobile' => trim((string) ($item['mobile'] ?? '')),
+                    'user_id' => trim((string) ($item['user_id'] ?? '')),
+                    'step_name' => $template === self::TEMPLATE_B1
+                        ? trim((string) ($item['step_name'] ?? ''))
+                        : null,
+                ];
+            }
+            $seen++;
+
+            return $seen < $needed;
+        }, $this->resolveFormForScope($formId));
+
+        return $out;
+    }
+
+    /**
+     * Count of matching recipients for one template (same chunked scan, no rows kept).
+     */
+    public function countRecipientsForTemplate(string $template, ?int $formId = null): int
+    {
+        $template = strtolower(trim($template));
+        if ($template !== self::TEMPLATE_B1 && $template !== self::TEMPLATE_B2) {
+            return 0;
+        }
+
+        $count = 0;
+        $this->eachClassifiedRecipient(function (array $item) use (&$count, $template) {
+            if (($item['bucket'] ?? null) === $template) {
+                $count++;
+            }
+        }, $this->resolveFormForScope($formId));
+
+        return $count;
+    }
+
+    /**
      * One chunked pass: counts + one page of each list (no full dataset in memory).
      *
      * @return array{
@@ -570,7 +634,8 @@ class FcAdminSmsBulkService
     /**
      * Stream classified B1/B2 recipients without keeping the full list in memory.
      *
-     * @param  callable(array<string, mixed>): void  $callback
+     * @param  callable(array<string, mixed>): (bool|void)  $callback  Return false to stop scanning early
+     *         (e.g. once a bounded page of matches has been collected).
      */
     protected function eachClassifiedRecipient(callable $callback, ?FcForm $form = null): void
     {
@@ -581,6 +646,7 @@ class FcAdminSmsBulkService
         $skipB2 = [];
         /** @var array<int, true> $emitted Already yielded (avoid double B2). */
         $emitted = [];
+        $stopped = false;
 
         $chunkCol = $this->trackerChunkColumn($form);
         $this->eligibleTrackerQuery($form)->orderBy($chunkCol)->chunkById(self::CHUNK_SIZE, function ($rows) use (
@@ -588,7 +654,8 @@ class FcAdminSmsBulkService
             $form,
             $steps,
             &$skipB2,
-            &$emitted
+            &$emitted,
+            &$stopped
         ) {
             foreach ($this->classifyTrackerChunk($rows, $form, $steps, $skipB2) as $item) {
                 $pk = (int) ($item['pk'] ?? 0);
@@ -602,9 +669,20 @@ class FcAdminSmsBulkService
                 }
 
                 $emitted[$pk] = true;
-                $callback($item);
+                if ($callback($item) === false) {
+                    $stopped = true;
+                }
             }
+
+            // B1 comes only from the (small) tracker table, so it always needs a full pass
+            // here to keep $skipB2 correct for phase two below — only stop once that pass
+            // itself is done producing rows.
+            return $stopped ? false : null;
         }, $chunkCol);
+
+        if ($stopped) {
+            return;
+        }
 
         $pendingStepsLabel = $steps
             ->map(fn ($s) => trim((string) ($s->step_name ?? '')))
@@ -614,15 +692,21 @@ class FcAdminSmsBulkService
             $pendingStepsLabel = 'pending steps';
         }
 
+        // Hoisted out of the per-row loop below — was previously re-checked via an
+        // uncached information_schema query for every one of the ~10k roster rows.
+        $hasIsRegistered = Schema::hasColumn('fc_registration_master', 'is_registered');
+
         $this->eligibleRosterQuery($form)->orderBy('pk')->chunkById(self::CHUNK_SIZE, function ($rows) use (
             $callback,
             $form,
             $steps,
             &$skipB2,
             &$emitted,
-            $pendingStepsLabel
+            $pendingStepsLabel,
+            $hasIsRegistered
         ) {
             $trackersByRosterPk = $this->loadTrackersForRosters(collect($rows), $form);
+            $stop = false;
 
             foreach ($rows as $roster) {
                 $pk = (int) ($roster->pk ?? 0);
@@ -630,8 +714,7 @@ class FcAdminSmsBulkService
                     continue;
                 }
 
-                if (Schema::hasColumn('fc_registration_master', 'is_registered')
-                    && (int) ($roster->is_registered ?? 0) === 1) {
+                if ($hasIsRegistered && (int) ($roster->is_registered ?? 0) === 1) {
                     continue;
                 }
 
@@ -647,7 +730,7 @@ class FcAdminSmsBulkService
 
                 $email = trim((string) ($roster->email ?? ''));
                 $emitted[$pk] = true;
-                $callback([
+                if ($callback([
                     'bucket' => self::TEMPLATE_B2,
                     'pk' => $pk,
                     'mobile' => $mobile,
@@ -656,8 +739,13 @@ class FcAdminSmsBulkService
                     'email' => $email !== '' ? $email : null,
                     'step_name' => null,
                     'pending_steps' => $pendingStepsLabel,
-                ]);
+                ]) === false) {
+                    $stop = true;
+                    break;
+                }
             }
+
+            return $stop ? false : null;
         }, 'pk');
     }
 
@@ -949,8 +1037,22 @@ class FcAdminSmsBulkService
         }
 
         $userCol = fc_user_col($table);
-        $keys = [];
+        $hasUserCredentials = Schema::hasTable('user_credentials');
 
+        $logins = $rosters
+            ->map(fn ($roster) => trim((string) ($roster->user_id ?? '')))
+            ->filter()
+            ->unique()
+            ->values();
+
+        // One batched login -> credentials-pk lookup instead of one query per roster.
+        $credPkByLogin = ($hasUserCredentials && $logins->isNotEmpty())
+            ? DB::table('user_credentials')
+                ->whereIn('user_name', $logins->all())
+                ->pluck('pk', 'user_name')
+            : collect();
+
+        $keys = [];
         foreach ($rosters as $roster) {
             $pk = (int) ($roster->pk ?? 0);
             if ($pk > 0) {
@@ -964,11 +1066,9 @@ class FcAdminSmsBulkService
 
             $keys[] = $login;
 
-            if (Schema::hasTable('user_credentials')) {
-                $credPk = DB::table('user_credentials')->where('user_name', $login)->value('pk');
-                if ($credPk) {
-                    $keys[] = (int) $credPk;
-                }
+            $credPk = $credPkByLogin->get($login);
+            if ($credPk) {
+                $keys[] = (int) $credPk;
             }
         }
 
@@ -998,8 +1098,8 @@ class FcAdminSmsBulkService
                 $tracker = $byKey->get($login);
             }
 
-            if (! $tracker && $login !== '' && Schema::hasTable('user_credentials')) {
-                $credPk = DB::table('user_credentials')->where('user_name', $login)->value('pk');
+            if (! $tracker && $login !== '') {
+                $credPk = $credPkByLogin->get($login);
                 if ($credPk) {
                     $tracker = $byKey->get((string) $credPk);
                 }

@@ -70,7 +70,50 @@ class FcAdminSmsController extends Controller
 
         $template = $validated['template'];
         $isB1 = $template === FcAdminSmsBulkService::TEMPLATE_B1;
-        $rows = $bulk->allRecipientsForTemplate($template, (int) $validated['form_id']);
+        $formId = (int) $validated['form_id'];
+        $keyword = trim((string) $request->input('search.value', ''));
+
+        // Fast path: no search box text typed — page the underlying scan directly
+        // instead of collecting every matching row just to slice out 25 of them.
+        // Search still needs the full (classified) list to filter across all fields,
+        // so it keeps using the original full-scan + in-memory filter below.
+        if ($keyword === '') {
+            $start = max(0, (int) $request->input('start', 0));
+            $length = (int) $request->input('length', 25);
+            $length = $length > 0 ? $length : 25;
+
+            $total = $bulk->countRecipientsForTemplate($template, $formId);
+            $rows = $bulk->recipientsPage($template, $start, $length, $formId);
+
+            $data = [];
+            foreach ($rows as $i => $row) {
+                $entry = [
+                    'select' => '<input type="checkbox" class="form-check-input fc-sms-recipient-pick" '
+                        .'value="'.(int) $row['pk'].'" data-template="'.e($template).'" '
+                        .'aria-label="Select trainee">',
+                    'DT_RowIndex' => $start + $i + 1,
+                    'name' => e($row['name'] !== '' ? $row['name'] : '—'),
+                    'user_id' => '<code class="small">'.e($row['user_id'] !== '' ? $row['user_id'] : '—').'</code>',
+                    'mobile' => e($row['mobile']),
+                ];
+                if ($isB1) {
+                    $step = trim((string) ($row['step_name'] ?? ''));
+                    $entry['step_name'] = $step !== ''
+                        ? '<span class="badge bg-warning text-dark">'.e($step).'</span>'
+                        : '—';
+                }
+                $data[] = $entry;
+            }
+
+            return response()->json([
+                'draw' => (int) $request->input('draw', 1),
+                'recordsTotal' => $total,
+                'recordsFiltered' => $total,
+                'data' => $data,
+            ]);
+        }
+
+        $rows = $bulk->allRecipientsForTemplate($template, $formId);
         $total = count($rows);
 
         $dt = DataTables::of(collect($rows))
