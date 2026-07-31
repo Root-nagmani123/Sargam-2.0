@@ -95,6 +95,31 @@ class SafeUploadedDocument implements Rule
      */
     private const HEADER_SCAN_BYTES = 512;
 
+    /**
+     * Byte markers that make an otherwise-genuine document dangerous: a real PDF
+     * that runs JavaScript / launches a program / embeds a file on open, or a
+     * .docx whose ZIP carries a macro project. A file like report.pdf that fires
+     * app.alert() or /Launch is a CWE-434 finding even though it passes every
+     * signature and MIME check — this is what a VAPT "malicious PDF upload" test
+     * plants (the tester's xss1.pdf carried /JavaScript + /JS app.alert()).
+     *
+     * Keyed by canonical extension so only the relevant format is scanned.
+     *
+     * @var array<string, list<string>>
+     */
+    private const ACTIVE_CONTENT_MARKERS = [
+        'pdf' => ['/JavaScript', '/JS', '/Launch', '/EmbeddedFile', '/RichMedia', '/XFA'],
+        // A genuine .docx never contains a VBA project; its presence means the file
+        // is really a macro-enabled document renamed/relabelled as .docx.
+        'docx' => ['vbaProject', 'vbaData', 'macroEnabled'],
+    ];
+
+    /** Cap on bytes read for the active-content scan (uploads are already size-limited). */
+    private const ACTIVE_SCAN_MAX_BYTES = 26214400; // 25 MB
+
+    /** Cap on FlateDecode streams inflated per PDF, so a crafted file can't stall the scan. */
+    private const ACTIVE_SCAN_MAX_STREAMS = 300;
+
     /** @var list<string> canonical extensions this instance accepts and can verify */
     private array $allowed;
 
@@ -285,6 +310,17 @@ class SafeUploadedDocument implements Rule
             return false;
         }
 
+        // The bytes are a genuine PDF/DOCX — now reject one carrying embedded
+        // JavaScript, auto-run actions, a launch action, or a macro project.
+        if ($this->hasActiveContent($value, $matched)) {
+            $this->message = 'This ' . strtoupper($matched)
+                . ' contains embedded scripts, macros, or auto-run actions and was rejected. '
+                . 'Please upload a plain document — if it was a fillable form, print or "Save as" a flat '
+                . strtoupper($matched) . ' and try again.';
+
+            return false;
+        }
+
         return true;
     }
 
@@ -334,6 +370,89 @@ class SafeUploadedDocument implements Rule
         fclose($handle);
 
         return $header;
+    }
+
+    /**
+     * True when a verified PDF/DOCX carries embedded active content (JavaScript,
+     * launch/auto actions, embedded files, or a macro project). Scans the raw
+     * bytes first, then — for PDFs — inflates FlateDecode streams so a payload
+     * hidden inside a compressed object stream is still caught.
+     */
+    private function hasActiveContent(UploadedFile $file, string $ext): bool
+    {
+        $markers = self::ACTIVE_CONTENT_MARKERS[$ext] ?? null;
+        if ($markers === null) {
+            return false;
+        }
+
+        $bytes = $this->readAll($file);
+        if ($bytes === '') {
+            return false;
+        }
+
+        if ($this->bytesContainAny($bytes, $markers)) {
+            return true;
+        }
+
+        if ($ext === 'pdf') {
+            foreach ($this->inflatedPdfStreams($bytes) as $chunk) {
+                if ($this->bytesContainAny($chunk, $markers)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param list<string> $markers
+     */
+    private function bytesContainAny(string $haystack, array $markers): bool
+    {
+        foreach ($markers as $marker) {
+            if (stripos($haystack, $marker) !== false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function readAll(UploadedFile $file): string
+    {
+        $path = $file->getRealPath();
+
+        if ($path === false || ! is_readable($path)) {
+            return '';
+        }
+
+        return (string) @file_get_contents($path, false, null, 0, self::ACTIVE_SCAN_MAX_BYTES);
+    }
+
+    /**
+     * Yield the inflated body of each `stream … endstream` block that is
+     * zlib/raw-deflate compressed. Non-compressed or undecodable streams are
+     * skipped. Bounded by ACTIVE_SCAN_MAX_STREAMS so a file packed with tiny
+     * streams cannot turn the scan into a CPU sink.
+     *
+     * @return \Generator<int, string>
+     */
+    private function inflatedPdfStreams(string $bytes): \Generator
+    {
+        if (! preg_match_all('/stream\r?\n(.*?)\r?\nendstream/s', $bytes, $matches)) {
+            return;
+        }
+
+        foreach (array_slice($matches[1], 0, self::ACTIVE_SCAN_MAX_STREAMS) as $raw) {
+            $out = @gzuncompress($raw);
+            if ($out === false) {
+                $out = @gzinflate($raw);
+            }
+            if (is_string($out) && $out !== '') {
+                yield $out;
+            }
+        }
     }
 
     /**

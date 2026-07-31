@@ -302,6 +302,49 @@
                 // extension (report.php.pdf) is caught before submit too.
                 var BLOCKED = /\.(php\d?|phtml|phps|pht|phar|cgi|pl|py|rb|jsp|asp|aspx|sh|bash|exe|com|bat|cmd|msi|dll|htaccess|htm|html|svg|js)(\.|$)/i;
 
+                // Active-content markers mirrored from App\Rules\SafeUploadedDocument, so a
+                // PDF/DOCX carrying embedded JavaScript, a launch / auto-run action, an
+                // embedded file, or a macro project is caught the instant it is picked —
+                // not only on the submit round-trip. Best-effort only: the browser can't
+                // inflate compressed PDF streams, so the server-side scan stays the
+                // authority (it inflates FlateDecode streams and can't be bypassed).
+                var ACTIVE_MARKERS = {
+                    '.pdf':  ['/JavaScript', '/JS', '/Launch', '/EmbeddedFile', '/RichMedia', '/XFA'],
+                    '.docx': ['vbaProject', 'vbaData', 'macroEnabled']
+                };
+
+                function submitBtnFor(input) {
+                    var form = input.closest ? input.closest('form') : null;
+                    return form ? form.querySelector('button[type="submit"]') : null;
+                }
+
+                // Read the picked file and reject immediately if it carries active content.
+                // The submit button is disabled while the async read runs so the file can't
+                // be sent before the scan resolves.
+                function scanActiveContent(input, file, ext) {
+                    var markers = ACTIVE_MARKERS[ext];
+                    if (!markers || typeof FileReader === 'undefined') { return; }
+
+                    var btn = submitBtnFor(input);
+                    if (btn) { btn.disabled = true; }
+
+                    var reader = new FileReader();
+                    reader.onload = function () {
+                        var text = String(reader.result || '');
+                        var found = markers.some(function (m) { return text.indexOf(m) !== -1; });
+                        if (found) {
+                            reject(input, 'This ' + ext.slice(1).toUpperCase()
+                                + ' contains embedded scripts, macros, or auto-run actions and cannot be uploaded. '
+                                + 'Please upload a plain document (print or "Save as" a flat file).');
+                        } else if (btn) {
+                            btn.disabled = false;
+                        }
+                    };
+                    // On read error, defer to the server rather than block a legitimate file.
+                    reader.onerror = function () { if (btn) { btn.disabled = false; } };
+                    reader.readAsText(file, 'ISO-8859-1');
+                }
+
                 document.addEventListener('change', function (e) {
                     var input = e.target;
                     if (!input.classList || !input.classList.contains('fc-doc-upload-input')) {
@@ -309,6 +352,8 @@
                     }
 
                     clearError(input);
+                    var resetBtn = submitBtnFor(input);
+                    if (resetBtn) { resetBtn.disabled = false; }
 
                     var file = input.files && input.files[0];
                     if (!file) {
@@ -330,7 +375,12 @@
                     if (maxKb > 0 && file.size > maxKb * 1024) {
                         var shown = maxKb >= 1024 ? (Math.round(maxKb / 102.4) / 10) + ' MB' : maxKb + ' KB';
                         reject(input, 'File is too large. Maximum allowed size is ' + shown + '.');
+                        return;
                     }
+
+                    // Name and size are fine — now scan the bytes and reject on the spot
+                    // if the file embeds scripts / macros / auto-run actions.
+                    scanActiveContent(input, file, ext);
                 }, true);
             })();
         </script>
