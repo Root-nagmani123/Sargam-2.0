@@ -344,6 +344,7 @@ class FcAdminSmsBulkService
                         $row['pk'],
                         $row['email'] ?? null,
                         $programme,
+                        $row['pending_steps'] ?? null,
                     );
                 } else {
                     $delivered = $this->notify->registrationPending(
@@ -556,6 +557,7 @@ class FcAdminSmsBulkService
 
         $bucket = self::TEMPLATE_B2;
         $stepName = null;
+        $rowPendingSteps = $pendingStepsLabel;
 
         if ($tracker) {
             $progress = $this->stepProgressFromTracker($form, $steps, $tracker, $roster);
@@ -565,6 +567,7 @@ class FcAdminSmsBulkService
             if ($progress['done'] >= 1) {
                 $bucket = self::TEMPLATE_B1;
                 $stepName = $progress['pending_step'];
+                $rowPendingSteps = $progress['pending_steps'] ?? $progress['pending_step'];
             }
         }
 
@@ -576,7 +579,7 @@ class FcAdminSmsBulkService
             'user_id' => $login,
             'email' => $email !== '' ? $email : null,
             'step_name' => $stepName,
-            'pending_steps' => $pendingStepsLabel,
+            'pending_steps' => $rowPendingSteps,
         ];
     }
 
@@ -599,6 +602,7 @@ class FcAdminSmsBulkService
                     $row['pk'],
                     $row['email'] ?? null,
                     $programme,
+                    $row['pending_steps'] ?? null,
                 );
             } else {
                 $delivered = $this->notify->registrationPending(

@@ -211,7 +211,14 @@ class FcNotifyService
         return $code;
     }
 
-    /** B1 — Individual Form Step Incomplete. Returns true if at least one channel delivered. */
+    /**
+     * B1 — Individual Form Step Incomplete. Returns true if at least one channel delivered.
+     *
+     * $stepName is the single next-pending step (used as-is for SMS — the DLT-approved
+     * template has one fixed {Step_Name} slot and cannot list multiple steps). $pendingSteps,
+     * when given, is the full comma-separated list of all pending steps and is used to render
+     * a bullet list in the email (which has no DLT constraint).
+     */
     public function formStepIncomplete(
         ?string $mobile,
         string $participantName,
@@ -219,6 +226,7 @@ class FcNotifyService
         ?int $registrationPk = null,
         ?string $email = null,
         string $programmeName = '',
+        ?string $pendingSteps = null,
     ): bool {
         $mobile = trim((string) $mobile);
         $email = $this->resolveEmail($email, $registrationPk);
@@ -226,9 +234,13 @@ class FcNotifyService
             return false;
         }
 
+        $stepName = $stepName !== '' ? $stepName : 'registration';
+        $pendingStepsList = $this->formatPendingStepsList($pendingSteps, $stepName);
+
         $replacements = [
             'Participant_Name' => $participantName !== '' ? $participantName : 'Candidate',
-            'Step_Name' => $stepName !== '' ? $stepName : 'registration',
+            'Step_Name' => $stepName,
+            'Pending_Steps' => $pendingStepsList,
             'Programme_Name' => $this->programme($programmeName),
             'Portal_Link' => $this->portal($registrationPk),
             'Institute_Name' => $this->institute(),
@@ -243,6 +255,17 @@ class FcNotifyService
         }
 
         return $delivered;
+    }
+
+    /** Renders the pending step names as a "- Step" bulleted list for the B1 email body. */
+    protected function formatPendingStepsList(?string $pendingSteps, string $fallbackStep): string
+    {
+        $steps = array_values(array_filter(array_map('trim', explode(',', (string) $pendingSteps))));
+        if ($steps === []) {
+            $steps = [$fallbackStep];
+        }
+
+        return implode("\n", array_map(fn (string $step) => '- '.$step, $steps));
     }
 
     /** B2 — Registration Steps Pending. Returns true if at least one channel delivered. */
