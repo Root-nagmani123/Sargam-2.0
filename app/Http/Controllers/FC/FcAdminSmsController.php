@@ -56,8 +56,14 @@ class FcAdminSmsController extends Controller
                     'help' => 'Registration not completed and form not started yet (or zero steps done) — overall registration deadline reminder.',
                     'count' => $counts['b2'],
                 ],
+                FcAdminSmsBulkService::TEMPLATE_B3 => [
+                    'label' => 'Travel pending',
+                    'code' => 'B3 / Email only',
+                    'help' => 'All registration form steps are complete but the travel plan has not been submitted yet — email reminder only (no SMS template approved yet).',
+                    'count' => $counts['b3'],
+                ],
             ],
-            'openList' => in_array($request->query('open'), ['b1', 'b2'], true)
+            'openList' => in_array($request->query('open'), ['b1', 'b2', 'b3'], true)
                 ? $request->query('open')
                 : null,
         ]);
@@ -66,7 +72,7 @@ class FcAdminSmsController extends Controller
     public function recipients(Request $request, FcAdminSmsBulkService $bulk): JsonResponse
     {
         $validated = $request->validate([
-            'template' => 'required|in:b1,b2',
+            'template' => 'required|in:b1,b2,b3',
             'form_id' => ['required', 'integer', Rule::exists('fc_forms', 'id')->where('is_active', true)],
         ]);
 
@@ -174,7 +180,7 @@ class FcAdminSmsController extends Controller
     public function send(Request $request, FcAdminSmsBulkService $bulk): RedirectResponse
     {
         $validated = $request->validate([
-            'template' => 'required|in:b1,b2',
+            'template' => 'required|in:b1,b2,b3',
             'form_id' => ['required', 'integer', Rule::exists('fc_forms', 'id')->where('is_active', true)],
             'send_mode' => 'required|in:all,selected',
             'registration_pks' => 'required_if:send_mode,selected|array|min:1',
@@ -189,7 +195,11 @@ class FcAdminSmsController extends Controller
             : null;
 
         $formId = (int) $validated['form_id'];
-        $label = $validated['template'] === FcAdminSmsBulkService::TEMPLATE_B1 ? 'Form step incomplete' : 'Registration pending';
+        $label = match ($validated['template']) {
+            FcAdminSmsBulkService::TEMPLATE_B1 => 'Form step incomplete',
+            FcAdminSmsBulkService::TEMPLATE_B3 => 'Travel pending',
+            default => 'Registration pending',
+        };
 
         // Guards against double-sends from a double-click, a resubmitted/refreshed
         // form, or two tabs — without this, each request spawns its own background

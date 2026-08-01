@@ -339,6 +339,34 @@ class FcNotifyService
         }
     }
 
+    /**
+     * B3 — Travel Pending. All registration form steps are complete but the
+     * (separately tracked) travel plan has not been submitted yet.
+     * Email only — no DLT-approved SMS template exists for this reminder yet.
+     * Returns true if delivered.
+     */
+    public function travelPending(
+        ?string $mobile,
+        string $participantName,
+        string $programmeName,
+        ?int $registrationPk = null,
+        ?string $email = null,
+    ): bool {
+        $email = $this->resolveEmail($email, $registrationPk);
+        if ($email === null) {
+            return false;
+        }
+
+        $replacements = [
+            'Participant_Name' => $participantName !== '' ? $participantName : 'Candidate',
+            'Programme_Name' => $this->programme($programmeName),
+            'Portal_Link' => $this->portal($registrationPk),
+            'Institute_Name' => $this->institute(),
+        ];
+
+        return $this->sendEmail('travel_pending', $email, $replacements, $registrationPk);
+    }
+
     public function otpService(): FcOtpService
     {
         return $this->otp;

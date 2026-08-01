@@ -45,6 +45,11 @@ return [
             'body' => "Dear {Participant_Name},\n\nYour registration for {Programme_Name} is currently incomplete.\n\nPending Step(s): {Pending_Steps}\n\nPlease complete the pending requirements before {Last_Date} to avoid any delay in processing your registration.\n\n{Login_Link_Label}\n{Portal_Link}\n\nRegards,\n{Institute_Signature}",
         ],
 
+        'travel_pending' => [
+            'subject' => 'Action Required: Submit Your Travel Plan for Foundation Course',
+            'body' => "Dear {Participant_Name},\n\nYour registration for {Programme_Name} is complete, but your travel plan has not been submitted yet.\n\nPlease log in and submit your travel details at the earliest to avoid delays in arrival arrangements.\n\n{Login_Link_Label}\n{Portal_Link}\n\nRegards,\n{Institute_Signature}",
+        ],
+
         'exemption_confirmation' => [
             'subject' => 'Exemption Confirmation – {Exemption_Category}',
             'body' => "Dear {Applicant_Name},\n\nThank you for submitting your exemption request for {Programme_Name}.\n\nYour request has been recorded successfully under the following category:\n\nExemption Category: {Exemption_Category}\nSubmission Date: {Submission_Date}\n\nThis exemption request has been recorded against your profile.\n\nRegards,\n{Institute_Signature}",

@@ -322,7 +322,7 @@
 $(function () {
     var recipientsUrl = @json(route('fc-reg.admin.sms.recipients'));
     var initialized = {};
-    var selectedByTemplate = { b1: new Set(), b2: new Set() };
+    var selectedByTemplate = { b1: new Set(), b2: new Set(), b3: new Set() };
     var selectedFormId = parseInt($('#fcSmsSelectedFormId').val() || '0', 10);
 
     $('#fcSmsFormFilter').on('change', function () {
@@ -330,6 +330,7 @@ $(function () {
         $('#fcSmsSelectedFormId').val(selectedFormId);
         selectedByTemplate.b1 = new Set();
         selectedByTemplate.b2 = new Set();
+        selectedByTemplate.b3 = new Set();
         initialized = {};
         $('#fcSmsTemplateFilterForm').trigger('submit');
     });

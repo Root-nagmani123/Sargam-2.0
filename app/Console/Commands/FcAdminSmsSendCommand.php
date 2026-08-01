@@ -17,11 +17,12 @@ use Throwable;
  *
  * php artisan fc:admin-sms-send --template=b1 --form-id=30
  * php artisan fc:admin-sms-send --template=b2 --form-id=30 --pks=101,102,103
+ * php artisan fc:admin-sms-send --template=b3 --form-id=30
  */
 class FcAdminSmsSendCommand extends Command
 {
     protected $signature = 'fc:admin-sms-send
-        {--template= : b1 or b2}
+        {--template= : b1, b2, or b3}
         {--form-id= : fc_forms.id}
         {--pks= : Comma-separated registration pks, or omit for all matching}
         {--lock-key= : Cache lock key to release when this run finishes (success or failure)}';
@@ -43,7 +44,7 @@ class FcAdminSmsSendCommand extends Command
             ), fn ($v) => $v > 0)));
         }
 
-        if (! in_array($template, [FcAdminSmsBulkService::TEMPLATE_B1, FcAdminSmsBulkService::TEMPLATE_B2], true) || $formId <= 0) {
+        if (! in_array($template, FcAdminSmsBulkService::VALID_TEMPLATES, true) || $formId <= 0) {
             Log::error('fc:admin-sms-send — invalid arguments.', [
                 'template' => $template,
                 'form_id' => $formId,
