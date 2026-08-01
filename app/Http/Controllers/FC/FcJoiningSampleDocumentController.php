@@ -4,10 +4,12 @@ namespace App\Http\Controllers\FC;
 
 use App\Http\Controllers\Controller;
 use App\Models\FC\FcJoiningSampleDocument;
+use App\Rules\SafeUploadedDocument;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 /**
@@ -19,6 +21,34 @@ use Illuminate\View\View;
 class FcJoiningSampleDocumentController extends Controller
 {
     private const STORAGE_DIR = 'joining_sample_documents';
+
+    /** Ceiling we want for a blank sample form; trimmed to php.ini's real limit. */
+    private const DESIRED_MAX_KB = 10240;
+
+    /** Document types an admin may attach as a downloadable sample. */
+    private const ALLOWED_TYPES = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'];
+
+    /**
+     * Upload rules shared by store() and update() (CWE-434).
+     *
+     * `mimes` is the cheap first pass; SafeUploadedDocument is the one that
+     * actually decides, by verifying the file's magic bytes and detected MIME
+     * against each other and rejecting script extensions anywhere in the
+     * submitted name. `max` is clamped to what PHP will really accept so an
+     * oversized file produces a validation message instead of a dropped request.
+     *
+     * @return array<int, mixed>
+     */
+    private function fileRules(bool $required): array
+    {
+        return [
+            $required ? 'required' : 'nullable',
+            'file',
+            'mimes:' . implode(',', self::ALLOWED_TYPES),
+            'max:' . SafeUploadedDocument::maxKilobytes(self::DESIRED_MAX_KB),
+            new SafeUploadedDocument(self::ALLOWED_TYPES),
+        ];
+    }
 
     public function index(): View
     {
@@ -46,7 +76,7 @@ class FcJoiningSampleDocumentController extends Controller
             'document_title' => 'nullable|string|max:300',
             'section'        => 'nullable|string|max:200',
             'display_order'  => 'nullable|integer|min:0',
-            'sample_file'    => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:10240',
+            'sample_file'    => $this->fileRules(true),
         ]);
 
         [$path, $original] = $this->storeFile($request);
@@ -72,7 +102,7 @@ class FcJoiningSampleDocumentController extends Controller
             'section'        => 'nullable|string|max:200',
             'display_order'  => 'nullable|integer|min:0',
             'is_active'      => 'nullable|boolean',
-            'sample_file'    => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:10240',
+            'sample_file'    => $this->fileRules(false),
         ]);
 
         $sample->field_name     = $data['field_name'];
@@ -104,15 +134,28 @@ class FcJoiningSampleDocumentController extends Controller
     /**
      * Store the uploaded sample on the public disk.
      *
-     * @return array{0:string,1:string} [web path usable by asset(), original name]
+     * Both halves of the name are decided by the server: a random basename, and
+     * an extension taken from the signature SafeUploadedDocument verified — not
+     * from the client filename and not from the MIME guesser (which can widen a
+     * .docx to .zip). The client's name is kept only as a sanitised display
+     * label. Validation has already run, so the signature always matches here;
+     * the fallback is a defensive no-op.
+     *
+     * @return array{0:string,1:string} [web path usable by asset(), display name]
      */
     private function storeFile(Request $request): array
     {
-        $file     = $request->file('sample_file');
-        $original = $file->getClientOriginalName();
-        $stored   = $file->store(self::STORAGE_DIR, 'public'); // joining_sample_documents/xxxx.pdf
+        $file      = $request->file('sample_file');
+        $extension = SafeUploadedDocument::canonicalExtension($file, self::ALLOWED_TYPES) ?? 'dat';
+        $display   = SafeUploadedDocument::safeDisplayName($file->getClientOriginalName(), 'sample.' . $extension);
 
-        return ['storage/' . $stored, $original];
+        $stored = $file->storeAs(
+            self::STORAGE_DIR,
+            Str::random(40) . '.' . $extension,
+            'public'
+        ); // joining_sample_documents/<random>.pdf
+
+        return ['storage/' . $stored, $display];
     }
 
     /**

@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use App\Rules\SafeUploadedDocument;
 
 /**
  * Fillable joining-document forms.
@@ -74,7 +75,15 @@ class FcJoiningDocumentFormController extends Controller
 
         $rules = DocumentFormTemplates::rules($template['key']);
         $rules['signature']   = 'nullable|array';
-        $rules['signature.*'] = 'nullable|image|max:2048';
+        $rules['signature.*'] = [
+            'nullable',
+            'image',
+            // `image` alone permits SVG, which executes script when opened from
+            // /storage — pin the list and verify the bytes behind it.
+            'mimes:jpeg,jpg,png',
+            'max:' . SafeUploadedDocument::maxKilobytes(2048),
+            new SafeUploadedDocument(['jpeg', 'jpg', 'png']),
+        ];
         $validated = $request->validate($rules);
         $data      = DocumentFormTemplates::normalize($template['key'], $validated);
 

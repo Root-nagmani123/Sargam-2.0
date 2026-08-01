@@ -148,6 +148,16 @@
         @if(session('error'))
             <div class="alert alert-danger small py-2">{{ session('error') }}</div>
         @endif
+        @if($errors->any())
+            <div class="alert alert-danger py-2" role="alert">
+                <div class="fw-semibold mb-1"><i class="bi bi-exclamation-triangle me-1"></i>Please fix the following:</div>
+                <ul class="mb-0 ps-3">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
         @php
             $readOnly = $plan?->is_submitted;
@@ -291,8 +301,9 @@
             <div class="row g-3 mb-1">
                 <div class="col-12 col-md-6 field-block">
                     <label class="form-label">Flight No / Train No/ Vehicle No <span class="text-danger">*</span></label>
-                    <input type="text" name="journey_vehicle_no" class="form-control" maxlength="200" required
+                    <input type="text" name="journey_vehicle_no" class="form-control @error('journey_vehicle_no') is-invalid @enderror" maxlength="200" required
                            value="{{ old('journey_vehicle_no', $plan?->journey_vehicle_no) }}">
+                    @error('journey_vehicle_no')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-12 col-md-6 field-block">
                     <label class="form-label">Whether Require Academy Vehicle From Dehradun Airport/Railway Station to Academy <span class="text-danger">*</span></label>
@@ -321,8 +332,9 @@
             <div class="row g-3 mb-1">
                 <div class="col-12 field-block mb-4">
                     <label class="form-label">Remarks (optional)</label>
-                    <textarea name="special_requirements" class="form-control" rows="2" maxlength="1000"
+                    <textarea name="special_requirements" class="form-control @error('special_requirements') is-invalid @enderror" rows="2" maxlength="1000"
                               placeholder="Special needs…">{{ old('special_requirements', $plan?->special_requirements) }}</textarea>
+                    @error('special_requirements')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
             </div>
 

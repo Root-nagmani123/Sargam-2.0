@@ -42,7 +42,7 @@ class MemoDisciplineController extends Controller
             ->get();
     } else {
         $courseQuery = CourseMaster::where('active_inactive', 1)
-            ->where('end_date', '>', now());
+            ->where('end_date', '>=', now()->toDateString());
         if (!empty($data_course_id)) {
             $courseQuery->whereIn('pk', $data_course_id);
         }
@@ -736,7 +736,7 @@ private function buildDisciplineExportData(Request $request): array
         $data_course_id = get_Role_by_course();
 
         $query = CourseMaster::where('active_inactive', 1)
-            ->where('end_date', '>', now());
+            ->where('end_date', '>=', now()->toDateString());
 
         if (!empty($data_course_id)) {
             $query->whereIn('pk', $data_course_id);
