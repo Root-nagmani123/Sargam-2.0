@@ -135,7 +135,7 @@ class FcNotifyService
             'Programme_Name' => $this->programme($programmeName),
             'Registration_ID' => $registrationId !== '' ? $registrationId : 'N/A',
             'Programme_Dates' => $this->programmeDates(),
-            'Portal_Link' => $this->portal($registrationPk),
+            'Portal_Link' => $this->loginPortal($registrationPk),
             'Institute_Name' => $this->institute(),
         ];
 
@@ -242,7 +242,7 @@ class FcNotifyService
             'Step_Name' => $stepName,
             'Pending_Steps' => $pendingStepsList,
             'Programme_Name' => $this->programme($programmeName),
-            'Portal_Link' => $this->portal($registrationPk),
+            'Portal_Link' => $this->loginPortal($registrationPk),
             'Institute_Name' => $this->institute(),
         ];
 
@@ -360,7 +360,7 @@ class FcNotifyService
         $replacements = [
             'Participant_Name' => $participantName !== '' ? $participantName : 'Candidate',
             'Programme_Name' => $this->programme($programmeName),
-            'Portal_Link' => $this->portal($registrationPk),
+            'Portal_Link' => $this->loginPortal($registrationPk),
             'Institute_Name' => $this->institute(),
         ];
 
@@ -390,6 +390,22 @@ class FcNotifyService
         $form = $this->resolveFormForPortal($registrationPk);
         if ($form) {
             return $form->landingPageUrl();
+        }
+
+        return rtrim((string) config('gupshup.portal_url'), '/');
+    }
+
+    /**
+     * Same resolution + query-string constraint as portal(), but points already-
+     * registered trainees straight to the login page instead of the registration
+     * landing page. Used where the recipient has nothing left to register for
+     * (registration successful, or only a non-form step like travel is pending).
+     */
+    protected function loginPortal(?int $registrationPk = null): string
+    {
+        $form = $this->resolveFormForPortal($registrationPk);
+        if ($form) {
+            return $form->loginUrl();
         }
 
         return rtrim((string) config('gupshup.portal_url'), '/');
