@@ -61,7 +61,7 @@
     <table class="dc">
         <thead>
             <tr>
-                <th style="width:6%;">Sl.No. / क्र.सं.<div class="cno">(1)</div></th>
+                <th style="width:6%;">Sl.No. / {!! fc_kra_sn_img('9pt') !!}<div class="cno">(1)</div></th>
                 <th style="width:14%;">Amount / धनराशि<div class="cno">(2)</div></th>
                 <th>Name and address of Creditor / ऋणदाता का नाम और पता<div class="cno">(3)</div></th>
                 <th style="width:16%;">Date of incurring Liability / दायित्व की तिथि<div class="cno">(4)</div></th>

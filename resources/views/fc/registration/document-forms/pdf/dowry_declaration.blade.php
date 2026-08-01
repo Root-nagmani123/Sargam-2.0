@@ -163,13 +163,13 @@
     <div class="clause">(ii) demand, directly or indirectly, from the parent or guardian of a bride or bridegroom, as the case may be, any dowry.</div>
     <div class="cl-body"><b>Explanation:</b> For the purposes of this rule, &ldquo;dowry&rdquo; has the same meaning as in the Dowry Prohibition Act, 1961 (28 of 1961).</div>
 
-    <div class="cl-hd" style="text-align:center; margin-top:11pt; text-decoration:none;">EXTRACT FROM &ldquo;THE DOWRY PROHIBITION ACT, 1961&rdquo; (28 OF 1961)</div>
+    <div style="text-align:center; font-weight:bold; font-size:12pt; margin-top:14pt; margin-bottom:8pt; padding-top:10pt; border-top:1px dashed #000; text-decoration:none;">EXTRACT FROM &ldquo;THE DOWRY PROHIBITION ACT, 1961&rdquo; (28 OF 1961)</div>
     <div class="cl-body"><b>Section 2. Definition of &ldquo;dowry&rdquo;</b> — In this Act, &ldquo;dowry&rdquo; means any property or valuable security given or agreed to be given either directly or indirectly —</div>
     <div class="clause">(a) by one party to a marriage to the other party to the marriage, or</div>
     <div class="clause">(b) by the parents of either party to a marriage or by any other person to either party to the marriage or to any other person; at or before or any time after the marriage in connection with the marriage of the said parties, but does not include dower or mahar in the case of persons to whom the Muslim Personal Law (Shariat) applies.</div>
     <div class="cl-body"><b>Explanation II</b> — The expression &ldquo;valuable security&rdquo; has the same meaning as in Section 30 of the Indian Penal Code (45 of 1860).</div>
 
-    <div class="cl-hd" style="text-align:center; margin-top:11pt; text-decoration:none;">EXTRACT FROM THE INDIAN PENAL CODE (45 OF 1860)</div>
+    <div style="text-align:center; font-weight:bold; font-size:12pt; margin-top:11pt; margin-bottom:8pt; text-decoration:none;">EXTRACT FROM THE INDIAN PENAL CODE (45 OF 1860)</div>
     <div class="cl-body"><b>Section 30. &ldquo;Valuable Security&rdquo;</b> — The words &ldquo;valuable security&rdquo; denote a document which is, or purports to be, a document whereby any legal right is created, extended, transferred, restricted, extinguished or released, or whereby any person acknowledges that he lies under legal liability, or has not a certain legal right.</div>
     </div>
 

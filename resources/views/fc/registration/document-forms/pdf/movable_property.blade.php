@@ -62,7 +62,7 @@
             <tr>
                 <th style="width:20%;">चल संपत्ति का नाम तथा विवरण / Name and details of Movable Property<div class="cno">(1)</div></th>
                 <th style="width:12%;">*वर्तमान मूल्य / Present Value<div class="cno">(2)</div></th>
-                <th style="width:22%;">यदि अपने नाम पर नहीं है तो बताएं किसके नाम पर, तथा उसका कर्मचारी के साथ संबंध / If not in own Name State in whose name held and his/her relationship to the Govt. Servant<div class="cno">(3)</div></th>
+                <th style="width:22%;">यदि अपने नाम पर नहीं है तो बताएं किसके नाम पर है, तथा उसका कर्मचारी के साथ संबंध / If not in own Name State in whose name held and his/her relationship to the Govt. Servant<div class="cno">(3)</div></th>
                 <th>कैसे अर्जित की– खरीदी है, विरासत में मिली, उपहार में मिली या अन्य तरह से प्राप्त हुई है; अर्जित करने की तारीख दें तथा उन व्यक्तियों का नाम एवं विवरण दें जिनसे प्राप्त की है / How acquired — purchase/inheritance/gift, etc., with date of acquisition and details of persons from whom acquired<div class="cno">(4)</div></th>
                 <th style="width:14%;">अभ्युक्तियां / Remarks<div class="cno">(5)</div></th>
             </tr>

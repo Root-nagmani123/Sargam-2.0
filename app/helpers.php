@@ -2032,3 +2032,31 @@ if (! function_exists('fc_document_date')) {
         }
     }
 }
+
+if (! function_exists('fc_kra_sn_img')) {
+    /**
+     * Return an inline <img> for the Devanagari "क्र.सं." label, as a base64 data URI.
+     *
+     * mPDF's Indic shaper renders the "क्र" rakaar conjunct as a faint/near-invisible
+     * stroke at small header sizes, so the document-form PDFs embed this pre-rendered
+     * (Chrome/HarfBuzz-shaped) image instead — only this one label is an image, the rest
+     * of every form stays plain mPDF text. Cached per request.
+     *
+     * @param  string  $height  CSS height for the label (match the surrounding font).
+     */
+    function fc_kra_sn_img(string $height = '9pt'): string
+    {
+        static $data = null;
+        if ($data === null) {
+            $path = resource_path('images/fc/kra_sn.png');
+            $data = (is_file($path) && is_readable($path))
+                ? 'data:image/png;base64,'.base64_encode((string) file_get_contents($path))
+                : '';
+        }
+        if ($data === '') {
+            return 'क्र.सं.'; // asset missing → fall back to text
+        }
+
+        return '<img src="'.$data.'" alt="क्र.सं." style="height:'.$height.'; vertical-align:middle;">';
+    }
+}

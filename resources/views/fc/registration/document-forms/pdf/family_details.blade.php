@@ -64,7 +64,7 @@
     <table class="fm">
         <thead>
             <tr>
-                <th class="rn">S.No.<br>क्र. सं.<br><span class="cno">(1)</span></th>
+                <th class="rn">S.No.<br>{!! fc_kra_sn_img('9pt') !!}<br><span class="cno">(1)</span></th>
                 <th>Name of the members of family* / परिवार के सदस्य का नाम<br><span class="cno">(2)</span></th>
                 <th style="width:12%;">Date of Birth** / जन्म तिथि<br><span class="cno">(3)</span></th>
                 <th style="width:15%;">Relationship with the officer / अधिकारी के साथ संबंध<br><span class="cno">(4)</span></th>
@@ -150,7 +150,7 @@
     <table class="fm">
         <thead>
             <tr>
-                <th class="rn">क्र. सं.<br><span class="cno">(1)</span></th>
+                <th class="rn">{!! fc_kra_sn_img('9pt') !!}<br><span class="cno">(1)</span></th>
                 <th>परिवार के सदस्य का नाम*<br><span class="cno">(2)</span></th>
                 <th style="width:12%;">जन्म तिथि**<br><span class="cno">(3)</span></th>
                 <th style="width:15%;">अधिकारी के साथ संबंध<br><span class="cno">(4)</span></th>
