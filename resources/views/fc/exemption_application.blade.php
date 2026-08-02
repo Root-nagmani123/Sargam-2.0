@@ -21,7 +21,7 @@
                     </header>
 
                     <form method="POST" action="{{ route('fc.exemption.apply', $exemption->pk) }}" enctype="multipart/form-data"
-                        id="exemptionApplicationForm" novalidate>
+                        id="exemptionApplicationForm" novalidate autocomplete="off">
                         @csrf
                         <input type="hidden" name="exemption_category" value="{{ $exemption->pk }}">
 
@@ -31,7 +31,7 @@
                                         class="text-danger">*</span></label>
                                 <input type="text" class="form-control rounded-3 @error('ex_mobile') is-invalid @enderror"
                                     id="ex_mobile" name="ex_mobile" placeholder="Enter mobile number"
-                                    value="{{ old('ex_mobile') }}" inputmode="numeric" autocomplete="tel" required>
+                                    value="{{ old('ex_mobile') }}" inputmode="numeric" autocomplete="off" required>
                             </div>
 
                             <div class="col-md-6">
@@ -39,7 +39,7 @@
                                         class="text-danger">*</span></label>
                                 <input type="text" class="form-control rounded-3 @error('reg_web_code') is-invalid @enderror"
                                     id="reg_web_code" name="reg_web_code" placeholder="Enter web auth code"
-                                    value="{{ old('reg_web_code') }}" autocomplete="one-time-code" required>
+                                    value="{{ old('reg_web_code') }}" autocomplete="off" required>
                             </div>
 
                             @if (stripos($exemption->Exemption_name, 'completed foundation course') !== false)
@@ -93,7 +93,7 @@
                                     <label for="medical_doc" class="form-label fw-semibold">
                                         Upload Medical Exemption Document <span class="text-danger">*</span>
                                     </label>
-                                    <input type="file" class="form-control rounded-3 @error('medical_doc') is-invalid @enderror"
+                                    <input type="file" class="form-control rounded-3 fc-file-upload @error('medical_doc') is-invalid @enderror"
                                         id="medical_doc" name="medical_doc" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                                         data-max-bytes="{{ $medicalDocMaxBytes ?? 5242880 }}" required>
                                     <div class="form-text">Preferably a <strong>PDF</strong>. Word (.doc, .docx), JPG, JPEG, PNG
@@ -163,6 +163,10 @@
 @endsection
 
 @push('scripts')
+    {{-- Instant client-side reject of script / double-extension file names on the
+         medical upload (.fc-file-upload). Server-side SafeUploadedDocument +
+         SingleFileExtension remain the authority. --}}
+    @include('fc.registration.partials.fc-upload-extension-guard')
     <!-- SweetAlert2 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 

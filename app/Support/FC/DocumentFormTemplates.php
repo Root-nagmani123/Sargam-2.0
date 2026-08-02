@@ -859,6 +859,7 @@ class DocumentFormTemplates
                         ['name' => 'surety_address', 'label' => 'Address of Surety / प्रतिभू का पता', 'type' => 'textarea', 'width' => 'col-md-6'],
                         ['name' => 'surety_occupation', 'label' => 'Occupation of Surety / प्रतिभू का व्यवसाय', 'type' => 'text', 'width' => 'col-md-6'],
                         ['name' => 'surety_eligibility', 'label' => 'Surety is / प्रतिभू है', 'type' => 'select', 'options' => ['In the permanent service of Government', 'Ordinarily resident in India'], 'width' => 'col-md-6'],
+                        ['name' => 'surety_govt_name', 'label' => 'Government of (if in permanent service) / (यदि स्थायी सेवा में) सरकार का नाम', 'type' => 'text', 'width' => 'col-md-6'],
                     ],
                 ],
                 [

@@ -12,6 +12,7 @@ use App\Models\FC\{
 };
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Rules\SafeUploadedDocument;
 
 /**
  * Matches: FCJoiningRelatedDocuments flow in the original system.
@@ -72,7 +73,15 @@ class DocumentUploadController extends Controller
         $docMaster = FcJoiningRelatedDocumentsMaster::findOrFail($documentMasterId);
 
         $request->validate([
-            'document_file' => 'required|file|mimes:jpeg,jpg,png,pdf|max:5120', // 5 MB max
+            'document_file' => [
+                'required',
+                'file',
+                'mimes:jpeg,jpg,png,pdf',
+                // 5 MB documented limit, clamped to what php.ini really accepts so
+                // an oversized scan fails with a message instead of vanishing.
+                'max:' . SafeUploadedDocument::maxKilobytes(5120),
+                new SafeUploadedDocument(['jpeg', 'jpg', 'png', 'pdf']),
+            ],
         ]);
 
         $file     = $request->file('document_file');

@@ -135,7 +135,7 @@
                     I (Insert name of surety) <input type="text" name="surety_decl_name" class="blank blank--wide" value="{{ $val('surety_decl_name') }}"> whose signature is appended to the above agreement, do hereby declare that —
                     <span class="sb-elig d-block">
                         <label class="d-block"><input type="radio" name="surety_eligibility" value="In the permanent service of Government" {{ $elig==='In the permanent service of Government'?'checked':'' }}>
-                            (a) I am in the permanent service of the Government of <span style="border-bottom:1px dotted #64748b; min-width:160px; display:inline-block;">&nbsp;</span>; <em>or</em></label>
+                            (a) I am in the permanent service of the Government of <input type="text" name="surety_govt_name" class="blank blank--mid" value="{{ $val('surety_govt_name') }}">; <em>or</em></label>
                         <label class="d-block"><input type="radio" name="surety_eligibility" value="Ordinarily resident in India" {{ $elig==='Ordinarily resident in India'?'checked':'' }}>
                             (b) I am ordinarily resident in India and possess means which will enable me to repay to the Central Government the sums of money referred to, in the event of my being called upon to do so in accordance with the terms of the agreement.</label>
                     </span>
@@ -192,7 +192,9 @@
                 </p>
 
                 <div class="sb-lines">
-                    दिनांक <input type="text" name="hi[ddate]" class="blank blank--sm" value="{{ $data['_hi']['ddate'] ?? '' }}" autocomplete="off">।
+                    <div>तारीख <input type="text" name="hi[ddate]" class="blank blank--sm" value="{{ $data['_hi']['ddate'] ?? '' }}" autocomplete="off">
+                    माह <input type="text" name="hi[dmonth]" class="blank blank--sm" value="{{ $data['_hi']['dmonth'] ?? '' }}" autocomplete="off">
+                    वर्ष <input type="text" name="hi[dyear]" class="blank blank--sm" value="{{ $data['_hi']['dyear'] ?? '' }}" autocomplete="off"></div>
                     <div class="sb-sign mt-3">परिवीक्षाधीन के हस्ताक्षर ______________________</div>
                     <div>साक्षी की उपस्थिति में परिवीक्षाधीन द्वारा हस्ताक्षरित —</div>
                     <div>साक्षी का नाम: <input type="text" name="hi[pwname]" class="blank blank--mid" value="{{ $data['_hi']['pwname'] ?? '' }}" autocomplete="off"></div>
@@ -206,7 +208,7 @@
 
                 <p class="sb-body" style="text-indent:0; margin-top:1.4rem;">
                     मैं, प्रतिभू, जिसके हस्ताक्षर उपर्युक्त करार में दिए गए हैं, एतद्द्वारा घोषणा करता/करती हूँ कि
-                    <span class="d-block mt-1">(क) मैं ______ सरकार की स्थायी सेवा में हूँ; <em>अथवा</em></span>
+                    <span class="d-block mt-1">(क) मैं <input type="text" name="hi[govt]" class="blank blank--mid" value="{{ $data['_hi']['govt'] ?? '' }}" autocomplete="off"> सरकार की स्थायी सेवा में हूँ; <em>अथवा</em></span>
                     <span class="d-block">(ख) मैं साधारणतया भारत का निवासी हूँ और मेरे पास ऐसे साधन हैं जिनसे करार के निबंधनों के अनुसार राशि की मांग किए जाने पर मैं केन्द्र सरकार को वह राशि चुका सकता/सकती हूँ।</span>
                     <em>(जो लागू न हो उसे काट दें।)</em>
                 </p>

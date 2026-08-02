@@ -15,14 +15,14 @@
         $val = ($v !== '' && $v !== null) ? e($v) : str_repeat('_', max(12, (int) round((strpos($w, 'mm') !== false ? (float) $w * 2.83465 : (float) $w) / 6)));
         return '<span style="display:inline-block; min-width:'.$w.'; border-bottom:1px solid #000; text-align:center; font-weight:bold; padding:0 4pt;">'.$val.'</span>';
     };
-    $box = fn ($on) => $on ? '&#9745;' : '&#9744;';
+    $box = fn ($on) => $on ? '&#9673;' : '&#9711;';
     $clauses = [
         ['I am unmarried / a widower / a widow',
-         'कि मैं अविवाहित / विधुर / विधवा हूँ।', 'That I am unmarried / a widower / a widow;'],
+         'कि मैं अविवाहित / विधुर / विधवा हूँ।', '*That I am unmarried / a widower / a widow;'],
         ['I am married and have only one spouse living',
-         'कि मैं विवाहित हूँ और मेरी केवल एक जीवित पत्नी / पति है।', 'That I am married and have only one spouse living;'],
+         'कि मैं विवाहित हूँ और मेरी केवल एक जीवित पत्नी / पति है।', '*That I am married and have only one spouse living;'],
         ['I am married and have more than one spouse living (exemption applied for)',
-         'कि मैं विवाहित हूँ और मेरी एक से अधिक जीवित पत्नियाँ हैं। छूट प्रदान संबंधी प्रार्थना-पत्र संलग्न है।', 'That I have entered into or contracted a marriage with a person having a spouse living. Application for grant of exemption is enclosed.'],
+         'कि मैं विवाहित हूँ और मेरी एक से अधिक जीवित पत्नियाँ हैं। छूट प्रदान संबंधी प्रार्थना-पत्र संलग्न है।', '*That I have entered into or contracted a marriage with a person having a spouse living. Application for grant of exemption is enclosed.'],
         ['I am about to marry a person who has a spouse living (exemption applied for)',
          'कि मैं ऐसे व्यक्ति के साथ विवाह करने जा रहा/रही हूँ जिसकी पहले ही एक या एक से अधिक जीवित पत्नियाँ हैं। छूट प्रदान संबंधी प्रार्थना-पत्र संलग्न है।', 'That I have entered into and contracted a marriage with another person during the life-time of my spouse. Application for grant of exemption is enclosed.'],
     ];
@@ -61,7 +61,7 @@
     <div class="lead"><b>1.</b> मैं / I, Shri/Smt./Kumari {!! $blank($name, '300pt') !!} घोषणा करता/करती हूँ / declare as under —</div>
 
     @foreach($clauses as $i => $c)
-        <div class="clause">{!! $box($sc === $c[0]) !!} <b>({{ $rn[$i] }})</b> {{ $c[1] }} <span class="en">{{ $c[2] }}</span></div>
+        <div class="clause"><b>{!! $box($sc === $c[0]) !!}</b> <b>({{ $rn[$i] }})</b> {{ $c[1] }} <span class="en">{{ $c[2] }}</span></div>
     @endforeach
 
     <div class="affirm"><b>2.</b> मैं सत्यनिष्ठा से प्रतिज्ञा करता/करती हूँ कि उपर्युक्त घोषणा सत्य है और मैं यह भी समझता/समझती हूँ कि मेरी नियुक्ति के बाद इस घोषणा के गलत सिद्ध होने पर मुझे सेवा से बरखास्त किया जा सकता है।<br>
@@ -88,14 +88,17 @@
     <div class="ex-title">रियायत प्रदान करने के लिए आवेदन पत्र<br>APPLICATION FOR GRANT OF EXEMPTION</div>
     <div style="text-align:center; font-size:9.5pt;">(घोषणा का पैरा 1(iii) / 1(iv) देखें) &middot; (Vide para 1(iii) / 1(iv) of the Declaration)</div>
 
-    <div style="margin-top:14pt;">सेवा में / To,<br>
-        &emsp;The Secretary,<br>
-        &emsp;Department of Personnel &amp; Training (DoPT),<br>
-        &emsp;New Delhi</div>
+    <div style="margin-top:14pt;">सेवा में / To,</div>
+    <table style="margin-left:24pt; margin-top:2pt; border-collapse:collapse;">
+        <tr><td style="vertical-align:bottom; white-space:nowrap;">The&nbsp;</td><td style="vertical-align:bottom;">{!! $blank('', '180pt') !!}</td></tr>
+        <tr><td></td><td style="vertical-align:bottom; padding-top:4pt;">{!! $blank('', '180pt') !!}</td></tr>
+        <tr><td></td><td style="vertical-align:bottom; padding-top:4pt;">{!! $blank('', '180pt') !!}</td></tr>
+        <tr><td></td><td style="vertical-align:bottom; padding-top:4pt;">{!! $blank('', '180pt') !!}</td></tr>
+    </table>
     <div class="ex-body">
         महोदय / Sir,<br>
-        मेरा अनुरोध है कि नीचे बताए गए कारणों को ध्यान में रखते हुए, मुझे एक से अधिक जीवित पत्नी रखने / ऐसी महिला जिसका ऐसे व्यक्ति से विवाह हुआ हो जिसकी पहले से एक या अधिक जीवित पत्नियाँ हों — की सेवा में भर्ती पर प्रतिबंध से छूट प्रदान की जाए।<br>
-        I request that, in view of the reasons stated below, I may be granted exemption from the operation of the restriction on recruitment to service of one having more than one wife living / a woman who is married to a person already having one or more wives living.
+        मेरा अनुरोध है कि नीचे बताए गए कारणों को ध्यान में रखते हुए, मेरी एक से अधिक जीवित पत्नी रखने / महिला जिसका ऐसे व्यक्ति से विवाह हुआ हो जिसकी पहले से एक या अधिक जीवित पत्नियाँ हों, की सेवा में भर्ती पर प्रतिबंध के कार्य से छूट दी जाए।<br>
+        I request that, in view of the reasons stated below, I may be granted exemption from the operation of the restriction on recruitment to service of one having more than one wife living / a woman who is married to a person already having one wife or more living.
     </div>
     <div style="margin-top:12pt;">कारण / Reasons:</div>
     <div style="border-bottom:1px solid #000; min-height:16pt; padding:2pt 4pt; font-weight:bold;">{{ $reasons ?: '' }}</div>

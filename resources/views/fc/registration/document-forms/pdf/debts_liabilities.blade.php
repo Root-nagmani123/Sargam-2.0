@@ -22,7 +22,7 @@
          'कॉलम 6 में, यदि सक्षम अधिकारी से अनुमति ली गई हो या उसकी सूचना दी गई हो, तो उसका विवरण भी दें।'],
         ['The term "emoluments" means pay and allowances received by the Government servant.',
          'परिलब्धियों का तात्पर्य सरकारी कर्मचारी द्वारा प्राप्त वेतन और भत्तों से है।'],
-        ['The statement should also include various loans and advances available to Government servants, such as advance for purchase of conveyance, house building advance, etc. (other than advances of pay and travelling allowance, advances from the GP Fund, and loans on Life Insurance Policies and fixed deposits).',
+        ['The statement should also include various loans and advances available to Government servants, like advance for purchase of conveyance, house building advance, etc. (other than advances of pay and travelling allowance, advances from the GP Fund, and loans on Life Insurance Policies and fixed deposits).',
          'विवरण में सरकारी कर्मचारियों को उपलब्ध विभिन्न ऋण, यथा आवागमन हेतु उपलब्ध अग्रिम, गृह निर्माण अग्रिम आदि (अन्य अग्रिमों, यथा यात्रा अग्रिम, भविष्य निधि अग्रिम तथा जीवन बीमा पालिसी और आवधिक जमा से लिए गए ऋणों के अतिरिक्त) को भी शामिल किया जाना चाहिए।'],
     ];
 @endphp
@@ -55,14 +55,13 @@
 
     <div class="docno">Document-6-C / दस्तावेज़-6-सी</div>
     <div class="title" style="font-size:10.5pt; white-space:nowrap;">Statement of Debts and Other Liabilities on First Appointment<span style="text-decoration:none; font-weight:bold;">&nbsp; as on date / जिस तिथि तक: {!! $blank($ason, '120pt') !!}</span></div>
-    <div class="formno">Form No. 6-C</div>
     <div class="title-hi">प्रथम नियुक्ति पर ऋणों तथा अन्य देयताओं का विवरण</div>
     <div class="sub">[debts and other liabilities incurred by him/her directly or indirectly]</div>
 
     <table class="dc">
         <thead>
             <tr>
-                <th style="width:6%;">Sl.No. / क्र.सं.<div class="cno">(1)</div></th>
+                <th style="width:6%;">Sl.No. / {!! fc_kra_sn_img('9pt') !!}<div class="cno">(1)</div></th>
                 <th style="width:14%;">Amount / धनराशि<div class="cno">(2)</div></th>
                 <th>Name and address of Creditor / ऋणदाता का नाम और पता<div class="cno">(3)</div></th>
                 <th style="width:16%;">Date of incurring Liability / दायित्व की तिथि<div class="cno">(4)</div></th>

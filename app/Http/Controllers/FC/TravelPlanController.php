@@ -105,11 +105,15 @@ class TravelPlanController extends Controller
             'joining_time'              => 'nullable|date_format:H:i',
             'fc_travel_arrival_slot_id' => 'required|exists:fc_travel_arrival_slots,id',
             'mode_of_journey'           => 'required|string|in:By Air,By Road,By Train',
-            'journey_vehicle_no'        => 'required|string|max:200',
+            'journey_vehicle_no'        => 'required|string|max:200|no_html',
             'academy_arrival_date'      => 'nullable|date',
-            'arrival_time_dehradun'     => 'required|string|max:120',
+            'arrival_time_dehradun'     => 'required|string|max:120|no_html',
             'require_academy_vehicle'   => 'required|boolean',
-            'special_requirements'      => 'nullable|string|max:1000',
+            'special_requirements'      => 'nullable|string|max:1000|no_html',
+        ], [], [
+            'journey_vehicle_no'    => 'Flight No / Train No / Vehicle No',
+            'arrival_time_dehradun' => 'Arrival time at Dehradun',
+            'special_requirements'  => 'Remarks',
         ]);
 
         $slot = FcTravelArrivalSlot::where('id', $request->fc_travel_arrival_slot_id)
@@ -172,11 +176,15 @@ class TravelPlanController extends Controller
             'joining_time'              => 'nullable|date_format:H:i',
             'fc_travel_arrival_slot_id' => 'required|exists:fc_travel_arrival_slots,id',
             'mode_of_journey'           => 'required|string|in:By Air,By Road,By Train',
-            'journey_vehicle_no'        => 'nullable|string|max:200',
+            'journey_vehicle_no'        => 'nullable|string|max:200|no_html',
             'academy_arrival_date'      => 'nullable|date',
-            'arrival_time_dehradun'     => 'nullable|string|max:120',
+            'arrival_time_dehradun'     => 'nullable|string|max:120|no_html',
             'require_academy_vehicle'   => 'nullable|boolean',
-            'special_requirements'      => 'nullable|string|max:1000',
+            'special_requirements'      => 'nullable|string|max:1000|no_html',
+        ], [], [
+            'journey_vehicle_no'    => 'Flight No / Train No / Vehicle No',
+            'arrival_time_dehradun' => 'Arrival time at Dehradun',
+            'special_requirements'  => 'Remarks',
         ]);
 
         $existing = StudentTravelPlanMaster::forUser($userId)->first();
