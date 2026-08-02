@@ -282,12 +282,12 @@ class FrontPageController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'OTP sent to your registered mobile number.',
+            'message' => 'OTP sent to your registered mobile number and email address.',
             'validity_minutes' => $this->fcOtp->validityMinutes(),
         ]);
     }
 
-    //validates user exists 
+    //validates user exists
     public function verify(Request $request)
     {
         // Step 1: Validate input, including captcha + mandatory OTP (A1)
@@ -1466,7 +1466,7 @@ class FrontPageController extends Controller
             'success' => true,
             'user_name' => $credentials->user_name,
             'otp_sent' => true,
-            'message' => 'OTP sent to your registered mobile number.',
+            'message' => 'OTP sent to your registered mobile number and email address.',
             'validity_minutes' => $this->fcOtp->validityMinutes(),
         ]);
     }
@@ -1511,7 +1511,7 @@ class FrontPageController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'OTP sent to your registered mobile number.',
+            'message' => 'OTP sent to your registered mobile number and email address.',
             'validity_minutes' => $this->fcOtp->validityMinutes(),
         ]);
     }

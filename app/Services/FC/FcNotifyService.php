@@ -135,7 +135,7 @@ class FcNotifyService
             'Programme_Name' => $this->programme($programmeName),
             'Registration_ID' => $registrationId !== '' ? $registrationId : 'N/A',
             'Programme_Dates' => $this->programmeDates(),
-            'Portal_Link' => $this->portal($registrationPk),
+            'Portal_Link' => $this->loginPortal($registrationPk),
             'Institute_Name' => $this->institute(),
         ];
 
@@ -211,7 +211,14 @@ class FcNotifyService
         return $code;
     }
 
-    /** B1 — Individual Form Step Incomplete. Returns true if at least one channel delivered. */
+    /**
+     * B1 — Individual Form Step Incomplete. Returns true if at least one channel delivered.
+     *
+     * $stepName is the single next-pending step (used as-is for SMS — the DLT-approved
+     * template has one fixed {Step_Name} slot and cannot list multiple steps). $pendingSteps,
+     * when given, is the full comma-separated list of all pending steps and is used to render
+     * a bullet list in the email (which has no DLT constraint).
+     */
     public function formStepIncomplete(
         ?string $mobile,
         string $participantName,
@@ -219,6 +226,7 @@ class FcNotifyService
         ?int $registrationPk = null,
         ?string $email = null,
         string $programmeName = '',
+        ?string $pendingSteps = null,
     ): bool {
         $mobile = trim((string) $mobile);
         $email = $this->resolveEmail($email, $registrationPk);
@@ -226,11 +234,15 @@ class FcNotifyService
             return false;
         }
 
+        $stepName = $stepName !== '' ? $stepName : 'registration';
+        $pendingStepsList = $this->formatPendingStepsList($pendingSteps, $stepName);
+
         $replacements = [
             'Participant_Name' => $participantName !== '' ? $participantName : 'Candidate',
-            'Step_Name' => $stepName !== '' ? $stepName : 'registration',
+            'Step_Name' => $stepName,
+            'Pending_Steps' => $pendingStepsList,
             'Programme_Name' => $this->programme($programmeName),
-            'Portal_Link' => $this->portal($registrationPk),
+            'Portal_Link' => $this->loginPortal($registrationPk),
             'Institute_Name' => $this->institute(),
         ];
 
@@ -243,6 +255,17 @@ class FcNotifyService
         }
 
         return $delivered;
+    }
+
+    /** Renders the pending step names as a "- Step" bulleted list for the B1 email body. */
+    protected function formatPendingStepsList(?string $pendingSteps, string $fallbackStep): string
+    {
+        $steps = array_values(array_filter(array_map('trim', explode(',', (string) $pendingSteps))));
+        if ($steps === []) {
+            $steps = [$fallbackStep];
+        }
+
+        return implode("\n", array_map(fn (string $step) => '- '.$step, $steps));
     }
 
     /** B2 — Registration Steps Pending. Returns true if at least one channel delivered. */
@@ -316,6 +339,34 @@ class FcNotifyService
         }
     }
 
+    /**
+     * B3 — Travel Pending. All registration form steps are complete but the
+     * (separately tracked) travel plan has not been submitted yet.
+     * Email only — no DLT-approved SMS template exists for this reminder yet.
+     * Returns true if delivered.
+     */
+    public function travelPending(
+        ?string $mobile,
+        string $participantName,
+        string $programmeName,
+        ?int $registrationPk = null,
+        ?string $email = null,
+    ): bool {
+        $email = $this->resolveEmail($email, $registrationPk);
+        if ($email === null) {
+            return false;
+        }
+
+        $replacements = [
+            'Participant_Name' => $participantName !== '' ? $participantName : 'Candidate',
+            'Programme_Name' => $this->programme($programmeName),
+            'Portal_Link' => $this->loginPortal($registrationPk),
+            'Institute_Name' => $this->institute(),
+        ];
+
+        return $this->sendEmail('travel_pending', $email, $replacements, $registrationPk);
+    }
+
     public function otpService(): FcOtpService
     {
         return $this->otp;
@@ -339,6 +390,22 @@ class FcNotifyService
         $form = $this->resolveFormForPortal($registrationPk);
         if ($form) {
             return $form->landingPageUrl();
+        }
+
+        return rtrim((string) config('gupshup.portal_url'), '/');
+    }
+
+    /**
+     * Same resolution + query-string constraint as portal(), but points already-
+     * registered trainees straight to the login page instead of the registration
+     * landing page. Used where the recipient has nothing left to register for
+     * (registration successful, or only a non-form step like travel is pending).
+     */
+    protected function loginPortal(?int $registrationPk = null): string
+    {
+        $form = $this->resolveFormForPortal($registrationPk);
+        if ($form) {
+            return $form->loginUrl();
         }
 
         return rtrim((string) config('gupshup.portal_url'), '/');
