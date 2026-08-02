@@ -62,8 +62,8 @@
             <tr>
                 <th style="width:20%;">चल संपत्ति का नाम तथा विवरण / Name and details of Movable Property<div class="cno">(1)</div></th>
                 <th style="width:12%;">*वर्तमान मूल्य / Present Value<div class="cno">(2)</div></th>
-                <th style="width:22%;">यदि अपने नाम पर नहीं है तो किसके नाम पर, तथा कर्मचारी के साथ संबंध / If not in own name, in whose name held and his/her relationship to the Govt. Servant<div class="cno">(3)</div></th>
-                <th>कैसे अर्जित की — खरीद/विरासत/उपहार आदि; अर्जन की तारीख तथा जिनसे प्राप्त की उनके नाम एवं विवरण / How acquired — purchase/inheritance/gift, etc., with date of acquisition and details of persons from whom acquired<div class="cno">(4)</div></th>
+                <th style="width:22%;">यदि अपने नाम पर नहीं है तो बताएं किसके नाम पर है, तथा उसका कर्मचारी के साथ संबंध / If not in own Name State in whose name held and his/her relationship to the Govt. Servant<div class="cno">(3)</div></th>
+                <th>कैसे अर्जित की– खरीदी है, विरासत में मिली, उपहार में मिली या अन्य तरह से प्राप्त हुई है; अर्जित करने की तारीख दें तथा उन व्यक्तियों का नाम एवं विवरण दें जिनसे प्राप्त की है / How acquired — purchase/inheritance/gift, etc., with date of acquisition and details of persons from whom acquired<div class="cno">(4)</div></th>
                 <th style="width:14%;">अभ्युक्तियां / Remarks<div class="cno">(5)</div></th>
             </tr>
         </thead>
@@ -98,7 +98,7 @@
     <div style="text-align:center; font-weight:bold; margin-bottom:10pt;">-2-</div>
     <div class="note-hd">टिप्पणी / Note:</div>
     <div class="note-p">
-        भा.प्र.सेवा/भा.पु.सेवा तथा प्रथम एवं द्वितीय श्रेणी सेवा के प्रत्येक सदस्य को इस घोषणा फार्म में अपनी उस समस्त चल संपत्ति का विवरण देना होता है जो चाहे उसके अपने नाम पर हो या परिवार के किसी सदस्य अथवा किसी अन्य व्यक्ति के नाम पर हो।<br>
+        भा.प्र.सेवा/भा.पु.सेवा और प्रथम एवं द्वितीय श्रेणी सेवा के प्रत्येक सदस्य को इस घोषणा फार्म में अपनी उस सभी चल संपत्ति का विवरण देना होता है जो चाहे उसके अपने नाम पर हो या परिवार के किसी दूसरे सदस्य के नाम पर अथवा किसी अन्य व्यक्ति के नाम पर।<br>
         The declaration form is required to be filled in and submitted by every member of IAS/IPS and Class-I and Class-II Service, giving particulars of all movable property held by him either in his own name or in the name of any member of his family or in the name of any other person.
     </div>
     <div class="note-p">
