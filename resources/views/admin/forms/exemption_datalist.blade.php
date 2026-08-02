@@ -103,8 +103,15 @@
                                             </td>
                                             <td>
                                                 @if ($data->application_type == 2)
-                                                    @if ($data->medical_exemption_doc)
-                                                        <a href="{{ asset('storage/' . $data->medical_exemption_doc) }}"
+                                                    {{-- Medical exemptions attach a medical document; "Previously Completed
+                                                         Foundation Course" attaches its completion certificate. Either way
+                                                         the supporting document belongs in this column. --}}
+                                                    @php
+                                                        $supportingDoc = $data->medical_exemption_doc
+                                                            ?: ($data->fc_Prev_comp_doc ?? null);
+                                                    @endphp
+                                                    @if ($supportingDoc)
+                                                        <a href="{{ asset('storage/' . $supportingDoc) }}"
                                                             target="_blank" class="btn btn-sm btn-info">View</a>
                                                     @else
                                                         <span class="text-muted">No Document</span>

@@ -15,6 +15,7 @@ use App\Models\FC\{
 };
 use Illuminate\Support\Collection;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -845,7 +846,53 @@ class RegistrationService
         return null;
     }
 
+    /**
+     * Resolve one master-data label, cached across requests.
+     *
+     * This is REFERENCE data (the label behind a stored id — "Ex Small" for cloth_size 1),
+     * never trainee-entered data, so caching it cannot make a profile stale: every value on
+     * the report is still read live from the trainee's own row on each render. Master-data
+     * screens call fc_flush_lookup_cache() to publish an edit immediately; otherwise
+     * fc.lookup_cache_ttl bounds it.
+     */
     private function resolveLookupLabelSafely(string $table, string $valueColumn, string $labelColumn, mixed $raw): ?string
+    {
+        static $memo = [];
+
+        $memoKey = $table.'|'.$valueColumn.'|'.$labelColumn.'|'.(string) $raw;
+        if (array_key_exists($memoKey, $memo)) {
+            return $memo[$memoKey];
+        }
+
+        $ttl = (int) config('fc.lookup_cache_ttl', 600);
+        if ($ttl <= 0) {
+            return $memo[$memoKey] = $this->resolveLookupLabelFromDb($table, $valueColumn, $labelColumn, $raw);
+        }
+
+        try {
+            $label = Cache::remember(
+                $this->lookupLabelCacheKey($memoKey),
+                $ttl,
+                fn () => $this->resolveLookupLabelFromDb($table, $valueColumn, $labelColumn, $raw)
+            );
+        } catch (\Throwable $e) {
+            // Cache store unavailable — never let it cost us the label.
+            $label = $this->resolveLookupLabelFromDb($table, $valueColumn, $labelColumn, $raw);
+        }
+
+        return $memo[$memoKey] = $label;
+    }
+
+    /**
+     * Namespaced by database + lookup cache version, same convention as
+     * DynamicFormService so fc_flush_lookup_cache() invalidates both at once.
+     */
+    private function lookupLabelCacheKey(string $suffix): string
+    {
+        return 'fc_lookup:'.DB::getDatabaseName().':v'.fc_lookup_cache_version().':label:'.md5($suffix);
+    }
+
+    private function resolveLookupLabelFromDb(string $table, string $valueColumn, string $labelColumn, mixed $raw): ?string
     {
         $tables = array_values(array_unique(array_filter([
             $this->resolveLookupTableName($table),
@@ -853,7 +900,10 @@ class RegistrationService
         ])));
 
         foreach ($tables as $resolvedTable) {
-            if (! Schema::hasTable($resolvedTable)) {
+            // fc_schema_has_table(), not Schema::hasTable(): the latter hits
+            // information_schema every single call — 26 metadata queries per profile render,
+            // and information_schema contends badly under concurrency. Same answer, cached.
+            if (! fc_schema_has_table($resolvedTable)) {
                 continue;
             }
 
@@ -876,10 +926,11 @@ class RegistrationService
 
             foreach ($candidateValueColumns as $col) {
                 try {
-                    if (! Schema::hasColumn($resolvedTable, $col)) {
+                    // Cached, case-insensitive equivalents of Schema::hasColumn().
+                    if (! fc_schema_has_column($resolvedTable, $col)) {
                         continue;
                     }
-                    if (! Schema::hasColumn($resolvedTable, $labelColumn)) {
+                    if (! fc_schema_has_column($resolvedTable, $labelColumn)) {
                         continue;
                     }
                     $value = DB::table($resolvedTable)->where($col, $raw)->value($labelColumn);

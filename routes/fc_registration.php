@@ -245,6 +245,8 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     // Individual student full profile
     Route::get('/student/{username}', [ReportController::class, 'studentDetail'])->name('student');
     Route::get('/student/{username}/pdf', [ReportController::class, 'studentDetailPdf'])->name('student.pdf');
+    // Print view — the PDF template served as HTML so browser print matches the PDF exactly
+    Route::get('/student/{username}/print', [ReportController::class, 'studentDetailPrint'])->name('student.print');
     // Standalone per-student document verification page
     Route::get('/student/{username}/documents', [ReportController::class, 'studentDocuments'])->name('student.documents');
     Route::post('/student/{username}/documents/{documentMasterId}/verify', [ReportController::class, 'updateStudentDocumentVerification'])

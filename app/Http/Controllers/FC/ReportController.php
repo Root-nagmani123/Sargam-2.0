@@ -16,8 +16,11 @@ use App\Models\FC\{
     StudentMasterLanguageKnown, StudentMasterEmploymentDetails,
     FcJoiningRelatedDocumentsMaster
 };
+use App\Models\FrontPage;
+use App\Models\PathPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -32,6 +35,12 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
 {
+    /** @var array<string,string>|null Memoised course/coordinator header (see fcReportCourseHeader). */
+    private ?array $fcReportCourseHeader = null;
+
+    /** @var string|false|null Memoised LBSNAA crest data URI; false = not resolved yet. */
+    private string|false|null $fcReportLogoDataUri = false;
+
     // ── 1. Registration Overview (all students, progress status) ─────
     public function overview(Request $request)
     {
@@ -228,6 +237,22 @@ class ReportController extends Controller
             }
         }
 
+        // Step-1 signature, shown under the photo in the identity box.
+        $signatureUrl = null;
+        $signaturePath = $this->fcRegistrationSignaturePath($step1, (string) $username);
+        if ($signaturePath !== null) {
+            $sp = ltrim(str_replace('\\', '/', $signaturePath), '/');
+            if (str_starts_with($sp, 'public/')) { $sp = substr($sp, 7); }
+            elseif (str_starts_with($sp, 'storage/')) { $sp = substr($sp, 8); }
+            if (is_file(storage_path('app/public/'.$sp))) {
+                $signatureUrl = \Illuminate\Support\Facades\Storage::url($sp);
+            }
+        }
+
+        // Course duration (Path Page) + coordinator (Front Page) for the report header.
+        $courseHeader = $this->fcReportCourseHeaderForDisplay();
+        $lbsnaaLogoUrl = is_file(public_path('images/lbsnaa_logo.jpg')) ? asset('images/lbsnaa_logo.jpg') : null;
+
         // Form this student is registered under
         $reportForm = ($master?->form_id) ? FcForm::find($master->form_id) : null;
 
@@ -284,7 +309,8 @@ class ReportController extends Controller
 
         return view('fc.report.student-detail', compact(
             'username','userId','displayName',
-            'photoUrl','reportForm','headerMeta','registrationComplete',
+            'photoUrl','signatureUrl','courseHeader','lbsnaaLogoUrl',
+            'reportForm','headerMeta','registrationComplete',
             'sections',
             'step1','step2','master','bank',
             'documents','documentSource','confirmation','qualifications','employments','languages'
@@ -410,6 +436,21 @@ class ReportController extends Controller
     }
 
     /**
+     * Browser-print view of the registration profile.
+     *
+     * Same template and same data as studentDetailPdf(), served as HTML with the print
+     * dialog opened on load, so Ctrl+P output is identical to the downloaded PDF instead of
+     * being the on-screen report's own layout.
+     */
+    public function studentDetailPrint(string $username)
+    {
+        $viewData = $this->fcStudentRegistrationPdfViewData($username);
+        abort_unless($viewData !== null, 404, "Student '{$username}' not found.");
+
+        return view('fc.report.student-detail-pdf', $viewData + ['autoPrint' => true]);
+    }
+
+    /**
      * Dompdf writes .ufm/.ttf font metrics under storage/fonts when rendering @font-face (FcRegPdf).
      * Production often lacks this directory (storage/ is not in git); without it fopen(...ufm) fails.
      */
@@ -442,9 +483,41 @@ class ReportController extends Controller
         if (! is_file($regular) || ! is_readable($regular)) {
             return '';
         }
+
+        // ~580 KB of base64 rebuilt from 440 KB of TTF on every render. Keyed by the font
+        // files' mtime/size so dropping in a new font file still takes effect immediately.
+        $bold = $dir.'/NotoSansDevanagari-Bold.ttf';
+        $stamp = [];
+        foreach ([$regular, $bold] as $f) {
+            $s = is_file($f) ? @stat($f) : null;
+            $stamp[] = $f.':'.($s['mtime'] ?? 0).':'.($s['size'] ?? 0);
+        }
+        $cacheKey = 'fc_pdf_fontface:'.md5(implode('|', $stamp));
+
+        try {
+            $cached = Cache::get($cacheKey);
+            if (is_string($cached) && $cached !== '') {
+                return $cached;
+            }
+        } catch (\Throwable $e) {
+            // Cache store unavailable — build it inline.
+        }
+
+        $css = $this->fcRegistrationBuildEmbeddedFontFaceCss($regular, $bold);
+
+        try {
+            Cache::put($cacheKey, $css, now()->addDays(30));
+        } catch (\Throwable $e) {
+            // Not worth failing the download over.
+        }
+
+        return $css;
+    }
+
+    private function fcRegistrationBuildEmbeddedFontFaceCss(string $regular, string $bold): string
+    {
         $rData = base64_encode((string) file_get_contents($regular));
         $css = '@font-face{font-family:\'FcRegPdf\';font-style:normal;font-weight:400;src:url(data:font/ttf;charset=utf-8;base64,'.$rData.') format(\'truetype\');}';
-        $bold = $dir.'/NotoSansDevanagari-Bold.ttf';
         if (is_file($bold) && is_readable($bold)) {
             $bData = base64_encode((string) file_get_contents($bold));
             $css .= '@font-face{font-family:\'FcRegPdf\';font-style:normal;font-weight:700;src:url(data:font/ttf;charset=utf-8;base64,'.$bData.') format(\'truetype\');}';
@@ -475,6 +548,72 @@ class ReportController extends Controller
     }
 
     /**
+     * Startup flags shared by the single-PDF and bulk-ZIP Chrome renders.
+     *
+     * A cold `--headless=new` launch was ~2.4 s, and roughly half of that was Chrome
+     * building a throw-away profile and starting services this render never uses. Reusing
+     * one profile directory and switching those services off takes it to ~1.4–1.7 s.
+     * Nothing here changes how the page is laid out or printed.
+     *
+     * @return list<string>
+     */
+    private function fcRegistrationChromeLaunchFlags(): array
+    {
+        $flags = [
+            '--no-first-run',
+            '--no-default-browser-check',
+            '--disable-extensions',
+            '--disable-background-networking',
+            '--disable-component-update',
+            '--disable-client-side-phishing-detection',
+            '--disable-default-apps',
+            '--disable-sync',
+            '--mute-audio',
+            '--disable-features=Translate,BackForwardCache,AcceptCHFrame,MediaRouter,OptimizationHints',
+        ];
+
+        // Persistent profile, one per PHP worker: two Chrome processes cannot share a profile
+        // (the second fails on its SingletonLock), and a worker only ever renders one PDF at
+        // a time, so the worker pid is a collision-free slot that survives across requests.
+        $root = storage_path('app/temp/fc-pdf-chrome');
+        $profile = $root.'/'.getmypid();
+        if (! is_dir($profile)) {
+            @mkdir($profile, 0775, true);
+            $this->fcRegistrationPruneChromeProfiles($root);
+        }
+        if (is_dir($profile) && is_writable($profile)) {
+            $flags[] = '--user-data-dir='.$profile;
+            $flags[] = '--crash-dumps-dir='.$profile;
+        }
+
+        return $flags;
+    }
+
+    /**
+     * Drop profile directories left behind by workers that no longer exist, so the pool
+     * stays bounded by the number of live PHP workers instead of growing with pid churn.
+     * Only runs when a new slot is created, which is once per worker lifetime.
+     */
+    private function fcRegistrationPruneChromeProfiles(string $root): void
+    {
+        try {
+            $cutoff = time() - 3600;
+            foreach (glob($root.'/*', GLOB_ONLYDIR) ?: [] as $dir) {
+                $pid = (int) basename($dir);
+                if ($pid > 0 && file_exists('/proc/'.$pid)) {
+                    continue;
+                }
+                if (@filemtime($dir) > $cutoff) {
+                    continue;
+                }
+                File::deleteDirectory($dir);
+            }
+        } catch (\Throwable $e) {
+            // Housekeeping only — never let it affect the download.
+        }
+    }
+
+    /**
      * Headless Chrome print-to-PDF (best Hindi + Latin shaping). Returns null on failure.
      */
     private function fcRegistrationPdfRenderChrome(string $html): ?string
@@ -499,17 +638,22 @@ class ReportController extends Controller
 
         $fileUri = 'file://'.str_replace('\\', '/', $htmlPath);
 
-        $cmd = [
-            $bin,
-            '--headless=new',
-            '--disable-gpu',
-            '--no-sandbox',
-            '--disable-dev-shm-usage',
-            '--no-pdf-header-footer',
-            '--virtual-time-budget=25000',
-            '--print-to-pdf='.$pdfPath,
-            $fileUri,
-        ];
+        $cmd = array_merge(
+            [
+                $bin,
+                '--headless=new',
+                '--disable-gpu',
+                '--no-sandbox',
+                '--disable-dev-shm-usage',
+                '--no-pdf-header-footer',
+                '--virtual-time-budget=25000',
+            ],
+            $this->fcRegistrationChromeLaunchFlags(),
+            [
+                '--print-to-pdf='.$pdfPath,
+                $fileUri,
+            ]
+        );
 
         try {
             $process = new Process($cmd);
@@ -736,7 +880,7 @@ class ReportController extends Controller
     /**
      * Embed trainee photo (downscaled for PDF) when file exists on public disk.
      */
-    private function fcRegistrationPhotoDataUri(?string $path): ?string
+    private function fcRegistrationPhotoDataUri(?string $path, int $maxW = 110, int $maxH = 140): ?string
     {
         if ($path === null || $path === '') {
             return null;
@@ -750,9 +894,58 @@ class ReportController extends Controller
             $path = substr($path, strlen('storage/'));
         }
         $full = storage_path('app/public/'.$path);
+
+        return $this->fcPdfImageDataUri($full, $maxW, $maxH);
+    }
+
+    /**
+     * Encode an on-disk image as a data: URI, downscaled to fit the PDF box.
+     * Extracted from fcRegistrationPhotoDataUri() so the trainee signature and the
+     * LBSNAA crest can reuse the same embedding (Dompdf never fetches file:// images).
+     */
+    private function fcPdfImageDataUri(string $full, int $maxW = 110, int $maxH = 140): ?string
+    {
         if (! is_file($full)) {
             return null;
         }
+
+        // Content-addressed cache: the key carries the file's mtime and size, so replacing a
+        // photo/signature produces a DIFFERENT key and the next render re-encodes it. Nothing
+        // stale can ever be served, and the GD downscale (≈50 ms per image, ≈100 ms for the
+        // 1583x1911 crest) stops running on every single download.
+        $stat = @stat($full);
+        $cacheKey = 'fc_pdf_img:'.md5(implode('|', [
+            $full,
+            (string) ($stat['mtime'] ?? 0),
+            (string) ($stat['size'] ?? 0),
+            (string) $maxW,
+            (string) $maxH,
+        ]));
+
+        try {
+            $cached = Cache::get($cacheKey);
+            if (is_string($cached) && $cached !== '') {
+                return $cached;
+            }
+        } catch (\Throwable $e) {
+            // Cache store unavailable — fall through and encode.
+        }
+
+        $encoded = $this->fcPdfEncodeImageDataUri($full, $maxW, $maxH);
+
+        if ($encoded !== null) {
+            try {
+                Cache::put($cacheKey, $encoded, now()->addDays(7));
+            } catch (\Throwable $e) {
+                // Encoding succeeded; failing to cache it is not worth an error.
+            }
+        }
+
+        return $encoded;
+    }
+
+    private function fcPdfEncodeImageDataUri(string $full, int $maxW, int $maxH): ?string
+    {
         $mime = @mime_content_type($full) ?: 'image/jpeg';
         if (! str_starts_with((string) $mime, 'image/')) {
             return null;
@@ -764,22 +957,17 @@ class ReportController extends Controller
             if ($src !== false) {
                 $w = imagesx($src);
                 $h = imagesy($src);
-                $maxW = 110;
-                $maxH = 140;
                 if ($w > 0 && $h > 0 && ($w > $maxW || $h > $maxH)) {
                     $scale = min($maxW / $w, $maxH / $h);
                     $nw = max(1, (int) round($w * $scale));
                     $nh = max(1, (int) round($h * $scale));
                     $dst = imagecreatetruecolor($nw, $nh);
                     if ($dst !== false) {
-                        if ($mime === 'image/png' || $mime === 'image/gif') {
-                            imagealphablending($dst, false);
-                            imagesavealpha($dst, true);
-                            $transparent = imagecolorallocatealpha($dst, 255, 255, 255, 127);
-                            imagefilledrectangle($dst, 0, 0, $nw, $nh, $transparent);
-                        } else {
-                            imagefill($dst, 0, 0, imagecolorallocate($dst, 255, 255, 255));
-                        }
+                        // Flatten onto white before the JPEG re-encode below. Keeping the
+                        // alpha channel here made every transparent pixel come out BLACK in
+                        // the PDF, which is exactly what a scanned PNG signature is made of.
+                        imagealphablending($dst, true);
+                        imagefilledrectangle($dst, 0, 0, $nw, $nh, imagecolorallocate($dst, 255, 255, 255));
                         imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
                         ob_start();
                         imagejpeg($dst, null, 88);
@@ -793,6 +981,124 @@ class ReportController extends Controller
         }
 
         return 'data:'.$mime.';base64,'.base64_encode($binary);
+    }
+
+    /**
+     * Course header shown on the descriptive-roll report / PDF.
+     *
+     * Course duration comes from the Path Page (Setup > FC Forms > Path Page Admin) and the
+     * coordinator from the Front Page (Landing Page Admin) — the same single rows those two
+     * screens edit, so the report follows whatever an admin last saved there. Read-only.
+     * Memoised: the bulk ZIP export renders one PDF per trainee from the same request.
+     *
+     * @return array{course_title:string,course_start:string,course_end:string,course_duration:string,coordinator_name:string,coordinator_designation:string}
+     */
+    private function fcReportCourseHeader(): array
+    {
+        if ($this->fcReportCourseHeader !== null) {
+            return $this->fcReportCourseHeader;
+        }
+
+        $header = [
+            'course_title' => '',
+            'course_start' => '',
+            'course_end' => '',
+            'course_duration' => '',
+            'coordinator_name' => '',
+            'coordinator_designation' => '',
+        ];
+
+        try {
+            $path = fc_schema_has_table('fc_path_pages') ? PathPage::query()->first() : null;
+            if ($path) {
+                $start = $path->course_start_date ? format_date($path->course_start_date) : '';
+                $end   = $path->course_end_date ? format_date($path->course_end_date) : '';
+                $header['course_start'] = $start === '-' ? '' : $start;
+                $header['course_end']   = $end === '-' ? '' : $end;
+                $header['course_duration'] = trim(implode(' to ', array_filter([
+                    $header['course_start'],
+                    $header['course_end'],
+                ])));
+            }
+
+            $front = fc_schema_has_table('fc_front_pages') ? FrontPage::query()->first() : null;
+            if ($front) {
+                $header['course_title'] = trim((string) ($front->course_title ?? ''));
+                $header['coordinator_name'] = trim((string) ($front->coordinator_name ?? ''));
+                $header['coordinator_designation'] = trim((string) ($front->coordinator_designation ?? ''));
+            }
+        } catch (\Throwable $e) {
+            // A missing/renamed column must not take the whole profile page down.
+            Log::warning('FC report: course header lookup failed', ['message' => $e->getMessage()]);
+        }
+
+        return $this->fcReportCourseHeader = $header;
+    }
+
+    /**
+     * The Front Page course title is authored with ordinal markup ("100<sup>th</sup>
+     * Foundation Course"), and that screen renders it as HTML — so printing it escaped
+     * showed the raw tags. Escape everything, then re-allow <sup> only, and return it as
+     * Htmlable so Blade's {{ }} emits it without a second round of escaping.
+     */
+    private function fcReportSupHtml(string $raw): \Illuminate\Support\HtmlString
+    {
+        return new \Illuminate\Support\HtmlString(str_replace(
+            ['&lt;sup&gt;', '&lt;/sup&gt;'],
+            ['<sup>', '</sup>'],
+            e($raw)
+        ));
+    }
+
+    /**
+     * fcReportCourseHeader() with the course title marked up for display (see above).
+     *
+     * @return array<string,mixed>
+     */
+    private function fcReportCourseHeaderForDisplay(): array
+    {
+        $header = $this->fcReportCourseHeader();
+        if ($header['course_title'] !== '') {
+            $header['course_title'] = $this->fcReportSupHtml($header['course_title']);
+        }
+
+        return $header;
+    }
+
+    /**
+     * LBSNAA crest for the PDF masthead, embedded (Dompdf will not load file:// images).
+     */
+    private function fcReportLbsnaaLogoDataUri(): ?string
+    {
+        if ($this->fcReportLogoDataUri === false) {
+            $this->fcReportLogoDataUri = $this->fcPdfImageDataUri(public_path('images/lbsnaa_logo.jpg'), 150, 150);
+        }
+
+        return $this->fcReportLogoDataUri;
+    }
+
+    /**
+     * Stored path of the Step-1 signature upload, with the same fallbacks the photo uses
+     * (records imported before signature_path was populated still have the file on disk).
+     */
+    private function fcRegistrationSignaturePath(?object $step1, string $username): ?string
+    {
+        $stored = trim((string) ($step1->signature_path ?? ''));
+        if ($stored !== '') {
+            return $stored;
+        }
+
+        $segment = fc_upload_path_segment((int) $username);
+        $dir = storage_path('app/public/uploads/'.$segment);
+        if (is_dir($dir)) {
+            foreach (glob($dir.'/signature*.*') ?: [] as $full) {
+                if (is_file($full)) {
+                    return 'uploads/'.$segment.'/'.basename($full);
+                }
+            }
+        }
+
+        return null;
     }
 
     // ── 3. Service-wise Report ────────────────────────────────────────
@@ -2151,87 +2457,65 @@ class ReportController extends Controller
 
     private function fcStudentRegistrationPdfBytes(string $username, ?int $stepLimit = null): ?string
     {
-        $s1Col = fc_user_col('student_master_firsts');
-        $s2Col = fc_user_col('student_master_seconds');
-        $smCol = fc_user_col('student_masters');
-        $bkCol = fc_user_col('new_registration_bank_details_masters');
-        $sqCol = fc_user_col('student_master_qualification_details');
-        $seCol = fc_user_col('student_master_employment_details');
-        $slCol = fc_user_col('student_master_language_knowns');
+        $viewData = $this->fcStudentRegistrationPdfViewData($username, $stepLimit);
+        if ($viewData === null) {
+            return null;
+        }
 
-        $step1 = StudentMasterFirst::where($s1Col, $username)
+        $html = view('fc.report.student-detail-pdf', $viewData)->render();
+
+        return $this->fcRenderPdfFromHtml($html, 'FC Registration - '.$username);
+    }
+
+    /**
+     * Everything the registration-profile template needs.
+     *
+     * Extracted so the browser Print view renders from the SAME data and the SAME template
+     * as the downloaded PDF — printing the on-screen report instead produced a different
+     * document (screen card layout, two-column field grid).
+     *
+     * @return array<string,mixed>|null
+     */
+    private function fcStudentRegistrationPdfViewData(string $username, ?int $stepLimit = null): ?array
+    {
+        $step1 = StudentMasterFirst::where(fc_user_col('student_master_firsts'), $username)
             ->with(['session', 'service', 'allottedState'])
             ->first();
         if (! $step1) {
             return null;
         }
 
-        $step2 = StudentMasterSecond::where($s2Col, $username)
-            ->with(['category', 'religion', 'permState', 'presState', 'fatherProfession'])
-            ->first();
-        $master = StudentMaster::where($smCol, $username)->first();
-        $bank = NewRegistrationBankDetailsMaster::where($bkCol, $username)->first();
-        $qualifications = DB::table('student_master_qualification_details')
-            ->where($sqCol, $username)
-            ->get()
-            ->map(function ($row) {
-                $row->qualification_name = $this->fcResolveLookupLabel(
-                    ['qualification_masters', 'qualification_master'],
-                    ['id', 'pk'],
-                    'qualification_name',
-                    $row->qualification_id ?? null
-                );
-                $row->board_name = $this->fcResolveLookupLabel(
-                    ['board_name_masters', 'board_name_master'],
-                    ['id', 'pk'],
-                    'board_name',
-                    $row->board_id ?? null
-                );
-                return $row;
-            });
-        $employments = DB::table('student_master_employment_details')
-            ->leftJoin('job_type_masters', 'student_master_employment_details.job_type_id', '=', 'job_type_masters.id')
-            ->where("student_master_employment_details.{$seCol}", $username)
-            ->select('student_master_employment_details.*', 'job_type_masters.job_type_name')
-            ->get();
-        $languages = DB::table('student_master_language_knowns')
-            ->where($slCol, $username)
-            ->get()
-            ->map(function ($row) {
-                $row->language_name = $this->fcResolveLookupLabel(
-                    ['language_master', 'language_masters'],
-                    ['id', 'pk'],
-                    'language_name',
-                    $row->language_id ?? null
-                );
-                return $row;
-            });
+        // step2 / master / bank / qualifications / employments / languages used to be loaded
+        // here as well — six queries per PDF whose results this template never reads (it
+        // renders from $sections). The bulk ZIP export ran them once per trainee.
+
         $sections = $this->fcStudentPdfSanitizeSections(
             app(RegistrationService::class)->buildPdfSectionsFromFormDefinition((int) $username, null, $stepLimit)
         );
-        $printedAt = $this->fcPdfSanitizeText(now()->format('d/m/Y H:i'));
-        $photoDataUri = $this->fcRegistrationPhotoDataUri($step1->photo_path);
 
         $pdfFontFaceCss = $this->fcRegistrationEmbeddedFontFaceCss();
         $pdfFontFamilyCss = $pdfFontFaceCss !== ''
             ? "'FcRegPdf', 'DejaVu Sans', sans-serif"
             : "'DejaVu Sans', sans-serif";
 
-        $viewData = [
+        return [
             'sections'       => $sections,
             'username'       => $this->fcPdfSanitizeText($username),
             'userId'         => $this->fcPdfSanitizeText($username),
             'step1'          => $step1,
             'pdfFullName'    => $this->fcPdfSanitizeText($this->fcPdfDisplayName($step1)),
-            'printedAt'      => $printedAt,
-            'photoDataUri'   => $photoDataUri,
+            'printedAt'      => $this->fcPdfSanitizeText(now()->format('d/m/Y H:i')),
+            'photoDataUri'   => $this->fcRegistrationPhotoDataUri($step1->photo_path),
+            'signatureDataUri' => $this->fcRegistrationPhotoDataUri(
+                $this->fcRegistrationSignaturePath($step1, $username),
+                220,
+                110
+            ),
+            'courseHeader'   => $this->fcPdfCourseHeader(),
+            'lbsnaaLogoDataUri' => $this->fcReportLbsnaaLogoDataUri(),
             'pdfFontFaceCss' => $pdfFontFaceCss,
             'pdfFontFamilyCss' => $pdfFontFamilyCss,
         ];
-
-        $html = view('fc.report.student-detail-pdf', $viewData)->render();
-
-        return $this->fcRenderPdfFromHtml($html, 'FC Registration - '.$username);
     }
 
     private function fcRenderPdfFromHtml(string $html, string $titleInfo): string
@@ -2279,7 +2563,34 @@ class ReportController extends Controller
             'pdfFullName'  => $this->fcPdfSanitizeText($this->fcPdfDisplayName($step1)),
             'printedAt'    => $this->fcPdfSanitizeText(now()->format('d/m/Y H:i')),
             'photoDataUri' => $this->fcRegistrationPhotoDataUri($step1->photo_path),
+            'signatureDataUri' => $this->fcRegistrationPhotoDataUri(
+                $this->fcRegistrationSignaturePath($step1, $username),
+                220,
+                110
+            ),
+            'courseHeader' => $this->fcPdfCourseHeader(),
+            'lbsnaaLogoDataUri' => $this->fcReportLbsnaaLogoDataUri(),
         ];
+    }
+
+    /**
+     * fcReportCourseHeader() run through the same PDF text sanitisation every other
+     * string in the document gets (smart quotes / dashes are common in a course title).
+     *
+     * @return array<string,string>
+     */
+    private function fcPdfCourseHeader(): array
+    {
+        $header = array_map(
+            fn ($v) => $this->fcPdfSanitizeText((string) $v),
+            $this->fcReportCourseHeader()
+        );
+
+        if ($header['course_title'] !== '') {
+            $header['course_title'] = $this->fcReportSupHtml($header['course_title']);
+        }
+
+        return $header;
     }
 
     private function fcRegistrationChromeFontFaceCss(): string

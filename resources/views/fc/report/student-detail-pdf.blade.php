@@ -14,6 +14,30 @@
             margin: 0;
             padding: 0;
         }
+        /* Government-form double rule around every page. position:fixed is repeated on each
+           printed page by both engines, which a bordered wrapper <div> is not — that would
+           only draw its top edge on page 1 and its bottom edge on the last page. */
+        /* Inset 0 exactly: Chrome clips a fixed box to the page content area, so a negative
+           inset (to push the rule into the page margin) loses the left/right edges entirely.
+           The gap between rule and content therefore comes from .page-body padding below. */
+        .page-frame,
+        .page-frame-inner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+        .page-frame {
+            border: 1.6pt solid #0a3d6b;
+        }
+        .page-frame-inner {
+            border: 0.5pt solid #0a3d6b;
+            margin: 2.4pt;
+        }
+        .page-body {
+            padding: 3mm 3.5mm 2mm;
+        }
         body {
             font-family: {!! $pdfFontFamilyCss !!};
             font-size: 9.5pt;
@@ -29,6 +53,32 @@
             padding: 7px 8px 8px;
             margin-bottom: 6px;
             background: #f8fafc;
+        }
+        /* 3-column masthead: the crest sits on the LEFT and an equal-width empty cell on
+           the right keeps the academy name optically centred on the page. */
+        table.masthead-grid {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table.masthead-grid td {
+            border: 0;
+            padding: 0;
+            vertical-align: middle;
+        }
+        .masthead-side {
+            width: 62px;
+        }
+        /* Explicit, not inherited from .masthead — Dompdf does not pass text-align down
+           into table cells, which left the academy name flush left in the fallback render. */
+        .masthead-main {
+            text-align: center;
+        }
+        .masthead-logo {
+            text-align: left;
+        }
+        .masthead-logo img {
+            width: 58px;
+            height: auto;
         }
         .masthead-hi {
             font-size: 12.5pt;
@@ -93,6 +143,12 @@
             font-weight: bold;
             color: #0a3d6b;
         }
+        /* Ordinal suffix in the course title ("100th"); Dompdf does not style <sup> itself. */
+        .meta-bar sup {
+            font-size: 70%;
+            vertical-align: super;
+            line-height: 0;
+        }
         .section {
             margin-top: 6px;
             /* Do not avoid-break whole sections: long blocks jump to next page and leave a huge gap */
@@ -122,9 +178,14 @@
             /* Fixed layout: without it a single long unbroken value (e.g. a Vision
                Statement with no spaces) squeezes the label column to one word per line. */
             table-layout: fixed;
+            /* Outer box only. Row-to-row rules live on the group headings below, so a run of
+               fields inside one group reads as a single block instead of a ruled ledger. */
+            border: 1px solid #bbb;
         }
         table.fields td {
-            border: 1px solid #bbb;
+            /* Vertical rule between label and value only — no horizontal rule per row. */
+            border: 0;
+            border-right: 1px solid #bbb;
             padding: 4px 6px;
             vertical-align: top;
             /* Long filenames / unbroken statements must wrap instead of running off the
@@ -153,6 +214,19 @@
         }
         table.fields .val {
             width: 68%;
+        }
+        /* Group heading ("Mailing Address", "Physical Details") — this is the only
+           horizontal rule left inside a section, so groups stay clearly separated. */
+        table.fields .grp {
+            background: #edf2f7;
+            font-weight: bold;
+            color: #24486e;
+            border-top: 1px solid #bbb;
+            border-bottom: 1px solid #bbb;
+            border-right: 0;
+        }
+        table.fields tr:first-child .grp {
+            border-top: 0;
         }
         /* Auto layout, so 5-10 columns of very uneven width size to their content — fixed
            layout gives every column an equal share and hyphenates "Matriculation State"
@@ -200,12 +274,17 @@
             background: #fafafa;
         }
         .footer-note {
-            margin-top: 8px;
-            padding-top: 6px;
+            margin-top: 6px;
+            padding-top: 4px;
             border-top: 1px solid #ccc;
-            font-size: 7.8pt;
+            font-size: 7.2pt;
+            line-height: 1.25;
             color: #555;
             text-align: center;
+            /* Both lines travel together: the Hindi line alone was spilling onto a page of
+               its own whenever the content ended near the bottom of a page. */
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
         .photo-cell {
             width: 112px;
@@ -226,15 +305,64 @@
             object-position: top center;
             border: 1px solid #999;
         }
+        /* Specimen signature, boxed directly under the photograph. */
+        .sign-box {
+            width: 96px;
+            margin: 4px auto 0;
+            border: 1px solid #999;
+            background: #fff;
+            padding: 2px;
+        }
+        /* height:auto, not a fixed box — Dompdf ignores object-fit and would stretch the
+           specimen out of shape. The source is already capped at 220x110 px. */
+        .photo-cell .sign-img {
+            width: 90px;
+            height: auto;
+            max-height: 40px;
+            border: 0;
+            margin: 0 auto;
+        }
+        .sign-empty {
+            display: block;
+            height: 30px;
+            line-height: 30px;
+            font-size: 8pt;
+            color: #888;
+        }
+        .sign-cap {
+            font-size: 6.5pt;
+            color: #555;
+            margin-top: 1px;
+            line-height: 1.2;
+        }
     </style>
 </head>
 <body>
 
+<div class="page-frame"></div>
+<div class="page-frame-inner"></div>
+
+<div class="page-body">
+
 <div class="masthead">
-    <p class="masthead-hi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी.</p>
-    <p class="masthead-en-org">Lal Bahadur Shastri National Academy of Administration,</p>
-    <p class="masthead-place-hi">मसूरी-248179(उत्तराखंड)</p>
-    <p class="masthead-place">Mussoorie-248 179 (Uttarakhand)</p>
+    <table class="masthead-grid" cellspacing="0">
+        <tr>
+            @if(!empty($lbsnaaLogoDataUri))
+                <td class="masthead-side masthead-logo">
+                    <img src="{{ $lbsnaaLogoDataUri }}" alt="LBSNAA">
+                </td>
+            @endif
+            <td class="masthead-main">
+                <p class="masthead-hi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी.</p>
+                <p class="masthead-en-org">Lal Bahadur Shastri National Academy of Administration,</p>
+                <p class="masthead-place-hi">मसूरी-248179(उत्तराखंड)</p>
+                <p class="masthead-place">Mussoorie-248 179 (Uttarakhand)</p>
+            </td>
+            @if(!empty($lbsnaaLogoDataUri))
+                <td class="masthead-side">&nbsp;</td>
+            @endif
+        </tr>
+    </table>
 </div>
 
 <div class="doc-title">
@@ -242,11 +370,41 @@
     <p class="doc-title-hi">वर्णनात्मक पंजीकरण प्रोफ़ाइल</p>
 </div>
 
+@php
+    // Rows are assembled first so the photo/signature cell can span exactly as many of
+    // them as actually render — the course rows below are only present when an admin has
+    // filled the Path Page / Front Page.
+    $ch = $courseHeader ?? [];
+    $metaRows = [
+        ['Name / नाम', ($pdfFullName ?? '') !== '' ? $pdfFullName : '-', true],
+        ['User ID / उपयोगकर्ता', $userId, false],
+    ];
+    if (!empty($pdfFormName)) {
+        $metaRows[] = ['Form / प्रपत्र', $pdfFormName, false];
+    }
+    if (!empty($ch['course_title'])) {
+        $metaRows[] = ['Course / पाठ्यक्रम', $ch['course_title'], false];
+    }
+    if (!empty($ch['course_duration'])) {
+        $metaRows[] = ['Course Duration / पाठ्यक्रम अवधि', $ch['course_duration'], false];
+    }
+    if (!empty($ch['coordinator_name'])) {
+        $coordinator = $ch['coordinator_name'];
+        if (!empty($ch['coordinator_designation']) && $ch['coordinator_designation'] !== $ch['coordinator_name']) {
+            $coordinator .= ' ('.$ch['coordinator_designation'].')';
+        }
+        $metaRows[] = ['Course Coordinator / पाठ्यक्रम समन्वयक', $coordinator, false];
+    }
+    $metaRows[] = ['Generated / जारी दिनांक', $printedAt, false];
+@endphp
+
 <table class="meta-bar">
+    @foreach($metaRows as $i => $row)
     <tr>
-        <td class="label">Name / नाम</td>
-        <td><strong>{{ ($pdfFullName ?? '') !== '' ? $pdfFullName : '-' }}</strong></td>
-        <td class="photo-cell" rowspan="3">
+        <td class="label">{{ $row[0] }}</td>
+        <td>@if($row[2])<strong>{{ $row[1] }}</strong>@else{{ $row[1] }}@endif</td>
+        @if($i === 0)
+        <td class="photo-cell" rowspan="{{ count($metaRows) }}">
             @if(!empty($photoDataUri))
                 <img src="{{ $photoDataUri }}" alt="Photo" width="96" height="124">
             @elseif(!empty($photoUrl))
@@ -254,22 +412,19 @@
             @else
                 <span style="font-size:8pt;color:#888;">Photo<br/>फोटो<br/>-</span>
             @endif
+
+            <div class="sign-box">
+                @if(!empty($signatureDataUri))
+                    <img class="sign-img" src="{{ $signatureDataUri }}" alt="Signature">
+                @else
+                    <span class="sign-empty">-</span>
+                @endif
+                <div class="sign-cap">Signature / हस्ताक्षर</div>
+            </div>
         </td>
+        @endif
     </tr>
-    <tr>
-        <td class="label">User ID / उपयोगकर्ता</td>
-        <td>{{ $userId }}</td>
-    </tr>
-    <tr>
-        <td class="label">Generated / जारी दिनांक</td>
-        <td>{{ $printedAt }}</td>
-    </tr>
-    @if(!empty($pdfFormName))
-    <tr>
-        <td class="label">Form / प्रपत्र</td>
-        <td>{{ $pdfFormName }}</td>
-    </tr>
-    @endif
+    @endforeach
 </table>
 
 @php
@@ -333,9 +488,7 @@
                 @foreach($sec['rows'] as $row)
                     @if(!empty($row['group']) && $row['group'] !== $lastGroup)
                         <tr>
-                            <td colspan="2" style="background:#edf2f7;font-weight:bold;color:#24486e;">
-                                {{ $row['group'] }}
-                            </td>
+                            <td colspan="2" class="grp">{{ $row['group'] }}</td>
                         </tr>
                         @php $lastGroup = $row['group']; @endphp
                     @endif
@@ -381,6 +534,23 @@
     Computer-generated document from Sargam FC Registration module. Signatures / stamps where required may be appended separately.<br/>
     सारगम पंजीकरण मॉड्यूल से कंप्यूटर जनित दस्तावेज़ - आवश्यकतानुसार हस्ताक्षर / मुहर अलग से जोड़े जा सकते हैं।
 </div>
+
+</div>{{-- .page-body --}}
+
+@if(!empty($autoPrint))
+    {{-- Served as the browser Print view: open the dialog once the fonts and the embedded
+         photo/signature have decoded, so the preview is never missing them. --}}
+    <script>
+        window.addEventListener('load', function () {
+            var go = function () { window.print(); };
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(go).catch(go);
+            } else {
+                go();
+            }
+        });
+    </script>
+@endif
 
 </body>
 </html>

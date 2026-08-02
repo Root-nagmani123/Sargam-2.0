@@ -378,7 +378,24 @@ function fc_user_val(string $table, int $userId): string|int
     }
 
     // Pre-migration: resolve the username string from user_credentials.
-    return fc_user_name_for_id($userId) ?? '';
+    $name = trim((string) (fc_user_name_for_id($userId) ?? ''));
+    if ($name !== '') {
+        return $name;
+    }
+
+    // Not in user_credentials — the id is a staged roster pk (fc_registration_master.pk),
+    // which is what the admin screens pass for a trainee who registered through /fc/login
+    // and has not been migrated yet. Their rows in the few still-username-keyed tables
+    // (e.g. student_cloth_size_master_details) were written under the roster login name,
+    // exactly as the $userId < 0 branch above resolves it. Without this the lookup returned
+    // '' and matched nothing, so those sections silently vanished from the profile report.
+    if (! array_key_exists($userId, $usernameCache)) {
+        $usernameCache[$userId] = trim((string) (\Illuminate\Support\Facades\DB::table('fc_registration_master')
+            ->where('pk', $userId)
+            ->value('user_id') ?? ''));
+    }
+
+    return $usernameCache[$userId];
 }
 
 /**
