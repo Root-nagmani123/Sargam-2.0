@@ -1237,9 +1237,20 @@ class FrontPageController extends Controller
             $rules['course'] = 'required|string|max:255|no_html';
             $rules['year'] = 'required|digits:4';
             $rules['institution_name'] = 'required|string|max:255|no_html';
+            // Completion certificate of the previously attended Foundation Course. Same file
+            // rules as the medical document: type + size, single extension, and byte-level
+            // inspection for script/macro content (this is a public, unauthenticated upload).
+            $rules['fc_prev_comp_doc'] = [
+                'required', 'file', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'max:'.self::MEDICAL_DOC_MAX_KB,
+                new SingleFileExtension(),
+                new SafeUploadedDocument(['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png']),
+            ];
             $messages['course.required'] = 'Course name is required for this exemption category.';
             $messages['year.required'] = 'Year is required for this exemption category.';
             $messages['institution_name.required'] = 'Institution name is required for this exemption category.';
+            $messages['fc_prev_comp_doc.required'] = 'The Foundation Course completion certificate is required for this exemption category.';
+            $messages['fc_prev_comp_doc.max'] = 'The completion certificate must not be larger than '.(self::MEDICAL_DOC_MAX_KB / 1024).' MB.';
+            $messages['fc_prev_comp_doc.mimes'] = 'The completion certificate must be PDF, Word (.doc, .docx), JPG, JPEG, or PNG.';
         }
 
         // Match "Medical Grounds" (and any medical-named category) — the previous exact
@@ -1288,31 +1299,77 @@ class FrontPageController extends Controller
             $medicalDocPath = $request->file('medical_doc')->store('medical_docs', 'public');
         }
 
-        // Update if exists, otherwise insert
-        DB::table('fc_registration_master')->updateOrInsert(
-            [
+        $prevFcDocPath = null;
+        if ($request->hasFile('fc_prev_comp_doc') && $request->file('fc_prev_comp_doc')->isValid()) {
+            $prevFcDocPath = $request->file('fc_prev_comp_doc')->store('previous_fc_docs', 'public');
+        }
+
+        $registrationValues = [
+            'user_id' => $username,
+            'fc_exemption_master_pk' => $request->exemption_category,
+            'previous_fc_course_name' => !empty($request->course) ? $request->course : null,
+            'fc_date'                 => !empty($request->year) ? $request->year : null,
+            'previous_fc_institution_name' => !empty($request->institution_name) ? $request->institution_name : null,
+            'appearing_roll_no'       => !empty($request->roll_number) ? $request->roll_number : null,
+        ];
+
+        // Document columns are written ONLY when a file was actually uploaded. Assigning them
+        // unconditionally set the other category's column to NULL on every submission, so a
+        // trainee who re-applied under a different category (possible once an admin resets
+        // application_type) silently lost the document reference from the first application —
+        // the file stayed on disk with nothing pointing at it. The exemption list picks the
+        // document that matches the category, so keeping both columns cannot show a stale one.
+        if ($medicalDocPath !== null) {
+            $registrationValues['medical_exemption_doc'] = $medicalDocPath;
+        }
+
+        // Written only when the column exists, so the form keeps working on an environment
+        // where 2026_08_02_000000_add_fc_prev_comp_doc_to_fc_registration_master has not run
+        // yet (code is routinely deployed ahead of migrations here).
+        if ($prevFcDocPath !== null && fc_schema_has_column('fc_registration_master', 'fc_Prev_comp_doc')) {
+            $registrationValues['fc_Prev_comp_doc'] = $prevFcDocPath;
+        }
+
+        try {
+            // Both writes together: without the transaction a failure between them left a row
+            // carrying the exemption answers but never marked as an exemption application.
+            DB::transaction(function () use ($request, $registrationValues) {
+                DB::table('fc_registration_master')->updateOrInsert(
+                    [
+                        'contact_no' => $request->ex_mobile,
+                        'web_auth' => $request->reg_web_code
+                    ],
+                    $registrationValues
+                );
+
+                DB::table('fc_registration_master')
+                    ->where('contact_no', $request->ex_mobile)
+                    ->where('web_auth', $request->reg_web_code)
+                    ->update([
+                        'application_type' => FcRosterApplicationGuardService::APPLICATION_EXEMPTION,
+                        'exemption_count' => DB::raw('GREATEST(COALESCE(exemption_count, 0), 1)'),
+                    ]);
+            });
+        } catch (\Throwable $e) {
+            // The uploads are written to disk before the row exists; drop them rather than
+            // leave files nothing will ever reference.
+            foreach (array_filter([$medicalDocPath, $prevFcDocPath]) as $orphan) {
+                try {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($orphan);
+                } catch (\Throwable $ignored) {
+                    // Best effort.
+                }
+            }
+
+            Log::error('FC exemption application save failed', [
                 'contact_no' => $request->ex_mobile,
-                'web_auth' => $request->reg_web_code
-            ],
-            [
-                'user_id' => $username,
-                'fc_exemption_master_pk' => $request->exemption_category,
-                'medical_exemption_doc' => $medicalDocPath,
-                'previous_fc_course_name' => !empty($request->course) ? $request->course : null,
-                'fc_date'                 => !empty($request->year) ? $request->year : null,
-                'previous_fc_institution_name' => !empty($request->institution_name) ? $request->institution_name : null,
-                'appearing_roll_no'       => !empty($request->roll_number) ? $request->roll_number : null,
-
-            ]
-        );
-
-        DB::table('fc_registration_master')
-            ->where('contact_no', $request->ex_mobile)
-            ->where('web_auth', $request->reg_web_code)
-            ->update([
-                'application_type' => FcRosterApplicationGuardService::APPLICATION_EXEMPTION,
-                'exemption_count' => DB::raw('GREATEST(COALESCE(exemption_count, 0), 1)'),
+                'message' => $e->getMessage(),
             ]);
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Your application could not be saved. Please try again, or contact the Academy office if the problem continues.');
+        }
 
         // C1 SMS (best-effort via Gupshup/log driver) — does not affect save/redirect.
         $programmeName = $this->resolvedIntendedProgrammeName()

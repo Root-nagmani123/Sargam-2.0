@@ -72,9 +72,11 @@
                         <div class="row g-3 mb-1">
                             <div class="col-12 col-md-6">
                                 <label class="form-label">Mode of journey <span class="text-danger">*</span></label>
+                                {{-- Options come from mctp_travel_mode_masters (active rows),
+                                     plus this plan's own saved value if it predates the list. --}}
                                 <select name="mode_of_journey" class="form-select" required>
                                     <option value="">-- Select --</option>
-                                    @foreach(['By Air', 'By Road', 'By Train'] as $m)
+                                    @foreach(($travelModes ?? []) as $m)
                                         <option value="{{ $m }}" {{ old('mode_of_journey', $plan->mode_of_journey) === $m ? 'selected' : '' }}>{{ $m }}</option>
                                     @endforeach
                                 </select>
