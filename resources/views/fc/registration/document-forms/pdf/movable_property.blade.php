@@ -49,7 +49,7 @@
     <div class="title">STATEMENT OF MOVABLE PROPERTY ON FIRST APPOINTMENT</div>
     <div class="brackets">
         [b. Shares, debentures, postal Cumulative Time Deposits and cash including bank deposits inherited by him or similarly owned, acquired or held by him]<br>
-        [c. Other movable property inhibited by him or similarly owned acquired or held by him]
+        [c. Other movable property owned, acquired or held by him]
     </div>
 
     <div class="year">वर्ष / YEAR: {!! $blank($year, '120pt') !!}</div>
