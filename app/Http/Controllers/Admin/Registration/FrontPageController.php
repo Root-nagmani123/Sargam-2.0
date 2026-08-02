@@ -1307,36 +1307,69 @@ class FrontPageController extends Controller
         $registrationValues = [
             'user_id' => $username,
             'fc_exemption_master_pk' => $request->exemption_category,
-            'medical_exemption_doc' => $medicalDocPath,
             'previous_fc_course_name' => !empty($request->course) ? $request->course : null,
             'fc_date'                 => !empty($request->year) ? $request->year : null,
             'previous_fc_institution_name' => !empty($request->institution_name) ? $request->institution_name : null,
             'appearing_roll_no'       => !empty($request->roll_number) ? $request->roll_number : null,
         ];
 
+        // Document columns are written ONLY when a file was actually uploaded. Assigning them
+        // unconditionally set the other category's column to NULL on every submission, so a
+        // trainee who re-applied under a different category (possible once an admin resets
+        // application_type) silently lost the document reference from the first application —
+        // the file stayed on disk with nothing pointing at it. The exemption list picks the
+        // document that matches the category, so keeping both columns cannot show a stale one.
+        if ($medicalDocPath !== null) {
+            $registrationValues['medical_exemption_doc'] = $medicalDocPath;
+        }
+
         // Written only when the column exists, so the form keeps working on an environment
         // where 2026_08_02_000000_add_fc_prev_comp_doc_to_fc_registration_master has not run
         // yet (code is routinely deployed ahead of migrations here).
-        if (fc_schema_has_column('fc_registration_master', 'fc_Prev_comp_doc')) {
+        if ($prevFcDocPath !== null && fc_schema_has_column('fc_registration_master', 'fc_Prev_comp_doc')) {
             $registrationValues['fc_Prev_comp_doc'] = $prevFcDocPath;
         }
 
-        // Update if exists, otherwise insert
-        DB::table('fc_registration_master')->updateOrInsert(
-            [
-                'contact_no' => $request->ex_mobile,
-                'web_auth' => $request->reg_web_code
-            ],
-            $registrationValues
-        );
+        try {
+            // Both writes together: without the transaction a failure between them left a row
+            // carrying the exemption answers but never marked as an exemption application.
+            DB::transaction(function () use ($request, $registrationValues) {
+                DB::table('fc_registration_master')->updateOrInsert(
+                    [
+                        'contact_no' => $request->ex_mobile,
+                        'web_auth' => $request->reg_web_code
+                    ],
+                    $registrationValues
+                );
 
-        DB::table('fc_registration_master')
-            ->where('contact_no', $request->ex_mobile)
-            ->where('web_auth', $request->reg_web_code)
-            ->update([
-                'application_type' => FcRosterApplicationGuardService::APPLICATION_EXEMPTION,
-                'exemption_count' => DB::raw('GREATEST(COALESCE(exemption_count, 0), 1)'),
+                DB::table('fc_registration_master')
+                    ->where('contact_no', $request->ex_mobile)
+                    ->where('web_auth', $request->reg_web_code)
+                    ->update([
+                        'application_type' => FcRosterApplicationGuardService::APPLICATION_EXEMPTION,
+                        'exemption_count' => DB::raw('GREATEST(COALESCE(exemption_count, 0), 1)'),
+                    ]);
+            });
+        } catch (\Throwable $e) {
+            // The uploads are written to disk before the row exists; drop them rather than
+            // leave files nothing will ever reference.
+            foreach (array_filter([$medicalDocPath, $prevFcDocPath]) as $orphan) {
+                try {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($orphan);
+                } catch (\Throwable $ignored) {
+                    // Best effort.
+                }
+            }
+
+            Log::error('FC exemption application save failed', [
+                'contact_no' => $request->ex_mobile,
+                'message' => $e->getMessage(),
             ]);
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Your application could not be saved. Please try again, or contact the Academy office if the problem continues.');
+        }
 
         // C1 SMS (best-effort via Gupshup/log driver) — does not affect save/redirect.
         $programmeName = $this->resolvedIntendedProgrammeName()

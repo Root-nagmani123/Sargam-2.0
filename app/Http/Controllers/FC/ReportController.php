@@ -600,7 +600,7 @@ class ReportController extends Controller
             $cutoff = time() - 3600;
             foreach (glob($root.'/*', GLOB_ONLYDIR) ?: [] as $dir) {
                 $pid = (int) basename($dir);
-                if ($pid > 0 && file_exists('/proc/'.$pid)) {
+                if ($pid > 0 && $this->fcProcessIsRunning($pid)) {
                     continue;
                 }
                 if (@filemtime($dir) > $cutoff) {
@@ -611,6 +611,30 @@ class ReportController extends Controller
         } catch (\Throwable $e) {
             // Housekeeping only — never let it affect the download.
         }
+    }
+
+    /**
+     * Is a PHP worker with this pid still alive? posix_kill(pid, 0) is the portable check;
+     * /proc is the fallback where ext-posix is absent. Where neither can answer we report
+     * "running" so the age check alone decides — pruning a live worker's profile mid-render
+     * is worse than keeping a stale directory for an hour.
+     */
+    private function fcProcessIsRunning(int $pid): bool
+    {
+        if (function_exists('posix_kill')) {
+            if (@posix_kill($pid, 0)) {
+                return true;
+            }
+
+            // EPERM (1) means the process exists but belongs to another user — still alive.
+            return function_exists('posix_get_last_error') && posix_get_last_error() === 1;
+        }
+
+        if (is_dir('/proc')) {
+            return file_exists('/proc/'.$pid);
+        }
+
+        return true;
     }
 
     /**
@@ -1009,7 +1033,12 @@ class ReportController extends Controller
         ];
 
         try {
-            $path = fc_schema_has_table('fc_path_pages') ? PathPage::query()->first() : null;
+            // Only the columns this header prints. A bare first() pulled every column on each
+            // report view and each PDF — including fc_front_pages.important_updates, which is a
+            // rich-text blob, once per trainee in the bulk export.
+            $path = fc_schema_has_table('fc_path_pages')
+                ? PathPage::query()->select(['course_start_date', 'course_end_date'])->first()
+                : null;
             if ($path) {
                 $start = $path->course_start_date ? format_date($path->course_start_date) : '';
                 $end   = $path->course_end_date ? format_date($path->course_end_date) : '';
@@ -1021,7 +1050,9 @@ class ReportController extends Controller
                 ])));
             }
 
-            $front = fc_schema_has_table('fc_front_pages') ? FrontPage::query()->first() : null;
+            $front = fc_schema_has_table('fc_front_pages')
+                ? FrontPage::query()->select(['course_title', 'coordinator_name', 'coordinator_designation'])->first()
+                : null;
             if ($front) {
                 $header['course_title'] = trim((string) ($front->course_title ?? ''));
                 $header['coordinator_name'] = trim((string) ($front->coordinator_name ?? ''));
@@ -2478,9 +2509,10 @@ class ReportController extends Controller
      */
     private function fcStudentRegistrationPdfViewData(string $username, ?int $stepLimit = null): ?array
     {
-        $step1 = StudentMasterFirst::where(fc_user_col('student_master_firsts'), $username)
-            ->with(['session', 'service', 'allottedState'])
-            ->first();
+        // No with([...]): the session / service / allottedState relations were eager-loaded and
+        // never read — this template renders from $sections. Three queries per PDF, and per
+        // trainee in the bulk ZIP export. Only the name parts and the two file paths are used.
+        $step1 = StudentMasterFirst::where(fc_user_col('student_master_firsts'), $username)->first();
         if (! $step1) {
             return null;
         }
@@ -2502,7 +2534,6 @@ class ReportController extends Controller
             'sections'       => $sections,
             'username'       => $this->fcPdfSanitizeText($username),
             'userId'         => $this->fcPdfSanitizeText($username),
-            'step1'          => $step1,
             'pdfFullName'    => $this->fcPdfSanitizeText($this->fcPdfDisplayName($step1)),
             'printedAt'      => $this->fcPdfSanitizeText(now()->format('d/m/Y H:i')),
             'photoDataUri'   => $this->fcRegistrationPhotoDataUri($step1->photo_path),

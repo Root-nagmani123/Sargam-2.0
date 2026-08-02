@@ -389,10 +389,24 @@ function fc_user_val(string $table, int $userId): string|int
     // (e.g. student_cloth_size_master_details) were written under the roster login name,
     // exactly as the $userId < 0 branch above resolves it. Without this the lookup returned
     // '' and matched nothing, so those sections silently vanished from the profile report.
+    //
+    // The fallback is deliberately narrow. user_credentials.pk and fc_registration_master.pk
+    // are SEPARATE id spaces, so an integer can be a dead credentials pk and, by coincidence,
+    // a live roster pk belonging to somebody else. It is therefore only accepted for a roster
+    // entry that has NOT been migrated into user_credentials — a migrated trainee is always
+    // addressed by their credentials pk, so a roster-pk hit on one is an ambiguous id, and
+    // returning '' (the previous behaviour: matches nothing) is the safe answer.
     if (! array_key_exists($userId, $usernameCache)) {
-        $usernameCache[$userId] = trim((string) (\Illuminate\Support\Facades\DB::table('fc_registration_master')
+        $rosterName = trim((string) (\Illuminate\Support\Facades\DB::table('fc_registration_master')
             ->where('pk', $userId)
             ->value('user_id') ?? ''));
+
+        $migrated = $rosterName !== ''
+            && \Illuminate\Support\Facades\DB::table('user_credentials')
+                ->where('user_name', $rosterName)
+                ->exists();
+
+        $usernameCache[$userId] = $migrated ? '' : $rosterName;
     }
 
     return $usernameCache[$userId];

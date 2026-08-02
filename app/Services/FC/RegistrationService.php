@@ -21,6 +21,9 @@ use Illuminate\Support\Facades\Schema;
 
 class RegistrationService
 {
+    /** Cached stand-in for "this id has no label in the master" (see resolveLookupLabelSafely). */
+    private const LOOKUP_LABEL_NONE = "\0fc-no-label";
+
     public function __construct(
         private readonly DynamicFormService $dynamicFormService,
     ) {}
@@ -870,11 +873,17 @@ class RegistrationService
         }
 
         try {
-            $label = Cache::remember(
+            // A "no label" answer is stored as a sentinel rather than null: Cache::remember()
+            // reads null back as a miss, so an id with no master row re-queried on every single
+            // render. The sentinel makes those negative answers cache like any other.
+            $cached = Cache::remember(
                 $this->lookupLabelCacheKey($memoKey),
                 $ttl,
                 fn () => $this->resolveLookupLabelFromDb($table, $valueColumn, $labelColumn, $raw)
+                    ?? self::LOOKUP_LABEL_NONE
             );
+
+            $label = $cached === self::LOOKUP_LABEL_NONE ? null : $cached;
         } catch (\Throwable $e) {
             // Cache store unavailable — never let it cost us the label.
             $label = $this->resolveLookupLabelFromDb($table, $valueColumn, $labelColumn, $raw);

@@ -104,11 +104,16 @@
                                             <td>
                                                 @if ($data->application_type == 2)
                                                     {{-- Medical exemptions attach a medical document; "Previously Completed
-                                                         Foundation Course" attaches its completion certificate. Either way
-                                                         the supporting document belongs in this column. --}}
+                                                         Foundation Course" attaches its completion certificate. Pick the one
+                                                         belonging to THIS application's category — a row can carry both when
+                                                         an earlier application was replaced, and showing the wrong one would
+                                                         misrepresent the application. --}}
                                                     @php
-                                                        $supportingDoc = $data->medical_exemption_doc
-                                                            ?: ($data->fc_Prev_comp_doc ?? null);
+                                                        $category = (string) ($data->Exemption_name ?? '');
+                                                        $prevFcDoc = $data->fc_Prev_comp_doc ?? null;
+                                                        $supportingDoc = stripos($category, 'completed foundation course') !== false
+                                                            ? ($prevFcDoc ?: $data->medical_exemption_doc)
+                                                            : ($data->medical_exemption_doc ?: $prevFcDoc);
                                                     @endphp
                                                     @if ($supportingDoc)
                                                         <a href="{{ asset('storage/' . $supportingDoc) }}"
