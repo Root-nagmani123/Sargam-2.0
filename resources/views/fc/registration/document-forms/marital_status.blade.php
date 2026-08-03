@@ -119,10 +119,13 @@
             <div class="ms-doc">
                 <div class="ms-ex__title">रियायत प्रदान करने के लिए आवेदन पत्र<br>APPLICATION FOR GRANT OF EXEMPTION</div>
                 <div style="text-align:center; font-size:.85rem;">(घोषणा का पैरा 1(iii) / 1(iv) देखें) &middot; (Vide para 1(iii) / 1(iv) of the Declaration)</div>
-                <div class="ms-ex__to">सेवा में / To,<br>
-                    &emsp;The Secretary,<br>
-                    &emsp;Department of Personnel &amp; Training (DoPT),<br>
-                    &emsp;New Delhi</div>
+                <div class="ms-ex__to">सेवा में / To,
+                    <div style="margin-left:1.5rem; margin-top:.3rem;">
+                        <div><input type="text" name="exemption_to_line1" class="blank blank--wide" value="{{ old('exemption_to_line1', $data['exemption_to_line1'] ?? 'The Secretary,') }}"></div>
+                        <div><input type="text" name="exemption_to_line2" class="blank blank--wide" value="{{ old('exemption_to_line2', $data['exemption_to_line2'] ?? 'Department of Personnel & Training (DoPT),') }}"></div>
+                        <div><input type="text" name="exemption_to_line3" class="blank blank--wide" value="{{ old('exemption_to_line3', $data['exemption_to_line3'] ?? 'New Delhi') }}"></div>
+                    </div>
+                </div>
                 <div class="ms-ex__body">
                     महोदय / Sir,<br>
                     मेरा अनुरोध है कि नीचे बताए गए कारणों को ध्यान में रखते हुए, मुझे एक से अधिक जीवित पत्नी रखने / ऐसी महिला जिसका ऐसे व्यक्ति से विवाह हुआ हो जिसकी पहले से एक या अधिक जीवित पत्नियाँ हों — की सेवा में भर्ती पर प्रतिबंध से छूट प्रदान की जाए।
