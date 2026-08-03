@@ -22,7 +22,7 @@
                             data-bs-toggle="collapse" data-bs-target="#collapseAll{{ $key }}"
                             aria-expanded="false"
                             aria-controls="collapseAll{{ $key }}">
-                            {{ $faq->header }}
+                            {!! $faq->header !!}
                         </button>
                     </h2>
                     <div id="collapseAll{{ $key }}"

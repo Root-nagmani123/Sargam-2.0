@@ -142,7 +142,7 @@
                                         type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ $index }}"
                                         aria-expanded="false"
                                         aria-controls="collapse{{ $index }}">
-                                        {{ $faq->header }}
+                                        {!! $faq->header !!}
                                     </button>
                                 </h3>
                                 <div id="collapse{{ $index }}"
