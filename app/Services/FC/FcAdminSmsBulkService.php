@@ -1067,13 +1067,23 @@ class FcAdminSmsBulkService
             return $base;
         }
 
-        // B2: tracker exists but no step completed yet (and still not registered).
+        // B2: tracker exists but no step completed yet (and still not registered) —
+        // unless credentials are already staged, which counts as "started" (B1), same
+        // signal as classifySelectedRosterRow() and the phase-two roster pass below.
         if ($progress['done'] === 0) {
             if (Schema::hasColumn('fc_registration_master', 'is_registered')) {
                 $registered = $roster->is_registered ?? null;
                 if ((int) $registered === 1) {
                     return null;
                 }
+            }
+
+            if ($this->hasStagedCredentials($roster)) {
+                $base['bucket'] = self::TEMPLATE_B1;
+                $base['step_name'] = trim((string) ($steps->first()?->step_name ?? '')) ?: 'Basic Information';
+                $base['pending_steps'] = $base['step_name'];
+
+                return $base;
             }
 
             $base['bucket'] = self::TEMPLATE_B2;
