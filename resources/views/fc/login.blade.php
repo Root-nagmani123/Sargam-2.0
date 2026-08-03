@@ -50,7 +50,7 @@
                                         <button type="button" class="btn btn-outline-primary" id="sendRegOtpBtn"
                                             style="border-color:#004a93;color:#004a93;">Send OTP</button>
                                     </div>
-                                    <small class="text-muted">OTP is sent to your registered mobile number</small>
+                                    <small class="text-muted">OTP is sent to your registered mobile number and email address</small>
                                 </div>
 
                                 <!-- Password -->

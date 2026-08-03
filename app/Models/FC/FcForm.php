@@ -182,5 +182,16 @@ class FcForm extends Model
     {
         return route('frontpage.index', ['form' => $this->getRouteKey()]);
     }
+
+    /**
+     * Login page URL — same query-string shape as landingPageUrl() (BSNL CTA
+     * whitelisting constraint, see FcNotifyService::portal()) but points trainees
+     * who are already registered straight to login instead of the registration
+     * landing page.
+     */
+    public function loginUrl(): string
+    {
+        return route('fc.login', ['form' => $this->getRouteKey()]);
+    }
 }
 

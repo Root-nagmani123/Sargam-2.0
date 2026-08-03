@@ -93,12 +93,12 @@ class FcRegistrationStatusService
     {
         return match ($tab) {
             self::TAB_REGISTERED => [
-                'label' => 'CSE 2024 Registered',
+                'label' => 'CSE 2025 Registered',
                 'list_title' => 'List of Participant who have Registered',
                 'theme' => 'registered',
             ],
             self::TAB_SERVICE => [
-                'label' => 'Service wise List',
+                'label' => 'Service wise Registered',
                 'list_title' => 'Service wise List Report',
                 'theme' => 'service',
                 // This badge counts SERVICES, not people — every other tab counts people.
