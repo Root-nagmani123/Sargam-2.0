@@ -1,0 +1,40 @@
+// =============================================================================
+// UX4G migration — main SCSS entry
+// Compiles to: public/css/ux4g-app.css   (see `npm run build:ux4g`)
+// =============================================================================
+//
+// PHASE 1 (this commit): the pipeline and layer architecture are established but
+// produce NO visual change — ux4g-app.css is not yet loaded by any layout, and
+// the override layers below are empty placeholders. Later phases fill them and
+// wire the output into pre_header, each gated against the visual baseline.
+//
+// CASCADE LAYERS — precedence low → high (later layer wins for NORMAL rules):
+//
+//   @layer ux4g, tokens, components, pages;
+//
+//   ux4g       the vendored UX4G design system (Bootstrap 5.3 recompile)
+//   tokens     brand overrides — LBSNAA navy #004384 + the 3 WCAG-failing
+//              semantic colours (info/success/warning). See Decision Note R-1.
+//   components project .sg-* components
+//   pages      page-specific tweaks
+//
+// IMPORTANT — the `!important` reversal (Decision Note R-1 / §9.3):
+// UX4G ships 1,668 `!important` declarations. The cascade REVERSES layer order
+// for `!important` (an important rule in an EARLIER layer beats one in a LATER
+// layer). So project `!important` rules that must beat UX4G's will go in a
+// dedicated first layer, declared ahead of `ux4g`, when UX4G is actually loaded
+// in Phase 2. That ordering is intentionally NOT active yet (nothing loads this).
+// =============================================================================
+
+@layer ux4g, tokens, components, pages;
+
+// --- ux4g layer -------------------------------------------------------------
+// The vendored design system is loaded via a <link> in Phase 2 (not @imported
+// here) so the pinned, byte-exact vendor file stays untouched. This layer block
+// is declared now only to fix its precedence slot in the cascade.
+@layer ux4g { /* vendored ux4g-min.css is assigned to this layer in Phase 2 */ }
+
+// --- override layers (empty in Phase 1) -------------------------------------
+@layer tokens     { @import 'overrides/tokens'; }
+@layer components { @import 'components/index'; }
+@layer pages      { @import 'pages/index'; }

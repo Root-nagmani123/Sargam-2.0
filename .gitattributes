@@ -5,6 +5,12 @@
 # invalidate any Subresource Integrity hash. Keep them exactly as published.
 public/js/jquery-*.min.js -text
 public/admin_assets/libs/bootstrap/dist/** -text
+# Self-hosted UX4G vendor bundle — keep byte-exact (hashes are pinned in its README).
+public/admin_assets/libs/ux4g/css/** -text
+public/admin_assets/libs/ux4g/js/** -text
+public/admin_assets/libs/ux4g/fonts/** binary
+*.woff2 binary
+*.woff binary
 
 *.blade.php diff=html
 *.css diff=css
