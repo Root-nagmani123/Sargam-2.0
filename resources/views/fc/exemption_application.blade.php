@@ -58,16 +58,17 @@
                                     value="{{ old('reg_web_code') }}" autocomplete="off" required>
                             </div>
 
-                                        <div class="col-md-6">
-                                            <label for="reg_web_code" class="fc-label">
-                                                <i class="bi bi-key" aria-hidden="true"></i>
-                                                Web Authentication Code <span class="fc-req" aria-hidden="true">*</span>
-                                            </label>
-                                            <input type="text"
-                                                class="form-control fc-input @error('reg_web_code') is-invalid @enderror"
-                                                id="reg_web_code" name="reg_web_code" placeholder="Enter web auth code"
-                                                value="{{ old('reg_web_code') }}" autocomplete="one-time-code" required>
-                                        </div>
+                            @if (stripos($exemption->Exemption_name, 'completed foundation course') !== false)
+                                <div class="col-md-6">
+                                    <label for="course" class="form-label fw-semibold">Already Completed Foundation Course <span
+                                            class="text-danger">*</span></label>
+                                    <input type="text" class="form-control rounded-3 @error('course') is-invalid @enderror"
+                                        id="course" name="course" placeholder="Enter your course" value="{{ old('course') }}"
+                                        required aria-describedby="courseFormatHelp">
+                                    <div id="courseFormatHelp" class="form-text text-muted small fw-semibold">
+                                        Please enter the course in the prescribed format, e.g. FC-100 or FC-99.
+                                    </div>
+                                </div>
 
                                         @if ($isCompletedFc)
                                             <div class="col-md-6">
@@ -82,19 +83,34 @@
                                                     value="{{ old('course') }}" required>
                                             </div>
 
-                                            <div class="col-md-6">
-                                                <label for="year" class="fc-label">
-                                                    <i class="bi bi-calendar3" aria-hidden="true"></i>
-                                                    Year of completion <span class="fc-req" aria-hidden="true">*</span>
-                                                </label>
-                                                <select class="form-select fc-input @error('year') is-invalid @enderror"
-                                                    id="year" name="year" required>
-                                                    <option value="" selected disabled>Select Year</option>
-                                                    @for ($y = date('Y'); $y >= 1970; $y--)
-                                                        <option value="{{ $y }}" @selected(old('year') == $y)>{{ $y }}</option>
-                                                    @endfor
-                                                </select>
-                                            </div>
+                                <div class="col-md-6">
+                                    <label for="institution_name" class="form-label fw-semibold">Institution
+                                        Name <span class="text-danger">*</span></label>
+                                    <input type="text"
+                                        class="form-control rounded-3 @error('institution_name') is-invalid @enderror"
+                                        id="institution_name" name="institution_name"
+                                        placeholder="Enter institution name" value="{{ old('institution_name') }}"
+                                        required aria-describedby="institutionNameHelp">
+                                    <div id="institutionNameHelp" class="form-text text-muted small fw-semibold">
+                                        Please enter the abbreviated name of the institution, e.g. MCHRD, YESDA or LBSNAA.
+                                    </div>
+                                </div>
+
+                                <div class="col-12">
+                                    <label for="fc_prev_comp_doc" class="form-label fw-semibold">
+                                        Upload Foundation Course Completion Certificate <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="file"
+                                        class="form-control rounded-3 fc-file-upload @error('fc_prev_comp_doc') is-invalid @enderror"
+                                        id="fc_prev_comp_doc" name="fc_prev_comp_doc" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                        data-max-bytes="{{ $medicalDocMaxBytes ?? 5242880 }}" required>
+                                    <div class="form-text">Preferably a <strong>PDF</strong>. Word (.doc, .docx), JPG, JPEG, PNG
+                                        also accepted. Max file size: {{ ($medicalDocMaxKb ?? 5120) / 1024 }} MB.</div>
+                                    <div id="fc_prev_comp_doc_client_error" class="invalid-feedback d-block @if (!$errors->has('fc_prev_comp_doc')) d-none @endif">
+                                        {{ $errors->first('fc_prev_comp_doc') }}
+                                    </div>
+                                </div>
+                            @endif
 
                                             <div class="col-md-6">
                                                 <label for="institution_name" class="fc-label">
@@ -196,130 +212,104 @@
     <!-- SweetAlert2 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <script>
-        // SweetAlert takes a colour string, not a CSS variable — read the brand
-        // token off the portal scope so this stays in step with sargam-app.css.
-        var FC_BRAND = (getComputedStyle(document.body).getPropertyValue('--fc-primary') || '').trim() || '#004a93';
-
-        var CAPTCHA_SRC = @json(captcha_src());
-
-        function refreshCaptcha() {
-            var img = document.getElementById('captchaImage');
-            if (img) img.src = CAPTCHA_SRC + '?' + Date.now();
-        }
-    </script>
-
+    {{-- Client-side size / type check for every upload on this form (medical document,
+         Foundation Course completion certificate). Was bound to #medical_doc alone; it now
+         walks the form's .fc-file-upload inputs so each category's upload is covered with
+         identical messages. App\Rules\SafeUploadedDocument stays the server-side authority. --}}
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            var refreshBtn = document.getElementById('refreshCaptchaBtn');
-            if (refreshBtn) refreshBtn.addEventListener('click', refreshCaptcha);
-
-            // Cancel is destructive — confirm before leaving the form.
-            var cancelBtn = document.getElementById('cancelApplicationBtn');
-            if (cancelBtn) {
-                cancelBtn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    var href = this.href;
-                    Swal.fire({
-                        title: 'Cancel application?',
-                        text: 'Your application will not be submitted. This action cannot be undone.',
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Yes, cancel it',
-                        cancelButtonText: 'Keep editing',
-                        confirmButtonColor: FC_BRAND
-                    }).then(function (result) {
-                        if (result.isConfirmed) window.location.href = href;
-                    });
-                });
+            var form = document.getElementById('exemptionApplicationForm');
+            var submitBtn = document.getElementById('exemptionSubmitBtn');
+            if (!form) {
+                return;
             }
-        });
-    </script>
 
-    @if ($isMedical)
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                var form = document.getElementById('exemptionApplicationForm');
-                var fileInput = document.getElementById('medical_doc');
-                var errorEl = document.getElementById('medical_doc_client_error');
-                var submitBtn = document.getElementById('exemptionSubmitBtn');
-                if (!form || !fileInput) {
-                    return;
+            var fileInputs = Array.prototype.slice.call(form.querySelectorAll('input[type="file"].fc-file-upload'));
+            if (!fileInputs.length) {
+                return;
+            }
+
+            var allowedExt = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
+
+            function errorElFor(input) {
+                return document.getElementById(input.id + '_client_error');
+            }
+
+            function showFileError(input, message) {
+                var errorEl = errorElFor(input);
+                if (errorEl) {
+                    errorEl.textContent = message;
+                    errorEl.classList.remove('d-none');
                 }
-
-                var maxBytes = parseInt(fileInput.getAttribute('data-max-bytes') || '5242880', 10);
-                var maxMbLabel = (maxBytes / 1024 / 1024).toFixed(0);
-                var allowedExt = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
-
-                function showFileError(message) {
-                    if (errorEl) {
-                        errorEl.textContent = message;
-                        errorEl.classList.remove('d-none');
-                    }
-                    fileInput.classList.add('is-invalid');
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({
-                            title: 'File not allowed',
-                            text: message,
-                            icon: 'error',
-                            confirmButtonColor: FC_BRAND,
-                            confirmButtonText: 'OK'
-                        });
-                    }
+                input.classList.add('is-invalid');
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'File not allowed',
+                        text: message,
+                        icon: 'error',
+                        confirmButtonColor: '#004a93',
+                        confirmButtonText: 'OK'
+                    });
                 }
+            }
 
-                function clearFileError() {
-                    if (errorEl) {
-                        errorEl.textContent = '';
-                        errorEl.classList.add('d-none');
-                    }
-                    fileInput.classList.remove('is-invalid');
+            function clearFileError(input) {
+                var errorEl = errorElFor(input);
+                if (errorEl) {
+                    errorEl.textContent = '';
+                    errorEl.classList.add('d-none');
                 }
+                input.classList.remove('is-invalid');
+            }
 
-                function validateMedicalFile(file) {
-                    if (!file) {
-                        return null;
-                    }
-                    var parts = file.name.split('.');
-                    var ext = parts.length > 1 ? parts.pop().toLowerCase() : '';
-                    if (allowedExt.indexOf(ext) === -1) {
-                        return 'Only PDF, Word (.doc, .docx), JPG, JPEG, and PNG files are allowed.';
-                    }
-                    if (file.size > maxBytes) {
-                        var sizeMb = (file.size / 1024 / 1024).toFixed(2);
-                        return 'File is too large (' + sizeMb + ' MB). Maximum allowed size is ' + maxMbLabel + ' MB.';
-                    }
+            function validateFile(input) {
+                var file = input.files && input.files[0];
+                if (!file) {
                     return null;
                 }
+                var maxBytes = parseInt(input.getAttribute('data-max-bytes') || '5242880', 10);
+                var maxMbLabel = (maxBytes / 1024 / 1024).toFixed(0);
+                var parts = file.name.split('.');
+                var ext = parts.length > 1 ? parts.pop().toLowerCase() : '';
+                if (allowedExt.indexOf(ext) === -1) {
+                    return 'Only PDF, Word (.doc, .docx), JPG, JPEG, and PNG files are allowed.';
+                }
+                if (file.size > maxBytes) {
+                    var sizeMb = (file.size / 1024 / 1024).toFixed(2);
+                    return 'File is too large (' + sizeMb + ' MB). Maximum allowed size is ' + maxMbLabel + ' MB.';
+                }
+                return null;
+            }
 
-                fileInput.addEventListener('change', function () {
-                    var file = this.files && this.files[0];
-                    var err = validateMedicalFile(file);
+            fileInputs.forEach(function (input) {
+                input.addEventListener('change', function () {
+                    var err = validateFile(this);
                     if (err) {
                         this.value = '';
-                        showFileError(err);
+                        showFileError(this, err);
                         return;
                     }
-                    clearFileError();
+                    clearFileError(this);
                 });
+            });
 
-                form.addEventListener('submit', function (e) {
-                    var file = fileInput.files && fileInput.files[0];
-                    var err = validateMedicalFile(file);
+            form.addEventListener('submit', function (e) {
+                for (var i = 0; i < fileInputs.length; i++) {
+                    var err = validateFile(fileInputs[i]);
                     if (err) {
                         e.preventDefault();
                         e.stopPropagation();
-                        showFileError(err);
+                        showFileError(fileInputs[i], err);
                         return false;
                     }
-                    if (submitBtn) {
-                        submitBtn.disabled = true;
-                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Submitting…';
-                    }
-                });
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Submitting…';
+                }
             });
-        </script>
-    @endif
+        });
+    </script>
 
     @if (session('already_applied'))
         <script>

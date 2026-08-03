@@ -378,7 +378,38 @@ function fc_user_val(string $table, int $userId): string|int
     }
 
     // Pre-migration: resolve the username string from user_credentials.
-    return fc_user_name_for_id($userId) ?? '';
+    $name = trim((string) (fc_user_name_for_id($userId) ?? ''));
+    if ($name !== '') {
+        return $name;
+    }
+
+    // Not in user_credentials — the id is a staged roster pk (fc_registration_master.pk),
+    // which is what the admin screens pass for a trainee who registered through /fc/login
+    // and has not been migrated yet. Their rows in the few still-username-keyed tables
+    // (e.g. student_cloth_size_master_details) were written under the roster login name,
+    // exactly as the $userId < 0 branch above resolves it. Without this the lookup returned
+    // '' and matched nothing, so those sections silently vanished from the profile report.
+    //
+    // The fallback is deliberately narrow. user_credentials.pk and fc_registration_master.pk
+    // are SEPARATE id spaces, so an integer can be a dead credentials pk and, by coincidence,
+    // a live roster pk belonging to somebody else. It is therefore only accepted for a roster
+    // entry that has NOT been migrated into user_credentials — a migrated trainee is always
+    // addressed by their credentials pk, so a roster-pk hit on one is an ambiguous id, and
+    // returning '' (the previous behaviour: matches nothing) is the safe answer.
+    if (! array_key_exists($userId, $usernameCache)) {
+        $rosterName = trim((string) (\Illuminate\Support\Facades\DB::table('fc_registration_master')
+            ->where('pk', $userId)
+            ->value('user_id') ?? ''));
+
+        $migrated = $rosterName !== ''
+            && \Illuminate\Support\Facades\DB::table('user_credentials')
+                ->where('user_name', $rosterName)
+                ->exists();
+
+        $usernameCache[$userId] = $migrated ? '' : $rosterName;
+    }
+
+    return $usernameCache[$userId];
 }
 
 /**
@@ -2030,5 +2061,33 @@ if (! function_exists('fc_document_date')) {
         } catch (\Throwable $e) {
             return $iso;
         }
+    }
+}
+
+if (! function_exists('fc_kra_sn_img')) {
+    /**
+     * Return an inline <img> for the Devanagari "क्र.सं." label, as a base64 data URI.
+     *
+     * mPDF's Indic shaper renders the "क्र" rakaar conjunct as a faint/near-invisible
+     * stroke at small header sizes, so the document-form PDFs embed this pre-rendered
+     * (Chrome/HarfBuzz-shaped) image instead — only this one label is an image, the rest
+     * of every form stays plain mPDF text. Cached per request.
+     *
+     * @param  string  $height  CSS height for the label (match the surrounding font).
+     */
+    function fc_kra_sn_img(string $height = '9pt'): string
+    {
+        static $data = null;
+        if ($data === null) {
+            $path = resource_path('images/fc/kra_sn.png');
+            $data = (is_file($path) && is_readable($path))
+                ? 'data:image/png;base64,'.base64_encode((string) file_get_contents($path))
+                : '';
+        }
+        if ($data === '') {
+            return 'क्र.सं.'; // asset missing → fall back to text
+        }
+
+        return '<img src="'.$data.'" alt="क्र.सं." style="height:'.$height.'; vertical-align:middle;">';
     }
 }

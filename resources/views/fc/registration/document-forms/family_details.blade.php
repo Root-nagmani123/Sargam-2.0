@@ -75,7 +75,7 @@
                 <input type="text" name="designation" class="fm-blank" value="{{ $val('designation') }}" style="min-width:220px;" readonly></div>
             <div class="fm-item"><span class="lbl">Date of Birth / जन्म तिथि:</span>
                 <input type="date" name="date_of_birth" class="fm-blank" value="{{ $val('date_of_birth') }}"></div>
-            <div class="fm-item"><span class="lbl">Details of the members of my family* as on / परिवार के सदस्यों का विवरण, तदनांक:</span>
+            <div class="fm-item"><span class="lbl">Details of the members of my family* as on / परिवार के सदस्यों का विवरण, दिनांक:</span>
                 <input type="date" name="details_as_on" class="fm-blank" value="{{ $val('details_as_on') }}"></div>
 
             <div class="d-flex justify-content-end mb-1 mt-2">

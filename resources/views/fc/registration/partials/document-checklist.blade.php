@@ -178,7 +178,7 @@
                                     @if($blankUrl)
                                         <a href="{{ $blankUrl }}" target="_blank" rel="noopener"
                                            class="btn btn-link btn-sm p-0 text-primary">
-                                            <i class="bi bi-file-earmark-text me-1"></i>View Blank Form
+                                            <i class="bi bi-download me-1"></i>Download Form
                                         </a>
                                     @else
                                         <span class="text-muted small">—</span>

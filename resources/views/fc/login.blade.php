@@ -24,26 +24,15 @@
                                         @endforeach
                                     </ul>
                                 </div>
-                            @endif --}}
+                            @endif
                             <form class="row g-3" method="POST" action="{{ route('registration.verify') }}" autocomplete="off">
                                 @csrf
-                                <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">User Authentication</h3>
-                                <hr>
                                 <!-- Mobile -->
                                 <div class="col-md-12">
                                     <label class="form-label">Mobile No.</label>
                                     <input type="number" class="form-control"
                                         placeholder="Enter your registered mobile number" name="reg_mobile" required
                                         autocomplete="off">
-                                </div>
-                                <!-- Web Code -->
-                                <div class="col-md-12">
-                                    <label class="form-label">Web Code</label>
-                                    <input type="text" class="form-control" placeholder="Enter Web Code"
-                                        name="reg_web_code" required autocomplete="off"
-                                        data-lpignore="true" data-1p-ignore>
-                                    <small class="text-muted">Web Code is sent to your registered mobile
-                                        number/Email</small>
                                 </div>
 
                                 <div class="mb-3">
@@ -57,6 +46,7 @@
                                     <div class="form-text">
                                         Web Code is sent to your registered mobile number / email.
                                     </div>
+                                    <small class="text-muted">OTP is sent to your registered mobile number and email address</small>
                                 </div>
 
                                 <div class="mb-3">
@@ -93,8 +83,6 @@
                                                 name="captcha" placeholder="Enter captcha code" autocomplete="off">
                                         </div>
                                     </div>
-                                    <input type="text" class="form-control" name="captcha"
-                                        placeholder="Enter captcha code" autocomplete="off">
                                 </div>
 
                                 <button type="submit" class="btn btn-primary fc-btn-block">

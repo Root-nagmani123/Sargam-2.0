@@ -11,8 +11,8 @@
     use App\Services\FC\FcRegistrationStatusService;
     $tabs = [
         FcRegistrationStatusService::TAB_NOT_RESPONDED => ['theme' => 'not-responded', 'label' => 'Not Responded'],
-        FcRegistrationStatusService::TAB_REGISTERED => ['theme' => 'registered', 'label' => 'CSE 2024 Registered'],
-        FcRegistrationStatusService::TAB_SERVICE => ['theme' => 'service', 'label' => 'Service wise List'],
+        FcRegistrationStatusService::TAB_REGISTERED => ['theme' => 'registered', 'label' => 'CSE 2025 Registered'],
+        FcRegistrationStatusService::TAB_SERVICE => ['theme' => 'service', 'label' => 'Service wise Registered'],
         FcRegistrationStatusService::TAB_EXEMPTION => ['theme' => 'exemption', 'label' => 'Applied for Exemption'],
         FcRegistrationStatusService::TAB_INCOMPLETE => ['theme' => 'incomplete', 'label' => 'Incomplete'],
     ];
@@ -44,8 +44,8 @@
                            aria-selected="{{ $activeTab === $tabKey ? 'true' : 'false' }}"
                            @if($activeTab === $tabKey) aria-current="true" @endif>
                             <span>{{ $tabDef['label'] }}</span>
-                            {{-- Every badge but "Service wise List" counts participants; that one
-                                 counts services, so it is labelled to stop it reading as people. --}}
+                            {{-- Every badge but "Service wise Registered" counts participants; that
+                                 one counts services, so it is labelled to stop it reading as people. --}}
                             <span class="fc-status-badge fc-status-badge--{{ $tabDef['theme'] }}"
                                   title="{{ number_format($counts[$tabKey] ?? 0) }} {{ $tabDef['count_unit'] ?? 'participants' }}">{{ number_format($counts[$tabKey] ?? 0) }}</span>
                         </a>
