@@ -127,16 +127,24 @@ return [
     | Joining letter shown on the trainee's form dashboard (per intake)
     |--------------------------------------------------------------------------
     |
-    | Keyed by fc_forms.form_slug, value is a path under public/. The dashboard view is shared
-    | by EVERY dynamic form, so the letter must NOT be hardcoded there — the 101st batch's
-    | letter would otherwise greet the 99th batch, the template and the copy form. A form with
-    | no entry here simply shows no card.
+    | joining_letter — the default letter, shown on EVERY dynamic form's dashboard. This is
+    | deliberate: form slugs differ between environments (the 101st Foundation Course is
+    | 'fc-101' on dev but 'fc-102' on production), so keying the letter on the slug meant the
+    | card silently vanished on prod. One default that always applies is the predictable
+    | behaviour. Set it to null/'' to hide the card everywhere.
     |
-    | Adding an intake: drop the PDF in public/fc-documents/ and add one line below.
+    | joining_letters — optional per-form OVERRIDES, keyed by fc_forms.form_slug. Use these
+    | when an intake needs its own letter, or '' to suppress the card for one form (e.g. the
+    | template). An entry whose slug matches nothing is simply ignored.
+    |
+    | Adding an intake: drop the PDF in public/fc-documents/ and either replace the default
+    | or add a per-slug override below.
     |
     */
+    'joining_letter' => env('FC_JOINING_LETTER', 'fc-documents/1st-communication-letter-to-ots.pdf'),
+
     'joining_letters' => [
-        'fc-101' => 'fc-documents/1st-communication-letter-to-ots.pdf',
+        // 'fc_template' => '',   // example: no letter on the reusable template
     ],
 
 ];
