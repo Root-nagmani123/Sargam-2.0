@@ -7,7 +7,7 @@
     
     <title>Registration - Foundation Course | Lal Bahadur Shastri National Academy of Administration</title>
     <link rel="shortcut icon" type="image/x-icon" href="{{ asset('admin_assets/images/logos/favicon.ico') }}">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <link href="{{ asset('admin_assets/libs/bootstrap/dist/css/bootstrap.min.css') }}" rel="stylesheet" crossorigin="anonymous">
     <!-- Icon library (Bootstrap Icons or Lucide) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <link href="asset/css/accesibility-style_v1.css" rel="stylesheet">
@@ -583,8 +583,9 @@
         </div>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"
-        integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous">
+    {{-- S-2: integrity/crossorigin dropped — the file is now same-origin, and a
+         stale SRI hash would silently BLOCK the asset when it is next updated. --}}
+    <script src="{{ asset('admin_assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}">
     </script>
 
     <script>

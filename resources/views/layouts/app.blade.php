@@ -38,7 +38,7 @@
     <!-- Plugins css Ends-->
     <!-- Bootstrap css (CDN latest stable) -->
     <!-- Previously: admin_assets/css/vendors/bootstrap.css -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" integrity="" crossorigin="anonymous">
+    <link href="{{ asset('admin_assets/libs/bootstrap/dist/css/bootstrap.min.css') }}" rel="stylesheet">
     <!-- App css-->
     <link rel="stylesheet" type="text/css" href="{{asset('admin_assets/css/styles.css')}}">
     <link id="color" rel="stylesheet" href="{{asset('admin_assets/css/color-1.css')}}" media="screen">
@@ -64,7 +64,7 @@
     <!-- latest jquery-->
      <script src="{{asset('admin_assets/js/jquery.min.js')}}"></script>
     <!-- Bootstrap js (local) -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="{{ asset('admin_assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}" crossorigin="anonymous"></script>
     <!-- feather icon js-->
     <script src="{{asset('admin_assets/js/icons/feather-icon/feather.min.js')}}"></script>
     <script src="{{asset('admin_assets/js/icons/feather-icon/feather-icon.js')}}"></script>

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sidebar Toggle Test</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ asset('admin_assets/libs/bootstrap/dist/css/bootstrap.min.css') }}" rel="stylesheet">
     <style>
         /* Mobile Sidebar Styles */
         @media (max-width: 991.98px) {

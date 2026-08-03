@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sale Voucher Report - OFFICER'S MESS LBSNAA MUSSOORIE</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ asset('admin_assets/libs/bootstrap/dist/css/bootstrap.min.css') }}" rel="stylesheet">
     <style>
         html, body {
             height: auto !important;
