@@ -1,0 +1,24 @@
+// =============================================================================
+// Phase 8 — Badges: WCAG AA fix for semantic bg-* badges
+//
+// UNLAYERED (wins over the theme; compiled into ux4g-app.css, loaded LAST).
+// Measured on the live app, badges using bg-success/warning/info put WHITE text
+// on bright backgrounds and fail WCAG 2.1 AA — the same defect as the buttons:
+//   badge bg-success  white on #36C76C = 2.20:1  FAIL
+//   badge bg-warning  white on #F8C20A = 1.65:1  FAIL (near-illegible)
+//   badge bg-info     white on #46CAEB = 1.93:1  FAIL
+//
+// Fix = DARK text on the SAME brand backgrounds (7.01 / 9.34 / 8.01 — all pass),
+// scoped to `.badge` so the general `.bg-success` background utility (used on
+// cards, panels, etc.) is NOT affected. 199 badge usages benefit.
+// =============================================================================
+
+$badge-ink: #212529;
+
+.badge.bg-success,
+.badge.bg-warning,
+.badge.bg-info {
+  color: $badge-ink !important;   // theme sets white with priority; loaded-last !important wins
+}
+
+// text-bg-* badges already ship an accessible foreground — left untouched.

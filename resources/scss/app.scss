@@ -44,3 +44,4 @@
 // NOT in a @layer (unlayered beats every layer). Loaded LAST in pre_header. Each
 // block is a deliberately-migrated component with a gated visual change.
 @import 'components/active-buttons';   // Phase 5
+@import 'components/active-badges';     // Phase 8

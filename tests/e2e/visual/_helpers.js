@@ -139,6 +139,9 @@ function masksFor(page) {
         page.locator('#dashboard-live-time')
             .locator('xpath=ancestor::div[contains(concat(" ", normalize-space(@class), " "), " lh-sm ")][1]')
     );
+    // Dashboard greeting is time-of-day dependent ("Good morning/afternoon/evening").
+    // Text-filtered so it matches ONLY that greeting line, on no other page.
+    masks.push(page.locator('p').filter({ hasText: /^Good (morning|afternoon|evening),/ }));
     return masks;
 }
 
