@@ -589,6 +589,13 @@ class FcAdminSmsBulkService
             $rowPendingSteps = $progress['pending_steps'] ?? $progress['pending_step'];
         }
 
+        // No tracker row at all, but credentials are staged: still B1 (see class
+        // doc-comment), so name the first trackable step instead of leaving it blank.
+        if ($bucket === self::TEMPLATE_B1 && $stepName === null) {
+            $stepName = trim((string) ($steps->first()?->step_name ?? '')) ?: 'Basic Information';
+            $rowPendingSteps = $stepName;
+        }
+
         return [
             'bucket' => $bucket,
             'pk' => $pk,
@@ -759,8 +766,16 @@ class FcAdminSmsBulkService
                 }
 
                 // Credentials staged (user_id + password set) counts as "started" even
-                // with 0 trackable steps done — see class doc-comment.
-                $bucket = $this->hasStagedCredentials($roster) ? self::TEMPLATE_B1 : self::TEMPLATE_B2;
+                // with 0 trackable steps done — see class doc-comment. Since there is no
+                // tracker row yet in that case, $stepName was never set above: fall back
+                // to the first trackable step so the SMS/list still names a pending step
+                // instead of showing blank.
+                $hasStagedCredentials = $this->hasStagedCredentials($roster);
+                $bucket = $hasStagedCredentials ? self::TEMPLATE_B1 : self::TEMPLATE_B2;
+                if ($hasStagedCredentials && $stepName === null) {
+                    $stepName = trim((string) ($steps->first()?->step_name ?? '')) ?: 'Basic Information';
+                    $rowPendingSteps = $stepName;
+                }
 
                 $mobile = trim((string) ($roster->contact_no ?? ''));
 
