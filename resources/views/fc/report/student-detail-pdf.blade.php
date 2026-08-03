@@ -377,8 +377,12 @@
     $ch = $courseHeader ?? [];
     $metaRows = [
         ['Name / नाम', ($pdfFullName ?? '') !== '' ? $pdfFullName : '-', true],
-        ['User ID / उपयोगकर्ता', $userId, false],
     ];
+    // The internal user id is meaningful to the academy, not to the trainee, so it stays on
+    // the admin profile PDF and is left off the Descriptive Roll the trainee downloads.
+    if (empty($isDescriptiveRoll)) {
+        $metaRows[] = ['User ID / उपयोगकर्ता', $userId, false];
+    }
     if (!empty($pdfFormName)) {
         $metaRows[] = ['Form / प्रपत्र', $pdfFormName, false];
     }

@@ -104,4 +104,39 @@ return [
     'document_place'            => env('FC_DOCUMENT_PLACE', 'Mussoorie'),
     'document_place_hi'         => env('FC_DOCUMENT_PLACE_HI', 'मसूरी'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Form-builder delete actions (default OFF while the intake is live)
+    |--------------------------------------------------------------------------
+    |
+    | Deleting a form / step / field / group / document master from the admin
+    | form builder is destructive and cascades to trainee data, and this intake is
+    | already live while the rest of the project is still in development. The delete
+    | buttons are therefore hidden everywhere in the form builder and the delete
+    | endpoints refuse the request, so a stale tab or a hand-crafted POST cannot
+    | delete either. Nothing else changes — the delete code itself is untouched.
+    |
+    | Re-enable with FC_FORM_BUILDER_DELETE_ENABLED=true (re-run
+    | `php artisan config:cache` if config is cached).
+    |
+    */
+    'form_builder_delete_enabled' => (bool) env('FC_FORM_BUILDER_DELETE_ENABLED', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Joining letter shown on the trainee's form dashboard (per intake)
+    |--------------------------------------------------------------------------
+    |
+    | Keyed by fc_forms.form_slug, value is a path under public/. The dashboard view is shared
+    | by EVERY dynamic form, so the letter must NOT be hardcoded there — the 101st batch's
+    | letter would otherwise greet the 99th batch, the template and the copy form. A form with
+    | no entry here simply shows no card.
+    |
+    | Adding an intake: drop the PDF in public/fc-documents/ and add one line below.
+    |
+    */
+    'joining_letters' => [
+        'fc-101' => 'fc-documents/1st-communication-letter-to-ots.pdf',
+    ],
+
 ];
