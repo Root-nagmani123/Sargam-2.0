@@ -1,5 +1,11 @@
 * text=auto
 
+# Vendored, byte-exact third-party libraries. `* text=auto` + core.autocrlf
+# rewrites these to CRLF on checkout, which changes their SHA-256 and would
+# invalidate any Subresource Integrity hash. Keep them exactly as published.
+public/js/jquery-*.min.js -text
+public/admin_assets/libs/bootstrap/dist/** -text
+
 *.blade.php diff=html
 *.css diff=css
 *.html diff=html

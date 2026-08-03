@@ -48,7 +48,10 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('js/jquery-3.7.1.min.js') }}"></script>
+{{-- jQuery is already loaded globally by admin.layouts.footer (vendor.min.js,
+     jQuery 3.7.1), which also registers DataTables on that instance. This stack
+     renders AFTER the footer, so re-loading jQuery here would replace the global
+     instance with a plugin-less one and break $().DataTable() below. --}}
 
 <script>
 $(document).ready(function (){

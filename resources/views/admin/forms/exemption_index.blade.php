@@ -8,7 +8,10 @@
     <meta name="Description" content="Enter your description here" />
     
     <link rel="stylesheet" href="https://unicons.iconscout.com/release/v2.1.9/css/unicons.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.0/css/bootstrap.min.css">
+    {{-- S-2: was Bootstrap 4.5.0 from cdnjs — the only Bootstrap 4 left in the app.
+         Safe to unify: this page defines its own .form-group (margin:0) and spaces
+         fields with mt-2, uses no Bootstrap JS, and carries no BS4-only classes. --}}
+    <link rel="stylesheet" href="{{ asset('admin_assets/libs/bootstrap/dist/css/bootstrap.min.css') }}">
     <title>Registration</title>
     <style>
         /* Please ❤ this if you like it! */

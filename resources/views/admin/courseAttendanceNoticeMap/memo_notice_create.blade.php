@@ -107,7 +107,9 @@
 
 
 @section('scripts')
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    {{-- jQuery comes from admin.layouts.footer (vendor.min.js, 3.7.1). This section
+         renders AFTER the footer, so loading jQuery again here would replace the
+         global instance and detach every plugin the footer registered on it. --}}
     <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
 
     <script>

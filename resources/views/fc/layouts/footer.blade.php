@@ -23,14 +23,13 @@
             </div>
         </div>
     </footer>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous">
-    </script>
+    {{-- S-2: self-hosted Bootstrap 5.3.6. The identical bundle was previously
+         loaded TWICE here (once above google-translate, once below); the second
+         copy has been removed. `integrity`/`crossorigin` dropped because the file
+         is now same-origin. --}}
+    <script src="{{ asset('admin_assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('admin_assets/js/google-translate.js') }}"></script>
     <script src="{{ asset('admin_assets/js/weights.js') }}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous">
-    </script>
 
     <!-- google translate -->
     <!-- Google Translate Code -->
