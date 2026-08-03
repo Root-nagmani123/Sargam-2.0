@@ -31,7 +31,11 @@ const MAX_ROUTES = parseInt(process.env.E2E_MAX_ROUTES || '60', 10);
 //    list; its cards change height/count run-to-run, so even a per-card mask
 //    leaves boundary diffs. Its chrome (header/nav/two-column layout) is already
 //    covered by the other pages that share the admin layout.
-const EXCLUDE = /logout|signout|delete|destroy|remove|export|download|print|pdf|excel|csv|birthday|\.(pdf|xlsx|csv|zip)$/i;
+//  - calendar : FullCalendar renders asynchronously (a "Loading…" state swaps to
+//    a grid on a timer) AND shows date-dependent events + a "today" highlight, so
+//    it is non-deterministic even between two same-minute runs. Not a stable
+//    pixel fixture; its chrome is covered by the other admin pages.
+const EXCLUDE = /logout|signout|delete|destroy|remove|export|download|print|pdf|excel|csv|birthday|calendar|\.(pdf|xlsx|csv|zip)$/i;
 
 test.describe('S-4 route discovery', () => {
     test.skip(!process.env.E2E_DISCOVER, 'Set E2E_DISCOVER=1 to regenerate routes.json');

@@ -92,6 +92,21 @@ async function stabilize(page) {
 
     // Let DataTables finish its draw and any XHR-driven widget settle.
     await page.waitForLoadState('networkidle').catch(() => {});
+
+    // Wait out async widgets that render AFTER networkidle (e.g. FullCalendar shows
+    // "Loading calendar..." then swaps in a grid on a timer). Screenshotting mid-load
+    // produces a flaky, layout-shifted capture. Best-effort, capped so a page with a
+    // genuinely persistent "Loading" label can't hang the run.
+    await page.waitForFunction(() => {
+        const loading = Array.from(document.querySelectorAll('body *')).some((el) => {
+            if (el.children.length) return false;
+            const t = (el.textContent || '').trim().toLowerCase();
+            return /loading[.…]*$/.test(t) && el.offsetParent !== null;
+        });
+        const fcRendering = document.querySelector('.fc:not(.fc-media-screen), .fc-view-harness:empty');
+        return !loading && !fcRendering;
+    }, null, { timeout: 8000 }).catch(() => {});
+
     await page.waitForTimeout(600);
 
     // Blur whatever has focus so focus rings don't vary between runs.

@@ -8,7 +8,7 @@
         "hot": "mix watch --hot",
         "prod": "npm run production",
         "production": "mix --production",
-        "build:ux4g": "sass resources/scss/app.scss public/css/ux4g-app.css --style=compressed --no-source-map --quiet-deps",
+        "build:ux4g": "node scripts/build-ux4g-vendor.js && sass resources/scss/app.scss public/css/ux4g-app.css --style=compressed --no-source-map --quiet-deps",
         "watch:ux4g": "sass --watch resources/scss/app.scss:public/css/ux4g-app.css --style=compressed --no-source-map --quiet-deps",
         "test:e2e": "playwright test",
         "test:e2e:headed": "playwright test --headed",

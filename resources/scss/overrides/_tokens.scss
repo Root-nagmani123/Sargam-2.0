@@ -1,3 +1,51 @@
-// Brand token overrides — LBSNAA navy #004384 + the 3 WCAG-failing UX4G semantic
-// colours (info/success/warning). See docs/UX4G-Decision-Note-R1-R2-R3.md (R-1).
-// PHASE 1: intentionally empty — Phase 2 (Design Tokens) fills this.
+// =============================================================================
+// Design Tokens — Phase 2
+// The single source of truth for brand colour, typography, radius and spacing.
+// Emitted into the `tokens` cascade layer (beats `ux4g`, loses to project CSS),
+// so these values steer UX4G components without touching the pinned vendor file.
+//
+// Basis: docs/UX4G-Decision-Note-R1-R2-R3.md (R-1). All contrast ratios measured
+// with the WCAG 2.1 formula against white.
+// =============================================================================
+
+:root {
+  // --- Brand: retain LBSNAA navy, NOT UX4G violet -----------------------------
+  // Navy #004384 = 9.83:1 (AAA); UX4G violet #613AF5 = 6.12:1 (AA). Keeping navy
+  // is the more accessible choice as well as the institutional identity.
+  --bs-primary:            #004384;
+  --bs-primary-rgb:        0, 67, 132;
+  --bs-link-color:         #004384;
+  --bs-link-color-rgb:     0, 67, 132;
+  --bs-link-hover-color:   #00325f;   // darker-on-hover (12.95:1)
+  --bs-link-hover-color-rgb: 0, 50, 95;
+
+  // --- WCAG fixes: 3 UX4G semantic colours fail AA as shipped ------------------
+  // Darkened to the nearest hue-preserving value that clears 4.5:1 on white.
+  // (Alternative per the Decision Note: keep UX4G's hue and use dark button text,
+  // like .btn-*-tonal. Darkening chosen as the more conventional default —
+  // subject to design-team confirmation, checklist item P0-5.)
+  --bs-info:      #0067A6;   // was #00AAFF (2.56:1 FAIL) -> 6.02:1
+  --bs-info-rgb:  0, 103, 166;
+  --bs-success:     #2F7A12; // was #3C9718 (3.73:1 FAIL) -> 5.37:1
+  --bs-success-rgb: 47, 122, 18;
+  --bs-warning:     #8F5716; // was #B77224 (3.86:1 FAIL) -> 5.93:1
+  --bs-warning-rgb: 143, 87, 22;
+
+  // --- Adopted from UX4G unchanged (already pass AA) ---------------------------
+  --bs-danger:      #B7131A;  --bs-danger-rgb: 183, 19, 26;   // 6.73:1
+  --bs-secondary:   #5A6370;  --bs-secondary-rgb: 90, 99, 112; // 6.08:1
+
+  // --- Typography -------------------------------------------------------------
+  // Noto Sans (GoI standard) is self-hosted at
+  // public/admin_assets/libs/ux4g/fonts/ and declared @font-face by ux4g-min.css.
+  --bs-body-font-family: 'Noto Sans', system-ui, -apple-system, 'Segoe UI',
+                         'Helvetica Neue', Arial, sans-serif;
+  // UX4G ships --bs-font-monospace as 'Noto Sans' (not monospace) — correct it.
+  --bs-font-monospace: 'Cascadia Mono', Consolas, 'Courier New', monospace;
+
+  // --- Radius (UX4G = Bootstrap defaults; pill differs, cosmetic) --------------
+  --bs-border-radius-pill: 50rem;   // UX4G ships 6.25rem; standardise to BS pill.
+
+  // Spacing scale, breakpoints and the grid are Bootstrap-identical in UX4G —
+  // no token overrides needed.
+}
