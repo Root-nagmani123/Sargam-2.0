@@ -1,0 +1,52 @@
+/*
+ * Injected into every visual-regression screenshot (Playwright `stylePath`).
+ * Purpose: remove non-deterministic rendering so a diff means a REAL change.
+ *
+ * This file must never be loaded by the application. It exists only so the
+ * S-4 baseline is stable across runs; it does not alter production CSS.
+ */
+
+/* 1. Kill all motion. Mid-transition frames are the single largest source of
+      false-positive diffs (fades, slides, sidebar accordion, DataTables draw). */
+*,
+*::before,
+*::after {
+    transition: none !important;
+    animation: none !important;
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+}
+
+/* 2. Caret blink inside focused inputs alternates between frames. */
+* {
+    caret-color: transparent !important;
+}
+
+/* 3. Scrollbars differ by OS/browser build and shift layout width. */
+::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+}
+html {
+    scrollbar-width: none !important;
+}
+
+/* 4. Spinners / loaders freeze mid-rotation at arbitrary angles. */
+.spinner-border,
+.spinner-grow,
+.dataTables_processing,
+.loader,
+.loading {
+    visibility: hidden !important;
+}
+
+/* 5. Live clocks and relative timestamps re-render every run.
+      Extend this list as volatile widgets are found — see README. */
+[data-live-clock],
+.js-current-time,
+.current-date-time {
+    visibility: hidden !important;
+}

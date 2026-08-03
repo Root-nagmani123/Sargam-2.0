@@ -18,6 +18,15 @@ yarn-error.log
 composer.lock
 composer.json
 
+# Playwright generated artifacts — rewritten on every test run.
+# NOTE: the visual-regression baselines under
+# tests/e2e/visual/baseline.spec.js-snapshots/ are deliberately NOT ignored;
+# they are the reference images the UX4G migration is verified against.
+/test-results
+/playwright-report
+/blob-report
+/playwright/.cache
+
 # Project-specific ignores
 testsargam2_dump1811_20012026.sql
 docker-compose.yml
