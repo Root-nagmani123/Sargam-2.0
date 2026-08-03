@@ -1295,6 +1295,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('course-repository/subjects/{coursePk}', [CourseRepositoryController::class, 'getSubjectsByCourse'])->name('course-repository.subjects');
     Route::get('course-repository/topics/{subjectPk}', [CourseRepositoryController::class, 'getTopicsBySubject'])->name('course-repository.topics');
     Route::get('course-repository/session-dates', [CourseRepositoryController::class, 'getSessionDateByTopic'])->name('course-repository.session-dates');
+    Route::get('course-repository/sessions-by-course-date', [CourseRepositoryController::class, 'getSessionsByCourseDate'])->name('course-repository.sessions-by-course-date');
     Route::get('course-repository/authors-by-topic', [CourseRepositoryController::class, 'getAuthorsByTopic'])->name('course-repository.authors-by-topic');
     Route::get('course-repository/groups', [CourseRepositoryController::class, 'getGroupsByCourse'])->name('course-repository.groups');
     Route::get('course-repository/timetables', [CourseRepositoryController::class, 'getTimetablesByGroup'])->name('course-repository.timetables');
