@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Security;
 
+use App\DataTables\VehiclePassApprovalDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\EmployeeMaster;
 use App\Models\VehiclePassTWApply;
@@ -17,6 +18,14 @@ use Illuminate\Support\Facades\Schema;
 
 class VehiclePassApprovalController extends Controller
 {
+    /**
+     * Server-side DataTables ajax endpoint (one per tab, keyed by ?tab_key=).
+     */
+    public function datatable(VehiclePassApprovalDataTable $dataTable)
+    {
+        return $dataTable->ajax();
+    }
+
     /**
      * Consolidated index showing both regular and duplicate vehicle pass applications.
      * Prefix format:
@@ -479,6 +488,7 @@ class VehiclePassApprovalController extends Controller
         if ($kind === 'tw') {
             VehiclePassController::bumpIndexListCacheEpoch();
         }
+        VehiclePassApprovalDataTable::bumpListingCacheEpoch();
 
         return redirect()->route('admin.security.vehicle_pass_approval.index')
             ->with('success', 'Vehicle Pass approved successfully');
@@ -537,6 +547,7 @@ class VehiclePassApprovalController extends Controller
         if ($kind === 'tw') {
             VehiclePassController::bumpIndexListCacheEpoch();
         }
+        VehiclePassApprovalDataTable::bumpListingCacheEpoch();
 
         return redirect()->route('admin.security.vehicle_pass_approval.index')
             ->with('success', 'Vehicle Pass rejected');

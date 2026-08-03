@@ -38,6 +38,8 @@ class EmployeeIDCardApprovalController extends Controller
     {
         EmployeeIDCardRequestController::bumpIndexListCacheEpoch();
         DuplicateIDCardRequestController::bumpIndexListCacheEpoch();
+        \App\DataTables\EmployeeIdcardApproval2DataTable::bumpListingCacheEpoch();
+        \App\DataTables\EmployeeIdcardApproval3DataTable::bumpListingCacheEpoch();
     }
 
     /**
@@ -58,7 +60,54 @@ class EmployeeIDCardApprovalController extends Controller
         return $dataTable->render('admin.security.employee_idcard_approval.approval1');
     }
 
+    /**
+     * Server-side DataTables ajax endpoint for Approval II (one per tab, keyed by ?tab_key=).
+     */
+    public function approval2Datatable(\App\DataTables\EmployeeIdcardApproval2DataTable $dataTable)
+    {
+        return $dataTable->ajax();
+    }
+
+    /**
+     * Server-side DataTables ajax endpoint for Approval III (one per tab, keyed by ?tab_key=).
+     */
+    public function approval3Datatable(\App\DataTables\EmployeeIdcardApproval3DataTable $dataTable)
+    {
+        return $dataTable->ajax();
+    }
+
     public function approval2(Request $request)
+    {
+        $lists = $this->buildApproval2Lists($request);
+
+        $activeTab = $request->get('tab', 'new');
+        if ($activeTab === 'archive') {
+            $activeTab = 'issued';
+        }
+        if (!in_array($activeTab, ['new', 'for_approval', 'issued', 'rejected'], true)) {
+            $activeTab = 'new';
+        }
+
+        $cardTypes = DB::table('sec_id_cardno_master')->orderBy('sec_card_name')->pluck('sec_card_name', 'pk')->toArray();
+
+        return view('admin.security.employee_idcard_approval.approval2', [
+            'newRequests' => $lists['new'],
+            'forApprovalRequests' => $lists['for_approval'],
+            'issuedRequests' => $lists['issued'],
+            'rejectedRequests' => $lists['rejected'],
+            'activeTab' => $activeTab,
+            'cardTypes' => $cardTypes,
+        ]);
+    }
+
+    /**
+     * Builds the 4 tab lists (new/for_approval/issued/rejected) for Approval II, exactly as
+     * rendered by approval2() previously — extracted so {@see \App\DataTables\EmployeeIdcardApproval2DataTable}
+     * can reuse the identical pool-building/merge/search logic for server-side pagination.
+     *
+     * @return array{new: \Illuminate\Support\Collection, for_approval: \Illuminate\Support\Collection, issued: \Illuminate\Support\Collection, rejected: \Illuminate\Support\Collection}
+     */
+    public function buildApproval2Lists(Request $request): array
     {
         // Default filter: show records from 01-03-2026 onward unless user selects another date.
         if (!$request->filled('date_from')) {
@@ -626,31 +675,19 @@ class EmployeeIDCardApprovalController extends Controller
         $rejectedRequests = $rejectedMerged;
         // ──────────────────────────────────────────────────────────────────────
 
-        $activeTab = $request->get('tab', 'new');
-        if ($activeTab === 'archive') {
-            $activeTab = 'issued';
-        }
-        if (!in_array($activeTab, ['new', 'for_approval', 'issued', 'rejected'], true)) {
-            $activeTab = 'new';
-        }
-
-        $cardTypes = DB::table('sec_id_cardno_master')->orderBy('sec_card_name')->pluck('sec_card_name', 'pk')->toArray();
-
-        return view('admin.security.employee_idcard_approval.approval2', compact(
-            'newRequests',
-            'forApprovalRequests',
-            'issuedRequests',
-            'rejectedRequests',
-            'activeTab',
-            'cardTypes'
-        ));
+        return [
+            'new' => $newRequests,
+            'for_approval' => $forApprovalRequests,
+            'issued' => $issuedRequests,
+            'rejected' => $rejectedRequests,
+        ];
     }
 
     /**
      * Global text search for Approval II list rows: matches visible table fields (name, designation,
      * ID no/type, request type labels, contact, status / pipeline hints, request date).
      */
-    private function approval2MatchesGlobalSearch(string $searchRaw, object $dto): bool
+    public function approval2MatchesGlobalSearch(string $searchRaw, object $dto): bool
     {
         $needle = trim($searchRaw);
         if ($needle === '') {
@@ -717,7 +754,7 @@ class EmployeeIDCardApprovalController extends Controller
     /**
      * @return list<string>
      */
-    private function approval2RequestTypeSearchPhrases(object $dto): array
+    public function approval2RequestTypeSearchPhrases(object $dto): array
     {
         $short = match ($dto->employee_type ?? null) {
             'Permanent Employee' => 'Permanent',
@@ -801,6 +838,34 @@ class EmployeeIDCardApprovalController extends Controller
      * Shows Pending/Approved/Rejected records that have reached Level 3 flow.
      */
     public function approval3(Request $request)
+    {
+        $lists = $this->buildApproval3Lists($request);
+
+        $activeTab = $request->get('tab', 'new');
+        if ($activeTab === 'archive') {
+            $activeTab = 'issued';
+        }
+        if (!in_array($activeTab, ['new', 'for_approval', 'issued', 'rejected'], true)) {
+            $activeTab = 'new';
+        }
+
+        return view('admin.security.employee_idcard_approval.approval3', [
+            'newRequests' => $lists['new'],
+            'forApprovalRequests' => $lists['for_approval'],
+            'issuedRequests' => $lists['issued'],
+            'rejectedRequests' => $lists['rejected'],
+            'activeTab' => $activeTab,
+        ]);
+    }
+
+    /**
+     * Builds the 4 tab lists (new/for_approval/issued/rejected) for Approval III, exactly as
+     * rendered by approval3() previously — extracted so {@see \App\DataTables\EmployeeIdcardApproval3DataTable}
+     * can reuse the identical pool-building/merge/search logic for server-side pagination.
+     *
+     * @return array{new: \Illuminate\Support\Collection, for_approval: \Illuminate\Support\Collection, issued: \Illuminate\Support\Collection, rejected: \Illuminate\Support\Collection}
+     */
+    public function buildApproval3Lists(Request $request): array
     {
         $dateFrom = $request->get('date_from');
         $dateTo = $request->get('date_to');
@@ -992,26 +1057,12 @@ class EmployeeIDCardApprovalController extends Controller
         $issuedRows = $merged->filter(fn ($r) => (string) ($r->status ?? '') === 'Approved')->values();
         $rejectedRows = $merged->filter(fn ($r) => (string) ($r->status ?? '') === 'Rejected')->values();
 
-        $newRequests = $newRows;
-        $forApprovalRequests = $forApprovalRows;
-        $issuedRequests = $issuedRows;
-        $rejectedRequests = $rejectedRows;
-
-        $activeTab = $request->get('tab', 'new');
-        if ($activeTab === 'archive') {
-            $activeTab = 'issued';
-        }
-        if (!in_array($activeTab, ['new', 'for_approval', 'issued', 'rejected'], true)) {
-            $activeTab = 'new';
-        }
-
-        return view('admin.security.employee_idcard_approval.approval3', compact(
-            'newRequests',
-            'forApprovalRequests',
-            'issuedRequests',
-            'rejectedRequests',
-            'activeTab'
-        ));
+        return [
+            'new' => $newRows,
+            'for_approval' => $forApprovalRows,
+            'issued' => $issuedRows,
+            'rejected' => $rejectedRows,
+        ];
     }
 
     public function show(Request $httpRequest, $id)
@@ -2519,7 +2570,7 @@ class EmployeeIDCardApprovalController extends Controller
      * @param  \Illuminate\Support\Collection|array<int, object>  $dupPermRows
      * @return array<string, string>  keyed by emp_id_apply
      */
-    private function mapDupPermIdCardTypeLabels($dupPermRows): array
+    public function mapDupPermIdCardTypeLabels($dupPermRows): array
     {
         if ($dupPermRows->isEmpty()) {
             return [];
@@ -2634,7 +2685,7 @@ class EmployeeIDCardApprovalController extends Controller
      * @param  \Illuminate\Support\Collection|array<int, object>  $dupContRows
      * @return array<string, string>  keyed by emp_id_apply
      */
-    private function mapDupOtherIdCardTypeLabels($dupContRows): array
+    public function mapDupOtherIdCardTypeLabels($dupContRows): array
     {
         if ($dupContRows->isEmpty()) {
             return [];

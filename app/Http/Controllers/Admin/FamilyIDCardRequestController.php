@@ -34,7 +34,7 @@ class FamilyIDCardRequestController extends Controller
     /**
      * @return Collection<int, SecurityFamilyIdApply>
      */
-    private function fetchFamilyIdcardApplicantRows(mixed $createdBy, string $search): Collection
+    public static function fetchFamilyIdcardApplicantRows(mixed $createdBy, string $search): Collection
     {
         $query = SecurityFamilyIdApply::query()
             ->where('created_by', $createdBy)
@@ -55,7 +55,7 @@ class FamilyIDCardRequestController extends Controller
      * @param  Collection<int, SecurityFamilyIdApply>  $all
      * @return Collection<int, object>
      */
-    private function buildFamilyIdcardGroupedListFromRows(Collection $all, string $cardType): Collection
+    public static function buildFamilyIdcardGroupedListFromRows(Collection $all, string $cardType): Collection
     {
         $fmlIdsAll = $all->pluck('fml_id_apply')->unique()->filter()->values();
         $blockedDeleteByFml = [];
@@ -139,13 +139,13 @@ class FamilyIDCardRequestController extends Controller
      */
     private function buildFamilyIdcardIndexGroupLists(mixed $createdBy, string $search, string $cardType): array
     {
-        $rows = $this->fetchFamilyIdcardApplicantRows($createdBy, $search);
+        $rows = self::fetchFamilyIdcardApplicantRows($createdBy, $search);
         $activeRows = $rows->filter(fn ($r) => (int) ($r->id_status ?? 1) === 1)->values();
         $archiveRows = $rows->filter(fn ($r) => in_array((int) ($r->id_status ?? 0), [2, 3], true))->values();
 
         return [
-            'active' => $this->buildFamilyIdcardGroupedListFromRows($activeRows, $cardType),
-            'archive' => $this->buildFamilyIdcardGroupedListFromRows($archiveRows, $cardType),
+            'active' => self::buildFamilyIdcardGroupedListFromRows($activeRows, $cardType),
+            'archive' => self::buildFamilyIdcardGroupedListFromRows($archiveRows, $cardType),
         ];
     }
 
@@ -182,6 +182,22 @@ class FamilyIDCardRequestController extends Controller
             'activeRequests' => $activeRequests,
             'archivedRequests' => $archivedRequests,
         ]);
+    }
+
+    /**
+     * Server-side DataTables ajax endpoint for the Active tab table.
+     */
+    public function datatableActive(\App\DataTables\FamilyIdCardActiveDataTable $dataTable)
+    {
+        return $dataTable->ajax();
+    }
+
+    /**
+     * Server-side DataTables ajax endpoint for the Archive tab table.
+     */
+    public function datatableArchive(\App\DataTables\FamilyIdCardArchiveDataTable $dataTable)
+    {
+        return $dataTable->ajax();
     }
 
     /**

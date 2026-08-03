@@ -122,37 +122,19 @@
             <div class="tab-content">
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'new' ? 'show active' : '' }}" id="fam-new-panel" role="tabpanel"
                      style="{{ ($activeTab ?? 'new') === 'new' ? 'display:block;' : 'display:none;' }}">
-                    @include('admin.security.family_idcard_approval._family_approval_table', ['groups' => $newFamilyGroups, 'familyMembersQueryString' => $familyMembersQueryString, 'tableId' => 'famNewTable'])
-                    @include('components.mess-master-datatables', ['tableId' => 'famNewTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 5, 'orderDir' => 'desc', 'actionColumnIndex' => 6, 'infoLabel' => 'requests'])
+                    @include('admin.security.family_idcard_approval._family_approval_table_shell', ['tableId' => 'famNewTable'])
                 </div>
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'for_approval' ? 'show active' : '' }}" id="fam-for-panel" role="tabpanel"
                      style="{{ ($activeTab ?? 'new') === 'for_approval' ? 'display:block;' : 'display:none;' }}">
-                    @include('admin.security.family_idcard_approval._family_approval_table', ['groups' => $processedFamilyGroups, 'familyMembersQueryString' => $familyMembersQueryString, 'tableId' => 'famForApprovalTable'])
-                    @include('components.mess-master-datatables', ['tableId' => 'famForApprovalTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 5, 'orderDir' => 'desc', 'actionColumnIndex' => 6, 'infoLabel' => 'requests'])
+                    @include('admin.security.family_idcard_approval._family_approval_table_shell', ['tableId' => 'famForApprovalTable'])
                 </div>
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'issued' ? 'show active' : '' }}" id="fam-issued-panel" role="tabpanel"
                      style="{{ ($activeTab ?? 'new') === 'issued' ? 'display:block;' : 'display:none;' }}">
-                    @if($issuedFamilyGroups->count() === 0)
-                        <div class="text-center text-muted py-5">
-                            <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">verified</i>
-                            <p class="mt-2 mb-0">No approved records in this tab.</p>
-                        </div>
-                    @else
-                        @include('admin.security.family_idcard_approval._family_approval_table', ['groups' => $issuedFamilyGroups, 'familyMembersQueryString' => $familyMembersQueryString, 'tableId' => 'famIssuedTable'])
-                        @include('components.mess-master-datatables', ['tableId' => 'famIssuedTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 5, 'orderDir' => 'desc', 'actionColumnIndex' => 6, 'infoLabel' => 'requests'])
-                    @endif
+                    @include('admin.security.family_idcard_approval._family_approval_table_shell', ['tableId' => 'famIssuedTable'])
                 </div>
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'rejected' ? 'show active' : '' }}" id="fam-rejected-panel" role="tabpanel"
                      style="{{ ($activeTab ?? 'new') === 'rejected' ? 'display:block;' : 'display:none;' }}">
-                    @if($rejectedFamilyGroups->count() === 0)
-                        <div class="text-center text-muted py-5">
-                            <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">cancel</i>
-                            <p class="mt-2 mb-0">No rejected records found.</p>
-                        </div>
-                    @else
-                        @include('admin.security.family_idcard_approval._family_approval_table', ['groups' => $rejectedFamilyGroups, 'familyMembersQueryString' => $familyMembersQueryString, 'tableId' => 'famRejectedTable'])
-                        @include('components.mess-master-datatables', ['tableId' => 'famRejectedTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 5, 'orderDir' => 'desc', 'actionColumnIndex' => 6, 'infoLabel' => 'requests'])
-                    @endif
+                    @include('admin.security.family_idcard_approval._family_approval_table_shell', ['tableId' => 'famRejectedTable'])
                 </div>
             </div>
         </div>
@@ -304,7 +286,71 @@ document.querySelectorAll('#familyApprovalTabs .nav-link').forEach(function (btn
             window.history.replaceState({}, '', url.toString());
         } catch (e) {}
         if (typeof window.adjustAllDataTables === 'function') { window.adjustAllDataTables(); }
+        ensureFamilyTabDataTableInitialized(tabKey);
     });
 });
+
+// --- Server-side DataTables: one per tab, lazy-initialized on first display ---
+(function () {
+    if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) return;
+    var $ = window.jQuery;
+
+    var familyDatatableUrl = '{{ route('admin.security.family_idcard_approval.datatable') }}';
+    var familyTabTableIds = {
+        new: 'famNewTable',
+        for_approval: 'famForApprovalTable',
+        issued: 'famIssuedTable',
+        rejected: 'famRejectedTable',
+    };
+    var familyTabDataTables = {};
+
+    var familyTableColumns = [
+        { data: 'submitted_by', name: 'submitted_by', orderable: false, searchable: false },
+        { data: 'employee_type_badge', name: 'employee_type_badge', orderable: false, searchable: false },
+        { data: 'emp_id_apply', name: 'emp_id_apply', orderable: false, searchable: false },
+        { data: 'member_count_badge', name: 'member_count_badge', orderable: false, searchable: false },
+        { data: 'status', name: 'status', orderable: false, searchable: false },
+        { data: 'applied_on', name: 'applied_on', orderable: false, searchable: false },
+        { data: 'actions', name: 'actions', orderable: false, searchable: false }
+    ];
+
+    window.ensureFamilyTabDataTableInitialized = function (tabKey) {
+        if (familyTabDataTables[tabKey]) {
+            familyTabDataTables[tabKey].columns.adjust();
+            return;
+        }
+        var tableId = familyTabTableIds[tabKey];
+        var $table = $('#' + tableId);
+        if (!$table.length) return;
+
+        familyTabDataTables[tabKey] = $table.DataTable({
+            processing: true,
+            serverSide: true,
+            searching: false,
+            ordering: false,
+            pageLength: 10,
+            ajax: {
+                url: familyDatatableUrl,
+                type: 'GET',
+                data: function (d) {
+                    d.tab_key = tabKey;
+                    d.search = $('#search').val() || '';
+                    d.date_from = $('#date_from').val() || '';
+                    d.date_to = $('#date_to').val() || '';
+                    d.return = '{{ $familyApprovalReturn }}';
+                }
+            },
+            columns: familyTableColumns,
+            language: {
+                zeroRecords: 'No requests in this category.',
+                processing: 'Loading...'
+            },
+            dom: '<"row align-items-center mb-2"<"col-12 col-md-4"l>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>'
+        });
+    };
+
+    // Initialize the tab that's active on first page load.
+    ensureFamilyTabDataTableInitialized('{{ $activeTab ?? 'new' }}');
+})();
 </script>
 @endpush

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Security;
 
+use App\DataTables\FamilyIdCardApprovalDataTable;
 use App\Http\Controllers\Admin\FamilyIDCardRequestController;
 use App\Http\Controllers\Controller;
 use App\Models\SecurityFamilyIdApply;
@@ -18,6 +19,14 @@ use Illuminate\Support\Facades\Schema;
  */
 class FamilyIDCardApprovalController extends Controller
 {
+    /**
+     * Server-side DataTables ajax endpoint (one per tab, keyed by ?tab_key=).
+     */
+    public function datatable(FamilyIdCardApprovalDataTable $dataTable)
+    {
+        return $dataTable->ajax();
+    }
+
     public function index(Request $request)
     {
         $search = trim($request->get('search', ''));
@@ -352,6 +361,7 @@ class FamilyIDCardApprovalController extends Controller
         }
 
         FamilyIDCardRequestController::bumpIndexListCacheEpoch();
+        FamilyIdCardApprovalDataTable::bumpListingCacheEpoch();
         return redirect()->route('admin.security.family_idcard_approval.index')
             ->with('success', 'Family ID Card approved successfully');
     }
@@ -389,6 +399,7 @@ class FamilyIDCardApprovalController extends Controller
         ]);
 
         FamilyIDCardRequestController::bumpIndexListCacheEpoch();
+        FamilyIdCardApprovalDataTable::bumpListingCacheEpoch();
         return redirect()->route('admin.security.family_idcard_approval.index')
             ->with('success', 'Family ID Card rejected');
     }
@@ -494,6 +505,7 @@ class FamilyIDCardApprovalController extends Controller
         }
 
         FamilyIDCardRequestController::bumpIndexListCacheEpoch();
+        FamilyIdCardApprovalDataTable::bumpListingCacheEpoch();
         return redirect()->route('admin.security.family_idcard_approval.index')
             ->with('success', 'Family ID Card group approved (' . $groupRows->count() . ' members)');
     }
@@ -542,6 +554,7 @@ class FamilyIDCardApprovalController extends Controller
         }
 
         FamilyIDCardRequestController::bumpIndexListCacheEpoch();
+        FamilyIdCardApprovalDataTable::bumpListingCacheEpoch();
         return redirect()->route('admin.security.family_idcard_approval.index')
             ->with('success', 'Family ID Card group rejected (' . $groupRows->count() . ' members)');
     }

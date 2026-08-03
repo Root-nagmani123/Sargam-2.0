@@ -121,38 +121,20 @@
 
             <div class="tab-content">
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'new' ? 'show active' : '' }}" id="new-request-panel" role="tabpanel" aria-labelledby="new-request-tab" style="{{ ($activeTab ?? 'new') === 'new' ? 'display:block;' : 'display:none;' }}">
-                    @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $newRequests, 'approvalStage' => 2, 'tableId' => 'idNewTable'])
-                    @include('components.mess-master-datatables', ['tableId' => 'idNewTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 9, 'orderDir' => 'desc', 'actionColumnIndex' => 8, 'infoLabel' => 'requests'])
+                    @include('admin.security.employee_idcard_approval._approval_table_shell', ['tableId' => 'idNewTable'])
                 </div>
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'for_approval' ? 'show active' : '' }}" id="for-approval-panel" role="tabpanel" aria-labelledby="for-approval-tab" style="{{ ($activeTab ?? 'new') === 'for_approval' ? 'display:block;' : 'display:none;' }}">
-                    @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $forApprovalRequests, 'approvalStage' => 2, 'tableId' => 'idForApprovalTable'])
-                    @include('components.mess-master-datatables', ['tableId' => 'idForApprovalTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 9, 'orderDir' => 'desc', 'actionColumnIndex' => 8, 'infoLabel' => 'requests'])
+                    @include('admin.security.employee_idcard_approval._approval_table_shell', ['tableId' => 'idForApprovalTable'])
                 </div>
 
                 {{-- Issued: all approved rows (Permanent / Duplicate / Contractual). Card print confirms physical issue. --}}
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'issued' ? 'show active' : '' }}" id="issued-panel" role="tabpanel" aria-labelledby="issued-tab" style="{{ ($activeTab ?? 'new') === 'issued' ? 'display:block;' : 'display:none;' }}">
-                    @if($issuedRequests->count() === 0)
-                        <div class="text-center text-muted py-5">
-                            <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">verified</i>
-                            <p class="mt-2 mb-0">No issued records found.</p>
-                        </div>
-                    @else
-                        @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $issuedRequests, 'approvalStage' => 2, 'tableId' => 'idIssuedTable'])
-                        @include('components.mess-master-datatables', ['tableId' => 'idIssuedTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 9, 'orderDir' => 'desc', 'actionColumnIndex' => 8, 'infoLabel' => 'requests'])
-                    @endif
+                    @include('admin.security.employee_idcard_approval._approval_table_shell', ['tableId' => 'idIssuedTable'])
                 </div>
 
                 {{-- Rejected only --}}
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'rejected' ? 'show active' : '' }}" id="rejected-panel" role="tabpanel" aria-labelledby="rejected-tab" style="{{ ($activeTab ?? 'new') === 'rejected' ? 'display:block;' : 'display:none;' }}">
-                    @if($rejectedRequests->count() === 0)
-                        <div class="text-center text-muted py-5">
-                            <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">cancel</i>
-                            <p class="mt-2 mb-0">No rejected records found.</p>
-                        </div>
-                    @else
-                        @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $rejectedRequests, 'approvalStage' => 2, 'tableId' => 'idRejectedTable'])
-                        @include('components.mess-master-datatables', ['tableId' => 'idRejectedTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 9, 'orderDir' => 'desc', 'actionColumnIndex' => 8, 'infoLabel' => 'requests'])
-                    @endif
+                    @include('admin.security.employee_idcard_approval._approval_table_shell', ['tableId' => 'idRejectedTable'])
                 </div>
             </div>
         </div>
@@ -252,13 +234,54 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch (e) {}
 });
 
-document.querySelectorAll('.reject-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        document.getElementById('rejectModalEmployeeName').textContent = 'Rejecting: ' + (this.dataset.name || '');
-        document.getElementById('rejectForm').action = this.dataset.url || '#';
-        document.getElementById('rejection_reason').value = '';
-        new bootstrap.Modal(document.getElementById('rejectModal')).show();
-    });
+// Reject button opens the modal. Delegated on document since rows are rendered by the DataTable ajax call.
+document.addEventListener('click', function (event) {
+    var btn = event.target.closest('.reject-btn');
+    if (!btn) {
+        return;
+    }
+    document.getElementById('rejectModalEmployeeName').textContent = 'Rejecting: ' + (btn.dataset.name || '');
+    document.getElementById('rejectForm').action = btn.dataset.url || '#';
+    document.getElementById('rejection_reason').value = '';
+    new bootstrap.Modal(document.getElementById('rejectModal')).show();
+});
+
+// "Card print" checkbox (Issued tab) — confirm before marking a request as physically issued.
+document.addEventListener('change', function (event) {
+    if (!event.target.classList.contains('archive-check-input')) {
+        return;
+    }
+    var checkbox = event.target;
+    if (!checkbox.checked) {
+        return;
+    }
+    var form = checkbox.closest('form.archive-check-form');
+    if (!form) {
+        checkbox.checked = false;
+        return;
+    }
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Card printed?',
+            text: 'Mark this record as physically issued (date will be recorded).',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, mark issued',
+            cancelButtonText: 'Cancel'
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                form.submit();
+            } else {
+                checkbox.checked = false;
+            }
+        });
+        return;
+    }
+    if (!window.confirm('Mark this approved request as card printed / physically issued?')) {
+        checkbox.checked = false;
+        return;
+    }
+    form.submit();
 });
 
 // Auto-submit when per_page changes
@@ -291,7 +314,78 @@ document.querySelectorAll('#approval2Tabs .nav-link').forEach(function(btn) {
             url.searchParams.set('tab', tabKey);
             window.history.replaceState({}, '', url.toString());
         } catch (e) {}
+        ensureApproval2TabDataTableInitialized(tabKey);
     });
 });
+
+// --- Server-side DataTables: one per tab, lazy-initialized on first display ---
+(function () {
+    if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) return;
+    var $ = window.jQuery;
+
+    var urlParams = new URLSearchParams(window.location.search);
+    var searchFilter = urlParams.get('search') || '';
+    var dateFromFilter = urlParams.get('date_from') || '{{ \App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController::DEFAULT_REQUEST_DATE_FROM }}';
+    var dateToFilter = urlParams.get('date_to') || '';
+
+    var approval2DatatableUrl = '{{ route('admin.security.employee_idcard_approval.approval2_datatable') }}';
+    var approval2TabTableIds = {
+        new: 'idNewTable',
+        for_approval: 'idForApprovalTable',
+        issued: 'idIssuedTable',
+        rejected: 'idRejectedTable',
+    };
+    var approval2TabDataTables = {};
+
+    var approval2TableColumns = [
+        { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+        { data: 'name', name: 'name', orderable: false, searchable: false },
+        { data: 'designation', name: 'designation', orderable: false, searchable: false },
+        { data: 'id_card_number', name: 'id_card_number', orderable: false, searchable: false },
+        { data: 'card_type', name: 'card_type', orderable: false, searchable: false },
+        { data: 'request_type_badge', name: 'request_type_badge', orderable: false, searchable: false },
+        { data: 'photo', name: 'photo', orderable: false, searchable: false },
+        { data: 'contact_no', name: 'contact_no', orderable: false, searchable: false },
+        { data: 'actions', name: 'actions', orderable: false, searchable: false },
+        { data: 'request_date_fmt', name: 'request_date_fmt', orderable: false, searchable: false },
+        { data: 'requested_section', name: 'requested_section', orderable: false, searchable: false }
+    ];
+
+    window.ensureApproval2TabDataTableInitialized = function (tabKey) {
+        if (approval2TabDataTables[tabKey]) {
+            approval2TabDataTables[tabKey].columns.adjust();
+            return;
+        }
+        var tableId = approval2TabTableIds[tabKey];
+        var $table = $('#' + tableId);
+        if (!$table.length) return;
+
+        approval2TabDataTables[tabKey] = $table.DataTable({
+            processing: true,
+            serverSide: true,
+            searching: false,
+            ordering: false,
+            pageLength: 10,
+            ajax: {
+                url: approval2DatatableUrl,
+                type: 'GET',
+                data: function (d) {
+                    d.tab_key = tabKey;
+                    d.search = searchFilter;
+                    d.date_from = dateFromFilter;
+                    d.date_to = dateToFilter;
+                }
+            },
+            columns: approval2TableColumns,
+            language: {
+                zeroRecords: 'No requests found for Approval II.',
+                processing: 'Loading...'
+            },
+            dom: '<"row align-items-center mb-2"<"col-12 col-md-4"l>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>'
+        });
+    };
+
+    ensureApproval2TabDataTableInitialized('{{ $activeTab ?? 'new' }}');
+})();
 </script>
 @endpush
