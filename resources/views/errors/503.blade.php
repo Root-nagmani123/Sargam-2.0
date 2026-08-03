@@ -495,7 +495,7 @@
         &copy; {{ date('Y') }} LBSNAA Mussoorie, Government of India. All Rights Reserved
     </footer>
 
-    <p class="sr-only" id="announcer" aria-live="polite"></p>
+    <p class="visually-hidden" id="announcer" aria-live="polite"></p>
 
     <script>
         (function () {

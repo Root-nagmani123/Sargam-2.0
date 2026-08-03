@@ -46,7 +46,7 @@
 @if(!empty($buttons))
     <div id="filter-buttons" class="row mx-1">
         @foreach($buttons as $btn)
-            <button class="btn btn-sm btn-outline-secondary filter-button mr-2 mb-2" data-filter="{{ $btn['filter'] }}"> {{ $btn['label'] }} <span>({{ $btn['today_count'] ?? 0 }} / {{ $btn['count'] ?? 0 }})</span></button>
+            <button class="btn btn-sm btn-outline-secondary filter-button me-2 mb-2" data-filter="{{ $btn['filter'] }}"> {{ $btn['label'] }} <span>({{ $btn['today_count'] ?? 0 }} / {{ $btn['count'] ?? 0 }})</span></button>
         @endforeach
     </div>
 @endif
