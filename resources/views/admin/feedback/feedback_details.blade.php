@@ -472,7 +472,7 @@
                                     <li class="page-item {{ $currentPage == 1 ? 'disabled' : '' }}">
                                         <a class="page-link" href="javascript:void(0)" onclick="goToPage(1)"
                                             aria-label="First">
-                                            <i class="fas fa-angle-double-left"></i>
+                                            <i class="bi bi-chevron-double-left" aria-hidden="true"></i>
                                         </a>
                                     </li>
 
@@ -480,7 +480,7 @@
                                     <li class="page-item {{ $currentPage == 1 ? 'disabled' : '' }}">
                                         <a class="page-link" href="javascript:void(0)"
                                             onclick="goToPage({{ $currentPage - 1 }})" aria-label="Previous">
-                                            <i class="fas fa-angle-left"></i>
+                                            <i class="bi bi-chevron-left" aria-hidden="true"></i>
                                         </a>
                                     </li>
 
@@ -501,7 +501,7 @@
                                     <li class="page-item {{ $currentPage == $totalPages ? 'disabled' : '' }}">
                                         <a class="page-link" href="javascript:void(0)"
                                             onclick="goToPage({{ $currentPage + 1 }})" aria-label="Next">
-                                            <i class="fas fa-angle-right"></i>
+                                            <i class="bi bi-chevron-right" aria-hidden="true"></i>
                                         </a>
                                     </li>
 
@@ -509,7 +509,7 @@
                                     <li class="page-item {{ $currentPage == $totalPages ? 'disabled' : '' }}">
                                         <a class="page-link" href="javascript:void(0)"
                                             onclick="goToPage({{ $totalPages }})" aria-label="Last">
-                                            <i class="fas fa-angle-double-right"></i>
+                                            <i class="bi bi-chevron-double-right" aria-hidden="true"></i>
                                         </a>
                                     </li>
                                 </ul>
@@ -805,9 +805,9 @@
 
                     // First + Prev
                     items += `<li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
-                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(1)" aria-label="First"><i class="fas fa-angle-double-left"></i></a></li>`;
+                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(1)" aria-label="First"><i class="bi bi-chevron-double-left" aria-hidden="true"></i></a></li>`;
                     items += `<li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
-                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage - 1})" aria-label="Previous"><i class="fas fa-angle-left"></i></a></li>`;
+                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage - 1})" aria-label="Previous"><i class="bi bi-chevron-left" aria-hidden="true"></i></a></li>`;
 
                     // Numbered pages + ellipsis
                     pageNumbers(currentPage, totalPages).forEach(function(p) {
@@ -821,9 +821,9 @@
 
                     // Next + Last
                     items += `<li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
-                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage + 1})" aria-label="Next"><i class="fas fa-angle-right"></i></a></li>`;
+                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage + 1})" aria-label="Next"><i class="bi bi-chevron-right" aria-hidden="true"></i></a></li>`;
                     items += `<li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
-                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${totalPages})" aria-label="Last"><i class="fas fa-angle-double-right"></i></a></li>`;
+                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${totalPages})" aria-label="Last"><i class="bi bi-chevron-double-right" aria-hidden="true"></i></a></li>`;
 
                     let pagination = `
             <nav aria-label="Feedback pagination" class="pb-2">

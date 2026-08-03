@@ -23,6 +23,11 @@ const MASK_SELECTORS = [
     '#datatable_paginate',
     '[data-testid="live-region"]',
     '.js-server-time',
+    // mews/captcha renders a fresh random image on EVERY request (verified on
+    // /registration/fc-auth). Masked, not hidden, so the box still occupies its
+    // real space and a layout regression around it is still caught.
+    '#captchaImage',
+    'img[src*="/captcha/"]',
 ];
 
 /**

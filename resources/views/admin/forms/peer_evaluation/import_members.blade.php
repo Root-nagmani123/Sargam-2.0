@@ -561,7 +561,10 @@
                                         class="file-preview-remove" 
                                         id="removeFile"
                                         aria-label="Remove file">
-                                    <i class="fas fa-times"></i>
+                                    {{-- S-3: was `fas fa-times`, but Font Awesome is not loaded on
+                                         this page, so the button rendered blank. Bootstrap Icons is
+                                         loaded globally by admin.layouts.pre_header. --}}
+                                    <i class="bi bi-x-lg" aria-hidden="true"></i>
                                 </button>
                             </div>
                         </div>

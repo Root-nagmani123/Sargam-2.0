@@ -23,27 +23,40 @@ const {
     ROUTES_FILE, STABILIZE_CSS,
 } = require('./_helpers');
 
+const PUBLIC_ROUTES_FILE = require('path').join(__dirname, 'routes.public.json');
+
 const hasCreds = Boolean(process.env.E2E_USERNAME && process.env.E2E_PASSWORD);
-const hasRoutes = fs.existsSync(ROUTES_FILE);
+
+// Two modes:
+//   AUTHENTICATED — credentials present -> log in, capture routes.json (494-page surface)
+//   PUBLIC        — no credentials      -> no login, capture routes.public.json
+// The public mode exists so the baseline is not blocked entirely on credentials;
+// it covers fc.layouts.master and layouts.app, but NOT admin.layouts.master.
+const MODE = hasCreds ? 'authenticated' : 'public';
+const activeFile = hasCreds ? ROUTES_FILE : PUBLIC_ROUTES_FILE;
+const hasRoutes = fs.existsSync(activeFile);
 
 const routes = hasRoutes
-    ? (JSON.parse(fs.readFileSync(ROUTES_FILE, 'utf8')).routes || [])
+    ? (JSON.parse(fs.readFileSync(activeFile, 'utf8')).routes || [])
     : [];
 
-// Without this guard the file would generate ZERO tests when routes.json is
+// Without this guard the file would generate ZERO tests when the route list is
 // absent, and a run would report "passed" while capturing nothing at all.
-test('S-4 preflight: routes.json exists and is non-empty', () => {
+test(`S-4 preflight [${MODE}]: route list exists and is non-empty`, () => {
     expect(hasRoutes,
-        'routes.json missing — run discover-routes.spec.js with E2E_DISCOVER=1 first').toBe(true);
-    expect(routes.length,
-        'routes.json contains no routes').toBeGreaterThan(0);
+        `${activeFile} missing` + (hasCreds
+            ? ' — run discover-routes.spec.js with E2E_DISCOVER=1 first'
+            : '')).toBe(true);
+    expect(routes.length, 'route list contains no routes').toBeGreaterThan(0);
+    if (!hasCreds) {
+        console.log('\n  MODE: public (no E2E_USERNAME/E2E_PASSWORD).'
+            + '\n  Covering fc.layouts.master + layouts.app only.'
+            + '\n  The 494 admin pages still require credentials.\n');
+    }
 });
 
-test.describe('S-4 visual baseline', () => {
-    test.skip(!hasCreds, 'E2E_USERNAME/E2E_PASSWORD not provided');
-    test.skip(!hasRoutes, 'routes.json missing — run discover-routes.spec.js with E2E_DISCOVER=1');
-    test.skip(({}, testInfo) => testInfo.project.name !== 'chrome',
-        'Baseline is pinned to chrome; cross-browser is a separate Phase 15 activity');
+test.describe(`S-4 visual baseline [${MODE}]`, () => {
+    test.skip(!hasRoutes, 'route list missing');
 
     // One login for the whole file — re-authenticating per route would triple
     // runtime and add a redirect that can race the screenshot.
@@ -53,7 +66,9 @@ test.describe('S-4 visual baseline', () => {
 
     test.beforeAll(async ({ browser, baseURL }) => {
         page = await browser.newPage();
-        await login(page, baseURL);
+        // Public mode captures unauthenticated pages, so logging in would be wrong
+        // as well as impossible — an authenticated session changes what they render.
+        if (hasCreds) await login(page, baseURL);
     });
 
     test.afterAll(async () => {
@@ -62,6 +77,10 @@ test.describe('S-4 visual baseline', () => {
 
     for (const route of routes) {
         test(`visual: ${route}`, async () => {
+            // Pinned to chrome; cross-browser is a separate Phase 15 activity.
+            // Checked here (not at describe level) because a describe-level
+            // test.skip callback receives fixtures only — never testInfo.
+            test.skip(test.info().project.name !== 'chrome', 'baseline runs on chrome');
             test.setTimeout(90 * 1000);
 
             const response = await page.goto(route, {
@@ -74,9 +93,12 @@ test.describe('S-4 visual baseline', () => {
             expect(response, `No response for ${route}`).not.toBeNull();
             expect(response.status(), `HTTP ${response.status()} at ${route}`).toBeLessThan(500);
 
-            // Being bounced to login mid-run means the session dropped; that
-            // would silently baseline 60 copies of the login page.
-            expect(page.url(), `Session lost while loading ${route}`).not.toMatch(/\/login\b/i);
+            // Authenticated mode only: being bounced to login mid-run means the
+            // session dropped, which would silently baseline 60 copies of the
+            // login page. In public mode some routes ARE login pages, legitimately.
+            if (hasCreds) {
+                expect(page.url(), `Session lost while loading ${route}`).not.toMatch(/\/login\b/i);
+            }
 
             await stabilize(page);
 

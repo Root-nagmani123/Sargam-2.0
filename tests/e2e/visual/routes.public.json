@@ -1,0 +1,25 @@
+{
+  "_comment": "Stage 0 / S-4 — PUBLIC (unauthenticated) visual baseline. Hand-curated from `php artisan route:list` by selecting GET routes with no auth middleware that return 200 text/html, then excluding destructive, download, JSON and vendor-UI endpoints. Used by baseline.spec.js when E2E_USERNAME/E2E_PASSWORD are absent. The authenticated 494-page baseline lives in routes.json and still requires credentials.",
+  "_excluded": {
+    "/clear-cache": "destructive - clears application cache",
+    "/log-viewer, /log-viewer/logs": "vendor log-viewer UI; publicly reachable (flagged separately) but not app UI worth baselining",
+    "*/export, */download-*": "file downloads, not pages",
+    "/livewire/livewire.js*": "static assets",
+    "/api/*, /fc/status/data": "JSON endpoints"
+  },
+  "_coverage": "Covers layouts: fc.layouts.master (31 pages) and layouts.app (7 pages). Does NOT cover admin.layouts.master (494 pages) - that needs credentials.",
+  "captured": 12,
+  "routes": [
+    "/",
+    "/fc/login",
+    "/fc/choose-path",
+    "/fc/create-credentials",
+    "/fc/forgot-password",
+    "/fc/all-faqs",
+    "/fc/status",
+    "/fc/thank-you",
+    "/registration/fc-auth",
+    "/registration/foundation-course",
+    "/password/reset"
+  ]
+}

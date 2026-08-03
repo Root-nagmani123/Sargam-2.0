@@ -28,82 +28,126 @@ const EXCLUDE = /logout|signout|delete|destroy|remove|export|download|print|pdf|
 
 test.describe('S-4 route discovery', () => {
     test.skip(!process.env.E2E_DISCOVER, 'Set E2E_DISCOVER=1 to regenerate routes.json');
-    test.skip(({}, testInfo) => testInfo.project.name !== 'chrome', 'Discovery runs once, on chrome');
 
     test('harvest sidebar routes into routes.json', async ({ page, baseURL }) => {
-        test.setTimeout(240 * 1000);
+        // Checked here, not at describe level: a describe-level test.skip callback
+        // receives fixtures only, never testInfo.
+        test.skip(test.info().project.name !== 'chrome', 'Discovery runs once, on chrome');
+        test.setTimeout(300 * 1000);
 
         const landing = await login(page, baseURL);
         const origin = new URL(page.url()).origin;
 
-        // Collect every anchor in the document, including those inside hidden
-        // tab panes — querySelectorAll reaches hidden nodes, so we do not need
-        // to click through the five RBAC panes (and risk changing state).
-        const hrefs = await page.evaluate((originArg) => {
-            return Array.from(document.querySelectorAll('a[href]'))
-                .map((a) => a.href)
-                .filter((h) => h && h.startsWith(originArg))
-                .filter((h) => !h.includes('#'))
-                .filter((h) => !h.startsWith('javascript:'));
-        }, origin);
+        // Candidate routes come from the DB-driven sidebar (menus table), committed
+        // as routes.candidates.json. The dashboard DOM alone is not enough — the
+        // RBAC menu tree is built by JS/AJAX, so scraping <a href> yields almost
+        // nothing. The DB list is the authoritative surface. DOM anchors on the
+        // landing page are folded in as a supplement.
+        const CANDIDATES_FILE = require('path').join(__dirname, 'routes.candidates.json');
+        let candidates = [];
+        if (fs.existsSync(CANDIDATES_FILE)) {
+            candidates = JSON.parse(fs.readFileSync(CANDIDATES_FILE, 'utf8')).routes || [];
+        }
+        const domHrefs = await page.evaluate((o) =>
+            Array.from(document.querySelectorAll('a[href]')).map((a) => a.href)
+                .filter((h) => h && h.startsWith(o) && !h.includes('#') && !h.startsWith('javascript:'))
+                .map((h) => new URL(h).pathname), origin);
 
-        const cleaned = Array.from(new Set(hrefs))
-            .map((h) => new URL(h).pathname)
+        const cleaned = Array.from(new Set(
+            [...candidates, ...domHrefs]
+                // Strip stray control chars (DOM hrefs can carry a trailing \r from
+                // the source HTML) and any trailing slash, so /x, /x\r and /x/ are
+                // one route — otherwise they slip past Set and collide at slug time.
+                .map((p) => p.replace(/[\r\n\t]/g, '').replace(/\/+$/, '') || '/')
+        ))
             .filter((p) => p && p !== '/')
             .filter((p) => !EXCLUDE.test(p))
             // Skip routes with numeric ids — record-specific pages are unstable
-            // baselines (the record may be edited or deleted between runs).
-            .filter((p) => !/\/\d{2,}(\/|$)/.test(p))
+            // baselines (the record may be edited or deleted between runs). The
+            // resolver emits /edit/0 style placeholders; those are fine.
+            .filter((p) => !/\/[1-9]\d{1,}(\/|$)/.test(p))
             .sort();
 
-        expect(cleaned.length, 'Sidebar yielded no navigable routes — is the account permissioned?')
+        expect(cleaned.length, 'No candidate routes — is routes.candidates.json present and the account permissioned?')
             .toBeGreaterThan(0);
 
-        // Spread the cap across modules (first path segment) so 60 routes cover
-        // many modules rather than 60 pages of whichever module sorts first.
+        // Build a module-spread ORDER first (round-robin across first-path-segment),
+        // THEN verify in that order and stop at MAX_ROUTES. Verifying all 213 would
+        // blow the timeout; verifying breadth-first means our ~60 confirmed routes
+        // sample many modules instead of clustering in whichever sorts first.
         const byModule = new Map();
         for (const p of cleaned) {
             const mod = p.split('/').filter(Boolean)[0] || 'root';
             if (!byModule.has(mod)) byModule.set(mod, []);
             byModule.get(mod).push(p);
         }
-
         const modules = Array.from(byModule.keys()).sort();
-        const picked = [];
-        let depth = 0;
-        while (picked.length < MAX_ROUTES) {
-            let addedThisPass = false;
+        const order = [];
+        for (let depth = 0; order.length < cleaned.length; depth++) {
+            let added = false;
             for (const mod of modules) {
                 const list = byModule.get(mod);
-                if (depth < list.length) {
-                    picked.push(list[depth]);
-                    addedThisPass = true;
-                    if (picked.length >= MAX_ROUTES) break;
-                }
+                if (depth < list.length) { order.push(list[depth]); added = true; }
             }
-            if (!addedThisPass) break;   // every module exhausted
-            depth += 1;
+            if (!added) break;
         }
 
-        // The landing/dashboard page is the most-viewed screen; pin it first.
+        // Verify each candidate renders (2xx/3xx, not bounced to login) BEFORE it can
+        // enter the baseline — baselining an error page is worse than omitting it.
+        // waitUntil:'commit' fires on first response byte: we only need the status
+        // here; full render + stabilisation happens later in baseline.spec.js.
+        const verified = [];
+        for (const path of order) {
+            if (verified.length >= MAX_ROUTES) break;
+            try {
+                const resp = await page.goto(path, { waitUntil: 'commit', timeout: 20_000 });
+                const status = resp ? resp.status() : 0;
+                const bounced = /\/login\b/i.test(page.url());
+                if (status >= 200 && status < 400 && !bounced) verified.push(path);
+                else console.log(`  skip ${path} (status=${status}${bounced ? ', bounced' : ''})`);
+            } catch (e) {
+                console.log(`  skip ${path} (${e.message.split('\n')[0]})`);
+            }
+        }
+        expect(verified.length, 'No candidate route rendered 200 while authenticated').toBeGreaterThan(0);
+
+        const verifiedModules = new Set(verified.map((p) => p.split('/').filter(Boolean)[0] || 'root'));
+
+        // Collision guard: Playwright re-sanitises the screenshot name to roughly
+        // [A-Za-z0-9-], so two DIFFERENT routes can collapse to the SAME snapshot
+        // file — the second silently overwrites the first, and both tests then pass
+        // against one image (silent under-coverage). Fail loudly here instead.
+        const sanitize = (p) => p.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        const byFile = new Map();
+        for (const r of verified) {
+            const f = sanitize(r);
+            if (byFile.has(f)) {
+                throw new Error(`Snapshot-name collision: "${byFile.get(f)}" and "${r}" both map to "${f}". `
+                    + `Adjust the route set or the naming scheme.`);
+            }
+            byFile.set(f, r);
+        }
+
+        // The landing/dashboard page is the most-viewed screen; pin it first,
+        // de-duplicated (it is usually also in the verified list).
         const landingPath = new URL(landing).pathname;
-        const ordered = [landingPath, ...picked.filter((p) => p !== landingPath)]
-            .slice(0, MAX_ROUTES);
+        const ordered = Array.from(new Set([landingPath, ...verified])).slice(0, MAX_ROUTES);
 
         const payload = {
             _comment: 'Generated by discover-routes.spec.js (Stage 0 / S-4). '
                 + 'Committed so the visual baseline pins the SAME routes every run. '
                 + 'Regenerate with E2E_DISCOVER=1.',
             generatedFrom: origin,
-            totalDiscovered: cleaned.length,
-            moduleCount: modules.length,
+            candidates: cleaned.length,
+            verified: verified.length,
+            moduleCount: verifiedModules.size,
             captured: ordered.length,
             routes: ordered,
         };
 
         fs.writeFileSync(ROUTES_FILE, JSON.stringify(payload, null, 2) + '\n', 'utf8');
 
-        console.log(`\n  discovered ${cleaned.length} routes across ${modules.length} modules`);
-        console.log(`  captured ${ordered.length} -> ${ROUTES_FILE}\n`);
+        console.log(`\n  candidates=${cleaned.length}  verified=${verified.length}  `
+            + `modules=${verifiedModules.size}  captured=${ordered.length} -> ${ROUTES_FILE}\n`);
     });
 });

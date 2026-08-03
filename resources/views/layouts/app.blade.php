@@ -25,7 +25,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="icon" href="{{asset('admin_assets/images/favicon.ico')}}" type="image/x-icon">
   <link rel="shortcut icon" href="{{asset('admin_assets/images/favicon.ico')}}" type="image/x-icon">
-    <link rel="stylesheet" type="text/css" href="{{asset('admin_assets/css/font-awesome.css')}}">
+    {{-- S-3: removed a <link> to admin_assets/css/font-awesome.css — that file does
+         not exist, so it 404'd on every request. None of the 7 views extending this
+         layout use fa-* classes, so nothing depended on it. --}}
     <!-- ico-font-->
     <link rel="stylesheet" type="text/css" href="{{asset('admin_assets/css/vendors/icofont.css')}}">
     <!-- Themify icon-->

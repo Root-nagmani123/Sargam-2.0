@@ -16,10 +16,25 @@ and re-approved.
 | `stabilize.css` | Injected at screenshot time — kills animation, caret, scrollbars, spinners |
 | `discover-routes.spec.js` | Harvests sidebar routes → writes `routes.json` (guarded by `E2E_DISCOVER=1`) |
 | `baseline.spec.js` | Screenshots every route in `routes.json` and diffs it |
-| `routes.json` | **Committed.** The pinned route list the baseline captures |
+| `routes.json` | **Committed.** The pinned route list for the AUTHENTICATED baseline |
+| `routes.public.json` | **Committed.** 11 unauthenticated pages, captured when no credentials are set |
 | `baseline.spec.js-snapshots/` | **Committed.** The reference PNGs |
 
 ---
+
+## Two modes
+
+`baseline.spec.js` picks its mode from whether credentials are present:
+
+| Mode | Trigger | Routes | Layout coverage |
+|---|---|---|---|
+| **public** | `E2E_USERNAME`/`E2E_PASSWORD` **unset** | `routes.public.json` (11) | `fc.layouts.master`, `layouts.app` |
+| **authenticated** | credentials set | `routes.json` (up to 60) | adds `admin.layouts.master` — **494 pages** |
+
+The public baseline is **captured and passing**. It exists so the safety net is not
+blocked entirely on credentials — but it does **not** cover the 494 admin pages,
+which is where the UX4G migration does almost all of its work. Capturing the
+authenticated baseline remains a prerequisite for gating Phase 1 onward.
 
 ## One-time setup
 
