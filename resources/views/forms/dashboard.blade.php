@@ -45,18 +45,21 @@
     </div>
 
     {{-- ── Fixed information card ─────────────────────────────────────────────
-         Always first — before Step 1 — whenever this form HAS a joining letter. It is not a
-         step: it carries no status, cannot be completed, and is never counted in the progress
-         bar.
+         Always first — before Step 1 — on every form. It is not a step: it carries no status,
+         cannot be completed, and is never counted in the progress bar.
 
-         The letter is per-intake, this view is not: the same dashboard renders for every
-         dynamic form (99th batch, template, copies, future intakes), so the document is looked
-         up by form_slug in config('fc.joining_letters') instead of being hardcoded here. A form
-         with no letter configured shows no card at all. --}}
+         The document comes from config('fc.joining_letter') — one default for every dynamic
+         form, because form slugs differ between environments (the 101st course is 'fc-101' on
+         dev, 'fc-102' on production) and keying on the slug made the card disappear on prod.
+         config('fc.joining_letters')[slug] overrides it per intake, and '' there suppresses
+         the card for one form. --}}
     @php
-        $fcLetterPath = (array) config('fc.joining_letters', []);
-        $fcLetterPath = $fcLetterPath[$form->form_slug ?? ''] ?? null;
-        $fcLetterExists = is_string($fcLetterPath) && $fcLetterPath !== '' && is_file(public_path($fcLetterPath));
+        $fcLetterOverrides = (array) config('fc.joining_letters', []);
+        $fcLetterPath = array_key_exists($form->form_slug ?? '', $fcLetterOverrides)
+            ? $fcLetterOverrides[$form->form_slug]
+            : config('fc.joining_letter');
+        $fcLetterPath = is_string($fcLetterPath) ? trim($fcLetterPath) : '';
+        $fcLetterExists = $fcLetterPath !== '' && is_file(public_path($fcLetterPath));
     @endphp
     @if($fcLetterPath)
     <div class="card border-0 shadow-sm mb-4" style="border-radius:10px; border-left:4px solid #004a93 !important;">
