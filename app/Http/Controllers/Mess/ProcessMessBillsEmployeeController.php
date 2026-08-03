@@ -1200,18 +1200,25 @@ class ProcessMessBillsEmployeeController extends Controller
     {
         abort_unless(\canSeeMessSelfServiceSetup(), 403);
 
+        // DataTables serverSide sends `draw` on every AJAX request.
+        $isDataTableRequest = $request->filled('draw');
+
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
         $unionCollation = 'utf8mb4_unicode_ci';
 
+        $effectiveDateFrom = $request->filled('date_from') ? $request->date_from : now()->startOfMonth()->format('d-m-Y');
+        $effectiveDateTo = $request->filled('date_to') ? $request->date_to : now()->endOfMonth()->format('d-m-Y');
+        $effectiveDateFromYmd = $dateFrom;
+        $effectiveDateToYmd = $dateTo;
+
         $authUid = (int) (auth()->user()->user_id ?? 0);
         $authLinkedUserIds = $this->authLinkedUserIdsForMessSelfService();
         if ($authUid <= 0) {
-            $combinedBills = collect();
-            $effectiveDateFrom = $request->filled('date_from') ? $request->date_from : now()->startOfMonth()->format('d-m-Y');
-            $effectiveDateTo = $request->filled('date_to') ? $request->date_to : now()->endOfMonth()->format('d-m-Y');
-            $effectiveDateFromYmd = $dateFrom;
-            $effectiveDateToYmd = $dateTo;
+            if ($isDataTableRequest) {
+                return $this->myBillsDatatableResponse($request, collect(), $effectiveDateFromYmd, $effectiveDateToYmd);
+            }
+
             $stats = [
                 'total_bills' => 0,
                 'paid_count' => 0,
@@ -1220,7 +1227,6 @@ class ProcessMessBillsEmployeeController extends Controller
             ];
 
             return view('mess.my-bills.index', compact(
-                'combinedBills',
                 'effectiveDateFrom',
                 'effectiveDateTo',
                 'effectiveDateFromYmd',
@@ -1274,6 +1280,24 @@ class ProcessMessBillsEmployeeController extends Controller
         }
         $this->applyMyBillsKitchenClientNameOrClientId($kitchenIssueQuery, $nameLikePatterns, $authLinkedUserIds);
 
+        if (! $isDataTableRequest) {
+            // Initial page load: table + summary cards are populated by the first DataTables AJAX response.
+            $stats = [
+                'total_bills' => 0,
+                'paid_count' => 0,
+                'unpaid_count' => 0,
+                'total_amount' => 0.0,
+            ];
+
+            return view('mess.my-bills.index', compact(
+                'effectiveDateFrom',
+                'effectiveDateTo',
+                'effectiveDateFromYmd',
+                'effectiveDateToYmd',
+                'stats'
+            ));
+        }
+
         [$combinedBills, $unusedBills] = $this->queryAndGroupBillsForProcessIndex(
             $dateFrom,
             $dateTo,
@@ -1288,26 +1312,136 @@ class ProcessMessBillsEmployeeController extends Controller
             })
             ->values();
 
-        $effectiveDateFrom = $request->filled('date_from') ? $request->date_from : now()->startOfMonth()->format('d-m-Y');
-        $effectiveDateTo = $request->filled('date_to') ? $request->date_to : now()->endOfMonth()->format('d-m-Y');
-        $effectiveDateFromYmd = $dateFrom;
-        $effectiveDateToYmd = $dateTo;
+        return $this->myBillsDatatableResponse($request, $combinedBills, $effectiveDateFromYmd, $effectiveDateToYmd);
+    }
 
-        $stats = [
+    /**
+     * Server-side JSON for the My Mess Bills self-service table. Same combined-bill collection and
+     * grouping as the previous client-side-paginated myBillsIndex() — only the delivery (paged AJAX
+     * vs. one full HTML render) changed. Mirrors processMessBillsDatatableResponse() for the admin
+     * Process Mess Bills table, trimmed to the columns shown here (no buyer name / due amount column).
+     */
+    private function myBillsDatatableResponse(
+        Request $request,
+        Collection $combinedBills,
+        string $effectiveDateFromYmd,
+        string $effectiveDateToYmd
+    ) {
+        $draw = (int) $request->input('draw', 1);
+        $start = max(0, (int) $request->input('start', 0));
+        $length = (int) $request->input('length', 10);
+        if ($length < 1 || $length > 100) {
+            $length = 10;
+        }
+
+        $recordsTotal = $combinedBills->count();
+
+        $searchRaw = '';
+        $searchPayload = $request->input('search');
+        if (is_array($searchPayload) && isset($searchPayload['value'])) {
+            $searchRaw = (string) $searchPayload['value'];
+        }
+        $searchTokens = DataTableSearchHelper::tokens($searchRaw);
+
+        $filteredBills = $combinedBills;
+        if ($searchTokens !== []) {
+            $filteredBills = $filteredBills->filter(function ($cb) use ($searchTokens) {
+                $statusLabel = ((int) ($cb->status ?? 0)) === 2
+                    ? 'paid'
+                    : (((int) ($cb->status ?? 0)) === 1 ? 'partial' : 'unpaid');
+
+                $haystack = implode(' ', [
+                    (string) ($cb->combined_invoice_no ?? ''),
+                    (string) ($cb->invoice_date_range ?? ''),
+                    (string) ($cb->client_type_display ?? ''),
+                    (string) ($cb->payment_type ?? ''),
+                    (string) number_format((float) ($cb->total ?? 0), 2, '.', ''),
+                    $statusLabel,
+                ]);
+
+                return DataTableSearchHelper::haystackMatchesAllTokens($haystack, $searchTokens);
+            })->values();
+        }
+
+        $recordsFiltered = $filteredBills->count();
+
+        $orderColumn = DataTableSearchHelper::orderColumnIndex($request, 0);
+        $orderDir = DataTableSearchHelper::orderDirection($request, 'asc');
+        $sortMap = [
+            1 => 'combined_invoice_no',
+            2 => 'invoice_date_range',
+            3 => 'client_type_display',
+            4 => 'total',
+            5 => 'payment_type',
+            6 => 'status',
+        ];
+        if ($orderColumn === 0) {
+            $filteredBills = $orderDir === 'desc' ? $filteredBills->reverse()->values() : $filteredBills->values();
+        } elseif (isset($sortMap[$orderColumn])) {
+            $field = $sortMap[$orderColumn];
+            $filteredBills = $filteredBills->sortBy(function ($cb) use ($field) {
+                $value = $cb->{$field} ?? '';
+
+                return in_array($field, ['total', 'status'], true) ? (float) $value : mb_strtolower((string) $value);
+            }, SORT_REGULAR, $orderDir === 'desc')->values();
+        }
+
+        $statsPayload = [
             'total_bills' => $combinedBills->count(),
             'paid_count' => $combinedBills->where('status', 2)->count(),
             'unpaid_count' => $combinedBills->count() - $combinedBills->where('status', 2)->count(),
             'total_amount' => (float) $combinedBills->sum('total'),
         ];
 
-        return view('mess.my-bills.index', compact(
-            'combinedBills',
-            'effectiveDateFrom',
-            'effectiveDateTo',
-            'effectiveDateFromYmd',
-            'effectiveDateToYmd',
-            'stats'
-        ));
+        $rows = $filteredBills->slice($start, $length)->values();
+
+        $data = [];
+        foreach ($rows as $idx => $cb) {
+            $status = (int) ($cb->status ?? 0);
+            if ($status === 2) {
+                $statusBadge = '<span class="badge rounded-1 text-bg-success shadow-sm px-3 py-2">Paid</span>';
+            } elseif ($status === 1) {
+                $statusBadge = '<span class="badge rounded-1 text-bg-warning text-dark shadow-sm px-3 py-2">Partial</span>';
+            } else {
+                $statusBadge = '<span class="badge rounded-1 text-bg-secondary shadow-sm px-3 py-2">Unpaid</span>';
+            }
+
+            $receiptUrl = route('admin.mess.process-mess-bills-employee.print-receipt', ['id' => $cb->combined_id])
+                . '?date_from=' . urlencode($effectiveDateFromYmd)
+                . '&date_to=' . urlencode($effectiveDateToYmd);
+
+            $actions = '<button type="button" class="btn btn-sm btn-outline-primary shadow-sm my-bills-details-btn"'
+                . ' data-bill-id="' . e((string) ($cb->combined_id ?? '')) . '"'
+                . ' data-date-from-ymd="' . e($effectiveDateFromYmd) . '"'
+                . ' data-date-to-ymd="' . e($effectiveDateToYmd) . '">'
+                . '<i class="material-symbols-rounded" style="font-size: 1.1rem;">visibility</i>'
+                . '<span class="d-none d-sm-inline">Details</span>'
+                . '</button>'
+                . '<a href="' . e($receiptUrl) . '" target="_blank"'
+                . ' class="btn btn-sm btn-outline-secondary shadow-sm d-inline-flex align-items-center gap-1 px-2"'
+                . ' title="Print receipt">'
+                . '<i class="material-symbols-rounded" style="font-size: 1.1rem;">print</i>'
+                . '</a>';
+
+            $data[] = [
+                (string) ($start + $idx + 1),
+                e((string) ($cb->combined_invoice_no ?? '—')),
+                e((string) ($cb->invoice_date_range ?? '—')),
+                e((string) ($cb->client_type_display ?? '—')),
+                '₹ ' . number_format((float) ($cb->total ?? 0), 2),
+                e((string) ($cb->payment_type ?? '—')),
+                $statusBadge,
+                $actions,
+            ];
+        }
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+            'stats' => $statsPayload,
+        ]);
     }
 
     /**

@@ -2,6 +2,7 @@
  
 namespace App\Http\Controllers\Admin;
 
+use App\DataTables\CourseAttendanceNoticeMapDataTable;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,318 +17,46 @@ use App\Models\MemoNoticeTemplate;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\NotificationService;
 use App\Services\NotificationReceiverService;
- 
+
 class CourseAttendanceNoticeMapController extends Controller
 {
     //
-   public function index(Request $request)
+   public function index(Request $request, CourseAttendanceNoticeMapDataTable $dataTable)
 {
-    // Get filter parameters
+    // Filter values are only needed here to pre-fill the filter bar on initial load;
+    // the DataTable's own query() re-resolves them fresh on every AJAX request.
     $programNameFilter = $request->get('program_name', '');
     $typeFilter = $request->get('type', '');
     $statusFilter = $request->get('status', '');
     $searchFilter = $request->get('search', '');
     $fromDateFilter = $request->get('from_date', '');
     $toDateFilter = $request->get('to_date', '');
-    
+
     // Set default to today's date if no date filters are provided
     if (empty($fromDateFilter) && empty($toDateFilter)) {
         $fromDateFilter = Carbon::today()->toDateString();
         $toDateFilter = Carbon::today()->toDateString();
     }
 
-    // An Officer Trainee must only ever see their own notices/memos.
-    $isOfficerTrainee = isOfficerTraineeUser();
-    $ownStudentPk = $isOfficerTrainee ? Auth::user()->user_id : null;
-
-    // Get initial notice records with course name
-    // Start from student_notice_status so direct notices (course_student_attendance_pk=0) are included
-    $noticesQuery = DB::table('student_notice_status as sns')
-        ->leftJoin('course_student_attendance as csa', 'csa.pk', '=', 'sns.course_student_attendance_pk')
-        ->leftJoin('student_master as sm', 'sm.pk', '=', 'sns.student_pk')
-        ->leftJoin('timetable as t', 't.pk', '=', 'sns.subject_topic')
-        ->leftJoin('course_master as cm', 'cm.pk', '=', 'sns.course_master_pk')
-        // A Notice closed directly (End Chat) records its conclusion on sns itself —
-        // it never becomes a student_memo_status row, so that conclusion must be
-        // joined in here or a closed Notice always shows "N/A".
-        ->leftJoin('memo_conclusion_master as ncm', 'ncm.pk', '=', 'sns.conclusion_type_pk')
-        ->select(
-            'sns.pk as notice_id',
-            'sns.pk as memo_notice_id',
-            'sns.student_pk',
-            'sns.course_master_pk',
-            'sns.date_',
-            'sns.subject_master_pk',
-            'sns.subject_topic',
-            'sns.venue_id',
-            'sns.class_session_master_pk',
-            'sns.faculty_master_pk',
-            'sns.message',
-            'sns.notice_memo',
-            'sns.status',
-            'sns.conclusion_remark',
-            'ncm.discussion_name',
-            'sm.display_name as student_name',
-            'sm.pk as student_id',
-            't.subject_topic as topic_name',
-            DB::raw('COALESCE(t.START_DATE, sns.date_) as session_date'),
-            'cm.course_name',
-            'sns.created_date',
-            DB::raw('"Notice" as type_notice_memo')
-        );
-
-    // Apply filters on notices query
-    if ($isOfficerTrainee) {
-        $noticesQuery->where('sns.student_pk', $ownStudentPk);
-    }
-
-    if ($programNameFilter) {
-        $noticesQuery->where('sns.course_master_pk', $programNameFilter);
-    }
-
-    if ($typeFilter !== null && $typeFilter !== '') {
-        if ($typeFilter == '1') {
-            // Notice: get notices that haven't been converted to memos
-            $noticesQuery->where('sns.notice_memo', 1)->where('sns.status', '!=', 2);
-        }
-        // if $typeFilter == '0' (memo), we'll fetch memos separately later
-    }
-
-    if ($statusFilter !== null && $statusFilter !== '') {
-        if ($statusFilter == '1') {
-            $noticesQuery->where('sns.status', 1);
-        } elseif ($statusFilter == '0') {
-            $noticesQuery->where('sns.status', 2);
-        }
-    }
-
-    // Apply date range filter — use session date for attendance-based, notice date for direct
-    if ($fromDateFilter) {
-        $noticesQuery->where(function ($q) use ($fromDateFilter) {
-            $q->whereDate('t.START_DATE', '>=', $fromDateFilter)
-              ->orWhere(function ($q2) use ($fromDateFilter) {
-                  $q2->whereNull('t.START_DATE')
-                     ->whereDate('sns.date_', '>=', $fromDateFilter);
-              });
-        });
-    }
-    if ($toDateFilter) {
-        $noticesQuery->where(function ($q) use ($toDateFilter) {
-            $q->whereDate('t.START_DATE', '<=', $toDateFilter)
-              ->orWhere(function ($q2) use ($toDateFilter) {
-                  $q2->whereNull('t.START_DATE')
-                     ->whereDate('sns.date_', '<=', $toDateFilter);
-              });
-        });
-    }
-
-    $notices = $noticesQuery->get();
-
-    $memos = collect(); // final result collection
-
-    // If filtering for Memo type, query student_memo_status directly
-    if ($typeFilter == '0') {
-        $memoQuery = DB::table('student_memo_status')
-            ->leftJoin('student_master as sm', 'student_memo_status.student_pk', '=', 'sm.pk')
-            ->leftJoin('student_notice_status as sns', 'student_memo_status.student_notice_status_pk', '=', 'sns.pk')
-            ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
-            ->leftJoin('memo_conclusion_master as mcm', 'student_memo_status.memo_conclusion_master_pk', '=', 'mcm.pk')
-            ->leftJoin('course_master as cm', 'student_memo_status.course_master_pk', '=', 'cm.pk')
-            ->select(
-                'student_memo_status.pk as memo_id',
-                'student_memo_status.pk as memo_notice_id',
-                'student_memo_status.student_notice_status_pk as notice_id',
-                'student_memo_status.student_pk',
-                'student_memo_status.communication_status',
-                'student_memo_status.course_master_pk',
-                'student_memo_status.date as date_',
-                'student_memo_status.conclusion_remark',
-                DB::raw('NULL as subject_master_pk'),
-                DB::raw('NULL as subject_topic'),
-                DB::raw('NULL as venue_id'),
-                DB::raw('NULL as class_session_master_pk'),
-                DB::raw('NULL as faculty_master_pk'),
-                DB::raw('"Memo" as type_notice_memo'),
-                'student_memo_status.message',
-                DB::raw('2 as notice_memo'),
-                'student_memo_status.status',
-                'sm.display_name as student_name',
-                'sm.pk as student_id',
-                't.subject_topic as topic_name',
-                't.START_DATE as session_date',
-                'mcm.discussion_name',
-                'cm.course_name',
-                'student_memo_status.created_date'
-            );
-
-        if ($isOfficerTrainee) {
-            $memoQuery->where('student_memo_status.student_pk', $ownStudentPk);
-        }
-
-        if ($programNameFilter) {
-            $memoQuery->where('student_memo_status.course_master_pk', $programNameFilter);
-        }
-        if ($statusFilter !== null && $statusFilter !== '') {
-            if ($statusFilter == '1') {
-                $memoQuery->where('student_memo_status.status', 1);
-            } elseif ($statusFilter == '0') {
-                $memoQuery->where('student_memo_status.status', 2);
-            }
-        }
-
-        // Apply date range filter by session date
-        if ($fromDateFilter) {
-            $memoQuery->whereDate('t.START_DATE', '>=', $fromDateFilter);
-        }
-        if ($toDateFilter) {
-            $memoQuery->whereDate('t.START_DATE', '<=', $toDateFilter);
-        }
-
-        $memos = $memoQuery->get();
-    } else {
-        // For Notice or no type filter, process notices normally
-        // Fix N+1: fetch all memo data for status==2 notices in ONE query
-        $statusTwoNoticeIds = $notices->where('status', 2)->pluck('notice_id')->toArray();
-
-        $memoDataMap = collect();
-        if (!empty($statusTwoNoticeIds)) {
-            $memoDataMap = DB::table('student_memo_status')
-                ->leftJoin('student_master as sm', 'student_memo_status.student_pk', '=', 'sm.pk')
-                ->leftJoin('student_notice_status as sns', 'student_memo_status.student_notice_status_pk', '=', 'sns.pk')
-                ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
-                ->leftJoin('memo_conclusion_master as mcm', 'student_memo_status.memo_conclusion_master_pk', '=', 'mcm.pk')
-                ->leftJoin('course_master as cm', 'student_memo_status.course_master_pk', '=', 'cm.pk')
-                ->whereIn('student_memo_status.student_notice_status_pk', $statusTwoNoticeIds)
-                ->select(
-                    'student_memo_status.pk as memo_id',
-                    'student_memo_status.pk as memo_notice_id',
-                    'student_memo_status.student_notice_status_pk as notice_id',
-                    'student_memo_status.student_pk',
-                    'student_memo_status.communication_status',
-                    'student_memo_status.course_master_pk',
-                    'student_memo_status.date as date_',
-                    'student_memo_status.conclusion_remark',
-                    DB::raw('NULL as subject_master_pk'),
-                    DB::raw('NULL as subject_topic'),
-                    DB::raw('NULL as venue_id'),
-                    DB::raw('NULL as class_session_master_pk'),
-                    DB::raw('NULL as faculty_master_pk'),
-                    DB::raw('"Memo" as type_notice_memo'),
-                    'student_memo_status.message',
-                    DB::raw('2 as notice_memo'),
-                    'student_memo_status.status',
-                    'sm.display_name as student_name',
-                    'sm.pk as student_id',
-                    't.subject_topic as topic_name',
-                    't.START_DATE as session_date',
-                    'mcm.discussion_name',
-                    'cm.course_name'
-                )
-                ->get()
-                ->keyBy('notice_id');
-        }
-
-        foreach ($notices as $notice) {
-            if ($notice->status == 2 && isset($memoDataMap[$notice->notice_id])) {
-                $memos->push($memoDataMap[$notice->notice_id]);
-            } else {
-                $memos->push($notice);
-            }
-        }
-    }
-
-    // Apply additional filters to final collection (only if not fetching pure memo type)
-    if ($typeFilter != '0') {
-
-        if ($programNameFilter) {
-            $memos = $memos->filter(function($item) use ($programNameFilter) {
-                return isset($item->course_master_pk) && $item->course_master_pk == $programNameFilter;
-            });
-        }
-
-        if ($typeFilter !== null && $typeFilter !== '') {
-            if ($typeFilter == '1') {
-                $memos = $memos->filter(function($item) {
-                    return isset($item->notice_memo) && $item->notice_memo == 1;
-                });
-            }
-        }
-
-        if ($statusFilter !== null && $statusFilter !== '') {
-            if ($statusFilter == '1') {
-                $memos = $memos->filter(function($item) {
-                    return isset($item->status) && $item->status == 1;
-                });
-            } elseif ($statusFilter == '0') {
-                $memos = $memos->filter(function($item) {
-                    return isset($item->status) && $item->status == 2;
-                });
-            }
-        }
-
-        if ($searchFilter !== null && $searchFilter !== '') {
-            $memos = $memos->filter(function($item) use ($searchFilter) {
-                return (isset($item->student_name) && stripos($item->student_name, $searchFilter) !== false)
-                    || (isset($item->course_name) && stripos($item->course_name, $searchFilter) !== false)
-                    || (isset($item->topic_name) && stripos($item->topic_name, $searchFilter) !== false)
-                    || (isset($item->type_notice_memo) && stripos($item->type_notice_memo, $searchFilter) !== false)
-                    || (isset($item->discussion_name) && stripos($item->discussion_name, $searchFilter) !== false)
-                    || (isset($item->conclusion_remark) && stripos($item->conclusion_remark, $searchFilter) !== false)
-                    || (isset($item->session_date) && stripos($item->session_date, $searchFilter) !== false);
-            });
-        }
-
-        // Apply date range filter to collection (prefer session date)
-        if ($fromDateFilter || $toDateFilter) {
-            $memos = $memos->filter(function($item) use ($fromDateFilter, $toDateFilter) {
-                $itemDate = $item->session_date ?? $item->date_ ?? null;
-                if (!$itemDate) {
-                    return false;
-                }
-                if ($fromDateFilter && $itemDate < $fromDateFilter) {
-                    return false;
-                }
-                if ($toDateFilter && $itemDate > $toDateFilter) {
-                    return false;
-                }
-                return true;
-            });
-        }
-    }
-
-   
-   
-
     // Get memo type and venues if needed
     $venue = VenueMaster::where('active_inactive', 1)->get();
     $memo_master = MemoTypeMaster::where('active_inactive', 1)->get();
     // Conclusion types for the chat panel's "End Chat" action.
     $conclusions = \App\Models\MemoConclusionMaster::where('active_inactive', 1)->get();
-    
+
     // Get courses for Program Name filter - only active courses (active_inactive = 1 and end_date > now)
     $courses = CourseMaster::where('active_inactive', 1)
         ->where('end_date', '>', now())
         ->orderBy('course_name', 'asc')
         ->get();
 
-    // Paginate the collection
-    $perPage = 10;
-    $currentPage = request()->get('page', 1);
-    $pagedData = $memos->slice(($currentPage - 1) * $perPage, $perPage)->values();
-    $memos = new \Illuminate\Pagination\LengthAwarePaginator(
-        $pagedData,
-        $memos->count(),
-        $perPage,
-        $currentPage,
-        ['path' => request()->url(), 'query' => request()->query()]
-    );
-$noticeCount = $memos->groupBy(function($item) {
-    return $item->student_pk . '_' . $item->course_master_pk;
-})->map(function ($group) {
-    return $group->where('type_notice_memo', 'Notice')->count();
-});
     $canManageMemoNotice = $this->userCanManageMemoNotice();
-    return view('admin.courseAttendanceNoticeMap.index', compact('memos', 'venue', 'memo_master', 'conclusions', 'courses', 'programNameFilter', 'typeFilter', 'statusFilter', 'searchFilter', 'fromDateFilter', 'toDateFilter','noticeCount', 'canManageMemoNotice'));
+
+    return $dataTable->render('admin.courseAttendanceNoticeMap.index', compact(
+        'venue', 'memo_master', 'conclusions', 'courses',
+        'programNameFilter', 'typeFilter', 'statusFilter', 'searchFilter', 'fromDateFilter', 'toDateFilter',
+        'canManageMemoNotice'
+    ));
 }
 
     public function exportPdf(Request $request)

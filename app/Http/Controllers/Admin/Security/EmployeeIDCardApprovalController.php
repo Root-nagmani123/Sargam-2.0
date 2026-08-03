@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Security;
 
+use App\DataTables\EmployeeIdcardApproval1DataTable;
 use App\Http\Controllers\Admin\DuplicateIDCardRequestController;
 use App\Http\Controllers\Admin\EmployeeIDCardRequestController;
 use App\Http\Controllers\Controller;
@@ -17,7 +18,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
  * Approval I: Contractual ID Card requests + Contractual Duplicate ID Card requests
@@ -53,199 +53,9 @@ class EmployeeIDCardApprovalController extends Controller
      * Does NOT include: Permanent duplicate, Family duplicate (those go to Approval 2 only).
      * Filtered by department_approval_emp_pk = current user's employee pk
      */
-    public function approval1(Request $request)
+    public function approval1(EmployeeIdcardApproval1DataTable $dataTable)
     {
-        $user = Auth::user();
-        $currentEmployeePk = $user->user_id ?? $user->pk ?? null;
-
-        $epoch = DataTableRedisCache::readListEpoch(self::APPROVAL1_LIST_EPOCH_KEY);
-        $cacheKey = 'employee_idcard_approval1:v1:' . md5(json_encode([
-            'epoch' => $epoch,
-            'emp_pk' => $currentEmployeePk,
-            'search' => $request->get('search'),
-            'date_from' => $request->get('date_from'),
-            'date_to' => $request->get('date_to'),
-            'card_type' => $request->get('card_type'),
-        ]));
-
-        $payload = DataTableRedisCache::remember(
-            $cacheKey,
-            [
-                'enabled' => 'EMPLOYEE_IDCARD_APPROVAL1_CACHE_ENABLED',
-                'seconds' => 'EMPLOYEE_IDCARD_APPROVAL1_CACHE_SECONDS',
-            ],
-            'EmployeeIDCardApprovalController@approval1',
-            fn () => $this->buildApproval1ListPayload($request, $currentEmployeePk)
-        );
-
-        $merged = $payload['merged'] ?? collect();
-        if (! $merged instanceof \Illuminate\Support\Collection) {
-            $merged = collect($merged);
-        }
-        $cardTypes = $payload['cardTypes'] ?? [];
-
-        $perPage = (int) $request->get('per_page', 10);
-        $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 10;
-        $page = (int) $request->get('page', 1);
-        $requests = new LengthAwarePaginator(
-            $merged->forPage($page, $perPage),
-            $merged->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
-
-        return view('admin.security.employee_idcard_approval.approval1', compact('requests', 'cardTypes'));
-    }
-
-    /**
-     * @return array{merged: \Illuminate\Support\Collection, cardTypes: array}
-     */
-    private function buildApproval1ListPayload(Request $request, $currentEmployeePk): array
-    {
-        // Contractual regular ID Card requests - Approval 1
-        $contA1Done = DB::table('security_con_oth_id_apply_approval')
-            ->where('status', 1)
-            ->pluck('security_parm_id_apply_pk');
-        $contQuery = DB::table('security_con_oth_id_apply')
-            // Show history too: Pending/Approved/Rejected
-            ->whereIn('id_status', [1, 2, 3])
-            // Approval-I scope: requests assigned to current authority
-            ->where('department_approval_emp_pk', $currentEmployeePk);
-        // (No whereNotIn here: we want already-approved rows to still appear as view-only.)
-        $contQuery->orderByDesc('created_date');
-
-        if ($request->filled('search')) {
-            $search = trim($request->search);
-            $searchLike = '%' . $search . '%';
-            $contQuery->where(function ($q) use ($searchLike) {
-                $q->where('employee_name', 'like', $searchLike)
-                    ->orWhere('id_card_no', 'like', $searchLike);
-            });
-        }
-
-        // Date filters (by created_date)
-        if ($request->filled('date_from')) {
-            $from = \Carbon\Carbon::parse($request->date_from)->startOfDay()->toDateTimeString();
-            $contQuery->where('created_date', '>=', $from);
-        }
-        if ($request->filled('date_to')) {
-            $to = \Carbon\Carbon::parse($request->date_to)->endOfDay()->toDateTimeString();
-            $contQuery->where('created_date', '<=', $to);
-        }
-        if ($request->filled('card_type')) {
-            $contQuery->where('permanent_type', $request->card_type);
-        }
-
-        $contRows = $contQuery->get();
-        $contA1DoneArr = $contA1Done->toArray();
-        $contDtos = $contRows->map(function ($r) use ($contA1DoneArr) {
-            $dto = IdCardSecurityMapper::toContractualRequestDto($r);
-
-            // Normalize status fields so the shared approval table can hide action buttons
-            // once a request is Approved / Rejected.
-            $dto->id_status = (int) ($dto->id_status ?? $r->id_status ?? 0);
-            $dto->status = match ((int) ($dto->id_status ?? 0)) {
-                1 => 'Pending',
-                2 => 'Approved',
-                3 => 'Rejected',
-                default => 'Unknown',
-            };
-
-            // Section head (Approval I) for contractual regular: approve1() sets
-            // depart_approval_status = 2 and inserts security row with approval status 0 (not 1).
-            // So we must key "A1 done" off the main table, not approval.status = 1.
-            $sectionHeadDone = (int) ($r->depart_approval_status ?? 0) === 2;
-            $legacyA1InApprovalTable = in_array($r->emp_id_apply ?? null, $contA1DoneArr, false);
-
-            if ((int) ($dto->id_status ?? 0) === 1 && ($sectionHeadDone || $legacyA1InApprovalTable)) {
-                $dto->is_view_only = true;
-            }
-
-            return $dto;
-        });
-
-        // Contractual Duplicate ID Card requests only (not Permanent/Family) - same approving authority
-        $dupContA1Done = DB::table('security_dup_other_id_apply_approval')
-            ->where('status', 1)
-            ->pluck('security_con_id_apply_pk');
-        $dupContQuery = DB::table('security_dup_other_id_apply')
-            // Show history too: Pending/Approved/Rejected
-            ->whereIn('id_status', [1, 2, 3])
-            ->where('card_type', 'Contractual')
-            // Approval-I scope: requests assigned to current authority
-            ->where('department_approval_emp_pk', $currentEmployeePk);
-
-        // (No whereNotIn here: we want already-approved rows to still appear as view-only.)
-        $dupContQuery->orderByDesc('created_date');
-
-        if ($request->filled('search')) {
-            $search = trim($request->search);
-            $searchLike = '%' . $search . '%';
-            $dupContQuery->where(function ($q) use ($searchLike) {
-                $q->where('employee_name', 'like', $searchLike)
-                    ->orWhere('id_card_no', 'like', $searchLike);
-            });
-        }
-        if ($request->filled('date_from')) {
-            $from = \Carbon\Carbon::parse($request->date_from)->startOfDay()->toDateTimeString();
-            $dupContQuery->where('created_date', '>=', $from);
-        }
-        if ($request->filled('date_to')) {
-            $to = \Carbon\Carbon::parse($request->date_to)->endOfDay()->toDateTimeString();
-            $dupContQuery->where('created_date', '<=', $to);
-        }
-
-        $dupContRows = $dupContQuery->get();
-        $deptMap = DB::table('department_master')->pluck('department_name', 'pk')->toArray();
-        $dupContA1DoneArr = $dupContA1Done->toArray();
-        $dupContDtos = $dupContRows->map(function ($r) use ($deptMap, $dupContA1DoneArr) {
-            $requestedSection = null;
-            if (!empty($r->section) && isset($deptMap[$r->section])) {
-                $requestedSection = $deptMap[$r->section];
-            }
-            $dto = new \stdClass();
-            $dto->id = 'c-' . $r->emp_id_apply;
-            $dto->pk = 0;
-            $dto->emp_id_apply = $r->emp_id_apply ?? '';
-            $dto->name = $r->employee_name ?? '--';
-            $dto->designation = $r->designation_name ?? '--';
-            $dto->photo = $r->id_photo_path ?? null;
-            $dto->joining_letter = null;
-            $dto->created_at = isset($r->created_date) ? \Carbon\Carbon::parse($r->created_date) : null;
-            $dto->card_type = $r->card_type ?? 'Contractual';
-            $dto->request_for = 'Duplication';
-            $dto->duplication_reason = $r->card_reason ?? null;
-            $dto->id_card_valid_upto = isset($r->card_valid_to) ? \Carbon\Carbon::parse($r->card_valid_to)->format('d/m/Y') : null;
-            $dto->id_card_valid_from = isset($r->card_valid_from) ? \Carbon\Carbon::parse($r->card_valid_from)->format('d/m/Y') : null;
-            $dto->id_card_number = $r->id_card_no ?? null;
-            $dto->date_of_birth = $r->employee_dob ?? null;
-            $dto->mobile_number = $r->mobile_no ?? null;
-            $dto->telephone_number = null;
-            $dto->blood_group = $r->blood_group ?? null;
-            $dto->remarks = $r->remarks ?? null;
-            $dto->created_by = $r->created_by ?? null;
-            $dto->id_status = (int) ($r->id_status ?? 0);
-            $dto->status = match ((int) ($r->id_status ?? 0)) {
-                1 => 'Pending',
-                2 => 'Approved',
-                3 => 'Rejected',
-                default => 'Unknown',
-            };
-            $dto->request_type = 'duplicate';
-            $dto->father_name = null;
-            $dto->requested_section = $requestedSection;
-            if ((int) ($r->id_status ?? 0) === 1 && in_array(($r->emp_id_apply ?? ''), $dupContA1DoneArr, true)) {
-                $dto->is_view_only = true;
-            }
-            return $dto;
-        });
-
-        $merged = $contDtos->concat($dupContDtos)->sortByDesc('created_at')->values();
-
-        $cardTypes = DB::table('sec_id_cardno_master')->orderBy('sec_card_name')->pluck('sec_card_name', 'pk')->toArray();
-
-        return ['merged' => $merged, 'cardTypes' => $cardTypes];
+        return $dataTable->render('admin.security.employee_idcard_approval.approval1');
     }
 
     public function approval2(Request $request)

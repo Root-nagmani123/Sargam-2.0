@@ -88,6 +88,16 @@
                     return;
                 }
                 e.preventDefault();
+                // DataTable rows carry their own edit data as data-* attributes (always fresh,
+                // works for any ajax-loaded page/search result). Fall back to the server-rendered
+                // moduleEditData lookup only for the open_edit_module deep-link case below.
+                if (btn.hasAttribute('data-module-name')) {
+                    openEditModal(btn.getAttribute('data-id'), {
+                        module_name: btn.getAttribute('data-module-name') || '',
+                        active_inactive: btn.getAttribute('data-active-inactive') || '1',
+                    });
+                    return;
+                }
                 openEditModal(btn.getAttribute('data-id'));
             });
 

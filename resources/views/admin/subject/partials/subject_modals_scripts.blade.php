@@ -89,6 +89,17 @@
                     return;
                 }
                 e.preventDefault();
+                // DataTable rows carry their own edit data as data-* attributes (always fresh,
+                // works for any ajax-loaded page/search result). Fall back to the server-rendered
+                // subjectEditData lookup only for the open_edit_subject deep-link case below.
+                if (btn.hasAttribute('data-major-subject-name')) {
+                    openEditModal(btn.getAttribute('data-id'), {
+                        major_subject_name: btn.getAttribute('data-major-subject-name') || '',
+                        short_name: btn.getAttribute('data-short-name') || '',
+                        status: btn.getAttribute('data-status') || '1',
+                    });
+                    return;
+                }
                 openEditModal(btn.getAttribute('data-id'));
             });
 

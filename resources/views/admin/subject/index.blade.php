@@ -31,123 +31,14 @@
                     <span>Columns</span>
                     <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                 </button>
-                <form method="GET" id="smSearchForm" class="programme-dt-search m-0" role="search">
-                    <div class="dataTables_filter">
-                        <label class="mb-0 w-100">
-                            <input type="search" name="search" id="smCustomSearch"
-                                class="form-control shadow-none" placeholder="Search"
-                                value="{{ request('search') }}"
-                                aria-label="Search subjects" autocomplete="off">
-                        </label>
-                    </div>
-                </form>
+                <div class="programme-dt-search"></div>
             </div>
 
-            <div id="zero_config_table">
-                <div class="programme-dt-panel sm-dt-panel">
-                    <div class="table-responsive sm-dt-scroll">
-                        <table class="table table-hover align-middle mb-0 w-100 programme-dt-table sm-subject-table" id="zero_config">
-                            <thead>
-                                <tr>
-                                    <th scope="col" class="text-nowrap">S. No.</th>
-                                    <th scope="col">Major Subject Name</th>
-                                    <th scope="col" class="text-nowrap">Short Name</th>
-                                    <th scope="col" class="text-nowrap">Status</th>
-                                    <th scope="col" class="text-nowrap text-end sm-col-actions">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($subjects as $key => $subject)
-                                <tr class="sm-subject-row" data-subject-id="{{ $subject->pk }}">
-                                    <td class="text-muted fw-medium">{{ $subjects->firstItem() + $key }}</td>
-                                    <td class="sm-col-name">{{ $subject->subject_name }}</td>
-                                    <td class="sm-col-short">{{ $subject->sub_short_name }}</td>
-                                    <td class="sm-subject-status-cell">
-                                        @if ($subject->active_inactive == 1)
-                                        <span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>
-                                        @else
-                                        <span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>
-                                        @endif
-                                    </td>
-                                    <td class="text-end sm-col-actions">
-                                        <div class="sm-subject-actions" role="group" aria-label="Subject actions">
-                                            <button type="button"
-                                                class="btn btn-sm sm-action-btn sm-action-edit sm-edit-subject-btn"
-                                                data-id="{{ $subject->pk }}"
-                                                aria-label="Edit subject">
-                                                <i class="bi bi-pencil" aria-hidden="true"></i>
-                                            </button>
-
-                                            <span class="sm-action-switch-wrap">
-                                                <div class="form-check form-switch sm-action-switch mb-0">
-                                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                        data-table="subject_master" data-column="active_inactive"
-                                                        data-id="{{ $subject->pk }}"
-                                                        {{ $subject->active_inactive == 1 ? 'checked' : '' }}
-                                                        aria-label="Toggle subject status">
-                                                </div>
-                                            </span>
-
-                                            @if ($subject->active_inactive == 1)
-                                            <button type="button"
-                                                class="btn btn-sm sm-action-btn sm-action-delete"
-                                                disabled
-                                                aria-disabled="true"
-                                                title="Cannot delete active subject"
-                                                aria-label="Delete subject (disabled while active)">
-                                                <i class="bi bi-trash" aria-hidden="true"></i>
-                                            </button>
-                                            @else
-                                            <form action="{{ route('subject.destroy', $subject->pk) }}" method="POST"
-                                                class="d-inline m-0 sm-delete-form"
-                                                onsubmit="return confirm('Are you sure you want to delete this subject?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit"
-                                                    class="btn btn-sm sm-action-btn sm-action-delete"
-                                                    aria-label="Delete subject">
-                                                    <i class="bi bi-trash" aria-hidden="true"></i>
-                                                </button>
-                                            </form>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                                @empty
-                                <tr class="sm-subject-empty-row">
-                                    <td colspan="5" class="text-center py-5 text-muted">
-                                        <i class="bi bi-inbox fs-2 d-block mb-2 opacity-50" aria-hidden="true"></i>
-                                        <span class="fw-medium">No subjects found.</span>
-                                    </td>
-                                </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-
-                    @if ($subjects->isNotEmpty())
-                    <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3">
-                        <div class="sm-pagination-nav">
-                            {{ $subjects->appends(request()->query())->links('vendor.pagination.custom') }}
-                        </div>
-                        <form method="GET" id="smPerPageForm" class="programme-dt-count mb-0 d-inline-flex align-items-center gap-2">
-                            @if (request('search'))
-                            <input type="hidden" name="search" value="{{ request('search') }}">
-                            @endif
-                            <span>Showing</span>
-                            <select name="per_page"
-                                class="form-select form-select-sm sm-per-page-select d-inline-block"
-                                aria-label="Items per page"
-                                onchange="this.form.submit()">
-                                @foreach ([10, 25, 50, 100, 200] as $pp)
-                                <option value="{{ $pp }}" {{ (int) $subjects->perPage() === $pp ? 'selected' : '' }}>{{ $pp }}</option>
-                                @endforeach
-                            </select>
-                            <span>of {{ $subjects->total() }} items</span>
-                        </form>
-                    </div>
-                    @endif
+            <div class="programme-dt-panel sm-dt-panel">
+                <div class="table-responsive sm-dt-scroll">
+                    {!! $dataTable->table() !!}
                 </div>
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"></div>
             </div>
         </div>
     </div>
@@ -181,38 +72,10 @@ window.statusToggleUrl = "{{ route('admin.toggleStatus') }}";
 @endsection
 
 @push('scripts')
+{!! $dataTable->scripts() !!}
 @include('admin.subject.partials.subject_modals_scripts')
 <script>
 (function () {
-    function initSubjectTable() {
-        if (typeof jQuery === 'undefined') {
-            return;
-        }
-        var $ = jQuery;
-        var $table = $('#zero_config');
-
-        if ($table.length && $.fn.DataTable && $.fn.DataTable.isDataTable($table)) {
-            $table.DataTable().destroy();
-        }
-
-        if ($table.length && $.fn.DataTable) {
-            var subjectTable = $table.DataTable({
-                responsive: true,
-                paging: false,
-                searching: false,
-                info: false,
-                lengthChange: false,
-                ordering: true,
-                order: [],
-                dom: 't',
-                autoWidth: false
-            });
-            setupSubjectColumns(subjectTable);
-        }
-
-        bindSubjectSearch();
-    }
-
     /* ---------- Column show / hide (DataTables API) ---------- */
     var subjectColStorageKey = 'subjectGrid:hiddenColumns:v1';
 
@@ -283,21 +146,6 @@ window.statusToggleUrl = "{{ route('admin.toggleStatus') }}";
         });
     }
 
-    /* ---------- Search (server-side via existing ?search= param) ---------- */
-    function bindSubjectSearch() {
-        var $ = jQuery;
-        var $input = $('#smCustomSearch');
-        var form = document.getElementById('smSearchForm');
-        if (!$input.length || !form) {
-            return;
-        }
-        var timer = null;
-        $input.off('input.sm').on('input.sm', function () {
-            clearTimeout(timer);
-            timer = setTimeout(function () { form.submit(); }, 600);
-        });
-    }
-
     function parseAjaxData(data) {
         if (!data) {
             return {};
@@ -341,10 +189,24 @@ window.statusToggleUrl = "{{ route('admin.toggleStatus') }}";
         });
     }
 
+    /* ---------- Wait for Yajra's own DataTable init, then wire the Columns modal ---------- */
+    function initSubjectColumnsWhenReady(attempts) {
+        if (typeof jQuery === 'undefined' || !jQuery.fn.DataTable) {
+            return;
+        }
+        if (!jQuery.fn.DataTable.isDataTable('#zero_config')) {
+            if (attempts > 0) {
+                setTimeout(function () { initSubjectColumnsWhenReady(attempts - 1); }, 100);
+            }
+            return;
+        }
+        setupSubjectColumns(jQuery('#zero_config').DataTable());
+    }
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initSubjectTable);
+        document.addEventListener('DOMContentLoaded', function () { initSubjectColumnsWhenReady(50); });
     } else {
-        initSubjectTable();
+        initSubjectColumnsWhenReady(50);
     }
 })();
 </script>

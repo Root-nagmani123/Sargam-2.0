@@ -3,6 +3,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\DataTables\MemoNoticeTemplateDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\MemoNoticeTemplate;
 use App\Models\CourseMaster;
@@ -13,27 +14,9 @@ use Illuminate\Support\Facades\Storage;
 class MemoNoticeController extends Controller
 {
     // Display all templates
-    public function index(Request $request)
+    public function index(Request $request, MemoNoticeTemplateDataTable $dataTable)
     {
         $data_course_id =  get_Role_by_course();
-        $query = MemoNoticeTemplate::with('course')
-            ->orderBy('created_date', 'desc');
-            
-        if(!empty($data_course_id)){
-            $query->whereIn('course_master_pk',$data_course_id);
-        }
-
-        // Filter by course if selected
-        if ($request->filled('course_master_pk')) {
-            $query->where('course_master_pk', $request->course_master_pk);
-        }
-
-        // Filter by status if selected
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        $templates = $query->paginate(20);
 
         // Current date for filtering
         $currentDate = now()->toDateString();
@@ -61,7 +44,7 @@ class MemoNoticeController extends Controller
             $courses = $courses->orderBy('course_name')
             ->get(['pk', 'course_name']);
 
-        return view('admin.courseAttendanceNoticeMap.memo_notice_index', compact('templates', 'courses'));
+        return $dataTable->render('admin.courseAttendanceNoticeMap.memo_notice_index', compact('courses'));
     }
 
     // Show create form

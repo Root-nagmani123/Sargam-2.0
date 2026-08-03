@@ -42,7 +42,7 @@
                         </div>
                         <div>
                             <div class="text-muted small text-uppercase fw-semibold mb-1">Total Bills</div>
-                            <div class="fs-3 fw-bold text-dark">{{ number_format($stats['total_bills']) }}</div>
+                            <div class="fs-3 fw-bold text-dark" id="my-bills-stats-total-bills">{{ number_format($stats['total_bills']) }}</div>
                         </div>
                     </div>
                 </div>
@@ -55,7 +55,7 @@
                         </div>
                         <div>
                             <div class="text-muted small text-uppercase fw-semibold mb-1">Unpaid</div>
-                            <div class="fs-3 fw-bold text-dark">{{ number_format($stats['unpaid_count']) }}</div>
+                            <div class="fs-3 fw-bold text-dark" id="my-bills-stats-unpaid">{{ number_format($stats['unpaid_count']) }}</div>
                         </div>
                     </div>
                 </div>
@@ -68,7 +68,7 @@
                         </div>
                         <div>
                             <div class="text-muted small text-uppercase fw-semibold mb-1">Paid</div>
-                            <div class="fs-3 fw-bold text-dark">{{ number_format($stats['paid_count']) }}</div>
+                            <div class="fs-3 fw-bold text-dark" id="my-bills-stats-paid">{{ number_format($stats['paid_count']) }}</div>
                         </div>
                     </div>
                 </div>
@@ -81,7 +81,7 @@
                         </div>
                         <div>
                             <div class="text-muted small text-uppercase fw-semibold mb-1">Total Amount</div>
-                            <div class="fs-3 fw-bold text-dark">₹ {{ number_format($stats['total_amount'], 2) }}</div>
+                            <div class="fs-3 fw-bold text-dark" id="my-bills-stats-total-amount">₹ {{ number_format($stats['total_amount'], 2) }}</div>
                         </div>
                     </div>
                 </div>
@@ -124,7 +124,7 @@
     <div class="card border-0 shadow">
         <div class="card-body p-3 p-lg-4">
             <div class="table-responsive">
-                <table class="table table-sm table-striped table-hover text-nowrap align-middle mb-0" id="myMessBillsTable">
+                <table class="table table-sm table-striped table-hover text-nowrap align-middle mb-0" id="myMessBillsTable" data-mess-datatable-server-side="1">
                     <thead class="table-light">
                         <tr>
                             <th class="py-2">S.No.</th>
@@ -210,12 +210,40 @@
     </div>
 </div>
 
+@push('scripts')
+<script>
+function applyMyBillsStats(json) {
+    if (!json || !json.stats) return;
+    var s = json.stats;
+    var fmtInt = function (n) { return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
+    var fmtAmt = function (n) {
+        var x = Number(n) || 0;
+        var parts = x.toFixed(2).split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return parts.join('.');
+    };
+    var elTotal = document.getElementById('my-bills-stats-total-bills');
+    var elUnpaid = document.getElementById('my-bills-stats-unpaid');
+    var elPaid = document.getElementById('my-bills-stats-paid');
+    var elAmt = document.getElementById('my-bills-stats-total-amount');
+    if (elTotal) elTotal.textContent = fmtInt(s.total_bills);
+    if (elUnpaid) elUnpaid.textContent = fmtInt(s.unpaid_count);
+    if (elPaid) elPaid.textContent = fmtInt(s.paid_count);
+    if (elAmt) elAmt.textContent = '₹ ' + fmtAmt(s.total_amount);
+}
+window.applyMyBillsStats = applyMyBillsStats;
+</script>
+@endpush
+
 @include('components.mess-master-datatables', [
     'tableId' => 'myMessBillsTable',
     'searchPlaceholder' => 'Search invoice no. or type',
     'orderColumn' => [[0, 'asc']],
     'actionColumnIndex' => 7,
     'infoLabel' => 'generated mess bills',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.my-bills.index'),
+    'ajaxJsonCallback' => 'applyMyBillsStats',
 ])
 @endsection
 

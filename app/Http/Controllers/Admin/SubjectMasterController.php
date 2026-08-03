@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
+use App\DataTables\Master\SubjectMasterDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\SubjectMaster;
 use Illuminate\Http\Request;
@@ -8,31 +9,9 @@ use Illuminate\Http\Request;
 
 class SubjectMasterController extends Controller
 {
-    public function index()
+    public function index(SubjectMasterDataTable $dataTable)
     {
-        $search = request('search');
-
-        $perPage = (int) request('per_page', 10);
-        if (!in_array($perPage, [10, 25, 50, 100, 200], true)) {
-            $perPage = 10;
-        }
-
-        $subjects = SubjectMaster::when($search, function ($q) use ($search) {
-            $q->where('subject_name', 'like', "%$search%")
-              ->orWhere('sub_short_name', 'like', "%$search%");
-        })
-        ->orderBy('created_date', 'desc')
-        ->paginate($perPage)
-        ->appends(['search' => $search, 'per_page' => $perPage]);
-
         $smSubjectEditData = [];
-        foreach ($subjects as $subject) {
-            $smSubjectEditData[$subject->pk] = [
-                'major_subject_name' => $subject->subject_name,
-                'short_name' => $subject->sub_short_name,
-                'status' => $subject->active_inactive,
-            ];
-        }
         if (request()->filled('open_edit_subject')) {
             $extra = SubjectMaster::find(request('open_edit_subject'));
             if ($extra) {
@@ -44,7 +23,7 @@ class SubjectMasterController extends Controller
             }
         }
 
-        return view('admin.subject.index', compact('subjects', 'smSubjectEditData'));
+        return $dataTable->render('admin.subject.index', compact('smSubjectEditData'));
     }
 
     // Show the form for creating a new subject
