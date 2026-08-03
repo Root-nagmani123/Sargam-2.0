@@ -160,6 +160,14 @@ Re-pointing layouts at a single compiled bundle remains desirable — but it bel
 
 ## C. Implementation Checklist
 
+### C.-1 Execution log — decisions taken during implementation
+
+| Date | Decision | Rationale |
+|---|---|---|
+| 2026-08-03 | **UX4G is NOT loaded globally.** It is vendored + build-ready (`ux4g-vendor.css` tamed to `@layer ux4g`, `ux4g-app.css` tokens), activated **per-component** in phases 5–12. | A 3-page probe showed a tamed+layered global load at ~0% change, but the full 58-page gate revealed ~14 pages changed (UX4G restyles table headers/toggles the existing theme doesn't control). A full design-system stylesheet cannot load globally with zero change. Global load reverted; per-component activation is the only zero-regression path. |
+| 2026-08-03 | **`!important` reduction is folded into the component phases (5–12), not done as a wholesale Phase 3 pass.** | The big `!important` blocks are component-bound (`styles.css`→theme, `sidebar-modern.css`→Phase 7, `admin-header.css`→Phase 7, `custom.css`→sweep). Many `!important` are load-bearing (utilities). Reducing them *when their component migrates* is safe and useful; a decoupled wholesale purge is high-risk with no payoff. Phase 3's standalone scope = dead-CSS removal (done) + the SCSS architecture (built in Phase 1). |
+| 2026-08-03 | **Design tokens** encode LBSNAA navy `#004384` (9.83:1 AAA) and the 3 WCAG-fixed semantics: info `#0067A6` (6.02:1), success `#2F7A12` (5.37:1), warning `#8F5716` (5.93:1) — the **darken-hue** option for P0-5. | Measured with the WCAG 2.1 formula. Darken chosen as the conventional default; still subject to design-team confirmation (P0-5). |
+
 ### C.0 Pre-flight gates — must clear before Phase 1
 
 | # | Item | Why | Owner | Status |
@@ -168,7 +176,7 @@ Re-pointing layouts at a single compiled bundle remains desirable — but it bel
 | P0-2 | Confirm R-1 (retain LBSNAA navy `#004384`) | Phase 2 tokens | Management | ⏳ |
 | P0-3 | Confirm R-2 (pin `UX4G@2.0.8`) | Phase 1 vendoring | Management | ⏳ |
 | P0-4 | Confirm R-3 (self-host) | Phase 1 | Management | ✅ Already mandated ("Do NOT use CDN") |
-| P0-5 | Choose success/warning/info remediation: darken hue **or** dark text | Phase 5 | Design | ⏳ |
+| P0-5 | success/warning/info remediation | Phase 5 | Design | 🔶 **darken-hue applied as default (2026-08-03); design confirmation pending** |
 | P0-6 | Confirm a Git branch for the migration | Rollback | User | ⏳ |
 | P0-7 | Confirm staging environment for regression runs | Phase 15 | User | ⏳ |
 
