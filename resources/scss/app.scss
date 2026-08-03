@@ -34,7 +34,13 @@
 // is declared now only to fix its precedence slot in the cascade.
 @layer ux4g { /* vendored ux4g-min.css is assigned to this layer in Phase 2 */ }
 
-// --- override layers (empty in Phase 1) -------------------------------------
+// --- override layers (dormant: lose to the existing UNLAYERED theme) --------
 @layer tokens     { @import 'overrides/tokens'; }
 @layer components { @import 'components/index'; }
 @layer pages      { @import 'pages/index'; }
+
+// --- ACTIVE component activations (UNLAYERED) -------------------------------
+// These must WIN over the existing unlayered theme, so they are intentionally
+// NOT in a @layer (unlayered beats every layer). Loaded LAST in pre_header. Each
+// block is a deliberately-migrated component with a gated visual change.
+@import 'components/active-buttons';   // Phase 5

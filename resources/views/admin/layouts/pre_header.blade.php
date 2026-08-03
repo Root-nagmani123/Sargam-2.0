@@ -44,6 +44,11 @@
 <link rel="stylesheet" href="{{ asset('admin_assets/css/sidebar-modern.css') }}">
 <!-- Sargam Design System (tokens + refinements + components) — must load LAST -->
 <link rel="stylesheet" href="{{ asset('css/sargam-app.css') }}?v={{ @filemtime(public_path('css/sargam-app.css')) ?: time() }}">
+{{-- UX4G migration output, loaded LAST so its UNLAYERED active-component rules win
+     over the theme. Phase 5: WCAG-fix for success/warning/info buttons (dark text).
+     Layered token/ux4g rules inside are dormant. NOT ux4g-vendor.css — see Phase 2
+     execution log in docs/UX4G-Phase-0-Implementation-Checklist.md. --}}
+<link rel="stylesheet" href="{{ asset('css/ux4g-app.css') }}?v={{ @filemtime(public_path('css/ux4g-app.css')) ?: time() }}">
 <style>
 .material-symbols-rounded {
   font-variation-settings:

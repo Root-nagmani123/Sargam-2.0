@@ -1,0 +1,38 @@
+// =============================================================================
+// Phase 5 — Buttons: WCAG AA fix for semantic variants
+//
+// UNLAYERED (wins over the existing theme, which is also unlayered — this file
+// compiles into ux4g-app.css, loaded LAST in pre_header). Measured on the live
+// app, the theme's success/warning/info buttons put WHITE text on bright
+// backgrounds and fail WCAG 2.1 AA badly:
+//   btn-success  white on #36C76C = 2.20:1   FAIL
+//   btn-warning  white on #F8C20A = 1.65:1   FAIL (near-illegible)
+//   btn-info     white on #46CAEB = 1.93:1   FAIL
+//
+// Fix = DARK text on the SAME brand backgrounds (minimal brand change, and the
+// conventional Bootstrap pattern for warning/info). New ratios, all AA/AAA:
+//   btn-success  #212529 on #36C76C = 7.01:1
+//   btn-warning  #212529 on #F8C20A = 9.34:1
+//   btn-info     #212529 on #46CAEB = 8.01:1
+//
+// Only the text colour changes; backgrounds, sizing and the rest are untouched.
+// (This is the dark-text option for P0-5; still subject to design confirmation.)
+// =============================================================================
+
+$btn-ink: #212529;
+
+.btn-success,
+.btn-warning,
+.btn-info {
+  // Bootstrap 5 buttons resolve text colour from these custom properties; the
+  // existing theme sets them to #fff. Override every interaction state so the
+  // dark text holds on hover/active/focus too.
+  --bs-btn-color:        #{$btn-ink};
+  --bs-btn-hover-color:  #{$btn-ink};
+  --bs-btn-active-color: #{$btn-ink};
+  // Belt-and-braces in case any theme rule sets `color` directly rather than via
+  // the variable (measured: some do).
+  color: $btn-ink;
+}
+
+// Outline variants already use the coloured text on transparent bg — leave them.
