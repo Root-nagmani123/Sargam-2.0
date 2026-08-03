@@ -84,7 +84,7 @@
     </main>
 @endsection
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ asset('admin_assets/libs/sweetalert2/dist/sweetalert2.all.min.js') }}"></script>
     <script>
         function refreshCaptcha() {
             document.getElementById('captchaImage').src = '{{ captcha_src() }}' + '?' + Math.random();

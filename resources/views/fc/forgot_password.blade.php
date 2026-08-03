@@ -3,7 +3,7 @@
 @section('title', 'Foundation Course | Lal Bahadur Shastri National Academy of Administration')
 
 @section('setup_content')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ asset('admin_assets/libs/sweetalert2/dist/sweetalert2.all.min.js') }}"></script>
     <main style="flex: 1;">
         <div class="container mt-5">
             <div class="row">
@@ -204,7 +204,7 @@
 @endsection
 
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ asset('admin_assets/libs/sweetalert2/dist/sweetalert2.all.min.js') }}"></script>
 
     @if ($errors->any())
         <script>

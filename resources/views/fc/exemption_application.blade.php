@@ -189,7 +189,7 @@
          SingleFileExtension remain the authority. --}}
     @include('fc.registration.partials.fc-upload-extension-guard')
     <!-- SweetAlert2 CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ asset('admin_assets/libs/sweetalert2/dist/sweetalert2.all.min.js') }}"></script>
 
     {{-- Client-side size / type check for every upload on this form (medical document,
          Foundation Course completion certificate). Was bound to #medical_doc alone; it now

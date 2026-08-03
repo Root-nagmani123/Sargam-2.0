@@ -810,7 +810,7 @@
     <script src="{{ asset('admin_assets/js/tab-persistence.js') }}"></script>
     <script src="{{ asset('admin_assets/js/nav-state.js') }}"></script>
     <!-- SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ asset('admin_assets/libs/sweetalert2/dist/sweetalert2.all.min.js') }}"></script>
     <!-- Global success toast (styles every icon:'success' Swal alike; see public/js/sargam-success-toast.js) -->
     <script src="{{ asset('js/sargam-success-toast.js') }}?v={{ @filemtime(public_path('js/sargam-success-toast.js')) ?: time() }}"></script>
     @if(request()->routeIs('admin.mess.*'))

@@ -1,5 +1,5 @@
 @if($errors->any())
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="{{ asset('admin_assets/libs/sweetalert2/dist/sweetalert2.all.min.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var errorMessages = @json($errors->all());
