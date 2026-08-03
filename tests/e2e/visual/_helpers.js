@@ -140,8 +140,9 @@ function masksFor(page) {
             .locator('xpath=ancestor::div[contains(concat(" ", normalize-space(@class), " "), " lh-sm ")][1]')
     );
     // Dashboard greeting is time-of-day dependent ("Good morning/afternoon/evening").
-    // Text-filtered so it matches ONLY that greeting line, on no other page.
-    masks.push(page.locator('p').filter({ hasText: /^Good (morning|afternoon|evening),/ }));
+    // No `^` anchor: the Blade renders the greeting with leading whitespace, so an
+    // anchored regex never matched. Text-filtered so it hits ONLY that greeting line.
+    masks.push(page.locator('p').filter({ hasText: /Good (morning|afternoon|evening),/ }));
     return masks;
 }
 

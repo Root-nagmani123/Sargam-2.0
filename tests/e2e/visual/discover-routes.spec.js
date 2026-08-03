@@ -35,7 +35,14 @@ const MAX_ROUTES = parseInt(process.env.E2E_MAX_ROUTES || '60', 10);
 //    a grid on a timer) AND shows date-dependent events + a "today" highlight, so
 //    it is non-deterministic even between two same-minute runs. Not a stable
 //    pixel fixture; its chrome is covered by the other admin pages.
-const EXCLUDE = /logout|signout|delete|destroy|remove|export|download|print|pdf|excel|csv|birthday|calendar|\.(pdf|xlsx|csv|zip)$/i;
+//  - /dashboard (exact) : the landing page carries FIVE volatile elements — a live
+//    clock, today's date, a time-of-day greeting, animated count-up stat numbers
+//    (requestAnimationFrame, captured mid-count), and a birthday panel. It flaked
+//    across five successive gates despite masking each in turn. Its chrome is the
+//    shared admin layout (covered by 57 other pages); its unique content is all
+//    live/animated. Excluded as an unreliable fixture. Sub-pages (/dashboard-*,
+//    /dashboard/…) are NOT excluded — only the exact landing route.
+const EXCLUDE = /logout|signout|delete|destroy|remove|export|download|print|pdf|excel|csv|birthday|calendar|\/dashboard$|\.(pdf|xlsx|csv|zip)$/i;
 
 test.describe('S-4 route discovery', () => {
     test.skip(!process.env.E2E_DISCOVER, 'Set E2E_DISCOVER=1 to regenerate routes.json');
