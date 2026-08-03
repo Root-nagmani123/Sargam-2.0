@@ -8,6 +8,9 @@
     $desig  = $g('designation');
     $place  = config('fc.document_place');   // hard-frozen: always Mussoorie, overrides any saved value
     $reasons= $g('exemption_reasons');
+    $toL1   = $g('exemption_to_line1') ?: 'The Secretary,';
+    $toL2   = $g('exemption_to_line2') ?: 'Department of Personnel & Training (DoPT),';
+    $toL3   = $g('exemption_to_line3') ?: 'New Delhi';
     $dated  = fc_document_date();   // hard-frozen date, overrides any saved value
     $sc     = $g('status_clause');
     $sigSrc = $data['_signature_src'][0] ?? null;
@@ -89,12 +92,11 @@
     <div style="text-align:center; font-size:9.5pt;">(घोषणा का पैरा 1(iii) / 1(iv) देखें) &middot; (Vide para 1(iii) / 1(iv) of the Declaration)</div>
 
     <div style="margin-top:14pt;">सेवा में / To,</div>
-    <table style="margin-left:24pt; margin-top:2pt; border-collapse:collapse;">
-        <tr><td style="vertical-align:bottom; white-space:nowrap;">The&nbsp;</td><td style="vertical-align:bottom;">{!! $blank('', '180pt') !!}</td></tr>
-        <tr><td></td><td style="vertical-align:bottom; padding-top:4pt;">{!! $blank('', '180pt') !!}</td></tr>
-        <tr><td></td><td style="vertical-align:bottom; padding-top:4pt;">{!! $blank('', '180pt') !!}</td></tr>
-        <tr><td></td><td style="vertical-align:bottom; padding-top:4pt;">{!! $blank('', '180pt') !!}</td></tr>
-    </table>
+    <div style="margin-left:24pt; margin-top:2pt; font-weight:bold;">
+        <div>{{ $toL1 }}</div>
+        <div>{{ $toL2 }}</div>
+        <div>{{ $toL3 }}</div>
+    </div>
     <div class="ex-body">
         महोदय / Sir,<br>
         मेरा अनुरोध है कि नीचे बताए गए कारणों को ध्यान में रखते हुए, मेरी एक से अधिक जीवित पत्नी रखने / महिला जिसका ऐसे व्यक्ति से विवाह हुआ हो जिसकी पहले से एक या अधिक जीवित पत्नियाँ हों, की सेवा में भर्ती पर प्रतिबंध के कार्य से छूट दी जाए।<br>

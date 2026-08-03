@@ -797,6 +797,10 @@ class DocumentFormTemplates
                             'I am about to marry a person who has a spouse living (exemption applied for)',
                         ]],
                         ['name' => 'exemption_reasons', 'label' => 'Reasons for seeking exemption (if applicable) / छूट माँगने के कारण (यदि लागू हो)', 'type' => 'textarea', 'width' => 'col-md-12'],
+                        // Editable addressee of the exemption application (defaults filled on the form).
+                        ['name' => 'exemption_to_line1', 'label' => 'Addressee — Line 1', 'type' => 'text', 'width' => 'col-md-12'],
+                        ['name' => 'exemption_to_line2', 'label' => 'Addressee — Line 2', 'type' => 'text', 'width' => 'col-md-12'],
+                        ['name' => 'exemption_to_line3', 'label' => 'Addressee — Line 3', 'type' => 'text', 'width' => 'col-md-12'],
                     ],
                 ],
             ],
