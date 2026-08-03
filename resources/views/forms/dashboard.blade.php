@@ -45,14 +45,20 @@
     </div>
 
     {{-- ── Fixed information card ─────────────────────────────────────────────
-         Always rendered, always first — before Step 1 — regardless of the form's
-         configured steps or the trainee's progress. It is not a step: it carries no
-         status, cannot be completed, and is never counted in the progress bar.
-         The letter is a static asset in public/fc-documents/. --}}
+         Always first — before Step 1 — whenever this form HAS a joining letter. It is not a
+         step: it carries no status, cannot be completed, and is never counted in the progress
+         bar.
+
+         The letter is per-intake, this view is not: the same dashboard renders for every
+         dynamic form (99th batch, template, copies, future intakes), so the document is looked
+         up by form_slug in config('fc.joining_letters') instead of being hardcoded here. A form
+         with no letter configured shows no card at all. --}}
     @php
-        $fcLetterPath = 'fc-documents/1st-communication-letter-to-ots.pdf';
-        $fcLetterExists = is_file(public_path($fcLetterPath));
+        $fcLetterPath = (array) config('fc.joining_letters', []);
+        $fcLetterPath = $fcLetterPath[$form->form_slug ?? ''] ?? null;
+        $fcLetterExists = is_string($fcLetterPath) && $fcLetterPath !== '' && is_file(public_path($fcLetterPath));
     @endphp
+    @if($fcLetterPath)
     <div class="card border-0 shadow-sm mb-4" style="border-radius:10px; border-left:4px solid #004a93 !important;">
         <div class="card-body p-4">
             <div class="d-flex flex-wrap align-items-start gap-3">
@@ -85,6 +91,7 @@
             </div>
         </div>
     </div>
+    @endif
 
     @if($steps->isEmpty())
         <div class="alert alert-warning">

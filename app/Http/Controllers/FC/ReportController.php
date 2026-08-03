@@ -876,8 +876,18 @@ class ReportController extends Controller
      *
      * The descriptive roll is the trainee's own printable record; these three groups are
      * administrative (kit sizing, spouse cross-registration, medical history) and are not part
-     * of it. They remain in the full admin profile PDF at admin/reports/student/{id}/pdf and
-     * on every on-screen report — this filter never runs for those.
+     * of it.
+     *
+     * Where they still appear — this filter only runs when a step limit is passed, i.e. for the
+     * Descriptive Roll:
+     *   • the on-screen admin report  /admin/reports/student/{id}        — every section
+     *   • the per-form bulk ZIP export (fcStudentRegistrationPdfBytes with no limit,
+     *     exportFormStudentPdfZip) — full profile PDFs, User ID row included
+     * The single-student download and Print at /admin/reports/student/{id}/pdf and /print are
+     * deliberately the SAME document the trainee gets, so they exclude these groups too.
+     *
+     * If the bulk ZIP is ever expected to match the single download, pass
+     * self::FIRST_TWO_STEP_LIMIT there as well — it is the one remaining full-profile path.
      *
      * Matched on the group label, loosely, so an admin renaming a group in the form builder
      * (e.g. adding a suffix) does not silently put it back into the document.
@@ -2849,12 +2859,24 @@ class ReportController extends Controller
      * because the id means nothing to whoever receives the file. Falls back to the id when
      * the name is empty or reduces to nothing once non-filename characters are stripped
      * (a name written only in Devanagari, for instance).
+     *
+     * Reads only the four name columns (G1) — student_master_firsts is the widest table in the
+     * FC schema — and memoises per request, because the PDF build a few lines earlier has
+     * already loaded the same row and every caller here asks right after it (G4).
      */
     private function fcPdfFileNameStem(string $username): string
     {
-        $step1 = StudentMasterFirst::where(fc_user_col('student_master_firsts'), $username)->first();
-        $stem = $this->safeZipName($this->fcPdfDisplayName($step1));
+        static $stems = [];
 
-        return $stem !== '' ? $stem : $this->safeZipName($username);
+        if (! array_key_exists($username, $stems)) {
+            $step1 = StudentMasterFirst::where(fc_user_col('student_master_firsts'), $username)
+                ->select(['full_name', 'first_name', 'middle_name', 'last_name'])
+                ->first();
+
+            $stem = $this->safeZipName($this->fcPdfDisplayName($step1));
+            $stems[$username] = $stem !== '' ? $stem : $this->safeZipName($username);
+        }
+
+        return $stems[$username];
     }
 }

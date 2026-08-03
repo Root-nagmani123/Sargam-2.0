@@ -122,4 +122,21 @@ return [
     */
     'form_builder_delete_enabled' => (bool) env('FC_FORM_BUILDER_DELETE_ENABLED', false),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Joining letter shown on the trainee's form dashboard (per intake)
+    |--------------------------------------------------------------------------
+    |
+    | Keyed by fc_forms.form_slug, value is a path under public/. The dashboard view is shared
+    | by EVERY dynamic form, so the letter must NOT be hardcoded there — the 101st batch's
+    | letter would otherwise greet the 99th batch, the template and the copy form. A form with
+    | no entry here simply shows no card.
+    |
+    | Adding an intake: drop the PDF in public/fc-documents/ and add one line below.
+    |
+    */
+    'joining_letters' => [
+        'fc-101' => 'fc-documents/1st-communication-letter-to-ots.pdf',
+    ],
+
 ];

@@ -180,10 +180,15 @@ class FormBuilderController extends Controller
             return back()->with('error', 'The new section name is the same as the current one.');
         }
 
-        // Scoped to THIS step and THIS exact heading: a section name repeated on another step
-        // is a different section and must not be touched.
+        // Scoped to THIS step and THIS heading: a section name repeated on another step is a
+        // different section and must not be touched.
+        //
+        // Compared on TRIM(section_heading), because the picker lists trimmed headings while the
+        // column may hold " Personal Details" — matching the raw column would offer that section
+        // and then refuse to rename it. (Trailing spaces are already forgiven by MySQL's PAD
+        // SPACE collations; leading ones are not.)
         $matches = FcFormField::where('step_id', $step->id)
-            ->where('section_heading', $old)
+            ->whereRaw('TRIM(section_heading) = ?', [$old])
             ->count();
 
         if ($matches === 0) {
@@ -193,13 +198,15 @@ class FormBuilderController extends Controller
         // Renaming onto a name already in use merges the two — legitimate, and the only way to
         // repair a section split by a typo — but say so plainly rather than silently merging.
         $mergesInto = FcFormField::where('step_id', $step->id)
-            ->where('section_heading', $new)
+            ->whereRaw('TRIM(section_heading) = ?', [$new])
             ->count();
 
         try {
             DB::transaction(function () use ($step, $old, $new) {
+                // Same TRIM comparison as the count above, so the rows counted are the rows
+                // updated — and a heading stored with stray whitespace is normalised on the way.
                 FcFormField::where('step_id', $step->id)
-                    ->where('section_heading', $old)
+                    ->whereRaw('TRIM(section_heading) = ?', [$old])
                     ->update(['section_heading' => $new]);
             });
         } catch (\Throwable $e) {
