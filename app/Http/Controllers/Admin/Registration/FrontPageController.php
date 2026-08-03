@@ -484,7 +484,7 @@ class FrontPageController extends Controller
 
         return redirect()->route('fc.login', $this->intentQueryForFcFormLinks())->with(
             'sweet_success',
-            'Credentials saved successfully. Please log in to complete your registration form.'
+            'Credentials created successfully. Please log in to complete your registration form.'
         );
     }
 
