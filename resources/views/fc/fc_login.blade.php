@@ -78,10 +78,6 @@
                                             <i class="bi bi-eye fs-5" aria-hidden="true"></i>
                                         </button>
                                     </div>
-                                    <div class="form-text mt-2">
-                                        <a href="{{ route('fc.password.forgot') }}"
-                                            class="link-primary link-offset-2 link-underline-opacity-25 small">Forget Password</a>
-                                    </div>
                                 </div>
 
                                 {{-- Captcha (bot / brute-force mitigation) — server-verified via required|captcha --}}

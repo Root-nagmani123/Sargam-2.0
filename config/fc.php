@@ -104,4 +104,22 @@ return [
     'document_place'            => env('FC_DOCUMENT_PLACE', 'Mussoorie'),
     'document_place_hi'         => env('FC_DOCUMENT_PLACE_HI', 'मसूरी'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Form-builder delete actions (default OFF while the intake is live)
+    |--------------------------------------------------------------------------
+    |
+    | Deleting a form / step / field / group / document master from the admin
+    | form builder is destructive and cascades to trainee data, and this intake is
+    | already live while the rest of the project is still in development. The delete
+    | buttons are therefore hidden everywhere in the form builder and the delete
+    | endpoints refuse the request, so a stale tab or a hand-crafted POST cannot
+    | delete either. Nothing else changes — the delete code itself is untouched.
+    |
+    | Re-enable with FC_FORM_BUILDER_DELETE_ENABLED=true (re-run
+    | `php artisan config:cache` if config is cached).
+    |
+    */
+    'form_builder_delete_enabled' => (bool) env('FC_FORM_BUILDER_DELETE_ENABLED', false),
+
 ];

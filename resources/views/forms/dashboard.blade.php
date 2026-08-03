@@ -44,6 +44,48 @@
         </div>
     </div>
 
+    {{-- ── Fixed information card ─────────────────────────────────────────────
+         Always rendered, always first — before Step 1 — regardless of the form's
+         configured steps or the trainee's progress. It is not a step: it carries no
+         status, cannot be completed, and is never counted in the progress bar.
+         The letter is a static asset in public/fc-documents/. --}}
+    @php
+        $fcLetterPath = 'fc-documents/1st-communication-letter-to-ots.pdf';
+        $fcLetterExists = is_file(public_path($fcLetterPath));
+    @endphp
+    <div class="card border-0 shadow-sm mb-4" style="border-radius:10px; border-left:4px solid #004a93 !important;">
+        <div class="card-body p-4">
+            <div class="d-flex flex-wrap align-items-start gap-3">
+                <div class="flex-shrink-0 d-flex align-items-center justify-content-center"
+                     style="width:52px; height:52px; border-radius:10px; background:#e7edf6; color:#004a93;">
+                    <i class="bi bi-envelope-paper fs-3" aria-hidden="true"></i>
+                </div>
+                <div class="flex-grow-1" style="min-width:16rem;">
+                    <h5 class="fw-bold mb-1" style="color:#004a93;">Read this first</h5>
+                    <p class="small fw-bold mb-3">Please read this joining document before you begin.</p>
+
+                    @if($fcLetterExists)
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="{{ asset($fcLetterPath) }}" target="_blank" rel="noopener"
+                               class="btn btn-sm btn-primary" style="background-color:#004a93; border-color:#004a93;">
+                                <i class="bi bi-file-earmark-pdf me-1"></i>Read the Joining Document (PDF)
+                            </a>
+                            <a href="{{ asset($fcLetterPath) }}" download
+                               class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-download me-1"></i>Download
+                            </a>
+                        </div>
+                    @else
+                        <div class="alert alert-warning small mb-0 py-2">
+                            <i class="bi bi-exclamation-triangle me-1"></i>The joining document is not available at the moment.
+                            Please contact the Academy office.
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
     @if($steps->isEmpty())
         <div class="alert alert-warning">
             <i class="bi bi-exclamation-triangle me-1"></i>
@@ -103,7 +145,7 @@
                                     @endif
                                 </div>
                                 <div>
-                                    <h6 class="mb-0">{{ $step->step_name }}</h6>
+                                    <h6 class="mb-0 fw-bold">{{ $step->step_name }}</h6>
                                     <small class="text-muted">Step {{ $si + 1 }}</small>
                                 </div>
                                 @if($isDone)
@@ -114,7 +156,7 @@
                             </div>
 
                             @if($step->description)
-                                <p class="text-muted small mb-3">{{ Str::limit($step->description, 100) }}</p>
+                                <p class="small fw-bold mb-3">{{ Str::limit($step->description, 100) }}</p>
                             @endif
 
                             @if($isAccessible)
