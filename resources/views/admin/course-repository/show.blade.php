@@ -689,6 +689,13 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>
                                 </div>
 
+                                <!-- Shown when the chosen course + date has no timetable session -->
+                                <div id="noSessionInfo" class="alert alert-info d-none py-2 px-3 mb-3" role="status">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    No session found for the selected date. Please choose another date, or fill the
+                                    details manually.
+                                </div>
+
                                 <!-- Row 2: Major Subject Name & Topic Name -->
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6">
@@ -2696,6 +2703,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Toggle the "no session for this date" info message.
+    function showNoSessionInfo(show) {
+        const el = document.getElementById('noSessionInfo');
+        if (el) el.classList.toggle('d-none', !show);
+    }
+
     // Course change - reset the date + dependent fields (user picks a date next)
     if (courseSelect) {
         courseSelect.addEventListener('change', function() {
@@ -2704,6 +2717,7 @@ document.addEventListener('DOMContentLoaded', function() {
             resetTopicDropdown();
             resetAuthorDropdown();
             courseSessionRows = [];
+            showNoSessionInfo(false);
             updateKeywords(); // Update keywords when course changes
         });
     }
@@ -2719,6 +2733,7 @@ document.addEventListener('DOMContentLoaded', function() {
             resetTopicDropdown();
             resetAuthorDropdown();
             courseSessionRows = [];
+            showNoSessionInfo(false);
             updateKeywords(); // Update keywords when session date changes
 
             if (!coursePk || !sessionDate) return;
@@ -2728,11 +2743,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(data => {
                     courseSessionRows = data.data || data || [];
                     applySubjectsFromRows(courseSessionRows);
+                    // No timetable session on this date -> tell the user.
+                    showNoSessionInfo(courseSessionRows.length === 0);
                     updateKeywords();
                 })
                 .catch(error => {
                     console.error('Error fetching sessions:', error);
                     courseSessionRows = [];
+                    showNoSessionInfo(false);
                 });
         });
     }
@@ -3523,6 +3541,7 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadModalElement.addEventListener('show.bs.modal', function(ev) {
             if (ev.relatedTarget && window.crDocEdit) {
                 window.crDocEdit.reset();
+                showNoSessionInfo(false); // clear any stale "no session" notice on fresh open
                 const f = document.getElementById('uploadForm');
                 if (f) {
                     try {
