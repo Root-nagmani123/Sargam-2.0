@@ -130,7 +130,7 @@
         <div class="container">
             <div class="row">
                 <div class="col-md-3 d-flex align-items-center">
-                    <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/800px-Flag_of_India.svg.png"
+                    <img src="{{ asset('images/flag-of-india.svg') }}"
                         alt="GoI Logo" height="30">
                     <span class="ms-2" style="font-size: 14px;">Government of India</span>
                 </div>
@@ -159,7 +159,7 @@
             <nav class="navbar navbar-expand-lg">
                 <div class="container-fluid px-0">
                     <a class="navbar-brand me-2" href="#">
-                        <img src="https://i.pinimg.com/736x/a8/fa/ef/a8faef978e6230b6a12d1c29c62d5edf.jpg"
+                        <img src="{{ asset('images/ashoka.png') }}"
                             alt="Logo 1" height="40">
                     </a>
                     <span class="vr mx-2"></span>

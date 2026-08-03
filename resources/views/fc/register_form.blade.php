@@ -265,7 +265,7 @@
             <nav class="navbar navbar-expand-lg">
                 <div class="container-fluid px-0">
                     <a class="navbar-brand me-2" href="#">
-                        <img src="https://i.pinimg.com/736x/a8/fa/ef/a8faef978e6230b6a12d1c29c62d5edf.jpg" alt="Logo 1"
+                        <img src="{{ asset('images/ashoka.png') }}" alt="Logo 1"
                             height="40">
                     </a>
                     <span class="vr mx-2"></span>

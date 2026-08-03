@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @php
-    $messEmblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
+    $messEmblemSrc = '{{ asset('images/ashoka.png') }}';
     $messLbsnaaLogoSrc = asset('images/lbsnaa_logo.jpg');
     if (! is_file(public_path('images/lbsnaa_logo.jpg'))) {
         $messLbsnaaLogoSrc = is_file(public_path('images/lbsnaa_logo.png'))

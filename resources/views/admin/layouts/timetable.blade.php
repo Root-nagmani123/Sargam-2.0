@@ -42,7 +42,7 @@
                 <!-- Brand: Flag + Government of India -->
                 <a href="https://www.india.gov.in/" target="_blank" rel="noopener"
                    class="d-inline-flex align-items-center gap-2 text-white text-decoration-none">
-                    <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
+                    <img src="{{ asset('images/flag-of-india.svg') }}"
                          alt="Flag of India" height="22" width="33"
                          class="d-inline-block">
                     <span class="fw-semibold lh-1">Government of India</span>
@@ -90,7 +90,7 @@
         <div class="container-fluid p-0 px-2">
             <nav class="navbar navbar-expand-lg navbar-light p-0">
                 <a class="navbar-brand d-flex align-items-center gap-2 gap-md-3 me-2 p-0" href="#">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
+                    <img src="{{ asset('images/ashoka.png') }}"
                         alt="Emblem of India" height="56" class="d-lg-block d-none ">
                     <span class="vr d-none d-sm-inline-block align-self-center"></span>
                     <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo" height="56" class="d-inline-block">

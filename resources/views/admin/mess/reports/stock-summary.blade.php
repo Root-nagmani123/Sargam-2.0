@@ -283,7 +283,7 @@ function printStockSummary() {
   <div class="container-fluid">
     <div class="row align-items-center lbsnaa-header">
       <div class="col-auto">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="India Emblem" height="42">
+        <img src="{{ asset('images/ashoka.png') }}" alt="India Emblem" height="42">
       </div>
       <div class="col">
         <div class="brand-line-1">Government of India</div>

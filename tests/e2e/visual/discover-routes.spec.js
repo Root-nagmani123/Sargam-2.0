@@ -23,8 +23,15 @@ const { login, ROUTES_FILE } = require('./_helpers');
 
 const MAX_ROUTES = parseInt(process.env.E2E_MAX_ROUTES || '60', 10);
 
-// Never screenshot these — they mutate state or end the session.
-const EXCLUDE = /logout|signout|delete|destroy|remove|export|download|print|pdf|excel|csv|\.(pdf|xlsx|csv|zip)$/i;
+// Never screenshot these — they mutate state, end the session, or are
+// inherently non-deterministic visual fixtures:
+//  - logout/delete/… : state-changing or session-ending
+//  - export/download/print/pdf/… : file responses, not pages
+//  - birthday-wishes : "Today's Birthdays" is a variable-length, date-dependent
+//    list; its cards change height/count run-to-run, so even a per-card mask
+//    leaves boundary diffs. Its chrome (header/nav/two-column layout) is already
+//    covered by the other pages that share the admin layout.
+const EXCLUDE = /logout|signout|delete|destroy|remove|export|download|print|pdf|excel|csv|birthday|\.(pdf|xlsx|csv|zip)$/i;
 
 test.describe('S-4 route discovery', () => {
     test.skip(!process.env.E2E_DISCOVER, 'Set E2E_DISCOVER=1 to regenerate routes.json');

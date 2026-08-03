@@ -2,7 +2,7 @@
     $tillLabel = $tillDate ? date('d-F-Y', strtotime($tillDate)) : '-';
     $storeLabel = $selectedStoreName ?? 'All Stores';
     $printedOn = now()->format('d/m/Y') . ' ' . now()->format('g:i:s A');
-    $emblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
+    $emblemSrc = '{{ asset('images/ashoka.png') }}';
 
     $lbsnaaLogoSrc = 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
     foreach ([public_path('images/lbsnaa_logo.jpg'), public_path('images/lbsnaa_logo.png')] as $logoPath) {

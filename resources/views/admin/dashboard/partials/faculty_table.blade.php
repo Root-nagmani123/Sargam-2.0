@@ -268,7 +268,7 @@ $(document).ready(function() {
     var $toolbar = $('#' + tableId + '_toolbar');
 
     // LBSNAA report branding (mirrors the Mess report theme)
-    var brandEmblem = @json('https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png');
+    var brandEmblem = @json('{{ asset('images/ashoka.png') }}');
     var brandLogo   = @json(asset('admin_assets/images/logos/logo.png'));
     var brandLine1  = 'Government of India';
     var brandLine2  = 'Lal Bahadur Shastri National Academy of Administration';

@@ -12,7 +12,7 @@
     /** @var int $perPage */
     $perPage = isset($perPage) ? (int) $perPage : 25;
 
-    $messEmblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
+    $messEmblemSrc = '{{ asset('images/ashoka.png') }}';
     // Print opens about:blank; remote URLs often fail. Raster: data URI on <img>. SVG: must be inlined in HTML — <img src="data:image/svg+xml;base64,…"> often stays blank when the SVG embeds raster (xlink:data PNG), which is how admin logo.svg is built.
     $messLbsnaaLogoSrc = 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
     $messLbsnaaLogoSvgInline = null;

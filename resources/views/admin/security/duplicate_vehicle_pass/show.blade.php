@@ -247,7 +247,7 @@
 <body>
     <div class="print-header">
         <div class="print-header-logos">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="Ashoka Emblem">
+            <img src="{{ asset('images/ashoka.png') }}" alt="Ashoka Emblem">
             <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo">
         </div>
         <p class="print-header-title">Lal Bahadur Shastri National Academy of Administration</p>

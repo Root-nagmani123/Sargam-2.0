@@ -2,7 +2,7 @@
     $printedOn = now()->format('d-m-Y H:i');
 
     // Emblem
-    $emblemSrc = $emblemSrc ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
+    $emblemSrc = $emblemSrc ?? '{{ asset('images/ashoka.png') }}';
 
     // LBSNAA logo
     $lbsnaaLogoSrc = $lbsnaaLogoSrc ?? 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';

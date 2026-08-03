@@ -86,7 +86,7 @@
                     <small class="text-muted">{{ $courseName }}</small>
                 </div>
             </div>
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png"
+            <img src="{{ asset('images/ashoka.png') }}"
                  alt="Emblem of India" style="height: 50px;" onerror="this.style.display='none'">
         </div>
 

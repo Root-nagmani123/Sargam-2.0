@@ -2,7 +2,7 @@
     $tillLabel = $tillDate ? date('d-F-Y', strtotime($tillDate)) : '-';
     $storeLabel = $selectedStoreName ?? 'All Stores';
     $totalAmount = collect($reportData)->sum('amount');
-    $emblemSrc = $emblemSrc ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
+    $emblemSrc = $emblemSrc ?? '{{ asset('images/ashoka.png') }}';
     $logoDataUri = $logoDataUri ?? null;
 @endphp
 <!doctype html>

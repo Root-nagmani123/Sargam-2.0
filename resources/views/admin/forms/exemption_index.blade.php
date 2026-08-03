@@ -344,9 +344,9 @@
 
 <body class="admin-force-light">
 
-    <a href="https://front.codes/" class="logo" target="_blank">
-        <img src="https://assets.codepen.io/1462889/fcy.png" alt="">
-    </a>
+    {{-- S-5: removed a leftover HTML-template watermark (a link to the template
+         vendor front.codes with its logo hosted on assets.codepen.io). Not a
+         government asset; it served no function on this exemption form. --}}
 
     <div class="section">
         <div class="container">

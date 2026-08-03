@@ -295,7 +295,7 @@
 <body>
     <div class="lbsnaa-header">
         <div class="lbsnaa-header-left">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
+            <img src="{{ asset('images/ashoka.png') }}"
                  alt="Emblem of India" height="42">
             <div class="lbsnaa-header-text">
                 <div class="brand-line-1">Government of India</div>

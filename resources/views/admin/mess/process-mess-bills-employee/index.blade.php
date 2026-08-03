@@ -3257,7 +3257,7 @@ function printProcessMessBillsMainTable() {
             <th colspan="${columnsCount}">
               <div class="d-flex justify-content-between align-items-center mb-2 lbsnaa-header">
                 <div class="d-flex align-items-center gap-2">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="India Emblem" height="40">
+                  <img src="{{ asset('images/ashoka.png') }}" alt="India Emblem" height="40">
                   <div>
                     <div class="brand-line-1">Government of India</div>
                     <div class="brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
@@ -3393,7 +3393,7 @@ function printProcessMessBillsTable() {
             <th colspan="${columnsCount}">
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <div class="d-flex align-items-center gap-2">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="India Emblem" height="40">
+                  <img src="{{ asset('images/ashoka.png') }}" alt="India Emblem" height="40">
                   <div>
                     <div class="brand-line-1">Government of India</div>
                     <div class="brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>

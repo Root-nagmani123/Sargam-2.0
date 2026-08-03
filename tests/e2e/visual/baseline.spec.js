@@ -58,9 +58,12 @@ test(`S-4 preflight [${MODE}]: route list exists and is non-empty`, () => {
 test.describe(`S-4 visual baseline [${MODE}]`, () => {
     test.skip(!hasRoutes, 'route list missing');
 
-    // One login for the whole file — re-authenticating per route would triple
-    // runtime and add a redirect that can race the screenshot.
-    test.describe.configure({ mode: 'serial' });
+    // One login for the whole file (shared page from beforeAll) — re-authenticating
+    // per route would triple runtime. NOT serial mode: serial skips every remaining
+    // test after the first failure, which would hide most diffs during a gate run
+    // where several intended changes are expected. workers:1 (playwright.config.js)
+    // already runs these in order on the shared page; each test re-navigates first,
+    // so a prior failure doesn't corrupt the next.
 
     let page;
 

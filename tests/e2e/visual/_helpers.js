@@ -28,6 +28,13 @@ const MASK_SELECTORS = [
     // real space and a layout regression around it is still caught.
     '#captchaImage',
     'img[src*="/captcha/"]',
+    // Dashboard header shows a live clock (#dashboard-live-time, H:i — changes every
+    // minute) and today's date next to it (changes daily). Both are volatile and
+    // would fail any run that crosses a minute/day boundary from capture time.
+    '#dashboard-live-time',
+    // "Today's Birthdays" cards (birthday-wishes page + dashboard panel) list whoever
+    // has a birthday today — date-dependent data that changes day to day.
+    '.birthday-person-card',
 ];
 
 /**
@@ -109,7 +116,15 @@ function slugForRoute(url) {
 
 /** Locators for the volatile regions, resolved against a live page. */
 function masksFor(page) {
-    return MASK_SELECTORS.map((s) => page.locator(s));
+    const masks = MASK_SELECTORS.map((s) => page.locator(s));
+    // The dashboard clock and the date sit as siblings inside one .lh-sm widget.
+    // Masking that whole widget (scoped by the clock's unique id ancestor) covers
+    // both volatile values in a single region without touching any other page.
+    masks.push(
+        page.locator('#dashboard-live-time')
+            .locator('xpath=ancestor::div[contains(concat(" ", normalize-space(@class), " "), " lh-sm ")][1]')
+    );
+    return masks;
 }
 
 module.exports = {
