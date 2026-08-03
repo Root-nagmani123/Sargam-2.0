@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\Security;
 use App\Http\Controllers\Controller;
 use App\Exports\VehiclePassExport;
 use App\Support\DataTableRedisCache;
+use App\Support\DataTableSearchHelper;
 use App\Support\IdCardSecurityMapper;
 use App\Models\VehiclePassTWApply;
 use App\Models\VehiclePassFWApply;
@@ -29,7 +30,7 @@ class VehiclePassController extends Controller
         DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'VehiclePassController@index');
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
         $user_old_pk = EmployeeMaster::where('pk', $user->user_id)->first();
@@ -60,7 +61,136 @@ class VehiclePassController extends Controller
         $activePasses = $allPasses->filter(fn ($m) => (int) $m->vech_card_status === 1)->values();
         $archivedPasses = $allPasses->filter(fn ($m) => in_array((int) $m->vech_card_status, [2, 3], true))->values();
 
+        if ($request->ajax() && $request->has('draw')) {
+            $tab = $request->get('tab') === 'archive' ? 'archive' : 'active';
+
+            return response()->json(
+                $tab === 'archive'
+                    ? $this->buildVehiclePassDatatableResponse($request, $archivedPasses, 'archive')
+                    : $this->buildVehiclePassDatatableResponse($request, $activePasses, 'active')
+            );
+        }
+
         return view('admin.security.vehicle_pass.index', compact('activePasses', 'archivedPasses'));
+    }
+
+    /**
+     * @param  Collection<int, VehiclePassTWApply>  $rows
+     * @return array<string, mixed>
+     */
+    private function buildVehiclePassDatatableResponse(Request $request, Collection $rows, string $tab): array
+    {
+        $draw = (int) $request->input('draw', 0);
+        $start = max((int) $request->input('start', 0), 0);
+        $length = (int) $request->input('length', 10);
+        if ($length < 1) {
+            $length = 10;
+        }
+
+        $recordsTotal = $rows->count();
+
+        $searchTokens = DataTableSearchHelper::tokens((string) $request->input('search.value', ''));
+        $filtered = $searchTokens === []
+            ? $rows
+            : $rows->filter(function ($pass) use ($searchTokens) {
+                $haystack = implode(' ', [
+                    $pass->display_name ?? '',
+                    $pass->vehicle_req_id ?? '',
+                    $pass->vehicleType->vehicle_type ?? '',
+                    $pass->vehicle_no ?? '',
+                ]);
+
+                return DataTableSearchHelper::haystackMatchesAllTokens($haystack, $searchTokens);
+            })->values();
+
+        $recordsFiltered = $filtered->count();
+
+        $paged = $length === -1 ? $filtered : $filtered->slice($start, $length)->values();
+
+        $data = $paged->map(function ($pass, $i) use ($start, $tab) {
+            return $tab === 'active'
+                ? $this->buildActiveVehiclePassRow($pass, $start + $i + 1)
+                : $this->buildArchivedVehiclePassRow($pass, $start + $i + 1);
+        })->all();
+
+        return [
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+        ];
+    }
+
+    private function vehiclePassDocumentCell(VehiclePassTWApply $pass): string
+    {
+        $docPath = $pass->doc_upload;
+        $docExists = $docPath && Storage::disk('public')->exists($docPath);
+        if ($docExists) {
+            return '<a href="' . e(asset('storage/' . $docPath)) . '" target="_blank" class="text-primary" title="View Document" data-bs-toggle="tooltip">'
+                . '<i class="material-icons material-symbols-rounded" style="font-size:22px;">picture_as_pdf</i></a>';
+        }
+        if ($docPath) {
+            return '<span class="text-warning small">No file available in storage</span>';
+        }
+
+        return '<span class="text-muted">--</span>';
+    }
+
+    private function buildActiveVehiclePassRow(VehiclePassTWApply $pass, int $rowNumber): array
+    {
+        $showUrl = route('admin.security.vehicle_pass.show', encrypt($pass->vehicle_tw_pk));
+        $actions = '<div class="d-flex align-items-center gap-2">'
+            . '<a href="' . e($showUrl) . '" class="text-primary" title="View" data-bs-toggle="tooltip">'
+            . '<i class="material-icons material-symbols-rounded" style="font-size:22px;">visibility</i></a>';
+
+        if (! $pass->approvals_exists) {
+            $editUrl = route('admin.security.vehicle_pass.edit', encrypt($pass->vehicle_tw_pk));
+            $deleteUrl = route('admin.security.vehicle_pass.delete', encrypt($pass->vehicle_tw_pk));
+            $token = csrf_token();
+            $actions .= '<a href="' . e($editUrl) . '" class="text-success" title="Edit" data-bs-toggle="tooltip">'
+                . '<i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i></a>'
+                . '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Delete this application?\');">'
+                . '<input type="hidden" name="_token" value="' . e($token) . '">'
+                . '<input type="hidden" name="_method" value="DELETE">'
+                . '<button type="submit" class="btn btn-link p-0 text-danger" title="Delete" data-bs-toggle="tooltip">'
+                . '<i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i></button>'
+                . '</form>';
+        }
+        $actions .= '</div>';
+
+        return [
+            'select' => '<input type="checkbox" class="form-check-input row-select" value="' . e($pass->vehicle_tw_pk) . '" aria-label="Select row">',
+            'sn' => $rowNumber,
+            'employee_name' => e($pass->display_name ?? ''),
+            'vehicle_req_id' => e($pass->vehicle_req_id ?? '--'),
+            'vehicle_type' => e($pass->vehicleType->vehicle_type ?? '--'),
+            'vehicle_no' => e($pass->vehicle_no ?? '--'),
+            'doc_upload' => $this->vehiclePassDocumentCell($pass),
+            'created_date' => $pass->created_date ? $pass->created_date->format('d-m-Y H:i') : '--',
+            'status' => '<span class="badge bg-warning text-dark">Pending</span>',
+            'actions' => $actions,
+        ];
+    }
+
+    private function buildArchivedVehiclePassRow(VehiclePassTWApply $pass, int $rowNumber): array
+    {
+        $showUrl = route('admin.security.vehicle_pass.show', encrypt($pass->vehicle_tw_pk));
+        $statusBadge = (int) $pass->vech_card_status === 2
+            ? '<span class="badge bg-success">Approved</span>'
+            : '<span class="badge bg-danger">Rejected</span>';
+
+        return [
+            'sn' => $rowNumber,
+            'employee_name' => e($pass->display_name ?? ''),
+            'vehicle_req_id' => e($pass->vehicle_req_id ?? '--'),
+            'vehicle_type' => e($pass->vehicleType->vehicle_type ?? '--'),
+            'vehicle_no' => e($pass->vehicle_no ?? '--'),
+            'doc_upload' => $this->vehiclePassDocumentCell($pass),
+            'created_date' => $pass->created_date ? $pass->created_date->format('d-m-Y H:i') : '--',
+            'status' => $statusBadge,
+            'actions' => '<a href="' . e($showUrl) . '" class="text-primary" title="View" data-bs-toggle="tooltip">'
+                . '<i class="material-icons material-symbols-rounded" style="font-size:22px;">visibility</i></a>',
+        ];
     }
 
     /**

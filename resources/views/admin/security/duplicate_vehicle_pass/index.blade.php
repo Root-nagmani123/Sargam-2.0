@@ -6,7 +6,6 @@
     <div class="print-only-header">
         <h5 class="mb-0">Duplicate Vehicle Pass Request - List</h5>
         <p class="text-muted small mb-0">Printed on: {{ now()->format('d-m-Y H:i') }}</p>
-        <p class="text-muted small mb-0">Total {{ $requests->count() }} entries</p>
     </div>
 
     <div class="no-print mb-3">
@@ -76,89 +75,13 @@
                             <th class="col-action" style="width:120px">ACTIONS</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($requests as $idx => $r)
-                            <tr>
-                                <td>{{ $idx + 1 }}</td>
-                                <td class="col-emp">{{ $r->employee_name ?? '--' }}</td>
-                                <td class="col-pass">{{ $r->vehicle_pass_no ?? '--' }}</td>
-                                <td class="col-type">{{ $r->vehicleType->vehicle_type ?? '--' }}</td>
-                                <td class="col-veh">{{ $r->vehicle_no ?? '--' }}</td>
-                                <td class="col-doc">
-                                    @php
-                                        $docPath = $r->doc_upload;
-                                        $docExists = $docPath && \Storage::disk('public')->exists($docPath);
-                                    @endphp
-                                    @if($docExists)
-                                        <a href="{{ asset('storage/' . $docPath) }}" target="_blank" class="text-primary d-inline-flex align-items-center gap-1">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:20px;">description</i>
-                                            <span class="d-none d-sm-inline">Download</span>
-                                        </a>
-                                    @elseif($docPath)
-                                        <span class="text-warning small">No file available in storage</span>
-                                    @else
-                                        --
-                                    @endif
-                                </td>
-                                <td class="col-date">{{ $r->created_date ? $r->created_date->format('d-m-Y') : '--' }}</td>
-                                <td class="col-status">
-                                    @php
-                                        $badge = match($r->status_text) {
-                                            'Approved' => 'bg-success',
-                                            'Rejected' => 'bg-danger',
-                                            'Issued' => 'bg-info',
-                                            default => 'bg-warning text-dark',
-                                        };
-                                    @endphp
-                                    <span class="badge {{ $badge }}">{{ $r->status_text }}</span>
-                                </td>
-                                <td class="col-action">
-                                    <div class="d-flex align-items-center gap-1">
-                                        <a href="{{ route('admin.security.duplicate_vehicle_pass.show', encrypt($r->vehicle_tw_pk)) }}" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" title="View">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
-                                            <span class="d-none d-md-inline">View</span>
-                                        </a>
-                                        @if((int)$r->vech_card_status === 1)
-                                            <a href="{{ route('admin.security.duplicate_vehicle_pass.edit', encrypt($r->vehicle_tw_pk)) }}" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1" title="Edit">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
-                                                <span class="d-none d-md-inline">Edit</span>
-                                            </a>
-                                            <form action="{{ route('admin.security.duplicate_vehicle_pass.delete', encrypt($r->vehicle_tw_pk)) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this request?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" title="Delete">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                                                    <span class="d-none d-md-inline">Delete</span>
-                                                </button>
-                                            </form>
-                                        @else
-                                            <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" title="Edit Disabled" disabled>
-                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
-                                                <span class="d-none d-md-inline">Edit</span>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" title="Delete Disabled" disabled>
-                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                                                <span class="d-none d-md-inline">Delete</span>
-                                            </button>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="9" class="text-center text-muted py-5">
-                                    No data available in table.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
 
         </div>
     </div>
 </div>
-@include('components.mess-master-datatables', ['tableId' => 'duplicateVehPassTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 0, 'actionColumnIndex' => 8, 'infoLabel' => 'requests'])
 
 <style>
 /* Print-only header: hidden on screen */
@@ -245,6 +168,31 @@
         document.querySelectorAll('#duplicateVehPassTable .col-doc').forEach(function(el) { el.classList.toggle('d-none'); });
     });
 })();
+
+$(document).ready(function () {
+    $('#duplicateVehPassTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: '{{ route('admin.security.duplicate_vehicle_pass.index') }}',
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'employee_name', name: 'employee_name', orderable: false, searchable: false, className: 'col-emp' },
+            { data: 'vehicle_pass_no', name: 'vehicle_pass_no', orderable: false, searchable: false, className: 'col-pass' },
+            { data: 'vehicle_type_name', name: 'vehicle_type_name', orderable: false, searchable: false, className: 'col-type' },
+            { data: 'vehicle_no', name: 'vehicle_no', className: 'col-veh' },
+            { data: 'doc_upload', name: 'doc_upload', orderable: false, searchable: false, className: 'col-doc' },
+            { data: 'created_date', name: 'created_date', className: 'col-date' },
+            { data: 'status', name: 'vech_card_status', orderable: false, searchable: false, className: 'col-status' },
+            { data: 'actions', name: 'actions', orderable: false, searchable: false, className: 'col-action' }
+        ],
+        order: [[0, 'asc']],
+        language: {
+            search: 'Search requests:',
+            zeroRecords: 'No data available in table.',
+            emptyTable: 'No data available in table.'
+        }
+    });
+});
 </script>
 @endpush
 @endsection

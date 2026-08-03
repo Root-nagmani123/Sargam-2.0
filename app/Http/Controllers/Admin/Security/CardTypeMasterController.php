@@ -7,22 +7,66 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
+use Yajra\DataTables\Facades\DataTables;
 
 class CardTypeMasterController extends Controller
 {
     /** Must match DB column `sec_id_cardno_master.sec_card_name` (e.g. varchar(11)). */
     private const SEC_CARD_NAME_MAX_LENGTH = 11;
 
-    public function index()
+    public function index(Request $request)
     {
-        $query = DB::table('sec_id_cardno_master')->orderBy('sec_card_name');
-        // If status column exists, include it for display/toggle.
-        if (Schema::hasColumn('sec_id_cardno_master', 'active_inactive')) {
-            $query->select(['pk', 'sec_card_name', 'active_inactive']);
-        }
-        $cardTypes = $query->get();
+        $hasStatusColumn = Schema::hasColumn('sec_id_cardno_master', 'active_inactive');
 
-        return view('admin.security.idcard_master.card_type.index', compact('cardTypes'));
+        if ($request->ajax()) {
+            $query = DB::table('sec_id_cardno_master')->orderBy('sec_card_name');
+            $query->select($hasStatusColumn ? ['pk', 'sec_card_name', 'active_inactive'] : ['pk', 'sec_card_name']);
+
+            return DataTables::of($query)
+                ->addIndexColumn()
+                ->addColumn('status', function ($ct) use ($hasStatusColumn) {
+                    if (! $hasStatusColumn) {
+                        return '<span class="badge bg-secondary">N/A</span>';
+                    }
+                    $isActive = (int) ($ct->active_inactive ?? 1) === 1;
+
+                    return '<div class="form-check form-switch d-inline-block">'
+                        . '<input class="form-check-input status-toggle" type="checkbox" role="switch"'
+                        . ' data-table="sec_id_cardno_master" data-column="active_inactive" data-id="' . $ct->pk . '" data-id_column="pk"'
+                        . ($isActive ? ' checked' : '') . '>'
+                        . '</div>';
+                })
+                ->addColumn('actions', function ($ct) use ($hasStatusColumn) {
+                    $editUrl = route('admin.security.idcard_card_type.edit', encrypt($ct->pk));
+                    $isActive = $hasStatusColumn ? ((int) ($ct->active_inactive ?? 1) === 1) : true;
+                    $canDelete = ! $hasStatusColumn || ! $isActive;
+
+                    $html = '<div class="d-flex gap-2">'
+                        . '<a href="' . e($editUrl) . '" class="text-success openEditCardType" title="Edit">'
+                        . '<i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i></a>';
+
+                    if ($canDelete) {
+                        $deleteUrl = route('admin.security.idcard_card_type.delete', encrypt($ct->pk));
+                        $token = csrf_token();
+                        $html .= '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Delete this Card Type?\');">'
+                            . '<input type="hidden" name="_token" value="' . e($token) . '">'
+                            . '<input type="hidden" name="_method" value="DELETE">'
+                            . '<button type="submit" class="btn btn-link p-0 text-danger" title="Delete">'
+                            . '<i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i></button>'
+                            . '</form>';
+                    } else {
+                        $html .= '<span class="text-muted" style="cursor:not-allowed;" title="Set status to Inactive before delete">'
+                            . '<i class="material-icons material-symbols-rounded" style="font-size:22px;opacity:0.4;">delete</i></span>';
+                    }
+
+                    return $html . '</div>';
+                })
+                ->rawColumns(['status', 'actions'])
+                ->setRowAttr(['data-pk' => fn ($ct) => $ct->pk])
+                ->make(true);
+        }
+
+        return view('admin.security.idcard_master.card_type.index');
     }
 
     public function create(Request $request)

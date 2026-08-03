@@ -12,23 +12,103 @@ use App\Models\VehiclePassFWApply;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Yajra\DataTables\Facades\DataTables;
 
 class DuplicateVehiclePassController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
         $userOldPk = EmployeeMaster::where('pk', $user->user_id)->first();
         $employeePk = $user->user_id ?? null;
         $pkOld = $userOldPk->pk_old ?? null;
 
-        $requests = VehiclePassDuplicateApplyTwfw::with(['vehicleType', 'employee'])
-            ->where('veh_created_by', $employeePk)
-            ->orWhere('veh_created_by', $pkOld)
-            ->orderBy('created_date', 'desc')
-            ->get();
+        if ($request->ajax()) {
+            $query = VehiclePassDuplicateApplyTwfw::with(['vehicleType', 'employee'])
+                ->where(function ($q) use ($employeePk, $pkOld) {
+                    $q->where('veh_created_by', $employeePk)
+                        ->orWhere('veh_created_by', $pkOld);
+                })
+                ->orderBy('created_date', 'desc');
 
-        return view('admin.security.duplicate_vehicle_pass.index', compact('requests'));
+            return DataTables::of($query)
+                ->addIndexColumn()
+                ->addColumn('employee_name', function ($r) {
+                    return e($r->employee_name ?? '--');
+                })
+                ->addColumn('vehicle_pass_no', function ($r) {
+                    return e($r->vehicle_pass_no ?? '--');
+                })
+                ->addColumn('vehicle_type_name', function ($r) {
+                    return e($r->vehicleType->vehicle_type ?? '--');
+                })
+                ->addColumn('vehicle_no', function ($r) {
+                    return e($r->vehicle_no ?? '--');
+                })
+                ->addColumn('doc_upload', function ($r) {
+                    $docPath = $r->doc_upload;
+                    $docExists = $docPath && Storage::disk('public')->exists($docPath);
+                    if ($docExists) {
+                        return '<a href="' . e(asset('storage/' . $docPath)) . '" target="_blank" class="text-primary d-inline-flex align-items-center gap-1">'
+                            . '<i class="material-icons material-symbols-rounded" style="font-size:20px;">description</i>'
+                            . '<span class="d-none d-sm-inline">Download</span></a>';
+                    }
+                    if ($docPath) {
+                        return '<span class="text-warning small">No file available in storage</span>';
+                    }
+
+                    return '--';
+                })
+                ->addColumn('created_date', function ($r) {
+                    return $r->created_date ? $r->created_date->format('d-m-Y') : '--';
+                })
+                ->addColumn('status', function ($r) {
+                    $badge = match ($r->status_text) {
+                        'Approved' => 'bg-success',
+                        'Rejected' => 'bg-danger',
+                        'Issued' => 'bg-info',
+                        default => 'bg-warning text-dark',
+                    };
+
+                    return '<span class="badge ' . $badge . '">' . e($r->status_text) . '</span>';
+                })
+                ->addColumn('actions', function ($r) {
+                    $showUrl = route('admin.security.duplicate_vehicle_pass.show', encrypt($r->vehicle_tw_pk));
+                    $html = '<div class="d-flex align-items-center gap-1">'
+                        . '<a href="' . e($showUrl) . '" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" title="View">'
+                        . '<i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>'
+                        . '<span class="d-none d-md-inline">View</span></a>';
+
+                    if ((int) $r->vech_card_status === 1) {
+                        $editUrl = route('admin.security.duplicate_vehicle_pass.edit', encrypt($r->vehicle_tw_pk));
+                        $deleteUrl = route('admin.security.duplicate_vehicle_pass.delete', encrypt($r->vehicle_tw_pk));
+                        $token = csrf_token();
+                        $html .= '<a href="' . e($editUrl) . '" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1" title="Edit">'
+                            . '<i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>'
+                            . '<span class="d-none d-md-inline">Edit</span></a>'
+                            . '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Delete this request?\');">'
+                            . '<input type="hidden" name="_token" value="' . e($token) . '">'
+                            . '<input type="hidden" name="_method" value="DELETE">'
+                            . '<button type="submit" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" title="Delete">'
+                            . '<i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>'
+                            . '<span class="d-none d-md-inline">Delete</span></button></form>';
+                    } else {
+                        $html .= '<button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" title="Edit Disabled" disabled>'
+                            . '<i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>'
+                            . '<span class="d-none d-md-inline">Edit</span></button>'
+                            . '<button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" title="Delete Disabled" disabled>'
+                            . '<i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>'
+                            . '<span class="d-none d-md-inline">Delete</span></button>';
+                    }
+
+                    return $html . '</div>';
+                })
+                ->rawColumns(['doc_upload', 'status', 'actions'])
+                ->setRowAttr(['data-pk' => fn ($r) => $r->vehicle_tw_pk])
+                ->make(true);
+        }
+
+        return view('admin.security.duplicate_vehicle_pass.index');
     }
 
     public function create()

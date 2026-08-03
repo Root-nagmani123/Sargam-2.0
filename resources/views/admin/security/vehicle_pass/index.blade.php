@@ -121,73 +121,9 @@
                                     <th>Action</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                @forelse($activePasses as $index => $pass)
-                                    <tr>
-                                        <td class="align-middle">
-                                            <input type="checkbox" class="form-check-input row-select" value="{{ $pass->vehicle_tw_pk }}" aria-label="Select row">
-                                        </td>
-                                        <td class="fw-medium align-middle">{{ $index + 1 }}</td>
-                                        <td class="align-middle">{{ $pass->display_name }}</td>
-                                        <td class="align-middle">{{ $pass->vehicle_req_id ?? '--' }}</td>
-                                        <td class="align-middle">{{ $pass->vehicleType->vehicle_type ?? '--' }}</td>
-                                        <td class="align-middle">{{ $pass->vehicle_no ?? '--' }}</td>
-                                        <td class="align-middle">
-                                            @php
-                                                $docPath = $pass->doc_upload;
-                                                $docExists = $docPath && \Storage::disk('public')->exists($docPath);
-                                            @endphp
-                                            @if($docExists)
-                                                <a href="{{ asset('storage/' . $docPath) }}" target="_blank" class="text-primary" title="View Document" data-bs-toggle="tooltip">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:22px;">picture_as_pdf</i>
-                                                </a>
-                                            @elseif($docPath)
-                                                <span class="text-warning small">No file available in storage</span>
-                                            @else
-                                                <span class="text-muted">--</span>
-                                            @endif
-                                        </td>
-                                        <td class="align-middle">{{ $pass->created_date ? $pass->created_date->format('d-m-Y H:i') : '--' }}</td>
-                                        <td class="align-middle">
-                                            <span class="badge bg-warning text-dark">Pending</span>
-                                        </td>
-                                        <td class="align-middle">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <a href="{{ route('admin.security.vehicle_pass.show', encrypt($pass->vehicle_tw_pk)) }}" class="text-primary" title="View" data-bs-toggle="tooltip">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:22px;">visibility</i>
-                                                </a>
-                                                @if(! $pass->approvals_exists)
-                                                    <a href="{{ route('admin.security.vehicle_pass.edit', encrypt($pass->vehicle_tw_pk)) }}" class="text-success" title="Edit" data-bs-toggle="tooltip">
-                                                        <i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i>
-                                                    </a>
-                                                    <form action="{{ route('admin.security.vehicle_pass.delete', encrypt($pass->vehicle_tw_pk)) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this application?');">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="btn btn-link p-0 text-danger" title="Delete" data-bs-toggle="tooltip">
-                                                            <i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i>
-                                                        </button>
-                                                    </form>
-                                                @endif
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="10" class="text-center py-5 text-muted">
-                                            <i class="material-icons material-symbols-rounded d-block mb-2" style="font-size:48px; opacity:0.4;">directions_car</i>
-                                            <p class="mb-1">No active vehicle pass requests found.</p>
-                                            <small>Click "Request for Vehicle Pass" to create one.</small>
-                                            <a href="{{ route('admin.security.vehicle_pass.create') }}" class="btn btn-primary  mt-2 rounded-1 px-3">
-                                                <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">add</i>
-                                                Request for Vehicle Pass
-                                            </a>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
+                            <tbody></tbody>
                         </table>
                     </div>
-                    @include('components.mess-master-datatables', ['tableId' => 'activeVehiclePassTable', 'searchPlaceholder' => 'Search active requests...', 'orderColumn' => 1, 'actionColumnIndex' => [0, 9], 'infoLabel' => 'active requests'])
                 </div>
 
                 <div class="tab-pane fade" id="archive-panel" role="tabpanel" aria-labelledby="archive-tab">
@@ -206,56 +142,9 @@
                                     <th>Action</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                @forelse($archivedPasses as $index => $pass)
-                                    <tr>
-                                        <td class="fw-medium align-middle">{{ $index + 1 }}</td>
-                                        <td class="align-middle">{{ $pass->display_name }}</td>
-                                        <td class="align-middle">{{ $pass->vehicle_req_id ?? '--' }}</td>
-                                        <td class="align-middle">{{ $pass->vehicleType->vehicle_type ?? '--' }}</td>
-                                        <td class="align-middle">{{ $pass->vehicle_no ?? '--' }}</td>
-                                        <td class="align-middle">
-                                            @php
-                                                $docPath = $pass->doc_upload;
-                                                $docExists = $docPath && \Storage::disk('public')->exists($docPath);
-                                            @endphp
-                                            @if($docExists)
-                                                <a href="{{ asset('storage/' . $docPath) }}" target="_blank" class="text-primary" title="View Document" data-bs-toggle="tooltip">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:22px;">picture_as_pdf</i>
-                                                </a>
-                                            @elseif($docPath)
-                                                <span class="text-warning small">No file available in storage</span>
-                                            @else
-                                                <span class="text-muted">--</span>
-                                            @endif
-                                        </td>
-                                        <td class="align-middle">{{ $pass->created_date ? $pass->created_date->format('d-m-Y H:i') : '--' }}</td>
-                                        <td class="align-middle">
-                                            @if($pass->vech_card_status == 2)
-                                                <span class="badge bg-success">Approved</span>
-                                            @else
-                                                <span class="badge bg-danger">Rejected</span>
-                                            @endif
-                                        </td>
-                                        <td class="align-middle">
-                                            <a href="{{ route('admin.security.vehicle_pass.show', encrypt($pass->vehicle_tw_pk)) }}" class="text-primary" title="View" data-bs-toggle="tooltip">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:22px;">visibility</i>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="9" class="text-center py-5 text-muted">
-                                            <i class="material-icons material-symbols-rounded d-block mb-2" style="font-size:48px; opacity:0.4;">archive</i>
-                                            <p class="mb-1">No archived vehicle pass requests found.</p>
-                                            <small>Approved or rejected applications will appear here.</small>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
+                            <tbody></tbody>
                         </table>
                     </div>
-                    @include('components.mess-master-datatables', ['tableId' => 'archiveVehiclePassTable', 'searchPlaceholder' => 'Search archived requests...', 'orderColumn' => 0, 'actionColumnIndex' => 8, 'infoLabel' => 'archived requests'])
                 </div>
             </div>
         </div>
@@ -301,14 +190,76 @@
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    var selectAll = document.querySelector('.select-all-active');
-    var rowSelects = document.querySelectorAll('#active-panel .row-select');
-    if (selectAll && rowSelects.length) {
-        selectAll.addEventListener('change', function() {
-            rowSelects.forEach(function(cb) { cb.checked = selectAll.checked; });
-        });
-    }
+$(document).ready(function() {
+    var indexUrl = '{{ route('admin.security.vehicle_pass.index') }}';
+
+    var activeVehiclePassTable = $('#activeVehiclePassTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: { url: indexUrl, type: 'GET', data: function (d) { d.tab = 'active'; } },
+        columns: [
+            { data: 'select', name: 'select', orderable: false, searchable: false },
+            { data: 'sn', name: 'sn', orderable: false, searchable: false },
+            { data: 'employee_name', name: 'employee_name' },
+            { data: 'vehicle_req_id', name: 'vehicle_req_id' },
+            { data: 'vehicle_type', name: 'vehicle_type' },
+            { data: 'vehicle_no', name: 'vehicle_no' },
+            { data: 'doc_upload', name: 'doc_upload', orderable: false, searchable: false },
+            { data: 'created_date', name: 'created_date', orderable: false, searchable: false },
+            { data: 'status', name: 'status', orderable: false, searchable: false },
+            { data: 'actions', name: 'actions', orderable: false, searchable: false }
+        ],
+        ordering: false,
+        language: {
+            search: 'Search active requests:',
+            zeroRecords: 'No active vehicle pass requests found.',
+            emptyTable: 'No active vehicle pass requests found.'
+        },
+        drawCallback: function() {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                [].slice.call(document.querySelectorAll('#active-panel [data-bs-toggle="tooltip"]')).forEach(function(el) {
+                    bootstrap.Tooltip.getOrCreateInstance(el);
+                });
+            }
+        }
+    });
+
+    var archiveVehiclePassTable = $('#archiveVehiclePassTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: { url: indexUrl, type: 'GET', data: function (d) { d.tab = 'archive'; } },
+        columns: [
+            { data: 'sn', name: 'sn', orderable: false, searchable: false },
+            { data: 'employee_name', name: 'employee_name' },
+            { data: 'vehicle_req_id', name: 'vehicle_req_id' },
+            { data: 'vehicle_type', name: 'vehicle_type' },
+            { data: 'vehicle_no', name: 'vehicle_no' },
+            { data: 'doc_upload', name: 'doc_upload', orderable: false, searchable: false },
+            { data: 'created_date', name: 'created_date', orderable: false, searchable: false },
+            { data: 'status', name: 'status', orderable: false, searchable: false },
+            { data: 'actions', name: 'actions', orderable: false, searchable: false }
+        ],
+        ordering: false,
+        language: {
+            search: 'Search archived requests:',
+            zeroRecords: 'No archived vehicle pass requests found.',
+            emptyTable: 'No archived vehicle pass requests found.'
+        },
+        drawCallback: function() {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                [].slice.call(document.querySelectorAll('#archive-panel [data-bs-toggle="tooltip"]')).forEach(function(el) {
+                    bootstrap.Tooltip.getOrCreateInstance(el);
+                });
+            }
+        }
+    });
+
+    // Select-all (delegated: rows are loaded via AJAX)
+    $(document).on('change', '.select-all-active', function() {
+        var checked = $(this).is(':checked');
+        $('#active-panel .row-select').prop('checked', checked);
+    });
+
     var activeTab = document.getElementById('active-tab');
     var archiveTab = document.getElementById('archive-tab');
     var activePanel = document.getElementById('active-panel');
@@ -330,17 +281,12 @@ document.addEventListener('DOMContentLoaded', function() {
         activeTab.addEventListener('shown.bs.tab', function () {
             activePanel.style.display = 'block';
             archivePanel.style.display = 'none';
-            if (typeof window.adjustAllDataTables === 'function') { window.adjustAllDataTables(); }
+            activeVehiclePassTable.columns.adjust();
         });
         archiveTab.addEventListener('shown.bs.tab', function () {
             activePanel.style.display = 'none';
             archivePanel.style.display = 'block';
-            if (typeof window.adjustAllDataTables === 'function') { window.adjustAllDataTables(); }
-        });
-    }
-    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-        [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')).forEach(function(el) {
-            new bootstrap.Tooltip(el);
+            archiveVehiclePassTable.columns.adjust();
         });
     }
 });

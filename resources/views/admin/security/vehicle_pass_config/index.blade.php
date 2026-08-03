@@ -38,69 +38,44 @@
                             <th style="width:110px;">Status</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($configs as $index => $config)
-                            <tr data-pk="{{ $config->pk }}">
-                                <td>{{ $index + 1 }}</td>
-                                <td>
-                                    @if($config->vehicleType)
-                                        {{ $config->vehicleType->vehicle_type }}
-                                    @else
-                                        <span class="text-muted">--</span>
-                                    @endif
-                                </td>
-                                <td>{{ number_format($config->charges, 2) }}</td>
-                                <td class="text-center">{{ $config->start_counter }}</td>
-                                <td>
-                                    <span class="badge bg-info text-dark">
-                                        VP{{ now()->format('Ymd') }}{{ str_pad($config->start_counter, 4, '0', STR_PAD_LEFT) }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="d-flex gap-2">
-                                        <a href="{{ route('admin.security.vehicle_pass_config.edit', encrypt($config->pk)) }}" class="text-success" title="Edit">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i>
-                                        </a>
-                                        <form action="{{ route('admin.security.vehicle_pass_config.delete', encrypt($config->pk)) }}" method="POST" onsubmit="return confirm('Delete this configuration?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-link p-0 text-danger" title="Delete">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="form-check form-switch d-inline-block">
-                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                            data-url="{{ route('admin.security.vehicle_pass_config.toggle.status', encrypt($config->pk)) }}"
-                                            {{ $config->active_inactive == 1 ? 'checked' : '' }}>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="text-center text-muted">No configurations found. Please add one.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
     </div>
 </div>
-@include('components.mess-master-datatables', ['tableId' => 'vehiclePassConfigTable', 'searchPlaceholder' => 'Search configurations...', 'orderColumn' => 0, 'actionColumnIndex' => [5, 6], 'infoLabel' => 'configurations'])
 @endsection
 
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // Status toggle
-    $('.status-toggle').on('change', function() {
+    var vehiclePassConfigTable = $('#vehiclePassConfigTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: '{{ route('admin.security.vehicle_pass_config.index') }}',
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'vehicle_type_name', name: 'vehicle_type_name', orderable: false, searchable: false },
+            { data: 'charges', name: 'charges', className: 'text-start' },
+            { data: 'start_counter', name: 'start_counter', className: 'text-center' },
+            { data: 'preview', name: 'preview', orderable: false, searchable: false },
+            { data: 'actions', name: 'actions', orderable: false, searchable: false },
+            { data: 'status', name: 'status', orderable: false, searchable: false }
+        ],
+        order: [[0, 'desc']],
+        language: {
+            search: 'Search configurations:',
+            zeroRecords: 'No configurations found. Please add one.',
+            emptyTable: 'No configurations found. Please add one.'
+        }
+    });
+
+    // Status toggle (delegated: rows are loaded via AJAX)
+    $('#vehiclePassConfigTable').on('change', '.status-toggle', function() {
         const url = $(this).data('url');
         const checkbox = $(this);
         const isChecked = checkbox.is(':checked');
-        
+
         $.ajax({
             url: url,
             type: 'POST',
@@ -110,6 +85,7 @@ $(document).ready(function() {
             },
             success: function(response) {
                 toastr.success(response.message || 'Status updated successfully');
+                vehiclePassConfigTable.ajax.reload(null, false);
             },
             error: function(xhr) {
                 checkbox.prop('checked', !isChecked);

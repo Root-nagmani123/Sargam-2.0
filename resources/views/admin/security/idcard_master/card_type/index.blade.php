@@ -37,67 +37,12 @@
                             <th style="width:140px;">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($cardTypes as $index => $ct)
-                            <tr>
-                                <td>{{ $index + 1 }}</td>
-                                <td>{{ $ct->sec_card_name }}</td>
-                                <td>
-                                    @php
-                                        $hasStatus = property_exists($ct, 'active_inactive');
-                                        $isActive = $hasStatus ? ((int) $ct->active_inactive === 1) : true;
-                                    @endphp
-                                    @if($hasStatus)
-                                        <div class="form-check form-switch d-inline-block">
-                                            <input class="form-check-input status-toggle"
-                                                   type="checkbox"
-                                                   role="switch"
-                                                   data-table="sec_id_cardno_master"
-                                                   data-column="active_inactive"
-                                                   data-id="{{ $ct->pk }}"
-                                                   data-id_column="pk"
-                                                   {{ $isActive ? 'checked' : '' }}>
-                                        </div>
-                                    @else
-                                        <span class="badge bg-secondary">N/A</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <div class="d-flex gap-2">
-                                        <a href="{{ route('admin.security.idcard_card_type.edit', encrypt($ct->pk)) }}" class="text-success openEditCardType" title="Edit">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i>
-                                        </a>
-                                        @php
-                                            $canDeleteCardType = ! $hasStatus || ! $isActive;
-                                        @endphp
-                                        @if($canDeleteCardType)
-                                            <form action="{{ route('admin.security.idcard_card_type.delete', encrypt($ct->pk)) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this Card Type?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-link p-0 text-danger" title="Delete">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i>
-                                                </button>
-                                            </form>
-                                        @else
-                                            <span class="text-muted" style="cursor:not-allowed;" title="Set status to Inactive before delete">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:22px;opacity:0.4;">delete</i>
-                                            </span>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="4" class="text-center text-muted">No Card Types found.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
     </div>
 </div>
-@include('components.mess-master-datatables', ['tableId' => 'cardTypeTable', 'searchPlaceholder' => 'Search card types...', 'orderColumn' => 0, 'actionColumnIndex' => [2, 3], 'infoLabel' => 'card types'])
 
 <div class="modal fade" id="cardTypeModal" tabindex="-1">
     <div class="modal-dialog">
@@ -110,8 +55,26 @@
 
 @push('scripts')
 <script>
-(function () {
-    // After status toggle (global custom.js → /admin/toggle-status), reload so delete icons match DB.
+$(document).ready(function () {
+    var cardTypeTable = $('#cardTypeTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: '{{ route('admin.security.idcard_card_type.index') }}',
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'sec_card_name', name: 'sec_card_name' },
+            { data: 'status', name: 'status', orderable: false, searchable: false },
+            { data: 'actions', name: 'actions', orderable: false, searchable: false }
+        ],
+        order: [[1, 'asc']],
+        language: {
+            search: 'Search card types:',
+            zeroRecords: 'No Card Types found.',
+            emptyTable: 'No Card Types found.'
+        }
+    });
+
+    // After status toggle (global custom.js → /admin/toggle-status), reload table so delete icons match DB.
     $(document).ajaxSuccess(function (event, xhr, settings) {
         if (!window.location.pathname.includes('idcard-card-type')) {
             return;
@@ -135,12 +98,10 @@
             isCardTypeTable = data.table === 'sec_id_cardno_master';
         }
         if (isCardTypeTable) {
-            window.location.reload();
+            cardTypeTable.ajax.reload(null, false);
         }
     });
-})();
 
-$(document).ready(function () {
     $('#openCreateCardType').on('click', function (e) {
         e.preventDefault();
         $.get($(this).attr('href'), function (data) {

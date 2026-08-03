@@ -6,13 +6,49 @@ use App\Http\Controllers\Controller;
 use App\Models\SecVehicleType;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Yajra\DataTables\Facades\DataTables;
 
 class VehicleTypeController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $vehicleTypes = SecVehicleType::orderBy('pk', 'desc')->get();
-        return view('admin.security.vehicle_type.index', compact('vehicleTypes'));
+        if ($request->ajax()) {
+            $query = SecVehicleType::query()->orderBy('pk', 'desc');
+
+            return DataTables::of($query)
+                ->addIndexColumn()
+                ->addColumn('description', function ($vt) {
+                    return $vt->description ?? '--';
+                })
+                ->addColumn('actions', function ($vt) {
+                    $editUrl = route('admin.security.vehicle_type.edit', encrypt($vt->pk));
+                    $deleteUrl = route('admin.security.vehicle_type.delete', encrypt($vt->pk));
+                    $token = csrf_token();
+
+                    return '<div class="d-flex gap-2">'
+                        . '<a href="' . e($editUrl) . '" class="text-success" title="Edit">'
+                        . '<i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i></a>'
+                        . '<form action="' . e($deleteUrl) . '" method="POST" onsubmit="return confirm(\'Delete this Vehicle Type?\')">'
+                        . '<input type="hidden" name="_token" value="' . e($token) . '">'
+                        . '<input type="hidden" name="_method" value="DELETE">'
+                        . '<button type="submit" class="btn btn-link p-0 text-danger" title="Delete">'
+                        . '<i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i></button>'
+                        . '</form></div>';
+                })
+                ->addColumn('status', function ($vt) {
+                    $toggleUrl = route('admin.security.vehicle_type.toggle.status', encrypt($vt->pk));
+                    $checked = $vt->active_inactive == 1 ? 'checked' : '';
+
+                    return '<div class="form-check form-switch d-inline-block">'
+                        . '<input class="form-check-input status-toggle" type="checkbox" role="switch" data-url="' . e($toggleUrl) . '" ' . $checked . '>'
+                        . '</div>';
+                })
+                ->rawColumns(['actions', 'status'])
+                ->setRowAttr(['data-pk' => fn ($vt) => $vt->pk])
+                ->make(true);
+        }
+
+        return view('admin.security.vehicle_type.index');
     }
 
     public function create(Request $request)

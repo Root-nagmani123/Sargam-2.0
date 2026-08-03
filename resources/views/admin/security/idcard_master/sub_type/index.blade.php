@@ -38,71 +38,12 @@
                             <th style="width:140px;">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($subTypes as $index => $st)
-                            <tr>
-                                <td>{{ $index + 1 }}</td>
-                                <td>{{ $st->sec_card_name }}</td>
-                                <td>
-                                    @if($st->card_name === 'p')
-                                        <span class="badge bg-primary">Permanent</span>
-                                    @elseif($st->card_name === 'c')
-                                        <span class="badge bg-info">Contractual</span>
-                                    @else
-                                        <span class="badge bg-secondary">{{ $st->card_name }}</span>
-                                    @endif
-                                </td>
-                                <td>{{ $st->config_name }}</td>
-                                <td>
-                                    <div class="form-check form-switch d-inline-block">
-                                        <input class="form-check-input status-toggle"
-                                               type="checkbox"
-                                               role="switch"
-                                               data-table="sec_id_cardno_config_map"
-                                               data-column="active_inactive"
-                                               data-id="{{ $st->pk }}"
-                                               data-id_column="pk"
-                                               {{ ($st->active_inactive ?? 1) == 1 ? 'checked' : '' }}>
-                                    </div>
-                                </td>
-                                <td>
-                                    @php $subIsActive = (int) ($st->active_inactive ?? 1) === 1; @endphp
-                                    <div class="d-flex gap-2 align-items-center">
-                                        <a href="{{ route('admin.security.idcard_sub_type.edit', encrypt($st->pk)) }}" class="text-success openEditSubType" title="Edit">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i>
-                                        </a>
-                                        @if($subIsActive)
-                                            <button type="button"
-                                                    class="btn btn-link p-0 text-secondary"
-                                                    disabled
-                                                    aria-disabled="true"
-                                                    title="Cannot delete while active. Set status to inactive first.">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i>
-                                            </button>
-                                        @else
-                                            <form action="{{ route('admin.security.idcard_sub_type.delete', encrypt($st->pk)) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this Sub Type mapping?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-link p-0 text-danger" title="Delete">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i>
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="text-center text-muted">No Sub Types found.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
     </div>
 </div>
-@include('components.mess-master-datatables', ['tableId' => 'subTypeTable', 'searchPlaceholder' => 'Search sub types...', 'orderColumn' => 0, 'actionColumnIndex' => [4, 5], 'infoLabel' => 'sub types'])
 
 <div class="modal fade" id="subTypeModal" tabindex="-1">
     <div class="modal-dialog">
@@ -116,6 +57,26 @@
 @push('scripts')
 <script>
 $(document).ready(function () {
+    var subTypeTable = $('#subTypeTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: '{{ route('admin.security.idcard_sub_type.index') }}',
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'sec_card_name', name: 't.sec_card_name' },
+            { data: 'card_name_label', name: 'm.card_name' },
+            { data: 'config_name', name: 'm.config_name' },
+            { data: 'status', name: 'status', orderable: false, searchable: false },
+            { data: 'actions', name: 'actions', orderable: false, searchable: false }
+        ],
+        order: [[1, 'asc'], [3, 'asc']],
+        language: {
+            search: 'Search sub types:',
+            zeroRecords: 'No Sub Types found.',
+            emptyTable: 'No Sub Types found.'
+        }
+    });
+
     $('#openCreateSubType').on('click', function (e) {
         e.preventDefault();
         $.get($(this).attr('href'), function (data) {
@@ -134,7 +95,7 @@ $(document).ready(function () {
     });
 
     // After status toggle success (global custom.js posts to /admin/toggle-status),
-    // reload the page so Active/Inactive UI + delete restrictions match DB.
+    // reload the table so Active/Inactive UI + delete restrictions match DB.
     $(document).ajaxSuccess(function (event, xhr, settings) {
         if (!settings || !settings.url) return;
 
@@ -153,7 +114,7 @@ $(document).ready(function () {
         }
 
         if (window.location.pathname.includes('idcard-sub-type') || tableName === 'sec_id_cardno_config_map') {
-            window.location.reload();
+            subTypeTable.ajax.reload(null, false);
         }
     });
 });
