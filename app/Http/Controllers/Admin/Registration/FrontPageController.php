@@ -427,6 +427,10 @@ class FrontPageController extends Controller
                 'required',
                 'string',
                 'min:8',
+                // Capped so Username + Password together can't push the FC-CRED1 DLT
+                // SMS template (fixed-length Portal_Link + static text) over its
+                // approved total length — see GupshupSmsService total-length guard.
+                'max:16',
                 // Strong password policy (CWE-521): upper + lower + number + special char.
                 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/',
             ],
@@ -438,6 +442,7 @@ class FrontPageController extends Controller
             'reg_mobile.required' => 'Mobile number is required.',
             'reg_mobile.digits' => 'Mobile number must be 10 digits.',
             'reg_password.min' => 'The password must be at least 8 characters.',
+            'reg_password.max' => 'The password must not exceed 16 characters.',
             'reg_password.regex' => 'Password must include uppercase, lowercase, a number and a special character.',
             'reg_confirm_password.same' => 'The confirm password and password must match.',
         ], [
