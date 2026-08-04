@@ -80,10 +80,15 @@ test.describe(`S-4 visual baseline [${MODE}]`, () => {
 
     for (const route of routes) {
         test(`visual: ${route}`, async () => {
-            // Pinned to chrome; cross-browser is a separate Phase 15 activity.
-            // Checked here (not at describe level) because a describe-level
-            // test.skip callback receives fixtures only — never testInfo.
-            test.skip(test.info().project.name !== 'chrome', 'baseline runs on chrome');
+            // Phase 15 (cross-browser regression): the baseline runs on the visual
+            // projects. Each browser keeps its OWN per-project snapshot
+            // (`<slug>-<project>-win32.png`) — pixel-comparing across engines is
+            // meaningless (font hinting/antialiasing always differ), so each engine is
+            // regressed against its own baseline. Checked here (not at describe level)
+            // because a describe-level test.skip callback receives fixtures only.
+            const VISUAL_PROJECTS = ['chrome', 'firefox', 'safari-webkit', 'edge'];
+            test.skip(!VISUAL_PROJECTS.includes(test.info().project.name),
+                'baseline runs on the visual projects only');
             test.setTimeout(90 * 1000);
 
             const response = await page.goto(route, {
