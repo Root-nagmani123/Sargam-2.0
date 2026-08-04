@@ -169,6 +169,7 @@ Re-pointing layouts at a single compiled bundle remains desirable — but it bel
 | 2026-08-03 | **Design tokens** encode LBSNAA navy `#004384` (9.83:1 AAA) and the 3 WCAG-fixed semantics: info `#0067A6` (6.02:1), success `#2F7A12` (5.37:1), warning `#8F5716` (5.93:1) — the **darken-hue** option for P0-5. | Measured with the WCAG 2.1 formula. Darken chosen as the conventional default; still subject to design-team confirmation (P0-5). |
 | 2026-08-03 | **Phase 10 (jQuery plugins) complete.** SweetAlert2 self-hosted (CDN `@11` → local `sweetalert2.all.min.js` v11.26.25, 12 files repointed); full audit produced (`docs/UX4G-Phase-10-jQuery-Plugins.md`). Gate = **58 passed, zero diff**. Remaining CDN plugins (choices.js ×80, jQuery 3.6.0 ×15, bootstrap-icons ×35, daterangepicker/select2/tom-select/flatpickr/summernote/Google Fonts) recorded as gated self-host follow-ups; jquery-steps → UX4G Stepper deferred to Phase 11. | Self-host one plugin at a time behind the gate rather than a 250-edit CDN sweep. `.all` bundle is the only SweetAlert2 build exposing `window.Swal`. |
 | 2026-08-03 | **Visual gate must run against XAMPP Apache (:8080 ephemeral vhost), not `php artisan serve`.** | Windows `artisan serve`/`php -S` is single-threaded and cannot fork; a page's ~40 parallel asset requests overflow the accept backlog → `ERR_CONNECTION_REFUSED` on every route (also drops assets → corrupt screenshots). Apache is process-pooled. Front-controller rewrite is baked into `gate-vhost.conf` since the app has no `public/.htaccess`. |
+| 2026-08-04 | **Phase 11 (Custom ERP components) complete.** Custom component layer (`<x-breadcrum>` ×309, `<x-session>` ×156, `<x-input>` ×147, `<x-select>` ×77, steppers) audited — **already BS5/UX4G-clean, no BS4-isms**. Shipped: `aria-current="step"` on the two steppers that lacked it (parity with `fc-stepper`). **jquery-steps = KEEP** (member wizard's step-gating is AJAX business logic; plugin is Bootstrap-agnostic; blueprint's own "Keep" row wins over its "REPLACE" row). Gate = **58 passed, zero diff**. Deliverable: `docs/UX4G-Phase-11-Custom-ERP-Components.md`. | Replacing jquery-steps would rewrite `/member/validate-step` view logic — forbidden by migration rules. Deferred as a separately-approved feature workstream. Phase 10 correction: jQuery CDN refs are local-first `onerror` fallbacks (low risk), `form-wizard.js` is dead code. |
 
 ### C.0 Pre-flight gates — must clear before Phase 1
 
@@ -222,7 +223,7 @@ These are **pre-existing production defects**, independent of UX4G. Fixing them 
 | 8 — Data components | Phase 5 | ⏳ |
 | 9 — Interactive | Phase 3 | ⏳ |
 | 10 — jQuery plugins | Phase 8 (DataTables theme depends on Tables) | ✅ **Done (2026-08-03)** — SweetAlert2 self-hosted; audit + follow-ups in `UX4G-Phase-10-jQuery-Plugins.md`; gate 58/58 |
-| 11 — Custom ERP components | Phases 5–9 | ⏳ |
+| 11 — Custom ERP components | Phases 5–9 | ✅ **Done (2026-08-04)** — custom layer already BS5-clean; stepper `aria-current` parity; jquery-steps KEEP; gate 58/58. `UX4G-Phase-11-Custom-ERP-Components.md` |
 | 12 — Pages | **All** component phases | ⏳ |
 | 13 — Accessibility | Runs after every phase | ⏳ |
 | 14 — Performance | Phase 12 | ⏳ |

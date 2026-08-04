@@ -21,6 +21,7 @@
             <div class="d-flex align-items-center {{ $i < count($stepLabels)-1 ? 'flex-grow-1' : '' }}">
                 <a href="{{ $isDone || $isCurrent ? route($stepRoutes[$i]) : '#' }}"
                    class="d-flex flex-column align-items-center text-decoration-none flex-shrink-0"
+                   @if($isCurrent) aria-current="step" @endif
                    style="min-width:56px;">
                     <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold"
                          style="width:32px;height:32px;font-size:0.8rem;

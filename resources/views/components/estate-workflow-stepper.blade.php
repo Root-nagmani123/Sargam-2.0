@@ -51,7 +51,7 @@
         <nav class="d-flex flex-wrap align-items-center gap-1 gap-sm-2">
             @foreach ($stages as $key => $stage)
                 @if ($key === $current)
-                    <span class="badge bg-primary px-2 py-1">{{ $stage['label'] }}</span>
+                    <span class="badge bg-primary px-2 py-1" aria-current="step">{{ $stage['label'] }}</span>
                 @else
                     <a href="{{ route($stage['route'], $estateStepperRouteParams) }}" class="badge bg-light text-dark border px-2 py-1 text-decoration-none">{{ $stage['label'] }}</a>
                 @endif
