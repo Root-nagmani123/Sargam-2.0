@@ -104,4 +104,47 @@ return [
     'document_place'            => env('FC_DOCUMENT_PLACE', 'Mussoorie'),
     'document_place_hi'         => env('FC_DOCUMENT_PLACE_HI', 'मसूरी'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Form-builder delete actions (default OFF while the intake is live)
+    |--------------------------------------------------------------------------
+    |
+    | Deleting a form / step / field / group / document master from the admin
+    | form builder is destructive and cascades to trainee data, and this intake is
+    | already live while the rest of the project is still in development. The delete
+    | buttons are therefore hidden everywhere in the form builder and the delete
+    | endpoints refuse the request, so a stale tab or a hand-crafted POST cannot
+    | delete either. Nothing else changes — the delete code itself is untouched.
+    |
+    | Re-enable with FC_FORM_BUILDER_DELETE_ENABLED=true (re-run
+    | `php artisan config:cache` if config is cached).
+    |
+    */
+    'form_builder_delete_enabled' => (bool) env('FC_FORM_BUILDER_DELETE_ENABLED', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Joining letter shown on the trainee's form dashboard (per intake)
+    |--------------------------------------------------------------------------
+    |
+    | joining_letter — the default letter, shown on EVERY dynamic form's dashboard. This is
+    | deliberate: form slugs differ between environments (the 101st Foundation Course is
+    | 'fc-101' on dev but 'fc-102' on production), so keying the letter on the slug meant the
+    | card silently vanished on prod. One default that always applies is the predictable
+    | behaviour. Set it to null/'' to hide the card everywhere.
+    |
+    | joining_letters — optional per-form OVERRIDES, keyed by fc_forms.form_slug. Use these
+    | when an intake needs its own letter, or '' to suppress the card for one form (e.g. the
+    | template). An entry whose slug matches nothing is simply ignored.
+    |
+    | Adding an intake: drop the PDF in public/fc-documents/ and either replace the default
+    | or add a per-slug override below.
+    |
+    */
+    'joining_letter' => env('FC_JOINING_LETTER', 'fc-documents/1st-communication-letter-to-ots.pdf'),
+
+    'joining_letters' => [
+        // 'fc_template' => '',   // example: no letter on the reusable template
+    ],
+
 ];

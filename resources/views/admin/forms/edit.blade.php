@@ -217,10 +217,12 @@
                                         <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveStep({{ $step->id }}, 'down')" title="Move Down">
                                             <i class="bi bi-arrow-down"></i>
                                         </button>
-                                        <form method="POST" action="{{ route('fc-reg.admin.forms.step.delete', $step) }}" class="d-inline" onsubmit="return confirm('Delete this step and all its fields?')">
-                                            @csrf @method('DELETE')
-                                            <button class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
-                                        </form>
+                                        @if(config('fc.form_builder_delete_enabled'))
+                                            <form method="POST" action="{{ route('fc-reg.admin.forms.step.delete', $step) }}" class="d-inline" onsubmit="return confirm('Delete this step and all its fields?')">
+                                                @csrf @method('DELETE')
+                                                <button class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        @endif
                                     </td>
                                 </tr>
                             @endforeach
