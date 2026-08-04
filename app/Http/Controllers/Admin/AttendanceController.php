@@ -390,12 +390,21 @@ class AttendanceController extends Controller
              if (hasRole('Student-OT')) {
             // Student-OT User Page - Show only their own attendance
             $studentPk = auth()->user()->user_id;
-            return '<a href="' . route('attendance.OT.student_mark.student', [
+            $params = [
                 'group_pk' => $row->group_pk,
                 'course_pk' => $row->Programme_pk,
                 'timetable_pk' => $row->timetable_pk,
-                'student_pk' => $studentPk
-            ]) . '" class="btn btn-primary btn-sm 1">Show My Attendance</a>';
+                'student_pk' => $studentPk,
+            ];
+            // Open the detail page scoped to THIS row's session date, so it shows
+            // that date's attendance instead of defaulting to today (which is why
+            // it was landing on "No attendance records found").
+            $sessionDate = optional($row->timetable)->START_DATE;
+            if ($sessionDate) {
+                $params['filter_date'] = date('Y-m-d', strtotime($sessionDate));
+            }
+            return '<a href="' . route('attendance.OT.student_mark.student', $params)
+                . '" class="btn btn-primary btn-sm 1">Show My Attendance</a>';
         } elseif (hasRole('Guest Faculty') || hasRole('Internal Faculty')) {
             // Faculty User Page
             return '<a href="' . route('attendance.student_mark', [
