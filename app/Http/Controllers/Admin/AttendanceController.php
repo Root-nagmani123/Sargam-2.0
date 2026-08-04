@@ -890,10 +890,15 @@ $currentPath = $segments[1] ?? null;
             $validated = $request->validate([
                 'student' => 'required|array',
                 'student.*' => 'required|in:0,1,2,3,4,5,6,7', // values from radio buttons
+                'other_exemption' => 'nullable|array',
+                'other_exemption_comments' => 'nullable|array',
+                'other_exemption_comments.*' => 'nullable|string|max:2000',
             ]);
 
             $group_pk = $request->group_pk; // if you have session reference
             $course_pk = $request->course_pk;
+            $otherFlags = (array) $request->input('other_exemption', []);
+            $otherComments = (array) $request->input('other_exemption_comments', []);
 
             // An OT on MDO / Escort-Moderator / Other duty, or carrying a medical
             // exemption for this session, is always Present and cannot be changed.
@@ -908,11 +913,27 @@ $currentPath = $segments[1] ?? null;
                         return redirect()->back()->with('error', 'Invalid attendance status for student ID: ' . $studentPk);
                     }
 
+                    // Reason column is cleared unless this OT is an Other Exemption.
+                    $otherComment = null;
+
                     if ($exemptions->isExempt((int) $studentPk)) {
                         // '1' as a STRING, not 1. status is ENUM('0','1',...) and MySQL
                         // reads an integer as a 1-based index into the member list, so
                         // int 1 silently stores '0' — Not Marked.
                         $attendanceStatus = '1'; // Present
+                    } elseif (!empty($otherFlags[$studentPk])) {
+                        // "Other Exemption" is its own flag. The attendance status is
+                        // stored as Absent; only the typed reason distinguishes it,
+                        // kept in its own column. A reason is required.
+                        $otherComment = isset($otherComments[$studentPk]) ? trim((string) $otherComments[$studentPk]) : '';
+                        if ($otherComment === '') {
+                            $message = 'Please enter the Other Exemption reason before saving.';
+                            if ($request->ajax() || $request->expectsJson()) {
+                                return response()->json(['status' => 'error', 'message' => $message], 422);
+                            }
+                            return redirect()->back()->with('error', $message);
+                        }
+                        $attendanceStatus = '3'; // Absent
                     }
 
                     // Create or update the attendance record
@@ -925,6 +946,7 @@ $currentPath = $segments[1] ?? null;
                         ],
                         [
                             'status' => $attendanceStatus,
+                            'other_exemption_comments' => $otherComment,
                         ]
                     );
 
@@ -1130,6 +1152,12 @@ $currentPath = $segments[1] ?? null;
                             break;
                         case 3:
                             $record['attendance_status'] = 'Absent';
+                            // Other Exemption is stored as Absent + a typed reason;
+                            // surface it in the Exemption / Comment columns.
+                            if (trim((string) ($attendance->other_exemption_comments ?? '')) !== '') {
+                                $record['exemption_type'] = 'Other Exemption';
+                                $record['exemption_comment'] = $attendance->other_exemption_comments;
+                            }
                             break;
                         case 4:
                             $record['attendance_status'] = 'Present';
@@ -1455,6 +1483,12 @@ $currentPath = $segments[1] ?? null;
                             break;
                         case 3:
                             $record['attendance_status'] = 'Absent';
+                            // Other Exemption is stored as Absent + a typed reason;
+                            // surface it in the Exemption / Comment columns.
+                            if (trim((string) ($attendance->other_exemption_comments ?? '')) !== '') {
+                                $record['exemption_type'] = 'Other Exemption';
+                                $record['exemption_comment'] = $attendance->other_exemption_comments;
+                            }
                             break;
                         case 4:
                             $record['attendance_status'] = 'Present';
