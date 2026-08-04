@@ -138,15 +138,15 @@
                         @foreach ($pathPage->faqs as $index => $faq)
                             <div class="accordion-item border-start-0 border-end-0">
                                 <h3 class="accordion-header m-0" id="heading{{ $index }}">
-                                    <button class="accordion-button {{ $index > 0 ? 'collapsed' : '' }} shadow-none rounded-0"
+                                    <button class="accordion-button collapsed shadow-none rounded-0"
                                         type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ $index }}"
-                                        aria-expanded="{{ $index === 0 ? 'true' : 'false' }}"
+                                        aria-expanded="false"
                                         aria-controls="collapse{{ $index }}">
-                                        {{ $faq->header }}
+                                        {!! $faq->header !!}
                                     </button>
                                 </h3>
                                 <div id="collapse{{ $index }}"
-                                    class="accordion-collapse collapse {{ $index === 0 ? 'show' : '' }}"
+                                    class="accordion-collapse collapse"
                                     aria-labelledby="heading{{ $index }}" data-bs-parent="#faqAccordion">
                                     <div class="accordion-body pt-0 small">
                                         {!! $faq->content !!}
