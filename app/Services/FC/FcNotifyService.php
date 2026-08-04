@@ -103,7 +103,7 @@ class FcNotifyService
             'Programme_Name' => $this->programme($programmeName),
             'Registration_ID' => $username,
             'Password' => $password,
-            'Portal_Link' => $this->portal($registrationPk),
+            'Portal_Link' => $this->loginPortal($registrationPk),
             'Institute_Name' => $this->institute(),
         ];
 
