@@ -72,5 +72,6 @@ class Kernel extends HttpKernel
         'fc.activity.coordinator' => \App\Http\Middleware\EnsureFcActivityCoordinator::class,
         'fc.activity.matrix' => \App\Http\Middleware\EnsureFcActivityMatrixAccess::class,
         'fc.reg.admin' => \App\Http\Middleware\EnsureFcRegAdmin::class,
+        'issue.reports.admin' => \App\Http\Middleware\EnsureIssueReportsAdmin::class,
     ];
 }

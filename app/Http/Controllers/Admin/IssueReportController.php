@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -72,13 +73,36 @@ class IssueReportController extends Controller
                 'sub_module'    => $report->sub_module,
                 'description'   => $report->description,
                 'page_url'      => $report->page_url,
-                'attachment_url'=> $report->attachment ? url('storage/' . $report->attachment) : null,
+                'attachment_url'=> $report->attachment ? route('issue-reports.attachment', $report->id) : null,
                 'status'        => (int) $report->status,
                 'status_label'  => self::STATUS_LABELS[(int) $report->status] ?? 'Open',
                 'reported_on'   => $report->created_at ? Carbon::parse($report->created_at)->format('d-m-Y h:i A') : null,
             ],
             'status_options' => self::STATUS_LABELS,
         ]);
+    }
+
+    /**
+     * Serve an issue's attachment (private disk) to the admin or the reporter only.
+     */
+    public function attachment($id)
+    {
+        $report = IssueReport::findOrFail($id);
+
+        if (! $report->attachment) {
+            abort(404);
+        }
+
+        $userId = Auth::user()->user_id ?? Auth::id();
+        if (! isSidebarPrivilegedUser() && (int) $report->reported_by !== (int) $userId) {
+            abort(403);
+        }
+
+        if (! Storage::disk('local')->exists($report->attachment)) {
+            abort(404);
+        }
+
+        return Storage::disk('local')->response($report->attachment);
     }
 
     /**
@@ -195,10 +219,10 @@ class IssueReportController extends Controller
 
         if ($deptFilter      !== '') $query->where('module_name', $deptFilter);
         if ($submoduleFilter !== '') $query->where('sub_module', $submoduleFilter);
-        if ($dateFrom        !== '') $query->whereDate('created_at', '>=', $dateFrom);
-        if ($dateTo          !== '') $query->whereDate('created_at', '<=', $dateTo);
+        if ($dateFrom        !== '') $query->where('created_at', '>=', $dateFrom . ' 00:00:00');
+        if ($dateTo          !== '') $query->where('created_at', '<=', $dateTo . ' 23:59:59');
 
-        $reports  = $query->orderBy('id', 'desc')->get();
+        $query->orderBy('id', 'desc');
         $filename = 'my_issue_reports_' . date('Ymd_His') . '.csv';
 
         $columnDefs = [
@@ -215,20 +239,22 @@ class IssueReportController extends Controller
             ? array_values(array_intersect(array_keys($columnDefs), $requestedKeys))
             : array_keys($columnDefs);
 
-        return response()->stream(function () use ($reports, $columnDefs, $activeKeys) {
+        return response()->stream(function () use ($query, $columnDefs, $activeKeys) {
             $h = fopen('php://output', 'w');
             fprintf($h, chr(0xEF) . chr(0xBB) . chr(0xBF));
             fputcsv($h, array_map(fn ($key) => $columnDefs[$key], $activeKeys));
-            foreach ($reports as $i => $r) {
+            $i = 0;
+            foreach ($query->cursor() as $r) {
+                $i++;
                 $label = in_array((int) $r->status, [IssueReport::STATUS_OPEN, IssueReport::STATUS_IN_PROGRESS])
                     ? 'Active' : 'Fixed Issue';
                 $row = [
-                    'sno'             => $i + 1,
+                    'sno'             => $i,
                     'date'            => $r->created_at ? Carbon::parse($r->created_at)->format('d-m-Y') : '',
                     'dept_name'       => $r->module_name ?? '',
-                    'sub_module_name' => $r->sub_module  ?? '',
-                    'description'     => $r->description ?? '',
-                    'attachment'      => $r->attachment ? url('storage/' . $r->attachment) : '',
+                    'sub_module_name' => sanitize_export_cell($r->sub_module ?? ''),
+                    'description'     => sanitize_export_cell($r->description ?? ''),
+                    'attachment'      => $r->attachment ? route('issue-reports.attachment', $r->id) : '',
                     'status'          => $label,
                 ];
                 fputcsv($h, array_map(fn ($key) => $row[$key], $activeKeys));
@@ -272,7 +298,7 @@ class IssueReportController extends Controller
         $report = IssueReport::findOrFail($id);
 
         if ($report->attachment) {
-            Storage::disk('public')->delete($report->attachment);
+            Storage::disk('local')->delete($report->attachment);
         }
 
         $report->delete();
@@ -330,10 +356,10 @@ class IssueReportController extends Controller
 
         if ($deptFilter      !== '') $query->where('issue_reports.module_name', $deptFilter);
         if ($submoduleFilter !== '') $query->where('issue_reports.sub_module', $submoduleFilter);
-        if ($dateFrom        !== '') $query->whereDate('issue_reports.created_at', '>=', $dateFrom);
-        if ($dateTo          !== '') $query->whereDate('issue_reports.created_at', '<=', $dateTo);
+        if ($dateFrom        !== '') $query->where('issue_reports.created_at', '>=', $dateFrom . ' 00:00:00');
+        if ($dateTo          !== '') $query->where('issue_reports.created_at', '<=', $dateTo . ' 23:59:59');
 
-        $reports  = $query->orderBy('issue_reports.id', 'desc')->get();
+        $query->orderBy('issue_reports.id', 'desc');
         $filename = 'issue_reports_' . date('Ymd_His') . '.csv';
 
         $columnDefs = [
@@ -351,23 +377,25 @@ class IssueReportController extends Controller
             ? array_values(array_intersect(array_keys($columnDefs), $requestedKeys))
             : array_keys($columnDefs);
 
-        return response()->stream(function () use ($reports, $columnDefs, $activeKeys) {
+        return response()->stream(function () use ($query, $columnDefs, $activeKeys) {
             $h = fopen('php://output', 'w');
             fprintf($h, chr(0xEF) . chr(0xBB) . chr(0xBF));
             fputcsv($h, array_map(fn ($key) => $columnDefs[$key], $activeKeys));
-            foreach ($reports as $i => $r) {
+            $i = 0;
+            foreach ($query->cursor() as $r) {
+                $i++;
                 $name  = trim(($r->reporter_first ?? '') . ' ' . ($r->reporter_last ?? ''));
                 if ($name === '') $name = $r->reporter_username ?? ('User #' . $r->reported_by);
                 $label = in_array((int) $r->status, [IssueReport::STATUS_OPEN, IssueReport::STATUS_IN_PROGRESS])
                     ? 'Active' : 'Fixed Issue';
                 $row = [
-                    'sno'             => $i + 1,
+                    'sno'             => $i,
                     'date'            => $r->created_at ? Carbon::parse($r->created_at)->format('d-m-Y') : '',
                     'dept_name'       => $r->module_name ?? '',
-                    'sub_module_name' => $r->sub_module  ?? '',
+                    'sub_module_name' => sanitize_export_cell($r->sub_module ?? ''),
                     'reporter'        => $name,
-                    'description'     => $r->description ?? '',
-                    'attachment'      => $r->attachment ? url('storage/' . $r->attachment) : '',
+                    'description'     => sanitize_export_cell($r->description ?? ''),
+                    'attachment'      => $r->attachment ? route('issue-reports.attachment', $r->id) : '',
                     'status'          => $label,
                 ];
                 fputcsv($h, array_map(fn ($key) => $row[$key], $activeKeys));
@@ -434,7 +462,7 @@ class IssueReportController extends Controller
                         'attachment' => ['The upload failed. Please try again or use a different file.'],
                     ]);
                 }
-                $path = $file->store('issue_reports', 'public');
+                $path = $file->store('issue_reports', 'local');
             }
 
             $report = IssueReport::create([
@@ -444,7 +472,7 @@ class IssueReportController extends Controller
                 'sub_module'    => $validated['sub_module'] ?? null,
                 'description'   => $validated['description'],
                 'attachment'    => $path,
-                'page_url'      => $validated['page_url'] ?? $request->headers->get('referer'),
+                'page_url'      => $validated['page_url'] ?? $this->safeRefererUrl($request),
                 'status'        => IssueReport::STATUS_OPEN,
             ]);
 
@@ -463,12 +491,13 @@ class IssueReportController extends Controller
                 $notificationService = app(\App\Services\NotificationService::class);
                 $message = $reporterName . ' reported an issue in ' . trim($group->name) . '.';
 
-                foreach ($adminUserIds as $rid) {
-                    $rid = (int) $rid;
-                    if ($senderId > 0 && $rid === $senderId) {
-                        continue;
-                    }
-                    $notificationService->create($rid, 'issue_report', 'IssueReport', (int) $report->id, 'New issue reported', $message);
+                $receiverIds = array_values(array_filter(
+                    array_map('intval', $adminUserIds),
+                    fn ($rid) => ! ($senderId > 0 && $rid === $senderId)
+                ));
+
+                if (!empty($receiverIds)) {
+                    $notificationService->createMultiple($receiverIds, 'issue_report', 'IssueReport', (int) $report->id, 'New issue reported', $message);
                 }
             } catch (\Throwable $e) {
                 \Log::error('Failed to send issue report admin notifications: ' . $e->getMessage());
@@ -484,7 +513,7 @@ class IssueReportController extends Controller
                 'message' => 'Please correct the highlighted fields.',
                 'errors'  => $e->errors(),
             ], 422);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             \Log::error('Issue report submit failed: ' . $e->getMessage());
 
             return response()->json([
@@ -492,5 +521,24 @@ class IssueReportController extends Controller
                 'message' => 'Something went wrong while reporting the issue. Please try again.',
             ], 500);
         }
+    }
+
+    /**
+     * Only accept the Referer header as a same-origin http(s) fallback for page_url;
+     * a stored javascript:/data: URL would become a live XSS if ever rendered as a link.
+     */
+    protected function safeRefererUrl(Request $request): ?string
+    {
+        $referer = $request->headers->get('referer');
+        if (! $referer) {
+            return null;
+        }
+
+        $scheme = parse_url($referer, PHP_URL_SCHEME);
+        if (! in_array($scheme, ['http', 'https'], true)) {
+            return null;
+        }
+
+        return Str::limit($referer, 500, '');
     }
 }

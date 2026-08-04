@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\SidebarMenu\MenuService;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +19,7 @@ return new class extends Migration
             ]);
 
         Cache::forget('sidebar_nav_route_index');
+        MenuService::clearStructureCache();
     }
 
     public function down(): void
@@ -32,5 +34,6 @@ return new class extends Migration
             ]);
 
         Cache::forget('sidebar_nav_route_index');
+        MenuService::clearStructureCache();
     }
 };

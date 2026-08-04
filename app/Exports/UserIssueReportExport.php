@@ -62,8 +62,8 @@ class UserIssueReportExport implements FromQuery, WithHeadings, WithMapping, Wit
 
         if ($deptFilter      !== '') $query->where('module_name', $deptFilter);
         if ($submoduleFilter !== '') $query->where('sub_module', $submoduleFilter);
-        if ($dateFrom        !== '') $query->whereDate('created_at', '>=', $dateFrom);
-        if ($dateTo          !== '') $query->whereDate('created_at', '<=', $dateTo);
+        if ($dateFrom        !== '') $query->where('created_at', '>=', $dateFrom . ' 00:00:00');
+        if ($dateTo          !== '') $query->where('created_at', '<=', $dateTo . ' 23:59:59');
 
         return $query->orderBy('id', 'desc');
     }
@@ -84,9 +84,9 @@ class UserIssueReportExport implements FromQuery, WithHeadings, WithMapping, Wit
             'sno'             => $this->rowIndex,
             'date'            => $report->created_at ? Carbon::parse($report->created_at)->format('d-m-Y') : '',
             'dept_name'       => $report->module_name ?? '',
-            'sub_module_name' => $report->sub_module  ?? '',
-            'description'     => $report->description ?? '',
-            'attachment'      => $report->attachment ? url('storage/' . $report->attachment) : '',
+            'sub_module_name' => sanitize_export_cell($report->sub_module ?? ''),
+            'description'     => sanitize_export_cell($report->description ?? ''),
+            'attachment'      => $report->attachment ? route('issue-reports.attachment', $report->id) : '',
             'status'          => $statusLabel,
         ];
 

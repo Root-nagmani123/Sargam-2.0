@@ -65,8 +65,8 @@ class IssueReportExport implements FromQuery, WithHeadings, WithMapping, WithSty
 
         if ($deptFilter      !== '') $query->where('issue_reports.module_name', $deptFilter);
         if ($submoduleFilter !== '') $query->where('issue_reports.sub_module', $submoduleFilter);
-        if ($dateFrom        !== '') $query->whereDate('issue_reports.created_at', '>=', $dateFrom);
-        if ($dateTo          !== '') $query->whereDate('issue_reports.created_at', '<=', $dateTo);
+        if ($dateFrom        !== '') $query->where('issue_reports.created_at', '>=', $dateFrom . ' 00:00:00');
+        if ($dateTo          !== '') $query->where('issue_reports.created_at', '<=', $dateTo . ' 23:59:59');
 
         return $query->orderBy('issue_reports.id', 'desc');
     }
@@ -91,10 +91,10 @@ class IssueReportExport implements FromQuery, WithHeadings, WithMapping, WithSty
             'sno'             => $this->rowIndex,
             'date'            => $report->created_at ? Carbon::parse($report->created_at)->format('d-m-Y') : '',
             'dept_name'       => $report->module_name ?? '',
-            'sub_module_name' => $report->sub_module  ?? '',
+            'sub_module_name' => sanitize_export_cell($report->sub_module ?? ''),
             'reporter'        => $name,
-            'description'     => $report->description ?? '',
-            'attachment'      => $report->attachment ? url('storage/' . $report->attachment) : '',
+            'description'     => sanitize_export_cell($report->description ?? ''),
+            'attachment'      => $report->attachment ? route('issue-reports.attachment', $report->id) : '',
             'status'          => $statusLabel,
         ];
 

@@ -35,7 +35,7 @@ class IssueReportDataTable extends DataTable
             })
             ->addColumn('attachment', function ($row) {
                 if ($row->attachment) {
-                    $url = url('storage/' . $row->attachment);
+                    $url = route('issue-reports.attachment', $row->id);
                     return '<a href="' . e($url) . '" target="_blank" rel="noopener" class="attachment-view">View</a>';
                 }
                 return '<span class="text-body-secondary">—</span>';
@@ -120,12 +120,12 @@ class IssueReportDataTable extends DataTable
 
         $from = request('date_from');
         if ($from !== null && $from !== '') {
-            $query->whereDate('issue_reports.created_at', '>=', $from);
+            $query->where('issue_reports.created_at', '>=', $from . ' 00:00:00');
         }
 
         $to = request('date_to');
         if ($to !== null && $to !== '') {
-            $query->whereDate('issue_reports.created_at', '<=', $to);
+            $query->where('issue_reports.created_at', '<=', $to . ' 23:59:59');
         }
 
         if (empty(request('order'))) {
