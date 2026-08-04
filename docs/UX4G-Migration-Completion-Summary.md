@@ -106,3 +106,5 @@ list their exact files and rollback command. Cross-browser baselines (114 PNGs) 
 - `UX4G-Phase-0-Implementation-Checklist.md` — Stage 0 + the running execution log (phases 1–9)
 - `UX4G-Phase-10..15` — per-phase deliverables (Plugins, Custom Components, Pages, Accessibility, Performance, Regression)
 - `UX4G-Migration-Completion-Summary.md` — this document
+- `UX4G-Contribution-Registry.md` — living registry of missing/custom UX4G components (Framework Phase D)
+- `UX4G-Framework-Compliance-Map.md` — reconciliation of this work vs the UX4G Enterprise Migration Framework (Master Prompt), with the compatibility-vs-redesign decision

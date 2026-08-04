@@ -4,8 +4,11 @@ When a ticket says *"apply the new design"* to an admin listing screen, it means
 **this page chrome**: the `programme-dt` toolbar, table panel and footer, as
 built on the Attendance page.
 
-**Canonical reference:** `resources/views/admin/attendance/index.blade.php`.
-It is not the `employee_idcard` layout and not the old DataTables default chrome.
+**Canonical references:** `admin/attendance/index.blade.php` (the chrome) and
+`admin/country/index.blade.php` for the **full modern pattern** — client-side DataTable,
+`simple_numbers` pagination, Download/Print, soft status badge + icon-over-label actions,
+and **modal** create/edit (§3b, §3c). It is not the `employee_idcard` layout and not the
+old DataTables default chrome.
 
 This doc covers page *chrome*. The `--ds-*` token and `.ds-*` component layer is
 documented separately in [design.md](design.md); column visibility has its own
@@ -38,16 +41,17 @@ Order on the page, top to bottom:
 
 ```
 container-fluid <module>-page
-├── <x-breadcrum title="…">            ← page heading (+ primary action button)
-├── status pills  ····  Download        ← OUTSIDE / ABOVE the card
+├── <x-breadcrum title="…">            ← page heading + primary action (opens create modal §3c)
+├── Download / Print  (or status pills + Download)   ← ABOVE the card
 └── card > card-body
-    ├── toolbar   (filters left · columns + search right)
+    ├── toolbar   (filters left · Columns + search right)
     ├── programme-dt-panel
-    │   └── table-responsive > table.programme-dt-table
-    └── programme-dt-footer            (pagination left · "Showing N of M items" right)
+    │   └── table-responsive > table.programme-dt-table   ← Status column + row actions §3b
+    └── programme-dt-footer            (pagination ‹ 1 2 3 › §5 · "Showing N of M items")
++ Create / Edit modal §3c    +    Column-visibility modal
 ```
 
-The status pills and Download button sit **above the card**, not inside it.
+The action row (status pills / Download / Print) sits **above the card**, not inside it.
 
 ---
 
@@ -186,6 +190,111 @@ padding, a 3%-primary hover row, a muted first column (S. No.) and a wrapping,
 
 ---
 
+## 3b. Status column + row actions (the `country/index` reference)
+
+The settled layout splits status **display** from the **control**:
+
+- **Status column** = a **soft badge** only (state *display*; `data-order` lets DataTables
+  sort by state).
+- **Action column** = **Edit** (icon + label) · the **toggle switch** (the inline
+  active/inactive *control*) · **Delete** (icon + label). The switch stays in the action
+  group — never drop it for a pill-only display; that removes the inline-toggle feature.
+
+```html
+{{-- Status column: soft badge (green Active / red Inactive) --}}
+<td data-order="{{ $row->active_inactive }}">
+    <span class="status-pill badge {{ $row->active_inactive == 1 ? 'bg-success-subtle' : 'bg-danger-subtle' }}">
+        {{ $row->active_inactive == 1 ? 'Active' : 'Inactive' }}
+    </span>
+</td>
+
+{{-- Action column: Edit · toggle · Delete --}}
+<td>
+    <div class="d-inline-flex align-items-center justify-content-center gap-3" role="group" aria-label="Row actions">
+        {{-- Edit opens the UX4G modal — see §3c --}}
+        <button type="button" class="country-act country-act--edit"
+                data-bs-toggle="modal" data-bs-target="#<page>FormModal" data-mode="edit"
+                data-id="{{ $row->pk }}" data-name="{{ $row->name }}" data-status="{{ $row->active_inactive }}">
+            <i class="bi bi-pencil-square" aria-hidden="true"></i><span>Edit</span>
+        </button>
+
+        <div class="form-check form-switch m-0">
+            <input type="checkbox" class="form-check-input status-toggle" role="switch"
+                   data-table="<table>" data-column="active_inactive"
+                   data-id="{{ $row->pk }}" {{ $row->active_inactive == 1 ? 'checked' : '' }}>
+        </div>
+
+        {{-- Delete: guarded — a disabled <span> when active, a DELETE <form> when inactive --}}
+    </div>
+</td>
+```
+
+- **Toggle wiring is automatic.** `status-toggle-delete.js` binds `.status-toggle` change
+  globally (AJAX + syncs the row's Delete control) and adds `aria-label="Toggle active status"`
+  on load and each `draw.dt` (a bare switch has no accessible name). You write **no** toggle
+  JS. On success, **reload the page** (§ ajax.reload trap below) so the Status-column badge
+  and the active-guard repaint from fresh data — the switch and badge are in different
+  columns, so don't hand-mirror them.
+- **Soft badge.** Active = `bg-success-subtle`, Inactive = `bg-danger-subtle`. ⚠️ The theme
+  ships the `*-subtle` **backgrounds** but not the `text-*-emphasis` colours (label renders
+  black) — set the tinted text in the page's scoped `<style>`:
+  ```css
+  .<page> .status-pill.bg-success-subtle { color: #146c43; }  /* green */
+  .<page> .status-pill.bg-danger-subtle  { color: #b02a37; }  /* red   */
+  ```
+- **Row actions = icon over label.** Edit (`bi-pencil-square` + "Edit", blue `#2563eb`) ·
+  Delete (`bi-trash3` + "Delete", `--bs-danger`; muted + disabled when the active-guard
+  forbids deletion).
+- **Alternative placement.** A small grid may keep the switch inside `.programme-action-group`
+  as a `.programme-action-switch` (like `building_floor_room_mapping`) with no separate Status
+  column — but the `country/index` split above is the reference.
+
+### ⚠️ Client-side DataTable + status toggle — the `ajax.reload()` trap
+
+On a **success**, shared `custom.js` runs `$('.dataTable').DataTable().ajax.reload()` (it
+assumes every grid is server-side). On a **client-side** DataTable (no `ajax` source) this
+logs DataTables' **"Invalid JSON response"**. Do **not** patch `custom.js` — instead, in the
+page's DataTable init:
+
+```js
+$.fn.dataTable.ext.errMode = 'none';                 // silence the stray reload (only this
+                                                     // table inits on this page)
+$(document).ajaxSuccess(function (e, xhr, s) {        // on a confirmed+successful toggle,
+    if (s && s.url && /toggle-?status/i.test(s.url))  // reload for correct fresh state
+        window.location.reload();                     // (new active-guard + badge)
+});
+```
+
+The toggle itself shows a **SweetAlert confirm** ("Yes, deactivate") before the AJAX — do
+**not** optimistically flip the badge on `change`, or a cancel leaves it wrong; let the
+reload (on real success) repaint the row. Server-side/Yajra grids don't need any of this.
+
+---
+
+## 3c. Create / Edit in a UX4G modal
+
+Create and Edit open a **UX4G (Bootstrap 5.3) modal** — **no separate page navigation**.
+One modal serves both modes; the form submits to the **unchanged** store (POST) / update
+(PUT) routes (no controller/route change). Reference: `country/index`.
+
+- **Triggers.** The Add button and each row's Edit are `data-bs-toggle="modal"
+  data-bs-target="#<page>FormModal"` with `data-mode="create|edit"` (Edit also carries
+  `data-id` / `data-name` / `data-status`). Bootstrap hands the trigger to `show.bs.modal`
+  as `event.relatedTarget`.
+- **Mode switch** in the `show.bs.modal` handler: set the form `action` (store vs
+  `/update/{id}`), the spoofed `_method` (POST vs PUT), the field **name**
+  (`country_name[]` for create — store expects an array — vs `country_name` for edit), and
+  prefill name/status for edit.
+- **⚠️ Status value mismatch.** The inline toggle stores inactive as `0`, but the create/edit
+  `<select>` uses `1`/`2` — map `data-status === '1' ? '1' : '2'` or the select comes up blank.
+- **Validation errors.** The controller redirects back to the index with `$errors` + old
+  input. Render the errors inside the modal, carry `_form_mode` / `_edit_id` as hidden fields,
+  and on load reopen with `bootstrap.Modal.getOrCreateInstance(el).show(triggerEl)`.
+- **It IS the UX4G modal** — `.modal .modal-dialog-centered > .modal-content` with
+  `.modal-header/.modal-body/.modal-footer`, `.btn-close`, standard form controls.
+
+---
+
 ## 4. Footer
 
 Two variants, visually identical.
@@ -230,6 +339,38 @@ uses for its pager, which is why the two variants match.
 
 ---
 
+## 4b. Branded exports — CSV / PDF / Print
+
+Download (CSV + PDF) and Print produce the **LBSNAA branded document** — logos + Hindi/English
+academy name + course/batch line + blue report title + blue table header — matching every
+other report. **Reuse the shared view**, don't rebuild the header.
+
+- **Shared view:** `resources/views/exports/lbsnaa-report.blade.php`. Generic — pass
+  `$reportTitle`, `$headings` (string[]), `$rows` (array of cell arrays), `$subtitle` /
+  `$subtitle2` (course + batch lines), the logo data-URIs, and `$autoPrint` (Print only). A
+  `Status` heading auto-renders green/red pills.
+- **Controller** (see `LocationController::countryExport($format)` + `exportAssets()`):
+  build `$headings`/`$rows`, resolve logos, then branch —
+  ```php
+  if ($format === 'csv')   return response()->streamDownload(fn()=>{ /* UTF-8 BOM, then Hindi + English academy + course + batch + title text rows, blank, headings + rows via fputcsv */ }, $file, ['Content-Type'=>'text/csv; charset=UTF-8']);
+  if ($format === 'print') return view('exports.lbsnaa-report', $data + ['autoPrint'=>true]);   // HTML + window.print()
+  return Pdf::loadView('exports.lbsnaa-report', $data)->setPaper('a4','landscape')->download($file);   // DomPDF
+  ```
+- **Logos** (data-URIs via `exportAssets()`): left `logo_new.png`, right `constitution-75.png`
+  → falls back to `Azadi-Ka-Amrit-Mahotsav-Logo.png`, Hindi title `lbsnaa-title-hi.png`. Brand
+  blue is `#004384` (title + table header). CSV can't carry logos/colour — it gets the **same
+  header lines as the PDF/Print**, in order, as leading text rows: **Hindi academy name** →
+  English academy name → course → batch → report title → blank → column headings → data.
+  Write a **UTF-8 BOM** (`fwrite($out, "\xEF\xBB\xBF")`) first so Excel renders the Devanagari
+  (and any non-ASCII data) correctly instead of mojibake; pad each header line across all
+  columns so it spans the sheet width like the centred design header.
+- **Route:** `GET …/export/{format}` `->whereIn('format',['csv','pdf','print'])`.
+- **Wire (above the card):** a **Download dropdown** (CSV · PDF) linking to the export route,
+  plus a **Print** link (`target="_blank"` → the auto-printing HTML). No client-side CSV/JS.
+- **Read-only** — the export controller never touches create/update logic.
+
+---
+
 ## 5. `datatable-global-ui.js` — the contract
 
 627 lines, loaded after the DataTables CDN scripts. What it does for you:
@@ -238,6 +379,13 @@ uses for its pager, which is why the two variants match.
 `pagingType: 'full_numbers'`, `autoWidth: false`, and the language strings that
 produce **"Showing [10] of 243 items"** (`lengthMenu: 'Showing _MENU_'`,
 `info: 'of _TOTAL_ items'`).
+
+> **Pagination style — set `pagingType: 'simple_numbers'` per table.** The reference
+> pager is **‹ 1 2 3 … ›** (prev + numbers + next, **no First / Last**). The global default
+> is `full_numbers` (which adds First/Last), but it is applied only when a table doesn't
+> set its own (`if (!settings.oInit.pagingType)`), so passing `pagingType: 'simple_numbers'`
+> in your `.DataTable({…})` init wins — with no change to the shared default. Do this on
+> every migrated grid.
 
 **Chrome relocation.** Its `dom` renders `f`/`i`/`l`/`p` into a hidden row, then
 `enhance()` moves the filter into your `.programme-dt-search` slot and rebuilds
@@ -315,14 +463,19 @@ Page CSS is namespaced under a page-root class (`.disc-page .disc-tab`,
 ## 8. Checklist for a new index page
 
 1. `<x-breadcrum>` heading, with the primary action button in its slot.
-2. Status pills + Download row **above** the card.
+2. Status pills / **Download (CSV·PDF) + Print** row **above** the card — branded exports via
+   the shared LBSNAA report view (§4b).
 3. Toolbar: `Filters` label → filter selects → red `Reset Filters` on the left;
    `Columns` + search slot on the right (`ms-lg-auto`).
 4. `.programme-dt-panel` > `.table-responsive` > `table.programme-dt-table`.
 5. Footer — empty div if DataTables paginates, hand-written variant B if Laravel does.
 6. If Laravel paginates: add `data-sargam-dt-ui="false"`.
-7. Column visibility → [column-visibility.md](column-visibility.md).
-8. Page CSS namespaced under a page-root class, tokens from
+7. **Status column:** if the list toggles active/inactive inline, keep the
+   `.status-toggle` switch (§3b) — never a pill-only display.
+8. **Pagination:** DataTable init sets `pagingType: 'simple_numbers'` (‹ 1 2 3 › — no First/Last, §5).
+9. **Create / Edit** open in a **UX4G modal** (§3c), submitting to the unchanged store/update routes.
+10. Column visibility → [column-visibility.md](column-visibility.md).
+11. Page CSS namespaced under a page-root class, tokens from
    [design.md](design.md), `?v={{ @filemtime(...) }}` on the link tag.
 
 ---

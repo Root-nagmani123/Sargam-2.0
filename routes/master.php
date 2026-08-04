@@ -28,6 +28,7 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
     // country route
     Route::prefix('country')->name('country.')->controller(LocationController::class)->group(function () {
         Route::get('/', 'countryIndex')->name('index');
+        Route::get('/export/{format}', 'countryExport')->whereIn('format', ['csv', 'pdf', 'print'])->name('export');
         Route::get('/create', 'countryCreate')->name('create');
         Route::post('/store', 'countryStore')->name('store');
         Route::get('/edit/{id}', 'countryEdit')->name('edit');
