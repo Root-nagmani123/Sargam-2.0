@@ -809,8 +809,8 @@
     <script src="{{ asset('admin_assets/js/sidebar-panel-accordion.js') }}?v=2"></script>
     <script src="{{ asset('admin_assets/js/tab-persistence.js') }}"></script>
     <script src="{{ asset('admin_assets/js/nav-state.js') }}"></script>
-    <!-- SweetAlert2 -->
-    <script src="{{ asset('admin_assets/libs/sweetalert2/dist/sweetalert2.all.min.js') }}"></script>
+    {{-- Perf (Phase 14): SweetAlert2 is already loaded in the footer (before custom.js);
+         this duplicate load on every master page was removed. Swal is available here. --}}
     <!-- Global success toast (styles every icon:'success' Swal alike; see public/js/sargam-success-toast.js) -->
     <script src="{{ asset('js/sargam-success-toast.js') }}?v={{ @filemtime(public_path('js/sargam-success-toast.js')) ?: time() }}"></script>
     @if(request()->routeIs('admin.mess.*'))

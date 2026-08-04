@@ -49,7 +49,8 @@
 
   <!-- solar icons -->
   <script src="{{asset('admin_assets/css/iconify-icon.min.js')}}"></script>
-  <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
+  {{-- Perf (Phase 14): removed duplicate CDN iconify-icon@1.0.8 load — the local copy above
+       already registers the <iconify-icon> element (and drops one external CDN dependency). --}}
 
   <!-- highlight.js (code view) -->
   <script src="{{asset('admin_assets/js/highlights/highlight.min.js')}}"></script>
@@ -203,7 +204,7 @@
     })();
   </script>
   <script src="{{asset('admin_assets/js/forms/repeater-init.js')}}"></script>
-  <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
+  {{-- Perf (Phase 14): FullCalendar was loaded twice back-to-back (~300 KB duplicate) — collapsed to one --}}
   <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
   <script src="{{asset('admin_assets/js/plugins/toastr-init.js')}}"></script>
   <script src="{{asset('admin_assets/js/routes.js')}}"></script>
@@ -211,9 +212,8 @@
   <script src="{{ asset('admin_assets/libs/sweetalert2/dist/sweetalert2.all.min.js') }}"></script>
   <script src="{{asset('admin_assets/js/custom.js')}}?v={{ filemtime(public_path('admin_assets/js/custom.js')) }}"></script>
   <script src="{{asset('admin_assets/js/status-toggle-delete.js')}}"></script>
-  <script src="{{asset('admin_assets/js/forms/form-wizard.js')}}"></script>
-  <script src="{{asset('admin_assets/libs/jquery-steps/build/jquery.steps.min.js')}}"></script>
-  <script src="{{asset('admin_assets/libs/jquery-validation/dist/jquery.validate.min.js')}}"></script>
+  {{-- Perf (Phase 14): removed duplicate jquery-steps, jquery-validation and (dead) form-wizard
+       loads — all are already loaded earlier in this footer (lines ~64–74). --}}
   <script src="{{ asset('admin_assets/js/prism.min.js') }}"></script>
   <script src="{{ asset('admin_assets/js/dual-listbox.js') }}"></script>
   <script src="{{ asset('admin_assets/js/validations.js') }}"></script>
