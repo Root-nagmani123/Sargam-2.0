@@ -72,7 +72,8 @@
   <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
   <script src="{{ asset('js/datatable-global-ui.js') }}?v={{ @filemtime(public_path('js/datatable-global-ui.js')) ?: time() }}"></script>
   <script src="{{asset('js/dropdown-search.js')}}"></script>
-  <script src="{{asset('admin_assets/js/forms/form-wizard.js')}}"></script>
+  {{-- Phase 16 (Cleanup): removed dead form-wizard.js — it initialised only demo IDs
+       (#example-basic/#example-form/#example-advanced-form/…) that exist in 0 views. File deleted. --}}
   <script>
     // Global DataTables defaults: disable auto column width to reduce header jitter
     (function() {
