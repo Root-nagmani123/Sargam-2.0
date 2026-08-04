@@ -6,9 +6,9 @@
     <div class="container-fluid py-5">
          <x-breadcrum title="Bulk Upload Registration" />
     <x-session_message />
-       <div class="card" style="border-left: 5px solid #004a93;">
+       <div class="card" style="border-left: 5px solid #004384;">
         <div class="card-body">
-            <h3 class="fw-bold mb-2" style="color: #004a93;">Bulk Registration Upload</h3>
+            <h3 class="fw-bold mb-2" style="color: #004384;">Bulk Registration Upload</h3>
                 <p class="text-muted mb-4">
                     Upload an Excel or CSV file containing user registration data. Please ensure your file follows the
                     required format. This helps streamline the bulk registration process and saves time.

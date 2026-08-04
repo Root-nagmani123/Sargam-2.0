@@ -37,7 +37,7 @@
             cursor: pointer;
         }
 
-        /* White checkbox on dark blue table header (#004a93) */
+        /* White checkbox on dark blue table header (#004384) */
         #fc-migrate-page #fcMigrateStudentsTable thead .migrate-select-th .migrate-header-checkbox,
         #fc-migrate-page #fcMigrateStudentsTable thead .migrate-select-th .js-migrate-select-all {
             width: 1.125rem;
@@ -49,7 +49,7 @@
             background-color: #ffffff !important;
             border: 2px solid #ffffff !important;
             box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
-            accent-color: #004a93;
+            accent-color: #004384;
             --bs-form-check-bg: #ffffff;
         }
 
@@ -69,7 +69,7 @@
         }
 
         #fc-migrate-page #fcMigrateStudentsTable tbody .migrate-select-td .form-check-input {
-            accent-color: #004a93;
+            accent-color: #004384;
         }
 
         #fc-migrate-page #filter_course + .choices,
@@ -167,7 +167,7 @@
         }
 
         #fc-migrate-page #fcMigrateTabs .nav-link.active {
-            color: #004a93;
+            color: #004384;
             font-weight: 600;
             background-color: #fff;
             border-color: #dee2e6 #dee2e6 #fff;
@@ -192,7 +192,7 @@
             </div>
         @endif
 
-        <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card" style="border-left: 4px solid #004384;">
             <div class="card-header">
                 <div class="row align-items-center">
                     <div class="col-md-12">

@@ -46,7 +46,7 @@
             gap: 1rem;
             padding-bottom: .75rem;
             margin-bottom: 1rem;
-            border-bottom: 2px solid #004a93;
+            border-bottom: 2px solid #004384;
         }
         .lbsnaa-header-left {
             display: flex;
@@ -60,7 +60,7 @@
             font-size: .8rem;
             text-transform: uppercase;
             letter-spacing: .06em;
-            color: #004a93;
+            color: #004384;
         }
         .brand-line-2 {
             font-size: 1.05rem;

@@ -160,7 +160,7 @@
 
                             <div class="col-12 d-flex flex-wrap justify-content-center gap-3 pt-2">
                                 <button type="submit" id="exemptionSubmitBtn" class="btn btn-primary rounded-3 px-4 py-2 fw-semibold"
-                                    style="background-color: #004a93; border-color: #004a93;">
+                                    style="background-color: #004384; border-color: #004384;">
                                     Submit Application
                                 </button>
                                 <a href="{{ route('fc.choose.path') }}"
@@ -226,7 +226,7 @@
                         title: 'File not allowed',
                         text: message,
                         icon: 'error',
-                        confirmButtonColor: '#004a93',
+                        confirmButtonColor: '#004384',
                         confirmButtonText: 'OK'
                     });
                 }
@@ -297,7 +297,7 @@
                     title: 'Notice',
                     text: '{{ session('already_applied') }}',
                     icon: 'info',
-                    confirmButtonColor: '#004a93',
+                    confirmButtonColor: '#004384',
                     confirmButtonText: 'OK'
                 });
             });
@@ -313,7 +313,7 @@
                         title: 'Validation Error',
                         text: errorMessages.join('\n'),
                         icon: 'error',
-                        confirmButtonColor: '#004a93',
+                        confirmButtonColor: '#004384',
                         confirmButtonText: 'OK'
                     });
                 }

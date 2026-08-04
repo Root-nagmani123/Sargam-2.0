@@ -76,7 +76,7 @@
 
         /* Branding — aligned with stock-purchase-details-pdf & category-wise mess PDFs */
         .lbsnaa-header-wrap {
-            border-bottom: 2px solid #004a93;
+            border-bottom: 2px solid #004384;
             margin-bottom: 12px;
             padding: 2px 0 8px;
         }
@@ -104,7 +104,7 @@
         }
         .lbsnaa-brand-line-1 {
             font-size: 8pt;
-            color: #004a93;
+            color: #004384;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             font-weight: 600;
@@ -144,7 +144,7 @@
             color: #212529;
         }
         .report-date-bar {
-            background: #004a93;
+            background: #004384;
             color: #fff;
             padding: 8px 12px;
             text-align: center;

@@ -60,7 +60,7 @@
 
 /* Edit-attendance action = stacked pencil icon + label (blue link) */
 .attendance-page td .btn-link.text-primary {
-    --bs-btn-color: #004a93;
+    --bs-btn-color: #004384;
     --bs-btn-hover-color: #003c78;
     min-width: 88px;
 }
@@ -78,7 +78,7 @@
     padding: 0 1.1rem;
     font-size: 0.9375rem;
     font-weight: 500;
-    color: #004a93;
+    color: #004384;
     border: 1px solid #d0d5dd;
     border-radius: 8px;
     background: #fff;
@@ -86,8 +86,8 @@
 
 .attendance-page .attendance-download-btn:hover {
     background: #f2f7fc;
-    border-color: #004a93;
-    color: #004a93;
+    border-color: #004384;
+    color: #004384;
 }
 
 .attendance-page .attendance-download-btn i {
@@ -97,7 +97,7 @@
 
 /* ── "+N Filters" popover — same pattern as the Student List toolbar ── */
 .attendance-page .attendance-more-filters {
-    color: #004a93;
+    color: #004384;
     font-weight: 600;
     font-size: 0.9375rem;
     text-decoration: none;
@@ -193,8 +193,8 @@
 }
 
 .attendance-page .attendance-daterange-input:focus {
-    border-color: #004a93;
-    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+    border-color: #004384;
+    box-shadow: 0 0 0 3px rgba(0, 67, 132, 0.12);
     outline: 0;
 }
 

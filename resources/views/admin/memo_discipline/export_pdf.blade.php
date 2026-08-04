@@ -29,7 +29,7 @@
             text-align: center;
             font-size: 12px;
             font-weight: bold;
-            color: #004a93;
+            color: #004384;
             margin: 4px 0 4px;
         }
 

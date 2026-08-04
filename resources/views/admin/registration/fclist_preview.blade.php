@@ -7,9 +7,9 @@
     <x-breadcrum title="Preview Bulk Upload" />
     <x-session_message />
 
-    <div class="card" style="border-left: 5px solid #004a93;">
+    <div class="card" style="border-left: 5px solid #004384;">
         <div class="card-body">
-            <h3 class="fw-bold mb-2" style="color: #004a93;">Preview Bulk Registration Upload</h3>
+            <h3 class="fw-bold mb-2" style="color: #004384;">Preview Bulk Registration Upload</h3>
 
             <form action="{{ route('fc.confirm.upload') }}" method="POST">
                 @csrf

@@ -29,7 +29,7 @@
 
         .sidebar .nav-pills .nav-link.active {
             font-weight: 500;
-            background-color: #004a93;
+            background-color: #004384;
             border: 1px solid #ddd;
             color: #fff;
             border-radius: 0.25rem;
@@ -37,7 +37,7 @@
         }
 
         .sidebar .nav-link:hover {
-            background-color: #004a93;
+            background-color: #004384;
             color: #fff !important;
         }
 
@@ -51,7 +51,7 @@
         }
 
         .top-header {
-            background-color: #004a93;
+            background-color: #004384;
             color: white;
             padding: 5px 15px;
         }
@@ -61,7 +61,7 @@
         }
 
         .document-section h5 {
-            color: #004a93;
+            color: #004384;
             margin-bottom: 20px;
         }
 
@@ -101,22 +101,22 @@
         }
 
         .btn-primary {
-            background-color: #004a93;
-            border-color: #004a93;
+            background-color: #004384;
+            border-color: #004384;
         }
 
         .btn-outline-primary {
-            color: #004a93;
-            border-color: #004a93;
+            color: #004384;
+            border-color: #004384;
         }
 
         .btn-outline-primary:hover {
-            background-color: #004a93;
+            background-color: #004384;
             color: white;
         }
 
         footer {
-            background-color: #004a93;
+            background-color: #004384;
             padding: 1rem 0;
             color: #fff;
             margin-top: auto;
@@ -186,7 +186,7 @@
                                 <a class="nav-link dropdown-toggle d-flex align-items-center" href="#"
                                     role="button" id="accountDropdown" data-bs-toggle="dropdown"
                                     aria-expanded="false">
-                                    <i class="material-icons" style="color: #004a93;">account_circle</i>
+                                    <i class="material-icons" style="color: #004384;">account_circle</i>
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountDropdown">
                                     <li>
@@ -261,7 +261,7 @@
              @csrf
 
              <!-- Administration Section Related Documents -->
-             <div class="card mb-4" style="border-left:4px solid #004a93;">
+             <div class="card mb-4" style="border-left:4px solid #004384;">
                  <div class="card-body">
                      <h5 class="fw-bold text-primary mb-3">Administration Section Related Documents</h5>
                      <div class="table-responsive">
@@ -723,7 +723,7 @@
              </div>
 
              <!-- Accounts Section Related Documents -->
-             <div class="card" style="border-left:4px solid #004a93;">
+             <div class="card" style="border-left:4px solid #004384;">
                  <div class="card-body">
                      <h5 class="fw-bold text-primary mb-3">Accounts Section Related Documents</h5>
                      <div class="table-responsive">

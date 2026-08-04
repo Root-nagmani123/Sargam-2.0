@@ -45,7 +45,7 @@
     --ds-shadow-lg: 0 4px 12px rgba(16, 24, 40, 0.10), 0 2px 4px rgba(16, 24, 40, 0.06);
 
     /* --- Brand (mirror theme; do NOT redefine --bs-*) ------------- */
-    --ds-primary: var(--bs-primary, #004a93);
+    --ds-primary: var(--bs-primary, #004384);
     --ds-secondary: #b12923;
     --ds-ink: #1f2937;          /* primary text */
     --ds-ink-muted: #667085;    /* secondary text */
@@ -419,7 +419,7 @@ table.dataTable > thead > tr > th.sorting_desc::after,
 table.dataTable > thead > tr > td.sorting_asc::before,
 table.dataTable > thead > tr > td.sorting_desc::after {
     opacity: 1 !important;
-    color: #004a93 !important;
+    color: #004384 !important;
 }
 
 table.dataTable > thead > tr > th.sorting,

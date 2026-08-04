@@ -276,7 +276,7 @@
     align-items: center;
     justify-content: center;
 }
-.family-idcard-upload-zone:hover { background-color: #eef4fc; border-color: #004a93; }
+.family-idcard-upload-zone:hover { background-color: #eef4fc; border-color: #004384; }
 .family-idcard-upload-icon { font-size: 2.5rem !important; color: #6c757d; }
 .family-idcard-upload-preview { display: flex; align-items: center; justify-content: center; min-height: 160px; padding: 0.5rem; }
 .family-idcard-preview-img { max-width: 100%; max-height: 180px; object-fit: contain; border-radius: 0.375rem; }
@@ -285,8 +285,8 @@
 .family-idcard-members-table thead th { font-weight: 600; padding: 0.75rem 1rem; }
 .family-idcard-members-table td:nth-child(2) { min-width: 11rem; }
 .family-idcard-members-table .member-name { min-width: 10rem; width: 100%; }
-.btn-outline-primary { border: 1px solid #004a93; color: #004a93; }
-.btn-outline-primary:hover { background-color: #004a93; color: #fff; }
+.btn-outline-primary { border: 1px solid #004384; color: #004384; }
+.btn-outline-primary:hover { background-color: #004384; color: #fff; }
 </style>
 
 <script>
@@ -330,7 +330,7 @@
             if (e.target.closest('.family-idcard-preview-remove')) return;
             if (input) input.click();
         });
-        zone.addEventListener('dragover', function(e) { e.preventDefault(); this.style.borderColor = '#004a93'; });
+        zone.addEventListener('dragover', function(e) { e.preventDefault(); this.style.borderColor = '#004384'; });
         zone.addEventListener('dragleave', function(e) { e.preventDefault(); this.style.borderColor = ''; });
         zone.addEventListener('drop', function(e) {
             e.preventDefault();

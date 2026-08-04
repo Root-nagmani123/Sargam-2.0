@@ -15,13 +15,13 @@
         .header {
             text-align: center;
             margin-bottom: 20px;
-            border-bottom: 2px solid #004a93;
+            border-bottom: 2px solid #004384;
             padding-bottom: 10px;
         }
 
         .header h1 {
             margin: 0;
-            color: #004a93;
+            color: #004384;
             font-size: 18px;
         }
 
@@ -36,7 +36,7 @@
             margin-bottom: 15px;
             padding: 10px;
             background-color: #f8f9fa;
-            border-left: 4px solid #004a93;
+            border-left: 4px solid #004384;
         }
 
         .filters p {
@@ -45,7 +45,7 @@
         }
 
         .filters strong {
-            color: #004a93;
+            color: #004384;
         }
 
         table {
@@ -63,7 +63,7 @@
         }
 
         th {
-            background-color: #004a93;
+            background-color: #004384;
             color: white;
             font-weight: bold;
             font-size: 9px;

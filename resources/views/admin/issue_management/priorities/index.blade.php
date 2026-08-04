@@ -102,7 +102,7 @@
         <div class="modal-content border-0 shadow-lg">
             <form action="{{ route('admin.issue-priorities.store') }}" method="POST">
                 @csrf
-                <div class="modal-header" style="background:#004a93;">
+                <div class="modal-header" style="background:#004384;">
                     <h5 class="modal-title text-white" id="addPriorityModalLabel">Add New Priority</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -140,7 +140,7 @@
             <form id="editPriorityForm" method="POST">
                 @csrf
                 @method('PUT')
-                <div class="modal-header" style="background:#004a93;">
+                <div class="modal-header" style="background:#004384;">
                     <h5 class="modal-title text-white" id="editPriorityModalLabel">Edit Priority</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>

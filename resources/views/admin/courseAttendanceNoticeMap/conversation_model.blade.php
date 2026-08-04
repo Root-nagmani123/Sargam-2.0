@@ -18,7 +18,7 @@
     .chat-wrapper{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;height:100%;overflow:hidden}
     .chat-container{padding:1rem .85rem;flex:1 1 auto;min-height:0;overflow-y:auto;background:#e9f1fb}
     .chat-container::-webkit-scrollbar{width:6px}
-    .chat-container::-webkit-scrollbar-thumb{background:rgba(0,74,147,.22);border-radius:3px}
+    .chat-container::-webkit-scrollbar-thumb{background:rgba(0,67,132,.22);border-radius:3px}
 
     /* Date separator chip */
     .date-separator{display:flex;justify-content:center;margin:.75rem 0}
@@ -77,7 +77,7 @@
     .chat-send-btn[disabled]{opacity:.6;cursor:not-allowed}
 
     .visually-hidden{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-    .chat-send-toast{position:absolute;top:0;left:0;right:0;z-index:10;padding:.5rem .75rem;margin:.5rem;border-radius:12px;background:#004a93;color:#fff;font-size:.8rem;font-weight:500;text-align:center;box-shadow:0 2px 8px rgba(0,74,147,.35);animation:chatToastIn .25s ease}
+    .chat-send-toast{position:absolute;top:0;left:0;right:0;z-index:10;padding:.5rem .75rem;margin:.5rem;border-radius:12px;background:#004384;color:#fff;font-size:.8rem;font-weight:500;text-align:center;box-shadow:0 2px 8px rgba(0,67,132,.35);animation:chatToastIn .25s ease}
     @keyframes chatToastIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
     @media (max-width:575.98px){.chat-bubble{max-width:86%}.chat-container{padding:.75rem .6rem}}
   </style>

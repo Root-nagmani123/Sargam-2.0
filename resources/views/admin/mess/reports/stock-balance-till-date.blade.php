@@ -387,13 +387,13 @@ function printStockBalance() {
 '            display: flex;\n' +
 '            align-items: center;\n' +
 '            gap: 12px;\n' +
-'            border-bottom: 3px solid #004a93;\n' +
+'            border-bottom: 3px solid #004384;\n' +
 '            padding-bottom: 10px;\n' +
 '            margin-bottom: 12px;\n' +
 '        }\n' +
 '        .print-header img { height: 48px; width: auto; object-fit: contain; }\n' +
 '        .header-text { flex: 1; }\n' +
-'        .header-text .line1 { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #004a93; font-weight: 600; margin: 0; }\n' +
+'        .header-text .line1 { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #004384; font-weight: 600; margin: 0; }\n' +
 '        .header-text .line2 { font-size: 14px; font-weight: 700; text-transform: uppercase; color: #1a1a1a; margin: 2px 0 0; }\n' +
 '        .header-text .line3 { font-size: 9px; color: #555; margin: 1px 0 0; }\n' +
 '\n' +
@@ -411,7 +411,7 @@ function printStockBalance() {
 '        /* ── Data Table ── */\n' +
 '        .data-table { width: 100%; border-collapse: collapse; font-size: 10px; }\n' +
 '        .data-table th, .data-table td { padding: 4px 6px; border: 1px solid #bbb; vertical-align: middle; }\n' +
-'        .data-table thead th { background: #004a93; color: #fff; font-weight: 600; font-size: 10px; text-align: left; }\n' +
+'        .data-table thead th { background: #004384; color: #fff; font-weight: 600; font-size: 10px; text-align: left; }\n' +
 '        .data-table thead th.text-end { text-align: right; }\n' +
 '        .data-table .text-end { text-align: right; }\n' +
 '        .data-table tbody tr:nth-child(even) td { background: #f9fafb; }\n' +
@@ -420,8 +420,8 @@ function printStockBalance() {
 '        .data-table .table-light td {\n' +
 '            background: #e8edf4 !important;\n' +
 '            font-weight: 700;\n' +
-'            border-top: 2px solid #004a93;\n' +
-'            color: #004a93;\n' +
+'            border-top: 2px solid #004384;\n' +
+'            color: #004384;\n' +
 '        }\n' +
 '\n' +
 '        /* ── Repeating header wrapper ── */\n' +
@@ -455,7 +455,7 @@ function printStockBalance() {
 '\n' +
 '<div class="report-title-block">\n' +
 '    <h2>' + title + '</h2>\n' +
-'    <p style="font-size:11px;font-weight:700;color:#004a93;margin:4px 0 0;text-align:center;">' + dateLabel + '</p>\n' +
+'    <p style="font-size:11px;font-weight:700;color:#004384;margin:4px 0 0;text-align:center;">' + dateLabel + '</p>\n' +
 '</div>\n' +
 '\n' +
 '<div class="report-meta">\n' +

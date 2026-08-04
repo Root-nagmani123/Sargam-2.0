@@ -184,7 +184,7 @@
         font-weight: bold;
     }
     .report-title-bar {
-        background-color: #004a93;
+        background-color: #004384;
         color: #fff;
         padding: 8px 12px;
         font-size: 1rem;
@@ -272,7 +272,7 @@
             z-index: 3;
             background: #e8f4fc !important;
             background-clip: padding-box;
-            box-shadow: 0 1px 0 rgba(0, 74, 147, 0.12);
+            box-shadow: 0 1px 0 rgba(0, 67, 132, 0.12);
         }
         .print-grand-total-block .table-responsive {
             overflow-x: auto !important;
@@ -301,7 +301,7 @@
     .print-slip-table .th-qty, .print-slip-table .th-price, .print-slip-table .th-amount { text-align: right; }
     .print-slip-table tbody td { padding: 6px 8px; vertical-align: middle; }
     .print-slip-table .total-row { background-color: #f0f0f0; font-weight: bold; }
-    .print-slip-table .grand-total-row { background-color: #e2e8f0; font-weight: bold; border-top: 2px solid #004a93; }
+    .print-slip-table .grand-total-row { background-color: #e2e8f0; font-weight: bold; border-top: 2px solid #004384; }
 
     .pagination-custom {
         background-color: #f5f5f5;
@@ -453,7 +453,7 @@
         .print-slip-table .grand-total-row {
             background: #d8e4ef !important;
             font-weight: bold;
-            border-top: 3px solid #004a93;
+            border-top: 3px solid #004384;
         }
     }
 </style>

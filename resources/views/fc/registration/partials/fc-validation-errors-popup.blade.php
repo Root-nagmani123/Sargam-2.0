@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function () {
             title: 'Please fix the following',
             html: listHtml,
             icon: 'error',
-            confirmButtonColor: '#004a93',
+            confirmButtonColor: '#004384',
             confirmButtonText: 'OK'
         }).then(scrollToFirstInvalid);
     } else {

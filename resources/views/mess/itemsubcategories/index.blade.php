@@ -461,7 +461,7 @@ if (document.readyState === 'loading') {
 @endpush
 
 <style>
-.table thead th { background-color: #004a93 !important; color: #fff !important; }
+.table thead th { background-color: #004384 !important; color: #fff !important; }
 
 /* Ensure Tom Select dropdowns appear above modals/backdrop */
 .ts-dropdown {

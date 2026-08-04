@@ -47,7 +47,7 @@
         .lbsnaa-header-table {
             width: 100%;
             border-collapse: collapse;
-            border-bottom: 2px solid #004a93;
+            border-bottom: 2px solid #004384;
             padding-bottom: 0;
             margin-bottom: 12px;
         }
@@ -74,7 +74,7 @@
             font-size: 10.5pt;
             text-transform: uppercase;
             letter-spacing: 0.06em;
-            color: #004a93;
+            color: #004384;
             font-weight: 600;
         }
 

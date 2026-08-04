@@ -258,12 +258,12 @@ $(document).ready(function() {
             '.pdf-hdr .inst-hi-img{height:18px;width:auto;margin-bottom:2px;}' +
             '.pdf-hdr .inst-en{font-size:16px;font-weight:bold;color:#102a43;line-height:1.25;}' +
             '.pdf-hdr .course-line{font-size:12px;font-weight:bold;color:#243b53;margin-top:4px;}' +
-            '.report-title{text-align:center;font-size:20px;font-weight:bold;color:#004a93;margin:8px 0 6px;padding-bottom:8px;border-bottom:2px solid #004a93;}' +
+            '.report-title{text-align:center;font-size:20px;font-weight:bold;color:#004384;margin:8px 0 6px;padding-bottom:8px;border-bottom:2px solid #004384;}' +
             '.print-info{margin-bottom:12px;font-size:11px;color:#666;text-align:center;}' +
             'table{width:100%;border-collapse:collapse;margin-top:10px;}' +
             'th,td{border:1px solid #8fa3bd;padding:6px 8px;text-align:left;font-size:11px;vertical-align:top;word-break:break-word;white-space:normal;}' +
             'thead{display:table-header-group;}' +
-            'thead th{font-weight:bold;background-color:#004a93 !important;color:#fff !important;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+            'thead th{font-weight:bold;background-color:#004384 !important;color:#fff !important;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
             'tbody tr:nth-child(even){background-color:#eef2f8;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
             'tr{page-break-inside:avoid;}' +
             '.print-footer{margin-top:18px;text-align:center;font-size:10px;color:#666;border-top:1px solid #ccc;padding-top:10px;}' +

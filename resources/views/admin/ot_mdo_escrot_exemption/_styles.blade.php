@@ -4,7 +4,7 @@
 <style>
     /* ===== Session Moderator / Escort Duty — modern UI (scoped to .otmdo) ===== */
     .otmdo {
-        --otmdo-primary: #004a93;
+        --otmdo-primary: #004384;
         --otmdo-primary-soft: #eaf1f9;
         --otmdo-border: #e9edf2;
         --otmdo-muted: #6b7280;
@@ -120,7 +120,7 @@
     .otmdo .otmdo-toolbar .form-select:focus,
     .otmdo .otmdo-toolbar .form-control:focus {
         border-color: var(--otmdo-primary);
-        box-shadow: 0 0 0 .2rem rgba(0, 74, 147, .12);
+        box-shadow: 0 0 0 .2rem rgba(0, 67, 132, .12);
     }
 
     /* Table */

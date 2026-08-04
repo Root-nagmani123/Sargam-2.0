@@ -26,7 +26,7 @@
         }
         
         .page-header {
-            border-bottom: 2px solid #004a93;
+            border-bottom: 2px solid #004384;
             padding-bottom: 8px;
             margin-bottom: 12px;
             page-break-after: avoid;
@@ -57,7 +57,7 @@
             font-size: 13px;
             margin: 4px 0 0;
             text-transform: uppercase;
-            color: #004a93;
+            color: #004384;
             font-weight: bold;
         }
         
@@ -159,7 +159,7 @@
         }
         
         .summary-stats strong {
-            color: #004a93;
+            color: #004384;
             font-size: 12px;
         }
     </style>

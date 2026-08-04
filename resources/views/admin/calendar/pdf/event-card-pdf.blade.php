@@ -8,7 +8,7 @@
         catch (\Throwable $e) { return (string) $value; }
     };
 
-    $brand        = '#004a93';
+    $brand        = '#004384';
     $startLabel   = $fmtDate($event['start_date'] ?? null);
     $endLabel     = $fmtDate($event['end_date'] ?? null);
     $dateLabel    = $startLabel;

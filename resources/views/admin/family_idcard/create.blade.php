@@ -283,7 +283,7 @@
 .family-idcard-create-page .form-control:focus,
 .family-idcard-create-page .form-select:focus {
     border-color: #86b7fe;
-    box-shadow: 0 0 0 0.25rem rgba(0, 74, 147, 0.15);
+    box-shadow: 0 0 0 0.25rem rgba(0, 67, 132, 0.15);
 }
 .family-idcard-upload-zone {
     background-color: #f8f9fa;
@@ -301,10 +301,10 @@
 }
 .family-idcard-upload-zone:hover {
     background-color: #eef4fc;
-    border-color: #004a93;
+    border-color: #004384;
 }
 .family-idcard-upload-icon { font-size: 2.5rem !important; color: #6c757d; }
-.family-idcard-upload-zone:hover .family-idcard-upload-icon { color: #004a93; }
+.family-idcard-upload-zone:hover .family-idcard-upload-icon { color: #004384; }
 .family-idcard-upload-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 120px; }
 .family-idcard-upload-preview {
     display: flex;
@@ -349,15 +349,15 @@
 }
 .family-idcard-upload-zone-sm:hover {
     background-color: #eef4fc;
-    border-color: #004a93;
+    border-color: #004384;
 }
 .family-idcard-upload-placeholder-sm { display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .family-idcard-upload-preview-sm { display: flex; align-items: center; justify-content: center; padding: 0.25rem; position: relative; min-height: 80px; }
 .family-idcard-members-table thead tr { background: #122442; color: #fff; }
 .family-idcard-members-table thead th { font-weight: 600; font-size: 0.8125rem; padding: 0.75rem 0.5rem; border: none; }
 .family-idcard-members-table tbody td { padding: 0.5rem; vertical-align: middle; }
-.btn-outline-primary { border: 1px solid #004a93; color: #004a93; }
-.btn-outline-primary:hover { background-color: #004a93; color: #fff; }
+.btn-outline-primary { border: 1px solid #004384; color: #004384; }
+.btn-outline-primary:hover { background-color: #004384; color: #fff; }
 </style>
 
 <script>
@@ -849,7 +849,7 @@
         });
         groupZone.addEventListener('dragover', function(e) {
             e.preventDefault();
-            this.style.borderColor = '#004a93';
+            this.style.borderColor = '#004384';
             this.style.backgroundColor = '#eef4fc';
         });
         groupZone.addEventListener('dragleave', function(e) {

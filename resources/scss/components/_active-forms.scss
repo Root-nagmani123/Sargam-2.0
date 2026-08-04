@@ -1,0 +1,31 @@
+// =============================================================================
+// Phase 13 / A11Y-1 + A11Y-2 — Form control contrast (WCAG 2.1 AA)
+//
+// UNLAYERED (wins over the theme; compiled into ux4g-app.css, loaded LAST).
+//
+// A11Y-1 — 1.4.11 Non-text Contrast (needs 3:1 for UI component boundaries):
+//   The theme's form-control/select border is `--bs-border-color` = #e0e6eb, which is
+//   only ~1.26:1 on white — the input boundary is nearly invisible. Darkened to a cool
+//   slate #858e99 = 3.32:1. Scoped to INTERACTIVE CONTROLS ONLY — the global
+//   --bs-border-color (cards, tables, dividers) is deliberately left soft; 1.4.11 governs
+//   control boundaries, not decorative separators.
+//
+// A11Y-2 — 2.4.7 Focus Visible:
+//   Focused controls get the brand navy border + a clearly visible navy ring (the token
+//   value #004384, rgb 0 67 132). Focus styling is not in the resting baseline (nothing
+//   is focused at rest), so this has no visual-gate impact — only the rest border does.
+// =============================================================================
+
+$control-border: #858e99;   // 3.32:1 on #fff — passes 1.4.11
+$brand-navy:     #004384;   // canonical LBSNAA navy (R-1)
+
+.form-control,
+.form-select {
+  border-color: $control-border;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: $brand-navy;
+  box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.25);
+}

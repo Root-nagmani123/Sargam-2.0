@@ -22,7 +22,7 @@
         }
         .fc-foundation .fc-eyebrow {
             font-size: clamp(1.25rem, 1.9vw, 1.6rem);
-            color: #004a93;
+            color: #004384;
             font-weight: 700;
             letter-spacing: .03em;
             margin-bottom: .15rem;
@@ -39,13 +39,13 @@
             transition: box-shadow .2s ease, transform .2s ease;
         }
         .fc-foundation .fc-info-card:hover {
-            box-shadow: 0 .4rem 1rem rgba(0, 74, 147, .12);
+            box-shadow: 0 .4rem 1rem rgba(0, 67, 132, .12);
             transform: translateY(-2px);
         }
         .fc-foundation .fc-info-label {
             font-size: 1.1rem;
             font-weight: 700;
-            color: #004a93;
+            color: #004384;
             margin-bottom: .2rem;
         }
         .fc-foundation .fc-info-value {
@@ -81,7 +81,7 @@
                 <!-- Course Duration -->
                 <div class="col-md-6">
                     <div class="d-flex align-items-center justify-content-center fc-info-card border rounded-4 p-3 h-100">
-                        <i class="material-icons menu-icon me-3 fs-3" style="color: #004a93;">calendar_today</i>
+                        <i class="material-icons menu-icon me-3 fs-3" style="color: #004384;">calendar_today</i>
                         <div class="text-start">
                             <h4 class="fc-info-label">Course Duration</h4>
                             <div class="fc-info-value">
@@ -96,7 +96,7 @@
                 <!-- Online Registration -->
                 <div class="col-md-6">
                     <div class="d-flex align-items-center justify-content-center fc-info-card border rounded-4 p-3 h-100">
-                        <i class="material-icons menu-icon me-3 fs-3" style="color: #004a93;">location_on</i>
+                        <i class="material-icons menu-icon me-3 fs-3" style="color: #004384;">location_on</i>
                         <div class="text-start">
                             <h4 class="fc-info-label">Online Registration</h4>
                             <div class="fc-info-value">
@@ -111,7 +111,7 @@
                 <!-- Online Exemption -->
                 {{-- <div class="col-md-6">
                     <div class="d-flex align-items-center border rounded-4 p-3 h-100">
-                        <i class="material-icons menu-icon me-3 fs-3" style="color: #004a93;">group</i>
+                        <i class="material-icons menu-icon me-3 fs-3" style="color: #004384;">group</i>
                         <div>
                             <h6 class="mb-1 fw-semibold">Online Exemption</h6>
                             <div class="text-muted">Available after registration</div>
@@ -122,7 +122,7 @@
                 <!-- Laptop Requirement -->
                 {{-- <div class="col-md-6">
                     <div class="d-flex align-items-center border rounded-4 p-3 h-100">
-                        <i class="material-icons menu-icon me-3 fs-3" style="color: #004a93;">laptop_windows</i>
+                        <i class="material-icons menu-icon me-3 fs-3" style="color: #004384;">laptop_windows</i>
                         <div>
                             <h6 class="mb-1 fw-semibold">Laptop Requirement</h6>
                             <div class="text-muted">Mandatory for all participants</div>
@@ -143,7 +143,7 @@
 
         {{-- <div class="text-center mt-4">
             <a href="{{ route('fc.choose.path') }}" class="btn btn-primary px-4"
-                style="background-color: #004a93; border: #004a93;">
+                style="background-color: #004384; border: #004384;">
                 Click Here to Proceed
             </a>
         </div> --}}
@@ -164,7 +164,7 @@
         </div>
          <div class="text-center mt-4">
             <a href="{{ route('fc.choose.path', $intentQuery ?? []) }}" class="btn btn-primary px-4"
-                style="background-color: #004a93; border: #004a93;">
+                style="background-color: #004384; border: #004384;">
                 Click Here to Proceed
             </a>
         </div>

@@ -70,8 +70,8 @@
     .student-list-page .sl-more-menu #slOverflowSlot:not(:empty) { margin-bottom: 0.75rem; }
 
     .student-list-page .sl-filter-select:focus {
-        border-color: #004a93;
-        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+        border-color: #004384;
+        box-shadow: 0 0 0 3px rgba(0, 67, 132, 0.12);
     }
 
     /* ── Searchable filter dropdowns (Select2) — sized to match .sl-filter-select chips ── */
@@ -87,8 +87,8 @@
     }
     .student-list-page .sl-filter-item .select2-container--default.select2-container--focus .select2-selection--single,
     .student-list-page .sl-filter-item .select2-container--default.select2-container--open .select2-selection--single {
-        border-color: #004a93;
-        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+        border-color: #004384;
+        box-shadow: 0 0 0 3px rgba(0, 67, 132, 0.12);
     }
     /* Inside the +N Filters popover the Select2 widgets span the menu width. */
     .student-list-page .sl-more-menu .sl-filter-item .select2-container { width: 100% !important; }
@@ -154,7 +154,7 @@
         padding: 0 1.1rem;
         font-size: 0.9375rem;
         font-weight: 500;
-        color: #004a93;
+        color: #004384;
         border: 1px solid #d0d5dd;
         border-radius: 8px;
         background: #fff;
@@ -167,7 +167,7 @@
     .student-list-page .sl-more-filters-wrap { display: inline-flex; align-items: center; }
 
     .student-list-page .sl-more-filters {
-        color: #004a93;
+        color: #004384;
         font-weight: 600;
         font-size: 0.9375rem;
         text-decoration: none;
@@ -202,7 +202,7 @@
     }
 
     .student-list-page .programme-dt-table tbody td a.sl-count {
-        color: #004a93;
+        color: #004384;
         font-weight: 600;
         text-decoration: none;
         white-space: wrap;

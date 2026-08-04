@@ -289,7 +289,7 @@
                         <div class="otmdo-stat-label">Students</div>
                         <div class="otmdo-stat-value mt-2">{{ $totalStudents }}</div>
                     </div>
-                    <span class="otmdo-stat-ico" style="background:#eaf1f9;color:#004a93;">
+                    <span class="otmdo-stat-ico" style="background:#eaf1f9;color:#004384;">
                         <i class="bi bi-people" aria-hidden="true"></i>
                     </span>
                 </div>
@@ -313,7 +313,7 @@
                 {{-- Student header --}}
                 <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 pb-3 mb-3 border-bottom">
                     <div class="d-flex align-items-center gap-3">
-                        <span class="otmdo-stat-ico" style="background:#eaf1f9;color:#004a93;">
+                        <span class="otmdo-stat-ico" style="background:#eaf1f9;color:#004384;">
                             <i class="bi bi-person" aria-hidden="true"></i>
                         </span>
                         <div>

@@ -74,12 +74,12 @@ body:has(#fcStatusPage) .top-header .container {
 .fc-status-board {
     width: 100%;
     border: 1px solid #9eb4cc;
-    box-shadow: 0 2px 8px rgba(0, 74, 147, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 67, 132, 0.08);
     background: #fff;
 }
 
 .fc-status-board__title {
-    background: #004a93;
+    background: #004384;
     color: #fff;
     text-align: center;
     font-weight: 700;
@@ -254,7 +254,7 @@ html.fc-status-smooth-scroll {
 }
 
 .fc-status-results__toolbar strong {
-    color: var(--fc-status-accent, #004a93);
+    color: var(--fc-status-accent, #004384);
 }
 
 .fc-status-table-wrap {
@@ -265,7 +265,7 @@ html.fc-status-smooth-scroll {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
     scrollbar-width: thin;
-    scrollbar-color: var(--fc-status-accent, #004a93) #e8ecef;
+    scrollbar-color: var(--fc-status-accent, #004384) #e8ecef;
 }
 
 .fc-status-table-wrap::-webkit-scrollbar {
@@ -278,7 +278,7 @@ html.fc-status-smooth-scroll {
 }
 
 .fc-status-table-wrap::-webkit-scrollbar-thumb {
-    background: var(--fc-status-accent, #004a93);
+    background: var(--fc-status-accent, #004384);
     border-radius: 4px;
 }
 
@@ -304,8 +304,8 @@ html.fc-status-smooth-scroll {
     position: sticky;
     top: 0;
     z-index: 3;
-    background-color: var(--fc-thead-bg, #004a93) !important;
-    box-shadow: inset 0 0 0 9999px var(--fc-thead-bg, #004a93) !important;
+    background-color: var(--fc-thead-bg, #004384) !important;
+    box-shadow: inset 0 0 0 9999px var(--fc-thead-bg, #004384) !important;
     background-clip: padding-box;
     color: var(--fc-thead-fg, #fff) !important;
     font-weight: 700;
@@ -402,13 +402,13 @@ html.fc-status-smooth-scroll {
 
 .fc-status-pagination-list .page-link:hover:not(.disabled) {
     background: var(--fc-status-accent-soft, #eef4fa);
-    border-color: var(--fc-status-accent, #004a93);
-    color: var(--fc-status-accent, #004a93);
+    border-color: var(--fc-status-accent, #004384);
+    color: var(--fc-status-accent, #004384);
 }
 
 .fc-status-pagination-list .page-item.active .page-link {
-    background: var(--fc-status-accent, #004a93);
-    border-color: var(--fc-status-accent, #004a93);
+    background: var(--fc-status-accent, #004384);
+    border-color: var(--fc-status-accent, #004384);
     color: #fff;
     font-weight: 700;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
@@ -480,7 +480,7 @@ body > footer.mt-4 {
 }
 
 .fc-status-tab:focus-visible {
-    outline: 2px solid #004a93;
+    outline: 2px solid #004384;
     outline-offset: 2px;
 }
 

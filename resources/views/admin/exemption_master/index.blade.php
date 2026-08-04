@@ -19,8 +19,8 @@
     }
 
     .pt-exemption-page .pt-filter-select:focus {
-        border-color: #004a93;
-        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+        border-color: #004384;
+        box-shadow: 0 0 0 3px rgba(0, 67, 132, 0.12);
     }
 
     /* Time-period date-range input */
@@ -61,7 +61,7 @@
         padding: 0 1.1rem;
         font-size: 0.9375rem;
         font-weight: 500;
-        color: #004a93;
+        color: #004384;
         border-radius: 8px;
         background: #fff;
     }
@@ -69,7 +69,7 @@
     .pt-exemption-page .pt-download-btn:hover {
         background: #fff;
 
-        color: #004a93;
+        color: #004384;
     }
 
     .pt-exemption-page .pt-download-btn i {

@@ -39,7 +39,7 @@
         line-height: 1.4;
         word-break: break-word;
     }
-    /* Sticky OT columns (DataTables scrollX). Header must stay #004a93 + white text like .table th — light bg + white text was invisible. */
+    /* Sticky OT columns (DataTables scrollX). Header must stay #004384 + white text like .table th — light bg + white text was invisible. */
     .dataTables_scrollBody .fc-status-grid-table tbody td.fc-status-sticky-1 {
         position: sticky;
         left: 0;
@@ -64,7 +64,7 @@
         z-index: 4;
         min-width: 11rem;
         box-shadow: 4px 0 12px -6px rgba(0, 0, 0, 0.25);
-        background-color: #004a93 !important;
+        background-color: #004384 !important;
         color: #ffffff !important;
     }
     .dataTables_scrollHead .fc-status-grid-table thead th.fc-status-sticky-2 {

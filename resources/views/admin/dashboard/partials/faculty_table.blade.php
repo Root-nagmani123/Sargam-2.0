@@ -397,27 +397,27 @@ $(document).ready(function() {
             }
         };
 
-        // Mess-report print theme: LBSNAA branding header, blue (#004a93) accents,
+        // Mess-report print theme: LBSNAA branding header, blue (#004384) accents,
         // grey table headers, zebra rows. Non-cropping A4 landscape.
         var PRINT_CSS =
             '@page { size: A4 landscape; margin: 12mm; }' +
             '* { box-sizing: border-box; }' +
             'body { font-family: "DejaVu Sans", Arial, sans-serif; font-size: 11pt; margin: 0; padding: 0; ' +
                 'color: #222; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
-            '.lbsnaa-header-wrap { border-bottom: 2px solid #004a93; margin-bottom: 12px; padding: 2px 0 8px; }' +
+            '.lbsnaa-header-wrap { border-bottom: 2px solid #004384; margin-bottom: 12px; padding: 2px 0 8px; }' +
             '.branding-table { width: 100%; border-collapse: collapse; margin: 0; }' +
             '.branding-table td { border: 0; padding: 0; vertical-align: middle; }' +
             '.branding-logo-left { width: 42px; }' +
             '.branding-text { text-align: left; padding: 0 10px 0 2px; line-height: 1.25; }' +
             '.branding-logo-right { width: 200px; text-align: right; }' +
-            '.lbsnaa-brand-line-1 { font-size: 8pt; color: #004a93; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }' +
+            '.lbsnaa-brand-line-1 { font-size: 8pt; color: #004384; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }' +
             '.lbsnaa-brand-line-2 { font-size: 13pt; color: #222; font-weight: 700; text-transform: uppercase; margin-top: 2px; }' +
             '.lbsnaa-brand-line-3 { font-size: 10pt; color: #555; margin-top: 2px; }' +
             '.header-img-left { width: 34px; height: 34px; }' +
             '.header-img-right { width: 165px; height: auto; }' +
             '.report-header-block { text-align: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #dee2e6; }' +
             '.report-title-center { font-size: 14pt; font-weight: 700; text-transform: uppercase; margin: 0 0 8px; color: #212529; }' +
-            '.report-date-bar { background: #004a93; color: #fff; padding: 8px 12px; text-align: center; font-weight: 600; font-size: 10pt; display: inline-block; }' +
+            '.report-date-bar { background: #004384; color: #fff; padding: 8px 12px; text-align: center; font-weight: 600; font-size: 10pt; display: inline-block; }' +
             '.report-meta-print { font-size: 9pt; margin: 10px 0 12px; line-height: 1.45; text-align: left; }' +
             '.report-meta-print .meta-line { margin-bottom: 4px; word-wrap: break-word; }' +
             'table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 10px; table-layout: auto; }' +
@@ -486,9 +486,9 @@ $(document).ready(function() {
 
                 // Branding lines above the title.
                 doc.content.unshift(
-                    { text: brandLine1, fontSize: 8, color: '#004a93', alignment: 'center', characterSpacing: 0.5 },
+                    { text: brandLine1, fontSize: 8, color: '#004384', alignment: 'center', characterSpacing: 0.5 },
                     { text: brandLine2.toUpperCase(), fontSize: 12, bold: true, alignment: 'center', margin: [0, 2, 0, 2] },
-                    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 751, y2: 0, lineWidth: 1.5, lineColor: '#004a93' }], margin: [0, 0, 0, 8] }
+                    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 751, y2: 0, lineWidth: 1.5, lineColor: '#004384' }], margin: [0, 0, 0, 8] }
                 );
 
                 var tableNode = doc.content.find(function (c) { return c && c.table; });

@@ -579,13 +579,13 @@ footer .row > div {
     }
 
     .nav-container .navbar-nav .nav-link.active {
-        color: #004a93;
-        border-bottom-color: #004a93;
-        background: rgba(0, 74, 147, 0.05);
+        color: #004384;
+        border-bottom-color: #004384;
+        background: rgba(0, 67, 132, 0.05);
     }
 
     .nav-container .navbar-nav .nav-link:hover {
-        background: rgba(0, 74, 147, 0.08);
+        background: rgba(0, 67, 132, 0.08);
     }
 
     /* Hide nav link spans on mobile */

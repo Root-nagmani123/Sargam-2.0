@@ -262,12 +262,12 @@
 
                             <div class="mb-3">
                                 <label class="form-label">From Date</label>
-                                <input type="date" class="form-control" name="from_date" value="{{ $fromDate ?? '' }}" />
+                                <input type="date" class="form-control" name="from_date" value="{{ $fromDate ?? '' }}" aria-label="From date" />
                             </div>
 
                             <div class="mb-4">
                                 <label class="form-label">To Date</label>
-                                <input type="date" class="form-control" name="to_date" value="{{ $toDate ?? '' }}" />
+                                <input type="date" class="form-control" name="to_date" value="{{ $toDate ?? '' }}" aria-label="To date" />
                             </div>
 
                             <div class="d-grid gap-2 d-flex">

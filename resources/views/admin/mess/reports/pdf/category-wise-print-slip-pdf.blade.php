@@ -89,7 +89,7 @@
 
         .lbsnaa-brand-line-1 {
             font-size: 11.5px;
-            color: #004a93;
+            color: #004384;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             font-weight: 600;
@@ -205,7 +205,7 @@
         .print-slip-table .grand-total-row {
             background: #d8e4ef;
             font-weight: bold;
-            border-top: 3px solid #004a93;
+            border-top: 3px solid #004384;
         }
 
         .cw-slip-empty {
@@ -236,7 +236,7 @@
         .lbsnaa-branding-table {
             width: 100%;
             border-collapse: collapse;
-            border-bottom: 2px solid #004a93;
+            border-bottom: 2px solid #004384;
             margin-bottom: 10px;
             padding: 2px 0 8px;
         }

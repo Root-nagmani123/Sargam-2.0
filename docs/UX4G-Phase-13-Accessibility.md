@@ -71,8 +71,8 @@ zero-regression phase. Each needs a design decision, then its own gated change.
 
 | # | Item | WCAG | Note |
 |---|---|---|---|
-| A11Y-1 | **Input border contrast** ~1.26:1 | 1.4.11 (needs 3:1) | Default control border too faint; darkening is a global visual change. Tie to the R-1 token decision. |
-| A11Y-2 | **Focus-ring strength** | 2.4.7 | Theme has a *faint* ring (verified real in Phase 6; the "no ring" reading was a false premise). Strengthening is a visual change. |
+| A11Y-1 | ✅ **DONE (2026-08-04)** — Input border contrast 1.26 → **3.32:1** | 1.4.11 | `.form-control/.form-select` rest border darkened to `#858e99` (cool slate), **scoped to controls** (global card/table borders left soft). New `_active-forms.scss` → `ux4g-app.css`. Baseline re-approved (chrome+firefox+webkit); verified diff = borders only. |
+| A11Y-2 | ✅ **DONE (2026-08-04)** — Focus ring → navy | 2.4.7 | `:focus` now gets brand navy `#004384` border + visible navy ring — **replacing the theme's off-brand UX4G-violet ring** (`#613AF5`). Confirmed via real keyboard-focus screenshot. Not in the resting baseline (no gate impact). |
 | A11Y-3 | **4 non-focusable tooltips** (A-5, from Phase 9) | 1.4.13 / 2.1.1 | Tooltips on non-focusable elements — keyboard users can't trigger. Fix = `tabindex="0"` or move to a focusable host; slight focus-outline change, so gated. |
 | A11Y-4 | **`.badge-success` #28a745 / white** in `joining_document` | 1.4.3 (2.20:1) | Same defect class as Phase 8 badges, but a page-local self-defined style on a printable doc. Low traffic. |
 | A11Y-5 | `title`→`aria-label` on title-only icon buttons | 4.1.2 | Robustness upgrade; `title` already provides a name. Low priority. |

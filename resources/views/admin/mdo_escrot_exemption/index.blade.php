@@ -137,7 +137,7 @@ select.mee-filter-control {
     margin: 0 0.25rem;
 }
 .mee-student-tag {
-    background-color: #004a93;
+    background-color: #004384;
     color: #fff;
     padding: 0.25rem 0.5rem;
     border-radius: 0.25rem;
@@ -209,12 +209,12 @@ select.mee-filter-control {
 
         <div class="d-flex flex-wrap align-items-center justify-content-lg-end gap-2">
             <button type="button" id="printDownloadBtn"
-                class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold shadow-sm" style="border:0;background:#fff;color:#004a93;">
+                class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold shadow-sm" style="border:0;background:#fff;color:#004384;">
                 <i class="material-icons material-symbols-rounded" aria-hidden="true">print</i>
                 <span>Print</span>
             </button>
             <button type="button" id="downloadBtn"
-                class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold shadow-sm" style="border:0;background:#fff;color:#004a93;">
+                class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold shadow-sm" style="border:0;background:#fff;color:#004384;">
                 <i class="material-icons material-symbols-rounded" aria-hidden="true">download</i>
                 <span>Download</span>
             </button>
@@ -624,7 +624,7 @@ $(document).ready(function() {
             tableHtml += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }';
             tableHtml += 'th { background-color: #b72a2a; color: white; font-weight: bold; }';
             tableHtml += 'tr:nth-child(even) { background-color: #f7f7f7; }';
-            tableHtml += 'h2 { color: #004a93; margin-bottom: 20px; }';
+            tableHtml += 'h2 { color: #004384; margin-bottom: 20px; }';
             tableHtml += '@media print { body { margin: 0; } @page { margin: 1cm; } }';
             tableHtml += '</style></head><body>';
             tableHtml += '<h2>MDO/Escort Exemption</h2>';

@@ -122,8 +122,8 @@
     {{-- Grand Total Row --}}
     @if($grandTotalAmount > 0)
         <tr>
-            <td colspan="7" style="text-align:right; font-weight:700;background:#004a93;color:#fff;">Grand Total:</td>
-            <td style="font-weight:700;background:#004a93;color:#fff;">{{ number_format($grandTotalAmount, 2) }}</td>
+            <td colspan="7" style="text-align:right; font-weight:700;background:#004384;color:#fff;">Grand Total:</td>
+            <td style="font-weight:700;background:#004384;color:#fff;">{{ number_format($grandTotalAmount, 2) }}</td>
         </tr>
     @endif
 </table>

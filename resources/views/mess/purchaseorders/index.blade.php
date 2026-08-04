@@ -10,7 +10,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
     </div>
     <div class="datatables">
         <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
-            <div class="card-header border-0 py-3 px-3 px-md-4 position-relative" style="background:#004a93;">
+            <div class="card-header border-0 py-3 px-3 px-md-4 position-relative" style="background:#004384;">
                 <div
                     class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 no-print">
                     <div class="d-flex align-items-center gap-3">
@@ -334,7 +334,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 }
 
 .report-title-bar {
-    background-color: #004a93;
+    background-color: #004384;
     color: #fff;
     padding: 8px 16px;
     font-size: 0.95rem;
@@ -421,7 +421,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 
     .report-header {
         margin-top: 0;
-        border-bottom: 2px solid #004a93;
+        border-bottom: 2px solid #004384;
         padding-bottom: 12px;
         margin-bottom: 20px;
     }
@@ -456,7 +456,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
         display: inline-block;
-        background-color: #004a93 !important;
+        background-color: #004384 !important;
     }
 
     .report-print-date {
@@ -474,7 +474,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
     }
 
     .table thead th {
-        background-color: #004a93 !important;
+        background-color: #004384 !important;
         color: #fff !important;
         font-weight: 600;
         padding: 10px 8px;
@@ -520,7 +520,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
     }
 
     .bg-primary {
-        background-color: #004a93 !important;
+        background-color: #004384 !important;
         color: #fff !important;
     }
 
@@ -540,7 +540,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
     }
 
     .text-bg-primary {
-        background-color: #004a93 !important;
+        background-color: #004384 !important;
         color: #fff !important;
     }
 
@@ -3235,7 +3235,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
             '<div class="print-doc-header" style="text-align:center;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #2c3e50;">' +
             '<div style="margin-bottom:10px;"><img src="' + poPrintLogoUrl + '" alt="LBSNAA Logo" style="height:60px;width:auto;"></div>' +
             '<div style="font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">OFFICER\'S MESS LBSNAA MUSSOORIE</div>' +
-            '<div style="background:#004a93;color:#fff;padding:8px 16px;font-size:14px;display:inline-block;margin:4px 0;border-radius:4px;-webkit-print-color-adjust:exact;print-color-adjust:exact;">Purchase Order Details</div>' +
+            '<div style="background:#004384;color:#fff;padding:8px 16px;font-size:14px;display:inline-block;margin:4px 0;border-radius:4px;-webkit-print-color-adjust:exact;print-color-adjust:exact;">Purchase Order Details</div>' +
             '<div style="font-size:11px;color:#6c757d;margin-top:8px;">Printed on ' + dateStr +
             '</div></div>';
         var iconCss = window.PO_PRINT_SUPPRESS_ICON_CSS || '';
@@ -3248,7 +3248,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
             '.modal-header .modal-title { font-size: 14px; font-weight: 600; }' +
             '.modal-body { color: #212529; }' +
             '.card { margin-bottom: 14px; page-break-inside: avoid; border: 1px solid #dee2e6; border-radius: 4px; }' +
-            '.card-header { font-weight: 600; font-size: 13px; margin-bottom: 10px; padding: 8px 12px; background: #f8f9fa; border-bottom: 2px solid #004a93; color: #004a93; }' +
+            '.card-header { font-weight: 600; font-size: 13px; margin-bottom: 10px; padding: 8px 12px; background: #f8f9fa; border-bottom: 2px solid #004384; color: #004384; }' +
             '.card-body .row { display: flex; flex-wrap: wrap; margin: 0 -6px; }' +
             '.card-body .col-md-4, .card-body .col-xl-4, .card-body .col-12 { width: 33.33%; box-sizing: border-box; padding: 0 6px 10px; }' +
             '.card-body .col-md-12, .card-body .col-12 { width: 100%; }' +
@@ -3259,16 +3259,16 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
             '.bg-light-subtle { background-color: #f8f9fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
             'table { width: 100%; border-collapse: collapse; font-size: 11px; page-break-inside: auto; }' +
             'th, td { border: 1px solid #adb5bd; padding: 6px 8px; text-align: left; }' +
-            'thead th { background: #004a93 !important; color: #fff !important; border-color: #003d7a; font-weight: 600; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
+            'thead th { background: #004384 !important; color: #fff !important; border-color: #003d7a; font-weight: 600; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
             'tbody tr:nth-child(even) { background-color: #f8f9fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
-            '.card-footer { font-weight: 600; padding: 10px 12px; border-top: 2px solid #004a93; margin-top: 4px; font-size: 13px; background: #f8f9fa; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
+            '.card-footer { font-weight: 600; padding: 10px 12px; border-top: 2px solid #004384; margin-top: 4px; font-size: 13px; background: #f8f9fa; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
             '.badge { display: inline-block; padding: 3px 8px; font-size: 10px; border-radius: 4px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
             '.bg-success { background-color: #28a745 !important; color: #fff !important; }' +
             '.bg-danger { background-color: #dc3545 !important; color: #fff !important; }' +
             '.bg-warning { background-color: #ffc107 !important; color: #212529 !important; }' +
-            '.bg-primary { background-color: #004a93 !important; color: #fff !important; }' +
+            '.bg-primary { background-color: #004384 !important; color: #fff !important; }' +
             '.btn-close, .modal-footer { display: none !important; }' +
-            '.text-primary { color: #004a93 !important; }' +
+            '.text-primary { color: #004384 !important; }' +
             '.fs-5 { font-size: 16px !important; }' +
             '@media print { body { padding: 0; } .print-doc-header { margin-bottom: 16px; } }' +
             '</style>';

@@ -193,7 +193,7 @@ function printStockSummary() {
       padding: 1rem;
     }
     .lbsnaa-header { 
-      border-bottom: 2px solid #004a93; 
+      border-bottom: 2px solid #004384; 
       padding-bottom:.75rem; 
       margin-bottom:1rem; 
     }
@@ -201,7 +201,7 @@ function printStockSummary() {
       font-size:0.9rem; 
       text-transform:uppercase; 
       letter-spacing:.06em; 
-      color:#004a93; 
+      color:#004384; 
       font-weight: 600;
     }
     .brand-line-2 { 

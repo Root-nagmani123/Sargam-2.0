@@ -2,7 +2,7 @@
 @section('title', 'Add Vehicle Pass Configuration - Security Management')
 @section('setup_content')
 <div class="container-fluid">
-    <div class="card" style="border-left:4px solid #004a93;">
+    <div class="card" style="border-left:4px solid #004384;">
         <div class="card-header bg-white">
             <div class="d-flex justify-content-between align-items-center">
                 <h4 class="mb-0">Add Vehicle Pass Configuration</h4>

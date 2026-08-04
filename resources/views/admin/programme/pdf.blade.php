@@ -27,7 +27,7 @@ body {
    HEADER
 ====================================================== */
 .course-header {
-    background: #004a93;
+    background: #004384;
     color: #ffffff;
     padding: 18px 20px;
     border-radius: 6px;
@@ -52,10 +52,10 @@ body {
 .section-title {
     font-size: 15px;
     font-weight: bold;
-    color: #004a93;
+    color: #004384;
     margin: 25px 0 12px;
     padding-bottom: 6px;
-    border-bottom: 2px solid #004a93;
+    border-bottom: 2px solid #004384;
 }
 
 /* ======================================================
@@ -98,7 +98,7 @@ body {
 ====================================================== */
 .role-badge {
     display: inline-block;
-    background: #004a93;
+    background: #004384;
     color: #ffffff;
     padding: 6px 16px;
     border-radius: 16px;
@@ -118,7 +118,7 @@ body {
 
 .photo-frame {
     display: inline-block;
-    border: 2px solid #004a93;
+    border: 2px solid #004384;
     padding: 6px;
     background: #ffffff;
     margin-bottom: 6px;
@@ -148,7 +148,7 @@ body {
     margin-top: 6px;
     font-size: 12px;
     font-weight: bold;
-    color: #004a93;
+    color: #004384;
 }
 
 /* ======================================================

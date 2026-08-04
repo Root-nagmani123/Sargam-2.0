@@ -47,7 +47,7 @@
         </li>
     </ul>
 
-    <a href="#" id="btnTimetablePdf" class="btn btn-outline-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm px-3 fw-semibold text-nowrap" style="background-color: #fff; border:0;color:#004a93;" title="Download the visible timetable as a PDF">
+    <a href="#" id="btnTimetablePdf" class="btn btn-outline-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm px-3 fw-semibold text-nowrap" style="background-color: #fff; border:0;color:#004384;" title="Download the visible timetable as a PDF">
         <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">download</i>
         <span>Download</span>
     </a>

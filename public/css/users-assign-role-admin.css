@@ -1,6 +1,6 @@
 /* Assign Role — user management theme */
 .users-assign-page {
-    --uar-primary: #004a93;
+    --uar-primary: #004384;
     --uar-primary-dark: #003366;
     --uar-border: #e4e7ec;
     --uar-text: #344054;
@@ -38,7 +38,7 @@
     padding: 0.4rem 0.875rem;
     background: var(--uar-selected-bg) !important;
     color: var(--uar-primary) !important;
-    border: 1px solid rgba(0, 74, 147, 0.15);
+    border: 1px solid rgba(0, 67, 132, 0.15);
 }
 
 .users-assign-page .users-assign-section-label {
@@ -88,7 +88,7 @@
 
 .users-assign-page .users-assign-search-input:focus {
     border-color: var(--uar-primary);
-    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.12);
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
 }
 
 .users-assign-page .users-assign-clear-btn {
@@ -141,7 +141,7 @@
 .users-assign-page .role-option.is-selected {
     border-color: var(--uar-primary) !important;
     background: var(--uar-selected-bg) !important;
-    box-shadow: 0 0 0 1px rgba(0, 74, 147, 0.08);
+    box-shadow: 0 0 0 1px rgba(0, 67, 132, 0.08);
 }
 
 .users-assign-page .role-option .form-check-input {

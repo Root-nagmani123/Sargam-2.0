@@ -235,7 +235,7 @@
 .header-app-name {
     font-size: 1.25rem;
     font-weight: 700;
-    color: #004a93;
+    color: #004384;
 }
 
 /* Centered scrollable nav pill */
@@ -345,7 +345,7 @@
     padding: 0.5rem 0.75rem !important;
     border-radius: 8px;
 }
-.header-search-btn:hover { color: #004a93 !important; }
+.header-search-btn:hover { color: #004384 !important; }
 
 /* Right side */
 .header-right-actions { margin-right: 0.4rem; }
@@ -504,9 +504,9 @@
     transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
 }
 .header-logout-btn:hover {
-    color: #004a93 !important;
-    background-color: rgba(0, 74, 147, 0.08) !important;
-    border-color: rgba(0, 74, 147, 0.12);
+    color: #004384 !important;
+    background-color: rgba(0, 67, 132, 0.08) !important;
+    border-color: rgba(0, 67, 132, 0.12);
 }
 .header-logout-btn:active {
     transform: scale(0.97);

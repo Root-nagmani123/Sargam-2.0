@@ -20,9 +20,9 @@
 .att-mark-page .att-btn-outline {
     height: 42px; display: inline-flex; align-items: center; gap: 0.5rem;
     padding: 0 1.1rem; font-weight: 600; font-size: 0.9rem;
-    color: #004a93; background: #fff; border: 1px solid #d0d5dd; border-radius: 8px;
+    color: #004384; background: #fff; border: 1px solid #d0d5dd; border-radius: 8px;
 }
-.att-mark-page .att-btn-outline:hover { background: #f2f7fc; border-color: #004a93; }
+.att-mark-page .att-btn-outline:hover { background: #f2f7fc; border-color: #004384; }
 .att-mark-page .att-btn-primary { height: 42px; font-weight: 600; }
 
 /* Filter chips */
@@ -51,7 +51,7 @@
     border-bottom: 1px solid #e4e7ec !important; white-space: nowrap;
 }
 .att-mark-page .att-table tbody td { padding: 0.9rem 1rem !important; font-size: 0.875rem; color: #344054; border-bottom: 1px solid #eef2f6 !important; }
-.att-mark-page .att-table tbody tr:hover td { background: rgba(0,74,147,0.03); }
+.att-mark-page .att-table tbody tr:hover td { background: rgba(0,67,132,0.03); }
 
 /* Status badges */
 .att-mark-page .att-badge {
@@ -62,20 +62,20 @@
 .att-mark-page .att-absent  { color: #b42318; background: #fef3f2; }
 .att-mark-page .att-nm      { color: #b54708; background: #fffaeb; }
 .att-mark-page .att-late    { color: #b54708; background: #fff6ed; }
-.att-mark-page .att-duty    { color: #004a93; background: #eff8ff; }
+.att-mark-page .att-duty    { color: #004384; background: #eff8ff; }
 .att-mark-page .att-exempt  { color: #475467; background: #f2f4f7; }
 
 /* Why this row's status is stuck on Present (OT is on duty / exempt). */
 .att-mark-page .att-lock-note {
     display: flex; align-items: center; gap: 0.3rem; margin-top: 0.25rem;
-    color: #004a93; font-size: 0.75rem; font-weight: 500;
+    color: #004384; font-size: 0.75rem; font-weight: 500;
 }
 .att-mark-page .att-lock-note i { font-size: 0.6875rem; }
 
 /* Update-attendance action = stacked icon + label (blue link) */
 .att-mark-page .att-action-icon {
     display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 2px; padding: 0.25rem 0.5rem; border-radius: 8px; color: #004a93;
+    gap: 2px; padding: 0.25rem 0.5rem; border-radius: 8px; color: #004384;
     text-decoration: none; border: 0; background: transparent; cursor: pointer;
     line-height: 1.1; transition: background-color .15s ease;
 }
@@ -86,7 +86,7 @@
 
 /* Breadcrumb */
 .att-mark-page .att-crumb a { color: #667085; text-decoration: none; }
-.att-mark-page .att-crumb a:hover { color: #004a93; text-decoration: underline; }
+.att-mark-page .att-crumb a:hover { color: #004384; text-decoration: underline; }
 .att-mark-page .att-crumb-sep { color: #cbd2da; margin: 0 0.15rem; }
 .att-mark-page .att-crumb-current { color: #101828; font-weight: 600; }
 
@@ -102,7 +102,7 @@
 .att-mark-page .att-info-ico {
     flex-shrink: 0; width: 2rem; height: 2rem; border-radius: 8px;
     display: inline-flex; align-items: center; justify-content: center;
-    background: #eff4fb; color: #004a93; font-size: 1rem;
+    background: #eff4fb; color: #004384; font-size: 1rem;
 }
 .att-mark-page .att-info-body { min-width: 0; }
 .att-mark-page .att-info-label { font-size: 0.75rem; color: #667085; margin-bottom: 0.15rem; }
@@ -357,17 +357,17 @@ $(function () {
             '.pdf-hdr .logo img{max-height:64px;max-width:84px;} .pdf-hdr .center{text-align:center;padding:0 8px;}' +
             '.pdf-hdr .inst-hi-img{height:18px;width:auto;margin-bottom:2px;}' +
             '.pdf-hdr .inst-en{font-size:16px;font-weight:bold;color:#102a43;line-height:1.25;}' +
-            '.report-title{text-align:center;font-size:20px;font-weight:bold;color:#004a93;margin:8px 0 6px;padding-bottom:8px;border-bottom:2px solid #004a93;}' +
+            '.report-title{text-align:center;font-size:20px;font-weight:bold;color:#004384;margin:8px 0 6px;padding-bottom:8px;border-bottom:2px solid #004384;}' +
             '.print-info{margin-bottom:12px;font-size:11px;color:#666;text-align:center;line-height:1.6;}' +
             'table{width:100%;border-collapse:collapse;margin-top:10px;}' +
             'table th,table td{border:1px solid #8fa3bd;padding:6px 8px;text-align:left;font-size:12px;}' +
-            'table thead th{font-weight:bold;background-color:#004a93 !important;color:#fff !important;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+            'table thead th{font-weight:bold;background-color:#004384 !important;color:#fff !important;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
             'table tbody tr:nth-child(even){background-color:#eef2f8;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
             '.att-badge{display:inline-block;padding:3px 8px;border-radius:4px;font-weight:600;font-size:11px;' +
                 '-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
             '.att-present{color:#027a48;background:#ecfdf3;} .att-absent{color:#b42318;background:#fef3f2;}' +
             '.att-nm{color:#b54708;background:#fffaeb;} .att-late{color:#b54708;background:#fff6ed;}' +
-            '.att-duty{color:#004a93;background:#eff8ff;} .att-exempt{color:#475467;background:#f2f4f7;}' +
+            '.att-duty{color:#004384;background:#eff8ff;} .att-exempt{color:#475467;background:#f2f4f7;}' +
             '.print-footer{margin-top:18px;text-align:center;font-size:10px;color:#666;border-top:1px solid #ccc;padding-top:10px;}' +
             '@media print{@page{size:A4 landscape;margin:10mm;} body{margin:0;}}' +
             '</style></head><body onload="window.focus();window.print();">' +

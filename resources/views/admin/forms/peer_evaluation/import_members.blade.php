@@ -9,9 +9,9 @@
     
     /* Focus Indicators - WCAG 2.4.7 */
     *:focus-visible {
-        outline: 3px solid #004a93;
+        outline: 3px solid #004384;
         outline-offset: 2px;
-        box-shadow: 0 0 0 4px rgba(0, 74, 147, 0.2);
+        box-shadow: 0 0 0 4px rgba(0, 67, 132, 0.2);
     }
     
     /* Modern Card Styles */
@@ -55,7 +55,7 @@
     }
     
     .file-upload-area:hover {
-        border-color: #004a93;
+        border-color: #004384;
         background: #e7f3ff;
     }
     
@@ -79,7 +79,7 @@
     
     .file-upload-area:hover .file-upload-icon,
     .file-upload-area.dragover .file-upload-icon {
-        color: #004a93;
+        color: #004384;
         transform: scale(1.1);
     }
     
@@ -114,7 +114,7 @@
     .file-input-label {
         display: inline-block;
         padding: 0.75rem 1.5rem;
-        background: #004a93;
+        background: #004384;
         color: white;
         border-radius: 8px;
         cursor: pointer;
@@ -126,7 +126,7 @@
     .file-input-label:hover {
         background: #003d7a;
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 74, 147, 0.3);
+        box-shadow: 0 4px 8px rgba(0, 67, 132, 0.3);
     }
     
     /* File Preview */
@@ -246,7 +246,7 @@
         background: white;
         padding: 0.75rem;
         border-radius: 8px;
-        border-left: 4px solid #004a93;
+        border-left: 4px solid #004384;
         font-size: 0.875rem;
         font-weight: 500;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -354,7 +354,7 @@
         gap: 0.5rem;
         padding: 0.5rem 1rem;
         background: #e7f3ff;
-        color: #004a93;
+        color: #004384;
         border-radius: 20px;
         font-size: 0.875rem;
         font-weight: 500;
@@ -417,9 +417,9 @@
     }
     
     .step-item.active .step-number {
-        background: #004a93;
+        background: #004384;
         color: white;
-        box-shadow: 0 4px 12px rgba(0, 74, 147, 0.3);
+        box-shadow: 0 4px 12px rgba(0, 67, 132, 0.3);
     }
     
     .step-label {
@@ -429,7 +429,7 @@
     }
     
     .step-item.active .step-label {
-        color: #004a93;
+        color: #004384;
         font-weight: 600;
     }
 </style>

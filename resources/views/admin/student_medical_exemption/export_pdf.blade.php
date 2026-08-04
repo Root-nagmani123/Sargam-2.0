@@ -37,10 +37,10 @@
             text-align: center;
             font-size: 15px;
             font-weight: bold;
-            color: #004a93;
+            color: #004384;
             margin: 6px 0 4px;
             padding-bottom: 5px;
-            border-bottom: 2px solid #004a93;
+            border-bottom: 2px solid #004384;
         }
 
         .meta { font-size: 7px; color: #444; margin: 0 0 6px; text-align: center; }
@@ -56,15 +56,15 @@
             overflow-wrap: break-word;
         }
         table.data-table thead th {
-            background: #004a93;
+            background: #004384;
             color: #fff;
             font-weight: bold;
             font-size: 6.5px;
             text-align: center;
-            border-color: #004a93;
+            border-color: #004384;
         }
         table.data-table tbody tr:nth-child(even) { background: #eef2f8; }
-        a.doc-link { color: #004a93; text-decoration: underline; }
+        a.doc-link { color: #004384; text-decoration: underline; }
 
         /* Give long-text columns more room; keep compact fields narrow. */
         .col-sno { width: 3%; }

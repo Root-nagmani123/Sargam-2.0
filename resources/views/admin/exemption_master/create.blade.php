@@ -36,11 +36,11 @@
     }
     .pt-exemption-config .days-input-group .form-control:focus {
         box-shadow: none;
-        border-color: #004a93;
+        border-color: #004384;
     }
     .pt-exemption-config .days-input-group:focus-within {
         border-radius: 0.375rem;
-        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+        box-shadow: 0 0 0 3px rgba(0, 67, 132, 0.12);
     }
     .pt-exemption-config .days-input-group .input-group-text {
         background: #f2f4f7;

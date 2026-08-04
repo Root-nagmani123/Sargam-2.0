@@ -14,7 +14,7 @@
 
         body {
             font-family: 'Noto Sans', 'Noto Sans Devanagari', 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #dc3545 0%, #004a93 100%);
+            background: linear-gradient(135deg, #dc3545 0%, #004384 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -83,7 +83,7 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #dc3545 0%, #004a93 100%);
+            background: linear-gradient(135deg, #dc3545 0%, #004384 100%);
             color: white;
         }
 

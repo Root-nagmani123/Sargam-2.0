@@ -6,7 +6,7 @@
 <style>
     /* GIGW Compliant Modern Design */
     :root {
-        --primary-blue: #004a93;
+        --primary-blue: #004384;
         --primary-light: #0066cc;
         --light-bg: #e8eef7;
         --very-light: #f0f3f7;
@@ -27,13 +27,13 @@
         border-radius: 12px;
         padding: 24px;
         color: white;
-        box-shadow: 0 4px 12px rgba(0, 74, 147, 0.15);
+        box-shadow: 0 4px 12px rgba(0, 67, 132, 0.15);
         margin-bottom: 32px;
         transition: var(--transition);
     }
     
     .exception-summary-card:hover {
-        box-shadow: 0 8px 24px rgba(0, 74, 147, 0.25);
+        box-shadow: 0 8px 24px rgba(0, 67, 132, 0.25);
         transform: translateY(-2px);
     }
     
@@ -285,12 +285,12 @@
     
     .filter-section .form-select:hover {
         border-color: var(--primary-blue);
-        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.1);
+        box-shadow: 0 0 0 3px rgba(0, 67, 132, 0.1);
     }
     
     .filter-section .form-select:focus {
         border-color: var(--primary-blue);
-        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.1);
+        box-shadow: 0 0 0 3px rgba(0, 67, 132, 0.1);
     }
     
     /* Responsive Adjustments */
@@ -698,14 +698,14 @@
                         }
                         
                         h4 {
-                            color: #004a93;
+                            color: #004384;
                             margin: 20px 0 15px 0;
                             font-size: 22px;
                             font-weight: 600;
                         }
                         
                         h5, h6 {
-                            color: #004a93;
+                            color: #004384;
                             margin: 15px 0 10px 0;
                             font-weight: 600;
                         }
@@ -719,7 +719,7 @@
                         .exception-summary-card {
                             background: #f0f3f7;
                             border: 1px solid #d1d5db;
-                            border-left: 4px solid #004a93;
+                            border-left: 4px solid #004384;
                             border-radius: 8px;
                             padding: 20px;
                             margin: 20px 0;
@@ -753,7 +753,7 @@
                         .summary-stat-value {
                             font-size: 28px;
                             font-weight: 700;
-                            color: #004a93;
+                            color: #004384;
                         }
                         
                         .section-container {
@@ -767,14 +767,14 @@
                         
                         .table-header {
                             background: #f0f3f7;
-                            border-bottom: 2px solid #004a93;
+                            border-bottom: 2px solid #004384;
                             padding: 14px 16px;
                             margin: 0;
                         }
                         
                         .table-header h6 {
                             margin: 0;
-                            color: #004a93;
+                            color: #004384;
                             font-size: 13px;
                             text-transform: uppercase;
                             letter-spacing: 0.5px;
@@ -784,7 +784,7 @@
                         }
                         
                         .faculty-header {
-                            background: #004a93;
+                            background: #004384;
                             color: white;
                             padding: 16px;
                             display: flex;
@@ -852,7 +852,7 @@
                         
                         .exception-table thead th {
                             background: #f0f3f7;
-                            color: #004a93;
+                            color: #004384;
                             font-weight: 600;
                             font-size: 12px;
                             padding: 12px;

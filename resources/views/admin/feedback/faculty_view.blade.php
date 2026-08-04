@@ -219,12 +219,12 @@ body {
 
                         <div class="mb-3">
                             <label class="form-label">From Date</label>
-                            <input type="date" name="from_date" class="form-control" value="{{ $fromDate ?? '' }}" />
+                            <input type="date" name="from_date" class="form-control" value="{{ $fromDate ?? '' }}" aria-label="From date" />
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">To Date</label>
-                            <input type="date" name="to_date" class="form-control" value="{{ $toDate ?? '' }}" />
+                            <input type="date" name="to_date" class="form-control" value="{{ $toDate ?? '' }}" aria-label="To date" />
                         </div>
 
                         <fieldset class="mb-3">

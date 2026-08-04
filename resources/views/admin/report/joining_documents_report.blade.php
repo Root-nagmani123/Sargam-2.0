@@ -28,14 +28,14 @@
 
         .sidebar .nav-pills .nav-link.active {
             font-weight: 500;
-            background-color: #004a93;
+            background-color: #004384;
             border: 1px solid #ddd;
             color: #fff;
             border-radius: 0.25rem;
         }
 
         .sidebar .nav-link:hover {
-            background-color: #004a93;
+            background-color: #004384;
             color: #fff !important;
         }
 
@@ -48,7 +48,7 @@
         }
 
         .top-header {
-            background-color: #004a93;
+            background-color: #004384;
             color: white;
             padding: 5px 15px;
         }
@@ -94,12 +94,12 @@
         }
 
         .btn-primary {
-            background-color: #004a93;
-            border-color: #004a93;
+            background-color: #004384;
+            border-color: #004384;
         }
 
         footer {
-            background-color: #004a93;
+            background-color: #004384;
             padding: 1rem 0;
             color: #fff;
         }
@@ -190,7 +190,7 @@
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle d-flex align-items-center" href="#"
                                     role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="material-icons" style="color: #004a93;">account_circle</i>
+                                    <i class="material-icons" style="color: #004384;">account_circle</i>
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end">
                                     <li>

@@ -237,17 +237,17 @@
     font-weight: 500;
 }
 .approval2-tabs .nav-link:hover {
-    color: #004a93;
+    color: #004384;
     background-color: #f1f5f9;
 }
 .approval2-tabs .nav-link.active {
-    background-color: #004a93;
+    background-color: #004384;
     color: #fff;
-    border-color: #004a93;
+    border-color: #004384;
 }
 .approval2-tabs .nav-link.active .badge {
     background-color: rgba(255,255,255,0.95) !important;
-    color: #004a93 !important;
+    color: #004384 !important;
 }
 .approval2-tabs .nav-link.active .badge.bg-success {
     background-color: #198754 !important;

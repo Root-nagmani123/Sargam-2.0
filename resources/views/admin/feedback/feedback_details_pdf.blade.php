@@ -25,7 +25,7 @@
 
         .print-header {
             width: 100%;
-            border-bottom: 3px solid #004a93;
+            border-bottom: 3px solid #004384;
             padding-bottom: 8px;
             margin-bottom: 10px;
         }
@@ -46,7 +46,7 @@
             font-size: 8px;
             text-transform: uppercase;
             letter-spacing: 0.06em;
-            color: #004a93;
+            color: #004384;
             font-weight: 700;
             margin: 0;
             padding: 0;
@@ -98,12 +98,12 @@
         }
 
         .main-table th {
-            background-color: #004a93;
+            background-color: #004384;
             color: #fff;
             font-weight: 700;
             padding: 4px 2px;
             text-align: center;
-            border: 1px solid #004a93;
+            border: 1px solid #004384;
             vertical-align: middle;
         }
 

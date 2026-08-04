@@ -22,7 +22,7 @@
             display: none !important;
         }
         .fc-reg-panel {
-            border: 1px solid rgba(0, 74, 147, 0.12);
+            border: 1px solid rgba(0, 67, 132, 0.12);
             border-radius: 10px;
             background: #fafbfd;
             padding: 1rem 1.15rem 1.1rem;
@@ -32,7 +32,7 @@
             font-weight: 700;
             letter-spacing: 0.06em;
             text-transform: uppercase;
-            color: #004a93;
+            color: #004384;
             margin-bottom: 0.85rem;
         }
         .fc-reg-panel .form-label {
@@ -54,7 +54,7 @@
             }
             .fc-reg-tools-col {
                 padding: 0 1.1rem;
-                border-right: 1px solid rgba(0, 74, 147, 0.1);
+                border-right: 1px solid rgba(0, 67, 132, 0.1);
             }
             .fc-reg-tools-col:first-child {
                 padding-left: 0;
@@ -99,7 +99,7 @@
         }
         .fc-reg-panel__divider {
             border: 0;
-            border-top: 1px solid rgba(0, 74, 147, 0.1);
+            border-top: 1px solid rgba(0, 67, 132, 0.1);
             margin: 1rem 0;
             opacity: 1;
         }
@@ -123,7 +123,7 @@
     </style>
     <div class="container-fluid">
 
-        <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card" style="border-left: 4px solid #004384;">
             <div class="card-body">
                 {{-- Filters --}}
                 <div class="fc-reg-panel mb-3">

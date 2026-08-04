@@ -16,7 +16,7 @@
 .issue-category-card {
     border-radius: 0.75rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(0, 74, 147, 0.1);
+    border: 1px solid rgba(0, 67, 132, 0.1);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
 }
@@ -28,7 +28,7 @@
 
 .issue-category-card .card-header-modern {
     background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-    border-bottom: 2px solid rgba(0, 74, 147, 0.1);
+    border-bottom: 2px solid rgba(0, 67, 132, 0.1);
     padding: 1.5rem;
 }
 
@@ -39,7 +39,7 @@
     top: 0;
     bottom: 0;
     width: 4px;
-    background: linear-gradient(180deg, #004a93 0%, #0066cc 100%);
+    background: linear-gradient(180deg, #004384 0%, #0066cc 100%);
 }
 
 /* Enhanced Table */
@@ -65,7 +65,7 @@
 }
 
 .issue-category-table tbody tr:hover {
-    background-color: rgba(0, 74, 147, 0.03);
+    background-color: rgba(0, 67, 132, 0.03);
     transform: scale(1.001);
 }
 
@@ -167,8 +167,8 @@
 }
 
 #addCategoryModal .form-control:focus {
-    border-color: #004a93;
-    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
+    border-color: #004384;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.15);
     outline: 0;
 }
 
@@ -197,8 +197,8 @@
 
 /* Button Styling */
 #addCategoryModal .btn-primary {
-    background-color: #004a93;
-    border-color: #004a93;
+    background-color: #004384;
+    border-color: #004384;
     border-radius: 0.375rem;
     padding: 0.5rem 1.5rem;
     font-weight: 500;
@@ -209,12 +209,12 @@
     background-color: #003d7a;
     border-color: #003d7a;
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 74, 147, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 67, 132, 0.3);
 }
 
 #addCategoryModal .btn-outline-primary {
-    border-color: #004a93;
-    color: #004a93;
+    border-color: #004384;
+    color: #004384;
     border-radius: 0.375rem;
     padding: 0.5rem 1.5rem;
     font-weight: 500;
@@ -223,8 +223,8 @@
 }
 
 #addCategoryModal .btn-outline-primary:hover {
-    background-color: #004a93;
-    border-color: #004a93;
+    background-color: #004384;
+    border-color: #004384;
     color: #fff;
     transform: translateY(-1px);
 }
@@ -232,17 +232,17 @@
 /* Sub-Category Buttons */
 #addCategoryModal .add-field-btn,
 #addCategoryModal .remove-field-btn {
-    border: 1.5px solid #004a93;
-    color: #004a93;
+    border: 1.5px solid #004384;
+    color: #004384;
     background-color: transparent;
     transition: all 0.2s ease;
     flex-shrink: 0;
 }
 
 #addCategoryModal .add-field-btn:hover {
-    background-color: #004a93;
+    background-color: #004384;
     color: #fff;
-    border-color: #004a93;
+    border-color: #004384;
     transform: scale(1.1);
 }
 
@@ -288,8 +288,8 @@
 
 .form-control:focus,
 .form-select:focus {
-    border-color: #004a93;
-    box-shadow: 0 0 0 0.25rem rgba(0, 74, 147, 0.15);
+    border-color: #004384;
+    box-shadow: 0 0 0 0.25rem rgba(0, 67, 132, 0.15);
 }
 
 /* Pagination Enhancement */
@@ -301,19 +301,19 @@
     border-radius: 0.5rem;
     margin: 0 0.25rem;
     border: 1px solid #dee2e6;
-    color: #004a93;
+    color: #004384;
     transition: all 0.2s ease;
 }
 
 .page-link:hover {
-    background-color: rgba(0, 74, 147, 0.1);
-    border-color: #004a93;
+    background-color: rgba(0, 67, 132, 0.1);
+    border-color: #004384;
     transform: translateY(-1px);
 }
 
 .page-item.active .page-link {
-    background-color: #004a93;
-    border-color: #004a93;
+    background-color: #004384;
+    border-color: #004384;
 }
 </style>
 @endsection
@@ -327,7 +327,7 @@
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
                     <div>
                         <h4 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <iconify-icon icon="solar:folder-bold-duotone" style="font-size: 1.5rem; color: #004a93;"></iconify-icon>
+                            <iconify-icon icon="solar:folder-bold-duotone" style="font-size: 1.5rem; color: #004384;"></iconify-icon>
                             Complaint Category Management
                         </h4>
                         <p class="text-muted small mb-0 mt-1">Manage and organize complaint categories</p>
@@ -521,7 +521,7 @@
                 <div class="modal-body">
                     <div class="mb-4">
                         <label for="edit_issue_category" class="form-label d-flex align-items-center gap-2">
-                            <iconify-icon icon="solar:folder-bold" style="color: #004a93;"></iconify-icon>
+                            <iconify-icon icon="solar:folder-bold" style="color: #004384;"></iconify-icon>
                             Category Name <span class="text-danger">*</span>
                         </label>
                         <input type="text" 
@@ -533,7 +533,7 @@
                     </div>
                     <div class="mb-4">
                         <label for="edit_description" class="form-label d-flex align-items-center gap-2">
-                            <iconify-icon icon="solar:document-text-bold" style="color: #004a93;"></iconify-icon>
+                            <iconify-icon icon="solar:document-text-bold" style="color: #004384;"></iconify-icon>
                             Description
                         </label>
                         <textarea class="form-control" 
@@ -545,7 +545,7 @@
                     </div>
                     <div class="mb-3">
                         <label for="edit_status" class="form-label d-flex align-items-center gap-2">
-                            <iconify-icon icon="solar:settings-bold" style="color: #004a93;"></iconify-icon>
+                            <iconify-icon icon="solar:settings-bold" style="color: #004384;"></iconify-icon>
                             Status
                         </label>
                         <select class="form-select form-select-lg" id="edit_status" name="status" required>
@@ -759,7 +759,7 @@ $('#addCategoryModal form').on('submit', function(e) {
             icon: 'error',
             title: 'No Data',
             text: 'Please add at least one category entry.',
-            confirmButtonColor: '#004a93'
+            confirmButtonColor: '#004384'
         });
         return false;
     }
@@ -770,7 +770,7 @@ $('#addCategoryModal form').on('submit', function(e) {
             icon: 'error',
             title: 'Validation Error',
             text: 'Please fill all required fields for each category entry.',
-            confirmButtonColor: '#004a93'
+            confirmButtonColor: '#004384'
         });
         return false;
     }

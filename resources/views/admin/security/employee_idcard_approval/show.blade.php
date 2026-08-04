@@ -10,13 +10,13 @@
 
 <style>
     .table th{
-        background-color: #004a93;
+        background-color: #004384;
         color: #fff;
     }
 </style>
 <div class="container-fluid">
     @include('components.breadcrum', ['title' => 'ID Card Approval Details'])
-    <div class="card" style="border-left:4px solid #004a93;">
+    <div class="card" style="border-left:4px solid #004384;">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>

@@ -18,7 +18,7 @@
             color: #1f2937;
         }
         .page-header {
-            border-bottom: 2px solid #004a93;
+            border-bottom: 2px solid #004384;
             padding-bottom: 8px;
             margin-bottom: 8px;
         }

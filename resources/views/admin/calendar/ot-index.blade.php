@@ -16,8 +16,8 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 <style>
         :root {
-        --primary: #004a93;
-        --primary-color: #004a93;
+        --primary: #004384;
+        --primary-color: #004384;
         --primary-dark: #003366;
         --accent: #eef5ff;
         --bg-light: #f4f6f9;
@@ -84,7 +84,7 @@
 }
 
 .fc-daygrid-day:hover {
-    background-color: rgba(0, 74, 147, 0.03);
+    background-color: rgba(0, 67, 132, 0.03);
 }
 
 .fc-daygrid-day.fc-day-today {
@@ -231,7 +231,7 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
 
 .fc-event-card:hover {
     transform: translateY(-4px) scale(1.02);
-    box-shadow: 0 10px 32px rgba(0, 74, 147, 0.18), 0 6px 12px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 10px 32px rgba(0, 67, 132, 0.18), 0 6px 12px rgba(0, 0, 0, 0.12);
     background: linear-gradient(135deg, #ffffff 0%, #eef5ff 100%) !important;
     border-left-width: 7px;
 }
@@ -616,7 +616,7 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
 .fc-timegrid-event:focus-visible {
     outline: 3px solid var(--primary-color);
     outline-offset: 2px;
-    box-shadow: 0 0 0 4px rgba(0, 74, 147, 0.2);
+    box-shadow: 0 0 0 4px rgba(0, 67, 132, 0.2);
 }
 
 /* Timetable styling */
@@ -649,7 +649,7 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
 }
 
 .timetable-grid td::-webkit-scrollbar-track {
-    background: rgba(0, 74, 147, 0.05);
+    background: rgba(0, 67, 132, 0.05);
     border-radius: 4px;
 }
 
@@ -666,11 +666,11 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
 /* Firefox scrollbar styling */
 .timetable-grid td {
     scrollbar-width: thin;
-    scrollbar-color: var(--primary-color) rgba(0, 74, 147, 0.05);
+    scrollbar-color: var(--primary-color) rgba(0, 67, 132, 0.05);
 }
 
 .timetable-grid td:hover {
-    background-color: rgba(0, 74, 147, 0.02);
+    background-color: rgba(0, 67, 132, 0.02);
 }
 
 /* Visual indicator for scrollable content */
@@ -708,7 +708,7 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
     font-weight: bold;
     background: white;
     border-radius: 50%;
-    box-shadow: 0 2px 8px rgba(0, 74, 147, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 67, 132, 0.3);
     z-index: 10;
     animation: bounce 2s infinite;
     pointer-events: none;
@@ -775,7 +775,7 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
 
 .list-event-card:hover {
     transform: translateX(8px) translateY(-3px);
-    box-shadow: 0 10px 32px rgba(0, 74, 147, 0.18), 0 6px 12px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 10px 32px rgba(0, 67, 132, 0.18), 0 6px 12px rgba(0, 0, 0, 0.12);
     z-index: 10;
     background: linear-gradient(135deg, #ffffff 0%, #eef5ff 100%);
     border-left-width: 7px;
@@ -792,7 +792,7 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
 .list-event-card:focus-visible {
     outline: 3px solid var(--primary-color);
     outline-offset: 4px;
-    box-shadow: 0 0 0 6px rgba(0, 74, 147, 0.15);
+    box-shadow: 0 0 0 6px rgba(0, 67, 132, 0.15);
 }
 
 /* Hover tooltip for full details */
@@ -992,7 +992,7 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
 .form-control:focus,
 .form-select:focus {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.25rem rgba(0, 74, 147, 0.15);
+    box-shadow: 0 0 0 0.25rem rgba(0, 67, 132, 0.15);
     outline: none;
 }
 
@@ -1020,14 +1020,14 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
 }
 
 .form-check-input:focus {
-    box-shadow: 0 0 0 0.25rem rgba(0, 74, 147, 0.25);
+    box-shadow: 0 0 0 0.25rem rgba(0, 67, 132, 0.25);
     border-color: var(--primary-color);
 }
 
 /* Modal improvements */
 .modal-header {
     padding: 1.5rem;
-    background: linear-gradient(135deg, rgba(0, 74, 147, 0.05), rgba(175, 41, 16, 0.05));
+    background: linear-gradient(135deg, rgba(0, 67, 132, 0.05), rgba(175, 41, 16, 0.05));
     border-bottom: 2px solid var(--primary-color);
 }
 
@@ -1047,13 +1047,13 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
 
 .control-panel {
     /* backdrop-filter creates a stacking context; dropdown then stays under fixed chrome */
-    border: 1px solid rgba(0, 74, 147, 0.1) !important;
+    border: 1px solid rgba(0, 67, 132, 0.1) !important;
     overflow: visible !important;
     position: relative;
 }
 
 .bg-gradient {
-    background: linear-gradient(135deg, rgba(0, 74, 147, 0.03), rgba(175, 41, 16, 0.03));
+    background: linear-gradient(135deg, rgba(0, 67, 132, 0.03), rgba(175, 41, 16, 0.03));
 }
 
 .logo-wrapper {
@@ -1233,9 +1233,9 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
 }
 
 .fc-daygrid-day-more-link:hover {
-    background: linear-gradient(135deg, var(--primary-dark), #004a93) !important;
+    background: linear-gradient(135deg, var(--primary-dark), #004384) !important;
     transform: scale(1.08);
-    box-shadow: 0 4px 12px rgba(0, 74, 147, 0.4) !important;
+    box-shadow: 0 4px 12px rgba(0, 67, 132, 0.4) !important;
     color: #ffffff !important;
 }
 
@@ -1269,14 +1269,14 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     display: inline-block !important;
     transition: all 0.2s ease !important;
     text-decoration: none !important;
-    box-shadow: 0 2px 4px rgba(0, 74, 147, 0.2) !important;
+    box-shadow: 0 2px 4px rgba(0, 67, 132, 0.2) !important;
 }
 
 .fc-timegrid-more-link:hover,
 .fc-timegrid .fc-more-link:hover {
-    background: linear-gradient(135deg, var(--primary-dark), #004a93) !important;
+    background: linear-gradient(135deg, var(--primary-dark), #004384) !important;
     transform: scale(1.05) !important;
-    box-shadow: 0 4px 8px rgba(0, 74, 147, 0.4) !important;
+    box-shadow: 0 4px 8px rgba(0, 67, 132, 0.4) !important;
     color: #ffffff !important;
 }
 
@@ -1334,7 +1334,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
 }
 
 .timeline-slot:hover {
-    background-color: rgba(0, 74, 147, 0.02);
+    background-color: rgba(0, 67, 132, 0.02);
 }
 
 .timeline-slot:last-child {
@@ -1357,7 +1357,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
 
 .timeline-event-card:hover {
     transform: translateX(4px);
-    box-shadow: 0 4px 16px rgba(0, 74, 147, 0.2);
+    box-shadow: 0 4px 16px rgba(0, 67, 132, 0.2);
     border-left-width: 6px;
 }
 
@@ -2130,13 +2130,13 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     }
 }
 .control-panel:focus-within {
-    outline: 2px solid #004a93;
+    outline: 2px solid #004384;
     outline-offset: 2px;
 }
 
 .btn:focus-visible,
 .form-select:focus-visible {
-    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.25);
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.25);
 }
 
 </style>
@@ -2176,7 +2176,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
             .tt-info-card {
                 background: #fff;
                 border: 1px solid var(--border, #e5e7eb);
-                border-left: 4px solid var(--primary-color, #004a93);
+                border-left: 4px solid var(--primary-color, #004384);
                 border-radius: 0.5rem;
                 padding: 0.85rem 1.1rem;
                 height: 100%;
@@ -2202,8 +2202,8 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
                 background: #fff;
             }
             #downloadTimetableBtn:hover {
-                border-color: var(--primary-color, #004a93);
-                color: var(--primary-color, #004a93);
+                border-color: var(--primary-color, #004384);
+                color: var(--primary-color, #004384);
             }
             /* Calendar toolbar: clean arrows + icon view toggles (mockup look) */
             #calendar .fc-toolbar-title { font-size: 1.25rem; font-weight: 700; color: #1f2937; }
@@ -2218,7 +2218,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
             #calendar .fc-prev-button:hover,
             #calendar .fc-next-button:hover {
                 background: #f3f4f6 !important;
-                color: var(--primary-color, #004a93) !important;
+                color: var(--primary-color, #004384) !important;
             }
             /* Segmented-control pill for the two view-toggle icons */
             #calendar .fc-button-group {
@@ -2240,12 +2240,12 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
             #calendar .fc-view-icon-btn:focus,
             #calendar .fc-view-icon-btn:active { box-shadow: none !important; outline: none !important; }
             #calendar .fc-view-icon-btn:hover {
-                color: var(--primary-color, #004a93) !important;
+                color: var(--primary-color, #004384) !important;
                 background: rgba(255, 255, 255, 0.55) !important;
             }
             #calendar .fc-view-icon-btn.fc-button-active {
                 background: #fff !important;
-                color: var(--primary-color, #004a93) !important;
+                color: var(--primary-color, #004384) !important;
                 box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18) !important;
             }
 
@@ -2375,7 +2375,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
                 background: #f8fafc; display: inline-flex; align-items: center; justify-content: center;
                 color: #475569; cursor: pointer; transition: all 0.15s ease; font-size: 0.95rem;
             }
-            .ot-hover-btn:hover { background: #eef5ff; color: #004a93; border-color: #004a93; }
+            .ot-hover-btn:hover { background: #eef5ff; color: #004384; border-color: #004384; }
             .ot-hover-del:hover { background: #fef2f2; color: #dc2626; border-color: #dc2626; }
             .ot-hover-divider { border: 0; border-top: 1px solid #e5e7eb; margin: 12px 0; }
             .ot-hover-topic { font-size: 1rem; font-weight: 700; color: #1f2937; margin-bottom: 12px; line-height: 1.4; }
@@ -2386,7 +2386,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
             .ot-hover-box > div { line-height: 1.7; }
             .ot-hover-box:last-child { margin-bottom: 0; }
             .ot-hover-box .lbl { font-weight: 600; color: #374151; }
-            .ot-hover-venue i { color: #004a93; font-size: 1.25rem; flex-shrink: 0; }
+            .ot-hover-venue i { color: #004384; font-size: 1.25rem; flex-shrink: 0; }
             .ot-hover-tail {
                 position: absolute; top: var(--tail-top, 40px); width: 0; height: 0;
                 border-top: 11px solid transparent; border-bottom: 11px solid transparent;
@@ -2480,7 +2480,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     class="control-panel bg-white p-3 p-md-4 rounded-3 shadow-sm border mb-3"
     role="region"
     aria-labelledby="controlPanelHeading"
-    style="border-left: 4px solid #004a93;"
+    style="border-left: 4px solid #004384;"
 >
     <h2 id="controlPanelHeading" class="visually-hidden">
         Calendar Control Panel
@@ -3149,25 +3149,25 @@ class CalendarManager {
                 link.style.fontSize = isTimeGrid ? '1rem' : '1.25rem';
                 link.style.fontWeight = '700';
                 link.style.color = '#ffffff';
-                link.style.backgroundColor = '#004a93';
+                link.style.backgroundColor = '#004384';
                 link.style.padding = isTimeGrid ? '0.4rem 0.6rem' : '0.5rem 0.75rem';
                 link.style.borderRadius = '0.375rem';
                 link.style.display = 'inline-block';
                 link.style.textDecoration = 'none';
-                link.style.background = 'linear-gradient(135deg, #004a93, #0066cc)';
+                link.style.background = 'linear-gradient(135deg, #004384, #0066cc)';
                 link.style.transition = 'all 0.2s ease';
-                link.style.boxShadow = '0 2px 4px rgba(0, 74, 147, 0.2)';
+                link.style.boxShadow = '0 2px 4px rgba(0, 67, 132, 0.2)';
 
                 link.addEventListener('mouseenter', () => {
-                    link.style.background = 'linear-gradient(135deg, #003366, #004a93)';
+                    link.style.background = 'linear-gradient(135deg, #003366, #004384)';
                     link.style.transform = isTimeGrid ? 'scale(1.05)' : 'scale(1.08)';
-                    link.style.boxShadow = '0 4px 12px rgba(0, 74, 147, 0.4)';
+                    link.style.boxShadow = '0 4px 12px rgba(0, 67, 132, 0.4)';
                 });
 
                 link.addEventListener('mouseleave', () => {
-                    link.style.background = 'linear-gradient(135deg, #004a93, #0066cc)';
+                    link.style.background = 'linear-gradient(135deg, #004384, #0066cc)';
                     link.style.transform = 'scale(1)';
-                    link.style.boxShadow = '0 2px 4px rgba(0, 74, 147, 0.2)';
+                    link.style.boxShadow = '0 2px 4px rgba(0, 67, 132, 0.2)';
                 });
             }
         });

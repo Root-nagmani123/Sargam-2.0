@@ -9,7 +9,7 @@
 
 <style>
     /* ===== Session Feedback – scoped UI enhancements ===== */
-    .session-feedback-main { --sf-primary: #004a93; }
+    .session-feedback-main { --sf-primary: #004384; }
     .session-feedback-card { overflow: hidden; }
     .sf-toolbar, .sf-filterbar { margin-bottom: 20px; }
 
@@ -28,7 +28,7 @@
         color: #fff;
         background: var(--sf-primary);
         border-color: var(--sf-primary);
-        box-shadow: 0 .25rem .6rem rgba(0,74,147,.25);
+        box-shadow: 0 .25rem .6rem rgba(0,67,132,.25);
     }
     .sf-toolbar .nav-pills .nav-link .badge {
         background: rgba(255,255,255,.25);
@@ -87,7 +87,7 @@
 
     /* Give feedback button */
     .give-feedback-btn { transition: all .15s ease; white-space: nowrap; }
-    .give-feedback-btn:hover { transform: translateY(-1px); box-shadow: 0 .25rem .5rem rgba(0,74,147,.18); }
+    .give-feedback-btn:hover { transform: translateY(-1px); box-shadow: 0 .25rem .5rem rgba(0,67,132,.18); }
 
     /* Remarks inline input */
     .sf-remark {
@@ -152,13 +152,13 @@
     .sf-flatpickr .flatpickr-day.selected,
     .sf-flatpickr .flatpickr-day.startRange,
     .sf-flatpickr .flatpickr-day.endRange {
-        background: #004a93; border-color: #004a93; color: #fff;
+        background: #004384; border-color: #004384; color: #fff;
     }
     .sf-flatpickr .flatpickr-day.inRange {
         background: #e7f0fa; border-color: #e7f0fa;
         box-shadow: -5px 0 0 #e7f0fa, 5px 0 0 #e7f0fa;
     }
-    .sf-flatpickr .flatpickr-day.today { border-color: #004a93; }
+    .sf-flatpickr .flatpickr-day.today { border-color: #004384; }
     .sf-flatpickr .flatpickr-day:hover { background: #eef3f9; }
 </style>
 
@@ -167,11 +167,11 @@
 
         <!-- Logged-in student identity — shows whose feedback listing this is -->
         <div class="mb-3">
-            <h5 class="fw-bold mb-2" style="color:#004a93;">
+            <h5 class="fw-bold mb-2" style="color:#004384;">
                 <i class="bi bi-chat-square-text me-1"></i> Session Feedback
             </h5>
             <span class="d-inline-flex align-items-center gap-2 fw-bold"
-                  style="background:#004a93;color:#fff;border-radius:.5rem;padding:.5rem 1rem;font-size:1.05rem;letter-spacing:.2px;box-shadow:0 .25rem .6rem rgba(0,74,147,.25);">
+                  style="background:#004384;color:#fff;border-radius:.5rem;padding:.5rem 1rem;font-size:1.05rem;letter-spacing:.2px;box-shadow:0 .25rem .6rem rgba(0,67,132,.25);">
                 <i class="bi bi-person-circle"></i>{{ $authFullName ?? (auth()->user()->user_name ?? '') }}
             </span>
         </div>
@@ -219,7 +219,7 @@
                     </div>
 
                     {{-- Ratings filter --}}
-                    <select id="sf-rating-filter" class="form-select rounded-1 w-auto">
+                    <select id="sf-rating-filter" class="form-select rounded-1 w-auto" aria-label="Filter by rating">
                         <option value="">Ratings</option>
                         <option value="5">5 Stars</option>
                         <option value="4">4 Stars &amp; up</option>
@@ -378,7 +378,7 @@
                                 ">
                                         <div style="text-align:center;">
                                             <svg class="spinner" width="32" height="32" viewBox="0 0 50 50">
-                                                <circle cx="25" cy="25" r="20" stroke="#004A93"
+                                                <circle cx="25" cy="25" r="20" stroke="#004384"
                                                     stroke-width="5" fill="rgba(255,255,255,0)" />
                                             </svg>
                                             <p style="margin-top:0.5rem; font-weight:500;">Submitting...</p>

@@ -6,7 +6,7 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-lite.min.css" rel="stylesheet">
 <style>
     .notice-form-card {
-        border-left: 4px solid #004a93;
+        border-left: 4px solid #004384;
     }
 
     .notice-form-card .form-label {
@@ -27,8 +27,8 @@
 
     .notice-form-card .form-control:focus,
     .notice-form-card .form-select:focus {
-        border-color: #004a93;
-        box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.12);
+        border-color: #004384;
+        box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
     }
 
     .notice-form-card .form-control::placeholder {
@@ -63,8 +63,8 @@
     }
 
     .notice-form-actions .btn-primary {
-        background-color: #004a93;
-        border-color: #004a93;
+        background-color: #004384;
+        border-color: #004384;
     }
 
     .notice-form-actions .btn-primary:hover,
@@ -74,13 +74,13 @@
     }
 
     .notice-form-actions .btn-outline-primary {
-        color: #004a93;
-        border-color: #004a93;
+        color: #004384;
+        border-color: #004384;
     }
 
     .notice-form-actions .btn-outline-primary:hover {
-        background-color: #004a93;
-        border-color: #004a93;
+        background-color: #004384;
+        border-color: #004384;
         color: #fff;
     }
 

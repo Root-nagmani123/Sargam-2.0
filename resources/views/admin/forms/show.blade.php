@@ -30,7 +30,7 @@
 
         .sidebar .nav-pills .nav-link.active {
             font-weight: 500;
-            background-color: #004a93;
+            background-color: #004384;
             border: 1px solid #ddd;
             color: #fff;
             border-radius: 0.25rem;
@@ -38,7 +38,7 @@
         }
 
         .sidebar .nav-link:hover {
-            background-color: #004a93;
+            background-color: #004384;
             color: #fff !important;
         }
 
@@ -51,7 +51,7 @@
         }
 
         .top-header {
-            background-color: #004a93;
+            background-color: #004384;
             color: white;
             padding: 5px 15px;
         }
@@ -63,7 +63,7 @@
             border-radius: 10px;
             box-shadow: 0 0 12px rgba(0, 0, 0, 0.08);
             padding: 2rem;
-            border-left: 4px solid #004a93;
+            border-left: 4px solid #004384;
             padding: 1rem;
             border-radius: 0.5rem;
         }
@@ -96,7 +96,7 @@
         }
 
         footer {
-            background-color: #004a93;
+            background-color: #004384;
             padding: 1rem 0;
             font-size: 0.9rem;
             color: #fff;
@@ -133,7 +133,7 @@
         }
 
         .text-primary {
-            color: #004a93 !important;
+            color: #004384 !important;
         }
 
         .fw-semibold {
@@ -234,7 +234,7 @@
         }
 
         .section-title {
-            background-color: #004a93;
+            background-color: #004384;
             padding: 0.5rem 1rem;
             border-radius: 0.5rem;
             margin-bottom: 1rem;
@@ -317,7 +317,7 @@
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle d-flex align-items-center" href="#"
                                     role="button" id="accountDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="material-icons" style="color: #004a93;">account_circle</i>
+                                    <i class="material-icons" style="color: #004384;">account_circle</i>
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountDropdown">
                                     <li>
@@ -560,7 +560,7 @@
     </main>
 
     <!-- Footer -->
-    <footer class="mt-4 text-white py-3" style="background-color: #004a93;">
+    <footer class="mt-4 text-white py-3" style="background-color: #004384;">
         <div class="container">
             <div class="row">
                 <div class="col-md-8">

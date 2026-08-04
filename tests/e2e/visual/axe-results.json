@@ -1,0 +1,219 @@
+{
+  "scanned": 57,
+  "totalRules": 12,
+  "totalNodes": 2434,
+  "rules": [
+    {
+      "id": "aria-allowed-attr",
+      "impact": "critical",
+      "help": "Elements must only use supported ARIA attributes",
+      "wcag": "wcag2a,wcag412",
+      "pages": 55,
+      "nodes": 546,
+      "samples": [
+        "a[data-name=\"Training Setup\"]",
+        "a[data-name=\"General\"]",
+        "a[data-name=\"Training Setup\"]"
+      ]
+    },
+    {
+      "id": "aria-required-parent",
+      "impact": "critical",
+      "help": "Certain ARIA roles must be contained by particular parents",
+      "wcag": "wcag2a,wcag131",
+      "pages": 55,
+      "nodes": 220,
+      "samples": [
+        "#home-tab",
+        "#home-tab",
+        "#home-tab"
+      ]
+    },
+    {
+      "id": "aria-required-children",
+      "impact": "critical",
+      "help": "Certain ARIA roles must contain particular children",
+      "wcag": "wcag2a,wcag131",
+      "pages": 55,
+      "nodes": 57,
+      "samples": [
+        ".header-main-nav",
+        ".header-main-nav",
+        ".header-main-nav"
+      ]
+    },
+    {
+      "id": "label",
+      "impact": "critical",
+      "help": "Form elements must have labels",
+      "wcag": "wcag2a,wcag412",
+      "pages": 3,
+      "nodes": 10,
+      "samples": [
+        "#logo1",
+        "input[name=\"date_from\"]",
+        "input[name=\"date_from\"]"
+      ]
+    },
+    {
+      "id": "select-name",
+      "impact": "critical",
+      "help": "Select element must have an accessible name",
+      "wcag": "wcag2a,wcag412",
+      "pages": 2,
+      "nodes": 3,
+      "samples": [
+        ".form-select-sm",
+        "#medicalFilterCourse"
+      ]
+    },
+    {
+      "id": "button-name",
+      "impact": "critical",
+      "help": "Buttons must have discernible text",
+      "wcag": "wcag2a,wcag412",
+      "pages": 1,
+      "nodes": 1,
+      "samples": [
+        ".programme-action-btn--danger"
+      ]
+    },
+    {
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "wcag": "wcag2aa,wcag143",
+      "pages": 57,
+      "nodes": 1486,
+      "samples": [
+        ".d-block.text-body-secondary.text-truncate",
+        ".d-block.text-body-secondary.text-truncate",
+        ".d-block.text-body-secondary.text-truncate"
+      ]
+    },
+    {
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "wcag": "wcag2a,wcag131",
+      "pages": 55,
+      "nodes": 91,
+      "samples": [
+        ".mini-nav-ul",
+        ".mini-nav-ul",
+        ".mini-nav-ul"
+      ]
+    },
+    {
+      "id": "aria-command-name",
+      "impact": "serious",
+      "help": "ARIA commands must have an accessible name",
+      "wcag": "wcag2a,wcag412",
+      "pages": 4,
+      "nodes": 6,
+      "samples": [
+        "a[data-dt-idx=\"previous\"]",
+        "a[data-dt-idx=\"previous\"]",
+        "a[data-dt-idx=\"previous\"]"
+      ]
+    },
+    {
+      "id": "scrollable-region-focusable",
+      "impact": "serious",
+      "help": "Scrollable region must have keyboard access",
+      "wcag": "wcag2a,wcag211,wcag213",
+      "pages": 5,
+      "nodes": 5,
+      "samples": [
+        ".dataTables_scrollBody",
+        ".dataTables_scrollBody",
+        ".table-responsive"
+      ]
+    },
+    {
+      "id": "link-name",
+      "impact": "serious",
+      "help": "Links must have discernible text",
+      "wcag": "wcag2a,wcag244,wcag412",
+      "pages": 4,
+      "nodes": 5,
+      "samples": [
+        "a[data-page=\"prev\"]",
+        "a[data-dt-idx=\"next\"]",
+        "a[data-dt-idx=\"next\"]"
+      ]
+    },
+    {
+      "id": "aria-input-field-name",
+      "impact": "serious",
+      "help": "ARIA input fields must have an accessible name",
+      "wcag": "wcag2a,wcag412",
+      "pages": 3,
+      "nodes": 4,
+      "samples": [
+        ".programme-dt-filter-select:nth-child(3) > .choices[data-type=\"select-one\"][aria-haspopup=\"true\"]",
+        "#exportForm > .choices[data-type=\"select-one\"][aria-haspopup=\"true\"]",
+        ".programme-dt-filter-select:nth-child(3) > .choices[data-type=\"select-one\"][aria-haspopup=\"true\"]"
+      ]
+    }
+  ],
+  "perPage": {
+    "/Venue-Master": 28,
+    "/active-course": 21,
+    "/admin/appellation": 27,
+    "/attendance": 26,
+    "/change_password": 15,
+    "/course-repository": 24,
+    "/course-repository-user": 13,
+    "/dashboard-statistics": 14,
+    "/directory/lbsnaa": 27,
+    "/enrollment/create": 29,
+    "/faculty": 30,
+    "/faculty-internal-feedback": 12,
+    "/faculty-leave-approval": 14,
+    "/faculty-mdo-escort-exception-view": 23,
+    "/faculty_view": 14,
+    "/fc-reg/admin/activities": 31,
+    "/feedback_average": 19,
+    "/feedback_details": 62,
+    "/group-mapping": 22,
+    "/hostel-building-floor-room-map": 22,
+    "/hostel-building-map/assign-student": 22,
+    "/incoming-course": 21,
+    "/master/caste-category": 28,
+    "/mdo-escrot-exemption": 25,
+    "/medical-exception-ot-view": 483,
+    "/medical-exemption-report": 27,
+    "/member": 27,
+    "/memo/discipline": 27,
+    "/ot-mdo-escrot-exemption-view": 536,
+    "/programme": 23,
+    "/registration/add-column": 23,
+    "/stream": 36,
+    "/student-courses": 38,
+    "/student-medical-exemption": 23,
+    "/subject": 22,
+    "/subject-module": 23,
+    "/timetable-report": 33,
+    "/admin/course-memo-decision": 32,
+    "/attendance/user_attendance": 28,
+    "/dashboard/feed": 13,
+    "/directory/ot": 26,
+    "/faculty/database": 34,
+    "/fc-reg/admin/activities/medical": 39,
+    "/feedback/student-feedback": 1,
+    "/master/city": 26,
+    "/registration/admin/registration-page/create": 29,
+    "/security/employee-idcard-approval/approval1": 30,
+    "/sidebar/categories": 32,
+    "/admin/discipline": 28,
+    "/dashboard/students": 15,
+    "/faculty/whos-who": 22,
+    "/master/class-session": 28,
+    "/registration/exemptions_data": 32,
+    "/security/employee-idcard-approval/approval2": 38,
+    "/sidebar/menu-groups": 31,
+    "/fc-reg/admin/activities/status": 34,
+    "/master/country": 26
+  }
+}

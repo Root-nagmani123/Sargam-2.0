@@ -11,7 +11,7 @@
     --sargam-panel-width: 252px;
     --sargam-sidebar-full-width: calc(var(--sargam-mini-nav-width) + var(--sargam-panel-width));
     --sargam-sidebar-active-bg: #e7f1ff;
-    --sargam-sidebar-active-color: #004a93;
+    --sargam-sidebar-active-color: #004384;
     --sargam-sidebar-border: #e5e7eb;
     --sargam-sidebar-radius: 0.5rem;
 }

@@ -163,7 +163,7 @@
 
 <style>
 .family-members-page .card { border-radius: 0.5rem; overflow: hidden; }
-.family-members-table thead tr.table-primary { background: #004a93 !important; color: #fff; border: none; }
+.family-members-table thead tr.table-primary { background: #004384 !important; color: #fff; border: none; }
 .family-members-table thead th { font-weight: 700; font-size: 0.75rem; padding: 0.75rem 0.5rem; border: none; text-align: left; }
 .family-members-table tbody td { padding: 0.65rem 0.5rem; vertical-align: middle; border-bottom: 1px solid #eee; font-size: 0.875rem; }
 .family-members-table tbody tr:hover { background: #f8fafc; }

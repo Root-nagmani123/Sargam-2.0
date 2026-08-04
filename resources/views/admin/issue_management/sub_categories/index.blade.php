@@ -115,7 +115,7 @@
         <div class="modal-content border-0 shadow-lg">
             <form action="{{ route('admin.issue-sub-categories.store') }}" method="POST" id="addSubCategoryForm">
                 @csrf
-                <div class="modal-header text-white" style="background: linear-gradient(135deg, #004a93 0%, #0066cc 100%);">
+                <div class="modal-header text-white" style="background: linear-gradient(135deg, #004384 0%, #0066cc 100%);">
                     <h5 class="modal-title fw-semibold" id="addSubCategoryModalLabel">
                         <i class="material-icons material-symbols-rounded me-2">add_circle</i>
                         Add New Sub-Category
@@ -177,7 +177,7 @@
             <form id="editSubCategoryForm" method="POST">
                 @csrf
                 @method('PUT')
-                <div class="modal-header text-white" style="background: linear-gradient(135deg, #004a93 0%, #0066cc 100%);">
+                <div class="modal-header text-white" style="background: linear-gradient(135deg, #004384 0%, #0066cc 100%);">
                     <h5 class="modal-title fw-semibold" id="editSubCategoryModalLabel">
                         <i class="material-icons material-symbols-rounded me-2">edit</i>
                         Edit Sub-Category

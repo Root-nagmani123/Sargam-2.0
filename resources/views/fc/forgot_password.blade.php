@@ -30,7 +30,7 @@
 
                             <form class="row g-3" method="POST" action="{{ route('fc.password.reset') }}">
                                 @csrf
-                                <h3 class="text-center fw-bold" style="color: #004a93;">Begin Secure Password Reset </h3>
+                                <h3 class="text-center fw-bold" style="color: #004384;">Begin Secure Password Reset </h3>
                                 <small class="text-muted text-center d-block fw-bold">Please enter your Mobile Number and
                                     Web Auth Code to
                                     reset your password</small>
@@ -78,7 +78,7 @@
                                             name="new_password" id="new_password" required disabled>
                                         <button type="button" class="btn btn-primary"
                                             onclick="togglePassword('new_password', this)"
-                                            style="background-color: #004a93; border-color: #004a93;">
+                                            style="background-color: #004384; border-color: #004384;">
                                             <i class="material-icons menu-icon me-3 fs-3">visibility</i>
                                         </button>
                                     </div>
@@ -92,7 +92,7 @@
                                             name="confirm_password" id="confirm_password" required disabled>
                                         <button type="button" class="btn btn-primary"
                                             onclick="togglePassword('confirm_password', this)"
-                                            style="background-color: #004a93; border-color: #004a93;">
+                                            style="background-color: #004384; border-color: #004384;">
                                             <i class="material-icons menu-icon me-3 fs-3">visibility</i>
                                         </button>
                                     </div>
@@ -101,7 +101,7 @@
                                 <!-- Submit -->
                                 <div class="col-12">
                                     <button type="submit" class="btn btn-primary w-100" id="submitBtn" disabled
-                                        style="background-color: #004a93; border-color: #004a93;">Submit</button>
+                                        style="background-color: #004384; border-color: #004384;">Submit</button>
                                 </div>
                             </form>
 
@@ -217,7 +217,7 @@
                 title: 'Validation Error',
                 text: errorMessages.trim(),
                 icon: 'error',
-                confirmButtonColor: '#004a93',
+                confirmButtonColor: '#004384',
                 confirmButtonText: 'OK'
             });
         </script>

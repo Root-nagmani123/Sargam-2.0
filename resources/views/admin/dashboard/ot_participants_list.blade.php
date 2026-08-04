@@ -12,7 +12,7 @@
         padding: 0.5rem 2.25rem 0.5rem 0.875rem; background-position: right 0.75rem center;
     }
     .ot-list-page .sl-filter-item { display: inline-flex; align-items: center; }
-    .ot-list-page .sl-filter-select:focus { border-color: #004a93; box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12); }
+    .ot-list-page .sl-filter-select:focus { border-color: #004384; box-shadow: 0 0 0 3px rgba(0, 67, 132, 0.12); }
     .ot-list-page .sl-daterange-wrap { position: relative; }
     .ot-list-page .sl-daterange-input {
         width: 220px; height: 40px; padding: 1.05rem 0.875rem 0.15rem; cursor: pointer;
@@ -22,7 +22,7 @@
 
     .ot-list-page .sl-toolbar-btn {
         height: 40px; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0 1.1rem;
-        font-size: 0.9375rem; font-weight: 500; color: #004a93; border: 1px solid #d0d5dd; border-radius: 8px; background: #fff;
+        font-size: 0.9375rem; font-weight: 500; color: #004384; border: 1px solid #d0d5dd; border-radius: 8px; background: #fff;
     }
     .ot-list-page .sl-toolbar-btn:hover { background: #f9fafb; }
     .ot-list-page .sl-toolbar-btn i { font-size: 1rem; line-height: 1; }
@@ -41,7 +41,7 @@
 
     .ot-list-page .programme-dt-table tbody td a.sl-count,
     .ot-list-page .programme-dt-table tbody td span.sl-count {
-        color: #004a93; font-weight: 600; text-decoration: none; white-space: wrap;
+        color: #004384; font-weight: 600; text-decoration: none; white-space: wrap;
     }
     .ot-list-page .programme-dt-table tbody td a.sl-count:hover { text-decoration: underline; cursor: pointer; }
     .ot-list-page .programme-dt-table tbody td span.sl-count:hover { text-decoration: underline; cursor: default; }
@@ -504,12 +504,12 @@
                 '.lh-en{font-size:13px;font-weight:bold;color:#102a43;margin-top:2px;line-height:1.3;}' +
                 '.lh-course{font-size:12px;font-weight:bold;color:#243b53;margin-top:5px;}' +
                 '.lh-dates{font-size:11px;color:#486581;margin-top:1px;}' +
-                '.lh-rule{border:0;border-top:2px solid #004a93;margin:6px 0 2px;}' +
-                '.doc-title{text-align:center;color:#004a93;margin:8px 0 4px;font-size:20px;}' +
+                '.lh-rule{border:0;border-top:2px solid #004384;margin:6px 0 2px;}' +
+                '.doc-title{text-align:center;color:#004384;margin:8px 0 4px;font-size:20px;}' +
                 '.meta{font-size:12px;color:#475467;margin:0 0 14px;text-align:center;}' +
                 'table.data-tbl{width:100%;border-collapse:collapse;margin-top:8px;font-size:9px;table-layout:fixed;}' +
                 'table.data-tbl th,table.data-tbl td{border:1px solid #ddd;padding:4px 5px;text-align:left;vertical-align:top;word-break:break-word;overflow-wrap:anywhere;white-space:normal;}' +
-                'table.data-tbl th{background-color:#004a93;color:#fff;font-weight:bold;}' +
+                'table.data-tbl th{background-color:#004384;color:#fff;font-weight:bold;}' +
                 'table.data-tbl tbody tr:nth-child(even){background-color:#f7f7f7;}' +
                 'table.data-tbl tr{page-break-inside:avoid;}' +
                 'table.data-tbl thead{display:table-header-group;}' +

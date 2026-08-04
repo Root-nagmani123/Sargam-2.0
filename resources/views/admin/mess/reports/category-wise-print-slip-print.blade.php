@@ -63,7 +63,7 @@
         }
 
         .report-title-bar {
-            background-color: #004a93;
+            background-color: #004384;
             color: #fff;
             padding: 8px 12px;
             font-size: 1rem;
@@ -74,7 +74,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 2px solid #004a93;
+            border-bottom: 2px solid #004384;
             margin-bottom: 10px;
             padding: 2px 0 8px;
             gap: 12px;
@@ -126,7 +126,7 @@
 
         .lbsnaa-brand-line-1 {
             font-size: 0.72rem;
-            color: #004a93;
+            color: #004384;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             font-weight: 600;
@@ -211,7 +211,7 @@
         .print-slip-table .grand-total-row {
             background-color: #e2e8f0;
             font-weight: bold;
-            border-top: 2px solid #004a93;
+            border-top: 2px solid #004384;
         }
 
         @page {
@@ -314,7 +314,7 @@
             .print-slip-table .grand-total-row {
                 background: #d8e4ef !important;
                 font-weight: bold;
-                border-top: 3px solid #004a93;
+                border-top: 3px solid #004384;
             }
         }
     </style>

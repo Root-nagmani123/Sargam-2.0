@@ -60,7 +60,7 @@
     padding: 0 1rem;
     font-weight: 600;
     font-size: 0.9rem;
-    color: #004a93;
+    color: #004384;
     background: #fff;
     border: 0;
     border-radius: var(--ds-radius-1);
@@ -460,8 +460,8 @@ select.sme-filter-control {
     transition: background-color .15s ease;
 }
 .sme-act i { font-size: 20px; line-height: 1; }
-.sme-act-edit { color: #004a93; }
-.sme-act-edit:hover { background: rgba(0, 74, 147, 0.12); }
+.sme-act-edit { color: #004384; }
+.sme-act-edit:hover { background: rgba(0, 67, 132, 0.12); }
 .sme-act-delete {
     color: #af2910;
 }
@@ -645,7 +645,7 @@ select.sme-filter-control {
 .datatables #medicalExemptionTable .sme-row-actions { display: inline-flex !important; flex-wrap: nowrap; }
 .datatables #medicalExemptionTable .sme-act { width: 34px; height: 34px; flex: 0 0 auto; }
 .datatables #medicalExemptionTable .sme-act-edit,
-.datatables #medicalExemptionTable .sme-act-edit i { color: #004a93 !important; }
+.datatables #medicalExemptionTable .sme-act-edit i { color: #004384 !important; }
 .datatables #medicalExemptionTable .sme-act-delete,
 .datatables #medicalExemptionTable .sme-act-delete i { color: #af2910 !important; }
 .datatables #medicalExemptionTable .sme-act i { font-size: 20px !important; line-height: 1; }
@@ -1742,10 +1742,10 @@ function printTable() {
                     text-align: center;
                     font-size: 20px;
                     font-weight: bold;
-                    color: #004a93;
+                    color: #004384;
                     margin: 8px 0 6px;
                     padding-bottom: 8px;
-                    border-bottom: 2px solid #004a93;
+                    border-bottom: 2px solid #004384;
                 }
                 .print-info {
                     margin-bottom: 12px;
@@ -1767,7 +1767,7 @@ function printTable() {
                 }
                 table thead th {
                     font-weight: bold;
-                    background-color: #004a93 !important;
+                    background-color: #004384 !important;
                     color: #fff !important;
                     text-align: center;
                     -webkit-print-color-adjust: exact;

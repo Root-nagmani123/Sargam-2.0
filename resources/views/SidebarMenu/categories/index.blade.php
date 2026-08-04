@@ -28,12 +28,12 @@
         padding-inline: 1rem;
     }
     .sidebar-categories-page .btn-gigw-touch:focus-visible {
-        outline: 3px solid #004a93;
+        outline: 3px solid #004384;
         outline-offset: 2px;
-        box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.25);
+        box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.25);
     }
     .sidebar-categories-page .modal .btn:focus-visible {
-        outline: 3px solid #004a93;
+        outline: 3px solid #004384;
         outline-offset: 2px;
     }
     .sidebar-categories-page .gigw-table-btn {
@@ -46,7 +46,7 @@
         padding: 0;
     }
     .sidebar-categories-page .gigw-table-btn:focus-visible {
-        outline: 3px solid #004a93;
+        outline: 3px solid #004384;
         outline-offset: 2px;
     }
     .sidebar-categories-page .gigw-switch-touch {
@@ -55,7 +55,7 @@
         cursor: pointer;
     }
     .sidebar-categories-page .gigw-switch-touch:focus-visible {
-        outline: 3px solid #004a93;
+        outline: 3px solid #004384;
         outline-offset: 3px;
     }
     .sidebar-categories-page #sidebar-category-table_wrapper .dataTables_filter input {
@@ -76,11 +76,11 @@
         justify-content: center;
     }
     .sidebar-categories-page #sidebar-category-table_wrapper .dataTables_paginate .page-link:focus-visible {
-        outline: 3px solid #004a93;
+        outline: 3px solid #004384;
         outline-offset: 2px;
     }
     .sidebar-categories-page #sidebar-category-table {
-        --bs-table-striped-bg: rgba(0, 74, 147, 0.04);
+        --bs-table-striped-bg: rgba(0, 67, 132, 0.04);
     }
 </style>
 <div class="container-fluid py-3 sidebar-categories-page">

@@ -184,7 +184,7 @@
 
 <style>
     .low-stock-report .mess-official-header {
-        border-bottom: 2px solid #004a93;
+        border-bottom: 2px solid #004384;
         padding-bottom: 10px;
     }
     .low-stock-report .mess-official-header-table td {
@@ -206,7 +206,7 @@
     }
     .low-stock-report .mess-official-line-1 {
         font-size: 0.82rem;
-        color: #004a93;
+        color: #004384;
         letter-spacing: 0.04em;
         line-height: 1.3;
     }
@@ -326,7 +326,7 @@
 
     /* Match mess PDF (stock-purchase-details / low-stock-pdf) */
     .lbsnaa-header-wrap {
-      border-bottom: 2px solid #004a93;
+      border-bottom: 2px solid #004384;
       margin-bottom: 12px;
       padding: 2px 0 8px;
     }
@@ -337,7 +337,7 @@
     .branding-logo-right { width: 200px; text-align: right; }
     .lbsnaa-brand-line-1 {
       font-size: 8pt;
-      color: #004a93;
+      color: #004384;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       font-weight: 600;
@@ -371,7 +371,7 @@
       color: #212529;
     }
     .report-date-bar {
-      background: #004a93;
+      background: #004384;
       color: #fff;
       padding: 8px 12px;
       text-align: center;

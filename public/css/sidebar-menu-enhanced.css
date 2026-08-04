@@ -130,10 +130,10 @@
 
 /* Focus States for Accessibility (Bootstrap 5.3+ focus-visible) */
 .sidebar-menu .sidebar-link:focus-visible {
-    outline: 3px solid rgba(0, 74, 147, 0.5);
+    outline: 3px solid rgba(0, 67, 132, 0.5);
     outline-offset: 2px;
     border-radius: var(--sidebar-border-radius);
-    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.25);
+    box-shadow: 0 0 0 3px rgba(0, 67, 132, 0.25);
 }
 
 /* Rounded Pill Enhancement */

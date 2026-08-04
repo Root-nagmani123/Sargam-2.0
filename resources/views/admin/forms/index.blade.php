@@ -34,7 +34,7 @@
         </div>
     @endif
 
-    <div class="card border-0 shadow-sm" style="border-left: 4px solid #004a93;">
+    <div class="card border-0 shadow-sm" style="border-left: 4px solid #004384;">
         <div class="card-body">
             <section class="row align-items-center mb-4">
                 <div class="col-md-4 col-lg-3">

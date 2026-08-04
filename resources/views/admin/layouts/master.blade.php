@@ -244,7 +244,7 @@
     }
 
         .calendar-cell:focus {
-            outline: 3px solid #004a93;
+            outline: 3px solid #004384;
             outline-offset: 2px;
         }
 
@@ -269,11 +269,11 @@
 
         /* Themes */
         .calendar-component[data-theme="gov-blue"] .calendar-header .form-select {
-            border-color: #004a93;
+            border-color: #004384;
         }
 
         .calendar-component[data-theme="gov-blue"] .calendar-cell.is-selected {
-            border-color: #004a93;
+            border-color: #004384;
         }
 
 
@@ -323,14 +323,14 @@
 
         /* Hover */
         .dd-trigger:hover {
-            border-bottom-color: #004a93;
+            border-bottom-color: #004384;
         }
 
         /* Focus visible for accessibility */
         .dd-trigger:focus-visible {
             outline: none;
-            border-bottom-color: #004a93 !important;
-            box-shadow: 0 2px 0 0 #004a93;
+            border-bottom-color: #004384 !important;
+            box-shadow: 0 2px 0 0 #004384;
         }
 
         /* Dropdown arrow rotation */
@@ -357,7 +357,7 @@
         /* Hover */
         .dd-menu-item:hover {
             background: #e8f3ff;
-            color: #004a93;
+            color: #004384;
             border-radius: 6px;
         }
 
@@ -442,7 +442,7 @@
             position: absolute;
             width: 6px;
             height: 6px;
-            background: linear-gradient(135deg, #004a93, #0d6efd);
+            background: linear-gradient(135deg, #004384, #0d6efd);
             border-radius: 50%;
             opacity: 0.4;
             animation: sargamFloat 4s ease-in-out infinite;
@@ -539,9 +539,9 @@
         .sargam-loader-ring-outer {
             width: 100%;
             height: 100%;
-            border-top-color: #004a93;
+            border-top-color: #004384;
             border-right-color: #0d6efd;
-            border-bottom-color: #004a93;
+            border-bottom-color: #004384;
             border-left-color: transparent;
             animation: sargamSpin 1.2s linear infinite;
         }
@@ -552,7 +552,7 @@
             border-top-color: transparent;
             border-right-color: #0d6efd;
             border-bottom-color: transparent;
-            border-left-color: #004a93;
+            border-left-color: #004384;
             animation: sargamSpin 1s linear infinite reverse;
         }
 
@@ -561,7 +561,7 @@
             height: 60px;
             border-top-color: #0d6efd;
             border-right-color: transparent;
-            border-bottom-color: #004a93;
+            border-bottom-color: #004384;
             border-left-color: transparent;
             animation: sargamSpin 0.8s linear infinite;
         }
@@ -584,14 +584,14 @@
 
         .sargam-loader-brand span {
             display: inline-block;
-            color: #004a93;
-            background: linear-gradient(135deg, #004a93 0%, #0066cc 40%, #0d6efd 70%, #004a93 100%);
+            color: #004384;
+            background: linear-gradient(135deg, #004384 0%, #0066cc 40%, #0d6efd 70%, #004384 100%);
             background-size: 200% auto;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             animation: sargamLetterPop 2s ease-in-out infinite;
-            text-shadow: 0 0 30px rgba(0, 74, 147, 0.2);
+            text-shadow: 0 0 30px rgba(0, 67, 132, 0.2);
         }
 
         .sargam-loader-brand span:nth-child(1) {
@@ -661,7 +661,7 @@
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: rgba(0, 74, 147, 0.2);
+            background: rgba(0, 67, 132, 0.2);
             animation: sargamDotPulse 1.4s ease-in-out infinite;
         }
 
@@ -690,7 +690,7 @@
             0%,
             100% {
                 transform: scale(0.8);
-                background: rgba(0, 74, 147, 0.2);
+                background: rgba(0, 67, 132, 0.2);
             }
 
             50% {

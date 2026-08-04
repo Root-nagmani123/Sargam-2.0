@@ -33,17 +33,17 @@
             text-align: center;
             font-size: 15px;
             font-weight: bold;
-            color: #004a93;
+            color: #004384;
             margin: 6px 0 4px;
             padding-bottom: 5px;
-            border-bottom: 2px solid #004a93;
+            border-bottom: 2px solid #004384;
         }
 
         .meta { font-size: 8pt; color: #444; margin: 0 0 8px; text-align: center; }
 
         table.data-table { width: 100%; border-collapse: collapse; font-size: 8pt; }
         table.data-table thead th {
-            background: #004a93;
+            background: #004384;
             color: #fff;
             border: 1px solid #003a75;
             padding: 5px 4px;

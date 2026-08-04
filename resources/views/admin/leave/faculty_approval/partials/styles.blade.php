@@ -13,8 +13,8 @@
     }
 
     .faculty-leave-approval-page .fl-filter-select:focus {
-        border-color: #004a93;
-        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+        border-color: #004384;
+        box-shadow: 0 0 0 3px rgba(0, 67, 132, 0.12);
     }
 
     .faculty-leave-approval-page .fl-daterange-wrap {
@@ -54,13 +54,13 @@
         padding: 0 1.1rem;
         font-size: 0.9375rem;
         font-weight: 500;
-        color: #004a93;
+        color: #004384;
         border-radius: 8px;
         background: #fff;
     }
 
     .faculty-leave-approval-page .fl-download-btn:hover {
-        color: #004a93;
+        color: #004384;
         background: #fff;
     }
 
@@ -133,15 +133,15 @@
     /* Approve — solid brand-blue square with white check */
     .faculty-leave-approval-page .approval-action-btn--approve {
         color: #fff;
-        background: #004a93;
-        border-color: #004a93;
+        background: #004384;
+        border-color: #004384;
     }
 
     .faculty-leave-approval-page .approval-action-btn--approve:hover {
         color: #fff;
         background: #003a75;
         border-color: #003a75;
-        box-shadow: 0 4px 10px rgba(0, 74, 147, 0.25);
+        box-shadow: 0 4px 10px rgba(0, 67, 132, 0.25);
     }
 
     /* Reject — white square with red border and red cross */

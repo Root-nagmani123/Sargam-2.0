@@ -1,7 +1,7 @@
 /* Course Repository User — Bootstrap 5.3 government portal UI */
 
 :root {
-    --cru-primary: #004a93;
+    --cru-primary: #004384;
     --cru-primary-hover: #003d7a;
     --cru-primary-light: #5b9bd5;
     --cru-banner-from: #e8f4fc;
@@ -76,7 +76,7 @@
 }
 
 .cru-repo-list-table tbody tr:hover {
-    background-color: rgba(0, 74, 147, 0.03);
+    background-color: rgba(0, 67, 132, 0.03);
 }
 
 .cru-subcategory-link {
@@ -226,7 +226,7 @@
 }
 .cru-search-group:focus-within {
     border-radius: var(--cru-radius);
-    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.12);
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
 }
 
 /* Category cards */
@@ -243,7 +243,7 @@
 }
 
 .course-card:focus-within {
-    border-color: rgba(0, 74, 147, 0.35) !important;
+    border-color: rgba(0, 67, 132, 0.35) !important;
 }
 
 .course-card:hover {
@@ -271,7 +271,7 @@
     overflow: hidden;
     margin: 0.75rem 0.75rem 0;
     border-radius: var(--cru-radius-lg);
-    border: 1px solid rgba(0, 74, 147, 0.08);
+    border: 1px solid rgba(0, 67, 132, 0.08);
 }
 
 .cru-card-banner-img {
@@ -371,7 +371,7 @@
 }
 
 .cru-table tbody tr:hover {
-    background-color: rgba(0, 74, 147, 0.03);
+    background-color: rgba(0, 67, 132, 0.03);
 }
 
 .cru-btn-download:hover,
@@ -478,8 +478,8 @@
 }
 
 .cru-colvis-chip:has(.form-check-input:checked) {
-    border-color: rgba(0, 74, 147, 0.45);
-    background-color: rgba(0, 74, 147, 0.04);
+    border-color: rgba(0, 67, 132, 0.45);
+    background-color: rgba(0, 67, 132, 0.04);
 }
 
 .cru-colvis-chip-locked {
@@ -568,13 +568,13 @@
     align-items: center;
     justify-content: center;
     border-radius: var(--cru-radius);
-    background-color: rgba(0, 74, 147, 0.08);
+    background-color: rgba(0, 67, 132, 0.08);
     color: var(--cru-primary);
     flex-shrink: 0;
 }
 
 .title-section .btn-back:hover {
-    background-color: rgba(0, 74, 147, 0.08);
+    background-color: rgba(0, 67, 132, 0.08);
 }
 
 .cru-nav-tabs .nav-link.active {

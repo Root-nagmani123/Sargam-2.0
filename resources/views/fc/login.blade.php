@@ -22,7 +22,7 @@
                             @endif --}}
                             <form class="row g-3" method="POST" action="{{ route('registration.verify') }}" autocomplete="off">
                                 @csrf
-                                <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">User Authentication</h3>
+                                <h3 class="text-center mb-4 fw-bold" style="color: #004384;">User Authentication</h3>
                                 <hr>
                                 <!-- Mobile -->
                                 <div class="col-md-12">
@@ -48,7 +48,7 @@
                                         <input type="text" class="form-control" placeholder="Enter OTP"
                                            name="otp" id="reg_otp" required maxlength="6" inputmode="numeric" autocomplete="one-time-code">
                                         <button type="button" class="btn btn-outline-primary" id="sendRegOtpBtn"
-                                            style="border-color:#004a93;color:#004a93;">Send OTP</button>
+                                            style="border-color:#004384;color:#004384;">Send OTP</button>
                                     </div>
                                     <small class="text-muted">OTP is sent to your registered mobile number and email address</small>
                                 </div>
@@ -70,7 +70,7 @@
                                     <button
                                         class="btn btn-primary me-2 d-flex align-items-center justify-content-center w-100"
                                         type="submit"
-                                        style="width: 150px;background-color: #004a93; border-color: #004a93;">
+                                        style="width: 150px;background-color: #004384; border-color: #004384;">
                                         <i class="material-icons me-2">login</i>
                                         Login
                                     </button>
@@ -94,7 +94,7 @@
             const mobile = document.querySelector('input[name="reg_mobile"]')?.value?.trim();
             const webCode = document.querySelector('input[name="reg_web_code"]')?.value?.trim();
             if (!mobile || !webCode) {
-                Swal.fire({ icon: 'warning', title: 'Required', text: 'Enter mobile number and web code first.', confirmButtonColor: '#004a93' });
+                Swal.fire({ icon: 'warning', title: 'Required', text: 'Enter mobile number and web code first.', confirmButtonColor: '#004384' });
                 return;
             }
             const btn = this;
@@ -114,10 +114,10 @@
                     icon: data.success ? 'success' : 'error',
                     title: data.success ? 'OTP Sent' : 'Failed',
                     text: data.message || 'Unable to send OTP.',
-                    confirmButtonColor: '#004a93',
+                    confirmButtonColor: '#004384',
                 });
             } catch (e) {
-                Swal.fire({ icon: 'error', title: 'Failed', text: 'Unable to send OTP.', confirmButtonColor: '#004a93' });
+                Swal.fire({ icon: 'error', title: 'Failed', text: 'Unable to send OTP.', confirmButtonColor: '#004384' });
             } finally {
                 btn.disabled = false;
             }
@@ -135,7 +135,7 @@
                 title: 'Validation Error',
                 text: errorMessages.trim(),
                 icon: 'error',
-                confirmButtonColor: '#004a93',
+                confirmButtonColor: '#004384',
                 confirmButtonText: 'OK'
             });
         </script>

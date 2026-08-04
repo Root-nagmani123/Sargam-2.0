@@ -690,7 +690,7 @@
     position: absolute;
     top: -40px;
     left: 10px;
-    background: #004a93;
+    background: #004384;
     color: #fff;
     padding: 6px 14px;
     z-index: 9999;
@@ -842,7 +842,7 @@
     padding: 6px 10px !important;
     border-radius: 8px;
 }
-.header-search-btn:hover { color: #004a93 !important; }
+.header-search-btn:hover { color: #004384 !important; }
 
 /* =====================
    RIGHT SIDE - Actions
@@ -918,9 +918,9 @@
     transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 .header-logout-btn:hover {
-    color: #004a93 !important;
-    background-color: rgba(0, 74, 147, 0.06) !important;
-    border-color: rgba(0, 74, 147, 0.1);
+    color: #004384 !important;
+    background-color: rgba(0, 67, 132, 0.06) !important;
+    border-color: rgba(0, 67, 132, 0.1);
 }
 
 /* Notification dropdown alignment */

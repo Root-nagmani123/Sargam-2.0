@@ -30,8 +30,8 @@
         .course-line { font-size: 9px; font-weight: bold; color: #243b53; margin-top: 3px; }
 
         .report-title {
-            text-align: center; font-size: 15px; font-weight: bold; color: #004a93;
-            margin: 6px 0 4px; padding-bottom: 5px; border-bottom: 2px solid #004a93;
+            text-align: center; font-size: 15px; font-weight: bold; color: #004384;
+            margin: 6px 0 4px; padding-bottom: 5px; border-bottom: 2px solid #004384;
         }
         .meta { font-size: 8px; color: #444; margin: 0 0 8px; text-align: center; }
 
@@ -41,8 +41,8 @@
             vertical-align: top; word-break: break-word; overflow-wrap: break-word;
         }
         table.data-table thead th {
-            background: #004a93; color: #fff; font-weight: bold; font-size: 9px;
-            text-align: center; border-color: #004a93;
+            background: #004384; color: #fff; font-weight: bold; font-size: 9px;
+            text-align: center; border-color: #004384;
         }
         table.data-table tbody tr:nth-child(even) { background: #eef2f8; }
 

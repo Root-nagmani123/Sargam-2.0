@@ -458,9 +458,9 @@
 
 <style>
 .idcard-create-page .breadcrumb { font-size: 0.8125rem; --bs-breadcrumb-divider: ">"; }
-.idcard-create-page .breadcrumb-item a:hover { color: #004a93 !important; }
+.idcard-create-page .breadcrumb-item a:hover { color: #004384 !important; }
 .idcard-create-type-card {
-    border: 1px solid rgba(0, 74, 147, 0.25);
+    border: 1px solid rgba(0, 67, 132, 0.25);
     border-radius: 0.5rem;
     background-color: #f0f6fc;
     box-shadow: none;
@@ -473,8 +473,8 @@
     margin-top: 0.125rem;
 }
 .idcard-radio-option .form-check-input:checked {
-    background-color: #004a93;
-    border-color: #004a93;
+    background-color: #004384;
+    border-color: #004384;
 }
 .idcard-radio-option .form-check-label {
     font-size: 0.9375rem;
@@ -503,9 +503,9 @@
     align-items: center;
     justify-content: center;
 }
-.idcard-upload-zone:hover { background-color: #eef4fc; border-color: #004a93; }
+.idcard-upload-zone:hover { background-color: #eef4fc; border-color: #004384; }
 .idcard-upload-icon { font-size: 2.5rem !important; color: #6c757d; }
-.idcard-upload-zone:hover .idcard-upload-icon { color: #004a93; }
+.idcard-upload-zone:hover .idcard-upload-icon { color: #004384; }
 .idcard-upload-zone p { font-size: 0.875rem; color: #6c757d; margin-bottom: 0; }
 .idcard-create-form-card .form-control,
 .idcard-create-form-card .form-select {
@@ -516,13 +516,13 @@
 .idcard-create-form-card .form-control:focus,
 .idcard-create-form-card .form-select:focus {
     border-color: #86b7fe;
-    box-shadow: 0 0 0 0.25rem rgba(0, 74, 147, 0.15);
+    box-shadow: 0 0 0 0.25rem rgba(0, 67, 132, 0.15);
 }
 .idcard-create-form-card .form-label { font-size: 0.875rem; color: #495057; margin-bottom: 0.35rem; }
-.btn-outline-primary { border: 1px solid #004a93; color: #004a93; }
-.btn-outline-primary:hover { background-color: #004a93; color: #fff; }
-.idcard-upload-zone-active { background-color: #e7f1ff !important; border-color: #004a93 !important; }
-.idcard-upload-zone-active .idcard-upload-icon { color: #004a93 !important; }
+.btn-outline-primary { border: 1px solid #004384; color: #004384; }
+.btn-outline-primary:hover { background-color: #004384; color: #fff; }
+.idcard-upload-zone-active { background-color: #e7f1ff !important; border-color: #004384 !important; }
+.idcard-upload-zone-active .idcard-upload-icon { color: #004384 !important; }
 .idcard-upload-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 120px; }
 .idcard-upload-preview { position: relative; display: flex; align-items: center; justify-content: center; min-height: 140px; padding: 0.5rem; }
 .idcard-preview-img { max-width: 100%; max-height: 180px; object-fit: contain; border-radius: 0.375rem; }

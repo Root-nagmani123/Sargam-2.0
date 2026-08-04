@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <x-breadcrum title="All Duplicate Vehicle Pass Applications"></x-breadcrum>
-    <div class="card" style="border-left:4px solid #004a93;">
+    <div class="card" style="border-left:4px solid #004384;">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">All Duplicate Vehicle Pass Applications</h4>

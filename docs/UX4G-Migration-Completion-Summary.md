@@ -62,10 +62,11 @@ diff** (or an intended, reviewed diff). Hard-won infrastructure lessons, all rec
 ## Open decisions & backlog (handed to owners)
 
 **Decisions blocking the remaining *visual* work — for management/design:**
-1. **R-1 brand navy** — the app uses **three** navies interchangeably: `#004a93` (×747),
-   `#1a3c6e` (×60), and the R-1 token `#004384` (9.83:1 AAA). Choosing the canonical one
-   **gates**: the tokenization pass (Phase 12), input-border contrast (A11Y-1), and
-   focus-ring strength (A11Y-2).
+1. **R-1 brand navy — ✅ DECIDED & EXECUTED (2026-08-04): `#004384`.** Re-coloured
+   **211 files / ~1,119 occurrences** (`#004a93` + `rgb(0,74,147)` → `#004384` /
+   `rgb(0,67,132)`); 0 old-navy left; baseline re-approved across chrome+firefox+webkit.
+   Now **A11Y-1 (input border) + A11Y-2 (focus ring) are unblocked** — both should derive
+   from the now-consistent brand navy. See `UX4G-Decision-Note-R1-Brand-Navy.md`.
 2. **R-2 / R-3** — pin UX4G 2.0.8 (done in vendoring); self-host mandate (met).
 
 **Engineering backlog (each its own gated change):**
@@ -74,8 +75,12 @@ diff** (or an intended, reviewed diff). Hard-won infrastructure lessons, all rec
 - **Self-host remaining CDN plugins** — choices.js (×80), bootstrap-icons (×35),
   daterangepicker, select2, tom-select, flatpickr, summernote, DataTables, Google Fonts.
 - **Tokenization pass** — replace ~4,781 hardcoded hex literals with `--bs-*` (after R-1).
-- **Accessibility backlog** — input-border 1.26:1, focus-ring, 4 non-focusable tooltips,
-  full axe-core sweep (label association, `alt`, heading order).
+- **Accessibility backlog** — ✅ input-border (now 3.32:1) and focus-ring (now navy) **DONE
+  2026-08-04**. ✅ **axe-core sweep DONE** (`UX4G-Accessibility-Axe-Sweep.md`): 2,555
+  A/AA instances across 57 pages → ~5 root causes. Remediation queued by risk:
+  **R-C** form-control labels (~138, safe) → **R-B** contrast tokens (1,486, re-baseline)
+  → **R-A** shared-nav ARIA (~914, contract-sensitive) → R-D page-local. Plus 4
+  non-focusable tooltips + a manual keyboard/screen-reader pass (axe covers ~30–50 %).
 - **`<select>`/date-picker consolidation** — 3 select libs + 2 date pickers coexist (product decision).
 - **jquery-steps → UX4G Stepper** — only as an approved feature workstream (member wizard
   step-validation is AJAX business logic; forbidden to rewrite in a zero-regression pass).

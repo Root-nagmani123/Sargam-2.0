@@ -22,7 +22,7 @@
 /* --- Toolbar buttons --------------------------------------------- */
 .mer-util-btn {
     height: 42px; display: inline-flex; align-items: center; gap: var(--ds-space-2);
-    padding: 0 1rem; font-weight: 600; font-size: 0.9rem; color: #004a93;
+    padding: 0 1rem; font-weight: 600; font-size: 0.9rem; color: #004384;
     background: #fff; border: 0; border-radius: var(--ds-radius-1);
     transition: border-color .15s ease, box-shadow .15s ease, color .15s ease;
 }
@@ -465,11 +465,11 @@ function merPrintTable() {
         '.pdf-hdr .inst-hi-img{height:18px;width:auto;margin-bottom:2px;}' +
         '.pdf-hdr .inst-en{font-size:16px;font-weight:bold;color:#102a43;line-height:1.25;}' +
         '.pdf-hdr .course-line{font-size:12px;font-weight:bold;color:#243b53;margin-top:4px;}' +
-        '.report-title{text-align:center;font-size:20px;font-weight:bold;color:#004a93;margin:8px 0 6px;padding-bottom:8px;border-bottom:2px solid #004a93;}' +
+        '.report-title{text-align:center;font-size:20px;font-weight:bold;color:#004384;margin:8px 0 6px;padding-bottom:8px;border-bottom:2px solid #004384;}' +
         '.print-info{margin-bottom:12px;font-size:11px;color:#666;text-align:center;}' +
         'table{width:100%;border-collapse:collapse;margin-top:10px;}' +
         'table th,table td{border:1px solid #8fa3bd;padding:6px 8px;text-align:left;font-size:12px;}' +
-        'table thead th{font-weight:bold;background-color:#004a93 !important;color:#fff !important;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+        'table thead th{font-weight:bold;background-color:#004384 !important;color:#fff !important;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
         'table tbody tr:nth-child(even){background-color:#eef2f8;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
         '.print-footer{margin-top:18px;text-align:center;font-size:10px;color:#666;border-top:1px solid #ccc;padding-top:10px;}' +
         '@media print{@page{size:A4 landscape;margin:10mm;} body{margin:0;}}' +

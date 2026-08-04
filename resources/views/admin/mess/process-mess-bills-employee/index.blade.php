@@ -22,7 +22,7 @@
     </div>
 
     {{-- Page header --}}
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 no-print p-4 rounded-3 shadow-sm" style="background: #004a93; color: white;">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 no-print p-4 rounded-3 shadow-sm" style="background: #004384; color: white;">
         <div>
             <h4 class="mb-2 fw-bold d-flex align-items-center gap-2">
                 <i class="material-symbols-rounded" style="font-size: 2rem;">receipt_long</i>
@@ -709,7 +709,7 @@ document.addEventListener('DOMContentLoaded', function () {
     opacity: 1 !important;
 }
 #modalBillsTable thead {
-    background: #004a93;
+    background: #004384;
     color: #fff;
 }
 #modalBillsTable thead th {
@@ -3436,11 +3436,11 @@ function printProcessMessBillsTable() {
       print-color-adjust: exact;
     }
     .lbsnaa-header {
-      border-bottom: 2px solid #004a93;
+      border-bottom: 2px solid #004384;
       padding-bottom: .75rem;
       margin-bottom: 1rem;
     }
-    .brand-line-1 { font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; color: #004a93; }
+    .brand-line-1 { font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; color: #004384; }
     .brand-line-2 { font-size: 1.1rem; font-weight: 700; text-transform: uppercase; color: #222; }
     .brand-line-3 { font-size: .8rem; color: #555; }
     .report-meta { font-size: .8rem; margin-bottom: .75rem; }

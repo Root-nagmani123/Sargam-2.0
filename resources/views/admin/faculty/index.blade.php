@@ -5,7 +5,7 @@
 @push('styles')
     <style>
         .faculty-index-page .card-faculty-accent {
-            border-left: 4px solid #004a93;
+            border-left: 4px solid #004384;
         }
         @media (min-width: 768px) {
             .faculty-index-page .faculty-actions .btn {
@@ -13,14 +13,14 @@
             }
         }
         .btn-faculty-export {
-            border-color: #004a93;
-            color: #004a93;
+            border-color: #004384;
+            color: #004384;
         }
         .btn-faculty-export:hover,
         .btn-faculty-export:focus,
         .btn-faculty-export:active {
-            background-color: #004a93;
-            border-color: #004a93;
+            background-color: #004384;
+            border-color: #004384;
             color: #fff !important;
         }
     </style>
@@ -34,12 +34,12 @@
 
     <div class="datatables">
         <!-- start Zero Configuration -->
-        <div class="card" style="border-left:4px solid #004a93;">
+        <div class="card" style="border-left:4px solid #004384;">
             <div class="card-body">
                 <div class="table-responsive">
                     <div class="row">
                         <div class="col-6">
-                            <h4 class="fw-semibold text-primary mb-0" style="color:#004a93 !important;">
+                            <h4 class="fw-semibold text-primary mb-0" style="color:#004384 !important;">
                                 Faculty
                             </h4>
                         </div>
@@ -50,7 +50,7 @@
                                 <!-- Add Faculty -->
                                 <a href="{{ route('faculty.create') }}"
                                     class="btn btn-primary d-flex align-items-center gap-1 shadow-sm"
-                                    style="background-color:#004a93; border-color:#004a93;"
+                                    style="background-color:#004384; border-color:#004384;"
                                     aria-label="Add New Faculty">
                                     <span class="material-symbols-rounded fs-5">add</span>
                                     Add Faculty

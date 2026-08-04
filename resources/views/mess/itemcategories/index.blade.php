@@ -220,6 +220,6 @@ document.addEventListener('DOMContentLoaded', function() {
 @endpush
 
 <style>
-.table thead th { background-color: #004a93 !important; color: #fff !important; }
+.table thead th { background-color: #004384 !important; color: #fff !important; }
 </style>
 @endsection

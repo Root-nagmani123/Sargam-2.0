@@ -10,7 +10,7 @@
 <div class="container-fluid">
     <x-breadcrum title="Create Path Page" />
     <x-session_message />
-    <div class="card" style="border-left: 4px solid #004a93;">
+    <div class="card" style="border-left: 4px solid #004384;">
         <div class="card-body">
             <h4 class="card-title mb-3">Create Path Page</h4>
             <hr>

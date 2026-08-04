@@ -9,41 +9,41 @@
             body { margin: 0; padding: 0; background: #fff !important; font-size: 8px; }
             .no-print { display: none !important; }
             .report-header { margin-top: 0; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 2px solid #2c3e50; }
-            table.data-table thead th { background: #004a93 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            table.data-table thead th { background: #004384 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             table.data-table tbody tr:nth-child(even) td { background: #f7f9fc !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
         * { box-sizing: border-box; }
         body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 9px; margin: 0; padding: 12px; color: #222; background: #fff; }
-        .report-header { text-align: center; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid #004a93; }
+        .report-header { text-align: center; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid #004384; }
         .lbsnaa-branding-table { width: 100%; border-collapse: collapse; border: none; }
         .lbsnaa-branding-table td { border: none; padding: 0; vertical-align: middle; }
         .lbsnaa-branding-emblem { width: 50px; text-align: left; }
         .lbsnaa-branding-emblem img { width: 38px; height: 38px; object-fit: contain; }
         .lbsnaa-branding-lines { text-align: center; padding: 0 8px; }
-        .lbsnaa-brand-line-1 { font-size: 9px; color: #004a93; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+        .lbsnaa-brand-line-1 { font-size: 9px; color: #004384; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
         .lbsnaa-brand-line-2 { font-size: 14px; color: #222; font-weight: 700; margin-top: 2px; }
         .lbsnaa-brand-line-3 { font-size: 10px; color: #555; margin-top: 2px; }
         .lbsnaa-branding-logo { width: 90px; text-align: right; }
         .lbsnaa-branding-logo img { width: 80px; max-height: 44px; object-fit: contain; }
-        .report-title-bar { background-color: #004a93; color: #fff; padding: 6px 12px; font-size: 12px; font-weight: 600; margin-top: 6px; letter-spacing: 0.03em; }
+        .report-title-bar { background-color: #004384; color: #fff; padding: 6px 12px; font-size: 12px; font-weight: 600; margin-top: 6px; letter-spacing: 0.03em; }
         .report-details-row { padding: 6px 8px; background: #f8f9fa; border: 1px solid #dee2e6; margin-top: 8px; margin-bottom: 10px; font-size: 9px; color: #333; }
         .report-details-row span { display: inline-block; margin-right: 16px; }
-        .report-details-row strong { color: #004a93; }
+        .report-details-row strong { color: #004384; }
         .summary-stats { margin-bottom: 8px; font-size: 10px; }
         .summary-stats .stat-pill { display: inline-block; background: #e8eef6; border: 1px solid #c0cde0; padding: 2px 10px; margin-right: 10px; font-size: 9px; }
         .summary-stats .stat-pill strong { color: #003366; font-size: 10px; }
         table.data-table { width: 100%; border-collapse: collapse; font-size: 8px; margin-top: 4px; page-break-inside: auto; }
         table.data-table thead { display: table-header-group; }
-        table.data-table thead th { background: #004a93; color: #fff; font-weight: 600; font-size: 8px; padding: 4px 3px; border: 1px solid #003060; text-align: left; }
+        table.data-table thead th { background: #004384; color: #fff; font-weight: 600; font-size: 8px; padding: 4px 3px; border: 1px solid #003060; text-align: left; }
         table.data-table thead th.text-center { text-align: center; }
         table.data-table tbody td { padding: 3px 3px; border: 1px solid #dde2ea; vertical-align: top; word-break: break-word; }
         table.data-table tbody tr:nth-child(even) td { background: #f7f9fc; }
         .text-center { text-align: center; }
         .no-wrap { white-space: nowrap; }
-        .report-footer { border-top: 1px solid #004a93; font-size: 8px; color: #666; text-align: center; padding-top: 5px; margin-top: 10px; }
-        .report-footer .institution { color: #004a93; font-weight: 600; }
+        .report-footer { border-top: 1px solid #004384; font-size: 8px; color: #666; text-align: center; padding-top: 5px; margin-top: 10px; }
+        .report-footer .institution { color: #004384; font-weight: 600; }
         .print-actions { text-align: center; margin-bottom: 12px; padding: 8px; }
-        .print-actions button { background: #004a93; color: #fff; border: none; padding: 8px 24px; font-size: 13px; border-radius: 4px; cursor: pointer; margin: 0 5px; font-family: Arial, sans-serif; }
+        .print-actions button { background: #004384; color: #fff; border: none; padding: 8px 24px; font-size: 13px; border-radius: 4px; cursor: pointer; margin: 0 5px; font-family: Arial, sans-serif; }
         .print-actions button:hover { background: #003366; }
         .print-actions button.btn-secondary { background: #6c757d; }
     </style>

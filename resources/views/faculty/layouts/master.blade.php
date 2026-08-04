@@ -139,7 +139,7 @@
     }
 
     .calendar-cell:focus {
-        outline: 3px solid #004a93;
+        outline: 3px solid #004384;
         outline-offset: 2px;
     }
 
@@ -164,11 +164,11 @@
 
     /* Themes */
     .calendar-component[data-theme="gov-blue"] .calendar-header .form-select {
-        border-color: #004a93;
+        border-color: #004384;
     }
 
     .calendar-component[data-theme="gov-blue"] .calendar-cell.is-selected {
-        border-color: #004a93;
+        border-color: #004384;
     }
 
 
@@ -215,14 +215,14 @@
 
 /* Hover */
 .dd-trigger:hover {
-    border-bottom-color: #004a93;
+    border-bottom-color: #004384;
 }
 
 /* Focus visible for accessibility */
 .dd-trigger:focus-visible {
     outline: none;
-    border-bottom-color: #004a93 !important;
-    box-shadow: 0 2px 0 0 #004a93;
+    border-bottom-color: #004384 !important;
+    box-shadow: 0 2px 0 0 #004384;
 }
 
 /* Dropdown arrow rotation */
@@ -249,7 +249,7 @@
 /* Hover */
 .dd-menu-item:hover {
     background: #e8f3ff;
-    color: #004a93;
+    color: #004384;
     border-radius: 6px;
 }
 
@@ -332,7 +332,7 @@
         font-size: 32px;
         font-weight: 700;
         font-family: 'Montserrat', sans-serif;
-        color: #004a93;
+        color: #004384;
         opacity: 0.2;
         animation: pulseText 1.2s infinite ease-in-out;
     }

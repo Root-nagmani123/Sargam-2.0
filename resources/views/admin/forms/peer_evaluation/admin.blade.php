@@ -356,7 +356,7 @@
             </h5>
             <div class="row g-3 mt-4 mb-4">
                 <div class="col-lg-3 col-md-6">
-                    <label class="form-label fw-600"><i class="fas fa-book-open me-2" style="color: #004a93;"></i>Course (Optional)</label>
+                    <label class="form-label fw-600"><i class="fas fa-book-open me-2" style="color: #004384;"></i>Course (Optional)</label>
                     <select class="form-select form-select-lg" id="reflection_course_id">
                         <option value="">Global Field</option>
                         @foreach ($courses as $course)
@@ -365,13 +365,13 @@
                     </select>
                 </div>
                 <div class="col-lg-3 col-md-6">
-                    <label class="form-label fw-600"><i class="fas fa-calendar-alt me-2" style="color: #004a93;"></i>Event (Optional)</label>
+                    <label class="form-label fw-600"><i class="fas fa-calendar-alt me-2" style="color: #004384;"></i>Event (Optional)</label>
                     <select class="form-select form-select-lg" id="reflection_event_id" disabled>
                         <option value="">Select Event</option>
                     </select>
                 </div>
                 <div class="col-lg-4 col-md-6">
-                    <label class="form-label fw-600"><i class="fas fa-pen me-2" style="color: #004a93;"></i>Reflection Field Name</label>
+                    <label class="form-label fw-600"><i class="fas fa-pen me-2" style="color: #004384;"></i>Reflection Field Name</label>
                     <input type="text" id="reflection_field" class="form-control form-control-lg"
                         placeholder="Enter Reflection Field Name">
                 </div>
@@ -381,7 +381,7 @@
             </div>  
             {{-- Reflection Fields List --}}
             <div class="mt-4">
-                <h6 class="mb-3"><i class="fas fa-list me-2" style="color: #004a93;"></i>Existing Reflection Fields:</h6>
+                <h6 class="mb-3"><i class="fas fa-list me-2" style="color: #004384;"></i>Existing Reflection Fields:</h6>
                 <div class="table-responsive">
                     <table class="table table-modern" id="datatable-reflection-fields">
                         <thead>

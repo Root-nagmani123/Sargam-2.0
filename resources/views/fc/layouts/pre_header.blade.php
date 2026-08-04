@@ -33,7 +33,7 @@ body {
 }
 
 .top-header {
-    background-color: #004a93;
+    background-color: #004384;
     color: white;
     padding: 8px 0;
 }
@@ -51,7 +51,7 @@ body {
     border-radius: 10px;
     box-shadow: 0 0 12px rgba(0, 0, 0, 0.08);
     padding: 1rem;
-    border-left: 4px solid #004a93;
+    border-left: 4px solid #004384;
     border-radius: 0.5rem;
 }
 
@@ -90,7 +90,7 @@ body {
 }
 
 footer {
-    background-color: #004a93;
+    background-color: #004384;
     padding: 1rem 0;
     font-size: 0.9rem;
     color: #fff;
@@ -127,7 +127,7 @@ p {
 }
 
 .text-primary {
-    color: #004a93 !important;
+    color: #004384 !important;
 }
 
 .fw-semibold {

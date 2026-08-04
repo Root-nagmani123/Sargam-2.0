@@ -460,14 +460,14 @@
     --bs-breadcrumb-divider: ">";
 }
 .idcard-create-page .breadcrumb-item a:hover {
-    color: #004a93 !important;
+    color: #004384 !important;
 }
 .idcard-back-arrow {
     font-size: 1.5rem !important;
     vertical-align: middle;
 }
 .idcard-create-type-card {
-    border: 1px solid rgba(0, 74, 147, 0.25);
+    border: 1px solid rgba(0, 67, 132, 0.25);
     border-radius: 0.5rem;
     background-color: #f0f6fc;
     box-shadow: none;
@@ -482,8 +482,8 @@
     margin-top: 0.125rem;
 }
 .idcard-radio-option .form-check-input:checked {
-    background-color: #004a93;
-    border-color: #004a93;
+    background-color: #004384;
+    border-color: #004384;
 }
 .idcard-radio-option .form-check-label {
     font-size: 0.9375rem;
@@ -518,14 +518,14 @@
 }
 .idcard-upload-zone:hover {
     background-color: #eef4fc;
-    border-color: #004a93;
+    border-color: #004384;
 }
 .idcard-upload-icon {
     font-size: 2.5rem !important;
     color: #6c757d;
 }
 .idcard-upload-zone:hover .idcard-upload-icon {
-    color: #004a93;
+    color: #004384;
 }
 .idcard-upload-zone p {
     font-size: 0.875rem;
@@ -541,7 +541,7 @@
 .idcard-create-form-card .form-control:focus,
 .idcard-create-form-card .form-select:focus {
     border-color: #86b7fe;
-    box-shadow: 0 0 0 0.25rem rgba(0, 74, 147, 0.15);
+    box-shadow: 0 0 0 0.25rem rgba(0, 67, 132, 0.15);
 }
 .idcard-create-form-card .form-label {
     font-size: 0.875rem;
@@ -549,11 +549,11 @@
     margin-bottom: 0.35rem;
 }
 .btn-outline-primary {
-    border: 1px solid #004a93;
-    color: #004a93;
+    border: 1px solid #004384;
+    color: #004384;
 }
 .btn-outline-primary:hover {
-    background-color: #004a93;
+    background-color: #004384;
     color: #fff;
 }
 </style>
@@ -767,10 +767,10 @@
 <style>
 .idcard-upload-zone-active {
     background-color: #e7f1ff !important;
-    border-color: #004a93 !important;
+    border-color: #004384 !important;
 }
 .idcard-upload-zone-active .idcard-upload-icon {
-    color: #004a93 !important;
+    color: #004384 !important;
 }
 </style>
 @endsection

@@ -10,7 +10,7 @@
 ======================= */
 .info-card {
     background: #ffffff;
-    border-left: 4px solid #004a93;
+    border-left: 4px solid #004384;
     border-radius: .75rem;
     box-shadow: 0 .25rem .75rem rgba(0,0,0,.05);
 }

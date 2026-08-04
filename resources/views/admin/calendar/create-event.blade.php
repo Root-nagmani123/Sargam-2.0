@@ -297,7 +297,7 @@
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 <style>
-    .cal-ce-section-title { color: #004a93; }
+    .cal-ce-section-title { color: #004384; }
     /* Choices.js: match Bootstrap form-control sizing/appearance */
     .cal-create-event-page .choices { margin-bottom: 0; }
     .cal-create-event-page .choices__inner {

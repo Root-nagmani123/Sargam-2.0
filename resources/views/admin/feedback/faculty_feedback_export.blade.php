@@ -25,7 +25,7 @@
             .lbsnaa-header-logo-right { width: 80px; max-height: 40px; }
 
             .report-title-bar {
-                background: #004a93 !important;
+                background: #004384 !important;
                 color: #fff !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
@@ -79,7 +79,7 @@
             text-align: center;
             margin-bottom: 10px;
             padding-bottom: 6px;
-            border-bottom: 2px solid #004a93;
+            border-bottom: 2px solid #004384;
         }
 
         .lbsnaa-branding-table {
@@ -112,7 +112,7 @@
 
         .lbsnaa-brand-line-1 {
             font-size: 9px;
-            color: #004a93;
+            color: #004384;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             font-weight: 600;
@@ -143,7 +143,7 @@
         }
 
         .report-title-bar {
-            background-color: #004a93;
+            background-color: #004384;
             color: #fff;
             padding: 6px 12px;
             font-size: 12px;
@@ -169,7 +169,7 @@
         }
 
         .report-details-row strong {
-            color: #004a93;
+            color: #004384;
         }
 
         /* ── Feedback Section ── */
@@ -193,7 +193,7 @@
         }
 
         .meta-info strong {
-            color: #004a93;
+            color: #004384;
         }
 
         .faculty-type-badge {
@@ -287,7 +287,7 @@
 
         /* ── Footer ── */
         .report-footer {
-            border-top: 1px solid #004a93;
+            border-top: 1px solid #004384;
             font-size: 8px;
             color: #666;
             text-align: center;
@@ -296,7 +296,7 @@
         }
 
         .report-footer .institution {
-            color: #004a93;
+            color: #004384;
             font-weight: 600;
         }
 
@@ -308,7 +308,7 @@
         }
 
         .print-actions button {
-            background: #004a93;
+            background: #004384;
             color: #fff;
             border: none;
             padding: 8px 24px;
@@ -479,7 +479,7 @@
     @endforeach
 @else
     <div style="text-align:center; padding:40px; color:#666; background:#f8f9fa; border:1px solid #dee2e6; border-radius:4px; margin-top:20px;">
-        <p style="font-size:12px; font-weight:600; color:#004a93; margin:0;">No feedback data found for the selected filters.</p>
+        <p style="font-size:12px; font-weight:600; color:#004384; margin:0;">No feedback data found for the selected filters.</p>
     </div>
 @endif
 

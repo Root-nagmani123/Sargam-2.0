@@ -38,7 +38,7 @@
 <div class="modal fade" id="vendorMappingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header" style="background: #004a93;">
+            <div class="modal-header" style="background: #004384;">
                 <h5 class="modal-title text-white">Vendor Mapping</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>

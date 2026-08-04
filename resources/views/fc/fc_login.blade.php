@@ -11,7 +11,7 @@
                         <div class="row g-0">
                             {{-- Branded welcome panel — desktop only; stacks away on small screens --}}
                             <div class="col-lg-6 d-none d-lg-flex flex-column justify-content-center p-5"
-                                style="background: linear-gradient(135deg, #004a93 0%, #0a6bb5 100%); color:#ffffff;">
+                                style="background: linear-gradient(135deg, #004384 0%, #0a6bb5 100%); color:#ffffff;">
                                 <h2 class="fw-bold mb-3" style="color:#ffffff;">Welcome Back</h2>
                                 <p class="mb-4" style="color:#ffffff; opacity:.85;">Foundation Course Portal — Lal Bahadur Shastri National
                                     Academy of Administration.</p>
@@ -72,7 +72,7 @@
                                             autocomplete="off" required>
                                         <button type="button"
                                             class="btn btn-primary rounded-end-3 px-3 d-inline-flex align-items-center justify-content-center"
-                                            style="background-color: #004a93; border-color: #004a93;"
+                                            style="background-color: #004384; border-color: #004384;"
                                             onclick="togglePassword('password', this)"
                                             aria-label="Show password">
                                             <i class="bi bi-eye fs-5" aria-hidden="true"></i>
@@ -104,7 +104,7 @@
 
                                 <div class="col-12 pt-1">
                                     <button type="submit" class="btn btn-primary w-100 rounded-3 py-2 fw-semibold"
-                                        style="background-color: #004a93; border-color: #004a93;">
+                                        style="background-color: #004384; border-color: #004384;">
                                         Submit
                                     </button>
                                 </div>
@@ -151,7 +151,7 @@
                 title: 'Success!',
                 text: '{{ session('sweet_success') }}',
                 icon: 'success',
-                confirmButtonColor: '#004a93',
+                confirmButtonColor: '#004384',
                 confirmButtonText: 'OK'
             });
         </script>
@@ -167,7 +167,7 @@
                 title: 'Validation Error',
                 text: errorMessages.trim(),
                 icon: 'error',
-                confirmButtonColor: '#004a93',
+                confirmButtonColor: '#004384',
                 confirmButtonText: 'OK'
             });
         </script>

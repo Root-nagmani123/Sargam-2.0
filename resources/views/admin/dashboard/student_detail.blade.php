@@ -737,7 +737,7 @@
         // Highlight the section briefly
         setTimeout(() => {
             element.style.transition = 'box-shadow 0.3s ease';
-            element.style.boxShadow = '0 0 20px rgba(0, 74, 147, 0.5)';
+            element.style.boxShadow = '0 0 20px rgba(0, 67, 132, 0.5)';
             setTimeout(() => {
                 element.style.boxShadow = '';
             }, 2000);
@@ -855,7 +855,7 @@
                             margin: 20px;
                         }
                         h2 {
-                            color: #004a93;
+                            color: #004384;
                             margin-bottom: 20px;
                         }
                         table {
@@ -869,7 +869,7 @@
                             text-align: left;
                         }
                         th {
-                            background-color: #004a93;
+                            background-color: #004384;
                             color: white;
                             font-weight: bold;
                         }

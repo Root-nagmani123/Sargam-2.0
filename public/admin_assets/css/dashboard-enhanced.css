@@ -9,7 +9,7 @@
    ======================================== */
 :root {
     /* Brand Colors */
-    --primary-color: #004a93;
+    --primary-color: #004384;
     --primary-light: #1565c0;
     --primary-dark: #003366;
     --secondary-color: #dc3545;
@@ -109,7 +109,7 @@
     right: -50px;
     width: 150px;
     height: 150px;
-    background: radial-gradient(circle, rgba(0,74,147,0.05) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(0,67,132,0.05) 0%, transparent 70%);
     transition: var(--transition-slow);
 }
 
@@ -582,7 +582,7 @@
 *:focus-visible {
     outline: 3px solid var(--primary-color);
     outline-offset: 2px;
-    box-shadow: 0 0 0 6px rgba(0, 74, 147, 0.15);
+    box-shadow: 0 0 0 6px rgba(0, 67, 132, 0.15);
 }
 
 /* Reduced motion for accessibility */

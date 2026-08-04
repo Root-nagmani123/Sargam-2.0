@@ -6,7 +6,7 @@
     <div class="container my-5" style="flex: 1;">
         <!-- Back Button -->
         <div class="mb-4 d-flex justify-content-between align-items-center">
-            <h3 class="mb-4" style="color: #004a93;">All Frequently Asked Questions</h3>
+            <h3 class="mb-4" style="color: #004384;">All Frequently Asked Questions</h3>
             <div class="mb-3 ms-3 justify-content-end">
                 <a href="{{ route('fc.choose.path') }}" class="btn btn-outline-secondary">
                 Back to FAQs

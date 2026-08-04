@@ -264,8 +264,8 @@
 <style>
     /* LBSNAA theme: primary blue */
     .family-idcard-print-btn {
-        background-color: #004a93 !important;
-        border-color: #004a93 !important;
+        background-color: #004384 !important;
+        border-color: #004384 !important;
         color: #fff !important;
     }
     .family-idcard-print-btn:hover {
@@ -281,11 +281,11 @@
         padding: 0.75rem 1.25rem;
     }
     .family-idcard-tabs .nav-link.active {
-        background-color: #004a93;
+        background-color: #004384;
         color: white;
     }
     .family-idcard-tabs .nav-link:hover {
-        color: #004a93;
+        color: #004384;
     }
     .family-idcard-table tbody tr:hover {
         background-color: #f8f9fa;
@@ -315,7 +315,7 @@
             visibility: visible !important;
             margin-bottom: 14px !important;
             padding: 0 0 10px 0 !important;
-            border-bottom: 2px solid #004a93 !important;
+            border-bottom: 2px solid #004384 !important;
         }
         .family-idcard-print-header-lbsnaa .family-idcard-print-header-top {
             display: flex !important;
@@ -331,7 +331,7 @@
         }
         .family-idcard-print-header-lbsnaa .family-idcard-print-title-block h5 {
             font-size: 14px !important;
-            color: #004a93 !important;
+            color: #004384 !important;
             font-weight: 700 !important;
             margin: 0 !important;
         }

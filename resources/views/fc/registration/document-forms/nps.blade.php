@@ -48,7 +48,7 @@
     .nps-comb{ width:100%; height:30px; border:1px solid #64748b; padding-left:8px; color:#0b3d91;
         font:700 15px 'Courier New', monospace; letter-spacing:9px; background-color:#fff;
         background-image:linear-gradient(90deg,#cbd5e1 1px,transparent 1px); background-size:18px 100%; background-position:8px 0; }
-    .nps-comb:focus{ outline:none; border-color:var(--fc-blue); box-shadow:0 0 0 2px rgba(0,74,147,.12); }
+    .nps-comb:focus{ outline:none; border-color:var(--fc-blue); box-shadow:0 0 0 2px rgba(0,67,132,.12); }
     textarea.nps-comb{ height:auto; background-image:none; letter-spacing:normal; font-family:inherit; padding:6px 8px; }
     select.nps-comb{ background-image:none; letter-spacing:normal; font-family:inherit; }
     .nps-ticks{ display:flex; flex-wrap:wrap; gap:.2rem 1.1rem; align-items:center; padding-top:.15rem; }

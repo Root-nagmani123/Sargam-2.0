@@ -188,14 +188,14 @@
     cursor: pointer;
 }
 .timetable-report-tabs .nav-link:hover {
-    color: #004a93;
-    background-color: rgba(0, 74, 147, 0.05);
+    color: #004384;
+    background-color: rgba(0, 67, 132, 0.05);
 }
 .timetable-report-tabs .nav-link.active {
-    color: #004a93;
+    color: #004384;
     background-color: white;
-    border-bottom: 3px solid #004a93;
-    box-shadow: 0 -2px 10px rgba(0, 74, 147, 0.1);
+    border-bottom: 3px solid #004384;
+    box-shadow: 0 -2px 10px rgba(0, 67, 132, 0.1);
 }
 /* Select2 fixes to match form-select height & style */
 .select2-container { width: 100% !important; display: block !important; }
@@ -463,13 +463,13 @@ $(document).ready(function() {
 '            display: flex;\n' +
 '            align-items: center;\n' +
 '            gap: 12px;\n' +
-'            border-bottom: 3px solid #004a93;\n' +
+'            border-bottom: 3px solid #004384;\n' +
 '            padding-bottom: 10px;\n' +
 '            margin-bottom: 12px;\n' +
 '        }\n' +
 '        .print-header img { height: 48px; width: auto; object-fit: contain; }\n' +
 '        .header-text { flex: 1; }\n' +
-'        .header-text .line1 { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #004a93; font-weight: 600; margin: 0; }\n' +
+'        .header-text .line1 { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #004384; font-weight: 600; margin: 0; }\n' +
 '        .header-text .line2 { font-size: 14px; font-weight: 700; text-transform: uppercase; color: #1a1a1a; margin: 2px 0 0; }\n' +
 '        .header-text .line3 { font-size: 9px; color: #555; margin: 1px 0 0; }\n' +
 '\n' +
@@ -478,7 +478,7 @@ $(document).ready(function() {
 '        .report-title-block h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 4px; color: #1a1a1a; }\n' +
 '        .date-pill {\n' +
 '            display: inline-block;\n' +
-'            background: #004a93;\n' +
+'            background: #004384;\n' +
 '            color: #fff;\n' +
 '            padding: 3px 14px;\n' +
 '            border-radius: 10px;\n' +
@@ -486,11 +486,11 @@ $(document).ready(function() {
 '            font-weight: 500;\n' +
 '            -webkit-print-color-adjust: exact;\n' +
 '            print-color-adjust: exact;\n' +
-'            border: 1px solid #004a93;\n' +
+'            border: 1px solid #004384;\n' +
 '        }\n' +
 '        @media print {\n' +
 '            .date-pill {\n' +
-'                background: #004a93 !important;\n' +
+'                background: #004384 !important;\n' +
 '                color: #fff !important;\n' +
 '                -webkit-print-color-adjust: exact !important;\n' +
 '                print-color-adjust: exact !important;\n' +
@@ -500,7 +500,7 @@ $(document).ready(function() {
 '                text-align: center;\n' +
 '                font-size: 10px;\n' +
 '                font-weight: 700;\n' +
-'                color: #004a93;\n' +
+'                color: #004384;\n' +
 '                margin-top: 2px;\n' +
 '            }\n' +
 '        }\n' +
@@ -518,7 +518,7 @@ $(document).ready(function() {
 '        /* ── Data Table ── */\n' +
 '        .data-table { width: 100%; border-collapse: collapse; font-size: 10px; }\n' +
 '        .data-table th, .data-table td { padding: 4px 6px; border: 1px solid #bbb; vertical-align: middle; word-break: break-word; white-space: normal; }\n' +
-'        .data-table thead th { background: #004a93; color: #fff; font-weight: 600; font-size: 10px; text-align: left; }\n' +
+'        .data-table thead th { background: #004384; color: #fff; font-weight: 600; font-size: 10px; text-align: left; }\n' +
 '\n' +
 '        /* Alternating item rows */\n' +
 '        .data-table tbody tr:nth-child(even) td { background: #f9fafb; }\n' +

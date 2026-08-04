@@ -21,9 +21,9 @@
     }
     .hostel-room-page .comment-input:focus {
         outline: 0;
-        border-color: #004a93;
+        border-color: #004384;
         background: #fff;
-        box-shadow: 0 0 0 3px rgba(0, 74, 147, .12);
+        box-shadow: 0 0 0 3px rgba(0, 67, 132, .12);
     }
     .hostel-room-page .programme-dt-filter-select select { min-width: 150px; }
 </style>

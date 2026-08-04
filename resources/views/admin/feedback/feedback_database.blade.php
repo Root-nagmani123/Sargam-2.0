@@ -259,7 +259,7 @@
                 <div class="row g-3 align-items-end mt-1" id="conditionalFilterContainer">
                     <div class="col-lg-2 col-md-3">
                         <label class="form-label">Score Filter</label>
-                        <select class="form-select" id="conditionalField">
+                        <select class="form-select" id="conditionalField" aria-label="Score Filter">
                             <option value="">None</option>
                             <option value="content">Content</option>
                             <option value="presentation">Presentation</option>
@@ -267,7 +267,7 @@
                     </div>
                     <div class="col-lg-2 col-md-2">
                         <label class="form-label">Operator</label>
-                        <select class="form-select" id="conditionalOperator">
+                        <select class="form-select" id="conditionalOperator" aria-label="Operator">
                             <option value=">=">≥ (>=)</option>
                             <option value="<=">≤ (<=)</option>
                             <option value=">">＞ (>)</option>

@@ -365,13 +365,13 @@ function printStockPurchaseTable() {
 '            display: flex;\n' +
 '            align-items: center;\n' +
 '            gap: 12px;\n' +
-'            border-bottom: 3px solid #004a93;\n' +
+'            border-bottom: 3px solid #004384;\n' +
 '            padding-bottom: 10px;\n' +
 '            margin-bottom: 12px;\n' +
 '        }\n' +
 '        .print-header img { height: 48px; width: auto; object-fit: contain; }\n' +
 '        .header-text { flex: 1; }\n' +
-'        .header-text .line1 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #004a93; font-weight: 600; margin: 0; }\n' +
+'        .header-text .line1 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #004384; font-weight: 600; margin: 0; }\n' +
 '        .header-text .line2 { font-size: 16px; font-weight: 700; text-transform: uppercase; color: #1a1a1a; margin: 2px 0 0; }\n' +
 '        .header-text .line3 { font-size: 11px; color: #555; margin: 1px 0 0; }\n' +
 '\n' +
@@ -380,7 +380,7 @@ function printStockPurchaseTable() {
 '        .report-title-block h2 { font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 4px; color: #1a1a1a; }\n' +
 '        .date-pill {\n' +
 '            display: inline-block;\n' +
-'            background: #004a93;\n' +
+'            background: #004384;\n' +
 '            color: #fff;\n' +
 '            padding: 3px 14px;\n' +
 '            border-radius: 10px;\n' +
@@ -388,11 +388,11 @@ function printStockPurchaseTable() {
 '            font-weight: 500;\n' +
 '            -webkit-print-color-adjust: exact;\n' +
 '            print-color-adjust: exact;\n' +
-'            border: 1px solid #004a93;\n' +
+'            border: 1px solid #004384;\n' +
 '        }\n' +
 '        @media print {\n' +
 '            .date-pill {\n' +
-'                background: #004a93 !important;\n' +
+'                background: #004384 !important;\n' +
 '                color: #fff !important;\n' +
 '                -webkit-print-color-adjust: exact !important;\n' +
 '                print-color-adjust: exact !important;\n' +
@@ -403,7 +403,7 @@ function printStockPurchaseTable() {
 '                text-align: center;\n' +
 '                font-size: 10px;\n' +
 '                font-weight: 700;\n' +
-'                color: #004a93;\n' +
+'                color: #004384;\n' +
 '                margin-top: 2px;\n' +
 '            }\n' +
 '        }\n' +
@@ -426,7 +426,7 @@ function printStockPurchaseTable() {
 '        /* ── Data Table ── */\n' +
 '        .data-table { width: 100%; border-collapse: collapse; font-size: 10px; }\n' +
 '        .data-table th, .data-table td { padding: 4px 6px; border: 1px solid #bbb; vertical-align: middle; }\n' +
-'        .data-table thead th { background: #004a93; color: #fff; font-weight: 600; font-size: 10px; text-align: left; }\n' +
+'        .data-table thead th { background: #004384; color: #fff; font-weight: 600; font-size: 10px; text-align: left; }\n' +
 '        .data-table thead th.text-end { text-align: right; }\n' +
 '        .data-table .text-end { text-align: right; }\n' +
 '\n' +
@@ -461,13 +461,13 @@ function printStockPurchaseTable() {
 '        .data-table .vendor-total-row td {\n' +
 '            background: #dee2e6;\n' +
 '            font-weight: 700;\n' +
-'            border-top: 2px solid #004a93;\n' +
-'            color: #004a93;\n' +
+'            border-top: 2px solid #004384;\n' +
+'            color: #004384;\n' +
 '        }\n' +
 '\n' +
 '        /* Grand total */\n' +
 '        .data-table .grand-total-row td {\n' +
-'            background: #004a93;\n' +
+'            background: #004384;\n' +
 '            color: #fff;\n' +
 '            font-weight: 700;\n' +
 '            font-size: 11px;\n' +
@@ -500,7 +500,7 @@ function printStockPurchaseTable() {
 '\n' +
 '<div class="report-title-block">\n' +
 '    <h2>' + title + '</h2>\n' +
-'    <p style="font-size:11px;font-weight:700;color:#004a93;margin:4px 0 0;text-align:center;">' + dateRange + '</p>\n' +
+'    <p style="font-size:11px;font-weight:700;color:#004384;margin:4px 0 0;text-align:center;">' + dateRange + '</p>\n' +
 '</div>\n' +
 '\n' +
 '<div class="report-meta">\n' +
@@ -570,7 +570,7 @@ function printStockPurchaseTable() {
         color: #fff !important;
         font-weight: 600;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        border-bottom: 2px solid #004a93;
+        border-bottom: 2px solid #004384;
         /* fill gap caused by border-collapse:separate */
         border-top: none;
         border-left: 1px solid rgba(255,255,255,0.15);
@@ -698,7 +698,7 @@ function printStockPurchaseTable() {
 }
 
 .stock-purchase-report .page-input { display: inline-block; }
-.report-date-bar { background: #004a93; color: #fff; font-size: 0.9rem; text-align: center; }
+.report-date-bar { background: #004384; color: #fff; font-size: 0.9rem; text-align: center; }
 .report-vendor-name { font-size: 1rem; }
 
 /* Transitions */
@@ -814,7 +814,7 @@ function printStockPurchaseTable() {
         var clonedThead = thead.cloneNode(true);
         // Force styles on cloned th
         clonedThead.querySelectorAll('th').forEach(function(th) {
-            th.style.cssText = 'background:#0b4a7e !important;color:#fff !important;font-weight:600;padding:0.6rem 0.75rem;border:1px solid rgba(255,255,255,0.15);border-bottom:2px solid #004a93;box-shadow:0 2px 4px rgba(0,0,0,0.1);font-size:0.8125rem;white-space:nowrap;';
+            th.style.cssText = 'background:#0b4a7e !important;color:#fff !important;font-weight:600;padding:0.6rem 0.75rem;border:1px solid rgba(255,255,255,0.15);border-bottom:2px solid #004384;box-shadow:0 2px 4px rgba(0,0,0,0.1);font-size:0.8125rem;white-space:nowrap;';
         });
         // Preserve text-end alignment
         clonedThead.querySelectorAll('th.text-end').forEach(function(th) {

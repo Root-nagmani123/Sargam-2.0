@@ -1,6 +1,6 @@
 /* Subject Master — programme-dt reference layout */
 .sm-subject-page {
-    --sm-primary: #004a93;
+    --sm-primary: #004384;
     --sm-primary-dark: #003366;
     --sm-border: #e4e7ec;
     --sm-text: #344054;
@@ -31,7 +31,7 @@
 
 .sm-subject-page .sm-search-group:focus-within {
     border-color: var(--sm-primary);
-    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+    box-shadow: 0 0 0 3px rgba(0, 67, 132, 0.12);
 }
 
 .sm-subject-page .sm-search-group .input-group-text {
@@ -177,7 +177,7 @@
 }
 
 .sm-subject-page .sm-action-switch .form-check-input:focus {
-    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.2);
+    box-shadow: 0 0 0 3px rgba(0, 67, 132, 0.2);
 }
 
 .sm-subject-page .sm-empty-state {
@@ -246,7 +246,7 @@
 
 /* Add / Edit Subject modals */
 .sm-subject-form-modal {
-    --sm-primary: #004a93;
+    --sm-primary: #004384;
     --sm-border: #e4e7ec;
     --sm-text: #344054;
     --sm-heading: #101828;
@@ -312,7 +312,7 @@ body.modal-open:has(.sm-edit-subject-modal.show) .modal-backdrop.show {
 .sm-subject-form-modal .sm-subject-modal-fields .form-control:focus,
 .sm-subject-form-modal .sm-subject-modal-fields .form-select:focus {
     border-color: var(--sm-primary);
-    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+    box-shadow: 0 0 0 3px rgba(0, 67, 132, 0.12);
 }
 
 .sm-subject-form-modal .sm-subject-modal-actions .sm-btn-cancel {

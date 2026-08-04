@@ -1,6 +1,6 @@
     <!-- Footer -->
     <!-- Footer -->
-    <footer class="mt-4 text-white py-3" style="background-color: #004a93;">
+    <footer class="mt-4 text-white py-3" style="background-color: #004384;">
         <div class="container">
             <div class="row">
                 <div class="col-md-8">

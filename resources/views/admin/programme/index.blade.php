@@ -45,7 +45,7 @@
                 <div class="d-flex flex-wrap align-items-center gap-3">
                     <span class="programme-dt-filters-label">Filters</span>
                     <div class="programme-dt-filter-select">
-                        <select id="courseFilter" class="form-select js-programme-choice">
+                        <select id="courseFilter" class="form-select js-programme-choice" aria-label="Filter by course">
                             <option value="">Course Name</option>
                             @foreach($courses ?? [] as $pk => $name)
                             <option value="{{ $pk }}">{{ $name }}</option>

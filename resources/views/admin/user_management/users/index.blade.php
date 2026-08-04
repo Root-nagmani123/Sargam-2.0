@@ -9,18 +9,18 @@
     #usersTableContainer.users-loading { opacity: .55; pointer-events: none; }
     /* Column Visibility modal items */
     #usersColumnToggleGrid .colvis-item { cursor: pointer; transition: border-color .15s ease, background-color .15s ease; }
-    #usersColumnToggleGrid .colvis-item:hover { border-color: #004a93 !important; background-color: rgba(0,74,147,.04); }
+    #usersColumnToggleGrid .colvis-item:hover { border-color: #004384 !important; background-color: rgba(0,67,132,.04); }
     #usersColumnToggleGrid .colvis-item .form-check-input { cursor: pointer; flex-shrink: 0; }
 
     /* ===== Reference-matched polish (presentation only) ===== */
     /* Print / Download utility buttons */
     .users-page .users-util-btn {
         height: 44px; display: inline-flex; align-items: center; gap: 8px;
-        padding: 0 18px; font-weight: 600; font-size: 0.9rem; color: #004a93;
+        padding: 0 18px; font-weight: 600; font-size: 0.9rem; color: #004384;
         background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
         transition: border-color .15s ease, box-shadow .15s ease;
     }
-    .users-page .users-util-btn:hover { border-color: #004a93; box-shadow: 0 1px 3px rgba(16,24,40,.08); }
+    .users-page .users-util-btn:hover { border-color: #004384; box-shadow: 0 1px 3px rgba(16,24,40,.08); }
 
     /* Filter toolbar */
     .users-page .users-filters-label { font-weight: 600; color: #1f2937; font-size: 0.9rem; }
@@ -353,7 +353,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!w) return;
             w.document.write('<!DOCTYPE html><html><head><title>Users</title>' +
                 '<style>body{font-family:Arial,sans-serif;margin:20px}table{width:100%;border-collapse:collapse}' +
-                'th,td{border:1px solid #ccc;padding:8px;text-align:left;font-size:12px}th{background:#004a93;color:#fff}h2{color:#004a93}</style>' +
+                'th,td{border:1px solid #ccc;padding:8px;text-align:left;font-size:12px}th{background:#004384;color:#fff}h2{color:#004384}</style>' +
                 '</head><body><h2>Users</h2>' + clone.outerHTML + '</body></html>');
             w.document.close();
             w.onload = function () { w.print(); };

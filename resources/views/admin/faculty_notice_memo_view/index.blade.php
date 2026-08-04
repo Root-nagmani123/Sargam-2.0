@@ -6,7 +6,7 @@
 <style>
     .student-card {
         background: #ffffff;
-        border-left: 4px solid #004a93;
+        border-left: 4px solid #004384;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         margin-bottom: 15px;
@@ -124,7 +124,7 @@
 
 <div class="container-fluid">
     <x-session_message />
-    <div class="card" style="border-left:4px solid #004a93;">
+    <div class="card" style="border-left:4px solid #004384;">
         <div class="card-body">
             <div class="row mb-3">
                 <div class="col-6">
@@ -201,7 +201,7 @@
                                     @foreach($student['records'] as $record)
                                         <div class="record-item">
                                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                                <h6 class="mb-0" style="color: #004a93; font-weight: 600;">
+                                                <h6 class="mb-0" style="color: #004384; font-weight: 600;">
                                                     <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 20px; vertical-align: middle;">description</i>
                                                     {{ $record->type }}: {{ $record->course_name ?? 'N/A' }}
                                                 </h6>
@@ -273,7 +273,7 @@
                                             <!-- Conversation Section -->
                                             @if(isset($record->conversations) && $record->conversations->count() > 0)
                                                 <div class="conversation-section">
-                                                    <h6 class="mb-3" style="color: #004a93; font-weight: 600;">
+                                                    <h6 class="mb-3" style="color: #004384; font-weight: 600;">
                                                         <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 18px; vertical-align: middle;">chat</i>
                                                         Conversation
                                                     </h6>

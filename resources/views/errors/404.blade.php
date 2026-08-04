@@ -14,7 +14,7 @@
 
         body {
             font-family: 'Noto Sans', 'Noto Sans Devanagari', 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #004a93 0%, #003366 100%);
+            background: linear-gradient(135deg, #004384 0%, #003366 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -39,7 +39,7 @@
         .error-code {
             font-size: 120px;
             font-weight: bold;
-            color: #004a93;
+            color: #004384;
             margin-bottom: 10px;
             line-height: 1;
         }
@@ -83,13 +83,13 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #004a93 0%, #003366 100%);
+            background: linear-gradient(135deg, #004384 0%, #003366 100%);
             color: white;
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0, 74, 147, 0.3);
+            box-shadow: 0 10px 20px rgba(0, 67, 132, 0.3);
         }
 
         .btn-secondary {

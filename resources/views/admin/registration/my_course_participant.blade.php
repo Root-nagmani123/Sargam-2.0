@@ -790,7 +790,7 @@
     .modern-table tbody tr { transition: all 0.3s ease; }
     .modern-table tbody tr:hover {
         background: linear-gradient(to right, #f8f9ff 0%, #ffffff 100%);
-        box-shadow: 0 5px 15px rgba(0, 74, 147, 0.1);
+        box-shadow: 0 5px 15px rgba(0, 67, 132, 0.1);
     }
 
     .card { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; }
@@ -812,7 +812,7 @@
     }
 
     .dataTables_wrapper .dataTables_paginate .paginate_button.current {
-        background: linear-gradient(135deg, #004a93 0%, #0066cc 100%);
+        background: linear-gradient(135deg, #004384 0%, #0066cc 100%);
         color: white !important;
         border: none;
     }

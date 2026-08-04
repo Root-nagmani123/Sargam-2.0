@@ -32,7 +32,7 @@
                        
                         <div class="col-md-4">
                             <label class="form-label">Course</label>
-                            <select id="courseFilter" class="form-select">
+                            <select id="courseFilter" class="form-select" aria-label="Filter by course">
                                 <option value="">-- All Courses --</option>
                                 @foreach($CourseMaster as $course)
                                 <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
@@ -41,7 +41,7 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Memo Conclusion</label>
-                            <select id="memoConclusionFilter" class="form-select">
+                            <select id="memoConclusionFilter" class="form-select" aria-label="Filter by conclusion">
                                 <option value="">-- All Memo Conclusions --</option>
                                 @foreach($MemoConclusionMaster as $memo)
                                 <option value="{{ $memo->pk }}">{{ $memo->discussion_name }}</option>

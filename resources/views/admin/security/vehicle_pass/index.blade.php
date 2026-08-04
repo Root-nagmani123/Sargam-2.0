@@ -289,15 +289,15 @@
 }
 .vehicle-pass-tabs .nav-link:hover { color: #495057; background: #dee2e6; }
 .vehicle-pass-tabs .nav-link.active {
-    background: #004a93;
+    background: #004384;
     color: #fff;
 }
 .vehicle-pass-table thead tr { background: #122442; color: #fff; }
 .vehicle-pass-table thead th { font-weight: 600; font-size: 0.8125rem; padding: 0.75rem 1rem; border: none; }
 .vehicle-pass-table tbody td { padding: 0.75rem 1rem; vertical-align: middle; border-bottom: 1px solid #f1f3f5; }
 .vehicle-pass-table tbody tr:hover { background: #f8fafc; }
-.vehicle-pass-index-page .pagination .page-item.active .page-link { background-color: #004a93; border-color: #004a93; color: #fff; }
-.vehicle-pass-index-page .pagination .page-link { color: #004a93; }
+.vehicle-pass-index-page .pagination .page-item.active .page-link { background-color: #004384; border-color: #004384; color: #fff; }
+.vehicle-pass-index-page .pagination .page-link { color: #004384; }
 .vehicle-pass-index-page .dropdown .btn-outline-success {
     border-color: #198754;
     color: #198754;

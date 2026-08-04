@@ -66,7 +66,7 @@
         if (stripos($section, 'Administration') !== false)  { $envelope = 'Envelope 1'; }
         elseif (stripos($section, 'Account') !== false)      { $envelope = 'Envelope 2'; }
     @endphp
-    <div class="card mb-4" style="border-left:4px solid #004a93;">
+    <div class="card mb-4" style="border-left:4px solid #004384;">
         <div class="card-body p-3">
             <h6 class="fw-bold text-primary mb-3 text-uppercase" style="letter-spacing:0.3px;">{{ $section }}@if($envelope) <span class="badge bg-warning text-dark ms-2 align-middle" style="letter-spacing:0.5px;">{{ $envelope }}</span>@endif</h6>
             <div class="table-responsive">
@@ -212,11 +212,11 @@
 @endforeach
 
 @if(! $readonly)
-    <div class="card border-0 shadow-sm mb-3" style="border-left:5px solid #004a93 !important; background:#f6faff;">
+    <div class="card border-0 shadow-sm mb-3" style="border-left:5px solid #004384 !important; background:#f6faff;">
         <div class="card-body p-4">
             <div class="d-flex align-items-center mb-3">
                 <span class="d-inline-flex align-items-center justify-content-center rounded-circle me-2"
-                      style="width:32px;height:32px;background:#004a93;color:#fff;"><i class="bi bi-info-lg"></i></span>
+                      style="width:32px;height:32px;background:#004384;color:#fff;"><i class="bi bi-info-lg"></i></span>
                 <h6 class="fw-bold text-primary mb-0 text-uppercase" style="letter-spacing:0.5px;">Important Instructions</h6>
             </div>
 

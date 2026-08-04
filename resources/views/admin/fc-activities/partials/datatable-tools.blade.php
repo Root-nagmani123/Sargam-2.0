@@ -66,12 +66,12 @@
                 box-shadow: none;
             }
             .fc-dt-toolbar-wrap .fc-colvis-menu .fc-colvis-checkbox:checked {
-                background-color: #004a93;
-                border-color: #004a93;
+                background-color: #004384;
+                border-color: #004384;
             }
             .fc-dt-toolbar-wrap .fc-colvis-menu .fc-colvis-checkbox:focus {
-                border-color: #004a93;
-                box-shadow: 0 0 0 0.15rem rgba(0, 74, 147, 0.25);
+                border-color: #004384;
+                box-shadow: 0 0 0 0.15rem rgba(0, 67, 132, 0.25);
             }
             .fc-dt-toolbar-wrap .fc-colvis-menu .fc-colvis-label {
                 flex: 1;
@@ -190,16 +190,16 @@
                     printWindow.document.write('<!doctype html><html lang="en"><head><meta charset="utf-8"><title>' + title + '</title>' +
                         '<style>' +
                         '*,*::before,*::after{box-sizing:border-box} body{font-family:"Segoe UI",system-ui,-apple-system,sans-serif;font-size:11px;color:#212529;margin:0;padding:12mm 10mm;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
-                        '.print-header{display:flex;align-items:center;gap:12px;border-bottom:3px solid #004a93;padding-bottom:10px;margin-bottom:12px}' +
+                        '.print-header{display:flex;align-items:center;gap:12px;border-bottom:3px solid #004384;padding-bottom:10px;margin-bottom:12px}' +
                         '.print-header img{height:48px;width:auto;object-fit:contain}' +
-                        '.header-text{flex:1}.header-text .line1{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#004a93;font-weight:600;margin:0}' +
+                        '.header-text{flex:1}.header-text .line1{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#004384;font-weight:600;margin:0}' +
                         '.header-text .line2{font-size:14px;font-weight:700;text-transform:uppercase;color:#1a1a1a;margin:2px 0 0}' +
                         '.header-text .line3{font-size:9px;color:#555;margin:1px 0 0}' +
                         '.report-title-block{text-align:center;margin-bottom:10px}.report-title-block h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin:0 0 4px;color:#1a1a1a}' +
-                        '.date-pill{display:inline-block;background:#004a93;color:#fff;padding:3px 14px;border-radius:10px;font-size:10px;font-weight:500;border:1px solid #004a93}' +
+                        '.date-pill{display:inline-block;background:#004384;color:#fff;padding:3px 14px;border-radius:10px;font-size:10px;font-weight:500;border:1px solid #004384}' +
                         '.report-meta{font-size:10px;line-height:1.7;margin:8px 0 10px;color:#333}' +
                         '.data-table{width:max-content;min-width:100%;border-collapse:collapse;font-size:9px}.data-table th,.data-table td{padding:3px 5px;border:1px solid #bbb;vertical-align:middle;word-break:normal;white-space:nowrap}' +
-                        '.data-table thead th{background:#004a93;color:#fff;font-weight:600;font-size:10px;text-align:left}' +
+                        '.data-table thead th{background:#004384;color:#fff;font-weight:600;font-size:10px;text-align:left}' +
                         '.data-table tbody tr:nth-child(even) td{background:#f9fafb}' +
                         '.footer{border-top:1px solid #dee2e6;font-size:8px;color:#666;text-align:center;padding-top:4px;margin-top:8px}' +
                         '@page{size:A4 landscape;margin:8mm} @media print{body{padding:0} thead{display:table-header-group} tr{page-break-inside:avoid}}' +
@@ -381,7 +381,7 @@
                                         {
                                             width: '*',
                                             stack: [
-                                                { text: 'Government of India', fontSize: 8, color: '#004a93', bold: true, alignment: 'center' },
+                                                { text: 'Government of India', fontSize: 8, color: '#004384', bold: true, alignment: 'center' },
                                                 { text: 'LBSNAA MUSSOORIE', fontSize: 13, bold: true, alignment: 'center' },
                                                 { text: 'Lal Bahadur Shastri National Academy of Administration', fontSize: 8, color: '#555', alignment: 'center' }
                                             ]
@@ -423,7 +423,7 @@
                                 tableHeader: {
                                     bold: true,
                                     color: 'white',
-                                    fillColor: '#004a93',
+                                    fillColor: '#004384',
                                     fontSize: wide ? 5 : 8,
                                     alignment: 'left',
                                     noWrap: false

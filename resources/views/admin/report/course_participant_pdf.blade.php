@@ -6,11 +6,11 @@
     <style>
         * { font-family: DejaVu Sans, sans-serif; }
         body { margin: 0; padding: 12px; color: #222; }
-        h2 { text-align: center; margin: 0 0 4px; color: #004a93; font-size: 16px; }
+        h2 { text-align: center; margin: 0 0 4px; color: #004384; font-size: 16px; }
         .meta { text-align: center; font-size: 11px; color: #555; margin-bottom: 10px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { border: 1px solid #444; padding: 5px 6px; font-size: 10px; text-align: left; }
-        thead th { background-color: #004a93; color: #fff; text-align: center; }
+        thead th { background-color: #004384; color: #fff; text-align: center; }
         tbody td:first-child { text-align: center; }
         tbody tr:nth-child(even) { background-color: #f2f5fa; }
     </style>

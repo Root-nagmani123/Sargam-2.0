@@ -15,7 +15,7 @@
     }
     #importModal .as-upload-dropzone:hover,
     #importModal .as-upload-dropzone.is-dragover {
-        border-color: #004a93;
+        border-color: #004384;
         background: #fff;
     }
     #importModal .as-upload-icon {

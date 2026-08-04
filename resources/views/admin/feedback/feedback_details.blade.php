@@ -1081,10 +1081,10 @@
                 var styleBlock =
                     '*,*::before,*::after{box-sizing:border-box}' +
                     'body{font-family:\"Segoe UI\",system-ui,-apple-system,sans-serif;font-size:11px;color:#212529;-webkit-print-color-adjust:exact;print-color-adjust:exact;margin:0;padding:12mm 10mm}' +
-                    '.print-header{display:flex;align-items:center;gap:12px;border-bottom:3px solid #004a93;padding-bottom:10px;margin-bottom:12px}' +
+                    '.print-header{display:flex;align-items:center;gap:12px;border-bottom:3px solid #004384;padding-bottom:10px;margin-bottom:12px}' +
                     '.print-header img{height:48px;width:auto;object-fit:contain}' +
                     '.header-text{flex:1}' +
-                    '.header-text .line1{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#004a93;font-weight:600;margin:0}' +
+                    '.header-text .line1{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#004384;font-weight:600;margin:0}' +
                     '.header-text .line2{font-size:14px;font-weight:700;text-transform:uppercase;color:#1a1a1a;margin:2px 0 0}' +
                     '.header-text .line3{font-size:9px;color:#555;margin:1px 0 0}' +
                     '.report-title-block{text-align:center;margin-bottom:10px}' +
@@ -1096,7 +1096,7 @@
                     '.feedback-print-wrap hr{border:0;border-top:1px solid #dee2e6;margin:12px 0}' +
                     '.data-table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:14px}' +
                     '.data-table th,.data-table td{padding:4px 6px;border:1px solid #bbb;vertical-align:middle}' +
-                    '.data-table thead th{background:#004a93;color:#fff;font-weight:600;text-align:left}' +
+                    '.data-table thead th{background:#004384;color:#fff;font-weight:600;text-align:left}' +
                     '.data-table .text-center{text-align:center}' +
                     '.rating-badge{display:inline-flex;align-items:center;justify-content:center;min-width:1.6rem;height:1.6rem;font-size:9px;font-weight:700;border-radius:3px}' +
                     '.rating-5{background:#198754;color:#fff}.rating-4{background:#20c997;color:#fff}' +

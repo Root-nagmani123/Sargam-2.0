@@ -40,7 +40,7 @@
             @endif --}}
             <form class="row g-3" method="POST" action="{{ route('credential.registration.store') }}">
                 @csrf
-                <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">Create Your Login Credentials
+                <h3 class="text-center mb-4 fw-bold" style="color: #004384;">Create Your Login Credentials
                 </h3>
                 <hr>
 
@@ -74,7 +74,7 @@
                         <input type="password" class="form-control" placeholder="Enter Password" name="reg_password"
                             id="password" required autocomplete="new-password">
                         <button type="button" class="btn btn-primary" onclick="togglePassword('password', this)"
-                            style="background-color: #004a93;border-color: #004a93;">
+                            style="background-color: #004384;border-color: #004384;">
                             <i class="material-icons menu-icon me-3 fs-3">visibility</i>
                         </button>
                     </div>
@@ -87,7 +87,7 @@
                         <input type="password" class="form-control" placeholder="Enter Confirm Password"
                             name="reg_confirm_password" id="confirm_password" required autocomplete="new-password">
                         <button type="button" class="btn btn-primary" onclick="togglePassword('confirm_password', this)"
-                            style="background-color: #004a93;border-color: #004a93;">
+                            style="background-color: #004384;border-color: #004384;">
                             <i class="material-icons menu-icon me-3 fs-3">visibility</i>
                         </button>
                     </div>
@@ -102,7 +102,7 @@
                 <!-- Submit -->
                 <div class="col-12">
                     <button type="submit" class="btn btn-primary w-100"
-                        style="background-color: #004a93;border-color: #004a93;">Submit</button>
+                        style="background-color: #004384;border-color: #004384;">Submit</button>
                 </div>
             </form>
         </div>
@@ -209,7 +209,7 @@ Swal.fire({
     title: 'Success!',
     text: '{{ session('sweet_success') }}',
     icon: 'success',
-    confirmButtonColor: '#004a93',
+    confirmButtonColor: '#004384',
     confirmButtonText: 'OK'
 });
 </script>
@@ -226,7 +226,7 @@ Swal.fire({
     title: 'Validation Error',
     text: errorMessages.trim(),
     icon: 'error',
-    confirmButtonColor: '#004a93',
+    confirmButtonColor: '#004384',
     confirmButtonText: 'OK'
 });
 </script>

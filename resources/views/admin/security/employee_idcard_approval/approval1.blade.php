@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     @include('components.breadcrum', ['title' => 'Approval I - Employee ID Card'])
-    <div class="card" style="border-left:4px solid #004a93;">
+    <div class="card" style="border-left:4px solid #004384;">
         <div class="card-body">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
                 <h4 class="mb-0">Approval I</h4>

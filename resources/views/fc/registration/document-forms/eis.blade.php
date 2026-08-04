@@ -37,9 +37,9 @@
     .eis-comb{ width:100%; height:26px; border:1px solid #64748b; padding-left:6px; color:#0b3d91;
         font:700 13px 'Courier New', monospace; letter-spacing:7px; background-color:#fff;
         background-image:linear-gradient(90deg,#cbd5e1 1px,transparent 1px); background-size:14px 100%; background-position:6px 0; }
-    .eis-comb:focus{ outline:none; border-color:var(--fc-blue); box-shadow:0 0 0 2px rgba(0,74,147,.12); }
+    .eis-comb:focus{ outline:none; border-color:var(--fc-blue); box-shadow:0 0 0 2px rgba(0,67,132,.12); }
     .eis-plain{ width:100%; height:26px; border:1px solid #64748b; padding:0 6px; color:#0b3d91; font-weight:600; font-size:.82rem; }
-    .eis-plain:focus{ outline:none; border-color:var(--fc-blue); box-shadow:0 0 0 2px rgba(0,74,147,.12); }
+    .eis-plain:focus{ outline:none; border-color:var(--fc-blue); box-shadow:0 0 0 2px rgba(0,67,132,.12); }
     .eis-ticks{ display:flex; flex-wrap:wrap; gap:.1rem .9rem; }
     .eis-tick{ font-size:.82rem; display:inline-flex; align-items:center; gap:.25rem; }
     .eis-tick input{ transform:scale(1.02); }

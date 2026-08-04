@@ -11,8 +11,8 @@
     border-radius: 0.375rem;
 }
 .form-control:focus, .form-select:focus {
-    border-color: #004a93;
-    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
+    border-color: #004384;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.15);
 }
 .form-label {
     font-weight: 500;

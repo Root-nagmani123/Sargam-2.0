@@ -22,7 +22,7 @@
 
         .pdf-hdr-border { border-bottom: 2px solid #003366; margin-bottom: 8px; padding-bottom: 4px; }
 
-        .report-title { text-align: center; font-size: 12px; font-weight: bold; color: #004a93; margin: 4px 0; }
+        .report-title { text-align: center; font-size: 12px; font-weight: bold; color: #004384; margin: 4px 0; }
 
         table.info-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
         table.info-table td { padding: 3px 6px; font-size: 9.5px; vertical-align: top; }

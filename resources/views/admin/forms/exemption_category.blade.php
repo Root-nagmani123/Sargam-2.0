@@ -10,7 +10,7 @@
 <div class="container-fluid">
     <x-breadcrum title="Exemption Master" />
     <div id="status-msg" class="mb-3"></div>
-    <div class="card" style="border-left:4px solid #004a93;">
+    <div class="card" style="border-left:4px solid #004384;">
         <div class="card-body">
             <div class="row">
                 <div class="col-6">
@@ -103,7 +103,7 @@
             </div>
         </div>
     </div>
-    <div class="card" style="border-left:4px solid #004a93;">
+    <div class="card" style="border-left:4px solid #004384;">
         <div class="card-body">
             <h5 class="mb-3">Important Notice</h5>
             <form action="{{ route('exemptionUpdateNotice') }}" method="POST">

@@ -28,7 +28,7 @@
                         icon: 'error',
                         title: 'Error',
                         text: @json(session('error')),
-                        confirmButtonColor: '#004a93'
+                        confirmButtonColor: '#004384'
                     });
                 @endif
             });
@@ -54,7 +54,7 @@
             </div>
         @endif
         <!-- Front Page Form -->
-        <div class="card mt-3" style="border-left:4px solid #004a93;">
+        <div class="card mt-3" style="border-left:4px solid #004384;">
             <div class="card-body">
                 <h4 class="card-title mb-3">Create Front Page</h4>
                 <hr>

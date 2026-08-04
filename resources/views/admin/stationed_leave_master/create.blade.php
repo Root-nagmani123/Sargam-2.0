@@ -57,8 +57,8 @@
         cursor: pointer;
     }
     .stationed-leave-config .sl-approval-radios .form-check-input:checked {
-        background-color: #004a93;
-        border-color: #004a93;
+        background-color: #004384;
+        border-color: #004384;
     }
     .stationed-leave-config .sl-approval-radios .form-check-label {
         font-weight: 500;
@@ -66,8 +66,8 @@
         cursor: pointer;
     }
     .stationed-leave-config .btn-add-faculty {
-        border: 1px solid #004a93;
-        color: #004a93;
+        border: 1px solid #004384;
+        color: #004384;
         font-weight: 600;
         border-radius: 8px;
         padding: 0.5rem 1.1rem;
@@ -75,7 +75,7 @@
     }
     .stationed-leave-config .btn-add-faculty:hover {
         background: #f0f6ff;
-        color: #004a93;
+        color: #004384;
     }
     .stationed-leave-config .sl-remove-btn {
         width: 2rem;
@@ -101,28 +101,28 @@
         cursor: pointer;
     }
     .stationed-leave-config .sl-authority-check:checked {
-        background-color: #004a93;
-        border-color: #004a93;
+        background-color: #004384;
+        border-color: #004384;
     }
     .stationed-leave-config .sl-authority-check:focus {
-        border-color: #004a93;
-        box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
+        border-color: #004384;
+        box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.15);
     }
     .stationed-leave-config .btn-cancel-outline {
         background: #fff;
-        border: 1px solid #004a93;
-        color: #004a93;
+        border: 1px solid #004384;
+        color: #004384;
         font-weight: 600;
         padding: 0.5rem 1.5rem;
         border-radius: 8px;
     }
     .stationed-leave-config .btn-cancel-outline:hover {
         background: #f0f6ff;
-        color: #004a93;
+        color: #004384;
     }
     .stationed-leave-config .btn-apply {
-        background: #004a93;
-        border-color: #004a93;
+        background: #004384;
+        border-color: #004384;
         color: #fff;
         font-weight: 600;
         padding: 0.5rem 1.5rem;

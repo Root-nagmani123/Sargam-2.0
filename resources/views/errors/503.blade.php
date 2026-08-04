@@ -73,7 +73,7 @@
 
     <style>
     :root {
-        --primary: #004a93;
+        --primary: #004384;
         --navy: #0d1829;
         --text-heading: #1c2b47;
         --text-muted: #6b7a90;
@@ -342,7 +342,7 @@
     .btn:not([disabled]) {
         background: var(--primary);
         cursor: pointer;
-        box-shadow: 0 4px 14px rgba(0,74,147,0.35);
+        box-shadow: 0 4px 14px rgba(0,67,132,0.35);
     }
 
     .btn:not([disabled]):hover { background: #003d7a; }

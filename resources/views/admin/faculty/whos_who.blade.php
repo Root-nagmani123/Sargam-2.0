@@ -201,7 +201,7 @@
                 </div>
                 <div class="col-md-3">
                     <label for="courseFilter" class="form-label fw-semibold">Course Name</label>
-                    <select class="form-select" id="courseFilter">
+                    <select class="form-select" id="courseFilter" aria-label="Filter by course">
                         <option value="">All Courses</option>
                         @foreach($courses as $course)
                             <option value="{{ $course->pk }}">{{ $course->course_name }}</option>

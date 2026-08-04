@@ -5,14 +5,14 @@
     <title>Issue Management Export</title>
     <style>
         body { font-family: Arial, sans-serif; font-size: 9px; color: #333; margin: 0; padding: 10px; }
-        .header { text-align: center; margin-bottom: 12px; border-bottom: 2px solid #004a93; padding-bottom: 8px; }
-        .title { color: #004a93; font-size: 16px; font-weight: bold; }
+        .header { text-align: center; margin-bottom: 12px; border-bottom: 2px solid #004384; padding-bottom: 8px; }
+        .title { color: #004384; font-size: 16px; font-weight: bold; }
         .subtitle { font-size: 10px; color: #666; margin-top: 4px; }
         .timestamp { font-size: 8px; color: #888; font-style: italic; }
         .filters { background: #f8f9fa; border: 1px solid #dee2e6; padding: 6px 10px; margin-bottom: 10px; font-size: 8px; border-radius: 4px; }
         .filters span { margin-right: 12px; }
         .main-table { width: 100%; border-collapse: collapse; font-size: 8px; }
-        .main-table th { background: #004a93; color: white; padding: 5px 4px; text-align: left; border: 1px solid #003a73; }
+        .main-table th { background: #004384; color: white; padding: 5px 4px; text-align: left; border: 1px solid #003a73; }
         .main-table td { padding: 4px; border: 1px solid #dee2e6; vertical-align: top; word-wrap: break-word; }
         .main-table tr:nth-child(even) { background: #f8f9fa; }
         .main-table th, .main-table td { font-size: 7px; }

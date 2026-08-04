@@ -1,6 +1,6 @@
 /* User Management — programme-dt reference layout */
 .users-page {
-    --users-primary: #004a93;
+    --users-primary: #004384;
     --users-primary-dark: #003366;
     --users-border: #e4e7ec;
     --users-text: #344054;
@@ -37,7 +37,7 @@
 
 .users-page .users-filter-select:focus {
     border-color: var(--users-primary);
-    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.12);
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
 }
 
 .users-page .users-reset-btn {

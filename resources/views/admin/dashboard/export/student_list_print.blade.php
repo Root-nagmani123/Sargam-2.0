@@ -46,16 +46,16 @@
         .report-title {
             font-size: 17px;
             font-weight: 700;
-            color: #004a93;
+            color: #004384;
             margin: 0 0 5px;
             padding-bottom: 6px;
-            border-bottom: 2px solid #004a93;
+            border-bottom: 2px solid #004384;
         }
         .report-meta { font-size: 11px; color: #555; }
 
         table.data-table { width: 100%; border-collapse: collapse; font-size: 10px; }
         table.data-table thead th {
-            background: #004a93;
+            background: #004384;
             color: #fff;
             border: 1px solid #003a75;
             padding: 5px 4px;
@@ -83,11 +83,11 @@
             font: 600 13px/1 Arial, sans-serif;
             padding: 9px 16px;
             border-radius: 8px;
-            border: 1px solid #004a93;
+            border: 1px solid #004384;
             cursor: pointer;
         }
-        .print-toolbar .btn-print { background: #004a93; color: #fff; }
-        .print-toolbar .btn-close { background: #fff; color: #004a93; }
+        .print-toolbar .btn-print { background: #004384; color: #fff; }
+        .print-toolbar .btn-close { background: #fff; color: #004384; }
 
         @media print {
             html, body { background: #fff; }

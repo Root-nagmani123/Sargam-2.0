@@ -172,7 +172,7 @@
                 title: 'Warning',
                 text: '{{ session('warning') }}',
                 icon: 'warning',
-                confirmButtonColor: '#004a93',
+                confirmButtonColor: '#004384',
                 confirmButtonText: 'OK'
             });
         </script>
@@ -190,7 +190,7 @@
                 title: 'Validation Error',
                 text: errorMessages.trim(),
                 icon: 'error',
-                confirmButtonColor: '#004a93',
+                confirmButtonColor: '#004384',
                 confirmButtonText: 'OK'
             });
         </script>

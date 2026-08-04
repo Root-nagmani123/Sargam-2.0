@@ -2,7 +2,7 @@
 
 <style>
 :root {
-    --primary-color: #004a93;
+    --primary-color: #004384;
     --secondary-color: #af2910;
     --light-bg: #f8f9fa;
     --border-color: #dee2e6;
@@ -64,7 +64,7 @@
 }
 
 .fc .fc-daygrid-day:hover .fc-daygrid-day-frame {
-    background-color: rgba(0, 74, 147, 0.05) !important;
+    background-color: rgba(0, 67, 132, 0.05) !important;
 }
 
 .fc .fc-daygrid-day {
@@ -209,7 +209,7 @@
 
 .form-control:focus, .form-select:focus {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.25);
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.25);
 }
 
 .form-check-input:checked {
@@ -315,7 +315,7 @@
 }
 
 .table-hover tbody tr:hover {
-    background-color: rgba(0, 74, 147, 0.05);
+    background-color: rgba(0, 67, 132, 0.05);
 }
 
 /* View controls */

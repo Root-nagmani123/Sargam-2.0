@@ -21,7 +21,7 @@
         <p class="text-muted mb-0 small">Generated on: {{ now()->format('d-m-Y H:i:s') }}</p>
     </div>
 
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 no-print p-4 rounded-3 shadow-sm" style="background: #004a93; color: white;">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 no-print p-4 rounded-3 shadow-sm" style="background: #004384; color: white;">
         <div>
             <h4 class="mb-2 fw-bold d-flex align-items-center gap-2">
                 <i class="material-symbols-rounded" style="font-size: 2rem;">receipt_long</i>

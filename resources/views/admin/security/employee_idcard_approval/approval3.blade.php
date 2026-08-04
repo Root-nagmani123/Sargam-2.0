@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     @include('components.breadcrum', ['title' => 'Approval III - Employee ID Card'])
-    <div class="card" style="border-left:4px solid #004a93;">
+    <div class="card" style="border-left:4px solid #004384;">
         <div class="card-body">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
                 <h4 class="mb-0">Approval III (Final Approval)</h4>
@@ -189,17 +189,17 @@
     font-weight: 500;
 }
 .approval2-tabs .nav-link:hover {
-    color: #004a93;
+    color: #004384;
     background-color: #f1f5f9;
 }
 .approval2-tabs .nav-link.active {
-    background-color: #004a93;
+    background-color: #004384;
     color: #fff;
-    border-color: #004a93;
+    border-color: #004384;
 }
 .approval2-tabs .nav-link.active .badge {
     background-color: #fff !important;
-    color: #004a93 !important;
+    color: #004384 !important;
 }
 </style>
 @endpush

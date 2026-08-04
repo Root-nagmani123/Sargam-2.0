@@ -39,13 +39,13 @@
 
     .leave-module .leave-type-tabs .btn:hover:not(.active):not(.disabled) {
         background: #f9fafb;
-        color: #004a93;
+        color: #004384;
     }
 
     .leave-module .leave-type-tabs .btn.active {
         background: #e8f0fb;
-        color: #004a93;
-        border-bottom-color: #004a93;
+        color: #004384;
+        border-bottom-color: #004384;
     }
 
     .leave-module .leave-form-row {
@@ -77,7 +77,7 @@
     .leave-module .leave-form-field .form-control:focus,
     .leave-module .leave-form-field .form-select:focus {
         border-color: #84adff;
-        box-shadow: 0 0 0 3px rgba(0, 74, 147, .12);
+        box-shadow: 0 0 0 3px rgba(0, 67, 132, .12);
     }
 
     .leave-module .leave-form-field .form-control[readonly] {
@@ -119,7 +119,7 @@
         align-items: center;
         gap: 0.5rem;
         font-weight: 600;
-        color: #004a93;
+        color: #004384;
         margin-bottom: 0.65rem;
         font-size: 0.95rem;
     }
@@ -164,7 +164,7 @@
     }
 
     .leave-module .attachment-table thead th {
-        background: #004a93;
+        background: #004384;
         color: #fff;
         font-size: 0.72rem;
         text-transform: uppercase;
@@ -197,8 +197,8 @@
     }
 
     .leave-module .leave-actions .btn-draft {
-        border: 1px solid #004a93;
-        color: #004a93;
+        border: 1px solid #004384;
+        color: #004384;
         font-weight: 600;
         padding: 0.5rem 1.25rem;
         border-radius: 8px;
@@ -206,8 +206,8 @@
     }
 
     .leave-module .leave-actions .btn-submit {
-        background: #004a93;
-        border-color: #004a93;
+        background: #004384;
+        border-color: #004384;
         font-weight: 600;
         padding: 0.5rem 1.35rem;
         border-radius: 8px;
@@ -251,13 +251,13 @@
     }
 
     .leave-module .leave-type-radios .form-check-input:checked {
-        background-color: #004a93;
-        border-color: #004a93;
+        background-color: #004384;
+        border-color: #004384;
     }
 
     .leave-module .leave-type-radios .form-check-input:focus {
         border-color: #84adff;
-        box-shadow: 0 0 0 3px rgba(0, 74, 147, .12);
+        box-shadow: 0 0 0 3px rgba(0, 67, 132, .12);
     }
 
     .leave-module .leave-type-radios .form-check-label {
@@ -280,8 +280,8 @@
 
     .leave-module .btn-cancel-outline {
         background: #fff;
-        border: 1px solid #004a93;
-        color: #004a93;
+        border: 1px solid #004384;
+        color: #004384;
         font-weight: 600;
         padding: 0.5rem 1.5rem;
         border-radius: 8px;
@@ -289,12 +289,12 @@
 
     .leave-module .btn-cancel-outline:hover {
         background: #f0f6ff;
-        color: #004a93;
+        color: #004384;
     }
 
     .leave-module .btn-apply {
-        background: #004a93;
-        border-color: #004a93;
+        background: #004384;
+        border-color: #004384;
         color: #fff;
         font-weight: 600;
         padding: 0.5rem 1.5rem;
@@ -321,8 +321,8 @@
     }
 
     .leave-module .fl-filter-select:focus {
-        border-color: #004a93;
-        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+        border-color: #004384;
+        box-shadow: 0 0 0 3px rgba(0, 67, 132, 0.12);
     }
 
     .leave-module .fl-daterange-wrap {
@@ -362,13 +362,13 @@
         padding: 0 1.1rem;
         font-size: 0.9375rem;
         font-weight: 500;
-        color: #004a93;
+        color: #004384;
         border-radius: 8px;
         background: #fff;
     }
 
     .leave-module .fl-download-btn:hover {
-        color: #004a93;
+        color: #004384;
         background: #fff;
     }
 
@@ -474,7 +474,7 @@
     }
 
     .leave-module .pt-balance-box .pt-balance-num {
-        color: #004a93;
+        color: #004384;
         font-size: 1.9rem;
         font-weight: 700;
         line-height: 1.1;

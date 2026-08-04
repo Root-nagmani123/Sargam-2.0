@@ -271,7 +271,7 @@
         }
 
         #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item>a:focus-visible {
-            outline: 2px solid rgba(0, 74, 147, 0.35);
+            outline: 2px solid rgba(0, 67, 132, 0.35);
             outline-offset: 2px;
         }
 

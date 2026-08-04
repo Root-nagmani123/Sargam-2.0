@@ -116,6 +116,23 @@
     });
 
     /**
+     * A11Y (axe R-C / WCAG 4.1.2 Name, Role, Value): the status switches are
+     * role="switch" checkboxes with NO accessible name — a screen reader announces
+     * only "switch, on". Give each one a name. Scoped to the status-toggle* classes
+     * (the known-nameless controls) with :not([aria-label]) so it can never override a
+     * real label. Re-applied after every DataTables draw because the rows — and their
+     * switches — are re-rendered on paginate / search / sort; a one-time pass would
+     * miss every redraw. Purely additive ARIA: zero visual change.
+     */
+    function labelStatusToggles($scope) {
+        ($scope && $scope.length ? $scope : $(document))
+            .find('[class*="status-toggle"]:not([aria-label])')
+            .attr('aria-label', 'Toggle active status');
+    }
+    $(function () { labelStatusToggles(); });
+    $(document).on('draw.dt', function (e) { labelStatusToggles($(e.target)); });
+
+    /**
      * Hook every successful status-toggle AJAX call.
      */
     $(document).ajaxSuccess(function (event, xhr, settings) {

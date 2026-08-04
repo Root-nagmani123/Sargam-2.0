@@ -66,7 +66,7 @@
             text-align: center;
             margin-bottom: 10px;
             padding-bottom: 6px;
-            border-bottom: 2px solid #004a93;
+            border-bottom: 2px solid #004384;
         }
 
         .lbsnaa-branding-table {
@@ -99,7 +99,7 @@
 
         .lbsnaa-brand-line-1 {
             font-size: 9px;
-            color: #004a93;
+            color: #004384;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             font-weight: 600;
@@ -130,7 +130,7 @@
         }
 
         .report-title-bar {
-            background-color: #004a93;
+            background-color: #004384;
             color: #fff;
             padding: 6px 12px;
             font-size: 12px;
@@ -156,7 +156,7 @@
         }
 
         .report-details-row strong {
-            color: #004a93;
+            color: #004384;
         }
 
         /* ── Summary Stats ── */
@@ -197,7 +197,7 @@
         }
 
         table.data-table thead th {
-            background: #004a93;
+            background: #004384;
             color: #fff;
             font-weight: 600;
             font-size: 9px;
@@ -257,7 +257,7 @@
 
         /* ── Footer ── */
         .report-footer {
-            border-top: 1px solid #004a93;
+            border-top: 1px solid #004384;
             font-size: 8px;
             color: #666;
             text-align: center;
@@ -266,7 +266,7 @@
         }
 
         .report-footer .institution {
-            color: #004a93;
+            color: #004384;
             font-weight: 600;
         }
 
@@ -278,7 +278,7 @@
         }
 
         .print-actions button {
-            background: #004a93;
+            background: #004384;
             color: #fff;
             border: none;
             padding: 8px 24px;

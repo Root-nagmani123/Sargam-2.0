@@ -157,7 +157,7 @@
 }
 /* Main card section */
 .table-section {
-    border-left: 4px solid #004a93 !important;
+    border-left: 4px solid #004384 !important;
 }
 
 /* Header */

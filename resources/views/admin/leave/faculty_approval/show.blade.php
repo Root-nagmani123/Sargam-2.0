@@ -46,8 +46,8 @@
         font-weight: 700;
         font-size: 1.1rem;
         color: #fff;
-        background: linear-gradient(135deg, #004a93, #0066cc);
-        box-shadow: 0 4px 10px rgba(0, 74, 147, 0.25);
+        background: linear-gradient(135deg, #004384, #0066cc);
+        box-shadow: 0 4px 10px rgba(0, 67, 132, 0.25);
     }
     .fla-show .fla-name {
         font-size: 1.15rem;
@@ -63,7 +63,7 @@
     }
     .fla-show .fla-sub .fla-otcode {
         font-weight: 600;
-        color: #004a93;
+        color: #004384;
     }
     .fla-show .fla-status {
         margin-left: auto;
@@ -101,7 +101,7 @@
         color: #101828;
         word-break: break-word;
     }
-    .fla-show .fla-tile-value.fla-strong { color: #004a93; }
+    .fla-show .fla-tile-value.fla-strong { color: #004384; }
 
     .fla-show .fla-block { margin-top: 1.25rem; }
     .fla-show .fla-block-label {
@@ -114,7 +114,7 @@
     }
     .fla-show .fla-reason {
         border: 1px solid #eaecf0;
-        border-left: 3px solid #004a93;
+        border-left: 3px solid #004384;
         border-radius: 8px;
         background: #fcfcfd;
         padding: 0.75rem 0.9rem;
@@ -141,7 +141,7 @@
         transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
     }
     .fla-show .fla-attach:hover {
-        border-color: #004a93;
+        border-color: #004384;
         box-shadow: 0 4px 12px rgba(16, 24, 40, 0.08);
         transform: translateY(-1px);
     }
@@ -150,7 +150,7 @@
         width: 34px; height: 34px;
         border-radius: 8px;
         display: inline-flex; align-items: center; justify-content: center;
-        background: #eef3fa; color: #004a93;
+        background: #eef3fa; color: #004384;
     }
     .fla-show .fla-attach-ic .material-symbols-rounded { font-size: 19px; }
     .fla-show .fla-attach-meta { min-width: 0; flex: 1 1 auto; }
@@ -161,7 +161,7 @@
     }
     .fla-show .fla-attach-sub { font-size: 0.75rem; color: #98a2b3; }
     .fla-show .fla-attach .fla-attach-dl { color: #98a2b3; }
-    .fla-show .fla-attach:hover .fla-attach-dl { color: #004a93; }
+    .fla-show .fla-attach:hover .fla-attach-dl { color: #004384; }
 
     /* Decision / side panel */
     .fla-show .fla-side-card { position: sticky; top: 1rem; }

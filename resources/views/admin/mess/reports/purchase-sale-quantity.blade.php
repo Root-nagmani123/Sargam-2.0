@@ -456,7 +456,7 @@
             color: #fff !important;
             font-weight: 600;
             box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-            border-bottom: 2px solid #004a93 !important;
+            border-bottom: 2px solid #004384 !important;
             border-top: none !important;
             border-left: 1px solid rgba(255,255,255,0.12) !important;
             border-right: 1px solid rgba(255,255,255,0.12) !important;
