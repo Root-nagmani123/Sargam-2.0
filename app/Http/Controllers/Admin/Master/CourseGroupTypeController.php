@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\Master;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\CourseGroupTypeMaster;
+use App\DataTables\GroupMappingDataTable;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\DB;
 
@@ -34,11 +35,17 @@ class CourseGroupTypeController extends Controller
                 ->update([
                     'active_inactive' => $request->active_inactive
                 ]);
+
+            // Group Type dropdowns on the Group Mapping page are cached against this
+            // epoch; bump it so a status change is reflected there without waiting
+            // for the cache TTL.
+            GroupMappingDataTable::bumpListingCacheEpoch();
         }
 
         // DELETE ROW
         if ($request->has('pk') && $request->active_inactive == 2) {
             CourseGroupTypeMaster::where('pk', $request->pk)->delete();
+            GroupMappingDataTable::bumpListingCacheEpoch();
         }
 
         // DataTable SELECT QUERY
@@ -118,6 +125,8 @@ class CourseGroupTypeController extends Controller
                     'active_inactive' => $request->has('active_inactive') ? 1 : 0,
                 ]);
 
+            GroupMappingDataTable::bumpListingCacheEpoch();
+
             return redirect()->back()->with('success', 'Course Group Type updated successfully');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Course Group Type not correct');
@@ -152,6 +161,9 @@ class CourseGroupTypeController extends Controller
                     'type_name' => $request->type_name
                 ]);
 
+                // Invalidate the cached Group Type dropdowns on the Group Mapping page.
+                GroupMappingDataTable::bumpListingCacheEpoch();
+
                 return response()->json([
                     'status' => true,
                     'message' => 'Course Group Type updated successfully.'
@@ -162,6 +174,11 @@ class CourseGroupTypeController extends Controller
             CourseGroupTypeMaster::create([
                 'type_name' => $request->type_name
             ]);
+
+            // Invalidate the cached Group Type dropdowns so the new type appears on
+            // the Group Mapping page immediately (esp. on live, where Redis caching
+            // is enabled) instead of waiting for the cache to expire.
+            GroupMappingDataTable::bumpListingCacheEpoch();
 
             return response()->json([
                 'status' => true,
@@ -211,6 +228,8 @@ class CourseGroupTypeController extends Controller
             }
 
             $courseGroupTypeMaster->delete();
+
+            GroupMappingDataTable::bumpListingCacheEpoch();
 
             return redirect()->route('master.course.group.type.index')
                 ->with('success', 'Course Group Type deleted successfully.');
