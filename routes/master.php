@@ -42,6 +42,7 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
     // state
     Route::prefix('state')->name('state.')->controller(LocationController::class)->group(function () {
         Route::get('/', 'stateIndex')->name('index');
+        Route::get('/export/{format}', 'stateExport')->whereIn('format', ['csv', 'pdf', 'print'])->name('export');
         Route::get('/create', 'stateCreate')->name('create');
         Route::post('/store', 'stateStore')->name('store');
         Route::get('/edit/{id}', 'stateEdit')->name('edit');
@@ -53,6 +54,7 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
     Route::prefix('district')->name('district.')->controller(LocationController::class)->group(function () {
 
         Route::get('/', 'districtIndex')->name('index');
+        Route::get('/export/{format}', 'districtExport')->whereIn('format', ['csv', 'pdf', 'print'])->name('export');
         Route::get('/create', 'districtCreate')->name('create');
         Route::post('/store', 'districtStore')->name('store');
         Route::get('/edit/{id}', 'districtEdit')->name('edit');
@@ -65,6 +67,7 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
         // Route::get('/', function() {
 
         Route::get('/', 'cityIndex')->name('index');
+        Route::get('/export/{format}', 'cityExport')->whereIn('format', ['csv', 'pdf', 'print'])->name('export');
         Route::get('/create', 'cityCreate')->name('create');
         Route::post('/store', 'cityStore')->name('store');
         Route::get('/edit/{id}', 'cityEdit')->name('edit');

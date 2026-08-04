@@ -1,136 +1,348 @@
 @extends('admin.layouts.master')
 
-@section('title', 'District - Sargam | Lal Bahadur')
+@section('title', 'District List')
 
+{{--
+    Phase E/F — pixel-perfect index redesign (the "Store Master" / country pattern).
+    Client-side DataTable on the shared programme-dt chrome (docs/new-design-index-page.md).
+    Status = its own column (soft badge). Action = Edit (modal) · toggle · Delete.
+    Create/Edit open in a UX4G modal with a client-side Country → State cascade.
+    Controller returns District::get() to feed the client-side grid. All functionality preserved.
+--}}
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid district-page">
+    <x-breadcrum title="District List" :showBack="false">
+        <button type="button" class="btn btn-primary px-3 py-2 rounded-1 shadow-sm"
+            data-bs-toggle="modal" data-bs-target="#districtFormModal" data-mode="create">
+            <i class="material-symbols-rounded" style="font-size: 20px; vertical-align: middle;">add</i>
+            Add District
+        </button>
+    </x-breadcrum>
 
-    <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card">
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-6">
-                        <h4>District</h4>
-                    </div>
-                    <div class="col-6">
-                        <div class="d-flex justify-content-end align-items-end mb-3">
-                            <div class="d-flex align-items-center gap-2">
+    {{-- Download / Print strip — branded CSV / PDF / Print (shared LBSNAA report chrome) --}}
+    <div class="d-flex justify-content-end gap-2 mb-3">
+        <div class="dropdown">
+            <button type="button" class="btn district-tool-btn border-0 dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{{ route('master.district.export', 'csv') }}"><i class="bi bi-filetype-csv me-2" aria-hidden="true"></i>CSV</a></li>
+                <li><a class="dropdown-item" href="{{ route('master.district.export', 'pdf') }}"><i class="bi bi-filetype-pdf me-2" aria-hidden="true"></i>PDF</a></li>
+            </ul>
+        </div>
+        <a href="{{ route('master.district.export', 'print') }}" target="_blank" rel="noopener" class="btn district-tool-btn border-0">
+            <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
+        </a>
+    </div>
 
-                                <!-- Add New Button -->
-                                <a href="{{ route('master.district.create') }}"
-                                    class="btn btn-primary px-3 py-2 rounded-3 shadow-sm">
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 20px; vertical-align: middle;">add</i>
-                                    Add New District
-                                </a>
+    <div class="card">
+        <div class="card-body">
 
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <hr>
+            {{-- Toolbar: Columns + search --}}
+            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3 programme-dt-toolbar">
+                <button type="button" class="btn programme-dt-btn-columns" id="districtColumnsBtn"
+                    data-bs-toggle="modal" data-bs-target="#districtColumnVisibilityModal" title="Show / hide columns">
+                    <span>Columns</span>
+                    <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                </button>
+                <div id="districtDtSearch" class="programme-dt-search" data-dt-search-for="districtTable"></div>
+            </div>
+
+            <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <table class="table">
+                    <table id="districtTable" class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                         <thead>
-                            <!-- start row -->
                             <tr>
-                                <th class="col">S.No.</th>
-                                <th class="col">District</th>
-                                <th class="col">Action</th>
-                                <th class="col">Status</th>
+                                <th style="width:5rem">S. No.</th>
+                                <th>District</th>
+                                <th style="width:8rem">Status</th>
+                                <th class="text-center" style="width:10rem">Action</th>
                             </tr>
-                            <!-- end row -->
                         </thead>
                         <tbody>
-                            @foreach($districts as $key => $district)
-                            <tr class="odd">
-                                <td>{{ $districts->firstItem() + $key }}</td>
-                                <td class="sorting_1">
-                                    <div class="d-flex align-items-center gap-6">
-                                        <h6 class="mb-0">{{ $district->district_name }}</h6>
-                                    </div>
+                            @foreach($districts as $district)
+                            <tr>
+                                <td></td>
+                                <td class="fw-medium">{{ $district->district_name }}</td>
+
+                                {{-- Status: soft badge (green Active / red Inactive) --}}
+                                <td data-order="{{ $district->active_inactive }}">
+                                    <span class="status-pill badge {{ $district->active_inactive == 1 ? 'bg-success-subtle' : 'bg-danger-subtle' }}">
+                                        {{ $district->active_inactive == 1 ? 'Active' : 'Inactive' }}
+                                    </span>
                                 </td>
+
+                                {{-- Action: Edit (blue) · toggle · Delete (red) — icon + label --}}
                                 <td>
-                                    <div class="form-check form-switch d-inline-block">
-                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                            data-table="state_district_mapping" data-column="active_inactive"
-                                            data-id="{{ $district->pk }}"
-                                            {{ $district->active_inactive == 1 ? 'checked' : '' }}>
+                                    <div class="d-inline-flex align-items-center justify-content-center gap-3" role="group" aria-label="District actions">
+                                        <button type="button" class="district-act district-act--edit"
+                                            data-bs-toggle="modal" data-bs-target="#districtFormModal" data-mode="edit"
+                                            data-id="{{ $district->pk }}" data-name="{{ $district->district_name }}"
+                                            data-country="{{ $district->country_master_pk }}" data-state="{{ $district->state_master_pk }}"
+                                            data-status="{{ $district->active_inactive }}"
+                                            aria-label="Edit {{ $district->district_name }}">
+                                            <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                            <span>Edit</span>
+                                        </button>
+
+                                        {{-- Status toggle (AJAX via status-toggle-delete.js) --}}
+                                        <div class="form-check form-switch m-0">
+                                            <input type="checkbox" class="form-check-input status-toggle" role="switch"
+                                                data-table="state_district_mapping" data-column="active_inactive"
+                                                data-id="{{ $district->pk }}" {{ $district->active_inactive == 1 ? 'checked' : '' }}>
+                                        </div>
+
+                                        {{-- Delete (guarded: an active district cannot be deleted) --}}
+                                        @if($district->active_inactive == 1)
+                                        <span class="district-act district-act--del is-disabled"
+                                            title="Set the district inactive before deleting" aria-disabled="true">
+                                            <i class="bi bi-trash3" aria-hidden="true"></i>
+                                            <span>Delete</span>
+                                        </span>
+                                        @else
+                                        <form action="{{ route('master.district.delete', $district->pk) }}" method="POST"
+                                            class="d-inline m-0" onsubmit="return confirm('Are you sure you want to delete this?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="district-act district-act--del"
+                                                aria-label="Delete {{ $district->district_name }}">
+                                                <i class="bi bi-trash3" aria-hidden="true"></i>
+                                                <span>Delete</span>
+                                            </button>
+                                        </form>
+                                        @endif
                                     </div>
                                 </td>
-
-
-                                <td class="text-start">
-                                    <div class="dropdown">
-                                        <a href="javascript:void(0)"
-                                            id="actionMenu{{ $district->pk }}" data-bs-toggle="dropdown"
-                                            aria-expanded="false">
-                                            <span class="material-symbols-rounded fs-5">more_horiz</span>
-                                        </a>
-
-                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm"
-                                            aria-labelledby="actionMenu{{ $district->pk }}">
-
-                                            <!-- Edit -->
-                                            <li>
-                                                <a href="{{ route('master.district.edit', $district->pk) }}"
-                                                    class="dropdown-item d-flex align-items-center gap-2">
-                                                    <span class="material-symbols-rounded text-primary fs-6">edit</span>
-                                                    Edit
-                                                </a>
-                                            </li>
-
-                                            <!-- Delete -->
-                                            <li>
-                                                <form action="{{ route('master.district.delete', $district->pk) }}"
-                                                    method="POST" class="d-inline">
-                                                    @csrf
-                                                    @method('DELETE')
-
-                                                    <button type="button"
-                                                        class="dropdown-item d-flex align-items-center gap-2 text-danger"
-                                                        onclick="event.preventDefault();
-                            if({{ $district->active_inactive }} == 1) return;
-                            if(confirm('Are you sure you want to delete this?')) {
-                                this.closest('form').submit();
-                            }" {{ $district->active_inactive == 1 ? 'disabled' : '' }}>
-                                                        <span class="material-symbols-rounded fs-6">delete</span>
-                                                        Delete
-                                                    </button>
-                                                </form>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </td>
-
-
-
                             </tr>
                             @endforeach
-
                         </tbody>
                     </table>
-                    <!-- Pagination -->
-                    <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
-
-                        <div class="text-muted small mb-2">
-                            Showing {{ $districts->firstItem() }}
-                            to {{ $districts->lastItem() }}
-                            of {{ $districts->total() }} items
-                        </div>
-
-                        <div>
-                            {{ $districts->links('vendor.pagination.custom') }}
-                        </div>
-
-                    </div>
                 </div>
             </div>
+
+            {{-- Footer: pagination + page-size + "Showing N of M items" (built by datatable-global-ui.js) --}}
+            <div id="districtDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3"
+                data-dt-footer-for="districtTable"></div>
         </div>
-        <!-- end Zero Configuration -->
     </div>
 </div>
 
+{{-- Column visibility modal --}}
+<div class="modal fade" id="districtColumnVisibilityModal" tabindex="-1" aria-labelledby="districtColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="districtColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2" id="districtColumnToggleGrid"></div>
+            </div>
+        </div>
+    </div>
+</div>
 
+{{-- Create / Edit modal (UX4G = Bootstrap 5.3). Country → State cascade is client-side
+     (states embedded below). Submits to the UNCHANGED store/update routes — no backend change. --}}
+<div class="modal fade" id="districtFormModal" tabindex="-1" aria-labelledby="districtFormModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="districtForm" method="POST" action="{{ route('master.district.store') }}">
+                @csrf
+                <input type="hidden" name="_form_mode" id="dfFormMode" value="create">
+                <input type="hidden" name="_edit_id" id="dfEditId" value="">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="districtFormModalLabel">Add District</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @if($errors->any())
+                    <div class="alert alert-danger py-2 small mb-3">
+                        <ul class="mb-0 ps-3">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
+                    </div>
+                    @endif
+                    <div class="mb-3">
+                        <label for="dfCountry" class="form-label">Country <span class="text-danger">*</span></label>
+                        <select class="form-select" id="dfCountry" name="country_master_pk" required>
+                            <option value="">-- Select Country --</option>
+                            @foreach($countries as $country)
+                            <option value="{{ $country->pk }}">{{ $country->country_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="dfState" class="form-label">State <span class="text-danger">*</span></label>
+                        <select class="form-select" id="dfState" name="state_master_pk" required>
+                            <option value="">Select State</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="dfName" class="form-label">District Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="dfName" name="district_name" placeholder="District Name" required>
+                    </div>
+                    <div class="mb-0">
+                        <label for="dfStatus" class="form-label">Status <span class="text-danger">*</span></label>
+                        <select class="form-select" id="dfStatus" name="active_inactive" required>
+                            <option value="1">Active</option>
+                            <option value="2">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection
+
+@push('styles')
+<style>
+    /* Store Master parity — scoped to .district-page (tokens from design.md) */
+    .district-page .district-tool-btn {
+        background: var(--ds-surface); color: var(--ds-primary);
+        border-radius: var(--ds-radius-1); font-size: 0.875rem;
+        display: inline-flex; align-items: center; gap: var(--ds-space-2); padding: 0.4rem 0.9rem;
+        box-shadow: 0 0 0 1px var(--ds-line) inset;
+        border: 0;
+    }
+    .district-page .district-tool-btn:hover { background: var(--ds-surface-2); }
+
+    /* Soft status badge — theme ships *-subtle backgrounds but not *-emphasis text, so set it */
+    .district-page .status-pill { padding: 0.4em 0.85em; font-weight: 600; }
+    .district-page .status-pill.bg-success-subtle { color: #146c43; }
+    .district-page .status-pill.bg-danger-subtle  { color: #b02a37; }
+
+    /* Row actions — icon over label: Edit (blue) · switch · Delete (red) */
+    .district-page .district-act {
+        display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
+        font-size: 0.72rem; font-weight: 500; line-height: 1;
+        text-decoration: none; background: transparent; border: 0; padding: 0;
+    }
+    .district-page .district-act i { font-size: 1.1rem; }
+    .district-page .district-act--edit { color: #2563eb; }
+    .district-page .district-act--del  { color: var(--bs-danger, #dc3545); }
+    .district-page .district-act--del.is-disabled { color: var(--ds-ink-muted); cursor: not-allowed; }
+
+    @media print {
+        .app-header, .left-sidebar, .district-tool-btn, .programme-dt-toolbar,
+        .programme-dt-footer, .district-act { display: none !important; }
+    }
+</style>
+@endpush
+
+@push('scripts')
+<script>
+$(function () {
+    var $table = $('#districtTable');
+    if (!$table.length || $.fn.dataTable.isDataTable($table)) return;
+
+    var dt = $table.DataTable({
+        autoWidth: false,
+        pageLength: 10,
+        pagingType: 'simple_numbers',
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+        order: [[1, 'asc']],
+        columnDefs: [
+            { targets: 0, orderable: false, searchable: false },
+            { targets: -1, orderable: false, searchable: false }
+        ]
+    });
+
+    dt.on('draw.dt', function () {
+        var start = dt.page.info().start;
+        dt.column(0, { page: 'current' }).nodes().each(function (cell, i) { cell.innerHTML = start + i + 1; });
+    });
+    dt.draw(false);
+
+    // --- Column visibility modal (persisted) ---
+    var KEY = 'districtGrid:hiddenColumns:v1';
+    function getHidden() { try { var a = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+    function setHidden(a) { try { localStorage.setItem(KEY, JSON.stringify(a)); } catch (e) {} }
+    var hidden = getHidden();
+    dt.columns().every(function () { this.visible(hidden.indexOf(this.index()) === -1, false); });
+    dt.columns.adjust();
+    var $grid = $('#districtColumnToggleGrid').empty();
+    dt.columns().every(function () {
+        var idx = this.index(), title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+        if (!title) return;
+        var id = 'districtcolvis_' + idx;
+        var $cb = $('<input type="checkbox" class="form-check-input m-0">').attr('id', id).prop('checked', hidden.indexOf(idx) === -1);
+        $cb.on('change', function () {
+            var h = getHidden(), pos = h.indexOf(idx);
+            if (this.checked) { if (pos !== -1) h.splice(pos, 1); } else if (pos === -1) { h.push(idx); }
+            setHidden(h); dt.column(idx).visible(this.checked, false); dt.columns.adjust();
+        });
+        $('<div class="col-12 col-sm-6"></div>').append(
+            $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                .attr('for', id).append($cb).append($('<span></span>').text(title))
+        ).appendTo($grid);
+    });
+
+    // --- Status toggle (client-side grid) — silence stray ajax.reload(); reload on success ---
+    $.fn.dataTable.ext.errMode = 'none';
+    $(document).ajaxSuccess(function (e, xhr, settings) {
+        if (settings && settings.url && /toggle-?status/i.test(settings.url)) {
+            window.location.reload();
+        }
+    });
+
+    // --- Create / Edit via UX4G modal, with a client-side Country → State cascade.
+    //     States are embedded here so the cascade (and edit prefill) work with no AJAX. ---
+    var STATES = @json($states->map(function ($s) {
+        return ['pk' => (string) $s->pk, 'name' => $s->state_name, 'country' => (string) $s->country_master_pk];
+    })->values());
+    var DT_STORE = @json(route('master.district.store'));
+    var DT_UPDATE = @json(route('master.district.update', '__ID__'));
+
+    function fillStates(countryId, selectId) {
+        var $s = $('#dfState').empty().append('<option value="">Select State</option>');
+        STATES.forEach(function (st) {
+            if (String(st.country) === String(countryId)) {
+                $('<option></option>').val(st.pk).text(st.name).appendTo($s);
+            }
+        });
+        if (selectId) $s.val(String(selectId));
+    }
+
+    $('#dfCountry').on('change', function () { fillStates(this.value, null); });
+
+    $('#districtFormModal').on('show.bs.modal', function (e) {
+        var t = e.relatedTarget; if (!t) return;
+        var mode = t.getAttribute('data-mode') || 'create';
+        if (mode === 'edit') {
+            $('#districtFormModalLabel').text('Edit District');
+            $('#districtForm').attr('action', DT_UPDATE.replace('__ID__', t.getAttribute('data-id')));
+            $('#dfFormMode').val('edit'); $('#dfEditId').val(t.getAttribute('data-id'));
+            $('#dfCountry').val(t.getAttribute('data-country') || '');
+            fillStates(t.getAttribute('data-country'), t.getAttribute('data-state'));
+            $('#dfName').val(t.getAttribute('data-name') || '');
+            $('#dfStatus').val(t.getAttribute('data-status') === '1' ? '1' : '2');
+        } else {
+            $('#districtFormModalLabel').text('Add District');
+            $('#districtForm').attr('action', DT_STORE);
+            $('#dfFormMode').val('create'); $('#dfEditId').val('');
+            $('#dfCountry').val(''); fillStates('', null);
+            $('#dfName').val(''); $('#dfStatus').val('1');
+        }
+    });
+
+    @if($errors->any())
+    (function () {
+        var t = document.createElement('div');
+        t.setAttribute('data-mode', @json(old('_form_mode', 'create')));
+        @if(old('_form_mode') === 'edit')
+        t.setAttribute('data-id', @json((string) old('_edit_id', '')));
+        @endif
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('districtFormModal')).show(t);
+        $('#dfCountry').val(@json((string) old('country_master_pk', '')));
+        fillStates(@json((string) old('country_master_pk', '')), @json((string) old('state_master_pk', '')));
+        $('#dfName').val(@json((string) old('district_name', '')));
+        $('#dfStatus').val(@json((string) old('active_inactive', '1')));
+    })();
+    @endif
+});
+</script>
+@endpush

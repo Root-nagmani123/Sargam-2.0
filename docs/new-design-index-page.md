@@ -292,6 +292,20 @@ One modal serves both modes; the form submits to the **unchanged** store (POST) 
   and on load reopen with `bootstrap.Modal.getOrCreateInstance(el).show(triggerEl)`.
 - **It IS the UX4G modal** — `.modal .modal-dialog-centered > .modal-content` with
   `.modal-header/.modal-body/.modal-footer`, `.btn-close`, standard form controls.
+- **Cascading FK selects (parent → child) — do it client-side, no AJAX.** For pages whose
+  create/edit form has dependent dropdowns (district = Country→State; city = Country→State→
+  District), the index controller already passes the parent lookups (`$countries`, `$states`,
+  `$districts`). Embed the *child* lists as JSON and filter in the browser:
+  ```blade
+  var STATES = @json($states->map(fn($s)=>['pk'=>(string)$s->pk,'name'=>$s->state_name,'country'=>(string)$s->country_master_pk])->values());
+  function fillStates(countryId, selectId){ /* rebuild #state <option>s where st.country===countryId; then .val(selectId) */ }
+  $('#country').on('change', function(){ fillStates(this.value, null); });
+  ```
+  On `show.bs.modal` **edit**, prefill top-down: set country → `fillStates(country, state)` →
+  `fillDistricts(state, district)`. This makes edit prefill **synchronous** (no async race)
+  and needs **no new routes** — the existing `get-states`/`get-districts` AJAX endpoints stay
+  untouched. (Reference: `district/index`, `city/index`.) Only reach for AJAX if a child list
+  is too large to embed; the master lookups here are small (≤~850 rows).
 
 ---
 
@@ -368,6 +382,14 @@ other report. **Reuse the shared view**, don't rebuild the header.
 - **Wire (above the card):** a **Download dropdown** (CSV · PDF) linking to the export route,
   plus a **Print** link (`target="_blank"` → the auto-printing HTML). No client-side CSV/JS.
 - **Read-only** — the export controller never touches create/update logic.
+- **Share one helper across a controller's lists.** `LocationController::brandedExport($format,
+  $reportTitle, $headings, $rows, $filenameBase)` holds the CSV/PDF/Print branching; each
+  `xxxExport()` just builds `$rows` and delegates. Country/State/District/City all route through it.
+- **⚠️ Large lists + DomPDF.** DomPDF is memory/CPU-hungry — City (~1,664 rows) peaks ~700 MB
+  and ~60 s. Guard the PDF branch the way the app already does elsewhere (Calendar/Feedback
+  controllers): `@ini_set('memory_limit','1024M'); @set_time_limit(300);` before `Pdf::loadView`.
+  CSV stays instant regardless. For very large tables prefer a Yajra server-side grid (see §5)
+  and consider whether a full-list PDF is even wanted.
 
 ---
 

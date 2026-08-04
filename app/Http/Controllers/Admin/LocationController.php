@@ -32,18 +32,66 @@ class LocationController extends Controller
      */
     public function countryExport(Request $request, $format = 'pdf')
     {
-        $headings  = ['S. No.', 'Country Name', 'Status'];
-        $rows      = [];
-        $i         = 1;
+        $rows = [];
+        $i    = 1;
         foreach (Country::orderBy('country_name')->get() as $c) {
             $rows[] = [$i++, $c->country_name, $c->active_inactive == 1 ? 'Active' : 'Inactive'];
         }
+        return $this->brandedExport($format, 'Country List', ['S. No.', 'Country Name', 'Status'], $rows, 'country-list');
+    }
 
-        $reportTitle = 'Country List';
-        $subtitle    = 'IAS Professional Course, Phase - I (2025 Batch)';
-        $subtitle2   = '(8 December 2025 to 17 April, 2026)';
+    /** Branded State export (CSV / PDF / Print) — see brandedExport(). Read-only. */
+    public function stateExport(Request $request, $format = 'pdf')
+    {
+        $rows = [];
+        $i    = 1;
+        foreach (State::orderBy('state_name')->get() as $s) {
+            $rows[] = [$i++, $s->state_name, $s->active_inactive == 1 ? 'Active' : 'Inactive'];
+        }
+        return $this->brandedExport($format, 'State List', ['S. No.', 'State Name', 'Status'], $rows, 'state-list');
+    }
+
+    /** Branded District export (CSV / PDF / Print) — see brandedExport(). Read-only. */
+    public function districtExport(Request $request, $format = 'pdf')
+    {
+        $rows = [];
+        $i    = 1;
+        foreach (District::orderBy('district_name')->get() as $d) {
+            $rows[] = [$i++, $d->district_name, $d->active_inactive == 1 ? 'Active' : 'Inactive'];
+        }
+        return $this->brandedExport($format, 'District List', ['S. No.', 'District', 'Status'], $rows, 'district-list');
+    }
+
+    /** Branded City export (CSV / PDF / Print) — see brandedExport(). Read-only. */
+    public function cityExport(Request $request, $format = 'pdf')
+    {
+        $rows = [];
+        $i    = 1;
+        foreach (City::with(['state', 'district'])->orderBy('city_name')->get() as $c) {
+            $rows[] = [
+                $i++,
+                $c->city_name,
+                optional($c->district)->district_name ?? 'N/A',
+                optional($c->state)->state_name ?? 'N/A',
+                $c->active_inactive == 1 ? 'Active' : 'Inactive',
+            ];
+        }
+        return $this->brandedExport($format, 'City List', ['S. No.', 'City Name', 'District', 'State', 'Status'], $rows, 'city-list');
+    }
+
+    /**
+     * Shared branded CSV / PDF / Print renderer for the Master location lists. Reuses the
+     * LBSNAA report chrome (resources/views/exports/lbsnaa-report.blade.php) so every export
+     * carries the same header (logos + academy + course line + blue title + blue table).
+     * Read-only; touches no create/update logic.
+     */
+    private function brandedExport(string $format, string $reportTitle, array $headings, array $rows, string $filenameBase)
+    {
+        $subtitle  = 'IAS Professional Course, Phase - I (2025 Batch)';
+        $subtitle2 = '(8 December 2025 to 17 April, 2026)';
+
         if ($format === 'csv') {
-            $filename = 'country-list-' . date('Ymd_His') . '.csv';
+            $filename = $filenameBase . '-' . date('Ymd_His') . '.csv';
             $colCount = max(count($headings), 1);
             return response()->streamDownload(function () use ($headings, $rows, $reportTitle, $subtitle, $subtitle2, $colCount) {
                 $out = fopen('php://output', 'w');
@@ -80,9 +128,14 @@ class LocationController extends Controller
             return view('exports.lbsnaa-report', array_merge($data, ['autoPrint' => true]));
         }
 
+        // DomPDF is memory/CPU-hungry on large lists (e.g. City ~1.6k rows peaks ~700MB).
+        // Match the app's existing heavy-export convention (Calendar/Feedback controllers).
+        @ini_set('memory_limit', '1024M');
+        @set_time_limit(300);
+
         return Pdf::loadView('exports.lbsnaa-report', $data)
             ->setPaper('a4', 'landscape')
-            ->download('country-list-' . date('Ymd_His') . '.pdf');
+            ->download($filenameBase . '-' . date('Ymd_His') . '.pdf');
     }
 
     /** LBSNAA logo/title data-URIs for the branded export chrome (see AttendanceController::pdfHeaderAssets). */
@@ -164,9 +217,11 @@ class LocationController extends Controller
     // State
     public function stateIndex()
     {
-        $states = State::paginate(10);
-        // print_r($states);die;
-        return view('admin.state.index', compact('states'));
+        // Phase E/F redesign: client-side DataTable needs the full set (was State::paginate(10)).
+        // Reversible. $countries feeds the create/edit modal's Country select.
+        $states    = State::orderBy('state_name')->get();
+        $countries = Country::orderBy('country_name')->get();
+        return view('admin.state.index', compact('states', 'countries'));
     }
 
     public function stateCreate()
@@ -234,8 +289,12 @@ class LocationController extends Controller
     // District
     public function districtIndex()
     {
-        $districts = District::paginate(10);
-        return view('admin.district.index', compact('districts'));
+        // Phase E/F redesign: client-side DataTable needs the full set (was District::paginate(10)).
+        // Reversible. $countries/$states feed the create/edit modal's cascading selects.
+        $districts = District::orderBy('district_name')->get();
+        $countries = Country::orderBy('country_name')->get();
+        $states    = State::orderBy('state_name')->get();
+        return view('admin.district.index', compact('districts', 'countries', 'states'));
     }
 
     public function districtCreate()
@@ -304,8 +363,13 @@ class LocationController extends Controller
     // City
     public function cityIndex()
     {
-        $cities = City::with(['state', 'district'])->paginate(10);
-        return view('admin.city.index', compact('cities'));
+        // Phase E/F redesign: client-side DataTable needs the full set (was ...->paginate(10)).
+        // Reversible. $countries/$states/$districts feed the create/edit modal's cascading selects.
+        $cities    = City::with(['state', 'district'])->orderBy('city_name')->get();
+        $countries = Country::orderBy('country_name')->get();
+        $states    = State::orderBy('state_name')->get();
+        $districts = District::orderBy('district_name')->get();
+        return view('admin.city.index', compact('cities', 'countries', 'states', 'districts'));
     }
 
     public function cityCreate()

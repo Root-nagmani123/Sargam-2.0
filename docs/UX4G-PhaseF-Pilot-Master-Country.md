@@ -125,7 +125,38 @@ For each page, in order (from [new-design-index-page.md §8](new-design-index-pa
 
 ---
 
+## Rollout status — Master location module
+
+| Page | Status | Notes |
+|---|---|---|
+| **Country** | ✅ done (pilot) | reference implementation |
+| **State** | ✅ done | modal adds a Country select; update route is POST (no PUT) |
+| **District** | ✅ done | modal Country→State cascade (client-side embed, no AJAX) |
+| **City** | ✅ done | modal Country→State→District cascade; **fixed** the legacy swapped District/State column data vs headers |
+
+All four now share `LocationController::brandedExport()` and the shared LBSNAA report view
+(CSV incl. Hindi academy line + UTF-8 BOM · branded PDF · auto-printing Print).
+
+**The same flagged, reversible backend touches as the pilot**, applied per page:
+`paginate(10)` → `orderBy(...)->get()` (client-side DataTable needs the full set), and each
+index now also passes the parent lookups (`$countries` / `$states` / `$districts`) **for the
+modal selects** — no change to any store/update/delete/validation logic or route verbs.
+
+**Flags for the module owner (not blocking, per the "flag don't silently change" rule):**
+- **City page weight.** Client-side render of all **1,664** rows → **~4.7 MB** HTML (District
+  ~2.4 MB / 850 rows; State ~0.3 MB / 37 rows). DataTable paginates client-side so it *works*,
+  but City is a candidate for a **Yajra server-side** grid if the payload matters. See the
+  page-weight tradeoff in `new-design-index-page.md` §5.
+- **City PDF cost.** ~700 MB / ~60 s to render (guarded with `ini_set`/`set_time_limit`, matching
+  the app's Calendar/Feedback exports). CSV is instant. A server-side/streamed export would be
+  lighter if full-list PDF is a common action.
+
+**Verified:** all four routes registered · three new blades compile · state/district/city render
+**HTTP 200** with the DataTable + modal + toggle markers · all FKs 100% populated (edit cascade
+prefill safe) · every export format runs (CSV BOM ✓ / PDF %PDF ✓ / Print HTML ✓).
+
 ## STOP — awaiting review
-Country now demonstrates the canonical Store Master pattern for a Laravel-paginated page.
-On approval I'll roll it across the Master module (state → district → city → …), one page
-at a time, each gated + re-baselined, flagging any that need a DataTable data-source.
+The whole Master location module (Country · State · District · City) now follows the canonical
+Store Master pattern. **Pending:** a browser visual gate + re-baseline (chrome/firefox/webkit)
+on the XAMPP Apache vhost per the usual process. On approval I'll re-baseline and move to the
+next Master group.
