@@ -185,6 +185,26 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/students/export/{format}', [UserController::class, 'studentListExport'])->name('admin.dashboard.students.export');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
+    Route::post('/dashboard/report-issue', [\App\Http\Controllers\Admin\IssueReportController::class, 'store'])->middleware('throttle:10,1')->name('admin.dashboard.report-issue');
+    // Admin console for issues submitted via the dashboard "Report Issue" launcher
+    // index() keeps its own in-body redirect for non-privileged users (unchanged UX);
+    // every other admin action is destructive/PII-bearing and is gated by 'issue.reports.admin'.
+    Route::get('/issue-reports', [\App\Http\Controllers\Admin\IssueReportController::class, 'index'])->name('admin.issue-reports.index');
+    Route::middleware(['issue.reports.admin'])->group(function () {
+        Route::get('/issue-reports/filter-options', [\App\Http\Controllers\Admin\IssueReportController::class, 'filterOptions'])->name('admin.issue-reports.filter-options');
+        Route::get('/issue-reports/export', [\App\Http\Controllers\Admin\IssueReportController::class, 'export'])->name('admin.issue-reports.export');
+        Route::get('/issue-reports/export-excel', [\App\Http\Controllers\Admin\IssueReportController::class, 'exportExcel'])->name('admin.issue-reports.export-excel');
+        Route::get('/issue-reports/{id}', [\App\Http\Controllers\Admin\IssueReportController::class, 'show'])->whereNumber('id')->name('admin.issue-reports.show');
+        Route::post('/issue-reports/{id}/status', [\App\Http\Controllers\Admin\IssueReportController::class, 'updateStatus'])->whereNumber('id')->name('admin.issue-reports.status');
+        Route::delete('/issue-reports/{id}', [\App\Http\Controllers\Admin\IssueReportController::class, 'destroy'])->whereNumber('id')->name('admin.issue-reports.destroy');
+    });
+    // User-facing: only the current user's own reported issues
+    Route::get('/my-reported-issues', [\App\Http\Controllers\Admin\IssueReportController::class, 'myIssues'])->name('my.issue-reports.index');
+    Route::get('/my-reported-issues/filter-options', [\App\Http\Controllers\Admin\IssueReportController::class, 'myFilterOptions'])->name('my.issue-reports.filter-options');
+    Route::get('/my-reported-issues/export', [\App\Http\Controllers\Admin\IssueReportController::class, 'myExport'])->name('my.issue-reports.export');
+    Route::get('/my-reported-issues/export-excel', [\App\Http\Controllers\Admin\IssueReportController::class, 'myExportExcel'])->name('my.issue-reports.export-excel');
+    // Shared: attachment download, gated in-body to the admin or the issue's own reporter
+    Route::get('/issue-reports/{id}/attachment', [\App\Http\Controllers\Admin\IssueReportController::class, 'attachment'])->whereNumber('id')->name('issue-reports.attachment');
     Route::get('/directory/lbsnaa', [DirectoryController::class, 'lbsnaa'])->name('admin.directory.lbsnaa');
     Route::get('/directory/ot', [DirectoryController::class, 'ot'])->name('admin.directory.ot');
 
