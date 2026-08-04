@@ -202,7 +202,7 @@
                             @foreach($rows as $ri => $row)
                                 <tr class="nps-row"><td class="text-center">{{ $ri+1 }}</td>
                                     @foreach($tbl['columns'] as $c)<td><input type="text" name="{{ $tbl['key'] }}[{{ $c['name'] }}][]" class="nps-tin" value="{{ $row[$c['name']] ?? '' }}"></td>@endforeach
-                                    <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="npsRemoveRow(this)"><i class="bi bi-x-lg"></i></button></td></tr>
+                                    <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="npsRemoveRow(this)" aria-label="Remove row"><i class="bi bi-x-lg" aria-hidden="true"></i></button></td></tr>
                             @endforeach
                         </tbody>
                     </table>

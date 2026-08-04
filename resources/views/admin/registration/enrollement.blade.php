@@ -599,7 +599,7 @@
             if (lastPage <= 1) return;
 
             const prevDisabled = currentPage === 1 ? 'disabled' : '';
-            paginationContainer.append(`<li class="page-item ${prevDisabled}"><a class="page-link" href="#" data-page="${currentPage - 1}"><i class="bi bi-chevron-left"></i></a></li>`);
+            paginationContainer.append(`<li class="page-item ${prevDisabled}"><a class="page-link" href="#" data-page="${currentPage - 1}" aria-label="Previous page"><i class="bi bi-chevron-left" aria-hidden="true"></i></a></li>`);
 
             const maxVisiblePages = 5;
             let startPage = 1;
@@ -634,7 +634,7 @@
             }
 
             const nextDisabled = currentPage === lastPage ? 'disabled' : '';
-            paginationContainer.append(`<li class="page-item ${nextDisabled}"><a class="page-link" href="#" data-page="${currentPage + 1}"><i class="bi bi-chevron-right"></i></a></li>`);
+            paginationContainer.append(`<li class="page-item ${nextDisabled}"><a class="page-link" href="#" data-page="${currentPage + 1}" aria-label="Next page"><i class="bi bi-chevron-right" aria-hidden="true"></i></a></li>`);
 
             // attach
             $('.page-link[data-page]').off('click').on('click', function(e) {

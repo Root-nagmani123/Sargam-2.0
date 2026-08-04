@@ -152,7 +152,7 @@
                                             </td>
                                         @endforeach
                                         <td class="text-center">
-                                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="fcDocRemoveRow(this,'{{ $tbl['key'] }}')"><i class="bi bi-x-lg"></i></button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="fcDocRemoveRow(this,'{{ $tbl['key'] }}')" aria-label="Remove row"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
                                         </td>
                                     </tr>
                                 @endforeach

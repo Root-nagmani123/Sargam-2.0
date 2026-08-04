@@ -104,7 +104,7 @@
                             <td><input type="text" name="{{ $tbl['key'] }}[marital_status][]" class="fm-in" value="{{ $row['marital_status'] ?? '' }}"></td>
                             <td><input type="text" name="{{ $tbl['key'] }}[remarks][]" class="fm-in" value="{{ $row['remarks'] ?? '' }}"></td>
                             <td class="fm-office">(for office use)</td>
-                            <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="fmRemoveRow(this)"><i class="bi bi-x-lg"></i></button></td>
+                            <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="fmRemoveRow(this)" aria-label="Remove row"><i class="bi bi-x-lg" aria-hidden="true"></i></button></td>
                         </tr>
                     @endforeach
                 </tbody>

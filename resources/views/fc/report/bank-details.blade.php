@@ -28,8 +28,8 @@
                 <div class="input-group input-group-sm">
                     <input type="text" name="search" class="form-control" placeholder="Name / Username"
                            value="{{ request('search') }}">
-                    <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search"></i></button>
-                    <a href="{{ route('admin.reports.bank') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x"></i></a>
+                    <button type="submit" class="btn btn-primary btn-sm" aria-label="Search"><i class="bi bi-search" aria-hidden="true"></i></button>
+                    <a href="{{ route('admin.reports.bank') }}" class="btn btn-outline-secondary btn-sm" aria-label="Clear filters"><i class="bi bi-x" aria-hidden="true"></i></a>
                 </div>
             </div>
         </div>

@@ -106,7 +106,7 @@
                             <td><input type="date" name="{{ $tbl['key'] }}[date_incurred][]" class="dc-in" value="{{ $row['date_incurred'] ?? '' }}"></td>
                             <td><input type="text" name="{{ $tbl['key'] }}[details][]" class="dc-in" value="{{ $row['details'] ?? '' }}"></td>
                             <td><input type="text" name="{{ $tbl['key'] }}[remarks][]" class="dc-in" value="{{ $row['remarks'] ?? '' }}"></td>
-                            <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="dcRemoveRow(this)"><i class="bi bi-x-lg"></i></button></td>
+                            <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="dcRemoveRow(this)" aria-label="Remove row"><i class="bi bi-x-lg" aria-hidden="true"></i></button></td>
                         </tr>
                     @endforeach
                 </tbody>

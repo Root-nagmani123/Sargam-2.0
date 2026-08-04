@@ -104,7 +104,7 @@
                             <td><input type="text" name="{{ $tbl['key'] }}[in_whose_name][]" class="mp-in" value="{{ $row['in_whose_name'] ?? '' }}"></td>
                             <td><input type="text" name="{{ $tbl['key'] }}[how_acquired][]" class="mp-in" value="{{ $row['how_acquired'] ?? '' }}"></td>
                             <td><input type="text" name="{{ $tbl['key'] }}[remarks][]" class="mp-in" value="{{ $row['remarks'] ?? '' }}"></td>
-                            <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="mpRemoveRow(this)"><i class="bi bi-x-lg"></i></button></td>
+                            <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="mpRemoveRow(this)" aria-label="Remove row"><i class="bi bi-x-lg" aria-hidden="true"></i></button></td>
                         </tr>
                     @endforeach
                 </tbody>

@@ -135,8 +135,8 @@
                         <input type="text" id="f_search" name="search" class="form-control"
                                placeholder="Name / Username / Mobile"
                                value="{{ request('search') }}">
-                        <button type="button" id="fcOverviewSearchBtn" class="btn btn-primary btn-sm px-2"><i class="bi bi-search"></i></button>
-                        <button type="button" id="fcOverviewClearBtn" class="btn btn-outline-secondary btn-sm px-2"><i class="bi bi-x"></i></button>
+                        <button type="button" id="fcOverviewSearchBtn" class="btn btn-primary btn-sm px-2" aria-label="Search"><i class="bi bi-search" aria-hidden="true"></i></button>
+                        <button type="button" id="fcOverviewClearBtn" class="btn btn-outline-secondary btn-sm px-2" aria-label="Clear filters"><i class="bi bi-x" aria-hidden="true"></i></button>
                     </div>
                 </div>
                 <div class="col-sm-6 col-md-2 col-lg-2 ms-lg-auto text-lg-end">

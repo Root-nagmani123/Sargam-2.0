@@ -106,8 +106,8 @@
                     <div class="input-group input-group-sm">
                         <input type="text" name="search" class="form-control" placeholder="Name / Username / Mobile"
                                value="{{ request('search') }}">
-                        <button type="submit" class="btn btn-primary btn-sm px-2"><i class="bi bi-search"></i></button>
-                        <a href="{{ route('admin.reports.overview') }}" class="btn btn-outline-secondary btn-sm px-2"><i class="bi bi-x"></i></a>
+                        <button type="submit" class="btn btn-primary btn-sm px-2" aria-label="Search"><i class="bi bi-search" aria-hidden="true"></i></button>
+                        <a href="{{ route('admin.reports.overview') }}" class="btn btn-outline-secondary btn-sm px-2" aria-label="Clear filters"><i class="bi bi-x" aria-hidden="true"></i></a>
                     </div>
                 </div>
             </form>

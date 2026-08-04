@@ -163,7 +163,7 @@
                             @foreach($colDefs as $c)
                                 <td><input type="text" name="nominees[{{ $c['name'] }}][]" class="gi-in" value="{{ $row[$c['name']] ?? '' }}"></td>
                             @endforeach
-                            <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="giRemoveRow(this)"><i class="bi bi-x-lg"></i></button></td>
+                            <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="giRemoveRow(this)" aria-label="Remove row"><i class="bi bi-x-lg" aria-hidden="true"></i></button></td>
                         </tr>
                     @endforeach
                 </tbody>

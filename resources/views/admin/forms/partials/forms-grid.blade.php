@@ -65,7 +65,7 @@
                     @if(config('fc.form_builder_delete_enabled'))
                         <form method="POST" action="{{ route('fc-reg.admin.forms.destroy', $form) }}" class="d-inline" onsubmit="return confirm('Delete this form and ALL its steps/fields? This cannot be undone.')">
                             @csrf @method('DELETE')
-                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            <button type="submit" class="btn btn-sm btn-outline-danger" aria-label="Delete"><i class="bi bi-trash" aria-hidden="true"></i></button>
                         </form>
                     @endif
                 </div>
