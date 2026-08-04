@@ -153,8 +153,9 @@
                                             <input type="hidden" name="upload_single" value="{{ $field->field_name }}">
                                             <input type="file"
                                                    name="{{ $field->field_name }}"
-                                                   class="form-control form-control-sm py-0 @error($field->field_name) is-invalid @enderror"
+                                                   class="form-control form-control-sm py-0 fc-doc-upload-input @error($field->field_name) is-invalid @enderror"
                                                    accept="{{ $accept }}"
+                                                   data-max-kb="{{ \App\Rules\SafeUploadedDocument::maxKilobytes((int) ($field->file_max_kb ?: 5120)) }}"
                                                    {{ $isDone ? '' : 'required' }}>
                                             <button type="submit" class="btn btn-sm btn-primary py-0 px-2 text-nowrap">
                                                 <i class="bi bi-upload me-1"></i>{{ $isDone ? 'Replace' : 'Upload' }}
@@ -177,7 +178,7 @@
                                     @if($blankUrl)
                                         <a href="{{ $blankUrl }}" target="_blank" rel="noopener"
                                            class="btn btn-link btn-sm p-0 text-primary">
-                                            <i class="bi bi-file-earmark-text me-1"></i>View Blank Form
+                                            <i class="bi bi-download me-1"></i>Download Form
                                         </a>
                                     @else
                                         <span class="text-muted small">—</span>
@@ -247,4 +248,141 @@
         <i class="bi bi-info-circle me-1"></i>{{ $uploadedCount }} / {{ $fileFieldCount }} uploaded.
         Use <strong>Save &amp; Continue</strong> when all mandatory documents are on file.
     </p>
+
+    {{--
+        Client-side pre-check: reject a disallowed selection the instant it is
+        picked, so the trainee gets immediate feedback instead of a round-trip.
+
+        This is a CONVENIENCE, not a security control — the browser `accept`
+        attribute only filters the file dialog and can be bypassed, and JS can be
+        disabled entirely. The authoritative check is server-side
+        (App\Rules\SafeUploadedDocument on every upload route), which verifies the
+        file's actual bytes, not just its name. Here we only mirror the extension
+        and size rules to save the user a failed submit.
+    --}}
+    @once
+        <script>
+            (function () {
+                function labelFromAccept(accept) {
+                    return (accept || '')
+                        .split(',')
+                        .map(function (s) { return s.trim().replace(/^\./, '').toUpperCase(); })
+                        .filter(Boolean)
+                        .join(' / ');
+                }
+
+                function feedbackEl(input) {
+                    var next = input.nextElementSibling;
+                    // Reuse our own message node; never clobber a server-rendered one.
+                    if (next && next.classList && next.classList.contains('fc-doc-upload-js-error')) {
+                        return next;
+                    }
+                    var el = document.createElement('div');
+                    el.className = 'fc-doc-upload-js-error text-danger small mt-1';
+                    input.parentNode.insertBefore(el, input.nextSibling);
+                    return el;
+                }
+
+                function clearError(input) {
+                    input.classList.remove('is-invalid');
+                    var next = input.nextElementSibling;
+                    if (next && next.classList && next.classList.contains('fc-doc-upload-js-error')) {
+                        next.textContent = '';
+                    }
+                }
+
+                function reject(input, message) {
+                    input.value = '';
+                    input.classList.add('is-invalid');
+                    feedbackEl(input).textContent = message;
+                }
+
+                // Extensions we never accept regardless of the field's accept list —
+                // mirrors the server's dangerous-extension guard so a double
+                // extension (report.php.pdf) is caught before submit too.
+                var BLOCKED = /\.(php\d?|phtml|phps|pht|phar|cgi|pl|py|rb|jsp|asp|aspx|sh|bash|exe|com|bat|cmd|msi|dll|htaccess|htm|html|svg|js)(\.|$)/i;
+
+                // Active-content markers mirrored from App\Rules\SafeUploadedDocument, so a
+                // PDF/DOCX carrying embedded JavaScript, a launch / auto-run action, an
+                // embedded file, or a macro project is caught the instant it is picked —
+                // not only on the submit round-trip. Best-effort only: the browser can't
+                // inflate compressed PDF streams, so the server-side scan stays the
+                // authority (it inflates FlateDecode streams and can't be bypassed).
+                var ACTIVE_MARKERS = {
+                    '.pdf':  ['/JavaScript', '/JS', '/Launch', '/EmbeddedFile', '/RichMedia', '/XFA'],
+                    '.docx': ['vbaProject', 'vbaData', 'macroEnabled']
+                };
+
+                function submitBtnFor(input) {
+                    var form = input.closest ? input.closest('form') : null;
+                    return form ? form.querySelector('button[type="submit"]') : null;
+                }
+
+                // Read the picked file and reject immediately if it carries active content.
+                // The submit button is disabled while the async read runs so the file can't
+                // be sent before the scan resolves.
+                function scanActiveContent(input, file, ext) {
+                    var markers = ACTIVE_MARKERS[ext];
+                    if (!markers || typeof FileReader === 'undefined') { return; }
+
+                    var btn = submitBtnFor(input);
+                    if (btn) { btn.disabled = true; }
+
+                    var reader = new FileReader();
+                    reader.onload = function () {
+                        var text = String(reader.result || '');
+                        var found = markers.some(function (m) { return text.indexOf(m) !== -1; });
+                        if (found) {
+                            reject(input, 'This ' + ext.slice(1).toUpperCase()
+                                + ' contains embedded scripts, macros, or auto-run actions and cannot be uploaded. '
+                                + 'Please upload a plain document (print or "Save as" a flat file).');
+                        } else if (btn) {
+                            btn.disabled = false;
+                        }
+                    };
+                    // On read error, defer to the server rather than block a legitimate file.
+                    reader.onerror = function () { if (btn) { btn.disabled = false; } };
+                    reader.readAsText(file, 'ISO-8859-1');
+                }
+
+                document.addEventListener('change', function (e) {
+                    var input = e.target;
+                    if (!input.classList || !input.classList.contains('fc-doc-upload-input')) {
+                        return;
+                    }
+
+                    clearError(input);
+                    var resetBtn = submitBtnFor(input);
+                    if (resetBtn) { resetBtn.disabled = false; }
+
+                    var file = input.files && input.files[0];
+                    if (!file) {
+                        return;
+                    }
+
+                    var name = file.name || '';
+                    var accept = input.getAttribute('accept') || '';
+                    var allowed = accept.split(',').map(function (s) { return s.trim().toLowerCase(); }).filter(Boolean);
+                    var dot = name.lastIndexOf('.');
+                    var ext = dot >= 0 ? name.slice(dot).toLowerCase() : '';
+
+                    if (BLOCKED.test(name) || (allowed.length && allowed.indexOf(ext) === -1)) {
+                        reject(input, 'Only ' + labelFromAccept(accept) + ' files are allowed. "' + name + '" was not accepted.');
+                        return;
+                    }
+
+                    var maxKb = parseInt(input.getAttribute('data-max-kb'), 10);
+                    if (maxKb > 0 && file.size > maxKb * 1024) {
+                        var shown = maxKb >= 1024 ? (Math.round(maxKb / 102.4) / 10) + ' MB' : maxKb + ' KB';
+                        reject(input, 'File is too large. Maximum allowed size is ' + shown + '.');
+                        return;
+                    }
+
+                    // Name and size are fine — now scan the bytes and reject on the spot
+                    // if the file embeds scripts / macros / auto-run actions.
+                    scanActiveContent(input, file, ext);
+                }, true);
+            })();
+        </script>
+    @endonce
 @endif

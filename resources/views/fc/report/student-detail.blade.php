@@ -36,6 +36,22 @@
             box-sizing: border-box;
         }
 
+        /* ── Government-form double rule on every printed page ──
+           position:fixed repeats per page; a bordered wrapper would only draw its top edge
+           on page 1 and its bottom edge on the last page. */
+        .print-page-frame,
+        .print-page-frame-inner {
+            display: block !important;
+            visibility: visible !important;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .print-page-frame { border: 1.6pt solid #0a3d6b; }
+        .print-page-frame-inner { border: 0.5pt solid #0a3d6b; margin: 2.4pt; }
+        .student-report-print-area { padding: 3mm 3.5mm 2mm !important; }
+
         /* ── Print masthead ── */
         .print-masthead {
             display: block !important;
@@ -51,6 +67,24 @@
         .print-masthead-en   { font-size: 8.8pt;  color: #333; margin: 0 0 1px; }
         .print-masthead-name { font-size: 9.5pt;  font-weight: bold; color: #0a3d6b; margin: 0; }
         .print-masthead-sub  { font-size: 8pt;    color: #555; margin: 0; }
+        /* Crest on the left; the empty right cell of equal width keeps the name centred. */
+        .print-masthead-grid { width: 100%; border-collapse: collapse; }
+        .print-masthead-grid td { border: 0; padding: 0; vertical-align: middle; }
+        .print-masthead-side { width: 58px; }
+        .print-masthead-logo { text-align: left; }
+        .print-masthead-logo img { width: 54px; height: auto; }
+
+        /* Specimen signature under the photograph in the identity box */
+        .student-hero-card .hero-sign-box {
+            width: 72px;
+            margin-top: 4px;
+            border: 1px solid #888 !important;
+            background: #fff !important;
+            padding: 2px;
+            text-align: center;
+        }
+        .student-hero-card .hero-sign-box img { width: 66px; height: auto; max-height: 28px; }
+        .student-hero-card .hero-sign-cap { font-size: 5.5pt; color: #444 !important; line-height: 1.2; }
         .print-doc-title {
             display: block !important;
             text-align: center;
@@ -83,7 +117,10 @@
         }
         .student-hero-card .hero-status { display: none !important; }
         .student-hero-card .hero-name   { font-size: 12pt !important; color: #000 !important; }
+        .student-hero-card .hero-meta { color: #222 !important; }
         .student-hero-card .hero-meta span { color: #222 !important; font-size: 8.5pt !important; }
+        /* Hidden on screen, restored for the printed document. */
+        .student-hero-card .hero-course-line { display: flex !important; }
 
         /* ── Progress bar: skip ── */
         .print-progress { display: none !important; }
@@ -177,7 +214,29 @@
     }
 
     /* Screen-only helpers */
-    .print-masthead, .print-doc-title { display: none; }
+    .print-masthead, .print-doc-title,
+    .print-page-frame, .print-page-frame-inner { display: none; }
+
+    /* ── Identity header ──
+       The trainee name inherited the admin theme's dark heading colour, which on the blue
+       card was all but unreadable; it has to be set explicitly. */
+    .student-hero-card .hero-name {
+        color: #fff !important;
+        font-size: 1.15rem;
+        line-height: 1.25;
+        letter-spacing: .2px;
+    }
+    .student-hero-card .hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .15rem 1.25rem;
+        font-size: .82rem;
+        color: rgba(255, 255, 255, .92);
+    }
+    .student-hero-card .hero-meta span { white-space: nowrap; }
+    .student-hero-card .hero-meta i { opacity: .8; }
+    /* Course / duration / coordinator: printed document only, not the working screen. */
+    .student-hero-card .hero-course-line { display: none; }
 
     /* ── Screen-only: compact "Descriptive Roll" layout matching the downloaded PDF.
          Wrapped in @media screen so print output (already PDF-matched above) is untouched. ── */
@@ -248,20 +307,41 @@
             <a href="{{ route('admin.reports.student.pdf', ['username' => $userId]) }}" class="btn btn-sm btn-primary">
                 <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
             </a>
-            <button type="button" onclick="window.print()" class="btn btn-sm btn-outline-secondary">
+            {{-- Opens the PDF template as HTML and prints that, so paper output matches the
+                 downloaded PDF exactly instead of printing this screen's own layout. --}}
+            <a href="{{ route('admin.reports.student.print', ['username' => $userId]) }}"
+               target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-printer me-1"></i>Print
-            </button>
+            </a>
         </div>
     </div>
 
     <div class="student-report-print-area">
 
+    {{-- Print-only page frame (repeats on every printed page) --}}
+    <div class="print-page-frame" aria-hidden="true"></div>
+    <div class="print-page-frame-inner" aria-hidden="true"></div>
+
     {{-- Print-only masthead --}}
     <div class="print-masthead">
-        <p class="print-masthead-hi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी</p>
-        <p class="print-masthead-en">Lal Bahadur Shastri National Academy of Administration</p>
-        <p class="print-masthead-name">Government of India &nbsp;|&nbsp; भारत सरकार</p>
-        <p class="print-masthead-sub">Mussoorie – Uttarakhand &nbsp;|&nbsp; मसूरी – उत्तराखंड</p>
+        <table class="print-masthead-grid">
+            <tr>
+                @if(!empty($lbsnaaLogoUrl))
+                    <td class="print-masthead-side print-masthead-logo">
+                        <img src="{{ $lbsnaaLogoUrl }}" alt="LBSNAA">
+                    </td>
+                @endif
+                <td>
+                    <p class="print-masthead-hi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी</p>
+                    <p class="print-masthead-en">Lal Bahadur Shastri National Academy of Administration</p>
+                    <p class="print-masthead-name">Government of India &nbsp;|&nbsp; भारत सरकार</p>
+                    <p class="print-masthead-sub">Mussoorie – Uttarakhand &nbsp;|&nbsp; मसूरी – उत्तराखंड</p>
+                </td>
+                @if(!empty($lbsnaaLogoUrl))
+                    <td class="print-masthead-side">&nbsp;</td>
+                @endif
+            </tr>
+        </table>
     </div>
     <div class="print-doc-title">DESCRIPTIVE REGISTRATION PROFILE &nbsp;|&nbsp; वर्णनात्मक पंजीकरण प्रोफ़ाइल</div>
 
@@ -276,21 +356,52 @@
                         <i class="bi bi-person-fill fs-2" style="opacity:.7;"></i>
                     </div>
                 @endif
+
+                {{-- Step-1 signature, boxed under the photograph --}}
+                <div class="hero-sign-box"
+                     style="width:72px;margin-top:6px;border-radius:6px;background:#fff;border:1px solid rgba(255,255,255,.5);padding:2px;text-align:center;">
+                    @if(!empty($signatureUrl))
+                        <img src="{{ $signatureUrl }}" alt="Signature" style="width:66px;height:auto;max-height:28px;object-fit:contain;">
+                    @else
+                        <span style="display:block;height:28px;line-height:28px;font-size:10px;color:#999;">—</span>
+                    @endif
+                    <div class="hero-sign-cap" style="font-size:8px;color:#555;line-height:1.2;">Signature</div>
+                </div>
             </div>
             <div class="flex-grow-1">
                 <h5 class="fw-bold mb-1 hero-name">{{ $displayName ?: '—' }}</h5>
-                <div class="hero-meta" style="font-size:.82rem;opacity:.85;">
-                    <span class="me-3"><i class="bi bi-person-badge me-1"></i>{{ $displayName ?: $userId }}</span>
+                {{-- Name, course and email only. The service / state / session chips printed a
+                     bare "—" whenever the trainee had none, which was most of the header. --}}
+                <div class="hero-meta">
                     @if($reportForm)
-                        <span class="me-3"><i class="bi bi-file-earmark-text me-1"></i>{{ $reportForm->form_name }}</span>
+                        <span><i class="bi bi-file-earmark-text me-1"></i>{{ $reportForm->form_name }}</span>
                     @endif
-                    <span class="me-3"><i class="bi bi-briefcase me-1"></i>{{ $headerMeta['service_label'] ?? '—' }}</span>
-                    <span class="me-3"><i class="bi bi-geo-alt me-1"></i>{{ $headerMeta['state_label'] ?? '—' }}</span>
-                    <span class="me-3"><i class="bi bi-calendar3 me-1"></i>{{ $headerMeta['session_label'] ?? '—' }}</span>
                     @if(!empty($headerMeta['email']))
                         <span><i class="bi bi-envelope me-1"></i>{{ $headerMeta['email'] }}</span>
                     @endif
                 </div>
+                {{-- Course window (Path Page) + coordinator (Front Page). Print only: on screen
+                     this is header clutter, but the printed page is a document and needs it. --}}
+                @php
+                    $ch = $courseHeader ?? [];
+                    $heroCoordinator = $ch['coordinator_name'] ?? '';
+                    if ($heroCoordinator !== '' && !empty($ch['coordinator_designation']) && $ch['coordinator_designation'] !== $heroCoordinator) {
+                        $heroCoordinator .= ' ('.$ch['coordinator_designation'].')';
+                    }
+                @endphp
+                @if(!empty($ch['course_title']) || !empty($ch['course_duration']) || $heroCoordinator !== '')
+                    <div class="hero-meta hero-course-line mt-1">
+                        @if(!empty($ch['course_title']))
+                            <span><i class="bi bi-mortarboard me-1"></i>{{ $ch['course_title'] }}</span>
+                        @endif
+                        @if(!empty($ch['course_duration']))
+                            <span><i class="bi bi-calendar-range me-1"></i>Course Duration: {{ $ch['course_duration'] }}</span>
+                        @endif
+                        @if($heroCoordinator !== '')
+                            <span><i class="bi bi-person-workspace me-1"></i>Coordinator: {{ $heroCoordinator }}</span>
+                        @endif
+                    </div>
+                @endif
             </div>
             <div class="text-end flex-shrink-0 hero-status">
                 @if($master?->status === 'SUBMITTED')

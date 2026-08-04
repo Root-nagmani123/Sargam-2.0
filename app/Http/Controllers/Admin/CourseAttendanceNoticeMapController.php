@@ -314,7 +314,7 @@ class CourseAttendanceNoticeMapController extends Controller
     
     // Get courses for Program Name filter - only active courses (active_inactive = 1 and end_date > now)
     $courses = CourseMaster::where('active_inactive', 1)
-        ->where('end_date', '>', now())
+        ->where('end_date', '>=', now()->toDateString())
         ->orderBy('course_name', 'asc')
         ->get();
 
@@ -742,7 +742,7 @@ if($memos[0]->status == 2){
 public function create(Request $request)
 {
     $activeCourses = CourseMaster::where('active_inactive', '1')
-        ->where('end_date', '>', now())
+        ->where('end_date', '>=', now()->toDateString())
         ->get();
 // print_r($activeCourses);die;
     return view('admin.courseAttendanceNoticeMap.create', compact('activeCourses'));

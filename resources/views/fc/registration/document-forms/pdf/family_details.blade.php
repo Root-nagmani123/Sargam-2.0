@@ -44,7 +44,7 @@
     .sig-img { max-height: 32pt; }
     .notes { margin-top: 16pt; border-top: 1px solid #000; padding-top: 8pt; font-size: 9.5pt; line-height: 1.5; }
     .note-p { margin-top: 6pt; text-align: justify; }
-    .note-hi { display: block; color: #000; }
+    .note-hi { display: block; color: #000; margin-top: 4pt; }
     .def-hd { font-weight: bold; margin-top: 10pt; text-align: justify; }
     .clause { margin: 4pt 0 0 20pt; text-align: justify; }
 </style>
@@ -59,12 +59,12 @@
     <div class="hdr"><span class="lbl">Name of the Government Servant / सरकारी कर्मचारी का नाम:</span> {!! $blank($name, '280pt') !!}</div>
     <div class="hdr"><span class="lbl">Designation / पद नाम:</span> {!! $blank($desig, '300pt') !!}</div>
     <div class="hdr"><span class="lbl">Date of Birth / जन्म तिथि:</span> {!! $blank($dob, '200pt') !!}</div>
-    <div class="hdr"><span class="lbl">Details of the members of my family* as on / परिवार के सदस्यों का विवरण, तदनांक:</span> {!! $blank($ason, '150pt') !!}</div>
+    <div class="hdr"><span class="lbl">Details of the members of my family* as on / परिवार के सदस्यों का विवरण, दिनांक:</span> {!! $blank($ason, '150pt') !!}</div>
 
     <table class="fm">
         <thead>
             <tr>
-                <th class="rn">S.No.<br>क्र.सं.<br><span class="cno">(1)</span></th>
+                <th class="rn">S.No.<br>{!! fc_kra_sn_img('9pt') !!}<br><span class="cno">(1)</span></th>
                 <th>Name of the members of family* / परिवार के सदस्य का नाम<br><span class="cno">(2)</span></th>
                 <th style="width:12%;">Date of Birth** / जन्म तिथि<br><span class="cno">(3)</span></th>
                 <th style="width:15%;">Relationship with the officer / अधिकारी के साथ संबंध<br><span class="cno">(4)</span></th>
@@ -108,14 +108,15 @@
         <div class="def-hd">*Family for this purpose means family as defined in clause (b) of sub-rule of Rule 54 of the CCS (Pension) Rule, 1972 (Mention overleaf for ready reference)</div>
         <div class="def-hd">** Please attach an ID proof of Date of birth (in each case, except your own).</div>
         <div class="note-p"><b>Note 1.</b> The original Form submitted by the Government servant is to be retained. All additions/alterations are to be recorded in this Form under the signature of Head of Office in Col. 7. No new Form will substitute the original Form. However, the retiring Government servant should submit the details of family afresh along with Form 5.
-            <span class="note-hi"><b>नोट 1.</b> सरकारी कर्मचारी द्वारा जमा किया गया मूल फार्म अभिलेख में रखा जाना है। इस फार्म में कॉलम 7 में कार्यालय प्रमुख के हस्ताक्षर के तहत सभी परिवर्धन/परिवर्तन दर्ज किए जाने हैं। कोई भी नया फॉर्म मूल फॉर्म को प्रतिस्थापित नहीं करेगा। सेवानिवृत्त होने वाले सरकारी कर्मचारी को फॉर्म 5 के साथ परिवार का विवरण फिर से जमा करना चाहिए।</span></div>
+            <div class="note-hi"><b>नोट 1.</b> सरकारी कर्मचारी द्वारा जमा किया गया मूल फार्म अभिलेख में रखा जाना है। इस फार्म में कॉलम 7 में कार्यालय प्रमुख के हस्ताक्षर के तहत सभी परिवर्धन/परिवर्तन दर्ज किए जाने हैं। कोई भी नया फॉर्म मूल फॉर्म को प्रतिस्थापित नहीं करेगा, हालांकि सेवानिवृत्त होने वाले सरकारी कर्मचारी को फॉर्म 5 के साथ परिवार का विवरण फिर से जमा करना चाहिए।</div></div>
         <div class="note-p"><b>Note 2.</b> The details of spouse, all children and parents (whether eligible for family pension or not) and disabled siblings (brothers and sisters) may be given.
-            <span class="note-hi"><b>नोट 2.</b> पति या पत्नी, सभी बच्चों और माता-पिता (चाहे परिवार पेंशन के लिए पात्र हों या नहीं) और विकलांग सहोदर (भाइयों और बहनों) का विवरण दिया जाए।</span></div>
+            <div class="note-hi"><b>नोट 2.</b> पति या पत्नी, सभी बच्चों और माता-पिता (चाहे परिवार पेंशन के लिए पात्र हों या नहीं) और विकलांग सहोदर (भाइयों और बहनों) का विवरण दिया जाए।</div></div>
         <div class="note-p"><b>Note 3.</b> The Head of Office shall indicate the date of receipt of communication regarding addition or alteration in the family in the &lsquo;Remarks&rsquo; column. The fact regarding disability or change of marital status of a family member should also be indicated in the &lsquo;Remarks&rsquo; column.
-            <span class="note-hi"><b>नोट 3.</b> कार्यालय प्रमुख &lsquo;टिप्पणी&rsquo; कॉलम में परिवार में परिवर्धन या परिवर्तन की सूचना की प्राप्ति की तारीख का उल्लेख करेगा। परिवार के किसी सदस्य की विकलांगता या वैवाहिक स्थिति में बदलाव के तथ्य को भी &lsquo;टिप्पणी&rsquo; कॉलम में दर्शाया जाना चाहिए।</span></div>
-        <div class="note-p"><b>Note 4.</b> Wife and husband shall include judicially separated wife and husband.</div>
+            <div class="note-hi"><b>नोट 3.</b> कार्यालय प्रमुख &lsquo;टिप्पणी&rsquo; कॉलम में परिवार में परिवर्धन या परिवर्तन की सूचना की प्राप्ति की तारीख का उल्लेख करेगा। परिवार के किसी सदस्य की विकलांगता या वैवाहिक स्थिति में बदलाव के तथ्य को भी &lsquo;टिप्पणी&rsquo; कॉलम में दर्शाया जाना चाहिए।</div></div>
+        <div class="note-p"><b>Note 4.</b> Wife and husband shall include judicially separated wife and husband.
+            <div class="note-hi"><b>नोट 4.</b> पति और पत्नी में न्यायिक रूप से अलग हो चुके पति और पत्नी शामिल होंगे।</div></div>
 
-        <div class="def-hd" style="margin-top:10pt;">*Family for this purpose means family as defined in clause (b) of sub-rule (14) of Rule 54 of the CCS (Pension) Rules, 1972 (as amended from time to time).</div>
+        <div class="def-hd" style="margin-top:10pt; font-size:11pt;">*Family for this purpose means family as defined in clause (b) of sub-rule (14) of Rule 54 of the CCS (Pension) Rules, 1972 (as amended from time to time).</div>
         <div class="note-p">As soon as a Government servant enters Government service, he/she shall give details of his/her family in Form 3 to the Head of Office. If the Government servant has no family, he/she shall furnish the details in Form 3 as soon as he acquires a family.</div>
         <div class="note-p">&lsquo;Family&rsquo; in relation to a Government servant means —</div>
         <div class="clause">14(b) Wife in the case of a male Government servant, or husband in the case of a female Government servant.</div>
@@ -123,6 +124,15 @@
         <div class="clause">(ii) unmarried son who has not attained the age of twenty-five years and unmarried or widowed or divorced daughter, including such son and daughter adopted legally;</div>
         <div class="clause">(iii) dependent parents;</div>
         <div class="clause">(iv) dependent disabled siblings (i.e. brother or sister) of a Government servant.</div>
+
+        <div class="def-hd" style="margin-top:12pt; font-size:11pt;">इसके प्रयोजनार्थ परिवार का अर्थ केन्द्रीय सिविल सेवा (पेंशन) नियमावली, 1972 (समय-समय पर संशोधित) के नियम 54 के उप-नियम (14) के खंड (ख) में परिभाषित परिवार है।</div>
+        <div class="note-p">जैसे ही कोई सरकारी कर्मचारी सरकारी सेवा में भर्ती होता है, वह अपने परिवार का विवरण फॉर्म 3 में कार्यालय प्रमुख को देगा/देगी। यदि सरकारी कर्मचारी का कोई परिवार नहीं है, तो उसे परिवार के अस्तित्व में आते ही फॉर्म 3 में विवरण प्रस्तुत करना होगा।</div>
+        <div class="note-p">सरकारी सेवक के संबंध में &ldquo;परिवार&rdquo; का अर्थ है—</div>
+        <div class="clause">14 (ख) पुरुष सरकारी कर्मचारी के मामले में पत्नी, या महिला सरकारी कर्मचारी के मामले में पति।</div>
+        <div class="clause">(i क) न्यायिक रूप से अलग हो चुके पति या पत्नी, एडेल्टरी के आधार पर ऐसे अलगाव की अनुमति नहीं दी जा रही है और उत्तरजीवी व्यक्ति को एडेल्टरी का दोषी नहीं ठहराया गया था।</div>
+        <div class="clause">(ii) अविवाहित पुत्र जिसने पच्चीस वर्ष की आयु प्राप्त नहीं की है और अविवाहित या विधवा या तलाकशुदा बेटी, जिनमें कानूनी रूप से गोद लिया गया बेटा और बेटी भी शामिल हैं।</div>
+        <div class="clause">(iii) आश्रित माता-पिता।</div>
+        <div class="clause">(iv) सरकारी कर्मचारी के आश्रित विकलांग सहोदर (अर्थात् भाई या बहन)</div>
     </div>
 
     <pagebreak />
@@ -140,7 +150,7 @@
     <table class="fm">
         <thead>
             <tr>
-                <th class="rn">क्र.सं.<br><span class="cno">(1)</span></th>
+                <th class="rn">{!! fc_kra_sn_img('9pt') !!}<br><span class="cno">(1)</span></th>
                 <th>परिवार के सदस्य का नाम*<br><span class="cno">(2)</span></th>
                 <th style="width:12%;">जन्म तिथि**<br><span class="cno">(3)</span></th>
                 <th style="width:15%;">अधिकारी के साथ संबंध<br><span class="cno">(4)</span></th>
@@ -181,9 +191,10 @@
     </table>
 
     <div class="notes">
-        <div class="def-hd">* इस प्रयोजनार्थ परिवार का अर्थ केंद्रीय सिविल सेवा (पेंशन) नियमावली, 1972 के नियम 54 के उप-नियम (ख) में परिभाषित परिवार से है। (तैयार संदर्भ हेतु पीछे देखें)</div>
+        <div class="def-hd">* इस प्रयोजनार्थ परिवार का अर्थ केंद्रीय सिविल सेवा (पेंशन) नियमावली, 1972 के नियम 54 के उप-नियम (ख) में परिभाषित परिवार से है।</div>
+        <div class="def-hd" style="text-align:right; margin-top:2pt;">महत्वपूर्ण बिन्दुओं के लिए कृपया अगला पृष्ठ देखें।</div>
         <div class="def-hd">** जन्म तिथि का पहचान प्रमाण संलग्न करें (अपने को छोड़कर प्रत्येक मामले में)।</div>
-        <div class="note-p"><b>नोट 1.</b> सरकारी कर्मचारी द्वारा जमा किया गया मूल फार्म अभिलेख में रखा जाना है। इस फार्म में कॉलम 7 में कार्यालय प्रमुख के हस्ताक्षर के तहत सभी परिवर्धन/परिवर्तन दर्ज किए जाने हैं। कोई भी नया फॉर्म मूल फॉर्म को प्रतिस्थापित नहीं करेगा। सेवानिवृत्त होने वाले सरकारी कर्मचारी को फॉर्म 5 के साथ परिवार का विवरण फिर से जमा करना चाहिए।</div>
+        <div class="note-p"><b>नोट 1.</b> सरकारी कर्मचारी द्वारा जमा किया गया मूल फार्म अभिलेख में रखा जाना है। इस फार्म में कॉलम 7 में कार्यालय प्रमुख के हस्ताक्षर के तहत सभी परिवर्धन/परिवर्तन दर्ज किए जाने हैं। कोई भी नया फॉर्म मूल फॉर्म को प्रतिस्थापित नहीं करेगा, हालांकि सेवानिवृत्त होने वाले सरकारी कर्मचारी को फॉर्म 5 के साथ परिवार का विवरण फिर से जमा करना चाहिए।</div>
         <div class="note-p"><b>नोट 2.</b> पति या पत्नी, सभी बच्चों और माता-पिता (चाहे परिवार पेंशन के लिए पात्र हों या नहीं) और विकलांग सहोदर (भाइयों और बहनों) का विवरण दिया जाए।</div>
         <div class="note-p"><b>नोट 3.</b> कार्यालय प्रमुख &lsquo;टिप्पणी&rsquo; कॉलम में परिवार में परिवर्धन या परिवर्तन की सूचना की प्राप्ति की तारीख का उल्लेख करेगा। परिवार के किसी सदस्य की विकलांगता या वैवाहिक स्थिति में बदलाव के तथ्य को भी &lsquo;टिप्पणी&rsquo; कॉलम में दर्शाया जाना चाहिए।</div>
         <div class="note-p"><b>नोट 4.</b> पति और पत्नी में न्यायिक रूप से अलग हो चुके पति और पत्नी शामिल होंगे।</div>

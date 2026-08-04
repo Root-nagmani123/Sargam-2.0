@@ -797,6 +797,10 @@ class DocumentFormTemplates
                             'I am about to marry a person who has a spouse living (exemption applied for)',
                         ]],
                         ['name' => 'exemption_reasons', 'label' => 'Reasons for seeking exemption (if applicable) / छूट माँगने के कारण (यदि लागू हो)', 'type' => 'textarea', 'width' => 'col-md-12'],
+                        // Editable addressee of the exemption application (defaults filled on the form).
+                        ['name' => 'exemption_to_line1', 'label' => 'Addressee — Line 1', 'type' => 'text', 'width' => 'col-md-12'],
+                        ['name' => 'exemption_to_line2', 'label' => 'Addressee — Line 2', 'type' => 'text', 'width' => 'col-md-12'],
+                        ['name' => 'exemption_to_line3', 'label' => 'Addressee — Line 3', 'type' => 'text', 'width' => 'col-md-12'],
                     ],
                 ],
             ],
@@ -859,6 +863,7 @@ class DocumentFormTemplates
                         ['name' => 'surety_address', 'label' => 'Address of Surety / प्रतिभू का पता', 'type' => 'textarea', 'width' => 'col-md-6'],
                         ['name' => 'surety_occupation', 'label' => 'Occupation of Surety / प्रतिभू का व्यवसाय', 'type' => 'text', 'width' => 'col-md-6'],
                         ['name' => 'surety_eligibility', 'label' => 'Surety is / प्रतिभू है', 'type' => 'select', 'options' => ['In the permanent service of Government', 'Ordinarily resident in India'], 'width' => 'col-md-6'],
+                        ['name' => 'surety_govt_name', 'label' => 'Government of (if in permanent service) / (यदि स्थायी सेवा में) सरकार का नाम', 'type' => 'text', 'width' => 'col-md-6'],
                     ],
                 ],
                 [

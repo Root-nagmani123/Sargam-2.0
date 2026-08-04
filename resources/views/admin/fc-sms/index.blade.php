@@ -322,7 +322,7 @@
 $(function () {
     var recipientsUrl = @json(route('fc-reg.admin.sms.recipients'));
     var initialized = {};
-    var selectedByTemplate = { b1: new Set(), b2: new Set() };
+    var selectedByTemplate = { b1: new Set(), b2: new Set(), b3: new Set() };
     var selectedFormId = parseInt($('#fcSmsSelectedFormId').val() || '0', 10);
 
     $('#fcSmsFormFilter').on('change', function () {
@@ -330,6 +330,7 @@ $(function () {
         $('#fcSmsSelectedFormId').val(selectedFormId);
         selectedByTemplate.b1 = new Set();
         selectedByTemplate.b2 = new Set();
+        selectedByTemplate.b3 = new Set();
         initialized = {};
         $('#fcSmsTemplateFilterForm').trigger('submit');
     });
@@ -351,6 +352,25 @@ $(function () {
         return $('input[name="template"]:checked').val() || 'b1';
     }
 
+    // The template actually driving the send: prefer whichever template has
+    // ticked trainees (this is what the user visibly selected), falling back
+    // to the checked radio only when nothing is ticked anywhere. This avoids
+    // silently falling back to "send to all" when the radio and the ticked
+    // checkboxes belong to different templates.
+    function resolveSendTemplate() {
+        var checkedRadio = activeTemplate();
+        if ((selectedByTemplate[checkedRadio] || new Set()).size > 0) {
+            return checkedRadio;
+        }
+        var templates = Object.keys(selectedByTemplate);
+        for (var i = 0; i < templates.length; i++) {
+            if (selectedByTemplate[templates[i]].size > 0) {
+                return templates[i];
+            }
+        }
+        return checkedRadio;
+    }
+
     function updateSelectedCount(template) {
         var tpl = template || activeTemplate();
         var count = selectedByTemplate[tpl] ? selectedByTemplate[tpl].size : 0;
@@ -362,7 +382,7 @@ $(function () {
     //   any ticked trainees -> 'selected' (message only those),
     //   nothing ticked       -> 'all' (message every matching recipient).
     function updateSendSummary() {
-        var tpl = activeTemplate();
+        var tpl = resolveSendTemplate();
         var set = selectedByTemplate[tpl] || new Set();
         var mode = set.size > 0 ? 'selected' : 'all';
         $('#fcSmsSendMode').val(mode);
@@ -382,6 +402,22 @@ $(function () {
         var $picks = $table.find('.fc-sms-recipient-pick');
         var allChecked = $picks.length > 0 && $picks.filter(':checked').length === $picks.length;
         $table.find('.fc-sms-page-select-all').prop('checked', allChecked);
+    }
+
+    /**
+     * Tick a template's radio and keep the dependent UI in step. Fires `change`
+     * so the existing radio handler recalculates the selected-recipient count;
+     * no-ops when the template is already the active one.
+     */
+    function selectTemplate(template) {
+        if (!template) {
+            return;
+        }
+        var $radio = $('#tpl_' + template);
+        if (!$radio.length || $radio.prop('checked')) {
+            return;
+        }
+        $radio.prop('checked', true).trigger('change');
     }
 
     function initRecipientsTable($collapse) {
@@ -411,10 +447,9 @@ $(function () {
 
         $table.DataTable({
             processing: true,
-            serverSide: false,
+            serverSide: true,
             searching: true,
-            ordering: true,
-            order: [[2, 'asc']],
+            ordering: false,
             autoWidth: false,
             responsive: false,
             pageLength: 25,
@@ -449,6 +484,10 @@ $(function () {
             initRecipientsTable($collapse);
         }
         $collapse.on('shown.bs.collapse', function () {
+            // Expanding a template's recipient list also selects that template.
+            // Picking the radio and opening the list were two separate clicks
+            // before, so it was easy to expand one template and send another.
+            selectTemplate($collapse.data('fc-sms-template'));
             initRecipientsTable($collapse);
         });
     });
@@ -500,15 +539,22 @@ $(function () {
     });
 
     $('#fcSmsSendForm').on('submit', function (e) {
-        var template = activeTemplate();
+        // Resolve which template is actually being sent, based on where the
+        // ticked trainees live — not just whichever radio happens to be
+        // checked — so a ticked selection can never silently degrade into
+        // "send to all" because the radio drifted to a different template.
+        var template = resolveSendTemplate();
         var set = selectedByTemplate[template] || new Set();
-        // Ticked trainees drive the send: any selection => selected, else => all.
         var mode = set.size > 0 ? 'selected' : 'all';
         var $pkWrap = $('#fcSmsPkInputs');
         var $btn = $('#fcSmsSendBtn');
         var $status = $('#fcSmsSendingStatus');
         $('#fcSmsSendMode').val(mode);
         $pkWrap.empty();
+
+        if (template !== activeTemplate()) {
+            selectTemplate(template);
+        }
 
         if (mode === 'selected') {
             set.forEach(function (pk) {

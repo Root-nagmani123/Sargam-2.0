@@ -117,9 +117,14 @@
                 <p>@if($travelStepTotal > 0)Step {{ $travelStepNo }} of {{ $travelStepTotal }} — @endif Travel Plan</p>
             </div>
             @if($navForm)
-                <a href="{{ route('fc-reg.forms.dashboard', $navForm) }}" class="btn btn-light btn-sm ms-auto rounded-pill px-3">
-                    <i class="bi bi-grid me-1"></i>All Steps
-                </a>
+                <div class="ms-auto d-flex flex-wrap gap-2">
+                    <a href="{{ $navForm->landingPageUrl() }}" class="btn btn-light btn-sm rounded-pill px-3">
+                        <i class="bi bi-house-door me-1"></i>Home
+                    </a>
+                    <a href="{{ route('fc-reg.forms.dashboard', $navForm) }}" class="btn btn-light btn-sm rounded-pill px-3">
+                        <i class="bi bi-grid me-1"></i>All Steps
+                    </a>
+                </div>
             @endif
         </div>
     </div>
@@ -147,6 +152,16 @@
         @endif
         @if(session('error'))
             <div class="alert alert-danger small py-2">{{ session('error') }}</div>
+        @endif
+        @if($errors->any())
+            <div class="alert alert-danger py-2" role="alert">
+                <div class="fw-semibold mb-1"><i class="bi bi-exclamation-triangle me-1"></i>Please fix the following:</div>
+                <ul class="mb-0 ps-3">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
         @endif
 
         @php
@@ -216,15 +231,19 @@
                     @php
                         $currentArrivalTime = old('arrival_time_dehradun', $plan?->arrival_time_dehradun);
                         $currentArrivalTime = $currentArrivalTime !== null ? trim((string) $currentArrivalTime) : '';
+                        // 24-hour clock (00:00 – 23:30). Both gap validators — PHP
+                        // TravelPlanController::parseTimeToMinutes() and the JS one below —
+                        // already accept a bare "HH:MM", and a plan saved earlier in the old
+                        // "g:i A" form is still offered back as its own option below.
                         $arrivalTimeOptions = [];
                         for ($h = 0; $h < 24; $h++) {
                             foreach ([0, 30] as $mm) {
-                                $arrivalTimeOptions[] = \Carbon\Carbon::createFromTime($h, $mm)->format('g:i A');
+                                $arrivalTimeOptions[] = \Carbon\Carbon::createFromTime($h, $mm)->format('H:i');
                             }
                         }
                         $arrivalTimeInList = $currentArrivalTime !== '' && in_array($currentArrivalTime, $arrivalTimeOptions, true);
                     @endphp
-                    <label class="form-label">Arrival time at Dehradun Airport/Railway Station<span class="text-danger">*</span></label>
+                    <label class="form-label">Arrival time at Dehradun Airport/Railway Station (24-hour)<span class="text-danger">*</span></label>
                     <select name="arrival_time_dehradun" id="arrivalTimeDehradun" class="form-select" required>
                         <option value="">-- Select arrival time --</option>
                         @if($currentArrivalTime !== '' && ! $arrivalTimeInList)
@@ -272,9 +291,11 @@
                 </div>
                 <div class="col-12 col-md-6 field-block">
                     <label class="form-label">Mode of journey <span class="text-danger">*</span></label>
+                    {{-- Options come from mctp_travel_mode_masters (active rows). The plan
+                         still stores the NAME string in mode_of_journey, as before. --}}
                     <select name="mode_of_journey" class="form-select" required>
                         <option value="">-- Select --</option>
-                        @foreach(['By Air', 'By Road', 'By Train'] as $m)
+                        @foreach(($travelModes ?? []) as $m)
                             <option value="{{ $m }}" {{ old('mode_of_journey', $plan?->mode_of_journey) === $m ? 'selected' : '' }}>{{ $m }}</option>
                         @endforeach
                     </select>
@@ -291,8 +312,9 @@
             <div class="row g-3 mb-1">
                 <div class="col-12 col-md-6 field-block">
                     <label class="form-label">Flight No / Train No/ Vehicle No <span class="text-danger">*</span></label>
-                    <input type="text" name="journey_vehicle_no" class="form-control" maxlength="200" required
+                    <input type="text" name="journey_vehicle_no" class="form-control @error('journey_vehicle_no') is-invalid @enderror" maxlength="200" required
                            value="{{ old('journey_vehicle_no', $plan?->journey_vehicle_no) }}">
+                    @error('journey_vehicle_no')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-12 col-md-6 field-block">
                     <label class="form-label">Whether Require Academy Vehicle From Dehradun Airport/Railway Station to Academy <span class="text-danger">*</span></label>
@@ -321,8 +343,9 @@
             <div class="row g-3 mb-1">
                 <div class="col-12 field-block mb-4">
                     <label class="form-label">Remarks (optional)</label>
-                    <textarea name="special_requirements" class="form-control" rows="2" maxlength="1000"
+                    <textarea name="special_requirements" class="form-control @error('special_requirements') is-invalid @enderror" rows="2" maxlength="1000"
                               placeholder="Special needs…">{{ old('special_requirements', $plan?->special_requirements) }}</textarea>
+                    @error('special_requirements')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
             </div>
 
@@ -404,7 +427,7 @@
                 function arrivalSlotGapMessage() {
                     const arrivalMinutes = parseTimeToMinutes(arrivalTimeInput ? arrivalTimeInput.value : '');
                     if (arrivalMinutes === null) {
-                        return 'Please enter your arrival time at Dehradun in a valid format (e.g. 6:00 AM).';
+                        return 'Please enter your arrival time at Dehradun in a valid format (e.g. 06:00 or 18:30).';
                     }
                     const slotOpt = slotSelect.options[slotSelect.selectedIndex];
                     const slotStart = slotOpt ? slotOpt.getAttribute('data-slot-start') : '';
@@ -504,7 +527,9 @@
                     previewValue('slot_time', slotTime);
                     previewValue('mode_of_journey', selectedText('select[name="mode_of_journey"]'));
                     previewValue('journey_vehicle_no', selectedText('input[name="journey_vehicle_no"]'));
-                    previewValue('arrival_time_dehradun', selectedText('input[name="arrival_time_dehradun"]'));
+                    // Field is a <select>: the old input[name=...] selector never matched, so
+                    // the preview row always showed an em dash.
+                    previewValue('arrival_time_dehradun', selectedText('[name="arrival_time_dehradun"]'));
                     previewValue('require_academy_vehicle', requireVehicle ? (requireVehicle.value === '1' ? 'Yes' : 'No') : '');
                     previewValue('special_requirements', selectedText('textarea[name="special_requirements"]'));
                 }

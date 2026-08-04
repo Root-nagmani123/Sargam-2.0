@@ -39,6 +39,11 @@ return [
     // End the session when the browser is closed (do not persist across restarts).
     'expire_on_close' => true,
 
+    // Bind each session to the browser's User-Agent so a copied session cookie
+    // used from a different browser is rejected (see BindSessionToUserAgent).
+    // Set SESSION_BIND_USER_AGENT=false only if a proxy rewrites User-Agents.
+    'bind_user_agent' => env('SESSION_BIND_USER_AGENT', true),
+
     /*
     |--------------------------------------------------------------------------
     | Session Encryption

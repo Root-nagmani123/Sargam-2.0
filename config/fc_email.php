@@ -22,7 +22,7 @@ return [
 
         'registration_successful' => [
             'subject' => 'Registration Successful for Foundation Course',
-            'body' => "Dear {Participant_Name},\n\nThank you for completing your registration for {Programme_Name}.\n\nYour registration has been completed successfully.\n\nUsername: {Registration_ID}\nProgramme Dates: {Programme_Dates}\n\nYou may now log in to the Training Portal using your registered credentials.\n\n{Login_Link_Label}\n{Portal_Link}\n\nRegards,\n{Institute_Signature}",
+            'body' => "Dear {Participant_Name},\n\nThank you for completing your registration for {Programme_Name}.\n\nYour registration has been completed successfully.\n\nUsername: {Registration_ID}\nProgramme Dates: {Programme_Dates}\n\nYou may now log in using your registered credentials.\n\n{Login_Link_Label}\n{Portal_Link}\n\nRegards,\n{Institute_Signature}",
         ],
 
         'forgot_password_otp' => [
@@ -37,7 +37,7 @@ return [
 
         'form_step_incomplete' => [
             'subject' => 'Action Required: Complete Your Foundation Course Registration',
-            'body' => "Dear {Participant_Name},\n\nWe noticed that the {Step_Name} section of your {Programme_Name} registration is still pending.\n\nPlease log in and complete this section at the earliest to avoid delays in processing your registration.\n\n{Login_Link_Label}\n{Portal_Link}\n\nRegards,\n{Institute_Signature}",
+            'body' => "Dear {Participant_Name},\n\nWe noticed that the following section(s) of your {Programme_Name} registration are still pending:\n\n{Pending_Steps}\n\nPlease log in and complete these sections at the earliest to avoid delays in processing your registration.\n\n{Login_Link_Label}\n{Portal_Link}\n\nRegards,\n{Institute_Signature}",
         ],
 
         'registration_pending' => [
@@ -45,9 +45,14 @@ return [
             'body' => "Dear {Participant_Name},\n\nYour registration for {Programme_Name} is currently incomplete.\n\nPending Step(s): {Pending_Steps}\n\nPlease complete the pending requirements before {Last_Date} to avoid any delay in processing your registration.\n\n{Login_Link_Label}\n{Portal_Link}\n\nRegards,\n{Institute_Signature}",
         ],
 
+        'travel_pending' => [
+            'subject' => 'Action Required: Submit Your Travel Plan for Foundation Course',
+            'body' => "Dear {Participant_Name},\n\nYour registration for {Programme_Name} is complete, but your travel plan has not been submitted yet.\n\nPlease log in and submit your travel details at the earliest to avoid delays in arrival arrangements.\n\n{Login_Link_Label}\n{Portal_Link}\n\nRegards,\n{Institute_Signature}",
+        ],
+
         'exemption_confirmation' => [
             'subject' => 'Exemption Confirmation – {Exemption_Category}',
-            'body' => "Dear {Applicant_Name},\n\nThank you for submitting your exemption request for {Programme_Name}.\n\nYour request has been recorded successfully under the following category:\n\nExemption Category: {Exemption_Category}\nSubmission Date: {Submission_Date}\n\nThis exemption request has been recorded against your profile on the Training Portal.\n\nRegards,\n{Institute_Signature}",
+            'body' => "Dear {Applicant_Name},\n\nThank you for submitting your exemption request for {Programme_Name}.\n\nYour request has been recorded successfully under the following category:\n\nExemption Category: {Exemption_Category}\nSubmission Date: {Submission_Date}\n\nThis exemption request has been recorded against your profile.\n\nRegards,\n{Institute_Signature}",
         ],
 
     ],

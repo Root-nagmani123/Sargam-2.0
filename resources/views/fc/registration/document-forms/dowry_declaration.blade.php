@@ -187,7 +187,7 @@
                 <div class="dw-expl"><strong>Explanation:</strong> For the purpose of this rule, &ldquo;dowry&rdquo; has the same meaning as in the Dowry Prohibition Act, 1961 (28 of 1961).</div>
 
                 <div class="dw-rule">Rule 13-A of the Central Civil Services (Conduct) Rules, 1964</div>
-                <div class="dw-clbody">13-A. Dowry — No Government servant shall —</div>
+                <div class="dw-clbody">13-A Dowry — No Government servant shall —</div>
                 <div class="dw-clause">(i) give or take or abet the giving or taking of dowry; or</div>
                 <div class="dw-clause">(ii) demand, directly or indirectly, from the parent or guardian of a bride or bridegroom, as the case may be, any dowry.</div>
                 <div class="dw-expl"><strong>Explanation:</strong> For the purposes of this rule, &ldquo;dowry&rdquo; has the same meaning as in the Dowry Prohibition Act, 1961 (28 of 1961).</div>

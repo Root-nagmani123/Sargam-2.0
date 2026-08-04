@@ -126,6 +126,13 @@ return [
 
     'cipher' => 'AES-256-CBC',
 
+    // Dedicated key for encrypting the login password in the browser before it is
+    // POSTed (so the field is not literal plaintext in an intercepting proxy). This
+    // is a SEPARATE key from APP_KEY on purpose — the client needs it in page source,
+    // and APP_KEY (which encrypts sessions/cookies) must never be exposed there.
+    // AES-256-CBC, so this must base64-decode to exactly 32 bytes.
+    'password_enc_key' => env('PASSWORD_ENC_KEY'),
+
     /*
     |--------------------------------------------------------------------------
     | Autoloaded Service Providers

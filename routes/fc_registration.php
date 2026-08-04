@@ -87,21 +87,23 @@ Route::middleware(['auth'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->grou
 
         Route::post('/steps/{step}/fields',   [FormBuilderController::class, 'storeField'])->name('field.store');
         Route::put('/fields/{field}',         [FormBuilderController::class, 'updateField'])->name('field.update');
-        Route::delete('/fields/{field}',      [FormBuilderController::class, 'deleteField'])->name('field.delete');
+        Route::delete('/fields/{field}',      [FormBuilderController::class, 'deleteField'])->middleware('fc.builder.delete')->name('field.delete');
         Route::post('/fields/reorder',        [FormBuilderController::class, 'reorderFields'])->name('field.reorder');
+        // Renames a section heading across every field of the step in one edit
+        Route::post('/steps/{step}/rename-section', [FormBuilderController::class, 'renameSection'])->name('section.rename');
 
         Route::post('/steps/{step}/groups',   [FormBuilderController::class, 'storeGroup'])->name('group.store');
         Route::put('/groups/{group}',         [FormBuilderController::class, 'updateGroup'])->name('group.update');
-        Route::delete('/groups/{group}',      [FormBuilderController::class, 'deleteGroup'])->name('group.delete');
+        Route::delete('/groups/{group}',      [FormBuilderController::class, 'deleteGroup'])->middleware('fc.builder.delete')->name('group.delete');
 
         Route::post('/groups/{group}/fields', [FormBuilderController::class, 'storeGroupField'])->name('group-field.store');
         Route::put('/group-fields/{field}',   [FormBuilderController::class, 'updateGroupField'])->name('group-field.update');
-        Route::delete('/group-fields/{field}',[FormBuilderController::class, 'deleteGroupField'])->name('group-field.delete');
+        Route::delete('/group-fields/{field}',[FormBuilderController::class, 'deleteGroupField'])->middleware('fc.builder.delete')->name('group-field.delete');
         Route::post('/group-fields/reorder',  [FormBuilderController::class, 'reorderGroupFields'])->name('group-field.reorder');
 
         Route::post('/doc-masters',           [FormBuilderController::class, 'storeDocMaster'])->name('doc-master.store');
         Route::put('/doc-masters/{doc}',      [FormBuilderController::class, 'updateDocMaster'])->name('doc-master.update');
-        Route::delete('/doc-masters/{doc}',   [FormBuilderController::class, 'deleteDocMaster'])->name('doc-master.delete');
+        Route::delete('/doc-masters/{doc}',   [FormBuilderController::class, 'deleteDocMaster'])->middleware('fc.builder.delete')->name('doc-master.delete');
         Route::post('/doc-masters/reorder',   [FormBuilderController::class, 'reorderDocMasters'])->name('doc-master.reorder');
     });
 
@@ -142,7 +144,7 @@ Route::middleware(['auth'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->grou
         Route::post('/',                       [FormManagementController::class, 'store'])->name('store');
         Route::get('/{form}/edit',             [FormManagementController::class, 'edit'])->name('edit');
         Route::put('/{form}',                  [FormManagementController::class, 'update'])->name('update');
-        Route::delete('/{form}',               [FormManagementController::class, 'destroy'])->name('destroy');
+        Route::delete('/{form}',               [FormManagementController::class, 'destroy'])->middleware('fc.builder.delete')->name('destroy');
 
         // API: get columns for a table
         Route::get('/api/table-columns',       [FormManagementController::class, 'getTableColumns'])->name('api.table-columns');
@@ -150,7 +152,7 @@ Route::middleware(['auth'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->grou
         // Step CRUD within a form
         Route::post('/{form}/steps',           [FormManagementController::class, 'storeStep'])->name('step.store');
         Route::put('/steps/{step}',            [FormManagementController::class, 'updateStep'])->name('step.update');
-        Route::delete('/steps/{step}',         [FormManagementController::class, 'deleteStep'])->name('step.delete');
+        Route::delete('/steps/{step}',         [FormManagementController::class, 'deleteStep'])->middleware('fc.builder.delete')->name('step.delete');
         Route::post('/steps/reorder',          [FormManagementController::class, 'reorderSteps'])->name('step.reorder');
     });
 
@@ -245,6 +247,8 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     // Individual student full profile
     Route::get('/student/{username}', [ReportController::class, 'studentDetail'])->name('student');
     Route::get('/student/{username}/pdf', [ReportController::class, 'studentDetailPdf'])->name('student.pdf');
+    // Print view — the PDF template served as HTML so browser print matches the PDF exactly
+    Route::get('/student/{username}/print', [ReportController::class, 'studentDetailPrint'])->name('student.print');
     // Standalone per-student document verification page
     Route::get('/student/{username}/documents', [ReportController::class, 'studentDocuments'])->name('student.documents');
     Route::post('/student/{username}/documents/{documentMasterId}/verify', [ReportController::class, 'updateStudentDocumentVerification'])

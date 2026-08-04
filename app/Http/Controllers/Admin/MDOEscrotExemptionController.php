@@ -92,7 +92,7 @@ class MDOEscrotExemptionController extends Controller
             {
                 $courseMaster->whereIn('pk',$data_course_id);
             }
-            $courseMaster = $courseMaster->where('end_date', '>', now())
+            $courseMaster = $courseMaster->where('end_date', '>=', now()->toDateString())
                 ->pluck('course_name', 'pk')
                 ->toArray();
             $MDODutyTypeMaster = MDODutyTypeMaster::where('active_inactive', 1)->pluck('mdo_duty_type_name', 'pk')->toArray();
