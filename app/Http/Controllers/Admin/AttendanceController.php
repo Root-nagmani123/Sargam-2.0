@@ -15,6 +15,7 @@ use App\Exports\AttendanceDataExport;
 use App\Exports\AttendanceListExport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class AttendanceController extends Controller
@@ -916,58 +917,61 @@ $currentPath = $segments[1] ?? null;
             $exemptions = new OtExemptionResolver((int) $course_pk, (int) $request->timetable_pk);
 
             if ($request->student) {
+                // Pre-validate ALL rows before any DB write so no partial batch is committed.
+                // If any row fails (e.g. Other Exemption missing reason) we return early
+                // with zero records written — consistent state is guaranteed.
                 foreach ($request->student as $studentPk => $attendanceStatus) {
-                    // Validate the attendance status
-                    if (!in_array($attendanceStatus, [0, 1, 2, 3, 4, 5, 6, 7])) {
-                        return redirect()->back()->with('error', 'Invalid attendance status for student ID: ' . $studentPk);
-                    }
-
-                    // Reason column is cleared unless this OT is an Other Exemption.
-                    $otherComment = null;
-
-                    if ($exemptions->isExempt((int) $studentPk)) {
-                        // '1' as a STRING, not 1. status is ENUM('0','1',...) and MySQL
-                        // reads an integer as a 1-based index into the member list, so
-                        // int 1 silently stores '0' — Not Marked.
-                        $attendanceStatus = '1'; // Present
-                    } elseif (!empty($otherFlags[$studentPk])) {
-                        // "Other Exemption" is its own flag. The attendance status is
-                        // stored as Absent; only the typed reason distinguishes it,
-                        // kept in its own column. A reason is required.
-                        $otherComment = isset($otherComments[$studentPk]) ? trim((string) $otherComments[$studentPk]) : '';
-                        if ($otherComment === '') {
+                    if (!$exemptions->isExempt((int) $studentPk) && !empty($otherFlags[$studentPk])) {
+                        $comment = isset($otherComments[$studentPk]) ? trim((string) $otherComments[$studentPk]) : '';
+                        if ($comment === '') {
                             $message = 'Please enter the Other Exemption reason before saving.';
                             if ($request->ajax() || $request->expectsJson()) {
                                 return response()->json(['status' => 'error', 'message' => $message], 422);
                             }
                             return redirect()->back()->with('error', $message);
                         }
-                        $attendanceStatus = '3'; // Absent
                     }
-
-                    // Create or update the attendance record
-                    CourseStudentAttendance::updateOrCreate(
-                        [
-                            'Student_master_pk' => $studentPk,
-                            'course_master_pk' => $course_pk,
-                            'group_type_master_course_master_map_pk' => $group_pk,
-                            'timetable_pk' => $request->timetable_pk,
-                        ],
-                        [
-                            'status' => $attendanceStatus,
-                            'other_exemption_comments' => $otherComment,
-                        ]
-                    );
-
                 }
+
+                // All rows passed validation — write atomically so a mid-loop failure
+                // rolls back every row in this batch, not just the remaining ones.
+                DB::transaction(function () use ($request, $group_pk, $course_pk, $exemptions, $otherFlags, $otherComments) {
+                    foreach ($request->student as $studentPk => $attendanceStatus) {
+                        // Reason column is cleared unless this OT is an Other Exemption.
+                        $otherComment = null;
+
+                        if ($exemptions->isExempt((int) $studentPk)) {
+                            // '1' as a STRING, not 1. status is ENUM('0','1',...) and MySQL
+                            // reads an integer as a 1-based index into the member list, so
+                            // int 1 silently stores '0' — Not Marked.
+                            $attendanceStatus = '1'; // Present
+                        } elseif (!empty($otherFlags[$studentPk])) {
+                            // Reason already validated in the pre-validation pass above.
+                            $otherComment     = trim((string) ($otherComments[$studentPk] ?? ''));
+                            $attendanceStatus = '3'; // Absent
+                        }
+
+                        CourseStudentAttendance::updateOrCreate(
+                            [
+                                'Student_master_pk'                      => $studentPk,
+                                'course_master_pk'                       => $course_pk,
+                                'group_type_master_course_master_map_pk' => $group_pk,
+                                'timetable_pk'                           => $request->timetable_pk,
+                            ],
+                            [
+                                'status'                   => $attendanceStatus,
+                                'other_exemption_comments' => $otherComment,
+                            ]
+                        );
+                    }
+                });
             }
             return redirect()->route('attendance.index')->with('success', 'Attendance saved successfully.');
-        } catch (\Exception $exception) {
+        } catch (\Throwable $exception) {
             Log::error('Error saving attendance: ' . $exception->getMessage());
             return redirect()->back()->with('error', 'An error occurred while saving attendance: ' . $exception->getMessage());
         }
     }
-###old code naseer###
     //   public function OTmarkAttendanceView(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk){
     //     // Check if this is a DataTables AJAX request
     //     if ($request->ajax() || $request->has('draw')) {
@@ -1391,7 +1395,8 @@ $currentPath = $segments[1] ?? null;
 
         if ($filterDate) {
             $query->whereHas('timetable', function ($q) use ($filterDate) {
-                $q->whereDate('START_DATE', '=', $filterDate);
+                // G8: full-day range keeps the index on START_DATE usable.
+                $q->whereBetween('START_DATE', [$filterDate . ' 00:00:00', $filterDate . ' 23:59:59']);
             });
         }
 
@@ -1433,8 +1438,9 @@ $currentPath = $segments[1] ?? null;
                 ->whereIn('course_master_pk', $batchCoursePks)
                 ->whereIn('mdo_duty_type_master_pk', $allDutyTypeIds)
                 ->where(function ($q) use ($timetableDates) {
+                    // G8: full-day ranges so the index on mdo_date is not defeated.
                     foreach ($timetableDates as $d) {
-                        $q->orWhereDate('mdo_date', $d);
+                        $q->orWhereBetween('mdo_date', [$d . ' 00:00:00', $d . ' 23:59:59']);
                     }
                 })
                 ->get()
