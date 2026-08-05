@@ -1009,6 +1009,7 @@ class KitchenIssueController extends Controller
                 "TRIM(CONCAT(COALESCE(first_name,''), ' ', COALESCE(middle_name,''), ' ', COALESCE(last_name,''))) = ?",
                 [$nameForMatch]
             )
+            ->orderBy('pk')
             ->value('pk');
 
         return ($pk !== null && (int) $pk > 0) ? (int) $pk : null;
@@ -2133,7 +2134,7 @@ class KitchenIssueController extends Controller
                                 return back()->withInput()->with('error', 'Return date cannot be earlier than issue date.');
                             }
                         }
-                    } catch (\Exception $e) {
+                    } catch (\Throwable $e) {
                         DB::rollBack();
                         return back()->withInput()->with('error', 'Invalid return date.');
                     }
@@ -2148,7 +2149,7 @@ class KitchenIssueController extends Controller
 
             return redirect()->route('admin.mess.material-management.index')
                 ->with('success', 'Return updated successfully.');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
             return back()->withInput()->with('error', 'Failed to update return: ' . $e->getMessage());
         }

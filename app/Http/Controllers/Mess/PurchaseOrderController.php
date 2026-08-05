@@ -12,6 +12,7 @@ use App\Models\Mess\PurchaseOrderItem;
 use App\Models\Mess\Vendor;
 use App\Models\Mess\Store;
 use App\Models\Mess\ItemSubcategory;
+use App\Services\Mess\AvailableQuantityService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -22,11 +23,13 @@ class PurchaseOrderController extends Controller
     private const PURCHASE_ORDER_DT_LIST_EPOCH = 'purchase_order_dt_list_epoch';
 
     /**
-     * Invalidate Redis-backed Purchase Order DataTables JSON after listing mutations.
+     * Invalidate Redis-backed Purchase Order DataTables JSON and the available-quantity
+     * cache after mutations that change mess_purchase_order_items (create/update/delete/approve/reject).
      */
     public static function bumpPurchaseOrderListingCacheEpoch(): void
     {
         DataTableRedisCache::bumpListEpoch(self::PURCHASE_ORDER_DT_LIST_EPOCH, 'PurchaseOrderController@index');
+        AvailableQuantityService::bumpCacheEpoch();
     }
 
     public function index(Request $request)
