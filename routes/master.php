@@ -167,6 +167,7 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
     // Department Master
     Route::prefix('department-master')->name('department.master.')->controller(DepartmentMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/export/{format}', 'export')->whereIn('format', ['csv', 'pdf', 'print'])->name('export');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
@@ -176,6 +177,7 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
     // Designation Master
     Route::prefix('designation')->name('designation.')->controller(DesignationMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/export/{format}', 'export')->whereIn('format', ['csv', 'pdf', 'print'])->name('export');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
@@ -185,6 +187,7 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
     // Caste Category
     Route::prefix('caste-category')->name('caste.category.')->controller(CasteCategoryMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/export/{format}', 'export')->whereIn('format', ['csv', 'pdf', 'print'])->name('export');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
@@ -194,6 +197,7 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
     // Employee Type Master
     Route::prefix('employee-type')->name('employee.type.')->controller(EmployeeTypeMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/export/{format}', 'export')->whereIn('format', ['csv', 'pdf', 'print'])->name('export');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
@@ -202,6 +206,7 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
     // Employee Group Master
     Route::prefix('employee-group')->name('employee.group.')->controller(EmployeeGroupMasterController::class)->group(function(){
         Route::get('/', 'index')->name('index');
+        Route::get('/export/{format}', 'export')->whereIn('format', ['csv', 'pdf', 'print'])->name('export');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');

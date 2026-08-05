@@ -25,20 +25,30 @@ class EmployeeGroupMasterDataTable extends DataTable
         return (new EloquentDataTable($query))
             ->addIndexColumn()
             ->addColumn('emp_group_name', fn($row) => $row->emp_group_name ?? '-')
-            ->addColumn('action', function ($row) {
-                $editUrl = route('master.employee.group.edit', ['id' => encrypt($row->pk)]);
-                return '<a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>';
-            })
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return '<div class="form-check form-switch d-inline-block ms-2">
-                <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                    data-table="employee_group_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
-            </div>';
+                // Soft status badge — canonical country/index pattern (new-design-index-page.md §3b).
+                return (int) $row->active_inactive === 1
+                    ? '<span class="status-pill badge bg-success-subtle">Active</span>'
+                    : '<span class="status-pill badge bg-danger-subtle">Inactive</span>';
             })
-
+            ->addColumn('action', function ($row) {
+                // Icon-over-label Edit (opens the modal) + status toggle. `empgroup-edit-btn` for the modal JS.
+                $checked = (int) $row->active_inactive === 1 ? 'checked' : '';
+                $editBtn = '<button type="button" class="empgroup-act empgroup-act--edit empgroup-edit-btn" aria-label="Edit employee group"'
+                        . ' data-id="' . encrypt($row->pk) . '"'
+                        . ' data-name="' . e($row->emp_group_name) . '"'
+                        . ' data-status="' . (int) $row->active_inactive . '">'
+                        . '<i class="bi bi-pencil-square" aria-hidden="true"></i><span>Edit</span></button>';
+                return '
+                <div class="d-inline-flex align-items-center justify-content-center gap-3" role="group" aria-label="Row actions">
+                    ' . $editBtn . '
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                            data-table="employee_group_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
+                    </div>
+                </div>';
+            })
             ->setRowId('pk')
-            ->setRowClass('text-center')
             ->filterColumn('emp_group_name', function ($query, $keyword) {
                 $query->where('emp_group_name', 'like', "%{$keyword}%");
             })
@@ -63,18 +73,32 @@ class EmployeeGroupMasterDataTable extends DataTable
      */
     public function html(): HtmlBuilder
     {
+
         return $this->builder()
             ->setTableId('employeegroupmaster-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            //->dom('Bfrtip')
-            // ->orderBy(1)
             ->selectStyleSingle()
+            ->responsive(true)
             ->parameters([
-                'responsive' => true,
-                'scrollX' => true,
-                'autoWidth' => false,
-                'order' => [],
+                'responsive'   => true,
+                'scrollX'      => false,
+                'autoWidth'    => false,
+                'ordering'     => false,
+                'searching'    => true,
+                'lengthChange' => true,
+                'pageLength'   => 10,
+                'lengthMenu'   => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+                'order'        => [],
+                'language'     => [
+                    'search'            => '',
+                    'searchPlaceholder' => 'Search',
+                    'paginate'          => ['previous' => '‹', 'next' => '›'],
+                    'lengthMenu'        => 'Showing _MENU_',
+                    'info'              => 'of _TOTAL_ items',
+                    'infoEmpty'         => 'of 0 items',
+                    'infoFiltered'      => 'of _MAX_ items',
+                ],
             ])
             ->buttons([
                 Button::make('excel'),
@@ -82,7 +106,7 @@ class EmployeeGroupMasterDataTable extends DataTable
                 Button::make('pdf'),
                 Button::make('print'),
                 Button::make('reset'),
-                Button::make('reload')
+                Button::make('reload'),
             ]);
     }
 
@@ -94,10 +118,10 @@ class EmployeeGroupMasterDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::make('emp_group_name')->title('Employee Group Name')->orderable(false)->addClass('text-center'),
+            Column::computed('DT_RowIndex')->title('S. No.')->searchable(false)->orderable(false)->addClass('text-center'),
+            Column::make('emp_group_name')->title('Employee Group Name')->orderable(false),
+            Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center'),
             Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center')
         ];
     }
 

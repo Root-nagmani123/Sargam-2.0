@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Master;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\HasBrandedExport;
 use Illuminate\Http\Request;
 use App\DataTables\Master\CasteCategoryMasterDataTable;
 use App\Models\CasteCategoryMaster;
@@ -10,6 +11,8 @@ use Illuminate\Validation\Rule;
 
 class CasteCategoryMasterController extends Controller
 {
+    use HasBrandedExport;
+
     public function index()
     {
         return (new CasteCategoryMasterDataTable())->render('admin.master.caste_category.index');
@@ -48,11 +51,36 @@ class CasteCategoryMasterController extends Controller
 
         $casteCategory->Seat_name = $request->Seat_name;
         $casteCategory->Seat_name_hindi = $request->Seat_name_hindi;
+        // Preserve existing behaviour (default active) while allowing the modal's Status field.
+        $casteCategory->active_inactive = $request->filled('active_inactive')
+            ? (int) $request->active_inactive
+            : ($casteCategory->active_inactive ?? 1);
         $casteCategory->save();
 
         $message = $id ? 'Caste Category updated successfully.' : 'Caste Category created successfully.';
 
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['status' => 'success', 'message' => $message]);
+        }
+
         return redirect()->route('master.caste.category.index')->with('success', $message);
+    }
+
+    /** Branded CSV / PDF / Print (new-design-index-page.md §4b) via the shared trait. */
+    public function export($format = 'pdf')
+    {
+        $rows = [];
+        $i    = 1;
+        foreach (CasteCategoryMaster::orderBy('Seat_name')->get() as $c) {
+            $rows[] = [$i++, $c->Seat_name, $c->Seat_name_hindi, $c->active_inactive == 1 ? 'Active' : 'Inactive'];
+        }
+        return $this->brandedExport(
+            $format,
+            'Caste Category Master',
+            ['S. No.', 'Category/Caste name', 'Category/Caste name (Hindi)', 'Status'],
+            $rows,
+            'caste-category-master'
+        );
     }
     public function edit($id)
     {

@@ -67,6 +67,10 @@
     "/master/district",
     "/master/hostel-building-master",
     "/master/hostel-floor-master",
-    "/master/hostel-room-master"
+    "/master/hostel-room-master",
+    "/master/department-master",
+    "/master/designation",
+    "/master/employee-type",
+    "/master/employee-group"
   ]
 }
