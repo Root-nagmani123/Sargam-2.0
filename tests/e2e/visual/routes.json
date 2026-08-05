@@ -64,6 +64,9 @@
     "/fc-reg/admin/activities/status",
     "/master/country",
     "/master/state",
-    "/master/district"
+    "/master/district",
+    "/master/hostel-building-master",
+    "/master/hostel-floor-master",
+    "/master/hostel-room-master"
   ]
 }

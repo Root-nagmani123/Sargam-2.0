@@ -3,15 +3,16 @@
 namespace App\Http\Controllers\Admin\Master;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\HasBrandedExport;
 use Illuminate\Http\Request;
 use App\DataTables\Master\HostelFloorMasterDataTable;
 // use App\Models\HostelFloorMaster;
 use App\Models\FloorMaster;
-use App\Exports\FloorMasterExport;
-use Maatwebsite\Excel\Facades\Excel;
 
 class HostelFloorMasterController extends Controller
 {
+    use HasBrandedExport;
+
     public function index(HostelFloorMasterDataTable $dataTable)
     {
         return $dataTable->render('admin.master.hostel_floor.index');
@@ -70,11 +71,13 @@ class HostelFloorMasterController extends Controller
         return redirect()->route('master.hostel.floor.index')->with('success', 'Floor deleted successfully.');
     }
 
-    public function export() {
-        try {
-            return Excel::download(new FloorMasterExport, 'floor_master.xlsx');
-        } catch (\Exception $th) {
-            return redirect()->route('master.hostel.floor.index')->with('error', 'Error exporting data: ' . $th->getMessage());
+    /** Branded CSV / PDF / Print (new-design-index-page.md §4b) via the shared trait. */
+    public function export($format = 'pdf') {
+        $rows = [];
+        $i    = 1;
+        foreach (FloorMaster::orderBy('floor_name')->get() as $f) {
+            $rows[] = [$i++, $f->floor_name, $f->active_inactive == 1 ? 'Active' : 'Inactive'];
         }
+        return $this->brandedExport($format, 'Hostel Floor', ['S. No.', 'Floor Name', 'Status'], $rows, 'floor-master');
     }
 }

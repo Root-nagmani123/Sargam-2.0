@@ -3,16 +3,17 @@
 namespace App\Http\Controllers\Admin\Master;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\HasBrandedExport;
 use Illuminate\Http\Request;
 // use App\DataTables\Master\HostelBuildingMasterDataTable;
 use App\DataTables\Master\BuildingMasterDataTable;
 // use App\Models\HostelBuildingMaster;
 use App\Models\BuildingMaster;
-use App\Exports\BuildingMasterExport;
-use Maatwebsite\Excel\Facades\Excel;
 
 class HostelBuildingMasterController extends Controller
 {
+    use HasBrandedExport;
+
     protected $buildingType;
     public function __construct(){
         $this->buildingType = BuildingMaster::$buildingType;
@@ -68,12 +69,27 @@ class HostelBuildingMasterController extends Controller
         return view('admin.master.hostel_building.create', compact('hostelBuildingMaster'), ['buildingType' => $this->buildingType]);
     }
 
-    public function export() {
-        try {
-            return \Excel::download(new \App\Exports\BuildingMasterExport, 'building_master.xlsx');
-        } catch (\Exception $e) {
-            return redirect()->route('master.hostel.building.index')->with('error', 'Error exporting data: ' . $e->getMessage());
+    /** Branded CSV / PDF / Print (new-design-index-page.md §4b) via the shared trait. */
+    public function export($format = 'pdf') {
+        $rows = [];
+        $i    = 1;
+        foreach (BuildingMaster::orderBy('building_name')->get() as $b) {
+            $rows[] = [
+                $i++,
+                $b->building_name,
+                $b->no_of_floors,
+                $b->no_of_rooms,
+                $b->building_type,
+                $b->active_inactive == 1 ? 'Active' : 'Inactive',
+            ];
         }
+        return $this->brandedExport(
+            $format,
+            'Building Master',
+            ['S. No.', 'Building Name', 'No. of Floors', 'No. of Rooms', 'Building Type', 'Status'],
+            $rows,
+            'building-master'
+        );
     }
 
     function destroy($id){

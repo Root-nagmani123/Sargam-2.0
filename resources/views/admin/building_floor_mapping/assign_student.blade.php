@@ -28,7 +28,7 @@
 
 @section('setup_content')
 <div class="container-fluid assign-student-page">
-    <x-breadcrum title="Assign Student Hostel">
+    <x-breadcrum title="Assign Student Hostel" :showBack="false">
         <button type="button"
                 class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
                 data-bs-toggle="modal" data-bs-target="#importModal">
@@ -39,15 +39,19 @@
 
     <x-session_message />
 
-    {{-- Secondary actions (Print / Download) --}}
+    {{-- Branded exports — Download (CSV·PDF) dropdown + Print link (new-design-index-page.md §4b) --}}
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
-        <button type="button" class="btn programme-dt-btn-columns" id="asPrintBtn" title="Print">
-            <i class="bi bi-printer" aria-hidden="true"></i>
-            <span>Print</span>
-        </button>
-        <a href="{{ route('hostel.building.map.export') }}" class="btn programme-dt-btn-columns" title="Download">
-            <i class="bi bi-download" aria-hidden="true"></i>
-            <span>Download</span>
+        <div class="dropdown">
+            <button type="button" class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{{ route('hostel.building.map.export', 'csv') }}"><i class="bi bi-filetype-csv me-2" aria-hidden="true"></i>CSV</a></li>
+                <li><a class="dropdown-item" href="{{ route('hostel.building.map.export', 'pdf') }}"><i class="bi bi-filetype-pdf me-2" aria-hidden="true"></i>PDF</a></li>
+            </ul>
+        </div>
+        <a href="{{ route('hostel.building.map.export', 'print') }}" target="_blank" rel="noopener" class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
+            <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
         </a>
     </div>
 
@@ -342,9 +346,12 @@
             });
         }
 
-        /* ---- Wait for Yajra DataTable init ---- */
-        setTimeout(function () {
+        /* ---- Wait for Yajra DataTable init. POLL — the server-side ajax can take >150ms,
+               and a one-shot bail would leave the default DataTables chrome un-enhanced. ---- */
+        (function waitForAsDt(tries) {
+            tries = tries || 0;
             if (!$.fn.DataTable.isDataTable(TABLE_ID)) {
+                if (tries < 80) { setTimeout(function () { waitForAsDt(tries + 1); }, 150); }
                 return;
             }
             table = $(TABLE_ID).DataTable();
@@ -366,7 +373,7 @@
                 enhanceAsDtControls();
                 updateAsDtCount();
             }, 300);
-        }, 150);
+        })();
 
         /* ---- Print ---- */
         $('#asPrintBtn').on('click', function () {

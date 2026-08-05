@@ -26,13 +26,30 @@
         box-shadow: 0 0 0 3px rgba(0, 67, 132, .12);
     }
     .hostel-room-page .programme-dt-filter-select select { min-width: 150px; }
+
+    /* Canonical country/index look (new-design-index-page.md §3b). */
+    .hostel-room-page .status-pill { padding: 0.4em 0.85em; font-weight: 600; }
+    .hostel-room-page .status-pill.bg-success-subtle { color: #146c43; }
+    .hostel-room-page .status-pill.bg-danger-subtle  { color: #b02a37; }
+
+    .hostel-room-page .hr-act {
+        display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
+        font-size: 0.72rem; font-weight: 500; line-height: 1;
+        text-decoration: none; background: transparent; border: 0; padding: 0;
+    }
+    .hostel-room-page .hr-act i { font-size: 1.1rem; }
+    .hostel-room-page .hr-act--edit { color: #2563eb; }
+    .hostel-room-page .hr-act--del  { color: var(--bs-danger, #dc3545); }
 </style>
 @endpush
 
 @section('setup_content')
 @php
     $currentQuery = request()->getQueryString();
-    $exportUrl = route('hostel.building.floor.room.map.export') . ($currentQuery ? ('?' . $currentQuery) : '');
+    $q = $currentQuery ? ('?' . $currentQuery) : '';
+    $csvUrl   = route('hostel.building.floor.room.map.export', 'csv') . $q;
+    $pdfUrl   = route('hostel.building.floor.room.map.export', 'pdf') . $q;
+    $printUrl = route('hostel.building.floor.room.map.export', 'print') . $q;
 @endphp
 <div class="container-fluid hostel-room-page">
     <x-breadcrum title="Hostel Floor Room Map">
@@ -46,15 +63,20 @@
 
     <x-session_message />
 
-    {{-- Secondary actions (Print / Download) --}}
+    {{-- Branded exports — Download (CSV·PDF) dropdown + Print link (new-design-index-page.md §4b).
+         Each URL carries the current filter query string so the export matches the on-screen list. --}}
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
-        <button type="button" class="btn programme-dt-btn-columns" id="hrPrintBtn" title="Print">
-            <i class="bi bi-printer" aria-hidden="true"></i>
-            <span>Print</span>
-        </button>
-        <a href="{{ $exportUrl }}" class="btn programme-dt-btn-columns" title="Download">
-            <i class="bi bi-download" aria-hidden="true"></i>
-            <span>Download</span>
+        <div class="dropdown">
+            <button type="button" class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{{ $csvUrl }}"><i class="bi bi-filetype-csv me-2" aria-hidden="true"></i>CSV</a></li>
+                <li><a class="dropdown-item" href="{{ $pdfUrl }}"><i class="bi bi-filetype-pdf me-2" aria-hidden="true"></i>PDF</a></li>
+            </ul>
+        </div>
+        <a href="{{ $printUrl }}" target="_blank" rel="noopener" class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
+            <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
         </a>
     </div>
 
@@ -144,9 +166,9 @@
                                     </td>
                                     <td class="text-center">
                                         @if($row->active_inactive == 1)
-                                            <span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>
+                                            <span class="status-pill badge bg-success-subtle">Active</span>
                                         @else
-                                            <span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>
+                                            <span class="status-pill badge bg-danger-subtle">Inactive</span>
                                         @endif
                                     </td>
                                     <td class="text-center">
@@ -158,8 +180,8 @@
                                                 $roomMiddle = explode('-', $roomSuffix)[0] ?? '';
                                             }
                                         @endphp
-                                        <div class="d-inline-flex align-items-center justify-content-center programme-action-group" role="group" aria-label="Row actions">
-                                            <button type="button" class="programme-action-btn hr-edit-btn" aria-label="Edit room"
+                                        <div class="d-inline-flex align-items-center justify-content-center gap-3" role="group" aria-label="Row actions">
+                                            <button type="button" class="hr-act hr-act--edit hr-edit-btn" aria-label="Edit room"
                                                     data-id="{{ encrypt($row->pk) }}"
                                                     data-building="{{ $row->building_master_pk }}"
                                                     data-floor="{{ $row->floor_master_pk }}"
@@ -168,20 +190,20 @@
                                                     data-capacity="{{ $row->capacity }}"
                                                     data-comment="{{ $row->comment }}"
                                                     data-status="{{ (int) $row->active_inactive }}">
-                                                <i class="bi bi-pencil" aria-hidden="true"></i>
+                                                <i class="bi bi-pencil-square" aria-hidden="true"></i><span>Edit</span>
                                             </button>
-                                            <div class="form-check form-switch programme-action-switch mb-0">
+                                            <div class="form-check form-switch m-0">
                                                 <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                                        data-table="building_floor_room_mapping" data-column="active_inactive"
                                                        data-id="{{ $row->pk }}" {{ $row->active_inactive == 1 ? 'checked' : '' }}>
                                             </div>
                                             <form action="{{ route('hostel.building.floor.room.map.destroy', encrypt($row->pk)) }}"
-                                                  method="POST" class="d-inline-flex m-0"
+                                                  method="POST" class="d-inline m-0"
                                                   onsubmit="return confirm('Are you sure you want to delete this room mapping?')">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="programme-action-btn programme-action-btn--danger" aria-label="Delete room">
-                                                    <i class="bi bi-trash3" aria-hidden="true"></i>
+                                                <button type="submit" class="hr-act hr-act--del" aria-label="Delete room">
+                                                    <i class="bi bi-trash3" aria-hidden="true"></i><span>Delete</span>
                                                 </button>
                                             </form>
                                         </div>

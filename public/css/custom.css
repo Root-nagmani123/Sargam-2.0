@@ -527,9 +527,17 @@ body.custom-loaded {
 
 .programme-dt-footer .pagination .page-item.active .page-link {
     background: #fff !important;
-    border-color: #7367f0 !important;
-    color: #344054 !important;
+    border-color: #004384 !important;   /* brand navy outlined active box (was #7367f0 purple) */
+    color: #004384 !important;
     font-weight: 600;
+}
+
+/* enabled prev / next chevrons → brand navy (DataTables .previous/.next; Laravel rel=prev/next) */
+.programme-dt-footer .pagination .page-item.previous:not(.disabled) .page-link,
+.programme-dt-footer .pagination .page-item.next:not(.disabled) .page-link,
+.programme-dt-footer .pagination .page-item:not(.disabled) .page-link[rel="prev"],
+.programme-dt-footer .pagination .page-item:not(.disabled) .page-link[rel="next"] {
+    color: #004384;
 }
 
 .programme-dt-footer .pagination .page-item.disabled .page-link {

@@ -82,42 +82,57 @@
   margin: 0 !important;
 }
 
+/* Canonical pager (new-design-index-page.md §5): grey numbers, brand-navy OUTLINED
+   active box (no filled pill / gradient), navy prev/next chevrons. Matches the
+   .programme-dt-footer pager so migrated + un-migrated grids look identical. */
 .dataTables_wrapper .dataTables_paginate .page-link {
-  min-width: 2.1rem;
-  height: 2.1rem;
-  padding: 0 0.65rem;
-  border-radius: 999px !important;
-  border: 0 !important;
-  background: #ffffff !important;
-  color: #1f3f66 !important;
-  font-weight: 600;
-  line-height: 2rem;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.5rem;
+  border-radius: 8px !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: #667085 !important;
+  font-weight: 500;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 2px rgba(13, 110, 253, 0.08);
+  transition: all 0.15s ease;
+  box-shadow: none !important;
 }
 
 .dataTables_wrapper .dataTables_paginate .page-link:hover {
-  background: #eef5ff !important;
-  color: #0d6efd !important;
-  transform: translateY(-1px);
+  background: #f9fafb !important;
+  border-color: #e4e7ec !important;
+  color: #344054 !important;
+  transform: none;
 }
 
 .dataTables_wrapper .dataTables_paginate .page-item.active .page-link {
-  background: linear-gradient(135deg, #0d6efd, #0a58ca) !important;
-  color: #ffffff !important;
-  box-shadow: 0 6px 16px rgba(13, 110, 253, 0.25);
+  background: #ffffff !important;
+  border-color: #004384 !important;
+  color: #004384 !important;
+  font-weight: 600;
+  box-shadow: none !important;
+}
+
+/* enabled prev / next chevrons → brand navy */
+.dataTables_wrapper .dataTables_paginate .page-item.previous:not(.disabled) .page-link,
+.dataTables_wrapper .dataTables_paginate .page-item.next:not(.disabled) .page-link {
+  color: #004384 !important;
 }
 
 .dataTables_wrapper .dataTables_paginate .page-item.disabled .page-link {
-  background: #f6f8fb !important;
-  color: #9aa9bd !important;
+  background: transparent !important;
+  color: #d0d5dd !important;
   cursor: not-allowed;
-  box-shadow: none;
+  box-shadow: none !important;
 }
 
 .dataTables_wrapper .dataTables_paginate .page-link:focus {
-  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.2) !important;
+  box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.15) !important;
 }
 
 /* DataTables page-length selector variants */

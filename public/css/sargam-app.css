@@ -83,6 +83,32 @@ a.dropdown-item:focus-visible {
     box-shadow: var(--ds-focus-ring);
 }
 
+/* ── Global pager (new-design-index-page.md §5) ────────────────────────────────
+   Brand-navy OUTLINED active box (no filled pill / gradient), grey numbers, navy
+   prev/next chevrons. The migrated `.programme-dt-footer` and DataTables
+   `.dataTables_paginate` pagers carry the SAME look via more-specific rules
+   (custom.css / pre_header); this base catches every other (standalone Laravel)
+   pager so pagination is identical app-wide. */
+.pagination .page-link {
+    border-radius: 8px;
+    color: #667085;
+    font-weight: 500;
+    box-shadow: none;
+}
+.pagination .page-item.active .page-link {
+    background: #fff;
+    border-color: #004384;
+    color: #004384;
+    font-weight: 600;
+}
+.pagination .page-item:not(.disabled) .page-link[rel="prev"],
+.pagination .page-item:not(.disabled) .page-link[rel="next"] {
+    color: #004384;
+}
+.pagination .page-item.disabled .page-link {
+    color: #d0d5dd;
+}
+
 /* Table headers: quieter, more scannable enterprise look.
    Intentionally gentle — only weight/colour/spacing, no size or
    text-transform overrides, so existing table layouts are untouched. */

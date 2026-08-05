@@ -363,8 +363,8 @@
         $.extend(true, $.fn.dataTable.defaults, {
             autoWidth: false,
             pageLength: 10,
-            lengthMenu: [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
-            pagingType: 'full_numbers',
+            // ‹ 1 2 3 › — prev + numbers + next, NO First/Last (matches the design). Global default.
+            pagingType: 'simple_numbers',
             dom: DEFAULT_DOM,
             language: DEFAULT_LANGUAGE
         });
@@ -589,7 +589,7 @@
         ensureDomHasControls(settings.oInit);
 
         if (!settings.oInit.pagingType) {
-            settings.oInit.pagingType = 'full_numbers';
+            settings.oInit.pagingType = 'simple_numbers';   // ‹ 1 2 3 › — no First/Last
         }
 
         settings.oInit.language = $.extend(true, {}, DEFAULT_LANGUAGE, settings.oInit.language || {});

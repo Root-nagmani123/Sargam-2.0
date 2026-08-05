@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\HasBrandedExport;
 use Illuminate\Http\Request;
 // use App\DataTables\HostelBuildingFloorRoomMappingDataTable;
 use App\DataTables\BuildingFloorRoomMappingDataTable;
-use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\FloorRoomMappingExport;
 use App\Models\{
     HostelBuildingFloorMapping,
     HostelRoomMaster,
@@ -22,6 +21,8 @@ use App\Models\{
 
 class HostelBuildingFloorRoomMappingController extends Controller
 {
+    use HasBrandedExport;
+
     public $roomTypes;
 
     public function __construct()
@@ -184,12 +185,42 @@ class HostelBuildingFloorRoomMappingController extends Controller
         return compact('building', 'floor', 'roomTypes');
     }
 
-    function export(Request $request) {
-        try {
-            return \Excel::download(new \App\Exports\FloorRoomMappingExport($request->all()), 'floor_room_mapping.xlsx');
-        } catch (\Exception $e) {
-            return redirect()->route('hostel.building.floor.room.map.index')->with('error', 'Error exporting data: ' . $e->getMessage());
+    /** Branded CSV / PDF / Print (new-design-index-page.md §4b) — honours the same filters as the list. */
+    public function export(Request $request, $format = 'pdf') {
+        $query = BuildingFloorRoomMapping::with(['building', 'floor'])->latest('pk');
+        if ($request->filled('building_id')) $query->where('building_master_pk', $request->building_id);
+        if ($request->filled('room_type'))   $query->where('room_type', $request->room_type);
+        if ($request->filled('status'))      $query->where('active_inactive', $request->status);
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('room_name', 'like', "%{$search}%")
+                  ->orWhere('capacity', 'like', "%{$search}%")
+                  ->orWhere('comment', 'like', "%{$search}%");
+            });
         }
+
+        $rows = [];
+        $i    = 1;
+        foreach ($query->get() as $m) {
+            $rows[] = [
+                $i++,
+                optional($m->building)->building_name ?? '—',
+                optional($m->floor)->floor_name ?? '—',
+                $m->room_name,
+                $m->room_type,
+                $m->capacity,
+                $m->comment,
+                $m->active_inactive == 1 ? 'Active' : 'Inactive',
+            ];
+        }
+        return $this->brandedExport(
+            $format,
+            'Hostel Floor Room Map',
+            ['S. No.', 'Building Name', 'Floor Name', 'Room Name', 'Room Type', 'Capacity', 'Comment', 'Status'],
+            $rows,
+            'hostel-floor-room-map'
+        );
     }
 
     function destroy($id) {

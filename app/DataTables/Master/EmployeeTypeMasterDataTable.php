@@ -101,7 +101,7 @@ class EmployeeTypeMasterDataTable extends DataTable
                 'autoWidth' => false,
                 'order' => [],
                 'paging' => true,
-                'pagingType' => 'full_numbers',
+                'pagingType' => 'simple_numbers',
                 'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
             ]);
     }

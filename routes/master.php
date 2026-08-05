@@ -237,7 +237,7 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::get('/create', 'create')->name('create');
         Route::post('store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::get('/export', 'export')->name('export');
+        Route::get('/export/{format}', 'export')->whereIn('format', ['csv', 'pdf', 'print'])->name('export');
         Route::delete('/destroy/{id}', 'destroy')->name('destroy');
         // Route::get('/get-building', 'getBuilding')->name('get.building');
     });
@@ -248,7 +248,7 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::get('/create', 'create')->name('create');
         Route::post('store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::get('/export', 'export')->name('export');
+        Route::get('/export/{format}', 'export')->whereIn('format', ['csv', 'pdf', 'print'])->name('export');
         Route::delete('/destroy/{id}', 'destroy')->name('destroy');
     });
 
@@ -258,6 +258,7 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::get('/create', 'create')->name('create');
         Route::post('store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::get('/export/{format}', 'export')->whereIn('format', ['csv', 'pdf', 'print'])->name('export');
     });
 
     // Medical Case Master

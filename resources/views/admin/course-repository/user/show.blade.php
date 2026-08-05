@@ -228,7 +228,7 @@ $documentCount = $documents->count();
                             // S.No is a display counter and Action is just icons — neither sorts.
                             { orderable: false, targets: [0, -1] }
                         ],
-                        pagingType: 'full_numbers'
+                        pagingType: 'simple_numbers'
                     });
 
                     // Renumber S.No in the CURRENT display order after every draw, so it stays

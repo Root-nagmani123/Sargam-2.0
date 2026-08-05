@@ -174,7 +174,33 @@ the four master routes across **chrome / firefox / safari-webkit** (12 checks).
 Baseline PNGs + the two infra fixes are staged in the working tree, **ready to commit** (kept
 separate from the code commit `1ca8a3f99` so `git log` explains the baseline movement).
 
+## Next group — OT Hostel (Building · Floor · Room) — DONE
+
+> **Update:** all three OT Hostel masters were subsequently aligned to the doc's **§3b**
+> status/action treatment (they had used the older `programme-status-badge` + icon-only
+> `programme-action-btn` look). Now: soft `status-pill badge bg-success-subtle` + icon-over-label
+> `<pfx>-act` actions (`bi-pencil-square` "Edit" / `bi-trash3` "Delete", guarded), matching
+> country/state/district/city. For a Yajra page this markup lives in the DataTable `addColumn`
+> (see the new §3b Yajra note). Re-baselined (chrome/firefox/webkit) zero-diff.
+
+Building and Floor were **already** on the programme-dt chrome + AJAX modal. Only **Hostel Room**
+remained on the old "Zero Configuration" layout — brought to the same pattern:
+
+- `HostelRoomMasterDataTable` — Status → soft badge column; Action → `programme-action-group`
+  (edit-modal button `.hr-edit-btn` + status toggle; **no delete**, Room has no delete route);
+  Building-style `html()` params (‹ › paging, "Showing N of M items", search relocation).
+- `hostel_room/index.blade.php` — full chrome + AJAX create/edit modal (name · capacity ·
+  status) + the shared enhance script; dropped the redundant per-page bootstrap-icons CDN link
+  (icons load globally via `pre_header`/`custom.css`).
+- Controller `store()` — added the AJAX JSON response and now **respects** the modal's
+  `active_inactive` (was hardcoded to 1), matching Building/Floor; added `export()` +
+  `HostelRoomMasterExport` + `/export` route so Download works like the others.
+
+**Gated + baselined:** added the 3 hostel master routes to `routes.json`; captured
+chrome/firefox/safari-webkit (9 first-time snapshots) and re-verified **zero-diff**.
+
 ## STOP — awaiting review
-The whole Master location module (Country · State · District · City) now follows the canonical
-Store Master pattern **and is gated + re-baselined**. On approval I'll move to the next Master
-group.
+Master **Address** (Country · State · District · City) and **OT Hostel** (Building · Floor ·
+Room) groups are migrated, gated, and baselined. Baseline PNGs + infra changes are staged in
+the working tree, ready to commit. On approval I'll move to the next Master group (General
+Master — the large bucket, to be batched).

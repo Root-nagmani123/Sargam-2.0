@@ -248,6 +248,15 @@ The settled layout splits status **display** from the **control**:
 - **Alternative placement.** A small grid may keep the switch inside `.programme-action-group`
   as a `.programme-action-switch` (like `building_floor_room_mapping`) with no separate Status
   column — but the `country/index` split above is the reference.
+- **Yajra (server-side) pages build the SAME markup in the DataTable class.** For a
+  `$dataTable`-driven grid the status/action HTML lives in `addColumn('status'|'action', …)`,
+  not the blade — but it must emit the **identical** classes: `status-pill badge bg-success-subtle`
+  and the icon-over-label `<pfx>-act <pfx>-act--edit` / `--del` (`bi-pencil-square` + `<span>Edit</span>`,
+  `bi-trash3` + `<span>Delete</span>`). Do **not** use the older `programme-status-badge` /
+  `programme-action-btn` (icon-only) look — it reads differently from country and breaks the
+  "whole ERP alike" goal. Keep any `<pfx>-edit-btn` class the page's modal JS binds to, and put
+  the scoped `.<page> .status-pill{…}` / `.<pfx>-act{…}` CSS in the index's `@push('styles')`.
+  Reference: the OT Hostel masters (`hostel_building` / `hostel_floor` / `hostel_room`).
 
 ### ⚠️ Client-side DataTable + status toggle — the `ajax.reload()` trap
 
@@ -382,9 +391,14 @@ other report. **Reuse the shared view**, don't rebuild the header.
 - **Wire (above the card):** a **Download dropdown** (CSV · PDF) linking to the export route,
   plus a **Print** link (`target="_blank"` → the auto-printing HTML). No client-side CSV/JS.
 - **Read-only** — the export controller never touches create/update logic.
-- **Share one helper across a controller's lists.** `LocationController::brandedExport($format,
-  $reportTitle, $headings, $rows, $filenameBase)` holds the CSV/PDF/Print branching; each
-  `xxxExport()` just builds `$rows` and delegates. Country/State/District/City all route through it.
+- **One shared engine for the WHOLE app — the `HasBrandedExport` trait.**
+  `App\Http\Controllers\Concerns\HasBrandedExport` provides `brandedExport($format, $reportTitle,
+  $headings, $rows, $filenameBase)` + `exportAssets()`. Any controller `use`s the trait and its
+  per-list `export()` just builds `$headings`/`$rows` and delegates — so Location (Country/State/
+  District/City) **and** the OT Hostel masters (Building/Floor/Room) render byte-identical headers.
+  Do **not** re-implement per controller, and do **not** ship a plain Maatwebsite `.xlsx` download —
+  that is the pre-migration look, not §4b. A Yajra page wires it the same way: `export($format='pdf')`
+  + `/export/{format}` route + the Download-dropdown / Print-link markup below.
 - **⚠️ Large lists + DomPDF.** DomPDF is memory/CPU-hungry — City (~1,664 rows) peaks ~700 MB
   and ~60 s. Guard the PDF branch the way the app already does elsewhere (Calendar/Feedback
   controllers): `@ini_set('memory_limit','1024M'); @set_time_limit(300);` before `Pdf::loadView`.
@@ -398,16 +412,17 @@ other report. **Reuse the shared view**, don't rebuild the header.
 627 lines, loaded after the DataTables CDN scripts. What it does for you:
 
 **Global defaults.** `pageLength: 10`, `lengthMenu` 10/25/50/100/200,
-`pagingType: 'full_numbers'`, `autoWidth: false`, and the language strings that
+`pagingType: 'simple_numbers'`, `autoWidth: false`, and the language strings that
 produce **"Showing [10] of 243 items"** (`lengthMenu: 'Showing _MENU_'`,
 `info: 'of _TOTAL_ items'`).
 
-> **Pagination style — set `pagingType: 'simple_numbers'` per table.** The reference
-> pager is **‹ 1 2 3 … ›** (prev + numbers + next, **no First / Last**). The global default
-> is `full_numbers` (which adds First/Last), but it is applied only when a table doesn't
-> set its own (`if (!settings.oInit.pagingType)`), so passing `pagingType: 'simple_numbers'`
-> in your `.DataTable({…})` init wins — with no change to the shared default. Do this on
-> every migrated grid.
+> **Pagination style — `simple_numbers` is now the GLOBAL default.** The reference pager is
+> **‹ 1 2 3 … ›** (prev + numbers + next, **no First / Last**). This is set app-wide in
+> `datatable-global-ui.js` (both `applyGlobalDefaults()` and the `if (!settings.oInit.pagingType)`
+> fallback), the footer's `.datatable` auto-init, and any Yajra `html()` params — so you no
+> longer need to pass `pagingType` per table. Do **not** set `full_numbers` anywhere (it brings
+> back First/Last). Explicit `pagingType: 'simple_numbers'` in a client-side init is still fine
+> (redundant but harmless).
 
 **Chrome relocation.** Its `dom` renders `f`/`i`/`l`/`p` into a hidden row, then
 `enhance()` moves the filter into your `.programme-dt-search` slot and rebuilds
@@ -506,11 +521,13 @@ Page CSS is namespaced under a page-root class (`.disc-page .disc-tab`,
 
 Real traps, not nitpicks:
 
-- **Pill pagination.** `admin/layouts/pre_header.blade.php:58-187` has an inline
-  `<style>` forcing `.page-link { border-radius: 999px !important }` with a blue
-  gradient active state. It contradicts both this pattern and the "no rounded-pill"
-  mandate. `.programme-dt-footer` selectors are more specific and win *inside the
-  footer* — but any un-migrated DataTable on the page still renders pills.
+- **Pill pagination — FIXED (global).** `pre_header.blade.php`'s inline pager `<style>`
+  used to force a `border-radius:999px` filled **blue-gradient** active pill. It is now the
+  canonical **brand-navy OUTLINED active box** (`#004384` border, white bg, radius 8px) with
+  grey numbers + navy prev/next chevrons — matching `.programme-dt-footer` (custom.css) and a
+  base `.pagination` rule in `sargam-app.css`. All three pager sources (un-migrated DataTables,
+  migrated footers, standalone Laravel paginators) now render identically app-wide. The
+  migrated footer's old **purple** `#7367f0` active border was also corrected to navy.
 - **Two reds for Reset Filters** — `#912018`/`#fda29b` (`programme-dt-btn-reset`)
   vs `#f04438` (`disc-reset`).
 - **Two column-visibility modals** — the `sn-colvis-*` chip grid and the

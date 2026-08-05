@@ -3,13 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\HasBrandedExport;
 use Illuminate\Http\Request;
 use App\DataTables\HostelBuildingFloorMappingDataTable;
 use App\Models\{
     HostelBuildingFloorMapping,
     HostelBuildingMaster,
     HostelFloorMaster,
-    CourseMaster
+    CourseMaster,
+    OTHostelRoomDetails
 };
 use App\Imports\AssignHostelToStudent;
 use Maatwebsite\Excel\Facades\Excel;
@@ -18,6 +20,8 @@ use App\DataTables\OTHostelRoomDetailsDataTable;
 
 class HostelBuildingFloorMappingController extends Controller
 {
+    use HasBrandedExport;
+
     public function index(HostelBuildingFloorMappingDataTable $dataTable)
     {
         return $dataTable->render('admin.building_floor_mapping.index');
@@ -197,9 +201,26 @@ class HostelBuildingFloorMappingController extends Controller
         return view('admin.building_floor_mapping.import', compact('courses'));
     }
 
-    function export()
+    /** Branded CSV / PDF / Print (new-design-index-page.md §4b) via the shared trait. */
+    public function export($format = 'pdf')
     {
-        $fileName = 'hostel_room_details_' . date('Y_m_d_H_i_s') . '.xlsx';
-        return Excel::download(new \App\Exports\OTHostelRoomDetailsExport, $fileName);
+        $rows = [];
+        $i    = 1;
+        foreach (OTHostelRoomDetails::with('course')->get() as $d) {
+            $rows[] = [
+                $i++,
+                $d->user_name,
+                $d->hostel_room_name,
+                optional($d->course)->course_name,
+                $d->active_inactive == 1 ? 'Active' : 'Inactive',
+            ];
+        }
+        return $this->brandedExport(
+            $format,
+            'Assign Student Hostel',
+            ['S. No.', 'Student Name', 'Hostel Room', 'Course', 'Status'],
+            $rows,
+            'assign-student-hostel'
+        );
     }
 }

@@ -154,7 +154,7 @@
                 }
               },
               dom: (window.SargamDataTableUI && window.SargamDataTableUI.DEFAULT_DOM) || undefined,
-              pagingType: 'full_numbers',
+              pagingType: 'simple_numbers',   // ‹ 1 2 3 › — no First/Last
               language: $.extend(true, {}, (window.SargamDataTableUI && window.SargamDataTableUI.DEFAULT_LANGUAGE) || {}, {
                 search: 'Search:',
                 searchPlaceholder: 'Type to filter...'

@@ -232,7 +232,7 @@ $courseQuery->whereNotNull('end_date')
     'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
     'order' => [],
     'dom' => 'rt<"row d-none"<"col-sm-12"ilp>>',
-    'pagingType' => 'full_numbers',
+    'pagingType' => 'simple_numbers',
     'language' => [
     'search' => '',
     'searchPlaceholder' => 'Search',

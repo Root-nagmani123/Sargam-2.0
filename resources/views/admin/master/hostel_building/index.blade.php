@@ -4,11 +4,27 @@
 
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<style>
+    /* Canonical country/index look (new-design-index-page.md §3b) — scoped to .hostel-building-page. */
+    .hostel-building-page .status-pill { padding: 0.4em 0.85em; font-weight: 600; }
+    .hostel-building-page .status-pill.bg-success-subtle { color: #146c43; }
+    .hostel-building-page .status-pill.bg-danger-subtle  { color: #b02a37; }
+
+    .hostel-building-page .hb-act {
+        display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
+        font-size: 0.72rem; font-weight: 500; line-height: 1;
+        text-decoration: none; background: transparent; border: 0; padding: 0;
+    }
+    .hostel-building-page .hb-act i { font-size: 1.1rem; }
+    .hostel-building-page .hb-act--edit { color: #2563eb; }
+    .hostel-building-page .hb-act--del  { color: var(--bs-danger, #dc3545); }
+    .hostel-building-page .hb-act--del.is-disabled { color: var(--ds-ink-muted); cursor: not-allowed; }
+</style>
 @endpush
 
 @section('setup_content')
 <div class="container-fluid hostel-building-page">
-    <x-breadcrum title="Building Master">
+    <x-breadcrum title="Building Master" :showBack="false">
         <button type="button"
                 class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
                 id="hbAddBtn" data-bs-toggle="modal" data-bs-target="#hbFormModal">
@@ -19,15 +35,19 @@
 
     <x-session_message />
 
-    {{-- Secondary actions (Print / Download) --}}
+    {{-- Branded exports — Download (CSV·PDF) dropdown + Print link (new-design-index-page.md §4b) --}}
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
-        <button type="button" class="btn programme-dt-btn-columns" id="hbPrintBtn" title="Print">
-            <i class="bi bi-printer" aria-hidden="true"></i>
-            <span>Print</span>
-        </button>
-        <a href="{{ route('master.hostel.building.export') }}" class="btn programme-dt-btn-columns" title="Download">
-            <i class="bi bi-download" aria-hidden="true"></i>
-            <span>Download</span>
+        <div class="dropdown">
+            <button type="button" class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{{ route('master.hostel.building.export', 'csv') }}"><i class="bi bi-filetype-csv me-2" aria-hidden="true"></i>CSV</a></li>
+                <li><a class="dropdown-item" href="{{ route('master.hostel.building.export', 'pdf') }}"><i class="bi bi-filetype-pdf me-2" aria-hidden="true"></i>PDF</a></li>
+            </ul>
+        </div>
+        <a href="{{ route('master.hostel.building.export', 'print') }}" target="_blank" rel="noopener" class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
+            <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
         </a>
     </div>
 
@@ -297,9 +317,13 @@
             });
         }
 
-        /* ---- Wait for Yajra DataTable init ---- */
-        setTimeout(function () {
+        /* ---- Wait for Yajra DataTable init. POLL — the server-side ajax can take >150ms,
+               and a one-shot bail would leave the default DataTables chrome un-enhanced
+               (search + "Showing 10" inline). Poll until ready, then enhance once. ---- */
+        (function waitForHbDt(tries) {
+            tries = tries || 0;
             if (!$.fn.DataTable.isDataTable(TABLE_ID)) {
+                if (tries < 80) { setTimeout(function () { waitForHbDt(tries + 1); }, 150); }
                 return;
             }
             table = $(TABLE_ID).DataTable();
@@ -321,7 +345,7 @@
                 enhanceHbDtControls();
                 updateHbDtCount();
             }, 300);
-        }, 150);
+        })();
 
         /* ---- Print ---- */
         $('#hbPrintBtn').on('click', function () {

@@ -29,39 +29,45 @@ class BuildingMasterDataTable extends DataTable
             ->addColumn('no_of_rooms', fn($row) => $row->no_of_rooms ?? '-')
             ->addColumn('building_type', fn($row) => $row->building_type ?? '-')
             ->addColumn('status', function ($row) {
+                // Soft status badge — the canonical country/index pattern (new-design-index-page.md §3b).
                 return (int) $row->active_inactive === 1
-                    ? '<span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>'
-                    : '<span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>';
+                    ? '<span class="status-pill badge bg-success-subtle">Active</span>'
+                    : '<span class="status-pill badge bg-danger-subtle">Inactive</span>';
             })
             ->addColumn('action', function ($row) {
-                $deleteUrl = route('master.hostel.building.destroy', ['id' => encrypt($row->pk)]);
-                $isActive  = (int) $row->active_inactive === 1;
-                $checked   = $isActive ? 'checked' : '';
-                $deleteDisabled = $isActive ? 'disabled' : '';
-                $csrf = csrf_token();
+                // Icon-over-label actions (§3b): Edit (blue) · toggle · Delete (red, guarded —
+                // an active building can't be deleted). `hb-edit-btn` is kept for the modal JS.
+                $isActive = (int) $row->active_inactive === 1;
+                $checked  = $isActive ? 'checked' : '';
 
-                $editBtn = '<button type="button" class="programme-action-btn hb-edit-btn" aria-label="Edit building"'
+                $editBtn = '<button type="button" class="hb-act hb-act--edit hb-edit-btn" aria-label="Edit building"'
                         . ' data-id="' . encrypt($row->pk) . '"'
                         . ' data-name="' . e($row->building_name) . '"'
                         . ' data-floors="' . e($row->no_of_floors) . '"'
                         . ' data-rooms="' . e($row->no_of_rooms) . '"'
                         . ' data-type="' . e($row->building_type) . '"'
                         . ' data-status="' . (int) $row->active_inactive . '">'
-                        . '<i class="bi bi-pencil" aria-hidden="true"></i>'
+                        . '<i class="bi bi-pencil-square" aria-hidden="true"></i><span>Edit</span>'
                         . '</button>';
 
-                $deleteHtml = '<form action="' . $deleteUrl . '" method="POST" class="d-inline-flex m-0" onsubmit="return confirm(\'Are you sure you want to delete this building?\')">'
+                if ($isActive) {
+                    $deleteHtml = '<span class="hb-act hb-act--del is-disabled" title="Set the building inactive before deleting" aria-disabled="true">'
+                        . '<i class="bi bi-trash3" aria-hidden="true"></i><span>Delete</span></span>';
+                } else {
+                    $deleteUrl = route('master.hostel.building.destroy', ['id' => encrypt($row->pk)]);
+                    $csrf = csrf_token();
+                    $deleteHtml = '<form action="' . $deleteUrl . '" method="POST" class="d-inline m-0" onsubmit="return confirm(\'Are you sure you want to delete this building?\')">'
                         . '<input type="hidden" name="_token" value="' . $csrf . '">'
                         . '<input type="hidden" name="_method" value="DELETE">'
-                        . '<button type="submit" class="programme-action-btn programme-action-btn--danger" aria-label="Delete building" ' . $deleteDisabled . '>'
-                        . '<i class="bi bi-trash3" aria-hidden="true"></i>'
-                        . '</button>'
+                        . '<button type="submit" class="hb-act hb-act--del" aria-label="Delete building">'
+                        . '<i class="bi bi-trash3" aria-hidden="true"></i><span>Delete</span></button>'
                         . '</form>';
+                }
 
                 return '
-                <div class="d-inline-flex align-items-center justify-content-center programme-action-group" role="group" aria-label="Row actions">
+                <div class="d-inline-flex align-items-center justify-content-center gap-3" role="group" aria-label="Row actions">
                     ' . $editBtn . '
-                    <div class="form-check form-switch programme-action-switch mb-0">
+                    <div class="form-check form-switch m-0">
                         <input class="form-check-input status-toggle" type="checkbox" role="switch"
                             data-table="building_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
                     </div>
