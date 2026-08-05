@@ -8,9 +8,10 @@ built on the Attendance page.
 It is not the `employee_idcard` layout and not the old DataTables default chrome.
 
 **Second reference —** `resources/views/admin/issue_management/categories/index.blade.php`
-for everything Attendance doesn't show: the status badge + row-action stack
-(§3b), the matching Add/Edit modals (§3c), the Laravel-paginated footer with its
-own sort/search/per-page wiring (§4B), and the Download + Print export pair (§1).
+(+ its sibling `sub_categories/index.blade.php`, same stylesheet) for everything
+Attendance doesn't show: the status badge + row-action stack (§3b), the matching
+Add/Edit modals (§3c), the Laravel-paginated footer with its own
+sort/search/per-page wiring (§4B), and the Download + Print export pair (§1).
 
 This doc covers page *chrome*. The `--ds-*` token and `.ds-*` component layer is
 documented separately in [design.md](design.md); column visibility has its own
@@ -25,7 +26,17 @@ doc, [column-visibility.md](column-visibility.md).
 | `programme-dt-*` chrome | `public/css/custom.css:104-640` | `admin/layouts/pre_header.blade.php:19` |
 | `--ds-*` tokens + `.ds-*` components | `public/css/sargam-app.css` | `pre_header.blade.php:39` — **must stay last** |
 | Global DataTables behaviour | `public/js/datatable-global-ui.js` | `admin/layouts/footer.blade.php:72` |
-| Page-specific | `public/css/<module>-admin.css` or an inline `<style>` | `@push('styles')` / `@section('css')` |
+| Module-shared (`ic-*`, …) | `public/css/<module>-admin.css` | `@push('styles')` on each page in the module |
+| Page-specific | an inline `<style>` | `@push('styles')` / `@section('css')` |
+
+**Second page in a module → move the CSS to a file.** An inline `<style>` is fine
+for the first screen. The moment a sibling needs the same look, extract it —
+copy-pasting the block is how two pages that are supposed to be identical start
+to drift. `public/css/issue-management-admin.css` is the worked example: the
+`ic-*` layer for Manage Categories **and** Manage Sub-Categories, scoped
+`.ic-page` (page root) / `.ic-modal` (modal root) so it can beat Bootstrap
+without `!important` and still can't leak. Both pages then carry only the link
+tag. See §7 for the naming rule.
 
 Page CSS is cache-busted with:
 
@@ -91,7 +102,7 @@ If the page exports more than one format, make Download a dropdown instead
 A grid with nothing to filter by status still keeps the row — just drop the `<ul>`
 and let the buttons sit alone on the right. Reuse `.programme-dt-btn-columns` for
 them so they match the toolbar below
-(`issue_management/categories/index.blade.php:171-180`):
+(`issue_management/categories/index.blade.php:36-45`):
 
 ```blade
 <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 ic-secondary-actions">
@@ -184,7 +195,7 @@ wrapping to a second row.
   The revealed input can just be a **GET `<form>`** whose submit reloads the page
   — no JS beyond the reveal. Keep the other grid state (`per_page`, `sort`, `dir`)
   as `<input type="hidden">` inside it or the search will reset them
-  (`#icSearchToggle` + `#icSearchWrap`, `categories/index.blade.php:195-209`).
+  (`#icSearchToggle` + `#icSearchWrap`, `categories/index.blade.php:60-74`).
   Start it un-hidden when a search is active: `class="… {{ filled($search) ? '' : 'd-none' }}"`.
 
 ### Reset Filters is a `<button>`, not a link
@@ -292,7 +303,7 @@ The layout splits status **display** from the **control**:
 - **The switch caption names the ACTION, not the state** — an Active row reads
   "Deactivate". The state is already shown by the badge one column over, so
   repeating it there is redundant *and* reads as a contradiction.
-  ⚠️ `categories/index.blade.php:284` currently ships the inverse
+  ⚠️ `categories/index.blade.php:149` currently ships the inverse
   (`$isActive ? 'Activate' : 'Deactivate'`) — that line is the exception, not the
   pattern. Copy the rule above, not that line.
 
@@ -449,7 +460,7 @@ For server-side paginated pages that aren't DataTables-driven. Reuses the
 uses for its pager, which is why the two variants match.
 
 The rows-per-page `<select>` is yours to wire — one handler, no DataTables
-involved (`categories/index.blade.php:480-485`):
+involved (`categories/index.blade.php:335-340`):
 
 ```js
 $('#icPerPage').on('change', function () {
@@ -558,12 +569,19 @@ Page CSS is namespaced under a page-root class (`.disc-page .disc-tab`,
 | `gm-*` | Group Mapping |
 | `sm-*` | Subject Master / Module |
 | `attendance-*` | Attendance |
-| `ic-*` | Centcom → Manage Categories (`issue_management/categories`) |
+| `ic-*` | Centcom / Issue Management — **all** its index pages (`public/css/issue-management-admin.css`) |
 
-Within a page prefix, the row-action stack uses BEM-ish element names —
-`.ic-act` / `.ic-act__icon` / `.ic-act__label`, modifiers `--edit` / `--toggle`
-/ `--del` (§3b). Keep those element/modifier names when you port the pattern;
-only the prefix changes.
+Within a prefix, the row-action stack uses BEM-ish element names — `.ic-act` /
+`.ic-act__icon` / `.ic-act__label`, modifiers `--edit` / `--toggle` / `--del`
+(§3b). Keep those element/modifier names when you port the pattern; only the
+prefix changes.
+
+**Prefix per module, not per page.** `ic-*` covers every Centcom index screen,
+scoped `.ic-page` / `.ic-modal` rather than `.manage-categories-page`. Per-page
+roots are for genuinely page-specific CSS; anything two screens in the module
+share belongs in the module stylesheet under the module root. Page-level IDs
+still differ (`#issueCategoriesTable` vs `#issueSubCategoriesTable`,
+`#icPerPage` vs `#iscPerPage`) — only the *component* classes are shared.
 
 `public/css` is flat, named `<module>-<audience>.css`
 (`course-repository-admin.css`, `roles-admin.css`, …).
@@ -588,9 +606,11 @@ only the prefix changes.
    `sort` / `dir` yourself (§4). Whitelist all three server-side and include them
    in the listing cache key.
 9. Column visibility → [column-visibility.md](column-visibility.md). Add the new
-   grid's ID to the `colvis-item` list in `custom.css:238-272` (§9).
-10. Page CSS namespaced under a page-root class, tokens from
-    [design.md](design.md), `?v={{ @filemtime(...) }}` on the link tag.
+   grid's **own** ID to the `colvis-item` list in `custom.css:238-275` (§9) —
+   don't reuse a sibling page's grid ID just because the rule already exists.
+10. CSS namespaced under a page root, or the module stylesheet if a sibling page
+    shares it ("Where the CSS lives"). Tokens from [design.md](design.md),
+    `?v={{ @filemtime(...) }}` on the link tag.
 11. Use only **one** of `@push('scripts')` / `@section('scripts')` — the master
     layout renders both, so using both double-renders your script.
 
@@ -609,7 +629,7 @@ Real traps, not nitpicks:
   vs `#f04438` (`disc-reset`).
 - **Two column-visibility modals** — the `sn-colvis-*` chip grid and the
   `colvis-item` card grid. The latter is styled by a hard-coded **ID list** at
-  `custom.css:238-272`, so a new page must be added there (three separate
+  `custom.css:238-275`, so a new page must be added there (three separate
   selector lists: base, `:hover`, `.form-check-input`).
 - **`.d-flex` beats `jQuery.hide()`.** Bootstrap's display utilities are
   `!important`, so `.hide()` — which writes inline `display:none` — silently does

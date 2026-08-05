@@ -3,247 +3,10 @@
 @section('title', 'Manage Categories')
 
 @push('styles')
-<style>
-    /* ── Manage Categories — "new design" index chrome (docs/new-design-index-page.md §3b).
-       Everything is scoped to .issue-cat-page so nothing leaks into other modules. ── */
-
-    /* Status column: soft badge only (display). The theme ships the *-subtle
-       backgrounds but not the text-*-emphasis colours, so tint the label here. */
-    .issue-cat-page .status-pill {
-        padding: 0.4em 0.85em;
-        font-weight: 600;
-        font-size: 0.75rem;
-    }
-    .issue-cat-page .status-pill.bg-success-subtle { color: #146c43; }
-    .issue-cat-page .status-pill.bg-danger-subtle  { color: #b02a37; }
-
-    /* ── Row actions: icon over label ──
-       Each action is an equal-width column holding a fixed-height icon strip
-       above its caption. Equal widths keep the icon row evenly spaced even
-       though "Edit" and "Deactivate" are very different label widths; the fixed
-       strip keeps the glyphs and the switch on one baseline. */
-    .issue-cat-page .ic-act-group {
-        display: inline-flex;
-        align-items: stretch;   /* equal heights → icon strips stay in line */
-        justify-content: flex-start;
-        gap: 0.25rem;
-    }
-
-    .issue-cat-page .ic-act {
-        display: inline-flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: flex-start;
-        gap: 4px;
-        min-width: 62px;        /* ≈ the widest caption ("Deactivate") */
-        font-size: 0.72rem;
-        font-weight: 500;
-        line-height: 1;
-        text-decoration: none;
-        background: transparent;
-        border: 0;
-        padding: 0;
-        margin: 0;
-        cursor: pointer;
-    }
-
-    .issue-cat-page .ic-act__icon {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 22px;           /* one strip for glyphs AND the switch */
-    }
-    .issue-cat-page .ic-act__icon > i {
-        font-size: 1.1rem;
-        line-height: 1;
-    }
-    /* No .form-check ancestor here, so neither Bootstrap's -2.5em nor
-       custom.css:106's -2.375rem applies — but pin it anyway. */
-    .issue-cat-page .ic-act__icon .form-check-input {
-        margin: 0;
-        float: none;
-    }
-
-    .issue-cat-page .ic-act__label { white-space: nowrap; }
-
-    .issue-cat-page .ic-act--edit { color: #2563eb; }
-    .issue-cat-page .ic-act--del { color: var(--bs-danger, #dc3545); }
-    .issue-cat-page .ic-act--del.is-disabled {
-        color: #98a2b3;
-        cursor: not-allowed;
-        opacity: 0.65;
-    }
-    .issue-cat-page .ic-act--toggle { color: #475467; }
-
-    /* The delete <form> is only a wrapper — it must not add a box of its own. */
-    .issue-cat-page .ic-delete-form {
-        display: flex;
-        margin: 0;
-        padding: 0;
-    }
-
-    /* Keep the Action header over its content. */
-    .issue-cat-page #issueCategoriesTable th:last-child,
-    .issue-cat-page #issueCategoriesTable td:last-child {
-        text-align: left;
-        white-space: nowrap;
-    }
-
-    /* Sortable headers — same caret language as the DataTables pages. */
-    .issue-cat-page .ic-sort {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        color: inherit;
-        text-decoration: none;
-        white-space: nowrap;
-    }
-    .issue-cat-page .ic-sort i { font-size: 0.7rem; color: #98a2b3; }
-    .issue-cat-page .ic-sort.is-active i { color: #004384; }
-    .issue-cat-page .ic-sort:hover { color: #004384; }
-
-    /* Search: an icon button that reveals the server-side search input
-       (the toggle variant — this grid is paginated by Laravel, not DataTables). */
-    .issue-cat-page .ic-search-wrap { position: relative; width: 260px; max-width: 100%; }
-    .issue-cat-page .ic-search-input {
-        width: 100%;
-        border: 1px solid #d0d5dd;
-        border-radius: 8px;
-        padding: 0.45rem 0.75rem;
-        font-size: 0.875rem;
-        color: #101828;
-    }
-    .issue-cat-page .ic-search-input:focus {
-        outline: 0;
-        border-color: #004384;
-        box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
-    }
-
-    /* ── Add / Edit modals ──
-       One visual language for both: a tinted field card holding the labelled
-       controls, a red Cancel and a solid brand submit. */
-    #addCategoryModal .modal-content,
-    #editCategoryModal .modal-content { border-radius: 12px; }
-
-    .ic-modal-header {
-        border-bottom: 1px solid #eaecf0;
-        padding: 1rem 1.25rem;
-    }
-    .ic-modal-header .modal-title {
-        font-size: 1.05rem;
-        font-weight: 700;
-        color: #101828;
-        margin: 0;
-    }
-
-    .ic-modal-body { padding: 1.25rem; }
-
-    /* The tinted card each field group lives in. */
-    .ic-field-card {
-        position: relative;
-        background: #eef1fc;
-        border-radius: 10px;
-        padding: 1rem;
-    }
-    .ic-field-card + .ic-field-card { margin-top: 1rem; }
-
-    .ic-form-label {
-        display: block;
-        margin-bottom: 0.375rem;
-        font-size: 0.8125rem;
-        font-weight: 600;
-        color: #1f2937;
-    }
-    .ic-req { color: #dc2626; margin-left: 1px; }
-
-    #addCategoryModal .ic-control,
-    #editCategoryModal .ic-control {
-        background-color: #fff;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 0.5rem 0.75rem;
-        font-size: 0.875rem;
-        color: #101828;
-        box-shadow: none;
-    }
-    #addCategoryModal .ic-control::placeholder,
-    #editCategoryModal .ic-control::placeholder { color: #9ca3af; }
-    #addCategoryModal .ic-control:focus,
-    #editCategoryModal .ic-control:focus {
-        border-color: #004384;
-        box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
-    }
-    #addCategoryModal textarea.ic-control,
-    #editCategoryModal textarea.ic-control { resize: vertical; min-height: 78px; }
-
-    /* Repeat controls, bottom-right inside the card.
-       Plain (non-!important) display so jQuery toggle()/show()/hide() work — see
-       the .d-flex trap in docs/new-design-index-page.md §9. */
-    .ic-field-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 0.5rem;
-        margin-top: 0.75rem;
-    }
-    .ic-field-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 30px;
-        height: 30px;
-        flex-shrink: 0;
-        border: 0;
-        border-radius: 7px;
-        color: #fff;
-        font-size: 0.9rem;
-        line-height: 1;
-        transition: filter 0.15s ease;
-    }
-    .ic-field-btn:hover { filter: brightness(0.92); }
-    .ic-field-btn--remove { background: #ef4444; }
-    .ic-field-btn--add { background: #2563eb; }
-
-    .ic-modal-footer {
-        border-top: 0;
-        justify-content: end;
-        gap: 0.75rem;
-        padding: 0.25rem 1.25rem 1.25rem;
-    }
-    #addCategoryModal .ic-btn-cancel,
-    #editCategoryModal .ic-btn-cancel {
-        min-width: 108px;
-        border: 1px solid #fca5a5;
-        border-radius: 8px;
-        background: #fff;
-        color: #dc2626;
-        font-weight: 500;
-    }
-    #addCategoryModal .ic-btn-cancel:hover,
-    #editCategoryModal .ic-btn-cancel:hover { background: #fef2f2; border-color: #f87171; }
-    #addCategoryModal .ic-btn-submit,
-    #editCategoryModal .ic-btn-submit {
-        min-width: 140px;
-        border: 1px solid #004384;
-        border-radius: 8px;
-        background: #004384;
-        color: #fff;
-        font-weight: 600;
-    }
-    #addCategoryModal .ic-btn-submit:hover,
-    #editCategoryModal .ic-btn-submit:hover { background: #00356a; border-color: #00356a; }
-
-    .issue-cat-page .ic-empty { padding: 2.5rem 1rem; text-align: center; color: #667085; }
-    .issue-cat-page .ic-empty i { font-size: 2.5rem; opacity: 0.35; }
-
-    @media print {
-        .modern-breadcrumb-wrapper,
-        .issue-cat-page .ic-toolbar,
-        .issue-cat-page .ic-secondary-actions,
-        .issue-cat-page .programme-dt-footer,
-        .issue-cat-page th:last-child,
-        .issue-cat-page td:last-child { display: none !important; }
-    }
-</style>
+{{-- Shared Centcom index chrome — same file the Manage Sub-Categories grid uses,
+     so the two pages cannot drift apart. See docs/new-design-index-page.md §3b/§3c. --}}
+<link rel="stylesheet"
+      href="{{ asset('css/issue-management-admin.css') }}?v={{ @filemtime(public_path('css/issue-management-admin.css')) ?: time() }}">
 @endpush
 
 @section('setup_content')
@@ -257,7 +20,7 @@
         return request()->fullUrlWithQuery(array_merge($baseQuery, ['sort' => $key, 'dir' => $dir, 'page' => 1]));
     };
 @endphp
-<div class="container-fluid issue-cat-page">
+<div class="container-fluid ic-page">
     <x-breadcrum title="Manage Categories" :showBack="false">
         <button type="button"
                 class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
@@ -450,7 +213,7 @@
 <!-- Add Category Modal (supports adding several categories in one go) -->
 <div class="modal fade" id="addCategoryModal" tabindex="-1" aria-labelledby="addCategoryModalLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-content ic-modal border-0 shadow">
             {{-- novalidate: the submit handler below drops fully-blank extra cards.
                  Native `required` would block submit first and the user could never
                  get past an extra card they added and left empty. --}}
@@ -503,7 +266,7 @@
 <!-- Edit Category Modal -->
 <div class="modal fade" id="editCategoryModal" tabindex="-1" aria-labelledby="editCategoryModalLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-content ic-modal border-0 shadow">
             <form id="editCategoryForm" method="POST">
                 @csrf
                 @method('PUT')
