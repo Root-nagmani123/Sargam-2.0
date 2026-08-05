@@ -18,32 +18,91 @@ class IssueCategoryController extends Controller
 {
     private const LISTING_CACHE_EPOCH_KEY = 'admin_issue_categories_index_list_epoch';
 
-    private const INDEX_PER_PAGE = 20;
+    private const INDEX_PER_PAGE = 10;
+
+    /** Page-size choices offered by the "Showing N of M items" footer select. */
+    private const PER_PAGE_OPTIONS = [10, 20, 50, 100, 200];
+
+    /** Sortable grid headers → orderable column / withCount alias. */
+    private const SORTABLE_COLUMNS = [
+        'category' => 'issue_category',
+        'description' => 'description',
+        'sub_categories' => 'sub_categories_count',
+        'status' => 'status',
+    ];
 
     public static function bumpIndexListCacheEpoch(): void
     {
         DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'IssueCategoryController@index');
     }
 
-    private function indexFilteredQuery(): Builder
+    /**
+     * Normalise the ?per_page= value against the whitelist (falls back to the default).
+     */
+    private function resolvePerPage(Request $request): int
     {
+        $perPage = (int) $request->query('per_page', self::INDEX_PER_PAGE);
+
+        return in_array($perPage, self::PER_PAGE_OPTIONS, true) ? $perPage : self::INDEX_PER_PAGE;
+    }
+
+    private function resolveSearch(Request $request): string
+    {
+        return trim((string) $request->query('q', ''));
+    }
+
+    /**
+     * Whitelisted sort keys → the expression the query orders by.
+     *
+     * @return array{key: string, dir: string}
+     */
+    private function resolveSort(Request $request): array
+    {
+        $key = (string) $request->query('sort', 'category');
+        if (! array_key_exists($key, self::SORTABLE_COLUMNS)) {
+            $key = 'category';
+        }
+
+        $dir = strtolower((string) $request->query('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+
+        return ['key' => $key, 'dir' => $dir];
+    }
+
+    private function indexFilteredQuery(string $search = '', string $sortKey = 'category', string $sortDir = 'asc', bool $withSubCategoryCount = false): Builder
+    {
+        $sortColumn = self::SORTABLE_COLUMNS[$sortKey] ?? self::SORTABLE_COLUMNS['category'];
+        $sortDir = $sortDir === 'desc' ? 'desc' : 'asc';
+
         // pk tiebreaker — issue_category unique nahi hai, warna snapshot pagination me
         // rows pages ke beech duplicate/miss ho sakte hain.
         return IssueCategoryMaster::query()
-            ->orderBy('issue_category')
+            ->when($search !== '', function (Builder $query) use ($search) {
+                $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $search) . '%';
+                $query->where(function (Builder $inner) use ($like) {
+                    $inner->where('issue_category', 'like', $like)
+                        ->orWhere('description', 'like', $like);
+                });
+            })
+            // The sub-category count lives in a subselect, so it needs withCount() to be orderable.
+            // Guarded by a single when() so the alias can never be added twice.
+            ->when(
+                $withSubCategoryCount || $sortColumn === 'sub_categories_count',
+                fn (Builder $query) => $query->withCount('subCategories')
+            )
+            ->orderBy($sortColumn, $sortDir)
             ->orderBy('pk');
     }
 
     /**
      * @return array{total: int, ids: array<int, int>}
      */
-    private function indexPageSnapshot(int $page): array
+    private function indexPageSnapshot(int $page, int $perPage, string $search, string $sortKey, string $sortDir): array
     {
-        $base = $this->indexFilteredQuery();
+        $base = $this->indexFilteredQuery($search, $sortKey, $sortDir);
         $total = (int) (clone $base)->toBase()->getCountForPagination();
         $ids = [];
         if ($total > 0) {
-            $ids = (clone $base)->forPage($page, self::INDEX_PER_PAGE)->pluck('pk')->values()->all();
+            $ids = (clone $base)->forPage($page, $perPage)->pluck('pk')->values()->all();
             $ids = array_map('intval', $ids);
         }
 
@@ -74,13 +133,20 @@ class IssueCategoryController extends Controller
     /**
      * Display a listing of issue categories.
      */
-    public function index()
+    public function index(Request $request)
     {
         $page = Paginator::resolveCurrentPage('page');
+        $perPage = $this->resolvePerPage($request);
+        $search = $this->resolveSearch($request);
+        $sort = $this->resolveSort($request);
+
         $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
         $cacheKey = 'admin_issue_categories_index:v1:' . md5(json_encode([
             'epoch' => $epoch,
             'page' => $page,
+            'per_page' => $perPage,
+            'q' => $search,
+            'sort' => $sort,
         ]));
 
         $snapshot = DataTableRedisCache::remember(
@@ -90,11 +156,11 @@ class IssueCategoryController extends Controller
                 'seconds' => 'ISSUE_CATEGORY_INDEX_CACHE_SECONDS',
             ],
             'IssueCategoryController@index',
-            fn () => $this->indexPageSnapshot($page)
+            fn () => $this->indexPageSnapshot($page, $perPage, $search, $sort['key'], $sort['dir'])
         );
 
         if (! is_array($snapshot) || ! array_key_exists('total', $snapshot) || ! array_key_exists('ids', $snapshot) || ! is_array($snapshot['ids'])) {
-            $snapshot = $this->indexPageSnapshot($page);
+            $snapshot = $this->indexPageSnapshot($page, $perPage, $search, $sort['key'], $sort['dir']);
         }
 
         $total = (int) $snapshot['total'];
@@ -104,7 +170,7 @@ class IssueCategoryController extends Controller
         $categories = new LengthAwarePaginator(
             $items,
             $total,
-            self::INDEX_PER_PAGE,
+            $perPage,
             $page,
             [
                 'path' => Paginator::resolveCurrentPath(),
@@ -113,7 +179,67 @@ class IssueCategoryController extends Controller
         );
         $categories->withQueryString();
 
-        return view('admin.issue_management.categories.index', compact('categories'));
+        $perPageOptions = self::PER_PAGE_OPTIONS;
+        $sortKey = $sort['key'];
+        $sortDir = $sort['dir'];
+
+        return view('admin.issue_management.categories.index', compact(
+            'categories',
+            'perPage',
+            'perPageOptions',
+            'search',
+            'sortKey',
+            'sortDir'
+        ));
+    }
+
+    /**
+     * Download / print the full (filtered) category list.
+     *
+     * Both formats share the same header + columns as the index grid.
+     */
+    public function export(Request $request, string $format = 'csv')
+    {
+        $format = strtolower($format);
+        abort_unless(in_array($format, ['csv', 'print'], true), 404);
+
+        $search = $this->resolveSearch($request);
+        $sort = $this->resolveSort($request);
+        $rows = $this->indexFilteredQuery($search, $sort['key'], $sort['dir'], true)->get();
+
+        $header = ['S. No.', 'Category', 'Description', 'Sub-Categories', 'Status'];
+
+        if ($format === 'print') {
+            return view('admin.issue_management.categories.export_print', [
+                'header' => $header,
+                'rows' => $rows,
+                'search' => $search,
+                'exportDate' => now()->format('d-m-Y h:i A'),
+            ]);
+        }
+
+        $filename = 'ManageCategories_' . now()->format('YmdHis') . '.csv';
+
+        return response()->streamDownload(function () use ($header, $rows) {
+            $handle = fopen('php://output', 'w');
+            // BOM so Excel opens the UTF-8 file with the right encoding.
+            fwrite($handle, "\xEF\xBB\xBF");
+            fputcsv($handle, $header);
+
+            foreach ($rows as $index => $row) {
+                fputcsv($handle, [
+                    $index + 1,
+                    $row->issue_category,
+                    $row->description,
+                    (int) $row->sub_categories_count,
+                    ((int) $row->status === 1) ? 'Active' : 'Inactive',
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 
     /**

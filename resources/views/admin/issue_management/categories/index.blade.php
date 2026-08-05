@@ -1,503 +1,499 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Complaint Category - Sargam | Lal Bahadur')
+@section('title', 'Manage Categories')
 
-@section('css')
+@push('styles')
 <style>
-.modal-body {
-    background-color: #fff !important;
-    color: #212529 !important;
-}
-.modal-content {
-    background-color: #fff !important;
-}
+    /* ── Manage Categories — "new design" index chrome (docs/new-design-index-page.md §3b).
+       Everything is scoped to .issue-cat-page so nothing leaks into other modules. ── */
 
-/* Enhanced Card Design */
-.issue-category-card {
-    border-radius: 0.75rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(0, 74, 147, 0.1);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    overflow: hidden;
-}
+    /* Status column: soft badge only (display). The theme ships the *-subtle
+       backgrounds but not the text-*-emphasis colours, so tint the label here. */
+    .issue-cat-page .status-pill {
+        padding: 0.4em 0.85em;
+        font-weight: 600;
+        font-size: 0.75rem;
+    }
+    .issue-cat-page .status-pill.bg-success-subtle { color: #146c43; }
+    .issue-cat-page .status-pill.bg-danger-subtle  { color: #b02a37; }
 
-.issue-category-card:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-    transform: translateY(-2px);
-}
+    /* ── Row actions: icon over label ──
+       Each action is an equal-width column holding a fixed-height icon strip
+       above its caption. Equal widths keep the icon row evenly spaced even
+       though "Edit" and "Deactivate" are very different label widths; the fixed
+       strip keeps the glyphs and the switch on one baseline. */
+    .issue-cat-page .ic-act-group {
+        display: inline-flex;
+        align-items: stretch;   /* equal heights → icon strips stay in line */
+        justify-content: flex-start;
+        gap: 0.25rem;
+    }
 
-.issue-category-card .card-header-modern {
-    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-    border-bottom: 2px solid rgba(0, 74, 147, 0.1);
-    padding: 1.5rem;
-}
+    .issue-cat-page .ic-act {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 4px;
+        min-width: 62px;        /* ≈ the widest caption ("Deactivate") */
+        font-size: 0.72rem;
+        font-weight: 500;
+        line-height: 1;
+        text-decoration: none;
+        background: transparent;
+        border: 0;
+        padding: 0;
+        margin: 0;
+        cursor: pointer;
+    }
 
-.issue-category-card .card-header-modern::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background: linear-gradient(180deg, #004a93 0%, #0066cc 100%);
-}
+    .issue-cat-page .ic-act__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 22px;           /* one strip for glyphs AND the switch */
+    }
+    .issue-cat-page .ic-act__icon > i {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    /* No .form-check ancestor here, so neither Bootstrap's -2.5em nor
+       custom.css:106's -2.375rem applies — but pin it anyway. */
+    .issue-cat-page .ic-act__icon .form-check-input {
+        margin: 0;
+        float: none;
+    }
 
-/* Enhanced Table */
-.issue-category-table {
-    margin-bottom: 0;
-}
+    .issue-cat-page .ic-act__label { white-space: nowrap; }
 
-.issue-category-table thead th {
-    background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
-    font-weight: 600;
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #495057;
-    border-bottom: 2px solid #dee2e6;
-    padding: 1rem 0.75rem;
-    vertical-align: middle;
-}
+    .issue-cat-page .ic-act--edit { color: #2563eb; }
+    .issue-cat-page .ic-act--del { color: var(--bs-danger, #dc3545); }
+    .issue-cat-page .ic-act--del.is-disabled {
+        color: #98a2b3;
+        cursor: not-allowed;
+        opacity: 0.65;
+    }
+    .issue-cat-page .ic-act--toggle { color: #475467; }
 
-.issue-category-table tbody tr {
-    transition: all 0.2s ease;
-    border-bottom: 1px solid #f0f0f0;
-}
+    /* The delete <form> is only a wrapper — it must not add a box of its own. */
+    .issue-cat-page .ic-delete-form {
+        display: flex;
+        margin: 0;
+        padding: 0;
+    }
 
-.issue-category-table tbody tr:hover {
-    background-color: rgba(0, 74, 147, 0.03);
-    transform: scale(1.001);
-}
+    /* Keep the Action header over its content. */
+    .issue-cat-page #issueCategoriesTable th:last-child,
+    .issue-cat-page #issueCategoriesTable td:last-child {
+        text-align: left;
+        white-space: nowrap;
+    }
 
-.issue-category-table tbody td {
-    padding: 1rem 0.75rem;
-    vertical-align: middle;
-    color: #212529;
-}
+    /* Sortable headers — same caret language as the DataTables pages. */
+    .issue-cat-page .ic-sort {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        color: inherit;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+    .issue-cat-page .ic-sort i { font-size: 0.7rem; color: #98a2b3; }
+    .issue-cat-page .ic-sort.is-active i { color: #004384; }
+    .issue-cat-page .ic-sort:hover { color: #004384; }
 
-/* Enhanced Badges */
-.badge-modern {
-    padding: 0.5em 0.75em;
-    font-weight: 600;
-    font-size: 0.75rem;
-    border-radius: 0.5rem;
-    letter-spacing: 0.02em;
-}
+    /* Search: an icon button that reveals the server-side search input
+       (the toggle variant — this grid is paginated by Laravel, not DataTables). */
+    .issue-cat-page .ic-search-wrap { position: relative; width: 260px; max-width: 100%; }
+    .issue-cat-page .ic-search-input {
+        width: 100%;
+        border: 1px solid #d0d5dd;
+        border-radius: 8px;
+        padding: 0.45rem 0.75rem;
+        font-size: 0.875rem;
+        color: #101828;
+    }
+    .issue-cat-page .ic-search-input:focus {
+        outline: 0;
+        border-color: #004384;
+        box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
+    }
 
-/* Enhanced Buttons */
-.btn-action-group {
-    display: inline-flex;
-    gap: 0.5rem;
-    align-items: center;
-}
+    /* ── Add / Edit modals ──
+       One visual language for both: a tinted field card holding the labelled
+       controls, a red Cancel and a solid brand submit. */
+    #addCategoryModal .modal-content,
+    #editCategoryModal .modal-content { border-radius: 12px; }
 
-.btn-modern {
-    border-radius: 0.5rem;
-    font-weight: 500;
-    padding: 0.5rem 1rem;
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-}
+    .ic-modal-header {
+        border-bottom: 1px solid #eaecf0;
+        padding: 1rem 1.25rem;
+    }
+    .ic-modal-header .modal-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #101828;
+        margin: 0;
+    }
 
-.btn-modern:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
+    .ic-modal-body { padding: 1.25rem; }
 
-.btn-modern:active {
-    transform: translateY(0);
-}
+    /* The tinted card each field group lives in. */
+    .ic-field-card {
+        position: relative;
+        background: #eef1fc;
+        border-radius: 10px;
+        padding: 1rem;
+    }
+    .ic-field-card + .ic-field-card { margin-top: 1rem; }
 
-/* Status Toggle — uses global styles from public/css/custom.css */
+    .ic-form-label {
+        display: block;
+        margin-bottom: 0.375rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .ic-req { color: #dc2626; margin-left: 1px; }
 
-/* Empty State */
-.empty-state {
-    padding: 3rem 1rem;
-    text-align: center;
-    color: #6c757d;
-}
+    #addCategoryModal .ic-control,
+    #editCategoryModal .ic-control {
+        background-color: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+        color: #101828;
+        box-shadow: none;
+    }
+    #addCategoryModal .ic-control::placeholder,
+    #editCategoryModal .ic-control::placeholder { color: #9ca3af; }
+    #addCategoryModal .ic-control:focus,
+    #editCategoryModal .ic-control:focus {
+        border-color: #004384;
+        box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
+    }
+    #addCategoryModal textarea.ic-control,
+    #editCategoryModal textarea.ic-control { resize: vertical; min-height: 78px; }
 
-.empty-state-icon {
-    font-size: 4rem;
-    opacity: 0.3;
-    margin-bottom: 1rem;
-}
+    /* Repeat controls, bottom-right inside the card.
+       Plain (non-!important) display so jQuery toggle()/show()/hide() work — see
+       the .d-flex trap in docs/new-design-index-page.md §9. */
+    .ic-field-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+    }
+    .ic-field-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        flex-shrink: 0;
+        border: 0;
+        border-radius: 7px;
+        color: #fff;
+        font-size: 0.9rem;
+        line-height: 1;
+        transition: filter 0.15s ease;
+    }
+    .ic-field-btn:hover { filter: brightness(0.92); }
+    .ic-field-btn--remove { background: #ef4444; }
+    .ic-field-btn--add { background: #2563eb; }
 
-/* Enhanced Modal - Matching Design */
-.modal-content {
-    border-radius: 0.5rem;
-    border: 1px solid #e0e0e0;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
+    .ic-modal-footer {
+        border-top: 0;
+        justify-content: end;
+        gap: 0.75rem;
+        padding: 0.25rem 1.25rem 1.25rem;
+    }
+    #addCategoryModal .ic-btn-cancel,
+    #editCategoryModal .ic-btn-cancel {
+        min-width: 108px;
+        border: 1px solid #fca5a5;
+        border-radius: 8px;
+        background: #fff;
+        color: #dc2626;
+        font-weight: 500;
+    }
+    #addCategoryModal .ic-btn-cancel:hover,
+    #editCategoryModal .ic-btn-cancel:hover { background: #fef2f2; border-color: #f87171; }
+    #addCategoryModal .ic-btn-submit,
+    #editCategoryModal .ic-btn-submit {
+        min-width: 140px;
+        border: 1px solid #004384;
+        border-radius: 8px;
+        background: #004384;
+        color: #fff;
+        font-weight: 600;
+    }
+    #addCategoryModal .ic-btn-submit:hover,
+    #editCategoryModal .ic-btn-submit:hover { background: #00356a; border-color: #00356a; }
 
-.modal-header {
-    border-radius: 0.5rem 0.5rem 0 0;
-    padding: 1.5rem 1.5rem 0.5rem 1.5rem;
-    border-bottom: none;
-}
+    .issue-cat-page .ic-empty { padding: 2.5rem 1rem; text-align: center; color: #667085; }
+    .issue-cat-page .ic-empty i { font-size: 2.5rem; opacity: 0.35; }
 
-.modal-header .modal-title {
-    font-size: 1.25rem;
-    color: #212529;
-}
-
-.modal-header .text-muted {
-    font-size: 0.875rem;
-    font-weight: 400;
-}
-
-.modal-body {
-    padding: 1rem 1.5rem;
-}
-
-.modal-footer {
-    border-top: none;
-    padding: 0.5rem 1.5rem 1.5rem 1.5rem;
-}
-
-/* Form Input Styling */
-#addCategoryModal .form-control {
-    border-radius: 0.375rem;
-    border: 1px solid #ced4da;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.9375rem;
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-}
-
-#addCategoryModal .form-control:focus {
-    border-color: #004a93;
-    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
-    outline: 0;
-}
-
-#addCategoryModal .form-label {
-    font-size: 0.9375rem;
-    color: #212529;
-    margin-bottom: 0.5rem;
-}
-
-#addCategoryModal .form-text {
-    font-size: 0.8125rem;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-
-#addCategoryModal .form-text iconify-icon {
-    color: #6c757d;
-}
-
-/* Required Fields Disclaimer */
-#addCategoryModal .text-muted.small {
-    font-size: 0.8125rem;
-    line-height: 1.5;
-}
-
-/* Button Styling */
-#addCategoryModal .btn-primary {
-    background-color: #004a93;
-    border-color: #004a93;
-    border-radius: 0.375rem;
-    padding: 0.5rem 1.5rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-
-#addCategoryModal .btn-primary:hover {
-    background-color: #003d7a;
-    border-color: #003d7a;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 74, 147, 0.3);
-}
-
-#addCategoryModal .btn-outline-primary {
-    border-color: #004a93;
-    color: #004a93;
-    border-radius: 0.375rem;
-    padding: 0.5rem 1.5rem;
-    font-weight: 500;
-    background-color: transparent;
-    transition: all 0.2s ease;
-}
-
-#addCategoryModal .btn-outline-primary:hover {
-    background-color: #004a93;
-    border-color: #004a93;
-    color: #fff;
-    transform: translateY(-1px);
-}
-
-/* Sub-Category Buttons */
-#addCategoryModal .add-field-btn,
-#addCategoryModal .remove-field-btn {
-    border: 1.5px solid #004a93;
-    color: #004a93;
-    background-color: transparent;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-}
-
-#addCategoryModal .add-field-btn:hover {
-    background-color: #004a93;
-    color: #fff;
-    border-color: #004a93;
-    transform: scale(1.1);
-}
-
-#addCategoryModal .remove-field-btn {
-    border-color: #dc3545;
-    color: #dc3545;
-}
-
-#addCategoryModal .remove-field-btn:hover {
-    background-color: #dc3545;
-    color: #fff;
-    border-color: #dc3545;
-    transform: scale(1.1);
-}
-
-#addCategoryModal .add-field-btn:active,
-#addCategoryModal .remove-field-btn:active {
-    transform: scale(0.95);
-}
-
-#addCategoryModal .add-field-btn iconify-icon,
-#addCategoryModal .remove-field-btn iconify-icon {
-    color: inherit;
-}
-
-/* Category Field Groups */
-#addCategoryModal .category-field-group {
-    transition: all 0.3s ease;
-}
-
-#addCategoryModal .category-field-group hr {
-    border-color: #e0e0e0;
-    opacity: 0.5;
-}
-
-/* Form Controls Enhancement */
-.form-label {
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 0.5rem;
-    font-size: 0.875rem;
-}
-
-.form-control:focus,
-.form-select:focus {
-    border-color: #004a93;
-    box-shadow: 0 0 0 0.25rem rgba(0, 74, 147, 0.15);
-}
-
-/* Pagination Enhancement */
-.pagination {
-    margin-top: 1.5rem;
-}
-
-.page-link {
-    border-radius: 0.5rem;
-    margin: 0 0.25rem;
-    border: 1px solid #dee2e6;
-    color: #004a93;
-    transition: all 0.2s ease;
-}
-
-.page-link:hover {
-    background-color: rgba(0, 74, 147, 0.1);
-    border-color: #004a93;
-    transform: translateY(-1px);
-}
-
-.page-item.active .page-link {
-    background-color: #004a93;
-    border-color: #004a93;
-}
+    @media print {
+        .modern-breadcrumb-wrapper,
+        .issue-cat-page .ic-toolbar,
+        .issue-cat-page .ic-secondary-actions,
+        .issue-cat-page .programme-dt-footer,
+        .issue-cat-page th:last-child,
+        .issue-cat-page td:last-child { display: none !important; }
+    }
 </style>
-@endsection
+@endpush
 
 @section('setup_content')
-<div class="container-fluid">
-    <x-breadcrum title="Complaint Category" />
-    <div class="datatables">
-        <div class="card issue-category-card">
-            <div class="card-header-modern position-relative">
-                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
-                    <div>
-                        <h4 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <iconify-icon icon="solar:folder-bold-duotone" style="font-size: 1.5rem; color: #004a93;"></iconify-icon>
-                            Complaint Category Management
-                        </h4>
-                        <p class="text-muted small mb-0 mt-1">Manage and organize complaint categories</p>
-                    </div>
-                    <button type="button" class="btn btn-primary btn-modern shadow-sm" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
-                        <i class="material-icons material-symbols-rounded">add</i>
-                        <span>Add Category</span>
+@php
+    // Query string carried across sort / paging / per-page changes.
+    $baseQuery = ['q' => $search, 'per_page' => $perPage, 'sort' => $sortKey, 'dir' => $sortDir];
+
+    $sortUrl = function (string $key) use ($baseQuery, $sortKey, $sortDir) {
+        $dir = ($sortKey === $key && $sortDir === 'asc') ? 'desc' : 'asc';
+
+        return request()->fullUrlWithQuery(array_merge($baseQuery, ['sort' => $key, 'dir' => $dir, 'page' => 1]));
+    };
+@endphp
+<div class="container-fluid issue-cat-page">
+    <x-breadcrum title="Manage Categories" :showBack="false">
+        <button type="button"
+                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
+                id="icAddBtn" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+            <span>Add Category</span>
+        </button>
+    </x-breadcrum>
+
+    <x-session_message />
+
+    {{-- Secondary actions (Download / Print) — above the card, per §1 --}}
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 ic-secondary-actions">
+        <a href="{{ route('admin.issue-categories.export', ['format' => 'csv', 'q' => $search, 'sort' => $sortKey, 'dir' => $sortDir]) }}"
+           class="btn programme-dt-btn-columns border-0 text-primary" title="Download as CSV">
+            <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+        </a>
+        <a href="{{ route('admin.issue-categories.export', ['format' => 'print', 'q' => $search, 'sort' => $sortKey, 'dir' => $sortDir]) }}"
+           target="_blank" rel="noopener" class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
+            <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
+        </a>
+    </div>
+
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
+
+            {{-- Toolbar: columns + search on the right (§2) --}}
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4 ic-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="icBtnColumns"
+                            data-bs-toggle="modal" data-bs-target="#icColumnVisibilityModal"
+                            title="Show / hide columns"
+                            style="border: 1px solid #d0d5dd; background: #fff; color: #344054;">
+                        <span>Columns</span><i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
+
+                    <button type="button" class="btn programme-dt-btn-columns" id="icSearchToggle"
+                            aria-label="Search categories" title="Search"
+                            style="border: 1px solid #d0d5dd; background: #fff; color: #344054;">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                    </button>
+
+                    <form method="GET" action="{{ route('admin.issue-categories.index') }}"
+                          class="ic-search-wrap {{ filled($search) ? '' : 'd-none' }}" id="icSearchWrap">
+                        <input type="hidden" name="per_page" value="{{ $perPage }}">
+                        <input type="hidden" name="sort" value="{{ $sortKey }}">
+                        <input type="hidden" name="dir" value="{{ $sortDir }}">
+                        <input type="search" class="ic-search-input" id="icSearchInput" name="q"
+                               value="{{ $search }}" placeholder="Search categories…" autocomplete="off"
+                               aria-label="Search categories">
+                    </form>
                 </div>
             </div>
-            <div class="card-body p-4">
-                @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm" role="alert">
-                        <iconify-icon icon="solar:check-circle-bold" style="font-size: 1.25rem;"></iconify-icon>
-                        <div class="flex-grow-1">{{ session('success') }}</div>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                @endif
-                @if(session('error'))
-                    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm" role="alert">
-                        <iconify-icon icon="solar:danger-triangle-bold" style="font-size: 1.25rem;"></iconify-icon>
-                        <div class="flex-grow-1">{{ session('error') }}</div>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                @endif
 
-                <div class="table-responsive rounded-3 border">
-                    <table class="table text-nowrap mb-0">
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    <table id="issueCategoriesTable" data-sargam-dt-ui="false"
+                           class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                         <thead>
                             <tr>
-                                <th class="text-nowrap">#</th>
-                                <th class="text-nowrap">Category Name</th>
-                                <th class="text-nowrap">Description</th>
-                                <th class="text-nowrap">Sub-Categories</th>
-                                <th class="text-nowrap">Status</th>
-                                <th class="text-nowrap">Actions</th>
+                                <th scope="col">S. No.</th>
+                                <th scope="col">
+                                    <a class="ic-sort {{ $sortKey === 'category' ? 'is-active' : '' }}" href="{{ $sortUrl('category') }}">
+                                        Category
+                                        <i class="bi {{ $sortKey === 'category' && $sortDir === 'desc' ? 'bi-caret-down-fill' : 'bi-caret-up-fill' }}" aria-hidden="true"></i>
+                                    </a>
+                                </th>
+                                <th scope="col">
+                                    <a class="ic-sort {{ $sortKey === 'description' ? 'is-active' : '' }}" href="{{ $sortUrl('description') }}">
+                                        Description
+                                        <i class="bi {{ $sortKey === 'description' && $sortDir === 'desc' ? 'bi-caret-down-fill' : 'bi-caret-up-fill' }}" aria-hidden="true"></i>
+                                    </a>
+                                </th>
+                                <th scope="col">
+                                    <a class="ic-sort {{ $sortKey === 'sub_categories' ? 'is-active' : '' }}" href="{{ $sortUrl('sub_categories') }}">
+                                        Sub-Categories
+                                        <i class="bi {{ $sortKey === 'sub_categories' && $sortDir === 'desc' ? 'bi-caret-down-fill' : 'bi-caret-up-fill' }}" aria-hidden="true"></i>
+                                    </a>
+                                </th>
+                                <th scope="col">
+                                    <a class="ic-sort {{ $sortKey === 'status' ? 'is-active' : '' }}" href="{{ $sortUrl('status') }}">
+                                        Status
+                                        <i class="bi {{ $sortKey === 'status' && $sortDir === 'desc' ? 'bi-caret-down-fill' : 'bi-caret-up-fill' }}" aria-hidden="true"></i>
+                                    </a>
+                                </th>
+                                <th scope="col">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($categories as $category)
-                            <tr>
-                                <td>{{ $categories->firstItem() + $loop->index }}</td>
-                                <td>{{ $category->issue_category }}</td>
-                                <td>{{ Str::limit($category->description ?? 'No description', 50) }}</td>
-                                <td>{{ $category->subCategories->count() }}</td>
-                                <td>
-                                    <div class="form-check form-switch d-inline-flex justify-content-center">
-                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                            data-table="issue_category_master" data-column="status" data-id="{{ $category->pk }}" 
-                                            {{ $category->status == 1 ? 'checked' : '' }}>
-                                    </div>
-                                <td>
-                                    <div class="btn-action-group justify-content-center">
-                                        <a href="javascript:void(0)" class="text-primary" onclick="editCategory({{ $category->pk }}, '{{ addslashes($category->issue_category) }}', '{{ addslashes($category->description) }}', {{ $category->status }})" title="Edit Category">
-                                            <i class="material-icons material-symbols-rounded">edit</i>
-                                        </a>
-                                        <form action="{{ route('admin.issue-categories.destroy', $category->pk) }}" 
-                                              method="POST" class="d-inline" 
-                                              onsubmit="return confirm('Are you sure you want to delete this category?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <a class="text-primary" title="Delete Category">
-                                                <i class="material-icons material-symbols-rounded">delete</i>
-                                            </a>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
+                                @php $isActive = (int) $category->status === 1; @endphp
+                                <tr>
+                                    <td>{{ $categories->firstItem() + $loop->index }}</td>
+                                    <td>{{ $category->issue_category }}</td>
+                                    <td>{{ $category->description ?: '—' }}</td>
+                                    <td>{{ $category->subCategories->count() }}</td>
+                                    <td data-order="{{ (int) $category->status }}">
+                                        <span class="status-pill badge {{ $isActive ? 'bg-success-subtle' : 'bg-danger-subtle' }}">
+                                            {{ $isActive ? 'Active' : 'Inactive' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {{-- Every action is the same stack: a fixed-height icon strip over a
+                                             caption, in an equal-width column — so the icons keep an even rhythm
+                                             no matter how wide the captions are. --}}
+                                        <div class="ic-act-group" role="group" aria-label="Row actions">
+                                            <button type="button" class="ic-act ic-act--edit ic-edit-btn" aria-label="Edit category"
+                                                    data-id="{{ $category->pk }}"
+                                                    data-name="{{ $category->issue_category }}"
+                                                    data-description="{{ $category->description }}"
+                                                    data-status="{{ (int) $category->status }}">
+                                                <span class="ic-act__icon"><i class="bi bi-pencil-square" aria-hidden="true"></i></span>
+                                                <span class="ic-act__label">Edit</span>
+                                            </button>
+
+                                            {{-- NB: no .form-check/.form-switch wrapper. Those pull the input left by
+                                                 -2.375rem (custom.css:106) for the switch-beside-label layout, which
+                                                 would knock it off-centre here. The .status-toggle skin is keyed on
+                                                 the input itself, so it still applies. --}}
+                                            <label class="ic-act ic-act--toggle">
+                                                <span class="ic-act__icon">
+                                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                           data-table="issue_category_master" data-column="status"
+                                                           data-id="{{ $category->pk }}" {{ $isActive ? 'checked' : '' }}>
+                                                </span>
+                                                <span class="ic-act__label">{{ $isActive ? 'Activate' : 'Deactivate' }}</span>
+                                            </label>
+
+                                            @if($isActive)
+                                                {{-- destroy() refuses to delete an active category — mirror that guard here. --}}
+                                                <span class="ic-act ic-act--del is-disabled" aria-disabled="true"
+                                                      title="Deactivate this category before deleting it">
+                                                    <span class="ic-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
+                                                    <span class="ic-act__label">Delete</span>
+                                                </span>
+                                            @else
+                                                <form action="{{ route('admin.issue-categories.destroy', $category->pk) }}"
+                                                      method="POST" class="ic-delete-form">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="ic-act ic-act--del" aria-label="Delete category"
+                                                            data-name="{{ $category->issue_category }}">
+                                                        <span class="ic-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
+                                                        <span class="ic-act__label">Delete</span>
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
                             @empty
-                            <tr>
-                                <td colspan="6" class="empty-state">
-                                    <div class="empty-state-icon">
-                                        <iconify-icon icon="solar:folder-off-bold-duotone"></iconify-icon>
-                                    </div>
-                                    <h5 class="fw-semibold mb-2">No Categories Found</h5>
-                                    <p class="text-muted mb-3">Get started by creating your first complaint category.</p>
-                                    <button type="button" class="btn btn-primary btn-modern" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
-                                        <iconify-icon icon="solar:add-circle-bold"></iconify-icon>
-                                        Add Your First Category
-                                    </button>
-                                </td>
-                            </tr>
+                                <tr>
+                                    <td colspan="6" class="ic-empty">
+                                        <i class="bi bi-folder-x d-block mb-2" aria-hidden="true"></i>
+                                        <h6 class="fw-semibold mb-1">No Categories Found</h6>
+                                        <p class="mb-0 small">
+                                            {{ filled($search) ? 'No category matches “' . $search . '”.' : 'Get started by creating your first complaint category.' }}
+                                        </p>
+                                    </td>
+                                </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
 
-                @if($categories->hasPages())
-                <div class="d-flex justify-content-center mt-4">
-                    {{ $categories->links() }}
+                {{-- Footer variant B — Laravel paginates this grid (§4) --}}
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
+                    <div class="programme-dt-pagination">
+                        {{ $categories->links('vendor.pagination.custom') }}
+                    </div>
+                    <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                        <div class="dataTables_length">
+                            <label class="mb-0">Showing
+                                <select id="icPerPage" class="form-select form-select-sm" aria-label="Rows per page">
+                                    @foreach($perPageOptions as $option)
+                                        <option value="{{ $option }}" {{ (int) $perPage === (int) $option ? 'selected' : '' }}>{{ $option }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                        </div>
+                        <div class="dataTables_info">of {{ number_format($categories->total()) }} items</div>
+                    </div>
                 </div>
-                @endif
             </div>
+
         </div>
     </div>
 </div>
 
-<!-- Add Category Modal -->
+<!-- Add Category Modal (supports adding several categories in one go) -->
 <div class="modal fade" id="addCategoryModal" tabindex="-1" aria-labelledby="addCategoryModalLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <form action="{{ route('admin.issue-categories.store') }}" method="POST">
+        <div class="modal-content border-0 shadow rounded-4">
+            {{-- novalidate: the submit handler below drops fully-blank extra cards.
+                 Native `required` would block submit first and the user could never
+                 get past an extra card they added and left empty. --}}
+            <form action="{{ route('admin.issue-categories.store') }}" method="POST" novalidate>
                 @csrf
-                <div class="modal-header border-0 pb-0 pt-4 px-4">
-                    <div class="w-100">
-                        <h4 class="modal-title fw-bold mb-2" id="addCategoryModalLabel">Define Complaint Category</h4>
-                        <p class="text-muted mb-0 small">Please add the Complaint Sub Category</p>
-                    </div>
+                <div class="modal-header ic-modal-header">
+                    <h5 class="modal-title" id="addCategoryModalLabel">Add Category</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body px-4 py-3">
+                <div class="modal-body ic-modal-body">
                     <div id="categoryFieldsContainer">
-                        <!-- First Field Set -->
-                        <div class="category-field-group mb-4" data-index="0">
+                        {{-- Template group. Clones of THIS node become groups 1..n, so keep it
+                             free of any state the clone shouldn't inherit — syncFieldControls()
+                             decides +/− visibility for every group after each change. --}}
+                        <div class="ic-field-card category-field-group" data-index="0">
                             <div class="mb-3">
-                                <label class="form-label fw-bold mb-2">
-                                    Complaint <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" 
-                                       class="form-control complaint-field" 
-                                       name="categories[0][issue_category]" 
-                                       placeholder="Enter Complaint"
-                                       required>
-                                <div class="form-text mt-2 d-flex align-items-center gap-1 text-muted">
-                                    <iconify-icon icon="solar:info-circle-bold" style="font-size: 0.875rem;"></iconify-icon>
-                                    <span>Enter Complaint</span>
-                                </div>
+                                <label class="ic-form-label">Complaint<span class="ic-req">*</span></label>
+                                <input type="text" class="form-control ic-control complaint-field"
+                                       name="categories[0][issue_category]" placeholder="e.g. Accounts"
+                                       maxlength="255" required>
                             </div>
-                            <div class="mb-3 position-relative">
-                                <label class="form-label fw-bold mb-2">
-                                    Description <span class="text-danger">*</span>
-                                </label>
-                                <div class="d-flex align-items-start gap-2">
-                                    <div class="flex-grow-1">
-                                        <input type="text" 
-                                               class="form-control description-field" 
-                                               name="categories[0][description]" 
-                                               placeholder="Enter Description"
-                                               required>
-                                        <div class="form-text mt-2 d-flex align-items-center gap-1 text-muted">
-                                            <iconify-icon icon="solar:info-circle-bold" style="font-size: 0.875rem;"></iconify-icon>
-                                            <span>Enter Description</span>
-                                        </div>
-                                    </div>
-                                    <div class="d-flex gap-2 align-items-end" style="padding-bottom: 0.5rem;">
-                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-circle p-0 d-flex align-items-center justify-content-center add-field-btn" style="width: 32px; height: 32px; border-width: 1.5px;" title="Add Another Field">
-                                            <iconify-icon icon="solar:add-circle-bold" style="font-size: 1.25rem;"></iconify-icon>
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline-danger rounded-circle p-0 d-flex align-items-center justify-content-center remove-field-btn" style="width: 32px; height: 32px; border-width: 1.5px; display: none;" title="Remove This Field">
-                                            <iconify-icon icon="solar:minus-circle-bold" style="font-size: 1.25rem;"></iconify-icon>
-                                        </button>
-                                    </div>
-                                </div>
+                            <div class="mb-0">
+                                <label class="ic-form-label">Description<span class="ic-req">*</span></label>
+                                <textarea class="form-control ic-control description-field" rows="3"
+                                          name="categories[0][description]"
+                                          placeholder="e.g. Lorem Ipsum dolor sit amet" required></textarea>
                             </div>
-                            <hr class="my-4" style="display: none;">
+                            <div class="ic-field-actions">
+                                <button type="button" class="ic-field-btn ic-field-btn--remove remove-field-btn"
+                                        title="Remove this category" aria-label="Remove this category">
+                                    <i class="bi bi-dash-lg" aria-hidden="true"></i>
+                                </button>
+                                <button type="button" class="ic-field-btn ic-field-btn--add add-field-btn"
+                                        title="Add another category" aria-label="Add another category">
+                                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div class="mt-4 mb-2">
-                        <p class="text-muted small mb-0">
-                            <span class="text-danger">*</span><strong>Required Fields:</strong> All marked fields are mandatory for registration
-                        </p>
-                    </div>
                 </div>
-                <div class="modal-footer border-0 pt-0 pb-4 px-4 gap-2">
-                    <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        Save
-                    </button>
+                <div class="modal-footer ic-modal-footer">
+                    <button type="button" class="btn ic-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn ic-btn-submit">Add Category</button>
                 </div>
             </form>
         </div>
@@ -506,286 +502,319 @@
 
 <!-- Edit Category Modal -->
 <div class="modal fade" id="editCategoryModal" tabindex="-1" aria-labelledby="editCategoryModalLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
             <form id="editCategoryForm" method="POST">
                 @csrf
                 @method('PUT')
-                <div class="modal-header bg-primary text-white">
-                    <div class="d-flex align-items-center gap-2">
-                        <iconify-icon icon="solar:pen-bold" style="font-size: 1.5rem;"></iconify-icon>
-                        <h5 class="modal-title mb-0 fw-bold" id="editCategoryModalLabel">Edit Category</h5>
-                    </div>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-header ic-modal-header">
+                    <h5 class="modal-title" id="editCategoryModalLabel">Edit Category</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="mb-4">
-                        <label for="edit_issue_category" class="form-label d-flex align-items-center gap-2">
-                            <iconify-icon icon="solar:folder-bold" style="color: #004a93;"></iconify-icon>
-                            Category Name <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" 
-                               class="form-control form-control-lg" 
-                               id="edit_issue_category" 
-                               name="issue_category" 
-                               placeholder="Enter category name"
-                               required>
-                    </div>
-                    <div class="mb-4">
-                        <label for="edit_description" class="form-label d-flex align-items-center gap-2">
-                            <iconify-icon icon="solar:document-text-bold" style="color: #004a93;"></iconify-icon>
-                            Description
-                        </label>
-                        <textarea class="form-control" 
-                                  id="edit_description" 
-                                  name="description" 
-                                  rows="4"
-                                  placeholder="Enter category description (optional)"></textarea>
-                        <div class="form-text">Provide a brief description to help users understand this category.</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_status" class="form-label d-flex align-items-center gap-2">
-                            <iconify-icon icon="solar:settings-bold" style="color: #004a93;"></iconify-icon>
-                            Status
-                        </label>
-                        <select class="form-select form-select-lg" id="edit_status" name="status" required>
-                            <option value="1">Active</option>
-                            <option value="0">Inactive</option>
-                        </select>
-                        <div class="form-text">Note: You can also toggle status directly from the table using the switch.</div>
+                {{-- Same card / label / control language as Add — only the repeat
+                     controls are absent, because Edit works on one row. --}}
+                <div class="modal-body ic-modal-body">
+                    <div class="ic-field-card">
+                        <div class="mb-3">
+                            <label for="edit_issue_category" class="ic-form-label">Complaint<span class="ic-req">*</span></label>
+                            <input type="text" class="form-control ic-control" id="edit_issue_category" name="issue_category"
+                                   placeholder="e.g. Accounts" maxlength="255" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_description" class="ic-form-label">Description</label>
+                            <textarea class="form-control ic-control" id="edit_description" name="description" rows="3"
+                                      placeholder="e.g. Lorem Ipsum dolor sit amet"></textarea>
+                        </div>
+                        <div class="mb-0">
+                            <label for="edit_status" class="ic-form-label">Status<span class="ic-req">*</span></label>
+                            <select class="form-select ic-control" id="edit_status" name="status" required>
+                                <option value="1">Active</option>
+                                <option value="0">Inactive</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top bg-light">
-                    <button type="button" class="btn btn-outline-secondary btn-modern" data-bs-dismiss="modal">
-                        <iconify-icon icon="solar:close-circle-bold"></iconify-icon>
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-success btn-modern shadow-sm">
-                        <iconify-icon icon="solar:check-circle-bold"></iconify-icon>
-                        Update Category
-                    </button>
+                <div class="modal-footer ic-modal-footer">
+                    <button type="button" class="btn ic-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn ic-btn-submit">Update Category</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="icColumnVisibilityModal" tabindex="-1" aria-labelledby="icColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="icColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="issueCatColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
-(function() {
+$(function () {
     'use strict';
-    document.addEventListener('DOMContentLoaded', function() {
-        var $ = window.jQuery;
-        if (!$ || !$.fn.DataTable) return;
-        var $table = $('#categoriesTable');
-        if (!$table.length) return;
-        var hasDataRows = $table.find('tbody tr').filter(function() { return $(this).find('td[colspan]').length === 0; }).length > 0;
-        if (!hasDataRows) return;
-        if ($.fn.DataTable.isDataTable($table)) return;
-        $table.DataTable({
-            order: [[1, 'asc']],
-            pageLength: 10,
-            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-            columnDefs: [
-                { orderable: false, targets: [0, 4, 5] }
-            ],
-            language: {
-                search: 'Search categories:',
-                lengthMenu: 'Show _MENU_ entries',
-                info: 'Showing _START_ to _END_ of _TOTAL_ categories',
-                infoEmpty: 'No categories',
-                infoFiltered: '(filtered from _MAX_ total)',
-                zeroRecords: 'No matching categories found',
-                paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
-            },
-            drawCallback: function() {
-                if (typeof window.adjustAllDataTables === 'function') {
-                    try { window.adjustAllDataTables(); } catch (e) {}
+
+    /* ── Footer: rows-per-page ───────────────────────────────────────────── */
+    $('#icPerPage').on('change', function () {
+        var url = new URL(window.location.href);
+        url.searchParams.set('per_page', this.value);
+        url.searchParams.set('page', '1');
+        window.location.href = url.toString();
+    });
+
+    /* ── Toolbar: search toggle (server-side ?q=) ────────────────────────── */
+    $('#icSearchToggle').on('click', function () {
+        var $wrap = $('#icSearchWrap');
+        $wrap.toggleClass('d-none');
+        if (!$wrap.hasClass('d-none')) {
+            $('#icSearchInput').trigger('focus');
+        }
+    });
+
+    // Clearing the box (the native "x" or emptying it) returns to the unfiltered list.
+    $('#icSearchInput').on('search', function () {
+        if (this.value === '') {
+            $('#icSearchWrap').trigger('submit');
+        }
+    });
+
+    /* ── Column visibility (plain table → toggle by column index) ────────── */
+    var COL_KEY = 'issueCatGrid:hiddenColumns:v1';
+    var $table = $('#issueCategoriesTable');
+
+    function getHiddenCols() {
+        try {
+            var parsed = JSON.parse(localStorage.getItem(COL_KEY) || '[]');
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) { return []; }
+    }
+
+    function persistHiddenCols(cols) {
+        try { localStorage.setItem(COL_KEY, JSON.stringify(cols)); } catch (e) { /* noop */ }
+    }
+
+    function applyColumnVisibility(index, visible) {
+        var nth = index + 1;
+        $table.find('thead th:nth-child(' + nth + '), tbody td:nth-child(' + nth + ')')
+              .toggle(visible);
+    }
+
+    function buildColumnToggles() {
+        var $grid = $('#issueCatColumnToggleGrid');
+        if (!$grid.length) { return; }
+        var hidden = getHiddenCols();
+        $grid.empty();
+
+        $table.find('thead th').each(function (index) {
+            var title = $(this).text().replace(/\s+/g, ' ').trim();
+            if (!title) { return; }
+
+            var visible = hidden.indexOf(index) === -1;
+            applyColumnVisibility(index, visible);
+
+            var inputId = 'iccolvis_' + index;
+            var $checkbox = $('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .prop('checked', visible);
+
+            $checkbox.on('change', function () {
+                var cols = getHiddenCols();
+                var pos = cols.indexOf(index);
+                if (this.checked) {
+                    if (pos !== -1) { cols.splice(pos, 1); }
+                } else if (pos === -1) {
+                    cols.push(index);
                 }
+                persistHiddenCols(cols);
+                applyColumnVisibility(index, this.checked);
+            });
+
+            $('<div class="col-12 col-sm-6 col-md-4"></div>').append(
+                $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                    .attr('for', inputId)
+                    .append($checkbox)
+                    .append($('<span></span>').text(title))
+            ).appendTo($grid);
+        });
+    }
+
+    buildColumnToggles();
+
+    /* ── Status toggle: repaint the row (badge + caption + delete guard) ──
+       custom.js does the AJAX; the badge and the switch live in different
+       columns, so reload rather than hand-mirroring them. ── */
+    $(document).ajaxSuccess(function (event, xhr, settings) {
+        var url = (settings && settings.url) ? settings.url : '';
+        if (url.indexOf('toggle-status') === -1 && url.indexOf('toggleStatus') === -1) { return; }
+        setTimeout(function () { window.location.reload(); }, 600);
+    });
+
+    /* ── Delete: confirm before submitting ───────────────────────────────── */
+    $(document).on('submit', '.ic-delete-form', function (e) {
+        var form = this;
+        if ($(form).data('confirmed')) { return; }
+        e.preventDefault();
+
+        var name = $(form).find('.ic-act--del').data('name') || 'this category';
+
+        if (typeof Swal === 'undefined' || typeof Swal.fire !== 'function') {
+            if (window.confirm('Delete "' + name + '"? This cannot be undone.')) {
+                $(form).data('confirmed', true);
+                form.submit();
+            }
+            return;
+        }
+
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'Delete "' + name + '"? This cannot be undone.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#d92d20',
+            reverseButtons: true
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                $(form).data('confirmed', true);
+                form.submit();
             }
         });
     });
-})();
 
-function editCategory(id, name, description, status) {
-    document.getElementById('edit_issue_category').value = name;
-    document.getElementById('edit_description').value = description || '';
-    document.getElementById('edit_status').value = status;
-    
-    const form = document.getElementById('editCategoryForm');
-    form.action = "{{ url('admin/issue-categories') }}/" + id;
-    
-    const modal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
-    modal.show();
-}
+    /* ── Edit modal ──────────────────────────────────────────────────────── */
+    $(document).on('click', '.ic-edit-btn', function () {
+        var $btn = $(this);
+        $('#edit_issue_category').val($btn.data('name'));
+        $('#edit_description').val($btn.data('description') || '');
+        $('#edit_status').val(String($btn.data('status')) === '1' ? '1' : '0');
+        $('#editCategoryForm').attr('action', "{{ url('admin/issue-categories') }}/" + $btn.data('id'));
 
-// Dynamic Field Management
-let fieldIndex = 1;
-
-// Add new field group
-$(document).on('click', '.add-field-btn', function() {
-    const container = $('#categoryFieldsContainer');
-    const firstGroup = container.find('.category-field-group').first();
-    const newGroup = firstGroup.clone();
-    
-    // Update index
-    newGroup.attr('data-index', fieldIndex);
-    
-    // Update field names
-    newGroup.find('.complaint-field').attr('name', `categories[${fieldIndex}][issue_category]`).val('');
-    newGroup.find('.description-field').attr('name', `categories[${fieldIndex}][description]`).val('');
-    
-    // Show remove button and separator
-    newGroup.find('.remove-field-btn').show();
-    newGroup.find('hr').show();
-    
-    // Hide add button in previous group
-    $(this).closest('.category-field-group').find('.add-field-btn').hide();
-    
-    // Append new group
-    container.append(newGroup);
-    
-    fieldIndex++;
-    
-    // Scroll to new field
-    $('html, body').animate({
-        scrollTop: newGroup.offset().top - 100
-    }, 300);
-});
-
-// Remove field group
-$(document).on('click', '.remove-field-btn', function() {
-    const group = $(this).closest('.category-field-group');
-    const container = $('#categoryFieldsContainer');
-    const totalGroups = container.find('.category-field-group').length;
-    
-    // Don't remove if only one group
-    if (totalGroups <= 1) {
-        return;
-    }
-    
-    // Show add button in previous group
-    const prevGroup = group.prev('.category-field-group');
-    if (prevGroup.length) {
-        prevGroup.find('.add-field-btn').show();
-        prevGroup.find('hr').hide();
-    }
-    
-    // Remove current group
-    group.fadeOut(300, function() {
-        $(this).remove();
-        
-        // Re-index remaining fields
-        reindexFields();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('editCategoryModal')).show();
     });
-});
 
-// Re-index fields after removal
-function reindexFields() {
-    $('#categoryFieldsContainer .category-field-group').each(function(index) {
-        $(this).attr('data-index', index);
-        $(this).find('.complaint-field').attr('name', `categories[${index}][issue_category]`);
-        $(this).find('.description-field').attr('name', `categories[${index}][description]`);
+    /* ── Add modal: repeatable Complaint / Description cards ─────────────── */
+
+    /* Single source of truth for the repeat controls and the field names, run
+       after every add/remove. Deriving both from the current DOM (rather than
+       nudging the previous/next card) means a clone can't inherit stale state. */
+    function syncFieldCards() {
+        var $groups = $('#categoryFieldsContainer .category-field-group');
+        var last = $groups.length - 1;
+
+        $groups.each(function (index) {
+            $(this).attr('data-index', index);
+            $(this).find('.complaint-field').attr('name', 'categories[' + index + '][issue_category]');
+            $(this).find('.description-field').attr('name', 'categories[' + index + '][description]');
+
+            // Remove only once there is something left to keep; add only on the last card.
+            $(this).find('.remove-field-btn').toggle($groups.length > 1);
+            $(this).find('.add-field-btn').toggle(index === last);
+        });
+    }
+
+    $(document).on('click', '.add-field-btn', function () {
+        var container = $('#categoryFieldsContainer');
+        var newGroup = container.find('.category-field-group').first().clone();
+
+        newGroup.find('.complaint-field, .description-field').val('').prop('disabled', false);
+        newGroup.find('.is-invalid').removeClass('is-invalid');
+        newGroup.find('.invalid-feedback').remove();
+
+        container.append(newGroup);
+        syncFieldCards();
+        newGroup.find('.complaint-field').trigger('focus');
     });
-    
-    fieldIndex = $('#categoryFieldsContainer .category-field-group').length;
-}
 
-// Reset form when modal is closed
-$('#addCategoryModal').on('hidden.bs.modal', function() {
-    const container = $('#categoryFieldsContainer');
-    
-    // Keep only first group
-    container.find('.category-field-group:not(:first)').remove();
-    
-    // Reset first group
-    const firstGroup = container.find('.category-field-group').first();
-    firstGroup.find('input').val('');
-    firstGroup.find('.remove-field-btn').hide();
-    firstGroup.find('.add-field-btn').show();
-    firstGroup.find('hr').hide();
-    
-    // Reset index
-    fieldIndex = 1;
-    
-    // Clear validation errors
-    container.find('.is-invalid').removeClass('is-invalid');
-    container.find('.invalid-feedback').remove();
-});
+    $(document).on('click', '.remove-field-btn', function () {
+        var container = $('#categoryFieldsContainer');
+        if (container.find('.category-field-group').length <= 1) { return; }
 
-// Form submission handler
-$('#addCategoryModal form').on('submit', function(e) {
-    const form = $(this);
-    let isValid = true;
-    let hasData = false;
-    
-    // Clear previous validation
-    form.find('.is-invalid').removeClass('is-invalid');
-    form.find('.invalid-feedback').remove();
-    
-    // Validate all fields
-    $('#categoryFieldsContainer .category-field-group').each(function() {
-        const complaint = $(this).find('.complaint-field').val().trim();
-        const description = $(this).find('.description-field').val().trim();
-        
-        if (complaint || description) {
+        $(this).closest('.category-field-group').fadeOut(200, function () {
+            $(this).remove();
+            syncFieldCards();
+        });
+    });
+
+    $('#addCategoryModal').on('hidden.bs.modal', function () {
+        var container = $('#categoryFieldsContainer');
+        container.find('.category-field-group:not(:first)').remove();
+        container.find('input, textarea').val('').prop('disabled', false);
+        container.find('.is-invalid').removeClass('is-invalid');
+        container.find('.invalid-feedback').remove();
+        syncFieldCards();
+    });
+
+    syncFieldCards();
+
+    $('#addCategoryModal form').on('submit', function (e) {
+        var form = $(this);
+        var isValid = true;
+        var hasData = false;
+
+        form.find('.is-invalid').removeClass('is-invalid');
+        form.find('.invalid-feedback').remove();
+
+        $('#categoryFieldsContainer .category-field-group').each(function () {
+            var complaint = $(this).find('.complaint-field').val().trim();
+            var description = $(this).find('.description-field').val().trim();
+            if (!complaint && !description) { return; }
+
             hasData = true;
-            
+
             if (!complaint) {
                 isValid = false;
-                const field = $(this).find('.complaint-field');
-                field.addClass('is-invalid');
-                if (!field.next('.invalid-feedback').length) {
-                    field.after('<div class="invalid-feedback">Complaint field is required.</div>');
+                var $complaint = $(this).find('.complaint-field').addClass('is-invalid');
+                if (!$complaint.next('.invalid-feedback').length) {
+                    $complaint.after('<div class="invalid-feedback">Complaint field is required.</div>');
                 }
             }
-            
             if (!description) {
                 isValid = false;
-                const field = $(this).find('.description-field');
-                field.addClass('is-invalid');
-                if (!field.next('.invalid-feedback').length) {
-                    field.after('<div class="invalid-feedback">Description field is required.</div>');
+                var $description = $(this).find('.description-field').addClass('is-invalid');
+                if (!$description.next('.invalid-feedback').length) {
+                    $description.after('<div class="invalid-feedback">Description field is required.</div>');
                 }
             }
-        }
-    });
-    
-    if (!hasData) {
-        e.preventDefault();
-        Swal.fire({
-            icon: 'error',
-            title: 'No Data',
-            text: 'Please add at least one category entry.',
-            confirmButtonColor: '#004a93'
         });
-        return false;
-    }
-    
-    if (!isValid) {
-        e.preventDefault();
-        Swal.fire({
-            icon: 'error',
-            title: 'Validation Error',
-            text: 'Please fill all required fields for each category entry.',
-            confirmButtonColor: '#004a93'
-        });
-        return false;
-    }
-    
-    // Disable empty field groups before submission to prevent sending empty data
-    $('#categoryFieldsContainer .category-field-group').each(function() {
-        const complaint = $(this).find('.complaint-field').val().trim();
-        const description = $(this).find('.description-field').val().trim();
-        
-        if (!complaint || !description) {
-            $(this).find('input').prop('disabled', true);
+
+        if (!hasData || !isValid) {
+            e.preventDefault();
+            Swal.fire({
+                icon: 'error',
+                title: hasData ? 'Validation Error' : 'No Data',
+                text: hasData
+                    ? 'Please fill all required fields for each category entry.'
+                    : 'Please add at least one category entry.',
+                confirmButtonColor: '#004384'
+            });
+            return false;
         }
+
+        // Drop half-filled groups so the store() loop never receives empty rows.
+        $('#categoryFieldsContainer .category-field-group').each(function () {
+            var complaint = $(this).find('.complaint-field').val().trim();
+            var description = $(this).find('.description-field').val().trim();
+            if (!complaint || !description) {
+                // textarea too — a disabled control is not submitted.
+                $(this).find('input, textarea').prop('disabled', true);
+            }
+        });
     });
-    
-    // Form will submit normally with valid data
 });
 </script>
-@endsection
+@endpush

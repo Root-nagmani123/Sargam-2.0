@@ -7,6 +7,11 @@ built on the Attendance page.
 **Canonical reference:** `resources/views/admin/attendance/index.blade.php`.
 It is not the `employee_idcard` layout and not the old DataTables default chrome.
 
+**Second reference —** `resources/views/admin/issue_management/categories/index.blade.php`
+for everything Attendance doesn't show: the status badge + row-action stack
+(§3b), the matching Add/Edit modals (§3c), the Laravel-paginated footer with its
+own sort/search/per-page wiring (§4B), and the Download + Print export pair (§1).
+
 This doc covers page *chrome*. The `--ds-*` token and `.ds-*` component layer is
 documented separately in [design.md](design.md); column visibility has its own
 doc, [column-visibility.md](column-visibility.md).
@@ -43,7 +48,7 @@ container-fluid <module>-page
 └── card > card-body
     ├── toolbar   (filters left · columns + search right)
     ├── programme-dt-panel
-    │   └── table-responsive > table.programme-dt-table
+    │   └── table-responsive > table.programme-dt-table   ← Status column + row actions §3b
     └── programme-dt-footer            (pagination left · "Showing N of M items" right)
 ```
 
@@ -80,6 +85,33 @@ The status pills and Download button sit **above the card**, not inside it.
 
 If the page exports more than one format, make Download a dropdown instead
 (`memo_discipline/index.blade.php:202-210` has the Excel + PDF version).
+
+### No status pills? Right-align the export row
+
+A grid with nothing to filter by status still keeps the row — just drop the `<ul>`
+and let the buttons sit alone on the right. Reuse `.programme-dt-btn-columns` for
+them so they match the toolbar below
+(`issue_management/categories/index.blade.php:171-180`):
+
+```blade
+<div class="d-flex flex-wrap justify-content-end gap-2 mb-3 ic-secondary-actions">
+    <a href="{{ route('…export', ['format' => 'csv']) }}"
+       class="btn programme-dt-btn-columns border-0 text-primary" title="Download as CSV">
+        <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+    </a>
+    <a href="{{ route('…export', ['format' => 'print']) }}" target="_blank" rel="noopener"
+       class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
+        <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
+    </a>
+</div>
+```
+
+**Print is a server-rendered view, not `window.print()`.** One controller action
+serves both formats off the same query so the CSV and the printout can't drift
+apart (`IssueCategoryController@export`, `categories/export_print.blade.php` — a
+`<body onload="window.print()">` page branded like the module's `export_pdf`).
+Carry the grid's own `q` / `sort` / `dir` into the export links so the user gets
+what they are looking at, not the unfiltered table.
 
 ---
 
@@ -149,6 +181,12 @@ wrapping to a second row.
   server-side and not a DataTables filter (`#discSearchToggle` +
   `.disc-search-wrap`, `memo_discipline/index.blade.php:280-289`).
 
+  The revealed input can just be a **GET `<form>`** whose submit reloads the page
+  — no JS beyond the reveal. Keep the other grid state (`per_page`, `sort`, `dir`)
+  as `<input type="hidden">` inside it or the search will reset them
+  (`#icSearchToggle` + `#icSearchWrap`, `categories/index.blade.php:195-209`).
+  Start it un-hidden when a search is active: `class="… {{ filled($search) ? '' : 'd-none' }}"`.
+
 ### Reset Filters is a `<button>`, not a link
 
 `attendance:351` and `programme/index.blade.php:55` both use
@@ -183,6 +221,188 @@ padding, a 3%-primary hover row, a muted first column (S. No.) and a wrapping,
 
 > **Never hand-roll `dom`/`colVis` options on a Yajra table** — it breaks the
 > init. Use the global UI script plus the column-visibility modal.
+
+---
+
+## 3b. Status column + row actions
+
+Reference: `issue_management/categories/index.blade.php` (blade rows) — Yajra
+pages build the identical markup inside `addColumn('status'|'action', …)`.
+
+The layout splits status **display** from the **control**:
+
+- **Status column** = a soft badge, display only. `data-order` lets a client-side
+  sort order by state.
+- **Action column** = **Edit** · the **status switch** · **Delete**, each an
+  icon over a caption. The switch stays in the action group — never drop it for a
+  badge-only display, that removes the inline-toggle feature.
+
+```blade
+{{-- Status: soft badge --}}
+<td data-order="{{ (int) $row->status }}">
+    <span class="status-pill badge rounded-1 {{ $isActive ? 'bg-success-subtle' : 'bg-danger-subtle' }}">
+        {{ $isActive ? 'Active' : 'Inactive' }}
+    </span>
+</td>
+
+{{-- Action: three identical stacks --}}
+<td>
+    <div class="ic-act-group" role="group" aria-label="Row actions">
+        <button type="button" class="ic-act ic-act--edit ic-edit-btn" data-id="…" data-name="…" data-status="…">
+            <span class="ic-act__icon"><i class="bi bi-pencil-square" aria-hidden="true"></i></span>
+            <span class="ic-act__label">Edit</span>
+        </button>
+
+        <label class="ic-act ic-act--toggle">
+            <span class="ic-act__icon">
+                <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                       data-table="<table>" data-column="<col>" data-id="{{ $row->pk }}" @checked($isActive)>
+            </span>
+            <span class="ic-act__label">{{ $isActive ? 'Deactivate' : 'Activate' }}</span>
+        </label>
+
+        {{-- Delete: guarded — a disabled <span> when the server would refuse it,
+             a DELETE <form> otherwise --}}
+    </div>
+</td>
+```
+
+- **Soft badge.** Active = `bg-success-subtle`, Inactive = `bg-danger-subtle`.
+  ⚠️ The theme ships the `*-subtle` **backgrounds** but not the
+  `text-*-emphasis` colours, so the label renders black. Tint it in the page's
+  scoped `<style>`:
+  ```css
+  .<page> .status-pill.bg-success-subtle { color: #146c43; }
+  .<page> .status-pill.bg-danger-subtle  { color: #b02a37; }
+  ```
+- **Toggle wiring is automatic.** `custom.js:170` binds `.status-toggle` change
+  globally (SweetAlert confirm → AJAX to `routes.toggleStatus`). You write **no**
+  toggle JS. The badge and the switch live in different columns, so on success
+  **reload the page** rather than hand-mirroring them:
+  ```js
+  $(document).ajaxSuccess(function (e, xhr, s) {
+      if (s.url.indexOf('toggle-status') === -1 && s.url.indexOf('toggleStatus') === -1) return;
+      setTimeout(function () { window.location.reload(); }, 600);
+  });
+  ```
+- **Guard Delete against the server's own rule.** If `destroy()` refuses (e.g.
+  "can't delete an active row"), render a muted disabled `<span>` with a `title`
+  saying why, and the real DELETE `<form>` only in the allowed state. A red icon
+  that always fails is worse than a greyed one.
+- **The switch caption names the ACTION, not the state** — an Active row reads
+  "Deactivate". The state is already shown by the badge one column over, so
+  repeating it there is redundant *and* reads as a contradiction.
+  ⚠️ `categories/index.blade.php:284` currently ships the inverse
+  (`$isActive ? 'Activate' : 'Deactivate'`) — that line is the exception, not the
+  pattern. Copy the rule above, not that line.
+
+### The two alignment traps
+
+Both cost real debugging time. Both are in the CSS you inherit.
+
+**1. Never wrap the switch in `.form-check.form-switch` here.**
+`custom.css:107-112` pulls `.form-check-input` left by `-2.375rem` whenever it
+sits inside `.form-check.form-switch:has(.status-toggle)` — correct for the
+switch-*beside*-label layout, wrong for switch-*above*-caption. At 4 classes it
+out-specifies a 3-class page reset, so the wrapper collapses to **0px wide** and
+the switch renders ~38px left of its caption. Drop the wrapper entirely: the
+skin is keyed on `.form-check-input.status-toggle[type="checkbox"]`
+(`custom.css:41`) and still applies without any `.form-check` ancestor.
+
+**2. Give every action the same width.** Otherwise each column is sized by its
+caption ("Edit" 21px vs "Deactivate" 58px) and the icon row comes out unevenly
+spaced. One fixed-height icon strip keeps glyphs and the switch on one baseline:
+
+```css
+.<page> .ic-act-group { display: inline-flex; align-items: stretch; gap: 0.25rem; }
+
+.<page> .ic-act {
+    display: inline-flex; flex-direction: column;
+    align-items: center; justify-content: flex-start; gap: 4px;
+    min-width: 62px;                 /* ≈ the widest caption */
+    font-size: 0.72rem; font-weight: 500; line-height: 1;
+    background: transparent; border: 0; padding: 0; margin: 0; cursor: pointer;
+}
+
+.<page> .ic-act__icon {              /* one strip for glyphs AND the switch */
+    display: flex; align-items: center; justify-content: center; height: 22px;
+}
+.<page> .ic-act__icon > i { font-size: 1.1rem; line-height: 1; }
+.<page> .ic-act__icon .form-check-input { margin: 0; float: none; }
+.<page> .ic-act__label { white-space: nowrap; }
+```
+
+Colours: Edit `#2563eb`, Delete `var(--bs-danger)`, disabled Delete `#98a2b3` at
+`opacity .65`, toggle caption `#475467`. A wrapping `<form>` around Delete needs
+`display: flex; margin: 0; padding: 0` so it adds no box of its own.
+
+Verify by measuring, not by eye — every `.ic-act` should report the same width
+and every `.ic-act__icon` the same `top`/`height`.
+
+---
+
+## 3c. Create / Edit modals
+
+Create and Edit open **modals** — no page navigation — and they look **alike**:
+same header, same tinted field card, same labels/controls, same footer pair.
+Only the contents and the submit caption differ. Reference:
+`categories/index.blade.php` (`#addCategoryModal` / `#editCategoryModal`).
+
+```
+modal-content (radius 12)
+├── .ic-modal-header      title left · btn-close right · 1px #eaecf0 rule under
+├── .ic-modal-body
+│   └── .ic-field-card    #eef1fc, radius 10, padding 1rem   ← one per record
+│       ├── .ic-form-label + .ic-req ("*")  → .form-control.ic-control
+│       └── .ic-field-actions               → − / +   (Add only)
+└── .ic-modal-footer      centred · .ic-btn-cancel (red outline) · .ic-btn-submit (#004384)
+```
+
+Tokens: card `#eef1fc`; label `.8125rem/600 #1f2937`; asterisk `#dc2626`;
+control white on `#e5e7eb`, radius 8; remove `#ef4444`, add `#2563eb`, both
+30×30 radius 7; Cancel `#dc2626` text on `#fca5a5`; submit brand `#004384`.
+Scope the control rules to the two modal IDs — they must beat `.form-control`
+without `!important`.
+
+### Repeatable field cards (Add)
+
+Where create accepts several records at once, each is one `.ic-field-card` and
+the whole state is derived from the DOM after every change — **never** by nudging
+the previous/next card:
+
+```js
+function syncFieldCards() {
+    var $groups = $('#categoryFieldsContainer .category-field-group');
+    var last = $groups.length - 1;
+    $groups.each(function (index) {
+        $(this).attr('data-index', index);
+        $(this).find('.complaint-field').attr('name', 'categories[' + index + '][issue_category]');
+        $(this).find('.description-field').attr('name', 'categories[' + index + '][description]');
+        $(this).find('.remove-field-btn').toggle($groups.length > 1);  // − once >1 card
+        $(this).find('.add-field-btn').toggle(index === last);         // + on the last only
+    });
+}
+```
+
+Call it after add, after remove, on `hidden.bs.modal`, and once on load. Clone
+the **first** card as the template and blank its values — deriving visibility
+afterwards is what stops a clone inheriting the template's hidden state (the bug
+in §9's `.d-flex` note had exactly this shape).
+
+### ⚠️ `required` + an optional extra card = dead end
+
+If the user adds a card and leaves it empty, native validation blocks submit and
+your handler — the one that would have dropped the blank card — never runs. The
+field is invalid, invisible-ish, and the form just refuses to submit.
+
+Put **`novalidate` on the create form** and let the submit handler own it:
+count a card as filled if either field has a value, error only on half-filled
+cards, and `prop('disabled', true)` the fully-blank ones so they are not posted.
+Disable **`input, textarea`** — a `find('input')` alone silently posts empty
+textareas and the controller writes blank rows.
+
+Keep the `required` attributes for semantics/a11y; `novalidate` only stops the
+browser from enforcing them.
 
 ---
 
@@ -227,6 +447,38 @@ For server-side paginated pages that aren't DataTables-driven. Reuses the
 
 `vendor/pagination/custom.blade.php` renders `‹` / `›` — the same glyphs the JS
 uses for its pager, which is why the two variants match.
+
+The rows-per-page `<select>` is yours to wire — one handler, no DataTables
+involved (`categories/index.blade.php:480-485`):
+
+```js
+$('#icPerPage').on('change', function () {
+    var url = new URL(window.location.href);
+    url.searchParams.set('per_page', this.value);
+    url.searchParams.set('page', '1');       // page 1, or the user lands past the end
+    window.location.href = url.toString();
+});
+```
+
+Whitelist the value server-side (`in_array($perPage, self::PER_PAGE_OPTIONS, true)`)
+and fold `per_page` / `q` / `sort` / `dir` into the **listing cache key** if the
+controller memoises its page snapshot — otherwise every variant serves page 1's rows.
+
+### Sortable headers without DataTables
+
+Variant B has no client-side sorter, so a header caret must be a real link. Keep
+a whitelist in the controller (`SORTABLE_COLUMNS` → column name or a `withCount`
+alias) and flip direction on the active column:
+
+```php
+$sortUrl = fn (string $key) => request()->fullUrlWithQuery(array_merge($baseQuery, [
+    'sort' => $key,
+    'dir'  => ($sortKey === $key && $sortDir === 'asc') ? 'desc' : 'asc',
+    'page' => 1,
+]));
+```
+
+Only give a caret to columns you actually sort — a running "S. No." isn't one.
 
 ---
 
@@ -306,6 +558,12 @@ Page CSS is namespaced under a page-root class (`.disc-page .disc-tab`,
 | `gm-*` | Group Mapping |
 | `sm-*` | Subject Master / Module |
 | `attendance-*` | Attendance |
+| `ic-*` | Centcom → Manage Categories (`issue_management/categories`) |
+
+Within a page prefix, the row-action stack uses BEM-ish element names —
+`.ic-act` / `.ic-act__icon` / `.ic-act__label`, modifiers `--edit` / `--toggle`
+/ `--del` (§3b). Keep those element/modifier names when you port the pattern;
+only the prefix changes.
 
 `public/css` is flat, named `<module>-<audience>.css`
 (`course-repository-admin.css`, `roles-admin.css`, …).
@@ -315,15 +573,26 @@ Page CSS is namespaced under a page-root class (`.disc-page .disc-tab`,
 ## 8. Checklist for a new index page
 
 1. `<x-breadcrum>` heading, with the primary action button in its slot.
-2. Status pills + Download row **above** the card.
+2. Status pills + Download row **above** the card (right-aligned exports alone if
+   there are no pills — §1).
 3. Toolbar: `Filters` label → filter selects → red `Reset Filters` on the left;
    `Columns` + search slot on the right (`ms-lg-auto`).
 4. `.programme-dt-panel` > `.table-responsive` > `table.programme-dt-table`.
-5. Footer — empty div if DataTables paginates, hand-written variant B if Laravel does.
-6. If Laravel paginates: add `data-sargam-dt-ui="false"`.
-7. Column visibility → [column-visibility.md](column-visibility.md).
-8. Page CSS namespaced under a page-root class, tokens from
-   [design.md](design.md), `?v={{ @filemtime(...) }}` on the link tag.
+5. Status column = soft badge; Action column = Edit · switch · Delete as
+   equal-width icon-over-label stacks (§3b). No `.form-check`/`.form-switch`
+   wrapper around the switch.
+6. Create + Edit in modals that look alike — shared header / field card / footer
+   (§3c). `novalidate` on any create form with repeatable cards.
+7. Footer — empty div if DataTables paginates, hand-written variant B if Laravel does.
+8. If Laravel paginates: add `data-sargam-dt-ui="false"`, and wire `per_page` /
+   `sort` / `dir` yourself (§4). Whitelist all three server-side and include them
+   in the listing cache key.
+9. Column visibility → [column-visibility.md](column-visibility.md). Add the new
+   grid's ID to the `colvis-item` list in `custom.css:238-272` (§9).
+10. Page CSS namespaced under a page-root class, tokens from
+    [design.md](design.md), `?v={{ @filemtime(...) }}` on the link tag.
+11. Use only **one** of `@push('scripts')` / `@section('scripts')` — the master
+    layout renders both, so using both double-renders your script.
 
 ---
 
@@ -340,7 +609,19 @@ Real traps, not nitpicks:
   vs `#f04438` (`disc-reset`).
 - **Two column-visibility modals** — the `sn-colvis-*` chip grid and the
   `colvis-item` card grid. The latter is styled by a hard-coded **ID list** at
-  `custom.css:238-269`, so a new page must be added there.
+  `custom.css:238-272`, so a new page must be added there (three separate
+  selector lists: base, `:hover`, `.form-check-input`).
+- **`.d-flex` beats `jQuery.hide()`.** Bootstrap's display utilities are
+  `!important`, so `.hide()` — which writes inline `display:none` — silently does
+  nothing on an element carrying `d-flex`. This shipped as a live bug in the
+  Manage Categories add-modal: the repeat-row `+`/`−` buttons were always both
+  visible. If JS toggles an element's visibility, give it a plain
+  (non-`!important`) `display` from your own scoped class, not `d-flex`. Cloning
+  compounds it — a clone of a hidden template inherits the hidden state, so
+  `.show()` the controls that must be live on the copy.
+- **The status switch carries layout baggage.** `.form-check.form-switch:has(.status-toggle)`
+  yanks the input `-2.375rem` left (`custom.css:107-112`). Fine beside a label,
+  broken above a caption — see §3b.
 - **Two token sets** — `--ds-*` (`sargam-app.css`) and `--gigw-*`
   (`notice-memo-discipline.css:14-23`). Prefer `--ds-*` in new work.
 - **Adoption is partial.** ~41 views use `programme-dt-*`; ~15 more use
