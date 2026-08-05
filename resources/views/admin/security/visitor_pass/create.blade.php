@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     @include('components.breadcrum', ['title' => 'Register New Visitor']) 
-    <div class="card" style="border-left:4px solid #004384;">
+    <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-header bg-white">
             <div class="d-flex justify-content-between align-items-center">
                 <h4 class="mb-0">Register New Visitor</h4>

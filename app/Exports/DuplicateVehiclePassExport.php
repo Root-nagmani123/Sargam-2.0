@@ -2,7 +2,7 @@
 
 namespace App\Exports;
 
-use App\Models\VehiclePassTWApply;
+use App\Models\VehiclePassDuplicateApplyTwfw;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\{FromCollection, WithColumnWidths, WithEvents, WithTitle};
 use Maatwebsite\Excel\Events\AfterSheet;
@@ -11,33 +11,32 @@ use PhpOffice\PhpSpreadsheet\Style\{Alignment, Border, Fill};
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 
 /**
- * Styled Excel (.xlsx) export for the Vehicle Pass Request listing.
+ * Styled Excel (.xlsx) export for the Duplicate Vehicle Pass Request listing.
  *
  * A plain CSV can't carry colour/borders/logos, so this builds a formatted
  * workbook whose header block + table styling mirror the Print / PDF layout:
  * institution logos, blue title band, blue column header, bordered zebra rows.
- * Mirrors {@see DuplicateVehiclePassExport}.
+ * Mirrors {@see StudentMedicalExemptionExport}.
  */
-class VehiclePassExport implements FromCollection, WithColumnWidths, WithEvents, WithTitle
+class DuplicateVehiclePassExport implements FromCollection, WithColumnWidths, WithEvents, WithTitle
 {
-    protected string $tab;
-    protected mixed $employeePk;
-    protected mixed $pkOld;
+    protected ?int $employeePk;
+    protected ?int $pkOld;
     protected ?string $search;
 
     /** Data-row count, captured while streaming the collection (for the meta line). */
     protected int $rowCount = 0;
 
-    public function __construct(string $tab, mixed $employeePk, mixed $pkOld = null, ?string $search = null)
+    public function __construct(?int $employeePk = null, ?int $pkOld = null, ?string $search = null)
     {
-        $this->tab = in_array($tab, ['active', 'archive', 'all'], true) ? $tab : 'active';
         $this->employeePk = $employeePk;
         $this->pkOld = $pkOld;
         $this->search = $search !== null && trim($search) !== '' ? trim($search) : null;
     }
 
     /**
-     * All exportable data columns, in on-screen order.
+     * All exportable data columns, in on-screen order. Document + Action are never
+     * exported so the Excel / PDF / Print match column-for-column.
      *
      * @return array<int,array{key:string,width:int,align:?string}>
      */
@@ -49,7 +48,7 @@ class VehiclePassExport implements FromCollection, WithColumnWidths, WithEvents,
             ['key' => 'vehicle_pass_no', 'width' => 18, 'align' => null],
             ['key' => 'vehicle_type',    'width' => 18, 'align' => null],
             ['key' => 'vehicle_no',      'width' => 18, 'align' => null],
-            ['key' => 'request_date',    'width' => 18, 'align' => 'center'],
+            ['key' => 'request_date',    'width' => 16, 'align' => 'center'],
             ['key' => 'status',          'width' => 14, 'align' => 'center'],
         ];
     }
@@ -57,7 +56,7 @@ class VehiclePassExport implements FromCollection, WithColumnWidths, WithEvents,
     /** The flat list of column headings (S.No included), same order as the layout. */
     public function activeHeadings(): array
     {
-        return ['S.No.', 'Employee Name', 'Vehicle Pass No', 'Vehicle Type', 'Vehicle Number', 'Requested Date', 'Status'];
+        return ['S.No.', 'Employee Name', 'Vehicle Pass No', 'Vehicle Type', 'Vehicle Number', 'Request Date', 'Status'];
     }
 
     public function collection()
@@ -80,7 +79,7 @@ class VehiclePassExport implements FromCollection, WithColumnWidths, WithEvents,
 
     public function title(): string
     {
-        return 'Vehicle Pass';
+        return 'Duplicate Vehicle Pass';
     }
 
     public function columnWidths(): array
@@ -109,7 +108,7 @@ class VehiclePassExport implements FromCollection, WithColumnWidths, WithEvents,
                 // --- Meta lines shown above the table (same content as Print / PDF) ---
                 $metaLines = [];
                 $metaLines[] = ['text' => 'Lal Bahadur Shastri National Academy of Administration, Mussoorie', 'style' => 'inst'];
-                $metaLines[] = ['text' => 'Vehicle Pass Request', 'style' => 'title'];
+                $metaLines[] = ['text' => 'Duplicate Vehicle Pass Request', 'style' => 'title'];
 
                 $filterLine = $this->exportFilterLine();
                 if ($filterLine !== '') {
@@ -231,33 +230,22 @@ class VehiclePassExport implements FromCollection, WithColumnWidths, WithEvents,
         $drawing->setWorksheet($sheet);
     }
 
-    /** Scoped to the current user's passes, split by the tab (active/archive/all) + search. */
+    /** Scoped to the passes created by the current user (mirrors the listing / DataTable). */
     private function recordsQuery()
     {
-        if ($this->employeePk === null || $this->employeePk === '') {
-            return collect();
-        }
-
-        $query = VehiclePassTWApply::with(['vehicleType', 'employee'])
+        $query = VehiclePassDuplicateApplyTwfw::with(['vehicleType', 'employee'])
             ->where(function ($q) {
                 $q->where('veh_created_by', $this->employeePk);
-                if ($this->pkOld) {
+                if ($this->pkOld !== null) {
                     $q->orWhere('veh_created_by', $this->pkOld);
                 }
             });
-
-        if ($this->tab === 'archive') {
-            $query->whereIn('vech_card_status', [2, 3]);
-        } elseif ($this->tab !== 'all') {
-            $query->where('vech_card_status', 1);
-        }
 
         if ($this->search) {
             $term = $this->search;
             $query->where(function ($q) use ($term) {
                 $q->where('vehicle_no', 'like', "%{$term}%")
-                    ->orWhere('vehicle_req_id', 'like', "%{$term}%")
-                    ->orWhere('applicant_name', 'like', "%{$term}%")
+                    ->orWhere('vehicle_primary_pk', 'like', "%{$term}%")
                     ->orWhere('employee_id_card', 'like', "%{$term}%")
                     ->orWhereHas('employee', function ($e) use ($term) {
                         $e->where('first_name', 'like', "%{$term}%")
@@ -274,38 +262,26 @@ class VehiclePassExport implements FromCollection, WithColumnWidths, WithEvents,
 
     private function mapRecord($record): array
     {
-        $status = match ((int) $record->vech_card_status) {
-            2       => 'Approved',
-            3       => 'Rejected',
-            default => 'Pending',
-        };
-
         return [
-            'employee_name'   => $record->display_name ?: '--',
-            'vehicle_pass_no' => $record->vehicle_req_id ?: '--',
+            'employee_name'   => $record->employee_name ?: '--',
+            'vehicle_pass_no' => $record->vehicle_primary_pk ?: '--',
             'vehicle_type'    => optional($record->vehicleType)->vehicle_type ?: '--',
             'vehicle_no'      => $record->vehicle_no ?: '--',
-            'request_date'    => $record->created_date ? $record->created_date->format('d-m-Y H:i') : '--',
-            'status'          => $status,
+            'request_date'    => $record->created_date ? $record->created_date->format('d-m-Y') : '--',
+            'status'          => $record->status_text,
         ];
     }
 
     /**
-     * "Applied Filters: …" summary line, mirroring the export header.
+     * "Applied Filters: …" summary line, mirroring the Print header. Returns ''
+     * when no search is active.
      */
     private function exportFilterLine(): string
     {
-        $label = match ($this->tab) {
-            'archive' => 'Archived',
-            'all'     => 'All',
-            default   => 'Active',
-        };
-        $parts = ['Status: ' . $label];
-
-        if ($this->search) {
-            $parts[] = 'Search: ' . $this->search;
+        if (! $this->search) {
+            return '';
         }
 
-        return 'Applied Filters:   ' . implode('   |   ', $parts);
+        return 'Applied Filters:   Search: ' . $this->search;
     }
 }

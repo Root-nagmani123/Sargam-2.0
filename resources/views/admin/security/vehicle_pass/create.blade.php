@@ -193,7 +193,7 @@
 .vehicle-pass-create-page .form-control:focus,
 .vehicle-pass-create-page .form-select:focus {
     border-color: #86b7fe;
-    box-shadow: 0 0 0 0.25rem rgba(0, 67, 132, 0.15);
+    box-shadow: 0 0 0 0.25rem rgba(0, 74, 147, 0.15);
 }
 .vehicle-pass-upload-zone {
     background-color: #f8f9fa;
@@ -211,10 +211,10 @@
 }
 .vehicle-pass-upload-zone:hover {
     background-color: #eef4fc;
-    border-color: #004384;
+    border-color: #004a93;
 }
 .vehicle-pass-upload-icon { font-size: 2.5rem !important; color: #6c757d; }
-.vehicle-pass-upload-zone:hover .vehicle-pass-upload-icon { color: #004384; }
+.vehicle-pass-upload-zone:hover .vehicle-pass-upload-icon { color: #004a93; }
 .vehicle-pass-upload-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 120px; }
 .vehicle-pass-upload-preview {
     display: flex;
@@ -271,8 +271,8 @@
 .vehicle-pass-preview-remove .material-icons { font-size: 20px !important; }
 .vehicle-pass-preview-remove:hover { background-color: #bb2d3b !important; border-color: #bb2d3b; color: #fff; }
 .text-break { word-break: break-all; }
-.btn-outline-primary { border: 1px solid #004384; color: #004384; }
-.btn-outline-primary:hover { background-color: #004384; color: #fff; }
+.btn-outline-primary { border: 1px solid #004a93; color: #004a93; }
+.btn-outline-primary:hover { background-color: #004a93; color: #fff; }
 </style>
 
 @push('scripts')

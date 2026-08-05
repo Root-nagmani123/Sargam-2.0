@@ -1,9 +1,32 @@
 @extends('admin.layouts.master')
 @section('title', 'Vehicle Pass Approvals')
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<style>
+    /* Canonical country/index look (new-design-index-page.md §3b) — scoped to .duplicate-vehicle-pass-approval-page. */
+    .duplicate-vehicle-pass-approval-page .status-pill { padding: .4em .85em; font-weight: 600; }
+    .duplicate-vehicle-pass-approval-page .status-pill.bg-success-subtle   { color: #146c43; }
+    .duplicate-vehicle-pass-approval-page .status-pill.bg-danger-subtle    { color: #b02a37; }
+    .duplicate-vehicle-pass-approval-page .status-pill.bg-warning-subtle   { color: #b54708; }
+    .duplicate-vehicle-pass-approval-page .status-pill.bg-secondary-subtle { color: #475467; }
+
+    .duplicate-vehicle-pass-approval-page .dva-act {
+        display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
+        font-size: .72rem; font-weight: 500; line-height: 1;
+        text-decoration: none; background: transparent; border: 0; padding: 0;
+    }
+    .duplicate-vehicle-pass-approval-page .dva-act i { font-size: 1.1rem; }
+    .duplicate-vehicle-pass-approval-page .dva-act--view    { color: #475467; }
+    .duplicate-vehicle-pass-approval-page .dva-act--approve { color: #146c43; }
+    .duplicate-vehicle-pass-approval-page .dva-act--reject  { color: var(--bs-danger, #dc3545); }
+</style>
+@endpush
+
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid duplicate-vehicle-pass-approval-page">
     <x-breadcrum title="Vehicle Pass Approvals"></x-breadcrum>
-    <div class="card" style="border-left:4px solid #004384;">
+    <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">Vehicle Pass Approvals</h4>
@@ -58,22 +81,22 @@
                                 </td>
                                 <td>{{ $app->created_date ? $app->created_date->format('d-m-Y H:i') : '--' }}</td>
                                 <td>
-                                    <div class="d-flex gap-2">
+                                    <div class="d-inline-flex align-items-center justify-content-center gap-3" role="group" aria-label="Row actions">
                                         <a href="{{ route('admin.security.vehicle_pass_approval.show', encrypt('dup-' . $app->vehicle_tw_pk)) }}"
-                                           class="btn btn-sm btn-info" title="View Details">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
+                                           class="dva-act dva-act--view" title="View Details" aria-label="View details">
+                                            <i class="bi bi-eye" aria-hidden="true"></i><span>View</span>
                                         </a>
-                                        <form action="{{ route('admin.security.vehicle_pass_approval.approve', encrypt('dup-' . $app->vehicle_tw_pk)) }}" method="POST" class="d-inline">
+                                        <form action="{{ route('admin.security.vehicle_pass_approval.approve', encrypt('dup-' . $app->vehicle_tw_pk)) }}" method="POST" class="d-inline m-0">
                                             @csrf
-                                            <button type="submit" class="btn btn-sm btn-success" title="Approve"
+                                            <button type="submit" class="dva-act dva-act--approve" title="Approve"
                                                     onclick="return confirm('Approve this application?')">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">check_circle</i>
+                                                <i class="bi bi-check-circle" aria-hidden="true"></i><span>Approve</span>
                                             </button>
                                         </form>
-                                        <button type="button" class="btn btn-sm btn-danger" title="Reject"
+                                        <button type="button" class="dva-act dva-act--reject" title="Reject"
                                                 data-encrypted-id="{{ encrypt($app->vehicle_tw_pk) }}"
                                                 onclick="openRejectModal(this)">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">cancel</i>
+                                            <i class="bi bi-x-circle" aria-hidden="true"></i><span>Reject</span>
                                         </button>
                                     </div>
                                 </td>

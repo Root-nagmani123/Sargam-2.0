@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin\Security;
 
+use App\DataTables\Security\DuplicateVehiclePassDataTable;
+use App\Exports\DuplicateVehiclePassExport;
 use App\Http\Controllers\Controller;
 use App\Support\IdCardSecurityMapper;
 use App\Models\EmployeeMaster;
@@ -9,37 +11,114 @@ use App\Models\SecVehicleType;
 use App\Models\VehiclePassDuplicateApplyTwfw;
 use App\Models\VehiclePassTWApply;
 use App\Models\VehiclePassFWApply;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Excel as ExcelFormat;
 
 class DuplicateVehiclePassController extends Controller
 {
-    public function index(Request $request)
+    public function index(DuplicateVehiclePassDataTable $dataTable)
+    {
+        return $dataTable->render('admin.security.duplicate_vehicle_pass.index');
+    }
+
+    /**
+     * Branded Print / PDF / Excel export of the current user's duplicate vehicle
+     * pass requests. All three share the same header block + columns as the listing.
+     * format = print (browser auto-print HTML) | pdf (DomPDF) | excel (styled .xlsx).
+     */
+    public function export(Request $request)
     {
         $user = Auth::user();
-        $userOldPk = EmployeeMaster::where('pk', $user->user_id)->first();
         $employeePk = $user->user_id ?? null;
-        $pkOld = $userOldPk->pk_old ?? null;
+        $pkOld = EmployeeMaster::where('pk', $user->user_id)->value('pk_old');
+        $search = $request->get('search');
 
-        $query = VehiclePassDuplicateApplyTwfw::with(['vehicleType', 'employee'])
-            ->where('veh_created_by', $employeePk)
-            ->orWhere('veh_created_by', $pkOld)
-            ->orderBy('created_date', 'desc');
-
-        if ($request->filled('search')) {
-            $term = trim($request->search);
-            $query->where(function ($q) use ($term) {
-                $q->where('vehicle_no', 'like', "%{$term}%")
-                    ->orWhere('vehicle_primary_pk', 'like', "%{$term}%")
-                    ->orWhere('employee_id_card', 'like', "%{$term}%");
-            });
+        $format = strtolower((string) $request->get('format', 'excel'));
+        if (! in_array($format, ['print', 'pdf', 'excel', 'xlsx'], true)) {
+            $format = 'excel';
         }
 
-        $perPage = (int) $request->get('per_page', 10);
-        $requests = $query->paginate(min(max($perPage, 5), 100))->withQueryString();
+        $export = new DuplicateVehiclePassExport($employeePk, $pkOld, $search);
+        $fileName = 'duplicate-vehicle-pass-export-' . now()->format('Y-m-d_H-i-s');
 
-        return view('admin.security.duplicate_vehicle_pass.index', compact('requests'));
+        if ($format === 'print' || $format === 'pdf') {
+            @ini_set('memory_limit', '256M');
+            @set_time_limit(120);
+
+            $viewData = array_merge([
+                'headings'    => $export->activeHeadings(),
+                'rows'        => $export->pdfRows(),
+                'filterLine'  => $this->buildExportFilterLine($search),
+                'printedOn'   => now()->format('d-m-Y H:i'),
+                'reportTitle' => 'Duplicate Vehicle Pass Request',
+                'mode'        => $format,
+            ], $this->buildExportHeaderData());
+
+            // Print: return branded HTML that auto-prints in the opened window.
+            if ($format === 'print') {
+                return response()->view('admin.security.duplicate_vehicle_pass.export_pdf', $viewData);
+            }
+
+            $pdf = Pdf::loadView('admin.security.duplicate_vehicle_pass.export_pdf', $viewData)
+                ->setPaper('a4', 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'isPhpEnabled' => true,
+                    'dpi' => 96,
+                ]);
+
+            return $pdf->download($fileName . '.pdf');
+        }
+
+        // Styled workbook (logos, blue header band, bordered zebra rows) so the
+        // download visually matches the Print / PDF layout — a plain CSV can't.
+        return Excel::download($export, $fileName . '.xlsx', ExcelFormat::XLSX);
+    }
+
+    /** Logo data-URIs for the branded export header (shared by PDF + Print). */
+    private function buildExportHeaderData(): array
+    {
+        $toDataUri = static function (string $path): ?string {
+            if (! is_file($path) || ! is_readable($path)) {
+                return null;
+            }
+            $raw = @file_get_contents($path);
+            if ($raw === false) {
+                return null;
+            }
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = match ($ext) {
+                'svg' => 'image/svg+xml',
+                'jpg', 'jpeg' => 'image/jpeg',
+                default => 'image/png',
+            };
+
+            return 'data:' . $mime . ';base64,' . base64_encode($raw);
+        };
+
+        return [
+            'logoLeft' => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
+            'logoRight' => $toDataUri(public_path('admin_assets/images/logos/constitution-75.png'))
+                ?: $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
+            'titleHindi' => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
+        ];
+    }
+
+    /** "Applied Filters: …" summary line, mirroring the export header. */
+    private function buildExportFilterLine(?string $search): string
+    {
+        $search = $search !== null ? trim($search) : '';
+        if ($search === '') {
+            return '';
+        }
+
+        return 'Applied Filters:   Search: ' . $search;
     }
 
     public function create()

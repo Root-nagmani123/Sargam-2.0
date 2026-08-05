@@ -2,7 +2,7 @@
 @section('title', 'Visitor Pass Details - {{ $visitorPass->pass_number ?? "N/A" }}')
 @section('setup_content')
 <div class="container-fluid">
-    <div class="card" style="border-left:4px solid #004384;">
+    <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-header bg-white">
             <div class="d-flex justify-content-between align-items-center">
                 <div>

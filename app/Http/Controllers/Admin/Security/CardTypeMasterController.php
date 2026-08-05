@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Security;
 
+use App\DataTables\Security\CardTypeMasterDataTable;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,16 +14,9 @@ class CardTypeMasterController extends Controller
     /** Must match DB column `sec_id_cardno_master.sec_card_name` (e.g. varchar(11)). */
     private const SEC_CARD_NAME_MAX_LENGTH = 11;
 
-    public function index()
+    public function index(CardTypeMasterDataTable $dataTable)
     {
-        $query = DB::table('sec_id_cardno_master')->orderBy('sec_card_name');
-        // If status column exists, include it for display/toggle.
-        if (Schema::hasColumn('sec_id_cardno_master', 'active_inactive')) {
-            $query->select(['pk', 'sec_card_name', 'active_inactive']);
-        }
-        $cardTypes = $query->paginate(15);
-
-        return view('admin.security.idcard_master.card_type.index', compact('cardTypes'));
+        return $dataTable->render('admin.security.idcard_master.card_type.index');
     }
 
     public function create(Request $request)

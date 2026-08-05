@@ -693,6 +693,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/update/{id}', 'update')->name('update');
         Route::delete('/delete/{id}', 'destroy')->name('delete');
         Route::get('/api/vehicle-details', 'getVehicleDetails')->name('api.vehicle_details');
+        Route::get('/export', 'export')->name('export');
     });
 
     // Vehicle Pass Approval Routes

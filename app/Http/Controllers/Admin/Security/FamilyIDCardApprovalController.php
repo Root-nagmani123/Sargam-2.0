@@ -222,34 +222,12 @@ class FamilyIDCardApprovalController extends Controller
             return ((int) ($g->status_int ?? 1) === 3);
         })->values();
 
-        $newFamilyGroups = new LengthAwarePaginator(
-            $newGroupsList->forPage($newPage, $perPage)->values(),
-            $newGroupsList->count(),
-            $perPage,
-            $newPage,
-            ['path' => $request->url(), 'pageName' => 'new_page', 'query' => $request->query()]
-        );
-        $processedFamilyGroups = new LengthAwarePaginator(
-            $processedGroupsList->forPage($forPage, $perPage)->values(),
-            $processedGroupsList->count(),
-            $perPage,
-            $forPage,
-            ['path' => $request->url(), 'pageName' => 'for_page', 'query' => $request->query()]
-        );
-        $issuedFamilyGroups = new LengthAwarePaginator(
-            $issuedGroupsList->forPage($issuedPage, $perPage)->values(),
-            $issuedGroupsList->count(),
-            $perPage,
-            $issuedPage,
-            ['path' => $request->url(), 'pageName' => 'issued_page', 'query' => $request->query()]
-        );
-        $rejectedFamilyGroups = new LengthAwarePaginator(
-            $rejectedGroupsList->forPage($rejectPage, $perPage)->values(),
-            $rejectedGroupsList->count(),
-            $perPage,
-            $rejectPage,
-            ['path' => $request->url(), 'pageName' => 'reject_page', 'query' => $request->query()]
-        );
+        // Each tab renders in full and paginates / searches / filters by date
+        // client-side (see the index view's DataTables setup).
+        $newFamilyGroups = $newGroupsList->values();
+        $processedFamilyGroups = $processedGroupsList->values();
+        $issuedFamilyGroups = $issuedGroupsList->values();
+        $rejectedFamilyGroups = $rejectedGroupsList->values();
 
         $activeTab = $request->get('tab', 'new');
         if ($activeTab === 'archive') {
