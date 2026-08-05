@@ -1183,13 +1183,19 @@ class CourseRepositoryController extends Controller
                 return response()->json(['success' => false, 'data' => []], 422);
             }
 
+            // F-278-03: Validate date format before using in a DB query.
+            $parsedDate = \DateTime::createFromFormat('Y-m-d', (string) $sessionDate);
+            if (!$parsedDate || $parsedDate->format('Y-m-d') !== (string) $sessionDate) {
+                return response()->json(['success' => false, 'data' => []], 422);
+            }
+
             // NOTE: timetable.faculty_master is NOT a plain fk — it stores a JSON
             // array of faculty pks, e.g. ["84"] or ["110","22"] (a session can have
             // several co-faculty). So it can't be joined directly; we parse it below
             // and resolve names in one lookup.
             $rows = Timetable::leftJoin('subject_master', 'timetable.subject_master_pk', '=', 'subject_master.pk')
                 ->where('timetable.course_master_pk', $coursePk)
-                ->whereDate('timetable.START_DATE', $sessionDate)
+                ->whereBetween('timetable.START_DATE', [$sessionDate . ' 00:00:00', $sessionDate . ' 23:59:59'])
                 ->select(
                     'timetable.pk',
                     'timetable.subject_master_pk',
