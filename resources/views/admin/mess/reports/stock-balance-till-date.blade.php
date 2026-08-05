@@ -98,13 +98,7 @@
         <!-- Report Heading -->
         <div class="report-header text-center mb-4 pb-3 border-bottom border-body-secondary border-opacity-25">
             <h4 class="fw-bold text-uppercase mb-3 fs-5 text-body-emphasis">Stock Balance as of Till Date</h4>
-            @if(config('app.debug') && isset($reportTimingMs))
-                <p class="small text-body-secondary mb-2 no-print">
-                    Server: {{ $reportTimingMs }} ms
-                    @if(isset($reportCacheStatus)) · cache {{ $reportCacheStatus }} @endif
-                    @if(isset($reportLineCount)) · {{ $reportLineCount }} item(s) @endif
-                </p>
-            @endif
+            <p class="small text-body-secondary mb-2 no-print" id="stockBalanceReportMeta"></p>
             <div class="d-flex flex-wrap justify-content-center gap-2 gap-md-3">
                 <span class="badge text-bg-body-secondary text-body-emphasis fw-normal rounded-pill px-3 py-2 border border-body-secondary border-opacity-50">
                     <span class="material-symbols-rounded icon-16 align-text-bottom me-1">event</span>
@@ -121,81 +115,66 @@
         <div class="card flex-grow-1 d-flex flex-column min-h-0">
             <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 flex-shrink-0">
                 <span class="fw-semibold text-dark">Stock Balance Details</span>
-                <span class="text-muted small">
-                    Total items: {{ $reportLineCount ?? ($reportPage->total() ?? 0) }}
-                </span>
+                <span class="text-muted small" id="stockBalanceReportCount"></span>
             </div>
-            <div class="stock-balance-table-split flex-grow-1 d-flex flex-column min-h-0">
-                <div class="stock-balance-table-head-wrap flex-shrink-0">
-                    <table class="table table-hover align-middle mb-0 stock-balance-table stock-balance-col-sync">
-                        <colgroup>
-                            <col class="sb-col-sn" />
-                            <col class="sb-col-code" />
-                            <col class="sb-col-name" />
-                            <col class="sb-col-qty" />
-                            <col class="sb-col-unit" />
-                            <col class="sb-col-rate" />
-                            <col class="sb-col-amt" />
-                        </colgroup>
-                        <thead>
-                            <tr>
-                                @include('admin.mess.reports.partials.report-sno-th')
-                                <th>Item Code</th>
-                                @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'item_name', 'label' => 'Item Name', 'defaultDir' => 'asc', 'defaultSort' => 'item_name'])
-                                <th class="text-end">Remaining Quantity</th>
-                                <th>Unit</th>
-                                <th class="text-end">Avg rate</th>
-                                <th class="text-end">Amount</th>
-                            </tr>
-                        </thead>
-                    </table>
-                </div>
-                <div class="stock-balance-table-body-scroll flex-grow-1 min-h-0">
-                    <table class="table align-middle mb-0 stock-balance-table stock-balance-col-sync">
-                        <colgroup>
-                            <col class="sb-col-sn" />
-                            <col class="sb-col-code" />
-                            <col class="sb-col-name" />
-                            <col class="sb-col-qty" />
-                            <col class="sb-col-unit" />
-                            <col class="sb-col-rate" />
-                            <col class="sb-col-amt" />
-                        </colgroup>
-                        <tbody>
-                            @forelse(($reportPage ?? collect()) as $index => $item)
-                                <tr>
-                                    <td class="text-center mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $reportPage ?? null, 'index' => $index])</td>
-                                    <td>{{ $item['item_code'] ?? '—' }}</td>
-                                    <td>{{ $item['item_name'] }}</td>
-                                    <td class="text-end">{{ number_format($item['remaining_qty'], 2) }}</td>
-                                    <td>{{ $item['unit'] ?? 'Unit' }}</td>
-                                    <td class="text-end">₹{{ number_format($item['rate'], 2) }}</td>
-                                    <td class="text-end">₹{{ number_format($item['amount'], 2) }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">No stock balance found</td>
-                                </tr>
-                            @endforelse
-                            @if(($reportLineCount ?? 0) > 0)
-                                <tr class="table-light fw-bold">
-                                    <td colspan="6" class="text-end">Total Amount:</td>
-                                    <td class="text-end">₹{{ number_format(($reportTotalAmount ?? 0), 2) }}</td>
-                                </tr>
-                            @endif
-                        </tbody>
-                    </table>
-                </div>
+            <div class="table-responsive flex-grow-1 min-h-0">
+                <table id="stockBalanceTable" class="table table-hover align-middle mb-0 w-100">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Item Code</th>
+                            <th>Item Name</th>
+                            <th class="text-end">Remaining Quantity</th>
+                            <th>Unit</th>
+                            <th class="text-end">Avg rate</th>
+                            <th class="text-end">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                    <tfoot>
+                        <tr class="table-light fw-bold">
+                            <td colspan="6" class="text-end">Total Amount:</td>
+                            <td class="text-end" id="stockBalanceTotalAmount">₹0.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
             </div>
-            @if(isset($reportPage) && $reportPage->hasPages())
-                <div class="px-3 py-3 border-top no-print">
-                    {{ $reportPage->appends(request()->query())->links('pagination::bootstrap-5') }}
-                </div>
-            @endif
         </div>
     </div>
 </div>
 </div>
+
+@include('components.mess-master-datatables', [
+    'tableId' => 'stockBalanceTable',
+    'searchPlaceholder' => 'Search items...',
+    'orderColumn' => 2,
+    'actionColumnIndex' => -1,
+    'infoLabel' => 'items',
+    'ordering' => true,
+    'columnManager' => false,
+    'colReorder' => false,
+    'searchHighlight' => false,
+    'pageLength' => 50,
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.reports.stock-balance-till-date', request()->query()),
+    'ajaxJsonCallback' => 'stockBalanceReportOnDraw',
+])
+<script>
+    function stockBalanceReportOnDraw(json) {
+        var totals = (json && json.totals) || { amount: '0.00' };
+        var meta = (json && json.meta) || {};
+        var totalEl = document.getElementById('stockBalanceTotalAmount');
+        if (totalEl) totalEl.textContent = '₹' + totals.amount;
+        var countEl = document.getElementById('stockBalanceReportCount');
+        if (countEl) countEl.textContent = 'Total items: ' + (json.recordsFiltered ?? 0);
+        var metaEl = document.getElementById('stockBalanceReportMeta');
+        if (metaEl) {
+            @if(config('app.debug'))
+            metaEl.textContent = 'Server: ' + (meta.timingMs ?? '-') + ' ms · cache ' + (meta.cacheStatus ?? '-') + ' · ' + (meta.lineCount ?? 0) + ' item(s)';
+            @endif
+        }
+    }
+</script>
 
 <style>
     /* Auto height/width and proper table view */
@@ -210,39 +189,11 @@
         min-height: 0;
     }
 
-    .stock-balance-report .stock-balance-table-body-scroll {
+    .stock-balance-report .table-responsive {
         min-height: 0;
         -webkit-overflow-scrolling: touch;
-        overflow-x: auto;
-        overflow-y: auto;
         max-height: min(72vh, calc(100dvh - 12rem));
     }
-
-    .stock-balance-report .stock-balance-table-head-wrap .stock-balance-table {
-        margin-bottom: 0 !important;
-    }
-
-    .stock-balance-report .stock-balance-table-body-scroll .stock-balance-table {
-        margin-bottom: 0 !important;
-    }
-
-    .stock-balance-report .stock-balance-table-body-scroll tbody tr:first-child td {
-        border-top: 0 !important;
-    }
-
-    .stock-balance-report .stock-balance-table.stock-balance-col-sync {
-        table-layout: fixed;
-        width: 100%;
-        min-width: 700px;
-    }
-
-    .stock-balance-report .stock-balance-col-sync col.sb-col-sn { width: 5%; }
-    .stock-balance-report .stock-balance-col-sync col.sb-col-code { width: 12%; }
-    .stock-balance-report .stock-balance-col-sync col.sb-col-name { width: 28%; }
-    .stock-balance-report .stock-balance-col-sync col.sb-col-qty { width: 14%; }
-    .stock-balance-report .stock-balance-col-sync col.sb-col-unit { width: 8%; }
-    .stock-balance-report .stock-balance-col-sync col.sb-col-rate { width: 14%; }
-    .stock-balance-report .stock-balance-col-sync col.sb-col-amt { width: 19%; }
 
     .stock-balance-report .stock-balance-table thead th {
         font-weight: 600;
@@ -284,15 +235,10 @@
         th, td {
             padding: 8px !important;
         }
-        .stock-balance-report .stock-balance-table-body-scroll {
+        .stock-balance-report .table-responsive {
             max-height: none !important;
             overflow: visible !important;
             min-height: 0 !important;
-        }
-        .stock-balance-report .stock-balance-table-split {
-            display: block !important;
-            border: none !important;
-            overflow: visible !important;
         }
     }
 
@@ -336,14 +282,12 @@
 </script>
 <script>
 function printStockBalance() {
-    var headTable = document.querySelector('.stock-balance-report .stock-balance-table-head-wrap table');
-    var bodyTable = document.querySelector('.stock-balance-report .stock-balance-table-body-scroll table');
-    if (!bodyTable && !headTable) {
+    var table = document.getElementById('stockBalanceTable');
+    if (!table) {
         window.print();
         return;
     }
 
-    var table = bodyTable || headTable;
     var clonedBody = table.cloneNode(true);
 
     // Remove Material Symbols icons from clone
@@ -351,8 +295,10 @@ function printStockBalance() {
         icon.remove();
     });
 
-    var bodyHtml = clonedBody.querySelector('tbody') ? clonedBody.querySelector('tbody').innerHTML : clonedBody.innerHTML;
-    var theadSource = headTable ? headTable.querySelector('thead') : table.querySelector('thead');
+    var bodyHtml = clonedBody.querySelector('tbody') ? clonedBody.querySelector('tbody').innerHTML : '';
+    var footerHtml = clonedBody.querySelector('tfoot') ? clonedBody.querySelector('tfoot').innerHTML : '';
+    bodyHtml += footerHtml;
+    var theadSource = table.querySelector('thead');
     var columnHeadHtml = theadSource ? theadSource.innerHTML : '';
 
     var title = 'Stock Balance as of Till Date';

@@ -30,8 +30,10 @@ use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Support\DataTableRedisCache;
+use App\Support\DataTableSearchHelper;
 use App\Support\MessBuyerClientFilter;
 use App\Support\RedisBackedCache;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use DB;
@@ -2782,9 +2784,51 @@ class ReportController extends Controller
             : now()->format('Y-m-d');
 
         $storeIds = $this->normalizedIdList($request, 'store_id');
-        sort($storeIds);
-        $cacheKey = 'stock-balance-till-date:v2:' . md5(json_encode([$tillDate, $storeIds]));
-        $loadReport = fn () => $this->buildStockBalanceTillDateData($tillDate, $storeIds);
+
+        if ($request->ajax() && $request->has('draw')) {
+            return $this->buildStockBalanceTillDateDatatableResponse($request, $tillDate, $storeIds, $startedAt);
+        }
+
+        $stores = Store::where('status', 'active')->orderBy('store_name')->get(['id', 'store_name']);
+        $selectedStoreName = $this->resolveStoreNamesLabel($storeIds);
+
+        return view('admin.mess.reports.stock-balance-till-date', compact(
+            'stores',
+            'tillDate',
+            'storeIds',
+            'selectedStoreName'
+        ));
+    }
+
+    /**
+     * DataTables sends order as order[0][column]=<int index>&order[0][dir]=asc|desc.
+     * sortMessReportRows() (built for the link-based report sort UI) instead reads
+     * ?sort=<field>&sort_dir=. Translate the former into the latter on a cloned request.
+     *
+     * @param  array<int, string>  $columnFieldMap  DataTable column index => sort field name
+     */
+    private function requestWithDatatableOrderTranslated(Request $request, array $columnFieldMap, string $defaultField): Request
+    {
+        $columnIndex = (int) $request->input('order.0.column', -1);
+        $dir = strtolower((string) $request->input('order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+        $field = $columnFieldMap[$columnIndex] ?? $defaultField;
+
+        $clone = $request->duplicate();
+        $clone->query->set('sort', $field);
+        $clone->query->set('sort_dir', $dir);
+
+        return $clone;
+    }
+
+    /**
+     * @param  array<int>  $storeIds
+     */
+    private function loadStockBalanceTillDateReportData(Request $request, string $tillDate, array $storeIds): array
+    {
+        $sortedStoreIds = $storeIds;
+        sort($sortedStoreIds);
+        $cacheKey = 'stock-balance-till-date:v2:' . md5(json_encode([$tillDate, $sortedStoreIds]));
+        $loadReport = fn () => $this->buildStockBalanceTillDateData($tillDate, $sortedStoreIds);
 
         if ($request->boolean('refresh')) {
             $rawReportData = $loadReport();
@@ -2804,9 +2848,26 @@ class ReportController extends Controller
             );
         }
 
+        return [is_array($rawReportData) ? $rawReportData : [], $cacheHit];
+    }
+
+    /**
+     * @param  array<int>  $storeIds
+     */
+    private function buildStockBalanceTillDateDatatableResponse(Request $request, string $tillDate, array $storeIds, float $startedAt): JsonResponse
+    {
+        [$rawReportData, $cacheHit] = $this->loadStockBalanceTillDateReportData($request, $tillDate, $storeIds);
+
+        $sortRequest = $this->requestWithDatatableOrderTranslated($request, [
+            0 => 'item_code',
+            2 => 'item_name',
+            3 => 'remaining_qty',
+            6 => 'amount',
+        ], 'item_name');
+
         $reportData = $this->sortMessReportRows(
-            is_array($rawReportData) ? $rawReportData : [],
-            $request,
+            $rawReportData,
+            $sortRequest,
             [
                 'item_name' => 'item_name',
                 'item_code' => 'item_code',
@@ -2817,46 +2878,57 @@ class ReportController extends Controller
             'asc'
         );
 
-        $reportLineCount = count($reportData);
+        $searchTokens = DataTableSearchHelper::tokens((string) $request->input('search.value', ''));
+        if ($searchTokens !== []) {
+            $reportData = array_values(array_filter($reportData, function ($row) use ($searchTokens) {
+                $haystack = ($row['item_code'] ?? '') . ' ' . ($row['item_name'] ?? '');
+
+                return DataTableSearchHelper::haystackMatchesAllTokens($haystack, $searchTokens);
+            }));
+        }
+
+        $recordsTotal = count($rawReportData);
+        $recordsFiltered = count($reportData);
         $reportTotalAmount = (float) collect($reportData)->sum('amount');
-        $perPage = self::STOCK_BALANCE_TILL_DATE_PER_PAGE;
-        $currentPage = LengthAwarePaginator::resolveCurrentPage();
-        $pageItems = array_slice($reportData, max(0, ($currentPage - 1) * $perPage), $perPage);
-        $reportPage = new LengthAwarePaginator(
-            $pageItems,
-            $reportLineCount,
-            $perPage,
-            $currentPage,
-            [
-                'path' => $request->url(),
-                'query' => $request->query(),
-            ]
-        );
 
-        $stores = Store::where('status', 'active')->orderBy('store_name')->get(['id', 'store_name']);
-        $selectedStoreName = $this->resolveStoreNamesLabel($storeIds);
+        $draw = (int) $request->input('draw', 0);
+        $start = max((int) $request->input('start', 0), 0);
+        $length = (int) $request->input('length', self::STOCK_BALANCE_TILL_DATE_PER_PAGE);
+        if ($length !== -1 && ($length < 1 || $length > 200)) {
+            $length = self::STOCK_BALANCE_TILL_DATE_PER_PAGE;
+        }
+
+        $pageItems = $length === -1 ? $reportData : array_slice($reportData, $start, $length);
+
+        $data = [];
+        foreach ($pageItems as $index => $item) {
+            $data[] = [
+                (string) ($start + $index + 1),
+                e($item['item_code'] ?? '—'),
+                e($item['item_name'] ?? ''),
+                number_format((float) ($item['remaining_qty'] ?? 0), 2),
+                e($item['unit'] ?? 'Unit'),
+                '₹' . number_format((float) ($item['rate'] ?? 0), 2),
+                '₹' . number_format((float) ($item['amount'] ?? 0), 2),
+            ];
+        }
+
         $reportTimingMs = (int) round((microtime(true) - $startedAt) * 1000);
-        $reportCacheStatus = $cacheHit ? 'hit' : 'miss';
 
-        return response()
-            ->view('admin.mess.reports.stock-balance-till-date', compact(
-                'stores',
-                'tillDate',
-                'storeIds',
-                'selectedStoreName',
-                'reportPage',
-                'reportLineCount',
-                'reportTotalAmount',
-                'reportTimingMs',
-                'reportCacheStatus'
-            ))
-            ->withHeaders($this->messReportTimingHeaders(
-                $startedAt,
-                $cacheHit,
-                'X-Stock-Balance-Till-Date',
-                'Stock Balance Till Date',
-                $reportLineCount
-            ));
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+            'totals' => [
+                'amount' => number_format($reportTotalAmount, 2),
+            ],
+            'meta' => [
+                'timingMs' => $reportTimingMs,
+                'cacheStatus' => $cacheHit ? 'hit' : 'miss',
+                'lineCount' => $recordsFiltered,
+            ],
+        ]);
     }
 
     /**
@@ -3142,10 +3214,37 @@ class ReportController extends Controller
             : now()->format('Y-m-d');
 
         $selectedStoreIds = $this->normalizedIdList($request, 'store_id');
+
+        if ($request->ajax() && $request->has('draw')) {
+            return $this->buildLowStockReportDatatableResponse($request, $tillDate, $selectedStoreIds, $startedAt);
+        }
+
+        $stores = Store::where('status', 'active')->orderBy('store_name')->get(['id', 'store_name']);
+        $selectedStoreName = $selectedStoreIds === []
+            ? null
+            : Store::whereIn('id', $selectedStoreIds)
+                ->orderBy('store_name')
+                ->pluck('store_name')
+                ->implode(', ');
+
+        return view('admin.mess.reports.low-stock', compact(
+            'stores',
+            'tillDate',
+            'selectedStoreIds',
+            'selectedStoreName'
+        ));
+    }
+
+    /**
+     * @param  array<int>  $selectedStoreIds
+     */
+    private function loadLowStockReportData(Request $request, string $tillDate, array $selectedStoreIds): array
+    {
         $storeFilter = $selectedStoreIds === [] ? null : $selectedStoreIds;
 
-        sort($selectedStoreIds);
-        $cacheKey = 'low-stock-report:v2:' . md5(json_encode([$tillDate, $selectedStoreIds]));
+        $sortedStoreIds = $selectedStoreIds;
+        sort($sortedStoreIds);
+        $cacheKey = 'low-stock-report:v2:' . md5(json_encode([$tillDate, $sortedStoreIds]));
         $loadItems = fn () => self::getLowStockAlertItems($tillDate, $storeFilter);
 
         if ($request->boolean('refresh')) {
@@ -3161,37 +3260,85 @@ class ReportController extends Controller
             );
         }
 
-        $items = $this->sortMessReportRows(is_array($rawItems) ? $rawItems : [], $request, [
+        return [is_array($rawItems) ? $rawItems : [], $cacheHit];
+    }
+
+    /**
+     * @param  array<int>  $selectedStoreIds
+     */
+    private function buildLowStockReportDatatableResponse(Request $request, string $tillDate, array $selectedStoreIds, float $startedAt): JsonResponse
+    {
+        [$rawItems, $cacheHit] = $this->loadLowStockReportData($request, $tillDate, $selectedStoreIds);
+
+        $sortRequest = $this->requestWithDatatableOrderTranslated($request, [
+            1 => 'item_name',
+            3 => 'remaining_quantity',
+            4 => 'alert_quantity',
+        ], 'item_name');
+
+        $items = $this->sortMessReportRows($rawItems, $sortRequest, [
             'item_name' => 'item_name',
             'remaining_quantity' => 'remaining_quantity',
             'alert_quantity' => 'alert_quantity',
         ], 'item_name', 'asc');
-        $stores = Store::where('status', 'active')->orderBy('store_name')->get(['id', 'store_name']);
 
-        $selectedStoreName = $selectedStoreIds === []
-            ? null
-            : Store::whereIn('id', $selectedStoreIds)
-                ->orderBy('store_name')
-                ->pluck('store_name')
-                ->implode(', ');
+        $searchTokens = DataTableSearchHelper::tokens((string) $request->input('search.value', ''));
+        if ($searchTokens !== []) {
+            $items = array_values(array_filter($items, function ($row) use ($searchTokens) {
+                $haystack = (string) ($row['item_name'] ?? '');
 
-        $reportLineCount = is_array($items) ? count($items) : 0;
+                return DataTableSearchHelper::haystackMatchesAllTokens($haystack, $searchTokens);
+            }));
+        }
 
-        return response()
-            ->view('admin.mess.reports.low-stock', compact(
-                'items',
-                'stores',
-                'tillDate',
-                'selectedStoreIds',
-                'selectedStoreName'
-            ))
-            ->withHeaders($this->messReportTimingHeaders(
-                $startedAt,
-                $cacheHit,
-                'X-Low-Stock-Report',
-                'Low Stock Report',
-                $reportLineCount
-            ));
+        $recordsTotal = count($rawItems);
+        $recordsFiltered = count($items);
+
+        $draw = (int) $request->input('draw', 0);
+        $start = max((int) $request->input('start', 0), 0);
+        $length = (int) $request->input('length', 25);
+        if ($length !== -1 && ($length < 1 || $length > 200)) {
+            $length = 25;
+        }
+
+        $pageItems = $length === -1 ? $items : array_slice($items, $start, $length);
+
+        $data = [];
+        foreach ($pageItems as $index => $row) {
+            $remaining = (float) ($row['remaining_quantity'] ?? 0);
+            $alert = (float) ($row['alert_quantity'] ?? 0);
+
+            if ($remaining <= 0) {
+                $statusBadge = '<span class="badge text-bg-danger rounded-pill px-3 py-2">Out of Stock</span>';
+            } elseif ($remaining <= $alert) {
+                $statusBadge = '<span class="badge text-bg-warning text-dark rounded-pill px-3 py-2">Below Minimum</span>';
+            } else {
+                $statusBadge = '<span class="badge text-bg-success rounded-pill px-3 py-2">OK</span>';
+            }
+
+            $data[] = [
+                (string) ($start + $index + 1),
+                e($row['item_name'] ?? '-'),
+                e($row['unit'] ?? 'Unit'),
+                number_format($remaining, 2),
+                number_format($alert, 2),
+                $statusBadge,
+            ];
+        }
+
+        $reportTimingMs = (int) round((microtime(true) - $startedAt) * 1000);
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+            'meta' => [
+                'timingMs' => $reportTimingMs,
+                'cacheStatus' => $cacheHit ? 'hit' : 'miss',
+                'lineCount' => $recordsFiltered,
+            ],
+        ]);
     }
 
     /**

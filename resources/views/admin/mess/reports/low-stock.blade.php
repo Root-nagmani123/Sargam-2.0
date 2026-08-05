@@ -7,17 +7,6 @@
             ? asset('images/lbsnaa_logo.png')
             : 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
     }
-    $printOutOfStock = 0;
-    $printBelowMin = 0;
-    foreach (is_array($items ?? null) ? $items : [] as $_row) {
-        $_rem = (float) ($_row['remaining_quantity'] ?? 0);
-        $_alt = (float) ($_row['alert_quantity'] ?? 0);
-        if ($_rem <= 0) {
-            $printOutOfStock++;
-        } elseif ($_rem <= $_alt) {
-            $printBelowMin++;
-        }
-    }
 @endphp
 @section('title', 'Low Stock Report')
 @section('content')
@@ -125,8 +114,8 @@
                         <span class="material-symbols-rounded icon-20 text-primary">inventory_2</span>
                         Items at or below minimum stock
                     </span>
-                    <span class="badge text-bg-body-secondary text-body-emphasis rounded-pill px-3 py-2 border border-body-secondary border-opacity-50 fw-semibold">
-                        Total: {{ is_array($items) ? count($items) : 0 }} items
+                    <span class="badge text-bg-body-secondary text-body-emphasis rounded-pill px-3 py-2 border border-body-secondary border-opacity-50 fw-semibold" id="lowStockReportCount">
+                        Total: 0 items
                     </span>
                 </div>
 
@@ -134,53 +123,53 @@
                     <table class="table table-hover table-striped align-middle mb-0" id="lowStockReportTable">
                         <thead class="table-light text-nowrap">
                             <tr>
-                                @include('admin.mess.reports.partials.report-sno-th')
-                                @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'item_name', 'label' => 'Item Name', 'defaultDir' => 'asc', 'defaultSort' => 'item_name', 'class' => 'text-uppercase small fw-bold text-body-secondary py-3'])
+                                <th class="text-center text-uppercase small fw-bold text-body-secondary py-3">S. No.</th>
+                                <th class="text-uppercase small fw-bold text-body-secondary py-3">Item Name</th>
                                 <th class="text-center text-uppercase small fw-bold text-body-secondary py-3" style="min-width: 90px;">Unit</th>
                                 <th class="text-end text-uppercase small fw-bold text-body-secondary py-3" style="min-width: 120px;">Available Qty</th>
                                 <th class="text-end text-uppercase small fw-bold text-body-secondary py-3" style="min-width: 120px;">Alert Qty</th>
                                 <th class="text-center text-uppercase small fw-bold text-body-secondary py-3 pe-3" style="min-width: 150px;">Status</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @forelse($items as $index => $row)
-                                @php
-                                    $remaining = $row['remaining_quantity'] ?? 0;
-                                    $alert = $row['alert_quantity'] ?? 0;
-                                @endphp
-                                <tr class="{{ $remaining < $alert ? 'table-danger' : '' }}">
-                                    <td class="text-center ps-3 mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['index' => $index])</td>
-                                    <td class="fw-semibold text-body-emphasis">{{ $row['item_name'] ?? '-' }}</td>
-                                    <td class="text-center">{{ $row['unit'] ?? 'Unit' }}</td>
-                                    <td class="text-end fw-medium">{{ number_format($remaining, 2) }}</td>
-                                    <td class="text-end">{{ number_format($alert, 2) }}</td>
-                                    <td class="text-center pe-3">
-                                        @if($remaining <= 0)
-                                            <span class="badge text-bg-danger rounded-pill px-3 py-2">Out of Stock</span>
-                                        @elseif($remaining <= $alert)
-                                            <span class="badge text-bg-warning text-dark rounded-pill px-3 py-2">Below Minimum</span>
-                                        @else
-                                            <span class="badge text-bg-success rounded-pill px-3 py-2">OK</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="text-center text-body-secondary py-5 px-4">
-                                        <div class="d-inline-flex flex-column align-items-center gap-2">
-                                            <span class="material-symbols-rounded icon-48 text-body-tertiary opacity-75">inventory_2</span>
-                                            <span class="small fw-medium">No items are currently below their minimum stock level for the selected filters.</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+@include('components.mess-master-datatables', [
+    'tableId' => 'lowStockReportTable',
+    'searchPlaceholder' => 'Search items...',
+    'orderColumn' => 1,
+    'actionColumnIndex' => -1,
+    'infoLabel' => 'items',
+    'ordering' => true,
+    'columnManager' => false,
+    'colReorder' => false,
+    'searchHighlight' => false,
+    'pageLength' => 25,
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.reports.low-stock', request()->query()),
+    'ajaxJsonCallback' => 'lowStockReportOnDraw',
+])
+<script>
+    function lowStockReportOnDraw(json) {
+        var countEl = document.getElementById('lowStockReportCount');
+        if (countEl) countEl.textContent = 'Total: ' + (json.recordsFiltered ?? 0) + ' items';
+
+        var table = document.getElementById('lowStockReportTable');
+        if (!table) return;
+        table.querySelectorAll('tbody tr').forEach(function (row) {
+            var statusCell = row.children[5];
+            row.classList.remove('table-danger');
+            if (statusCell && /Out of Stock|Below Minimum/.test(statusCell.textContent)) {
+                row.classList.add('table-danger');
+            }
+        });
+    }
+</script>
 
 <style>
     .low-stock-report .mess-official-header {
@@ -291,9 +280,18 @@
 
         var tillDateText = @json(date('d-F-Y', strtotime($tillDate)));
         var storeNameText = @json($selectedStoreName ?? 'All Stores');
-        var totalItems = @json(is_array($items) ? count($items) : 0);
-        var outOfStockCount = @json($printOutOfStock);
-        var belowMinCount = @json($printBelowMin);
+        var bodyRows = table.querySelectorAll('tbody tr');
+        var totalItems = bodyRows.length;
+        var outOfStockCount = 0;
+        var belowMinCount = 0;
+        bodyRows.forEach(function (row) {
+            var statusText = row.children[5] ? row.children[5].textContent : '';
+            if (/Out of Stock/.test(statusText)) {
+                outOfStockCount++;
+            } else if (/Below Minimum/.test(statusText)) {
+                belowMinCount++;
+            }
+        });
         var emblemSrc = @json($messEmblemSrc);
         var lbsnaaLogoSrc = @json($messLbsnaaLogoSrc);
 
