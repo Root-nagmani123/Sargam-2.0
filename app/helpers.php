@@ -1494,6 +1494,7 @@ if (!function_exists('notice_feed_base_query')) {
             ->select(
                 'notices_notification.pk',
                 'notices_notification.notice_title',
+                'notices_notification.description',
                 'notices_notification.notice_type',
                 'notices_notification.target_audience',
                 'notices_notification.course_master_pk',
@@ -1522,10 +1523,12 @@ if (!function_exists('get_notice_notification_by_role')) {
 
         $sessionRoles = Session::get('user_roles', []);
 
-        $roleStaffFaculty = ['Internal Faculty', 'Guest Faculty', 'Training', 'Staff'];
+        $roleStaffFaculty = ['Internal Faculty', 'Guest Faculty', 'Training', 'Staff', 'Faculty'];
         $roleStudent      = ['Student-OT'];
 
-        $isStaffFaculty = !empty(array_intersect($roleStaffFaculty, $sessionRoles));
+        // Also treat user_category F (faculty portal users without explicit Spatie role) as staff/faculty
+        $isStaffFaculty = !empty(array_intersect($roleStaffFaculty, $sessionRoles))
+            || ($user->user_category ?? '') === 'F';
         $isStudent      = !empty(array_intersect($roleStudent, $sessionRoles));
 
 

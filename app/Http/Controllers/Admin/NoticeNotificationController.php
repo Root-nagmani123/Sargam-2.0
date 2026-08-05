@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use App\Models\NoticeNotification as Notice;
 use App\Models\CourseMaster;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Auth;
 
 class NoticeNotificationController extends Controller
@@ -119,6 +120,8 @@ public function store(Request $request)
 
     Notice::create($data);
 
+        $this->sendNoticeNotifications($data['target_audience'] ?? 'All', $data['course_master_pk'] ?? null, $data['notice_title'] ?? 'New Notice');
+
     return redirect()
         ->route('admin.notice.index')
         ->with('success', 'Notice created successfully!');
@@ -173,6 +176,8 @@ public function store(Request $request)
 
     $notice->update($data);
 
+        $this->sendNoticeNotifications($data['target_audience'] ?? $notice->target_audience ?? 'All', $data['course_master_pk'] ?? $notice->course_master_pk ?? null, $data['notice_title'] ?? $notice->notice_title ?? 'Updated Notice');
+
     return redirect()->route('admin.notice.index')->with('success','Notice updated!');
 }
 
@@ -191,7 +196,6 @@ public function store(Request $request)
     }
 public function getCourses()
 {
-    // Course model ko aapke DB name ke according adjust karein
     $courses = CourseMaster::where('active_inactive', 1)
                         ->where('end_date', '>=', date('Y-m-d'))
                      ->orderBy('course_name', 'ASC')
@@ -203,6 +207,66 @@ public function getCourses()
     ]);
 }
 
-   
+    // Resolve recipient user_ids and send in-app notifications for a new/updated notice.
+    private function sendNoticeNotifications(string $targetAudience, ?int $coursePk, string $noticeTitle): void
+    {
+        $senderUserId = Auth::user()?->user_id;
+        $recipientIds = $this->resolveNoticeRecipients($targetAudience, $coursePk);
+
+        if (empty($recipientIds)) {
+            return;
+        }
+
+        // Exclude the creator from receiving their own notification.
+        if ($senderUserId) {
+            $recipientIds = array_values(array_filter($recipientIds, fn($id) => $id !== $senderUserId));
+        }
+
+        notification()->createMultiple(
+            array_values(array_unique($recipientIds)),
+            'notice',
+            'Notice',
+            0,
+            'New Notice',
+            $noticeTitle,
+            $senderUserId
+        );
+    }
+
+    private function resolveNoticeRecipients(string $targetAudience, ?int $coursePk): array
+    {
+        $audience = strtolower(trim($targetAudience));
+
+        if (str_contains($audience, 'office trainee') && $coursePk) {
+            // Students enrolled in the specific course
+            return DB::table('student_master_course__map as smcm')
+                ->join('user_credentials as uc', function ($join) {
+                    $join->on('uc.user_id', '=', 'smcm.student_master_pk')
+                         ->where('uc.user_category', 'S');
+                })
+                ->where('smcm.course_master_pk', $coursePk)
+                ->pluck('uc.user_id')
+                ->map(fn($id) => (int) $id)
+                ->toArray();
+        }
+
+        if (str_contains($audience, 'staff') || str_contains($audience, 'faculty')) {
+            // All active employee and faculty portal users
+            return DB::table('user_credentials')
+                ->whereIn('user_category', ['E', 'F'])
+                ->where('active_inactive', 1)
+                ->pluck('user_id')
+                ->map(fn($id) => (int) $id)
+                ->toArray();
+        }
+
+        // 'All' — everyone except students
+        return DB::table('user_credentials')
+            ->where('user_category', '!=', 'S')
+            ->where('active_inactive', 1)
+            ->pluck('user_id')
+            ->map(fn($id) => (int) $id)
+            ->toArray();
+    }
 
 }

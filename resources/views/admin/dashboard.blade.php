@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-calendar.css') }}?v=4">
 <link rel="stylesheet" href="{{ asset('css/dashboard-stat-cards.css') }}?v=2">
-<link rel="stylesheet" href="{{ asset('css/dashboard-main.css') }}?v=7">
+<link rel="stylesheet" href="{{ asset('css/dashboard-main.css') }}?v=8">
 
 @php
 $user = Auth::user();
@@ -269,7 +269,15 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                             $noticeAuthorDept = trim((string) ($notice->author_department ?? ''));
                             @endphp
                             <li class="dashboard-notice-row">
-                                <div class="dashboard-notice-item">
+                                <div class="dashboard-notice-item"
+                                    role="button" tabindex="0"
+                                    aria-label="View notice: {{ e($notice->notice_title ?? 'Notice') }}"
+                                    data-notice-pk="{{ $notice->pk }}"
+                                    data-notice-title="{{ e($notice->notice_title ?? '') }}"
+                                    data-notice-desc='@json($notice->description ?? "")'
+                                    data-notice-badge="{{ e($noticeCategory) }}"
+                                    data-notice-meta="{{ e('~by ' . $noticeAuthor . ($noticeAuthorDept !== '' ? ' (' . $noticeAuthorDept . ')' : '') . ($noticeDateLabel ? ' on ' . $noticeDateLabel : '')) }}"
+                                    data-notice-doc="{{ $notice->document ? asset('storage/' . $notice->document) : '' }}">
                                     <span class="dashboard-notice-title">{{ $notice->notice_title }}</span>
                                     <div class="dashboard-notice-meta">
                                         <small class="dashboard-notice-byline">
@@ -655,6 +663,33 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
     </div>
 
     @include('admin.dashboard.partials.report_issue')
+
+    {{-- Notice detail modal --}}
+    <div class="modal fade" id="dashboard-notice-detail-modal" tabindex="-1"
+        aria-labelledby="dashboard-notice-detail-label" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header border-bottom-0 pb-1">
+                    <div class="flex-grow-1 min-w-0 pe-2">
+                        <h5 class="modal-title fw-semibold lh-sm mb-1" id="dashboard-notice-detail-label"></h5>
+                        <small class="text-muted" id="dashboard-notice-detail-meta"></small>
+                    </div>
+                    <span class="dashboard-notice-type-pill flex-shrink-0 me-2 mt-1" id="dashboard-notice-detail-badge"></span>
+                    <button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-2">
+                    <hr class="mt-0 mb-3">
+                    <div class="notice-description-content" id="dashboard-notice-detail-body"></div>
+                    <div class="mt-3 d-none" id="dashboard-notice-detail-attachment">
+                        <a id="dashboard-notice-detail-doc" href="#" target="_blank" rel="noopener noreferrer"
+                            class="small text-danger text-decoration-none d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-paperclip" aria-hidden="true"></i> View Attachment
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     @push('scripts')
     <script>
@@ -1356,6 +1391,47 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 });
         });
     })();
+    // ── Notice card → open detail modal ──
+    (function () {
+        var noticeModal = document.getElementById('dashboard-notice-detail-modal');
+        if (!noticeModal) return;
+
+        function openNoticeModal(card) {
+            document.getElementById('dashboard-notice-detail-label').textContent = card.dataset.noticeTitle || '';
+            document.getElementById('dashboard-notice-detail-meta').textContent  = card.dataset.noticeMeta  || '';
+            document.getElementById('dashboard-notice-detail-badge').textContent = card.dataset.noticeBadge || '';
+
+            var desc = '';
+            try { desc = JSON.parse(card.dataset.noticeDesc || '""'); } catch (e) { desc = ''; }
+            document.getElementById('dashboard-notice-detail-body').innerHTML =
+                desc || '<p class="text-muted fst-italic mb-0">No description provided.</p>';
+
+            var attachEl   = document.getElementById('dashboard-notice-detail-attachment');
+            var attachLink = document.getElementById('dashboard-notice-detail-doc');
+            var docUrl     = card.dataset.noticeDoc || '';
+            if (docUrl) {
+                attachLink.href = docUrl;
+                attachEl.classList.remove('d-none');
+            } else {
+                attachEl.classList.add('d-none');
+            }
+
+            bootstrap.Modal.getOrCreateInstance(noticeModal).show();
+        }
+
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.dashboard-notice-attachment')) return; // let attachment link open normally
+            var card = e.target.closest('.dashboard-notice-item[data-notice-pk]');
+            if (card) openNoticeModal(card);
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            var card = document.activeElement && document.activeElement.closest
+                ? document.activeElement.closest('.dashboard-notice-item[data-notice-pk]') : null;
+            if (card) { e.preventDefault(); openNoticeModal(card); }
+        });
+    }());
     </script>
     @endpush
     @endsection

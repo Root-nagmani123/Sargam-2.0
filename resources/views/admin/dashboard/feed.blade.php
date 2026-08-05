@@ -81,64 +81,104 @@
                 </div>
             </div>
 
-            {{-- Notices (with category tabs like dashboard) --}}
+            {{-- Notices (with filter bar) --}}
             <div data-feed-panel="notices" class="{{ $activeTab !== 'notices' ? 'd-none' : '' }}">
-                @if(count($notices) > 0)
-                <div class="dashboard-notice-tabs" role="tablist" aria-label="Notice categories">
-                    @foreach($noticeTabKeys as $tabKey)
-                    <button type="button"
-                        class="dashboard-notice-tab rounded-1 {{ $tabKey === $defaultNoticeTab ? 'active' : '' }}"
-                        role="tab" data-notice-tab="{{ $tabKey }}">
-                        {{ $noticeTabLabels[$tabKey] }}@if($noticeTabCounts[$tabKey] > 0): {{ $noticeTabCounts[$tabKey] }}@endif
-                    </button>
-                    @endforeach
+                @php
+                    $noticeYears     = $notices->map(fn($n) => !empty($n->display_date) ? \Carbon\Carbon::parse($n->display_date)->year : null)->filter()->unique()->sort()->values();
+                    $noticeTypes     = $notices->pluck('notice_type')->filter()->unique()->sort()->values();
+                    $noticeDepts     = $notices->pluck('author_department')->filter()->unique()->sort()->values();
+                    $noticeAudiences = $notices->pluck('target_audience')->filter()->unique()->sort()->values();
+                @endphp
+
+                <h2 class="notices-feed-section-title">Notices</h2>
+
+                <div class="notices-feed-toolbar d-flex flex-wrap align-items-center gap-2 mb-3">
+                    <span class="notices-feed-toolbar__label">Filters</span>
+
+                    <select class="form-select form-select-sm notices-feed-filter" id="notice-filter-year" aria-label="Filter by year">
+                        <option value="">Year</option>
+                        @foreach($noticeYears as $yr)
+                        <option value="{{ $yr }}">{{ $yr }}</option>
+                        @endforeach
+                    </select>
+
+                    <select class="form-select form-select-sm notices-feed-filter" id="notice-filter-type" aria-label="Filter by type">
+                        <option value="">Type</option>
+                        @foreach($noticeTypes as $nt)
+                        <option value="{{ strtolower($nt) }}">{{ $nt }}</option>
+                        @endforeach
+                    </select>
+
+                    <select class="form-select form-select-sm notices-feed-filter" id="notice-filter-dept" aria-label="Filter by department">
+                        <option value="">Department</option>
+                        @foreach($noticeDepts as $nd)
+                        <option value="{{ strtolower($nd) }}">{{ $nd }}</option>
+                        @endforeach
+                    </select>
+
+                    <select class="form-select form-select-sm notices-feed-filter" id="notice-filter-audience" aria-label="Filter by target audience">
+                        <option value="">Target Audience</option>
+                        @foreach($noticeAudiences as $na)
+                        <option value="{{ strtolower($na) }}">{{ $na }}</option>
+                        @endforeach
+                    </select>
+
+                    <button type="button" class="btn btn-sm notices-feed-reset-btn" id="notice-filter-reset">Reset Filters</button>
+
+                    @if(hasRole('Admin'))
+                    <a href="{{ route('admin.notice.create') }}" class="btn btn-sm notices-feed-add-btn ms-auto">
+                        <i class="bi bi-plus-square me-1" aria-hidden="true"></i>Add New Notice
+                    </a>
+                    @endif
                 </div>
-                <p class="dashboard-feed-empty d-none mb-3" id="dashboard-feed-notice-tab-empty">No notices in this category.</p>
-                @endif
+
                 <div id="dashboard-feed-page-list-notices">
                     @forelse($notices as $feedNotice)
                     @php
-                    $noticeType = $feedNotice->notice_type ?? '';
-                    $noticeTypeLower = strtolower((string) $noticeType);
-                    if (str_contains($noticeTypeLower, 'office order')) {
-                        $noticeTab = 'office-orders';
-                    } elseif (str_contains($noticeTypeLower, 'course notice')) {
-                        $noticeTab = 'work-allocation';
-                    } else {
-                        $noticeTab = 'notice-circular';
-                    }
-                    $feedNoticeFrom = !empty($feedNotice->display_date) ? \Carbon\Carbon::parse($feedNotice->display_date)->format('j F, Y') : null;
-                    $feedNoticeTo = !empty($feedNotice->expiry_date) ? \Carbon\Carbon::parse($feedNotice->expiry_date)->format('j F, Y') : null;
-                    $feedNoticeDates = ($feedNoticeFrom && $feedNoticeTo) ? $feedNoticeFrom . ' to ' . $feedNoticeTo : ($feedNoticeFrom ?? '—');
-                    $feedNoticeSearch = strtolower(($feedNotice->notice_title ?? '') . ' ' . ($feedNotice->notice_type ?? '') . ' ' . $feedNoticeDates);
+                        $noticeTypeLower     = strtolower((string) ($feedNotice->notice_type ?? ''));
+                        $noticeDeptLower     = strtolower((string) ($feedNotice->author_department ?? ''));
+                        $noticeAudienceLower = strtolower((string) ($feedNotice->target_audience ?? ''));
+                        $noticeYear          = !empty($feedNotice->display_date) ? \Carbon\Carbon::parse($feedNotice->display_date)->year : '';
+                        $feedNoticeDate      = !empty($feedNotice->display_date) ? \Carbon\Carbon::parse($feedNotice->display_date)->format('d/m/Y h:i A') : '—';
+                        $feedNoticeSearch    = strtolower(($feedNotice->notice_title ?? '') . ' ' . ($feedNotice->notice_type ?? '') . ' ' . ($feedNotice->author_name ?? '') . ' ' . ($feedNotice->author_department ?? ''));
+
+                        if (str_contains($noticeTypeLower, 'office order')) {
+                            $noticeBadgeClass = 'notices-feed-badge--order';
+                            $noticeBadgeLabel = $feedNotice->notice_type;
+                        } elseif (str_contains($noticeTypeLower, 'course notice')) {
+                            $noticeBadgeClass = 'notices-feed-badge--work';
+                            $noticeBadgeLabel = 'Work Allocations';
+                        } elseif (str_contains($noticeTypeLower, 'work allocation')) {
+                            $noticeBadgeClass = 'notices-feed-badge--work';
+                            $noticeBadgeLabel = $feedNotice->notice_type;
+                        } else {
+                            $noticeBadgeClass = 'notices-feed-badge--notice';
+                            $noticeBadgeLabel = $feedNotice->notice_type ?? 'Notice';
+                        }
                     @endphp
-                    @php
-                        $plainDesc = !empty($feedNotice->description) ? strip_tags($feedNotice->description) : '';
-                        $descWordCount = $plainDesc !== '' ? str_word_count($plainDesc) : 0;
-                        $needsTruncation = $descWordCount > 50;
-                        $truncatedText = $needsTruncation ? Str::words($plainDesc, 50, '') : null;
-                    @endphp
-                    <div class="dashboard-notice-item {{ $noticeTab !== $defaultNoticeTab ? 'd-none' : '' }}"
-                        data-notice-tab-item="{{ $noticeTab }}"
-                        data-feed-search="{{ $feedNoticeSearch }}">
-                        <span class="dashboard-notice-title">{{ $feedNotice->notice_title }}</span>
-                        <small class="dashboard-notice-date">{{ $feedNoticeDates }}</small>
-                        @if(!empty($feedNotice->description))
-                        <div class="notice-description-content mt-2">
-                            @if($needsTruncation)
-                            <span class="notice-desc-preview">{{ $truncatedText }}<span class="notice-desc-ellipsis">... </span><button type="button" class="btn btn-link btn-sm p-0 notice-desc-toggle align-baseline">See more</button></span>
-                            <span class="notice-desc-full d-none">{!! $feedNotice->description !!}<button type="button" class="btn btn-link btn-sm p-0 ms-1 notice-desc-toggle align-baseline">See less</button></span>
-                            @else
-                            {!! $feedNotice->description !!}
-                            @endif
+                    <div class="notices-feed-item"
+                        data-feed-search="{{ $feedNoticeSearch }}"
+                        data-notice-year="{{ $noticeYear }}"
+                        data-notice-type="{{ $noticeTypeLower }}"
+                        data-notice-dept="{{ $noticeDeptLower }}"
+                        data-notice-audience="{{ $noticeAudienceLower }}"
+                        data-notice-pk="{{ $feedNotice->pk }}"
+                        data-notice-title="{{ e($feedNotice->notice_title ?? '') }}"
+                        data-notice-desc='@json($feedNotice->description ?? "")'
+                        data-notice-badge="{{ e($noticeBadgeLabel) }}"
+                        data-notice-meta="{{ e('~by ' . ($feedNotice->author_name ?? 'System') . ($feedNotice->author_department ? ' (' . $feedNotice->author_department . ')' : '') . ' on ' . $feedNoticeDate) }}"
+                        data-notice-doc="{{ $feedNotice->document ? asset('storage/' . $feedNotice->document) : '' }}"
+                        role="button" tabindex="0" aria-label="View notice: {{ e($feedNotice->notice_title ?? 'Notice') }}">
+                        <div class="d-flex justify-content-between align-items-center gap-3">
+                            <div class="notices-feed-item__body min-w-0">
+                                <span class="notices-feed-item__title d-block mb-1">{{ $feedNotice->notice_title }}</span>
+                                <small class="notices-feed-item__meta">
+                                    ~by <strong>{{ $feedNotice->author_name ?? 'System' }}@if($feedNotice->author_department ?? '') ({{ $feedNotice->author_department }})@endif</strong>
+                                    on {{ $feedNoticeDate }}
+                                </small>
+                            </div>
+                            <span class="notices-feed-badge {{ $noticeBadgeClass }} flex-shrink-0">{{ $noticeBadgeLabel }}</span>
                         </div>
-                        @endif
-                        @if($feedNotice->document)
-                        <a href="{{ asset('storage/' . $feedNotice->document) }}" target="_blank"
-                            class="small text-danger text-decoration-none d-inline-flex align-items-center gap-1 mt-2">
-                            <i class="bi bi-paperclip" aria-hidden="true"></i> View attachment
-                        </a>
-                        @endif
                     </div>
                     @empty
                     <p class="dashboard-feed-empty mb-0">No notices available.</p>
@@ -202,10 +242,37 @@
 </div>
 
 @include('admin.dashboard.partials.wish-modal')
+
+{{-- Notice detail modal --}}
+<div class="modal fade" id="notice-detail-modal" tabindex="-1"
+    aria-labelledby="notice-detail-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header border-bottom-0 pb-1">
+                <div class="flex-grow-1 min-w-0 pe-2">
+                    <h5 class="modal-title fw-semibold lh-sm mb-1" id="notice-detail-modal-label"></h5>
+                    <small class="text-muted" id="notice-detail-modal-meta"></small>
+                </div>
+                <span class="notices-feed-badge flex-shrink-0 me-2 mt-1" id="notice-detail-modal-badge"></span>
+                <button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <hr class="mt-0 mb-3">
+                <div class="notice-description-content" id="notice-detail-modal-body"></div>
+                <div class="mt-3 d-none" id="notice-detail-modal-attachment">
+                    <a id="notice-detail-modal-doc" href="#" target="_blank" rel="noopener noreferrer"
+                        class="small text-danger text-decoration-none d-inline-flex align-items-center gap-1">
+                        <i class="bi bi-paperclip" aria-hidden="true"></i> View Attachment
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-feed.css') }}?v=6">
+<link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-feed.css') }}?v=11">
 @endpush
 
 @push('scripts')
@@ -253,9 +320,23 @@ document.addEventListener('DOMContentLoaded', function() {
         const query = (searchInput && searchInput.value ? searchInput.value : '').trim().toLowerCase();
         const panel = getActivePanel();
         if (!panel) return;
+
+        const isNotices = activeTab === 'notices';
+        const filterYear     = isNotices ? (document.getElementById('notice-filter-year')?.value     || '') : '';
+        const filterType     = isNotices ? (document.getElementById('notice-filter-type')?.value     || '') : '';
+        const filterDept     = isNotices ? (document.getElementById('notice-filter-dept')?.value     || '') : '';
+        const filterAudience = isNotices ? (document.getElementById('notice-filter-audience')?.value || '') : '';
+
         panel.querySelectorAll('[data-feed-search]').forEach(function(item) {
             const haystack = (item.getAttribute('data-feed-search') || '').toLowerCase();
-            item.classList.toggle('d-none', query !== '' && haystack.indexOf(query) === -1);
+            let hidden = query !== '' && haystack.indexOf(query) === -1;
+            if (!hidden && isNotices) {
+                if (filterYear     && String(item.dataset.noticeYear     || '') !== filterYear)                         hidden = true;
+                if (!hidden && filterType     && (item.dataset.noticeType     || '').indexOf(filterType)     === -1) hidden = true;
+                if (!hidden && filterDept     && (item.dataset.noticeDept     || '').indexOf(filterDept)     === -1) hidden = true;
+                if (!hidden && filterAudience && (item.dataset.noticeAudience || '').indexOf(filterAudience) === -1) hidden = true;
+            }
+            item.classList.toggle('d-none', hidden);
         });
         updateCount();
     }
@@ -316,23 +397,17 @@ document.addEventListener('DOMContentLoaded', function() {
         setActiveTab(tabFromUrl(), false);
     });
 
-    document.querySelectorAll('.dashboard-notice-tab[data-notice-tab]').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const tab = btn.dataset.noticeTab;
-            document.querySelectorAll('.dashboard-notice-tab').forEach(function(b) {
-                b.classList.toggle('active', b.dataset.noticeTab === tab);
-            });
-            let visible = 0;
-            document.querySelectorAll('[data-notice-tab-item]').forEach(function(item) {
-                const show = item.dataset.noticeTabItem === tab;
-                item.classList.toggle('d-none', !show);
-                if (show && !item.classList.contains('d-none')) visible++;
-            });
-            const emptyEl = document.getElementById('dashboard-feed-notice-tab-empty');
-            if (emptyEl) emptyEl.classList.toggle('d-none', visible > 0);
+    document.querySelectorAll('.notices-feed-filter').forEach(function(sel) {
+        sel.addEventListener('change', applySearch);
+    });
+
+    const noticeFilterReset = document.getElementById('notice-filter-reset');
+    if (noticeFilterReset) {
+        noticeFilterReset.addEventListener('click', function() {
+            document.querySelectorAll('.notices-feed-filter').forEach(function(sel) { sel.value = ''; });
             applySearch();
         });
-    });
+    }
 
     if (markAllBtn) {
         markAllBtn.addEventListener('click', function() {
@@ -398,7 +473,47 @@ document.addEventListener('click', function(e) {
     window.markAsReadDashboard(notifItem.dataset.notificationId, notifItem);
 });
 
-// Notice description See more / See less toggle
+// Notice card → open detail modal
+(function () {
+    const noticeModal = document.getElementById('notice-detail-modal');
+    if (!noticeModal) return;
+
+    function openNoticeModal(card) {
+        document.getElementById('notice-detail-modal-label').textContent = card.dataset.noticeTitle || '';
+        document.getElementById('notice-detail-modal-meta').textContent  = card.dataset.noticeMeta  || '';
+
+        const badgeEl = document.getElementById('notice-detail-modal-badge');
+        badgeEl.textContent = card.dataset.noticeBadge || '';
+        badgeEl.className   = 'notices-feed-badge flex-shrink-0 me-2 mt-1 ' + (card.querySelector('.notices-feed-badge')?.className.split(' ').find(c => c.startsWith('notices-feed-badge--')) || '');
+
+        let desc = '';
+        try { desc = JSON.parse(card.dataset.noticeDesc || '""'); } catch (e) { desc = ''; }
+        document.getElementById('notice-detail-modal-body').innerHTML = desc || '<p class="text-muted fst-italic mb-0">No description provided.</p>';
+
+        const attachEl   = document.getElementById('notice-detail-modal-attachment');
+        const attachLink = document.getElementById('notice-detail-modal-doc');
+        const docUrl     = card.dataset.noticeDoc || '';
+        if (docUrl) {
+            attachLink.href = docUrl;
+            attachEl.classList.remove('d-none');
+        } else {
+            attachEl.classList.add('d-none');
+        }
+
+        bootstrap.Modal.getOrCreateInstance(noticeModal).show();
+    }
+
+    document.addEventListener('click', function (e) {
+        const card = e.target.closest('.notices-feed-item[data-notice-pk]');
+        if (card) openNoticeModal(card);
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const card = document.activeElement?.closest('.notices-feed-item[data-notice-pk]');
+        if (card) { e.preventDefault(); openNoticeModal(card); }
+    });
+}());
 document.addEventListener('click', function(e) {
     const toggleBtn = e.target && e.target.closest ? e.target.closest('.notice-desc-toggle') : null;
     if (!toggleBtn) return;
