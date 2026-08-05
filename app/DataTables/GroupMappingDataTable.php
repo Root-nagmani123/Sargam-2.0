@@ -22,6 +22,13 @@ class GroupMappingDataTable extends DataTable
 
     /**
      * Server-side JSON for /group-mapping. .env: GROUP_MAPPING_DATATABLE_CACHE_*.
+     *
+     * Cached in Redis, but keyed against LISTING_CACHE_EPOCH_KEY. Any create /
+     * edit / delete / toggle of a group mapping — or of a group type
+     * (CourseGroupTypeController) — bumps that epoch via bumpListingCacheEpoch(),
+     * which changes the cache key and serves fresh rows on the next request. So
+     * the listing stays fast AND reflects changes immediately, without waiting
+     * for the TTL to expire.
      */
     public function ajax(): JsonResponse
     {
