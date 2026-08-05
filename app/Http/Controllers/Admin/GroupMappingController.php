@@ -33,6 +33,13 @@ class GroupMappingController extends Controller
     {
         $data_course_id = get_Role_by_course();
 
+        // Dropdowns are cached in Redis for speed, but the cache key embeds the
+        // listing epoch. That epoch is bumped whenever a group type or group
+        // mapping is created / edited / deleted / toggled (see the
+        // GroupMappingDataTable::bumpListingCacheEpoch() calls in this controller
+        // and in CourseGroupTypeController). So any such change invalidates this
+        // cache immediately — the new/edited data shows up on the very next page
+        // load, without waiting for the TTL to expire.
         $epoch = DataTableRedisCache::readListEpoch(GroupMappingDataTable::LISTING_CACHE_EPOCH_KEY);
         $cacheKey = 'group_mapping_index_dropdowns:v3:' . md5(json_encode([
             'epoch' => $epoch,

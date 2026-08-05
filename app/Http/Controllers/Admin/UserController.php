@@ -2606,6 +2606,7 @@ class UserController extends Controller
                 'a.Student_master_pk as spk',
                 'a.pk as attendance_pk',
                 'a.status',
+                'a.other_exemption_comments',
                 'a.timetable_pk',
                 'a.course_master_pk',
                 't.START_DATE as session_date',
@@ -2622,6 +2623,7 @@ class UserController extends Controller
                     'course_master_pk' => $r->course_master_pk,
                     'status' => $r->status,
                     'present' => (int) $r->status !== 3,
+                    'other_exemption_comments' => $r->other_exemption_comments ?? null,
                     'session_date' => $r->session_date ?? null,
                     'session_time' => $r->session_time ?? null,
                     'session_topic' => $r->session_topic ?? null,
@@ -2705,6 +2707,7 @@ class UserController extends Controller
             if (empty($sessions)) {
                 $studentMap->attendance_present = true;
                 $studentMap->attendance_status = null;
+                $studentMap->other_exemption_comments = null;
                 $studentMap->session_date = null;
                 $studentMap->session_time = null;
                 $studentMap->session_topic = null;
@@ -2719,6 +2722,7 @@ class UserController extends Controller
                 $row = clone $studentMap;
                 $row->attendance_present = $session['present'];
                 $row->attendance_status = $session['status'];
+                $row->other_exemption_comments = $session['other_exemption_comments'] ?? null;
                 $row->session_date = $session['session_date'];
                 $row->session_time = $session['session_time'];
                 $row->session_topic = $session['session_topic'];
@@ -3164,11 +3168,21 @@ class UserController extends Controller
                 'escort' => $showEscort
                     ? '<a href="' . e($detailUrl . '?section=dutiesSection' . $linkDateQs) . '" class="sl-count">Escort</a>'
                     : '-',
-                'other_exempt' => $showMedical
-                    ? '<a href="' . e($detailUrl . '?section=medicalExceptionsSection' . $linkDateQs) . '" class="sl-count">Medical</a>'
-                    : ($showOther
-                        ? '<a href="' . e($detailUrl . ($linkDateQs !== '' ? '?' . ltrim($linkDateQs, '&') : '')) . '" class="sl-count">Other</a>'
-                        : '-'),
+                'other_exempt' => (function () use ($showMedical, $showOther, $studentMap, $detailUrl, $linkDateQs) {
+                    if ($showMedical) {
+                        return '<a href="' . e($detailUrl . '?section=medicalExceptionsSection' . $linkDateQs) . '" class="sl-count">Medical</a>';
+                    }
+                    if ($showOther) {
+                        return '<a href="' . e($detailUrl . ($linkDateQs !== '' ? '?' . ltrim($linkDateQs, '&') : '')) . '" class="sl-count">Other</a>';
+                    }
+                    // Inline Other Exemption from the mark-attendance screen (Absent +
+                    // a typed reason) — show the reason text in this column.
+                    $otherComment = trim((string) ($studentMap->other_exemption_comments ?? ''));
+                    if ($otherComment !== '') {
+                        return '<span class="text-muted small" title="Other Exemption">' . e($otherComment) . '</span>';
+                    }
+                    return '-';
+                })(),
             ];
         }
 
@@ -3570,6 +3584,13 @@ class UserController extends Controller
             $showMedical = $statusCode === 6 || $flags['medical'];
             $showOther = $statusCode === 7 || $flags['other'];
 
+            // Inline Other Exemption (Absent + typed reason) shows its reason text in
+            // the Other Exemptions column, mirroring the on-screen table.
+            $otherComment = trim((string) ($studentMap->other_exemption_comments ?? ''));
+            $otherExemptionColumn = $showMedical
+                ? 'Medical'
+                : ($showOther ? 'Other' : ($otherComment !== '' ? $otherComment : '-'));
+
             $rows[] = [
                 $index + 1,
                 $student->generated_OT_code ?? 'N/A',
@@ -3587,7 +3608,7 @@ class UserController extends Controller
                 $statusText,
                 $showMdo ? 'MDO' : '-',
                 $showEscort ? 'Escort' : '-',
-                $showMedical ? 'Medical' : ($showOther ? 'Other' : '-'),
+                $otherExemptionColumn,
             ];
         }
 
