@@ -340,6 +340,32 @@ body.custom-loaded {
     background: #fff;
 }
 
+/* ── Pre-enhance flash guard ───────────────────────────────────────────────────
+   On programme-dt DataTable pages the search / "Showing N" length / info / paginate
+   controls are relocated OUT of `.dataTables_wrapper` into the toolbar
+   (`.programme-dt-search`) and footer (`.programme-dt-footer`) by the page's enhance
+   script (or the global datatable-global-ui.js). While they are still in their DEFAULT
+   position INSIDE `.dataTables_wrapper` (i.e. before relocation completes) we hide them,
+   so a render/screenshot taken mid-enhance never flashes the raw inline controls. Once
+   relocated they no longer match this selector (they live outside `.dataTables_wrapper`,
+   in the toolbar/footer) and render normally. Scoped to `.programme-dt-panel` so
+   un-migrated (Zero-Configuration) DataTables are unaffected. */
+.programme-dt-panel .dataTables_wrapper .dataTables_filter,
+.programme-dt-panel .dataTables_wrapper .dataTables_length,
+.programme-dt-panel .dataTables_wrapper .dataTables_info,
+.programme-dt-panel .dataTables_wrapper .dataTables_paginate {
+    display: none !important;
+}
+/* Collapse the control ROWS too, so the hidden controls leave no empty-row gap that would
+   shift the table (the source of the "doubled header" diff). :has() is supported in the
+   gate's Chrome/Firefox/WebKit; the descendant rule above is the guaranteed fallback. */
+.programme-dt-panel .dataTables_wrapper > .row:has(.dataTables_filter),
+.programme-dt-panel .dataTables_wrapper > .row:has(.dataTables_length),
+.programme-dt-panel .dataTables_wrapper > .row:has(.dataTables_info),
+.programme-dt-panel .dataTables_wrapper > .row:has(.dataTables_paginate) {
+    display: none !important;
+}
+
 /* Single table header — hide duplicate thead from DataTables scrollX clone */
 #coursemaster-table_wrapper .dataTables_scrollBody thead,
 #coursemaster-table_wrapper .dataTables_scrollBody thead tr {
