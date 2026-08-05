@@ -62,6 +62,8 @@
     "/security/employee-idcard-approval/approval2",
     "/sidebar/menu-groups",
     "/fc-reg/admin/activities/status",
-    "/master/country"
+    "/master/country",
+    "/master/state",
+    "/master/district"
   ]
 }

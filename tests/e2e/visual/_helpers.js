@@ -122,8 +122,8 @@ function slugForRoute(url) {
         p = String(url);
     }
     const slug = p.replace(/^\/+|\/+$/g, '')
-        .replace(/[^a-zA-Z0-9/_-]/g, '-')
-        .replace(/\//g, '__')
+        .replace(/[^a-zA-Z0-9/-]/g, '-')
+        .replace(/\//g, '-')
         .replace(/-{2,}/g, '-')
         .slice(0, 90);
     return slug || 'root';

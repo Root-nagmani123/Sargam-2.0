@@ -155,8 +155,26 @@ modal selects** — no change to any store/update/delete/validation logic or rou
 **HTTP 200** with the DataTable + modal + toggle markers · all FKs 100% populated (edit cascade
 prefill safe) · every export format runs (CSV BOM ✓ / PDF %PDF ✓ / Print HTML ✓).
 
+## Visual gate — DONE (re-baselined)
+
+Ran the Playwright visual gate on the XAMPP Apache vhost (`http://localhost:8080`), scoped to
+the four master routes across **chrome / firefox / safari-webkit** (12 checks).
+
+- **Country** — content **pixel-identical** to its prior baseline (only the top-right
+  logged-in-user block differed, because the baseline account's profile name/avatar changed).
+- **City** — re-baselined (its old baseline predated the redesign).
+- **State · District** — first-time baselines captured.
+- All 12 re-verified **zero-diff** on a clean re-run → deterministic.
+
+**Two gate-infra fixes were required first** (the harness had drifted; both verified):
+1. `_helpers.js` `slugForRoute()` mapped `/`→`__`, but all **182** committed snapshots use `-`.
+   Restored `/`(and `_`)→`-` so the slug matches every existing baseline (verified 182/182).
+2. `routes.json` was missing `/master/state` and `/master/district` — added.
+
+Baseline PNGs + the two infra fixes are staged in the working tree, **ready to commit** (kept
+separate from the code commit `1ca8a3f99` so `git log` explains the baseline movement).
+
 ## STOP — awaiting review
 The whole Master location module (Country · State · District · City) now follows the canonical
-Store Master pattern. **Pending:** a browser visual gate + re-baseline (chrome/firefox/webkit)
-on the XAMPP Apache vhost per the usual process. On approval I'll re-baseline and move to the
-next Master group.
+Store Master pattern **and is gated + re-baselined**. On approval I'll move to the next Master
+group.
