@@ -124,10 +124,6 @@ return [
             'dlt_name' => 'FC-RSP',
             'dlt_template_id' => env('GUPSHUP_DLT_B2_REGISTRATION_PENDING', '1477178461353333216'),
             'body' => 'Dear {Participant_Name}, your registration for {Programme_Name} is incomplete. Complete pending steps by {Last_Date}. Portal: {Portal_Link} - {Institute_Name}',
-            'max_lengths' => [
-                'Participant_Name' => 40, 'Programme_Name' => 40, 'Last_Date' => 40,
-                'Portal_Link' => 120, 'Institute_Name' => 40,
-            ],
         ],
 
         // FC-EC — C1 (approved wording: "opted for"; no date field in the DLT body)
