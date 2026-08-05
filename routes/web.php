@@ -838,6 +838,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         Route::get('/student_mark/{group_pk}/{course_pk}/{timetable_pk}', 'markAttendanceView')->name('student_mark');
         // Route::get('/student_mark/{group_pk}/{course_pk}/{timetable_pk}/{student_pk}', 'OTmarkAttendanceView')->name('OT.student_mark.student');
         Route::get('/student_mark/{group_pk}/{course_pk}/{timetable_pk}/{student_pk}', 'OTmarkAttendanceView')->name('OT.student_mark.student');
+        Route::get('/student_mark_export/{group_pk}/{course_pk}/{timetable_pk}/{student_pk}', 'exportOtStudentAttendanceExcel')->name('OT.student_mark.export');
     });
 
     Route::get('/getstudentmarks', [AttendanceController::class, 'OTmarkAttendanceData'])->name('ot.student.attendance.data');
