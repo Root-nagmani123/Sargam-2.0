@@ -71,6 +71,15 @@
     "/master/department-master",
     "/master/designation",
     "/master/employee-type",
-    "/master/employee-group"
+    "/master/employee-group",
+    "/security/vehicle-type",
+    "/security/vehicle-pass-config",
+    "/security/idcard-card-type",
+    "/security/idcard-sub-type",
+    "/security/vehicle-pass",
+    "/security/visitor-pass",
+    "/security/duplicate-vehicle-pass",
+    "/security/vehicle-pass-approval",
+    "/security/family-idcard-approval"
   ]
 }
