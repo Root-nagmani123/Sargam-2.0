@@ -303,11 +303,11 @@
                 <div class="fc-sms-footer">
                     <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2" id="fcSmsSendBtn">
                         <i class="bi bi-send" aria-hidden="true"></i>
-                        <span>Send SMS + Email</span>
+                        <span id="fcSmsSendBtnLabel">Send SMS + Email</span>
                     </button>
                     <div id="fcSmsSendingStatus" class="text-muted small d-none d-inline-flex align-items-center">
                         <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        Sending SMS and email. Please wait…
+                        <span id="fcSmsSendingStatusText">Sending SMS and email. Please wait…</span>
                     </div>
                 </div>
             </form>
@@ -352,6 +352,21 @@ $(function () {
         return $('input[name="template"]:checked').val() || 'b1';
     }
 
+    // B3 (Travel pending) is email-only — no DLT-approved SMS template yet.
+    function isEmailOnlyTemplate(template) {
+        return template === 'b3';
+    }
+
+    function channelActionLabel(template) {
+        return isEmailOnlyTemplate(template) ? 'Send Email' : 'Send SMS + Email';
+    }
+
+    function channelSendingLabel(template) {
+        return isEmailOnlyTemplate(template)
+            ? 'Sending email. Please wait…'
+            : 'Sending SMS and email. Please wait…';
+    }
+
     // The template actually driving the send: prefer whichever template has
     // ticked trainees (this is what the user visibly selected), falling back
     // to the checked radio only when nothing is ticked anywhere. This avoids
@@ -385,12 +400,19 @@ $(function () {
         var tpl = resolveSendTemplate();
         var set = selectedByTemplate[tpl] || new Set();
         var mode = set.size > 0 ? 'selected' : 'all';
+        var channel = isEmailOnlyTemplate(tpl) ? 'email' : 'SMS + email';
         $('#fcSmsSendMode').val(mode);
         if (mode === 'selected') {
-            $('#fcSmsSendSummary').html('Sending to <strong>' + set.size + '</strong> selected trainee(s) for this template.');
+            $('#fcSmsSendSummary').html(
+                'Sending ' + channel + ' to <strong>' + set.size + '</strong> selected trainee(s) for this template.'
+            );
         } else {
-            $('#fcSmsSendSummary').html('No trainees ticked — sending to <strong>all</strong> matching recipients for this template.');
+            $('#fcSmsSendSummary').html(
+                'No trainees ticked — sending ' + channel + ' to <strong>all</strong> matching recipients for this template.'
+            );
         }
+        $('#fcSmsSendBtnLabel').text(channelActionLabel(tpl));
+        $('#fcSmsSendingStatusText').text(channelSendingLabel(tpl));
     }
 
     function syncPageCheckboxes(tableId, template) {
@@ -556,15 +578,16 @@ $(function () {
             selectTemplate(template);
         }
 
+        var actionLabel = channelActionLabel(template);
         if (mode === 'selected') {
             set.forEach(function (pk) {
                 $('<input>', { type: 'hidden', name: 'registration_pks[]', value: pk }).appendTo($pkWrap);
             });
-            if (!confirm('Send SMS + Email to ' + set.size + ' selected trainee(s)?')) {
+            if (!confirm(actionLabel + ' to ' + set.size + ' selected trainee(s)?')) {
                 e.preventDefault();
                 return false;
             }
-        } else if (!confirm('Send SMS + Email to ALL matching trainees for the selected template? This can take time for large lists.')) {
+        } else if (!confirm(actionLabel + ' to ALL matching trainees for the selected template? This can take time for large lists.')) {
             e.preventDefault();
             return false;
         }
