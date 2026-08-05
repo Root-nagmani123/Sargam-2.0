@@ -1,10 +1,10 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Active Course')
+@section('title', 'Active Course - Sargam | Lal Bahadur')
 
 @section('content')
 <div class="container-fluid">
-    <x-breadcrum title="Active Course" :showBack="true"></x-breadcrum>
+    <x-breadcrum title="Active Course"></x-breadcrum>
 
     <div class="card">
         <div class="card-body">

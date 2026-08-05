@@ -1479,37 +1479,6 @@ function get_profile_pic()
         return $profile_pic;
     }
 }
-if (!function_exists('notice_feed_base_query')) {
-    /**
-     * Base notice query with the author name and department resolved.
-     * Columns are table-qualified because user_credentials / department_master
-     * carry their own active_inactive + pk columns.
-     */
-    function notice_feed_base_query()
-    {
-        return DB::table('notices_notification')
-            ->leftJoin('user_credentials as notice_author', 'notice_author.pk', '=', 'notices_notification.created_by')
-            ->leftJoin('employee_master as notice_author_emp', 'notice_author_emp.pk', '=', 'notice_author.user_id')
-            ->leftJoin('department_master as notice_author_dept', 'notice_author_dept.pk', '=', 'notice_author_emp.department_master_pk')
-            ->select(
-                'notices_notification.pk',
-                'notices_notification.notice_title',
-                'notices_notification.notice_type',
-                'notices_notification.target_audience',
-                'notices_notification.course_master_pk',
-                'notices_notification.document',
-                'notices_notification.display_date',
-                'notices_notification.expiry_date',
-                'notices_notification.created_at',
-                'notices_notification.created_by',
-                DB::raw("NULLIF(TRIM(CONCAT_WS(' ', notice_author.first_name, notice_author.last_name)), '') as author_name"),
-                'notice_author_dept.department_name as author_department'
-            )
-            ->where('notices_notification.active_inactive', 1)
-            ->where('notices_notification.expiry_date', '>=', date('Y-m-d'))
-            ->orderBy('notices_notification.display_date', 'desc');
-    }
-}
 if (!function_exists('get_notice_notification_by_role')) {
     function get_notice_notification_by_role()
     {
@@ -1529,15 +1498,21 @@ if (!function_exists('get_notice_notification_by_role')) {
         $isStudent      = !empty(array_intersect($roleStudent, $sessionRoles));
 
 
-        $commonNotices = notice_feed_base_query()
-            ->where('notices_notification.target_audience', 'All')
+        $commonNotices = DB::table('notices_notification')
+            ->where('target_audience', 'All')
+            ->where('active_inactive', 1)
+            ->where('expiry_date', '>=', date('Y-m-d'))
+            ->orderBy('display_date', 'desc')
             ->get();
 
         // 🔥 Staff/Faculty Notices
         if ($isStaffFaculty) {
 
-            $data = notice_feed_base_query()
-                ->where('notices_notification.target_audience', 'like', '%Staff/Faculty%')
+            $data = DB::table('notices_notification')
+                ->where('target_audience', 'like', '%Staff/Faculty%')
+                ->where('active_inactive', 1)
+                ->where('expiry_date', '>=', date('Y-m-d'))
+                ->orderBy('display_date', 'desc')
                 ->get();
 
 
@@ -1546,10 +1521,13 @@ if (!function_exists('get_notice_notification_by_role')) {
 
         // 🔥 Student OT Notices
         if ($isStudent) {
-            $roleNotices = notice_feed_base_query()
+            $roleNotices =  DB::table('notices_notification')
                 ->join('student_master_course__map as smcm', 'notices_notification.course_master_pk', '=', 'smcm.course_master_pk')
-                ->where('notices_notification.target_audience', 'like', '%Office trainee%')
+                ->where('target_audience', 'like', '%Office trainee%')
+                ->where('notices_notification.active_inactive', 1)
                 ->where('smcm.student_master_pk', $user->user_id)
+                ->where('expiry_date', '>=', date('Y-m-d'))
+                ->orderBy('display_date', 'desc')
                 ->get();
 
 
