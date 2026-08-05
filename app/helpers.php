@@ -1532,15 +1532,21 @@ if (!function_exists('get_notice_notification_by_role')) {
         $isStudent      = !empty(array_intersect($roleStudent, $sessionRoles));
 
 
-        $commonNotices = notice_feed_base_query()
-            ->where('notices_notification.target_audience', 'All')
+        $commonNotices = DB::table('notices_notification')
+            ->where('target_audience', 'All')
+            ->where('active_inactive', 1)
+            ->where('expiry_date', '>=', date('Y-m-d'))
+            ->orderBy('display_date', 'desc')
             ->get();
 
         // 🔥 Staff/Faculty Notices
         if ($isStaffFaculty) {
 
-            $data = notice_feed_base_query()
-                ->where('notices_notification.target_audience', 'like', '%Staff/Faculty%')
+            $data = DB::table('notices_notification')
+                ->where('target_audience', 'like', '%Staff/Faculty%')
+                ->where('active_inactive', 1)
+                ->where('expiry_date', '>=', date('Y-m-d'))
+                ->orderBy('display_date', 'desc')
                 ->get();
 
 
@@ -1549,10 +1555,13 @@ if (!function_exists('get_notice_notification_by_role')) {
 
         // 🔥 Student OT Notices
         if ($isStudent) {
-            $roleNotices = notice_feed_base_query()
+            $roleNotices =  DB::table('notices_notification')
                 ->join('student_master_course__map as smcm', 'notices_notification.course_master_pk', '=', 'smcm.course_master_pk')
-                ->where('notices_notification.target_audience', 'like', '%Office trainee%')
+                ->where('target_audience', 'like', '%Office trainee%')
+                ->where('notices_notification.active_inactive', 1)
                 ->where('smcm.student_master_pk', $user->user_id)
+                ->where('expiry_date', '>=', date('Y-m-d'))
+                ->orderBy('display_date', 'desc')
                 ->get();
 
 

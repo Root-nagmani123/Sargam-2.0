@@ -211,11 +211,13 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
             <div class="col">
                 @if(in_array('widget_notices', $enabledWidgetKeys))
                 @php
-                $noticeCategoryLabels = [
-                'office-orders' => 'Office Order',
-                'work-allocation' => 'Work Allocations',
-                'notice-circular' => 'Notice',
+                $noticeTabKeys = ['office-orders', 'work-allocation', 'notice-circular'];
+                $noticeTabLabels = [
+                'office-orders' => 'Office Orders',
+                'work-allocation' => 'Work Allocation',
+                'notice-circular' => 'Notice/ Circular/ Order',
                 ];
+                $noticeTabCounts = ['office-orders' => 0, 'work-allocation' => 0, 'notice-circular' => 0];
                 $resolveDashboardNoticeTab = function ($type) {
                 $t = strtolower((string) ($type ?? ''));
                 if (str_contains($t, 'office order')) {
@@ -226,6 +228,17 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 }
                 return 'notice-circular';
                 };
+                foreach ($notices as $noticeForTab) {
+                $tabKey = $resolveDashboardNoticeTab($noticeForTab->notice_type ?? '');
+                $noticeTabCounts[$tabKey]++;
+                }
+                $defaultNoticeTab = 'office-orders';
+                foreach ($noticeTabKeys as $tabKeyCandidate) {
+                if ($noticeTabCounts[$tabKeyCandidate] > 0) {
+                $defaultNoticeTab = $tabKeyCandidate;
+                break;
+                }
+                }
                 @endphp
                 <div class="card dashboard-panel dashboard-feed-panel mb-3" id="dashboard-notices-panel">
                     <div class="card-header py-3 px-4">
@@ -239,6 +252,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                             </a>
                             @endif
                         </div>
+                        <hr class="dashboard-feed-divider">
                     </div>
                     <div class="card-body pt-0 px-4 pb-3 dashboard-list-scroll">
                         @if(count($notices) === 0)
@@ -256,11 +270,25 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                             @endif
                         </div>
                         @else
+                        <div class="dashboard-notice-tabs" role="tablist" aria-label="Notice categories">
+                            @foreach($noticeTabKeys as $tabKey)
+                            <button type="button"
+                                class="dashboard-notice-tab {{ $tabKey === $defaultNoticeTab ? 'active' : '' }}{{ $noticeTabCounts[$tabKey] === 0 ? ' dashboard-notice-tab-empty' : '' }}"
+                                role="tab" aria-selected="{{ $tabKey === $defaultNoticeTab ? 'true' : 'false' }}"
+                                data-notice-tab="{{ $tabKey }}" id="dashboard-notice-tab-{{ $tabKey }}">
+                                {{ $noticeTabLabels[$tabKey] }}@if($noticeTabCounts[$tabKey] > 0):
+                                {{ $noticeTabCounts[$tabKey] }}@endif
+                            </button>
+                            @endforeach
+                        </div>
+                        <p class="dashboard-notice-list-empty d-none mb-0" id="dashboard-notice-tab-empty"
+                            role="status">
+                            No notices in this category.
+                        </p>
                         <ul class="list-unstyled mb-0 ps-0" id="dashboard-notice-list">
                             @foreach($notices as $notice)
                             @php
-                            $noticeCategory = $noticeCategoryLabels[$resolveDashboardNoticeTab($notice->notice_type ??
-                            '')];
+                            $noticeTab = $resolveDashboardNoticeTab($notice->notice_type ?? '');
                             $noticeDate = $notice->created_at ?? $notice->display_date ?? null;
                             $noticeDateLabel = $noticeDate
                             ? \Carbon\Carbon::parse($noticeDate)->format('d/m/Y h:i A')
@@ -285,22 +313,10 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                             <span class="dashboard-notice-byline__tilde" aria-hidden="true">~</span>by
                                             <span class="dashboard-notice-author">{{ $noticeAuthor }}@if($noticeAuthorDept !== '') ({{ $noticeAuthorDept }})@endif</span>
                                             @endif
-                                            @if($noticeDateLabel)
-                                            <span class="dashboard-notice-date">{{ $noticeAuthor !== '' ? 'on ' : '' }}{{
-                                                $noticeDateLabel }}</span>
-                                            @endif
-                                        </small>
-                                        <span class="dashboard-notice-type-pill">{{ $noticeCategory }}</span>
+                                        </div>
                                     </div>
-                                    @if($notice->document)
-                                    <a href="{{ asset('storage/' . $notice->document) }}" target="_blank"
-                                        class="dashboard-notice-attachment text-danger text-decoration-none">
-                                        <i class="bi bi-paperclip" aria-hidden="true"></i>View attachment
-                                    </a>
-                                    @endif
-                                </div>
-                            </li>
-                            @endforeach
+                                </li>
+                                @endforeach
                         </ul>
                         <div class="dashboard-feed-footer">
                             <a href="{{ route('admin.dashboard.feed', ['tab' => 'notices']) }}"
@@ -947,6 +963,156 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
         const id = btn.dataset.notificationId;
         if (!id) return;
         window.markAsReadDashboard(id, btn);
+    });
+
+    /* ===== Notification hover peek =====
+       Hovering a row floats the full notification beside the list. The card is
+       appended to <body> and positioned with fixed coordinates because the panel is
+       an overflow:auto scroller, which clips anything absolutely positioned inside
+       it. Text is written with textContent — notification bodies are user data. */
+    (function() {
+        var peek = null;
+        var current = null;
+        var GAP = 12;
+
+        function build() {
+            if (peek) return peek;
+            peek = document.createElement('div');
+            peek.className = 'dashboard-notification-peek';
+            peek.setAttribute('role', 'tooltip');
+            peek.setAttribute('aria-hidden', 'true');
+            peek.innerHTML =
+                '<span class="dashboard-notification-peek__title"></span>' +
+                '<span class="dashboard-notification-peek__meta">' +
+                '<span class="dashboard-notification-peek__time"></span>' +
+                '</span>' +
+                '<p class="dashboard-notification-peek__message"></p>';
+            document.body.appendChild(peek);
+            return peek;
+        }
+
+        function place(item) {
+            var r = item.getBoundingClientRect();
+            var w = peek.offsetWidth;
+            var h = peek.offsetHeight;
+
+            // Prefer the right of the row; flip left when it would run off-screen.
+            var toLeft = r.right + GAP + w > window.innerWidth - 8;
+            var left = toLeft ? r.left - GAP - w : r.right + GAP;
+            left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+
+            var top = Math.max(8, Math.min(r.top, window.innerHeight - h - 8));
+
+            peek.classList.toggle('dashboard-notification-peek--left', toLeft);
+            peek.classList.toggle('dashboard-notification-peek--right', !toLeft);
+            peek.style.left = left + 'px';
+            peek.style.top = top + 'px';
+
+            // Keep the caret pointing at the row even when the card is clamped.
+            var caret = Math.max(10, Math.min(r.top + r.height / 2 - top, h - 18));
+            peek.style.setProperty('--peek-caret-top', caret + 'px');
+        }
+
+        function show(item) {
+            var message = item.querySelector('.dashboard-notification-message');
+            var text = message ? message.textContent.trim() : '';
+            if (!text) return; // nothing more to reveal than the row already shows
+
+            build();
+            current = item;
+
+            var title = item.querySelector('.dashboard-notification-title');
+            var time = item.querySelector('.dashboard-notification-time');
+            peek.querySelector('.dashboard-notification-peek__title').textContent =
+                title ? title.textContent.trim() : 'Notification';
+            peek.querySelector('.dashboard-notification-peek__time').textContent =
+                time ? time.textContent.trim() : '';
+            peek.querySelector('.dashboard-notification-peek__message').textContent = text;
+
+            var meta = peek.querySelector('.dashboard-notification-peek__meta');
+            var existingTag = meta.querySelector('.dashboard-notification-peek__new');
+            if (existingTag) existingTag.remove();
+            if (item.classList.contains('dashboard-notification-item-unread')) {
+                var tag = document.createElement('span');
+                tag.className = 'dashboard-notification-peek__new';
+                tag.textContent = 'New';
+                meta.appendChild(tag);
+            }
+
+            place(item);
+            peek.classList.add('is-visible');
+            peek.setAttribute('aria-hidden', 'false');
+        }
+
+        function hide() {
+            current = null;
+            if (!peek) return;
+            peek.classList.remove('is-visible');
+            peek.setAttribute('aria-hidden', 'true');
+        }
+
+        function itemFrom(e) {
+            return e.target && e.target.closest ?
+                e.target.closest('.dashboard-notification-item') : null;
+        }
+
+        document.addEventListener('mouseover', function(e) {
+            var item = itemFrom(e);
+            if (item && item !== current) show(item);
+        });
+
+        document.addEventListener('mouseout', function(e) {
+            var item = itemFrom(e);
+            if (!item) return;
+            // Ignore moves between children of the same row.
+            if (e.relatedTarget && item.contains(e.relatedTarget)) return;
+            hide();
+        });
+
+        // Keyboard parity: the row is a real button, so Tab must peek too.
+        document.addEventListener('focusin', function(e) {
+            var item = itemFrom(e);
+            if (item) show(item);
+        });
+        document.addEventListener('focusout', function(e) {
+            if (itemFrom(e)) hide();
+        });
+
+        // The list scrolls under the card, so re-anchor (or drop) it as things move.
+        window.addEventListener('scroll', function() {
+            if (current) place(current);
+        }, true);
+        window.addEventListener('resize', hide);
+    })();
+
+    document.addEventListener('click', function(e) {
+        const tabBtn = e.target && e.target.closest ? e.target.closest(
+            '.dashboard-notice-tab[data-notice-tab]') :
+            null;
+        if (!tabBtn) return;
+
+        const activeTab = tabBtn.dataset.noticeTab;
+        if (!activeTab) return;
+
+        document.querySelectorAll('.dashboard-notice-tab[data-notice-tab]').forEach(function(button) {
+            const isActive = button.dataset.noticeTab === activeTab;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+
+        let visibleCount = 0;
+        document.querySelectorAll('[data-notice-tab-item]').forEach(function(item) {
+            const show = item.dataset.noticeTabItem === activeTab;
+            item.classList.toggle('d-none', !show);
+            if (show) {
+                visibleCount++;
+            }
+        });
+
+        const emptyState = document.getElementById('dashboard-notice-tab-empty');
+        if (emptyState) {
+            emptyState.classList.toggle('d-none', visibleCount > 0);
+        }
     });
 
     document.addEventListener('DOMContentLoaded', function() {
