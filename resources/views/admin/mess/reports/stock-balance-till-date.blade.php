@@ -283,23 +283,51 @@
 <script>
 function printStockBalance() {
     var table = document.getElementById('stockBalanceTable');
-    if (!table) {
+    if (!table || typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable.isDataTable('#stockBalanceTable')) {
         window.print();
         return;
     }
 
-    var clonedBody = table.cloneNode(true);
+    var dtApi = window.jQuery('#stockBalanceTable').DataTable();
+    var urlFn = (window.messMasterDataTableAjaxUrlByTable || {})['stockBalanceTable'];
+    if (typeof urlFn !== 'function') {
+        window.print();
+        return;
+    }
 
-    // Remove Material Symbols icons from clone
-    clonedBody.querySelectorAll('.material-symbols-rounded, .material-icons').forEach(function(icon) {
-        icon.remove();
+    var ajaxData = dtApi.ajax.params();
+    ajaxData.start = 0;
+    ajaxData.length = -1;
+
+    window.jQuery.ajax({
+        url: urlFn(),
+        type: 'GET',
+        data: ajaxData,
+        dataType: 'json',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    }).done(function (json) {
+        renderStockBalancePrintWindow(table, (json && json.data) || [], (json && json.totals) || { amount: '0.00' });
+    }).fail(function () {
+        window.print();
     });
+}
 
-    var bodyHtml = clonedBody.querySelector('tbody') ? clonedBody.querySelector('tbody').innerHTML : '';
-    var footerHtml = clonedBody.querySelector('tfoot') ? clonedBody.querySelector('tfoot').innerHTML : '';
-    bodyHtml += footerHtml;
+function renderStockBalancePrintWindow(table, rows, totals) {
     var theadSource = table.querySelector('thead');
     var columnHeadHtml = theadSource ? theadSource.innerHTML : '';
+
+    var bodyHtml = rows.map(function (row) {
+        return '<tr>' +
+            '<td>' + row[0] + '</td>' +
+            '<td>' + row[1] + '</td>' +
+            '<td>' + row[2] + '</td>' +
+            '<td class="text-end">' + row[3] + '</td>' +
+            '<td>' + row[4] + '</td>' +
+            '<td class="text-end">' + row[5] + '</td>' +
+            '<td class="text-end">' + row[6] + '</td>' +
+            '</tr>';
+    }).join('');
+    bodyHtml += '<tr class="table-light"><td colspan="6" class="text-end">Total Amount:</td><td class="text-end">₹' + (totals.amount ?? '0.00') + '</td></tr>';
 
     var title = 'Stock Balance as of Till Date';
     var dateLabel = @json('As on ' . date('d-F-Y', strtotime($tillDate)));

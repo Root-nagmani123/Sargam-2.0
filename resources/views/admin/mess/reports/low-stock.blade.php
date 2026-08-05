@@ -268,24 +268,55 @@
 <script>
     function printLowStockReport() {
         var tableEl = document.getElementById('lowStockReportTable');
-        if (!tableEl) {
+        if (!tableEl || typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable.isDataTable('#lowStockReportTable')) {
             window.print();
             return;
         }
 
-        var table = tableEl.cloneNode(true);
-        table.removeAttribute('id');
-        table.classList.add('low-stock-data');
-        table.classList.remove('table', 'table-hover', 'table-striped', 'align-middle', 'mb-0');
+        var dtApi = window.jQuery('#lowStockReportTable').DataTable();
+        var urlFn = (window.messMasterDataTableAjaxUrlByTable || {})['lowStockReportTable'];
+        if (typeof urlFn !== 'function') {
+            window.print();
+            return;
+        }
+
+        var ajaxData = dtApi.ajax.params();
+        ajaxData.start = 0;
+        ajaxData.length = -1;
+
+        window.jQuery.ajax({
+            url: urlFn(),
+            type: 'GET',
+            data: ajaxData,
+            dataType: 'json',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }).done(function (json) {
+            renderLowStockPrintWindow((json && json.data) || []);
+        }).fail(function () {
+            window.print();
+        });
+    }
+
+    function renderLowStockPrintWindow(rows) {
+        var theadHtml = document.querySelector('#lowStockReportTable thead') ? document.querySelector('#lowStockReportTable thead').innerHTML : '';
+        var bodyHtml = rows.map(function (row) {
+            return '<tr' + (/Out of Stock|Below Minimum/.test(row[5] || '') ? ' class="table-danger"' : '') + '>' +
+                '<td class="text-center">' + row[0] + '</td>' +
+                '<td>' + row[1] + '</td>' +
+                '<td class="text-center">' + row[2] + '</td>' +
+                '<td class="text-end">' + row[3] + '</td>' +
+                '<td class="text-end">' + row[4] + '</td>' +
+                '<td class="text-center">' + row[5] + '</td>' +
+                '</tr>';
+        }).join('');
 
         var tillDateText = @json(date('d-F-Y', strtotime($tillDate)));
         var storeNameText = @json($selectedStoreName ?? 'All Stores');
-        var bodyRows = table.querySelectorAll('tbody tr');
-        var totalItems = bodyRows.length;
+        var totalItems = rows.length;
         var outOfStockCount = 0;
         var belowMinCount = 0;
-        bodyRows.forEach(function (row) {
-            var statusText = row.children[5] ? row.children[5].textContent : '';
+        rows.forEach(function (row) {
+            var statusText = row[5] || '';
             if (/Out of Stock/.test(statusText)) {
                 outOfStockCount++;
             } else if (/Below Minimum/.test(statusText)) {
@@ -479,7 +510,10 @@
         ${totalItems > 0 ? '<div class="meta-line"><strong>Summary:</strong> Total items ' + totalItems + ' | Out of stock ' + outOfStockCount + ' | Below minimum ' + belowMinCount + '</div>' : ''}
       </div>
 
-      ${table.outerHTML}
+      <table class="low-stock-data">
+        <thead>${theadHtml}</thead>
+        <tbody>${bodyHtml}</tbody>
+      </table>
 
       <div class="footer"><small>Officer's Mess LBSNAA Mussoorie — Low Stock Report</small></div>
     </div>
