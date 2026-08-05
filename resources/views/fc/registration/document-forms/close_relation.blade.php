@@ -10,7 +10,7 @@
         ['Father', 'पिता / Father'],
         ['Mother', 'माता / Mother'],
         ['Wife / Husband', 'पत्नी / पति / Wife / Husband'],
-        ['Son(s)', 'पुत्र / Son(s)'],
+        ['Son(s)', 'पुत्र / Son{s}'],
         ['Daughter(s)', 'पुत्री / पुत्रियाँ / Daughter(s)'],
         ['Brother(s)', 'भाई / Brother(s)'],
         ['Sister(s)', 'बहिन / बहिनें / Sister(s)'],
@@ -52,7 +52,7 @@
     .cr-in:focus{ border-bottom-color:var(--fc-blue); background:#eef6ff; }
     .cr-cert{ font-size:.95rem; margin-top:1.2rem; }
     .cr-sign{ margin-top:1.4rem; font-size:1rem; line-height:2.1; }
-    .cr-notes{ font-size:.82rem; margin-top:1.2rem; line-height:1.55; font-family:system-ui,sans-serif; border-top:1px solid #d5deeb; padding-top:.8rem; }
+    .cr-notes{ font-size:.98rem; margin-top:1.2rem; line-height:1.6; font-family:system-ui,sans-serif; border-top:1px solid #d5deeb; padding-top:.8rem; }
     .cr-notes b{ color:#14315e; }
     .blank{ border:0; border-bottom:1px dotted #64748b; background:transparent; color:#0b3d91; font-weight:600; padding:0 .3rem 1px; outline:none; min-width:130px; }
     .blank:focus{ border-bottom-color:var(--fc-blue); background:#eef6ff; }
@@ -97,7 +97,7 @@
                     @if($ti === 0)
                         विदेशों में निवास कर रहे या विदेशी राष्ट्रीयता-प्राप्त निकट संबंधी <span class="en">/ Close relations who are Nationals of, or are domiciled in, other countries</span>
                     @else
-                        भारत में निवास कर रहे निकट संबंधी जो भारतीय मूल के नहीं हैं <span class="en">/ Close relations residing in India who are of non-Indian origin</span>
+                        भारत में निवास कर रहे निकट संबंधी जो भारतीय मूल के नहीं हैं <span class="en">/ Close relations residing in India, who are non-Indian origin</span>
                     @endif
                 </div>
                 <table class="cr">
@@ -129,11 +129,11 @@
             <div class="cr-cert">मैं प्रमाणित करता/करती हूँ कि जहाँ तक मेरी जानकारी और विश्वास है, पूर्वोक्त सूचना सही और पूर्ण है। I certify that the foregoing information is correct and complete to the best of my knowledge and belief.</div>
 
             <div class="cr-sign row">
-                <div class="col-md-6">तारीख / Date:
-                    <input type="date" name="declaration_date" class="blank" value="{{ $val('declaration_date') }}" style="min-width:150px;"></div>
+                <div class="col-md-6"></div>
                 <div class="col-md-6 text-md-end">
                     <div>हस्ताक्षर / Signature: ______________________</div>
-                    <div>पदनाम / Designation: <input type="text" name="designation" class="blank" value="{{ $val('designation') }}" style="min-width:200px;"></div>
+                    <div>पदनाम / Designation: <input type="text" name="designation" class="blank" value="{{ $val('designation') }}" style="width:200px;"></div>
+                    <div>तारीख / Date: <input type="date" name="declaration_date" class="blank" value="{{ old('declaration_date', fc_document_date('iso')) }}" style="width:200px;" readonly></div>
                 </div>
             </div>
 
@@ -143,7 +143,8 @@
             </div>
         </div>
 
-        {{-- Signature upload --}}
+        {{-- Signature upload section — commented out per request (hidden on the fill form) --}}
+        {{--
         @if(! empty($template['signatures']))
             <div class="card fc-card border-0 shadow-sm mb-3">
                 <div class="card-header bg-white py-3"><h6 class="mb-0 text-uppercase small fw-bold text-muted">Signatures / हस्ताक्षर</h6></div>
@@ -163,6 +164,7 @@
                 </div>
             </div>
         @endif
+        --}}
 
         <div class="d-flex justify-content-between mb-5">
             <a href="{{ route('fc-reg.forms.step', [$form, $step]) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Cancel</a>

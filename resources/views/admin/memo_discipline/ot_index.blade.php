@@ -50,6 +50,12 @@
                         <option value="3" {{ (string)$statusFilter === '3' ? 'selected' : '' }}>Closed</option>
                     </select>
 
+                    <select class="form-select" id="minor_major" name="minor_major" aria-label="Category">
+                        <option value="">Category</option>
+                        <option value="2" {{ (string)$categoryFilter === '2' ? 'selected' : '' }}>Major</option>
+                        <option value="1" {{ (string)$categoryFilter === '1' ? 'selected' : '' }}>Minor</option>
+                    </select>
+
                     <select class="form-select" id="otTimePeriod" aria-label="Time Period">
                         <option value="all" {{ !$hasRange ? 'selected' : '' }}>All Time</option>
                         <option value="today">Today</option>
@@ -89,9 +95,11 @@
                             <th>Program Name</th>
                             <th>Date of Infraction</th>
                             <th>Infraction</th>
+                            <th>Category</th>
                             <th class="text-center">Marks Submitted</th>
                             <th class="text-center">Final Marks</th>
                             <th>Remarks</th>
+                            <th>Conclusion Remark</th>
                             <th>Created Date</th>
                             <th>Status</th>
                         </tr>
@@ -103,9 +111,19 @@
                             <td class="fw-semibold">{{ $memo->course->course_name ?? 'N/A' }}</td>
                             <td class="text-muted">{{ $memo->date ? \Carbon\Carbon::parse($memo->date)->format('d M Y') : 'N/A' }}</td>
                             <td><span class="badge bg-info-subtle text-info">{{ $memo->discipline->discipline_name ?? 'N/A' }}</span></td>
+                            <td>
+                                @if($memo->minor_major == 2)
+                                <span class="badge bg-danger-subtle text-danger">Major</span>
+                                @elseif($memo->minor_major == 1)
+                                <span class="badge bg-secondary-subtle text-secondary">Minor</span>
+                                @else
+                                <span class="text-muted">—</span>
+                                @endif
+                            </td>
                             <td class="text-center fw-semibold text-warning">{{ $memo->mark_deduction_submit }}</td>
                             <td class="text-center fw-semibold text-danger">{{ $memo->final_mark_deduction }}</td>
                             <td class="text-muted">{{ $memo->remarks ?? '—' }}</td>
+                            <td class="text-muted">{{ $memo->conclusion_remark ?? '—' }}</td>
                             <td class="text-muted">{{ !empty($memo->created_date) ? \Carbon\Carbon::parse($memo->created_date)->format('d M Y') : 'N/A' }}</td>
                             <td>
                                 @if ($memo->status == 1)
@@ -147,7 +165,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="9" class="text-center py-5 text-muted">
+                            <td colspan="11" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                                 <span class="fw-medium">No discipline memos available</span>
                             </td>
@@ -208,7 +226,7 @@ $(document).ready(function () {
 
     /* ── Searchable dropdowns (match the admin page) ── */
     if (typeof window.Choices !== 'undefined') {
-        ['program_name', 'discipline_master_pk', 'status', 'otTimePeriod'].forEach(function (id) {
+        ['program_name', 'discipline_master_pk', 'status', 'minor_major', 'otTimePeriod'].forEach(function (id) {
             var el = document.getElementById(id);
             if (!el || el.dataset.choicesInitialized === 'true') return;
             new Choices(el, {
@@ -238,7 +256,7 @@ $(document).ready(function () {
     function otRunFilter() { document.getElementById('otFilterForm').submit(); }
 
     // Dropdowns + explicit date pickers reload immediately.
-    $('#program_name, #discipline_master_pk, #status, #from_date, #to_date').on('change', otRunFilter);
+    $('#program_name, #discipline_master_pk, #status, #minor_major, #from_date, #to_date').on('change', otRunFilter);
 
     /* ── Time Period preset → from/to dates ── */
     function otFmt(d) { return d.toISOString().split('T')[0]; }

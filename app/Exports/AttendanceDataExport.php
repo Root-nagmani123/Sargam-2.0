@@ -2,18 +2,27 @@
 
 namespace App\Exports;
 
-use Maatwebsite\Excel\Concerns\FromArray;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use Maatwebsite\Excel\Concerns\{FromArray, WithColumnWidths, WithEvents, WithHeadings, WithTitle};
+use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Style\{Alignment, Border, Fill};
+use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 use App\Models\{MDOEscotDutyMap, StudentMedicalExemption, Timetable};
 
-class AttendanceDataExport implements FromArray, WithHeadings, ShouldAutoSize, WithStyles
+/**
+ * Styled .xlsx of a topic's attendance sheet. The header block + table styling
+ * mirror the Medical Exemption Report export for a consistent look.
+ */
+class AttendanceDataExport implements FromArray, WithColumnWidths, WithEvents, WithHeadings, WithTitle
 {
+    /** Attendance status => [font colour, fill colour]; mirrors the .att-badge styles on the mark-attendance page. */
+    private const STATUS_COLOURS = [
+        'Present'    => ['027A48', 'ECFDF3'],
+        'Late'       => ['B54708', 'FFF6ED'],
+        'Absent'     => ['B42318', 'FEF3F2'],
+        'Not Marked' => ['B54708', 'FFFAEB'],
+    ];
+
     protected $records;
     protected $courseName;
     protected $topicName;
@@ -25,6 +34,9 @@ class AttendanceDataExport implements FromArray, WithHeadings, ShouldAutoSize, W
     protected $timetable_pk;
     protected $timetableDate;
     protected $timetableClassSession;
+
+    /** Data rows written by {@see array()}; used for the "Total OTs" line and row styling. */
+    protected int $rowCount = 0;
 
     public function __construct($records, $courseName = '', $topicName = '', $facultyName = '', $topicDate = '', $sessionTime = '', $course_pk = null, $group_pk = null, $timetable_pk = null, $timetableDate = null, $timetableClassSession = null)
     {
@@ -141,19 +153,13 @@ class AttendanceDataExport implements FromArray, WithHeadings, ShouldAutoSize, W
             $attendanceStatus = 'Not Marked';
             $mdoDuty = 'No';
             $escortDuty = 'No';
-            $medicalExempt = 'No';
-            $otherExempt = 'No';
-            
+
             // First, check exemptions from tables (these take priority)
-            if ($hasMedicalExempt) {
+            if ($hasMedicalExempt || $hasOtherExempt) {
                 $attendanceStatus = 'Not Marked';
-                $medicalExempt = 'Yes';
-            } elseif ($hasOtherExempt) {
-                $attendanceStatus = 'Not Marked';
-                $otherExempt = 'Yes';
             } elseif ($hasMdoDuty) {
                 $attendanceStatus = 'Not Marked';
-                $mdoDuty = 'Yes';
+                $mdoDuty = 'MDO Duty';
             } elseif ($hasEscortDuty) {
                 $attendanceStatus = 'Not Marked';
                 $escortDuty = 'Yes';
@@ -162,12 +168,8 @@ class AttendanceDataExport implements FromArray, WithHeadings, ShouldAutoSize, W
                 $status = $attendance->status;
                 
                 // Handle Medical (6) and Other (7) exemptions - show "Not Marked"
-                if ($status == 6) {
+                if ($status == 6 || $status == 7) {
                     $attendanceStatus = 'Not Marked';
-                    $medicalExempt = 'Yes';
-                } elseif ($status == 7) {
-                    $attendanceStatus = 'Not Marked';
-                    $otherExempt = 'Yes';
                 } else {
                     // Handle Present, Late, Absent, MDO (4), Escort (5)
                     // Ensure Late (2) and Absent (3) are properly displayed
@@ -183,7 +185,7 @@ class AttendanceDataExport implements FromArray, WithHeadings, ShouldAutoSize, W
                             break;
                         case 4:
                             $attendanceStatus = 'Not Marked'; // MDO Duty
-                            $mdoDuty = 'Yes';
+                            $mdoDuty = 'MDO Duty';
                             break;
                         case 5:
                             $attendanceStatus = 'Not Marked'; // Escort Duty
@@ -206,12 +208,12 @@ class AttendanceDataExport implements FromArray, WithHeadings, ShouldAutoSize, W
                 $attendanceStatus,
                 $mdoDuty,
                 $escortDuty,
-                $medicalExempt,
-                $otherExempt,
             ];
 
             $data[] = $row;
         }
+
+        $this->rowCount = count($data);
 
         return $data;
     }
@@ -352,62 +354,186 @@ class AttendanceDataExport implements FromArray, WithHeadings, ShouldAutoSize, W
             'Attendance Status',
             'MDO Duty',
             'Escort Duty',
-            'Medical Exemption',
-            'Other Exemption',
         ];
     }
 
-    public function styles(Worksheet $sheet)
+    public function title(): string
     {
-        $lastRow = $sheet->getHighestRow();
-        $lastColumn = $sheet->getHighestColumn();
+        return 'Attendance';
+    }
 
-        // Apply border + alignment for all cells
-        $sheet->getStyle("A1:{$lastColumn}{$lastRow}")
-            ->applyFromArray([
-                'borders' => [
-                    'allBorders' => [
-                        'borderStyle' => Border::BORDER_THIN,
-                        'color' => ['argb' => 'FF000000'],
-                    ],
-                ],
-                'alignment' => [
-                    'horizontal' => Alignment::HORIZONTAL_CENTER,
-                    'vertical'   => Alignment::VERTICAL_CENTER,
-                ],
-            ]);
+    public function columnWidths(): array
+    {
+        return ['A' => 8, 'B' => 40, 'C' => 18, 'D' => 20, 'E' => 14, 'F' => 18];
+    }
 
-        // Apply header row style (row 1)
-        $sheet->getStyle("A1:{$lastColumn}1")
-            ->applyFromArray([
-                'font' => ['bold' => true],
-                'fill' => [
-                    'fillType'   => Fill::FILL_SOLID,
-                    'startColor' => ['rgb' => 'FFCC00'], // Light Yellow
-                ],
-            ]);
-
-        // Apply fill color to "Yes" fields in exemption columns
-        // Column E = MDO Duty, F = Escort Duty, G = Medical Exemption, H = Other Exemption
-        $exemptionColumns = ['E', 'F', 'G', 'H'];
-
-        // Iterate through data rows (starting from row 2, as row 1 is header)
-        for ($row = 2; $row <= $lastRow; $row++) {
-            foreach ($exemptionColumns as $column) {
-                $cellValue = $sheet->getCell($column . $row)->getValue();
-                if (strtoupper(trim($cellValue ?? '')) === 'YES') {
-                    $sheet->getStyle($column . $row)
-                        ->applyFromArray([
-                            'fill' => [
-                                'fillType'   => Fill::FILL_SOLID,
-                                'startColor' => ['rgb' => '90EE90'], // Light Green
-                            ],
-                        ]);
-                }
+    /** Session context shown under the report title, mirroring the on-screen info cards. */
+    public function filterLine(): string
+    {
+        $parts = [];
+        foreach ([
+            'Course'  => $this->courseName,
+            'Topic'   => $this->topicName,
+            'Faculty' => $this->facultyName,
+        ] as $label => $value) {
+            $value = trim((string) $value);
+            if ($value !== '' && $value !== 'N/A') {
+                $parts[] = $label . ': ' . $value;
             }
         }
 
-        return [];
+        return $parts ? 'Applied Filters:   ' . implode('   |   ', $parts) : '';
+    }
+
+    /** Date + session-time line shown under the filter line. */
+    public function sessionLine(): string
+    {
+        $parts = [];
+        foreach (['Topic Date' => $this->topicDate, 'Session Time' => $this->sessionTime] as $label => $value) {
+            $value = trim((string) $value);
+            if ($value !== '' && $value !== 'N/A') {
+                $parts[] = $label . ': ' . $value;
+            }
+        }
+
+        return $parts ? implode('   |   ', $parts) : '';
+    }
+
+    public function registerEvents(): array
+    {
+        return [
+            AfterSheet::class => function (AfterSheet $event) {
+                $sheet = $event->sheet->getDelegate();
+
+                $lastCol = Coordinate::stringFromColumnIndex(count($this->headings()));
+
+                $metaLines = [
+                    ['text' => 'Lal Bahadur Shastri National Academy of Administration, Mussoorie', 'style' => 'inst'],
+                    ['text' => 'Attendance Report', 'style' => 'title'],
+                ];
+                if (($filterLine = $this->filterLine()) !== '') {
+                    $metaLines[] = ['text' => $filterLine, 'style' => 'meta'];
+                }
+                if (($sessionLine = $this->sessionLine()) !== '') {
+                    $metaLines[] = ['text' => $sessionLine, 'style' => 'meta'];
+                }
+                $metaLines[] = [
+                    'text'  => 'Generated on: ' . now()->format('d-m-Y H:i') . '   |   Total OTs: ' . $this->rowCount,
+                    'style' => 'meta',
+                ];
+                $metaLines[] = ['text' => '', 'style' => 'spacer'];
+
+                // WithHeadings already wrote the column headings at row 1; push them
+                // down to make room for the header block above.
+                $sheet->insertNewRowBefore(1, count($metaLines));
+
+                $headingRow = count($metaLines) + 1;
+                $firstDataRow = $headingRow + 1;
+                $lastDataRow = $headingRow + max($this->rowCount, 0);
+
+                $sheet->setShowGridlines(false);
+
+                foreach ($metaLines as $i => $line) {
+                    $r = $i + 1;
+                    $range = "A{$r}:{$lastCol}{$r}";
+                    $sheet->mergeCells($range);
+                    $sheet->setCellValue("A{$r}", $line['text']);
+                    $sheet->getStyle($range)->getAlignment()
+                        ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                        ->setVertical(Alignment::VERTICAL_CENTER);
+
+                    $font = $sheet->getStyle("A{$r}")->getFont();
+                    switch ($line['style']) {
+                        case 'inst':
+                            $font->setBold(true)->setSize(13)->getColor()->setRGB('102A43');
+                            $sheet->getRowDimension($r)->setRowHeight(42);
+                            break;
+                        case 'title':
+                            $font->setBold(true)->setSize(16)->getColor()->setRGB('004A93');
+                            $sheet->getStyle($range)->getBorders()->getBottom()
+                                ->setBorderStyle(Border::BORDER_MEDIUM)->getColor()->setRGB('004A93');
+                            $sheet->getRowDimension($r)->setRowHeight(24);
+                            break;
+                        case 'spacer':
+                            $sheet->getRowDimension($r)->setRowHeight(6);
+                            break;
+                        default:
+                            $font->setSize(9)->getColor()->setRGB('555555');
+                    }
+                }
+
+                $headingRange = "A{$headingRow}:{$lastCol}{$headingRow}";
+                $sheet->getStyle($headingRange)->getFont()->setBold(true)->setSize(10)->getColor()->setRGB('FFFFFF');
+                $sheet->getStyle($headingRange)->getFill()
+                    ->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('004A93');
+                $sheet->getStyle($headingRange)->getAlignment()
+                    ->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
+                $sheet->getRowDimension($headingRow)->setRowHeight(24);
+
+                if ($this->rowCount > 0) {
+                    $bodyRange = "A{$firstDataRow}:{$lastCol}{$lastDataRow}";
+                    $sheet->getStyle($bodyRange)->getFont()->setSize(10);
+                    $sheet->getStyle($bodyRange)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
+                    // S.No + OT Code + status/duty columns centre; OT Name stays left-aligned.
+                    foreach (['A', 'C', 'D', 'E', 'F'] as $letter) {
+                        $sheet->getStyle("{$letter}{$firstDataRow}:{$letter}{$lastDataRow}")
+                            ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    }
+
+                    for ($r = $firstDataRow; $r <= $lastDataRow; $r++) {
+                        if (($r - $firstDataRow) % 2 === 1) {
+                            $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()
+                                ->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('EEF2F8');
+                        }
+
+                        // Highlight the duty columns (E = MDO, F = Escort) whenever a duty
+                        // is set. Matches on "not No" rather than a specific label, so the
+                        // fill survives the cell text changing.
+                        foreach (['E', 'F'] as $letter) {
+                            $dutyValue = strtoupper(trim((string) $sheet->getCell($letter . $r)->getValue()));
+                            if ($dutyValue !== '' && $dutyValue !== 'NO') {
+                                $sheet->getStyle($letter . $r)->getFill()
+                                    ->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('90EE90');
+                            }
+                        }
+
+                        // Colour-code Attendance Status (column D) to match the on-screen badges.
+                        $status = trim((string) ($sheet->getCell('D' . $r)->getValue() ?? ''));
+                        if (isset(self::STATUS_COLOURS[$status])) {
+                            [$fontColour, $fillColour] = self::STATUS_COLOURS[$status];
+                            $sheet->getStyle('D' . $r)->getFont()->setBold(true)->getColor()->setRGB($fontColour);
+                            $sheet->getStyle('D' . $r)->getFill()
+                                ->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB($fillColour);
+                        }
+                    }
+                }
+
+                $tableBottom = max($lastDataRow, $headingRow);
+                $sheet->getStyle("A{$headingRow}:{$lastCol}{$tableBottom}")->getBorders()
+                    ->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('8FA3BD');
+
+                $this->placeLogo($sheet, public_path('admin_assets/images/logos/logo_new.png'), 'A1', 6);
+                $rightLogo = public_path('admin_assets/images/logos/constitution-75.png');
+                if (! is_file($rightLogo)) {
+                    $rightLogo = public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png');
+                }
+                $this->placeLogo($sheet, $rightLogo, $lastCol . '1', 2);
+            },
+        ];
+    }
+
+    private function placeLogo($sheet, string $path, string $coordinates, int $offsetX): void
+    {
+        if (! is_file($path) || ! is_readable($path)) {
+            return;
+        }
+        $drawing = new Drawing();
+        $drawing->setPath($path);
+        $drawing->setHeight(48);
+        $drawing->setCoordinates($coordinates);
+        $drawing->setOffsetX($offsetX);
+        $drawing->setOffsetY(3);
+        $drawing->setWorksheet($sheet);
     }
 }
 

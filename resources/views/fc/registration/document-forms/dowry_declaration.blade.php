@@ -94,11 +94,11 @@
 
                 <table class="dw-signtbl">
                     <tr>
-                        <td>स्थान: <input type="text" name="hi[place]" class="blank" value="{{ $data['_hi']['place'] ?? '' }}" autocomplete="off"></td>
+                        <td>स्थान: <input type="text" name="hi[place]" class="blank" value="{{ old('hi.place', config('fc.document_place_hi')) }}" autocomplete="off" readonly></td>
                         <td>हस्ताक्षर: <span class="dw-ruled">&nbsp;</span></td>
                     </tr>
                     <tr>
-                        <td>तारीख: <input type="text" name="hi[ddate]" class="blank blank--sm" value="{{ $data['_hi']['ddate'] ?? '' }}" autocomplete="off"></td>
+                        <td>तारीख: <input type="text" name="hi[ddate]" class="blank blank--sm" value="{{ old('hi.ddate', fc_document_date()) }}" autocomplete="off" readonly></td>
                         <td>(नाम साफ अक्षरों में): <span class="mirror-out" data-mirror-out="hi_name">&nbsp;</span></td>
                     </tr>
                 </table>
@@ -159,11 +159,11 @@
 
                 <table class="dw-signtbl">
                     <tr>
-                        <td>Place: <input type="text" name="place" class="blank" value="{{ $val('place') }}" data-mirror="place"></td>
+                        <td>Place: <input type="text" name="place" class="blank" value="{{ old('place', config('fc.document_place')) }}" data-mirror="place" readonly></td>
                         <td>Signature: <span class="dw-ruled">&nbsp;</span></td>
                     </tr>
                     <tr>
-                        <td>Dated: <input type="date" name="declaration_date" class="blank blank--sm" value="{{ $val('declaration_date') }}" data-mirror="ddate"></td>
+                        <td>Dated: <input type="date" name="declaration_date" class="blank blank--sm" value="{{ old('declaration_date', fc_document_date('iso')) }}" data-mirror="ddate" readonly></td>
                         <td>(Name of Officer in Block Letters): <span class="mirror-out" data-mirror-out="name">&nbsp;</span></td>
                     </tr>
                 </table>
@@ -187,7 +187,7 @@
                 <div class="dw-expl"><strong>Explanation:</strong> For the purpose of this rule, &ldquo;dowry&rdquo; has the same meaning as in the Dowry Prohibition Act, 1961 (28 of 1961).</div>
 
                 <div class="dw-rule">Rule 13-A of the Central Civil Services (Conduct) Rules, 1964</div>
-                <div class="dw-clbody">13-A. Dowry — No Government servant shall —</div>
+                <div class="dw-clbody">13-A Dowry — No Government servant shall —</div>
                 <div class="dw-clause">(i) give or take or abet the giving or taking of dowry; or</div>
                 <div class="dw-clause">(ii) demand, directly or indirectly, from the parent or guardian of a bride or bridegroom, as the case may be, any dowry.</div>
                 <div class="dw-expl"><strong>Explanation:</strong> For the purposes of this rule, &ldquo;dowry&rdquo; has the same meaning as in the Dowry Prohibition Act, 1961 (28 of 1961).</div>
@@ -195,7 +195,7 @@
                 <div class="dw-clhd" style="margin-top:1.4rem;">EXTRACT FROM &ldquo;THE DOWRY PROHIBITION ACT, 1961&rdquo; (28 OF 1961)</div>
                 <div class="dw-clbody"><strong>Section 2. Definition of &ldquo;dowry&rdquo;</strong> — In this Act, &ldquo;dowry&rdquo; means any property or valuable security given or agreed to be given either directly or indirectly —</div>
                 <div class="dw-clause">(a) by one party to a marriage to the other party to the marriage, or</div>
-                <div class="dw-clause">(b) by the parents of either party to a marriage or by any other person to either party to the marriage or to any other person; at or before or any time after the marriage in connection with the marriage of the said parties, but does not include dower or mahr in the case of persons to whom the Muslim Personal Law (Shariat) applies.</div>
+                <div class="dw-clause">(b) by the parents of either party to a marriage or by any other person to either party to the marriage or to any other person; at or before or any time after the marriage in connection with the marriage of the said parties, but does not include dower or mahar in the case of persons to whom the Muslim Personal Law (Shariat) applies.</div>
                 <div class="dw-expl"><strong>Explanation II</strong> — The expression &ldquo;valuable security&rdquo; has the same meaning as in Section 30 of the Indian Penal Code (45 of 1860).</div>
 
                 <div class="dw-clhd" style="margin-top:1.4rem;">EXTRACT FROM THE INDIAN PENAL CODE (45 OF 1860)</div>
@@ -203,7 +203,8 @@
             </div>
         </div>
 
-        {{-- Signature upload --}}
+        {{-- Signature upload section — commented out per request (hidden on the fill form) --}}
+        {{--
         @if(! empty($template['signatures']))
             <div class="card fc-card border-0 shadow-sm mb-3">
                 <div class="card-header bg-white py-3"><h6 class="mb-0 text-uppercase small fw-bold text-muted">Signatures / हस्ताक्षर</h6></div>
@@ -223,6 +224,7 @@
                 </div>
             </div>
         @endif
+        --}}
 
         <div class="d-flex justify-content-between mb-5">
             <a href="{{ route('fc-reg.forms.step', [$form, $step]) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Cancel</a>

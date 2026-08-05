@@ -38,7 +38,11 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => env('APP_URL').'/storage',
+            // rtrim: APP_URL is commonly written with a trailing slash, and plain
+            // concatenation then yields "http://host//storage/...". That double slash
+            // 404s (Laravel's dev server won't map it), so every stored file — PDF
+            // viewer iframes, images, downloads — silently came up blank.
+            'url' => rtrim(env('APP_URL'), '/').'/storage',
             'visibility' => 'public',
         ],
 

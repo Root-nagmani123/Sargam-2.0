@@ -168,7 +168,7 @@
                     <tr style="{{ $i % 2 === 0 ? 'background:#f9fafb;' : 'background:#fff;' }}">
                         <td style="padding:6px 10px; color:#9ca3af; vertical-align:middle;">{{ $i+1 }}</td>
                         <td style="padding:6px 10px; vertical-align:middle;">
-                            <a href="{{ route('admin.reports.student', $s->user_id) }}"
+                            <a href="{{ route('admin.reports.student', $s->route_user_id ?? $s->user_id) }}"
                                style="color:#1a3c6e; font-family:monospace; font-size:11px; font-weight:600; text-decoration:none;"
                                title="User ID: {{ $s->user_id }}">
                                 {{ $s->login_username ?? $s->user_id }}

@@ -10,7 +10,8 @@ class FcFormStep extends Model
 {
     protected $fillable = [
         'form_id', 'step_name', 'step_slug', 'step_number', 'target_table',
-        'completion_column', 'tracker_column', 'is_active', 'description', 'icon',
+        'completion_column', 'tracker_column', 'applicability_rule', 'is_active',
+        'description', 'icon',
     ];
 
     protected $casts = [

@@ -10,7 +10,7 @@ class Timetable extends Model
     protected $guarded = [];
 
     public $timestamps = false;
-    protected $primaryKey = 'id';
+    protected $primaryKey = 'pk';
 
     public function scopeActive($query)
     {

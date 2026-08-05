@@ -55,6 +55,10 @@ class ColumnController extends Controller
                 }
             });
 
+            // Runtime DDL — invalidate the cached column listing for this table so
+            // fc_schema_has_column() picks the new column up straight away.
+            fc_schema_cache_forget($table);
+
             return redirect()->back()->with('success', 'Column added successfully!');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Error adding column: ' . $e->getMessage());

@@ -1,63 +1,45 @@
+@php
+    $reportTitle    = $reportTitle ?? 'Student List';
+    $logoLeft       = $logoLeft ?? null;
+    $logoRight      = $logoRight ?? null;
+    $titleHindi     = $titleHindi ?? null;
+    $courseName     = $courseName ?? '';
+    $courseDuration = $courseDuration ?? '';
+    $filterSummary  = $filterSummary ?? '';
+@endphp
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Student List - LBSNAA MUSSOORIE</title>
+    <title>{{ $reportTitle }} — LBSNAA</title>
     <style>
         @page { margin: 12mm 10mm; }
         * { box-sizing: border-box; font-family: DejaVu Sans, Arial, Helvetica, sans-serif; }
         body { margin: 0; color: #1f2937; background: #fff; }
 
-        .pdf-header {
-            border-bottom: 2.5px solid #0b4a7e;
-            padding-bottom: 8px;
-            margin-bottom: 10px;
-        }
-        .pdf-header table { width: 100%; border-collapse: collapse; }
-        .pdf-header td { border: 0; padding: 0; vertical-align: middle; }
-        .pdf-header .hdr-left { width: 50px; }
-        .pdf-header .hdr-left img { width: 42px; height: 42px; }
-        .pdf-header .hdr-center { padding-left: 10px; }
-        .pdf-header .hdr-right { width: 50px; text-align: right; }
-        .pdf-header .hdr-right img { width: 42px; height: 42px; }
-        .brand-1 {
-            font-size: 7pt;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: #0b4a7e;
-            font-weight: 600;
-        }
-        .brand-2 {
-            font-size: 11pt;
-            font-weight: 700;
-            text-transform: uppercase;
-            color: #111;
-            margin-top: 2px;
-        }
-        .brand-3 {
-            font-size: 7.5pt;
-            color: #555;
-            margin-top: 2px;
+        /* ===== Institution header (matches the official LBSNAA report layout) ===== */
+        table.pdf-hdr { width: 100%; border-collapse: collapse; margin-bottom: 2px; }
+        table.pdf-hdr td { vertical-align: middle; }
+        table.pdf-hdr .logo { width: 78px; text-align: center; }
+        table.pdf-hdr .logo img { max-height: 52px; max-width: 74px; }
+        table.pdf-hdr .center { text-align: center; padding: 0 6px; }
+        /* Devanagari title is a pre-shaped image — DomPDF can't shape Indic text. */
+        .inst-hi-img { height: 16px; width: auto; margin-bottom: 2px; }
+        .inst-en { font-size: 13px; font-weight: bold; color: #102a43; line-height: 1.25; }
+        .course-line { font-size: 10px; font-weight: bold; color: #243b53; margin-top: 3px; }
+        .course-dates { font-size: 9px; color: #486581; margin-top: 1px; }
+
+        .report-title {
+            text-align: center;
+            font-size: 15px;
+            font-weight: bold;
+            color: #004a93;
+            margin: 6px 0 4px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #004a93;
         }
 
-        .report-title-block {
-            text-align: center;
-            margin-bottom: 10px;
-            padding-bottom: 6px;
-            border-bottom: 1px solid #dee2e6;
-        }
-        .report-title {
-            font-size: 11pt;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            color: #0f172a;
-            margin: 0 0 6px;
-        }
-        .report-meta {
-            font-size: 8pt;
-            color: #555;
-        }
+        .meta { font-size: 8pt; color: #444; margin: 0 0 8px; text-align: center; }
 
         table.data-table { width: 100%; border-collapse: collapse; font-size: 8pt; }
         table.data-table thead th {
@@ -78,15 +60,30 @@
     </style>
 </head>
 <body>
-    @include('admin.partials.pdf_lbsnaa_official_header')
 
-    <div class="report-title-block">
-        <h1 class="report-title">Student List</h1>
-        <div class="report-meta">
-            Generated: {{ $generatedAt }}
-            &nbsp;|&nbsp; {{ count($rows) }} record(s)
-            &nbsp;|&nbsp; Filters: {{ $filterSummary }}
-        </div>
+    {{-- Institution header --}}
+    <table class="pdf-hdr">
+        <tr>
+            <td class="logo">@if($logoLeft)<img src="{{ $logoLeft }}" alt="">@endif</td>
+            <td class="center">
+                @if($titleHindi)<img class="inst-hi-img" src="{{ $titleHindi }}" alt="">@endif
+                <div class="inst-en">Lal Bahadur Shastri National Academy of Administration, Mussoorie</div>
+                @if($courseName)
+                    <div class="course-line">{{ $courseName }}</div>
+                @endif
+                @if($courseDuration)
+                    <div class="course-dates">({{ $courseDuration }})</div>
+                @endif
+            </td>
+            <td class="logo">@if($logoRight)<img src="{{ $logoRight }}" alt="">@endif</td>
+        </tr>
+    </table>
+
+    <div class="report-title">{{ $reportTitle }}</div>
+
+    <div class="meta">
+        @if($filterSummary)<div>Filters: {{ $filterSummary }}</div>@endif
+        <div>Generated on: {{ $generatedAt }} &nbsp;|&nbsp; Total records: {{ count($rows) }}</div>
     </div>
 
     <table class="data-table">

@@ -99,11 +99,15 @@
                 </div>
 
                 <div class="ms-sign">
-                    <div>दिनांक / Date: <input type="date" name="declaration_date" class="blank blank--sm" value="{{ $val('declaration_date') }}">
-                        &nbsp;&nbsp;&nbsp; हस्ताक्षर / Full Signature: ______________________</div>
-                    <div>स्थान / Place: <input type="text" name="place" class="blank" value="{{ $val('place') }}">
-                        &nbsp;&nbsp;&nbsp; नाम स्पष्ट अक्षरों में / Name (in Block Letters): <span class="mirror-out" data-mirror-out="name">&nbsp;</span></div>
-                    <div>पदनाम / Designation: <input type="text" name="designation" class="blank blank--wide" value="{{ $val('designation') }}" placeholder="name of service followed by (Probationer)"></div>
+                    <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:.5rem;">
+                        <span>दिनांक / Date: <input type="date" name="declaration_date" class="blank blank--sm" value="{{ old('declaration_date', fc_document_date('iso')) }}" readonly></span>
+                        <span>हस्ताक्षर / Full Signature: ______________________</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:.5rem; margin-top:.4rem;">
+                        <span>स्थान / Place: <input type="text" name="place" class="blank" value="{{ old('place', config('fc.document_place')) }}" readonly></span>
+                        <span>नाम स्पष्ट अक्षरों में / Name (in Block Letters): <span class="mirror-out" data-mirror-out="name">&nbsp;</span></span>
+                    </div>
+                    <div style="text-align:right; margin-top:.4rem;">पदनाम / Designation: <input type="text" name="designation" class="blank blank--wide" value="{{ $val('designation') }}" placeholder="name of service followed by (Probationer)"></div>
                 </div>
 
                 <div class="ms-note">टिप्पणी: कृपया उपर्युक्त कथनों में से जो लागू न हों उन्हें काट दें। (*Note: Please delete clause/clauses not applicable.)</div>
@@ -115,7 +119,13 @@
             <div class="ms-doc">
                 <div class="ms-ex__title">रियायत प्रदान करने के लिए आवेदन पत्र<br>APPLICATION FOR GRANT OF EXEMPTION</div>
                 <div style="text-align:center; font-size:.85rem;">(घोषणा का पैरा 1(iii) / 1(iv) देखें) &middot; (Vide para 1(iii) / 1(iv) of the Declaration)</div>
-                <div class="ms-ex__to">सेवा में / To,<br>&emsp;The Secretary, Department of Personnel &amp; Training (DoPT), New Delhi</div>
+                <div class="ms-ex__to">सेवा में / To,
+                    <div style="margin-left:1.5rem; margin-top:.3rem;">
+                        <div><input type="text" name="exemption_to_line1" class="blank blank--wide" value="{{ old('exemption_to_line1', $data['exemption_to_line1'] ?? 'The Secretary,') }}"></div>
+                        <div><input type="text" name="exemption_to_line2" class="blank blank--wide" value="{{ old('exemption_to_line2', $data['exemption_to_line2'] ?? 'Department of Personnel & Training (DoPT),') }}"></div>
+                        <div><input type="text" name="exemption_to_line3" class="blank blank--wide" value="{{ old('exemption_to_line3', $data['exemption_to_line3'] ?? 'New Delhi') }}"></div>
+                    </div>
+                </div>
                 <div class="ms-ex__body">
                     महोदय / Sir,<br>
                     मेरा अनुरोध है कि नीचे बताए गए कारणों को ध्यान में रखते हुए, मुझे एक से अधिक जीवित पत्नी रखने / ऐसी महिला जिसका ऐसे व्यक्ति से विवाह हुआ हो जिसकी पहले से एक या अधिक जीवित पत्नियाँ हों — की सेवा में भर्ती पर प्रतिबंध से छूट प्रदान की जाए।
@@ -128,7 +138,8 @@
             </div>
         </div>
 
-        {{-- Signature upload --}}
+        {{-- Signature upload section — commented out per request (hidden on the fill form) --}}
+        {{--
         @if(! empty($template['signatures']))
             <div class="card fc-card border-0 shadow-sm mb-3">
                 <div class="card-header bg-white py-3"><h6 class="mb-0 text-uppercase small fw-bold text-muted">Signatures / हस्ताक्षर</h6></div>
@@ -148,6 +159,7 @@
                 </div>
             </div>
         @endif
+        --}}
 
         <div class="d-flex justify-content-between mb-5">
             <a href="{{ route('fc-reg.forms.step', [$form, $step]) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Cancel</a>

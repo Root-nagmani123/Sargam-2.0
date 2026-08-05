@@ -42,8 +42,12 @@ class Handler extends ExceptionHandler
         });
 
         $this->renderable(function (PostTooLargeException $e, Request $request) {
-            $maxMb = 5;
-            $message = "The uploaded file is too large. Maximum allowed size is {$maxMb} MB. "
+            // Report the limit the server actually enforces. Hardcoding "5 MB"
+            // told users the wrong number wherever php.ini was lower (or a form
+            // used a different ceiling), which is what made an oversized upload
+            // look like a broken form rather than a rejected file.
+            $maxLabel = \App\Rules\SafeUploadedDocument::maxLabel(PHP_INT_MAX);
+            $message = "The uploaded file is too large. Maximum allowed size is {$maxLabel}. "
                 .'Please choose a smaller file and try again.';
 
             if ($request->routeIs('fc.exemption.apply')) {

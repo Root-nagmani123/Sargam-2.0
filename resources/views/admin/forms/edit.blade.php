@@ -90,6 +90,21 @@
                         <small class="text-muted d-block mt-2 pt-2 border-top border-light-subtle">Existing table to track step completion. Leave blank if not needed.</small>
                     </div>
                     <div class="col-xl-3 col-lg-6">
+                        <label class="form-label small fw-semibold mb-1" for="formRequiresAllSteps">Registration Complete When</label>
+                        <div class="d-flex align-items-center gap-2 flex-wrap fc-form-settings__field rounded-2">
+                            <div class="form-check form-switch mb-0 flex-shrink-0">
+                                <input class="form-check-input" type="checkbox" name="registration_requires_all_steps" value="1"
+                                       id="formRequiresAllSteps" {{ $form->registration_requires_all_steps ? 'checked' : '' }}>
+                                <label class="form-check-label small fw-semibold" for="formRequiresAllSteps">All steps done</label>
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mt-2 pt-2 border-top border-light-subtle">
+                            Off (default): a trainee counts as registered after the first two steps.
+                            On: only after every step that applies to them — steps marked “not applicable” are excluded.
+                            Affects who appears in Migrate Students. Leave off for existing courses.
+                        </small>
+                    </div>
+                    <div class="col-xl-3 col-lg-6">
                         <label class="form-label small fw-semibold mb-1" for="formActive">Status</label>
                         <div class="d-flex align-items-center gap-2 flex-wrap fc-form-settings__field fc-form-settings__actions-cell rounded-2">
                             <div class="form-check form-switch mb-0 flex-shrink-0">
@@ -160,6 +175,7 @@
                                         'target_table' => $step->target_table,
                                         'completion_column' => $step->completion_column,
                                         'tracker_column' => $step->tracker_column,
+                                        'applicability_rule' => $step->applicability_rule,
                                         'description' => $step->description,
                                         'icon' => $step->icon ?: 'bi-file-text',
                                         'is_active' => (bool) $step->is_active,
@@ -201,10 +217,12 @@
                                         <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveStep({{ $step->id }}, 'down')" title="Move Down">
                                             <i class="bi bi-arrow-down"></i>
                                         </button>
-                                        <form method="POST" action="{{ route('fc-reg.admin.forms.step.delete', $step) }}" class="d-inline" onsubmit="return confirm('Delete this step and all its fields?')">
-                                            @csrf @method('DELETE')
-                                            <button class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
-                                        </form>
+                                        @if(config('fc.form_builder_delete_enabled'))
+                                            <form method="POST" action="{{ route('fc-reg.admin.forms.step.delete', $step) }}" class="d-inline" onsubmit="return confirm('Delete this step and all its fields?')">
+                                                @csrf @method('DELETE')
+                                                <button class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        @endif
                                     </td>
                                 </tr>
                             @endforeach
@@ -293,6 +311,14 @@
                         <input type="text" name="tracker_column" class="form-control" placeholder="e.g. step1_done">
                         <small class="text-muted">Existing column in consolidation table to track completion</small>
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Applies To</label>
+                        <select name="applicability_rule" class="form-select">
+                            <option value="">Every trainee</option>
+                            <option value="ph_value_present">Only trainees with a PH value on the roster</option>
+                        </select>
+                        <small class="text-muted">A step that does not apply is shown disabled, is skipped in the flow, and is left out of that trainee's progress count</small>
+                    </div>
                     <div class="col-12">
                         <label class="form-label small fw-semibold">Description</label>
                         <textarea name="description" class="form-control" rows="2" placeholder="Brief description of what this step collects"></textarea>
@@ -364,6 +390,14 @@
                         <label class="form-label small fw-semibold">Tracker Column</label>
                         <input type="text" name="tracker_column" id="editStepTrackerCol" class="form-control" placeholder="e.g. step1_done">
                         <small class="text-muted">Column in consolidation table for completion</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Applies To</label>
+                        <select name="applicability_rule" id="editStepApplicability" class="form-select">
+                            <option value="">Every trainee</option>
+                            <option value="ph_value_present">Only trainees with a PH value on the roster</option>
+                        </select>
+                        <small class="text-muted">A step that does not apply is shown disabled, is skipped in the flow, and is left out of that trainee's progress count</small>
                     </div>
                     <div class="col-12">
                         <label class="form-label small fw-semibold">Description</label>
@@ -476,6 +510,7 @@ document.querySelector('#addStepModal [name="step_name"]').addEventListener('inp
         }
         document.getElementById('editStepCompletionCol').value = d.completion_column || '';
         document.getElementById('editStepTrackerCol').value = d.tracker_column || '';
+        document.getElementById('editStepApplicability').value = d.applicability_rule || '';
         document.getElementById('editStepDescription').value = d.description || '';
         document.getElementById('editStepActive').checked = !!d.is_active;
 

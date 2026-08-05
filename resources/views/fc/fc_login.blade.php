@@ -6,9 +6,24 @@
     <main id="content" class="flex-grow-1 py-4 py-md-5">
         <div class="container">
             <div class="row justify-content-center">
-                <div class="col-12 col-sm-10 col-md-8 col-lg-5 col-xl-4">
-                    <div class="card border-0 shadow-lg rounded-4">
-                        <div class="card-body p-4 p-md-5">
+                <div class="col-12 col-md-11 col-lg-10 col-xl-9">
+                    <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                        <div class="row g-0">
+                            {{-- Branded welcome panel — desktop only; stacks away on small screens --}}
+                            <div class="col-lg-6 d-none d-lg-flex flex-column justify-content-center p-5"
+                                style="background: linear-gradient(135deg, #004a93 0%, #0a6bb5 100%); color:#ffffff;">
+                                <h2 class="fw-bold mb-3" style="color:#ffffff;">Welcome Back</h2>
+                                <p class="mb-4" style="color:#ffffff; opacity:.85;">Foundation Course Portal — Lal Bahadur Shastri National
+                                    Academy of Administration.</p>
+                                <ul class="list-unstyled mb-0">
+                                    <li class="d-flex align-items-start mb-3" style="color:#ffffff;"><i class="bi bi-shield-lock-fill fs-5 me-3" style="color:#ffffff;"></i><span style="color:#ffffff;">Secure sign-in for registered candidates.</span></li>
+                                    <li class="d-flex align-items-start mb-3" style="color:#ffffff;"><i class="bi bi-file-earmark-text-fill fs-5 me-3" style="color:#ffffff;"></i><span style="color:#ffffff;">Continue your registration and document submission.</span></li>
+                                    <li class="d-flex align-items-start" style="color:#ffffff;"><i class="bi bi-headset fs-5 me-3" style="color:#ffffff;"></i><span style="color:#ffffff;">Need help? Visit the Contact page.</span></li>
+                                </ul>
+                            </div>
+                            {{-- Form panel --}}
+                            <div class="col-12 col-lg-6">
+                                <div class="card-body p-4 p-md-5">
                             @if (session('success'))
                                 <div class="alert alert-success alert-dismissible fade show mb-4 rounded-3" role="alert">
                                     {{ session('success') }}
@@ -27,7 +42,7 @@
                                 </div>
                             @endif
 
-                            <form class="row g-3 g-md-4" method="POST" action="{{ route('fc.login.verify') }}" autocomplete="off">
+                            <form class="row g-3 g-md-4" method="POST" action="{{ route('fc.login.verify') }}" autocomplete="off" id="fcLoginForm">
                                 {{-- ⚠️ TEMPORARY load-test only — revert with: git checkout resources/views/fc/fc_login.blade.php --}}
                                 {{-- @csrf --}}
 
@@ -53,6 +68,7 @@
                                         <input type="password"
                                             class="form-control rounded-start-3 @error('reg_password') is-invalid @enderror"
                                             placeholder="Enter Password" name="reg_password" id="password"
+                                            style="font-size: 0.875rem;"
                                             autocomplete="off" required>
                                         <button type="button"
                                             class="btn btn-primary rounded-end-3 px-3 d-inline-flex align-items-center justify-content-center"
@@ -62,9 +78,27 @@
                                             <i class="bi bi-eye fs-5" aria-hidden="true"></i>
                                         </button>
                                     </div>
-                                    <div class="form-text mt-2">
-                                        <a href="{{ route('fc.password.forgot') }}"
-                                            class="link-primary link-offset-2 link-underline-opacity-25 small">Forget Password</a>
+                                </div>
+
+                                {{-- Captcha (bot / brute-force mitigation) — server-verified via required|captcha --}}
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold mb-2">Verification <span class="text-danger">*</span></label>
+                                    <div class="bg-light border border-light rounded-3 p-3 text-center">
+                                        <div class="d-flex flex-column align-items-center gap-3">
+                                            <div class="d-flex flex-wrap align-items-center justify-content-center gap-2">
+                                                <img src="{{ captcha_src() }}" alt="Captcha" id="captchaImage"
+                                                    class="img-fluid border rounded-3 shadow-sm bg-white p-2" style="max-height: 52px;">
+                                                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3"
+                                                    onclick="refreshCaptcha()">
+                                                    <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Refresh
+                                                </button>
+                                            </div>
+                                            <div class="w-100" style="max-width: 280px;">
+                                                <input type="text" name="captcha"
+                                                    class="form-control form-control-sm text-center rounded-3 @error('captcha') is-invalid @enderror"
+                                                    placeholder="Enter captcha code" autocomplete="off" required>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -75,6 +109,8 @@
                                     </button>
                                 </div>
                             </form>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -97,6 +133,11 @@
                 icon.classList.add('bi-eye');
                 btn.setAttribute('aria-label', 'Show password');
             }
+        }
+
+        function refreshCaptcha() {
+            var img = document.getElementById('captchaImage');
+            if (img) { img.src = '{{ captcha_src() }}' + '?' + Math.random(); }
         }
     </script>
 @endsection
@@ -131,4 +172,46 @@
             });
         </script>
     @endif
+
+    {{-- Encrypt the password in the browser before POST so it is not literal plaintext
+         in an intercepting proxy. AES-256-CBC, mirrored server-side in
+         FrontPageController::decryptLoginPassword(). CryptoJS is SELF-HOSTED (same
+         origin), not a CDN — so it can't be blocked by a network/firewall, which lets
+         the guard below block a plaintext send without risking a CDN-outage lockout. --}}
+    <script src="{{ asset('js/crypto-js.min.js') }}"></script>
+    <script>
+        (function () {
+            var ENC_KEY = @json(config('app.password_enc_key'));
+            var form = document.getElementById('fcLoginForm');
+            var pwd  = document.getElementById('password');
+            if (!form || !pwd) { return; }
+
+            form.addEventListener('submit', function (e) {
+                // Not configured / nothing to send / already encrypted → submit as-is.
+                // (No key = rollout not active, so never block — no lockout.)
+                if (!ENC_KEY || pwd.dataset.enc === '1' || !pwd.value) {
+                    return;
+                }
+
+                // Key IS configured → encryption is required. CryptoJS is self-hosted,
+                // so a missing library means a broken deploy, not a blocked CDN: block
+                // the submit rather than fall back to sending the password in plaintext.
+                if (typeof CryptoJS === 'undefined' || !CryptoJS.AES) {
+                    e.preventDefault();
+                    pwd.classList.add('is-invalid');
+                    alert('Secure login could not initialize. Please refresh the page (Ctrl+F5) and try again.');
+                    return;
+                }
+
+                e.preventDefault();
+                var key = CryptoJS.enc.Base64.parse(ENC_KEY);
+                var iv  = CryptoJS.enc.Utf8.parse('1234567890123456');
+                pwd.value = CryptoJS.AES.encrypt(pwd.value, key, {
+                    iv: iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7
+                }).toString();
+                pwd.dataset.enc = '1'; // guard against double-encryption on resubmit
+                form.submit();
+            });
+        })();
+    </script>
 @endpush

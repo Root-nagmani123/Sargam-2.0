@@ -181,9 +181,30 @@ Route::middleware(['auth'])->group(function () {
         ->name('admin.navigation.error');
     Route::get('/dashboard/feed', [UserController::class, 'dashboardFeed'])->name('admin.dashboard.feed');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
+    Route::get('/dashboard/ot-participants', [UserController::class, 'otParticipantsList'])->name('admin.dashboard.ot-participants');
     Route::get('/dashboard/students/export/{format}', [UserController::class, 'studentListExport'])->name('admin.dashboard.students.export');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
+    Route::post('/dashboard/report-issue', [\App\Http\Controllers\Admin\IssueReportController::class, 'store'])->middleware('throttle:10,1')->name('admin.dashboard.report-issue');
+    // Admin console for issues submitted via the dashboard "Report Issue" launcher
+    // index() keeps its own in-body redirect for non-privileged users (unchanged UX);
+    // every other admin action is destructive/PII-bearing and is gated by 'issue.reports.admin'.
+    Route::get('/issue-reports', [\App\Http\Controllers\Admin\IssueReportController::class, 'index'])->name('admin.issue-reports.index');
+    Route::middleware(['issue.reports.admin'])->group(function () {
+        Route::get('/issue-reports/filter-options', [\App\Http\Controllers\Admin\IssueReportController::class, 'filterOptions'])->name('admin.issue-reports.filter-options');
+        Route::get('/issue-reports/export', [\App\Http\Controllers\Admin\IssueReportController::class, 'export'])->name('admin.issue-reports.export');
+        Route::get('/issue-reports/export-excel', [\App\Http\Controllers\Admin\IssueReportController::class, 'exportExcel'])->name('admin.issue-reports.export-excel');
+        Route::get('/issue-reports/{id}', [\App\Http\Controllers\Admin\IssueReportController::class, 'show'])->whereNumber('id')->name('admin.issue-reports.show');
+        Route::post('/issue-reports/{id}/status', [\App\Http\Controllers\Admin\IssueReportController::class, 'updateStatus'])->whereNumber('id')->name('admin.issue-reports.status');
+        Route::delete('/issue-reports/{id}', [\App\Http\Controllers\Admin\IssueReportController::class, 'destroy'])->whereNumber('id')->name('admin.issue-reports.destroy');
+    });
+    // User-facing: only the current user's own reported issues
+    Route::get('/my-reported-issues', [\App\Http\Controllers\Admin\IssueReportController::class, 'myIssues'])->name('my.issue-reports.index');
+    Route::get('/my-reported-issues/filter-options', [\App\Http\Controllers\Admin\IssueReportController::class, 'myFilterOptions'])->name('my.issue-reports.filter-options');
+    Route::get('/my-reported-issues/export', [\App\Http\Controllers\Admin\IssueReportController::class, 'myExport'])->name('my.issue-reports.export');
+    Route::get('/my-reported-issues/export-excel', [\App\Http\Controllers\Admin\IssueReportController::class, 'myExportExcel'])->name('my.issue-reports.export-excel');
+    // Shared: attachment download, gated in-body to the admin or the issue's own reporter
+    Route::get('/issue-reports/{id}/attachment', [\App\Http\Controllers\Admin\IssueReportController::class, 'attachment'])->whereNumber('id')->name('issue-reports.attachment');
     Route::get('/directory/lbsnaa', [DirectoryController::class, 'lbsnaa'])->name('admin.directory.lbsnaa');
     Route::get('/directory/ot', [DirectoryController::class, 'ot'])->name('admin.directory.ot');
 
@@ -825,6 +846,8 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     Route::prefix('attendance')->name('attendance.')->controller(AttendanceController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/get-attendance-list', 'getAttendanceList')->name('get.attendance.list');
+        Route::get('/filter-options', 'attendanceFilterOptions')->name('filter_options');
+        Route::get('/export-list', 'exportAttendanceList')->name('export_list');
         Route::get('/create', 'create')->name('create');
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::get('/mark/{group_pk}/{course_pk}/{timetable_pk}', 'markAttendanceView')->name('mark');
@@ -930,6 +953,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         ->controller(CourseMemoDecisionMappController::class)
         ->group(function () {
             Route::get('/', 'index')->name('index');
+            Route::get('/get-courses-by-status', 'getCoursesByStatus')->name('get.courses.by.status');
             Route::get('/create', 'create')->name('create');
             Route::post('/store', 'store')->name('store');
             Route::get('/edit/{id}', 'edit')->name('edit');
@@ -1012,6 +1036,8 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
         Route::get('/my-memos', [MemoDisciplineController::class, 'otIndex'])->name('ot_index');
         Route::delete('/delete/{id}', [MemoDisciplineController::class, 'destroy'])->name('destroy');
         Route::get('/export-csv', [MemoDisciplineController::class, 'exportCsv'])->name('export_csv');
+        Route::get('/export-pdf', [MemoDisciplineController::class, 'exportPdf'])->name('export_pdf');
+        Route::post('/export-pdf-zip', [MemoDisciplineController::class, 'exportPdfZip'])->name('export_pdf_zip');
         Route::get('create', [MemoDisciplineController::class, 'create'])->name('create');
         Route::get('edit/{id}', [MemoDisciplineController::class, 'edit'])->name('edit');
         Route::post('update/{id}', [MemoDisciplineController::class, 'update'])->name('update');
@@ -1022,6 +1048,7 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
         Route::get('/templates-by-discipline', [MemoDisciplineController::class, 'getTemplatesByDiscipline'])->name('templatesByDiscipline');
 
         Route::post('/send-memo', [MemoDisciplineController::class, 'sendMemo'])->name('sendMemo');
+        Route::post('/send-memo-bulk', [MemoDisciplineController::class, 'sendMemoBulk'])->name('sendMemoBulk');
         Route::post('/close-memo', [MemoDisciplineController::class, 'closeMemo'])->name('closeMemo');
         Route::get('/get_conversation_model/{memoId}/{type}', [MemoDisciplineController::class, 'getConversationModel'])->name('get_conversation_model');
 
