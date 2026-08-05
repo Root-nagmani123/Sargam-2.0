@@ -9,8 +9,10 @@ use App\Models\FC\FcFormFieldGroup;
 use App\Models\FC\FcFormGroupField;
 use App\Models\FC\FcPreHistory;
 use App\Models\FC\StudentMasterFirst;
+use App\Rules\SafeUploadedDocument;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -120,7 +122,7 @@ class DynamicFormService
         ?object $existingData = null
     ): array {
         if ($existingData === null && $step !== null && $userId !== null) {
-            $existingData = $this->getExistingData($step->step_slug, $userId);
+            $existingData = $this->existingDataForStepModel($step, $userId);
         }
 
         $rules = [];
@@ -297,23 +299,19 @@ class DynamicFormService
             }
 
             $table = $this->normalizeLookupTable($field->lookup_table);
-            if (! Schema::hasTable($table)) {
+            if (! fc_schema_has_table($table)) {
                 continue;
             }
 
-            $query = DB::table($table);
+            $orderColumn = $field->lookup_order_column
+                ?: ($field->lookup_label_column ?: null);
 
-            if ($table === 'state_master' && Schema::hasColumn($table, 'country_master_pk')) {
-                $query->select('*');
-            }
-
-            if ($field->lookup_order_column) {
-                $query->orderBy($field->lookup_order_column);
-            } elseif ($field->lookup_label_column) {
-                $query->orderBy($field->lookup_label_column);
-            }
-
-            $lookups[$field->field_name] = $query->get();
+            $lookups[$field->field_name] = $this->cachedLookupRows(
+                $table,
+                $orderColumn,
+                $field->lookup_value_column ?? null,
+                $field->lookup_label_column ?? null
+            );
         }
 
         return $lookups;
@@ -326,23 +324,41 @@ class DynamicFormService
      */
     public function getDistrictMasterOptions(): Collection
     {
-        if (! Schema::hasTable('state_district_mapping')) {
+        if (! fc_schema_has_table('state_district_mapping')) {
             return collect();
         }
 
-        $query = DB::table('state_district_mapping')
-            ->select('pk', 'district_name', 'state_master_pk', 'country_master_pk');
+        static $memo = null;
 
-        if (Schema::hasColumn('state_district_mapping', 'active_inactive')) {
-            $query->where('active_inactive', 1);
+        if ($memo === null) {
+            $fetch = static function () {
+                $query = DB::table('state_district_mapping')
+                    ->select('pk', 'district_name', 'state_master_pk', 'country_master_pk');
+
+                if (fc_schema_has_column('state_district_mapping', 'active_inactive')) {
+                    $query->where('active_inactive', 1);
+                }
+
+                return $query->orderBy('district_name')->get()->all();
+            };
+
+            $ttl = (int) config('fc.lookup_cache_ttl', 600);
+
+            try {
+                $memo = $ttl > 0
+                    ? Cache::remember($this->lookupCacheKey('districts'), $ttl, $fetch)
+                    : $fetch();
+            } catch (\Throwable $e) {
+                $memo = $fetch();
+            }
         }
 
-        return $query->orderBy('district_name')->get();
+        return collect($memo);
     }
 
     public function getExistingDataForStep(FcFormStep $step, int $userId): ?object
     {
-        return $this->getExistingData($step->step_slug, $userId);
+        return $this->existingDataForStepModel($step, $userId);
     }
 
     /**
@@ -363,19 +379,107 @@ class DynamicFormService
                 continue;
             }
 
-            $query = DB::table($table);
-
             if (property_exists($field, 'lookup_order_column') && $field->lookup_order_column) {
-                $query->orderBy($field->lookup_order_column);
+                $orderColumn = $field->lookup_order_column;
             } elseif (property_exists($field, 'lookup_label_column') && $field->lookup_label_column) {
-                $query->orderBy($field->lookup_label_column);
+                $orderColumn = $field->lookup_label_column;
             } elseif ($table === 'language_master') {
-                $query->orderBy('language_name');
+                $orderColumn = 'language_name';
+            } else {
+                $orderColumn = null;
             }
 
-            $lookups[$field->field_name] = $query->get();
+            $lookups[$field->field_name] = $this->cachedLookupRows($table, $orderColumn);
         }
         return $lookups;
+    }
+
+    /**
+     * Cache key for a reference-table lookup, namespaced by database and by the
+     * lookup cache version so fc_flush_lookup_cache() can publish master-data
+     * edits instantly instead of waiting out the TTL.
+     */
+    private function lookupCacheKey(string $suffix): string
+    {
+        return 'fc_lookup:'.DB::getDatabaseName().':v'.fc_lookup_cache_version().':'.$suffix;
+    }
+
+    /**
+     * Rows for a reference/master table, de-duplicated within the request and cached
+     * across requests.
+     *
+     * These masters (states, countries, languages, districts, cities, qualifications…)
+     * change very rarely but were re-queried once per field: a single Descriptive Roll
+     * render fetched language_master 5x, state_master 4x and country_master 2x. Under
+     * 200 concurrent users that multiplied into the dominant DB load.
+     *
+     * Each caller gets a fresh Collection wrapper, but the row objects inside it are the
+     * shared cached instances — treat them as read-only and never mutate row properties.
+     *
+     * @return Collection<int, object>
+     */
+    private function cachedLookupRows(
+        string $table,
+        ?string $orderColumn = null,
+        ?string $valueColumn = null,
+        ?string $labelColumn = null
+    ): Collection {
+        static $memo = [];
+
+        $key = $table.'|'.($orderColumn ?? '').'|'.($valueColumn ?? '').'|'.($labelColumn ?? '');
+
+        if (! array_key_exists($key, $memo)) {
+            $fetch = static function () use ($table, $orderColumn, $valueColumn, $labelColumn) {
+                $query = DB::table($table);
+
+                // Select only the columns the dropdown partials actually read — value + label
+                // (with the blade's id/name fallbacks), the order column, and the optional
+                // country_master_pk used for the state→country cascade — instead of SELECT *.
+                // Only restrict when every core column exists; otherwise fall back to all
+                // columns so a misconfigured lookup can never turn into a SQL error.
+                $value = $valueColumn ?: 'id';
+                $label = $labelColumn ?: 'name';
+                $core  = array_values(array_unique(array_filter(
+                    [$value, $label, $orderColumn],
+                    static fn ($c) => is_string($c) && $c !== ''
+                )));
+
+                $restrict = $core !== [];
+                foreach ($core as $col) {
+                    if (! fc_schema_has_column($table, $col)) {
+                        $restrict = false;
+                        break;
+                    }
+                }
+
+                if ($restrict) {
+                    $select = $core;
+                    if (fc_schema_has_column($table, 'country_master_pk')) {
+                        $select[] = 'country_master_pk';
+                    }
+                    $query->select(array_values(array_unique($select)));
+                }
+
+                if ($orderColumn !== null && $orderColumn !== '') {
+                    $query->orderBy($orderColumn);
+                }
+
+                return $query->get()->all();
+            };
+
+            $ttl = (int) config('fc.lookup_cache_ttl', 600);
+
+            try {
+                $memo[$key] = $ttl > 0
+                    ? Cache::remember($this->lookupCacheKey($key), $ttl, $fetch)
+                    : $fetch();
+            } catch (\Throwable $e) {
+                // Cache store unavailable — never fail a page render over a cache miss.
+                $memo[$key] = $fetch();
+            }
+        }
+
+        return collect($memo[$key]);
     }
 
     /**
@@ -401,10 +505,10 @@ class DynamicFormService
 
     private function languageMasterPrimaryKeyColumn(): string
     {
-        if (! Schema::hasTable('language_master')) {
+        if (! fc_schema_has_table('language_master')) {
             return 'id';
         }
-        $cols = Schema::getColumnListing('language_master');
+        $cols = fc_schema_columns('language_master');
         // Legacy Sargam uses pk; some DBs have both id and pk — prefer pk when present so values match seeded rows.
         if (in_array('pk', $cols, true)) {
             return 'pk';
@@ -441,6 +545,10 @@ class DynamicFormService
 
     /**
      * Get existing data for a step from its target table.
+     *
+     * Resolves the step from its slug. Callers that already hold the step model
+     * should use getExistingDataForStep() instead, which skips the extra
+     * fc_form_steps + fc_form_fields round trip.
      */
     public function getExistingData(string $stepSlug, int $userId): ?object
     {
@@ -449,6 +557,14 @@ class DynamicFormService
             return null;
         }
 
+        return $this->existingDataForStepModel($step, $userId);
+    }
+
+    /**
+     * Same as getExistingData() but for an already-loaded step model.
+     */
+    private function existingDataForStepModel(FcFormStep $step, int $userId): ?object
+    {
         // A flat step can write to several tables (e.g. Descriptive Roll →
         // student_master_firsts + student_master_seconds + knowledge_hindi).
         // Merge every table its fields target so ALL values prefill on
@@ -468,7 +584,7 @@ class DynamicFormService
 
         $rowsByTable = [];
         foreach (array_keys($tables) as $tbl) {
-            if (! Schema::hasTable($tbl)) {
+            if (! fc_schema_has_table($tbl)) {
                 continue;
             }
             $uVal = $this->userVal($tbl, $userId);
@@ -583,11 +699,9 @@ class DynamicFormService
         // This handles cases where student_master_firsts.session_id is null (e.g. pre-migration
         // staged-login users who belong to a dynamic-form course set on fc_registration_master).
         $rosterPk = $userId < 0 ? abs($userId) : null;
-        if ($rosterPk === null && \Illuminate\Support\Facades\Schema::hasTable('fc_registration_master')) {
+        if ($rosterPk === null && fc_schema_has_table('fc_registration_master')) {
             // Positive userId post-migration: find roster via user_credentials.user_name
-            $userName = \Illuminate\Support\Facades\DB::table('user_credentials')
-                ->where('pk', $userId)
-                ->value('user_name');
+            $userName = fc_user_name_for_id($userId);
             if ($userName) {
                 $rosterPk = (int) (\Illuminate\Support\Facades\DB::table('fc_registration_master')
                     ->where('user_id', $userName)
@@ -595,11 +709,11 @@ class DynamicFormService
             }
         }
 
-        if ($rosterPk && \Illuminate\Support\Facades\Schema::hasTable('fc_registration_master')) {
+        if ($rosterPk && fc_schema_has_table('fc_registration_master')) {
             $courseMasterPk = \Illuminate\Support\Facades\DB::table('fc_registration_master')
                 ->where('pk', $rosterPk)
                 ->value('course_master_pk');
-            if ($courseMasterPk && \Illuminate\Support\Facades\Schema::hasTable('course_master')) {
+            if ($courseMasterPk && fc_schema_has_table('course_master')) {
                 $courseName = trim((string) (\Illuminate\Support\Facades\DB::table('course_master')
                     ->where('pk', $courseMasterPk)
                     ->value('course_name') ?? ''));
@@ -642,17 +756,19 @@ class DynamicFormService
         $uCol = $this->userCol($targetTable);
         $uVal = $this->userVal($targetTable, $userId);
 
-        DB::table($targetTable)->updateOrInsert(
-            [$uCol => $uVal],
-            [
-                $field->target_column => $path,
-                'updated_at' => now(),
-            ]
-        );
-
+        // One read, then update or insert — created_at on insert / back-filled if missing,
+        // updated_at always. Replaces updateOrInsert + a re-read + a conditional update.
+        $write    = [$field->target_column => $path, 'updated_at' => now()];
         $existing = DB::table($targetTable)->where($uCol, $uVal)->first();
-        if ($existing && empty($existing->created_at)) {
-            DB::table($targetTable)->where($uCol, $uVal)->update(['created_at' => now()]);
+        if ($existing) {
+            if (empty($existing->created_at)) {
+                $write['created_at'] = now();
+            }
+            DB::table($targetTable)->where($uCol, $uVal)->update($write);
+        } else {
+            $write[$uCol] = $uVal;
+            $write['created_at'] = now();
+            DB::table($targetTable)->insert($write);
         }
     }
 
@@ -703,7 +819,7 @@ class DynamicFormService
             $userKey = fc_user_col($trackerTable);
             $trackerKey = [$userKey => fc_user_val($trackerTable, $userId)];
             $trackerData = [$step->tracker_column => 1, 'updated_at' => now()];
-            if (Schema::hasColumn($trackerTable, 'form_id')) {
+            if (fc_schema_has_column($trackerTable, 'form_id')) {
                 $trackerKey['form_id'] = $form->id;
                 $trackerData['form_id'] = $form->id;
             }
@@ -800,14 +916,18 @@ class DynamicFormService
                     $data[$step->completion_column] = 1;
                 }
 
-                DB::table($table)->updateOrInsert(
-                    [$uCol => $uVal],
-                    array_merge($data, ['updated_at' => now()])
-                );
-
-                $existing = DB::table($table)->where($uCol, $uVal)->first();
-                if ($existing && empty($existing->created_at)) {
-                    DB::table($table)->where($uCol, $uVal)->update(['created_at' => now()]);
+                // Reuse $existing (already read above) to update-or-insert without a second
+                // read — skips updateOrInsert's internal SELECT and the re-read. created_at is
+                // written on insert and back-filled for legacy rows missing it; updated_at always.
+                $write = array_merge($data, ['updated_at' => now()]);
+                if ($existing) {
+                    if (empty($existing->created_at)) {
+                        $write['created_at'] = now();
+                    }
+                    DB::table($table)->where($uCol, $uVal)->update($write);
+                } else {
+                    $write['created_at'] = now();
+                    DB::table($table)->insert($write);
                 }
             }
 
@@ -828,7 +948,7 @@ class DynamicFormService
                 $trackerTable = $form->trackerStorageTable();
                 $userKey = fc_user_col($trackerTable);
                 $trackerKey = [$userKey => fc_user_val($trackerTable, $userId)];
-                if (Schema::hasColumn($trackerTable, 'form_id')) {
+                if (fc_schema_has_column($trackerTable, 'form_id')) {
                     $trackerKey['form_id'] = $form->id;
                     $trackerData['form_id'] = $form->id;
                 }
@@ -899,13 +1019,20 @@ class DynamicFormService
             if (! $useUpsert) {
                 DB::table($gt)->where($uCol, $uVal)->delete();
 
+                // Build every row first, then insert in a SINGLE statement instead of one
+                // INSERT per row. Same rows are written (identical columns per row), just
+                // one round-trip instead of N — cheaper under concurrent registration saves.
+                $bulk = [];
                 foreach ($rows as $row) {
                     $data = [$uCol => $uVal, 'created_at' => now(), 'updated_at' => now()];
                     foreach ($fields as $field) {
                         $value = $row[$field->field_name] ?? null;
                         $data[$field->target_column] = $this->normalizeGroupFieldStoredValue($field, $value);
                     }
-                    DB::table($gt)->insert($data);
+                    $bulk[] = $data;
+                }
+                if ($bulk !== []) {
+                    DB::table($gt)->insert($bulk);
                 }
             } else {
                 // upsert mode (single-row tables like spouse, hobbies, dress sizes)
@@ -930,10 +1057,18 @@ class DynamicFormService
                     return;
                 }
 
-                DB::table($gt)->updateOrInsert([$uCol => $uVal], $data);
+                // One read, then update or insert — replaces updateOrInsert + a re-read + a
+                // conditional created_at update (3-4 queries -> 2). created_at is written on
+                // insert and back-filled for legacy rows missing it; updated_at always. Same result.
                 $existing = DB::table($gt)->where($uCol, $uVal)->first();
-                if ($existing && ! $existing->created_at) {
-                    DB::table($gt)->where($uCol, $uVal)->update(['created_at' => now()]);
+                if ($existing) {
+                    if (empty($existing->created_at)) {
+                        $data['created_at'] = now();
+                    }
+                    DB::table($gt)->where($uCol, $uVal)->update($data);
+                } else {
+                    $data['created_at'] = now();
+                    DB::table($gt)->insert($data);
                 }
             }
         });
@@ -1088,11 +1223,15 @@ class DynamicFormService
     /**
      * @param  FcFormField|FcFormGroupField  $field
      */
+    /**
+     * @return string|array<int, mixed> file fields return a rule LIST so the
+     *                                  content-verifying rule object can ride along
+     */
     private function resolveFieldValidationRules(
         FcFormField|FcFormGroupField $field,
         ?object $existingData = null,
         mixed $existingFilePath = null
-    ): string {
+    ): string|array {
         if ($field->field_type === 'file') {
             if ($existingFilePath === null && $existingData !== null) {
                 $col = $field->target_column ?: $field->field_name;
@@ -1187,7 +1326,10 @@ class DynamicFormService
     /**
      * @param  FcFormField|FcFormGroupField  $field
      */
-    private function buildFileValidationRules(FcFormField|FcFormGroupField $field, bool $hasExistingUpload): string
+    /**
+     * @return array<int, mixed> rule list (ends with the content-verifying rule)
+     */
+    private function buildFileValidationRules(FcFormField|FcFormGroupField $field, bool $hasExistingUpload): array
     {
         $rules = $field->validation_rules ?: ($field->is_required ? 'required' : 'nullable');
 
@@ -1208,13 +1350,75 @@ class DynamicFormService
             $rules .= '|mimes:'.str_replace(' ', '', $ext);
         }
 
+        // Never promise more than php.ini accepts: a file above upload_max_filesize
+        // is discarded before validation runs, which reads to the trainee as a
+        // form that silently did nothing (CWE-434 retest finding on row 1).
+        $maxKb = SafeUploadedDocument::maxKilobytes($maxKb);
+
         if (preg_match('/max:\d+/', $rules)) {
             $rules = preg_replace('/max:\d+/', 'max:'.$maxKb, $rules) ?? $rules;
         } else {
             $rules .= '|max:'.$maxKb;
         }
 
-        return $this->cleanValidationRules($rules);
+        // Reject a name carrying more than one extension (e.g. "Document1.txt.pdf.pdf"
+        // or "scan.jpg.pdf") on the FC form steps. SafeUploadedDocument only blocks a
+        // *script* extension anywhere in the name; a VAPT "double extension" finding also
+        // covers benign stacks like .txt.pdf, so this closure enforces a single extension.
+        // Scoped here (form-steps path) so other FC uploads are not affected.
+        $singleExtensionOnly = function ($attribute, $value, $fail) {
+            if ($value instanceof \Illuminate\Http\UploadedFile
+                    && $this->hasMultipleFileExtensions((string) $value->getClientOriginalName())) {
+                $fail('The file name has more than one extension (e.g. "name.txt.pdf"). '
+                    . 'Rename it to a single extension like "name.pdf" and upload again.');
+            }
+        };
+
+        // `mimes` only maps the guessed MIME back to an extension. SafeUploadedDocument
+        // is what verifies the bytes actually are that type, rejects a script
+        // extension anywhere in the submitted name, and blocks image/PHP polyglots.
+        return array_merge(
+            explode('|', $this->cleanValidationRules($rules)),
+            [$singleExtensionOnly, new SafeUploadedDocument(explode(',', str_replace(' ', '', $ext)))]
+        );
+    }
+
+    /**
+     * True when the submitted file name carries more than one extension — a
+     * "double extension" like "Document1.txt.pdf.pdf" or "scan.jpg.pdf". We count
+     * dot-segments (after the base name) that are recognised file extensions; two
+     * or more means a stacked extension. Names with incidental dots in the base
+     * ("Dr. Smith CV.pdf", "invoice.2024.pdf") have only one real extension and pass.
+     */
+    private function hasMultipleFileExtensions(string $name): bool
+    {
+        $name = basename(str_replace('\\', '/', $name));
+        $segments = explode('.', strtolower($name));
+
+        // "file.ext" = 2 segments = a single extension; nothing stacked.
+        if (count($segments) < 3) {
+            return false;
+        }
+
+        array_shift($segments); // drop the base name; only trailing segments can be extensions
+
+        $known = [
+            'pdf', 'txt', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'csv', 'rtf', 'odt', 'ods',
+            'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'tif', 'tiff', 'heic',
+            'zip', 'rar', '7z', 'gz', 'tar', 'bz2',
+            'php', 'php3', 'php4', 'php5', 'php7', 'phtml', 'phar', 'exe', 'com', 'bat', 'cmd', 'sh',
+            'bash', 'js', 'mjs', 'html', 'htm', 'xhtml', 'asp', 'aspx', 'jsp', 'pl', 'py', 'rb',
+            'dll', 'msi', 'jar', 'vbs', 'ps1',
+        ];
+
+        $extCount = 0;
+        foreach ($segments as $segment) {
+            if (in_array(trim($segment), $known, true)) {
+                $extCount++;
+            }
+        }
+
+        return $extCount >= 2;
     }
 
     /**
@@ -1519,10 +1723,10 @@ class DynamicFormService
     {
         $key = $table.'.'.$column;
         if (! array_key_exists($key, self::$columnTypeCache)) {
-            if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $column)) {
+            if (! fc_schema_has_table($table) || ! fc_schema_has_column($table, $column)) {
                 self::$columnTypeCache[$key] = null;
             } else {
-                self::$columnTypeCache[$key] = $this->fetchMysqlColumnType($table, $column);
+                self::$columnTypeCache[$key] = $this->cachedColumnType($table, $column);
             }
         }
 
@@ -1553,6 +1757,38 @@ class DynamicFormService
         }
 
         return strtolower((string) $row->data_type);
+    }
+
+    /**
+     * Column data type, cached ACROSS requests (keyed by the schema cache version so a
+     * runtime ALTER still invalidates it, with a TTL backstop). Without this the per-field
+     * type check runs a fresh information_schema query per column on every save — the
+     * dominant cost of saving a wide step (e.g. Descriptive Roll ~200 metadata queries).
+     * fc_schema_has_* already guards existence, so only real columns reach here.
+     */
+    protected function cachedColumnType(string $table, string $column): ?string
+    {
+        $ttl = (int) config('fc.schema_cache_ttl', 86400);
+        $ttl = $ttl > 0 ? $ttl : 86400;
+        $cacheKey = 'fc_col_type:'.DB::getDatabaseName().':v'.fc_schema_cache_version().':'.$table.'.'.$column;
+
+        try {
+            $cached = Cache::get($cacheKey);
+            if ($cached !== null) {
+                return $cached;
+            }
+
+            // Only ever cache a real result — never persist a null (a transient failure or a
+            // missing column), so a hiccup can't poison the type for the whole TTL (cf. F-02).
+            $type = $this->fetchMysqlColumnType($table, $column);
+            if ($type !== null) {
+                Cache::put($cacheKey, $type, $ttl);
+            }
+
+            return $type;
+        } catch (\Throwable $e) {
+            return $this->fetchMysqlColumnType($table, $column);
+        }
     }
 
     protected function coerceToBoolInt(mixed $value): bool

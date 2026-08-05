@@ -54,7 +54,7 @@ class NoticeNotificationController extends Controller
     $notices = $query->paginate(10)->appends($request->all());
 
     // Courses dropdown
-    $courses = CourseMaster::select('pk','course_name')->where('active_inactive', 1)->where('end_date', '>=', now())->get();
+    $courses = CourseMaster::select('pk','course_name')->where('active_inactive', 1)->where('end_date', '>=', now()->toDateString())->get();
 
     return view('admin.NoticeNotification.index', compact('notices','courses','types'));
 }

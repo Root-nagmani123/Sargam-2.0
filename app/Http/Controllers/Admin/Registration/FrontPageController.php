@@ -8,16 +8,20 @@ use App\Services\FC\FcRegistrationIntentService;
 use App\Services\FC\FcRegistrationStatusService;
 use App\Services\FC\FcRosterApplicationGuardService;
 use App\Services\FC\FcRosterAuthService;
+use App\Services\FC\FcNotifyService;
+use App\Services\FC\FcOtpService;
 use App\Support\FcEncryptedFormId;
+use App\Rules\SafeUploadedDocument;
+use App\Rules\SingleFileExtension;
 use Illuminate\Http\Request;
 use App\Models\FC\FcForm;
 use App\Models\FrontPage;
 use App\Models\FacultyMaster;
 use App\Models\DesignationMaster;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use App\Models\PathPage;
 use App\Models\PathPageFaq;
@@ -39,6 +43,8 @@ class FrontPageController extends Controller
         private FcRegistrationIntentService $fcRegistrationIntent,
         private FcRegistrationStatusService $fcRegistrationStatus,
         private FcRosterApplicationGuardService $rosterGuard,
+        private FcNotifyService $fcNotify,
+        private FcOtpService $fcOtp,
     ) {
     }
 
@@ -49,6 +55,32 @@ class FrontPageController extends Controller
             ->with('warning', $message);
     }
 
+    /**
+     * Faculty / designation dropdown data for the front-page form.
+     *
+     * These are master records that change only when an admin edits faculty or
+     * designations, but were re-queried on every page view. Cached under the FC
+     * lookup version, so fc_flush_lookup_cache() publishes edits immediately;
+     * otherwise they refresh within fc.lookup_cache_ttl.
+     */
+    private function cachedFrontPageLookup(string $key, callable $fetch): array
+    {
+        $ttl = (int) config('fc.lookup_cache_ttl', 600);
+        if ($ttl <= 0) {
+            return $fetch();
+        }
+
+        try {
+            return Cache::remember(
+                'fc_lookup:'.DB::getDatabaseName().':v'.fc_lookup_cache_version().':frontpage_'.$key,
+                $ttl,
+                $fetch
+            );
+        } catch (\Throwable $e) {
+            return $fetch();
+        }
+    }
+
     public function index()
     {
         $data = FrontPage::first(); // fetch latest/only record
@@ -56,7 +88,10 @@ class FrontPageController extends Controller
         // Faculty list for the Coordinator Name dropdown (same source as Create Course).
         // Keyed by full_name so the saved value remains a name string and the public
         // front page (which prints coordinator_name directly) keeps working unchanged.
-        $facultyList = FacultyMaster::orderBy('full_name')->pluck('full_name', 'full_name')->toArray();
+        $facultyList = $this->cachedFrontPageLookup(
+            'faculty_names',
+            static fn () => FacultyMaster::orderBy('full_name')->pluck('full_name', 'full_name')->toArray()
+        );
 
         // Preserve a previously saved coordinator name even if it is no longer in the faculty list.
         if ($data && !empty($data->coordinator_name) && !isset($facultyList[$data->coordinator_name])) {
@@ -66,19 +101,25 @@ class FrontPageController extends Controller
         // Map of coordinator (faculty) name => their designation name, so the
         // Coordinator Designation field can auto-fill when a coordinator is picked.
         // Chain: faculty_master.employee_master_pk -> employee_master.designation_master_pk -> designation_master.
-        $coordinatorDesignations = FacultyMaster::query()
-            ->join('employee_master', 'faculty_master.employee_master_pk', '=', 'employee_master.pk')
-            ->join('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
-            ->whereNotNull('faculty_master.full_name')
-            ->pluck('designation_master.designation_name', 'faculty_master.full_name')
-            ->toArray();
+        $coordinatorDesignations = $this->cachedFrontPageLookup(
+            'coordinator_designations',
+            static fn () => FacultyMaster::query()
+                ->join('employee_master', 'faculty_master.employee_master_pk', '=', 'employee_master.pk')
+                ->join('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
+                ->whereNotNull('faculty_master.full_name')
+                ->pluck('designation_master.designation_name', 'faculty_master.full_name')
+                ->toArray()
+        );
 
         // Options for the Coordinator Designation searchable dropdown. Keyed by name so the
         // saved value stays a string (the public front page prints coordinator_designation directly).
-        $designationList = DesignationMaster::where('active_inactive', 1)
-            ->orderBy('designation_name')
-            ->pluck('designation_name', 'designation_name')
-            ->toArray();
+        $designationList = $this->cachedFrontPageLookup(
+            'active_designations',
+            static fn () => DesignationMaster::where('active_inactive', 1)
+                ->orderBy('designation_name')
+                ->pluck('designation_name', 'designation_name')
+                ->toArray()
+        );
 
         // Ensure every designation that a coordinator can auto-fill is selectable (even if inactive).
         foreach ($coordinatorDesignations as $desigName) {
@@ -111,7 +152,21 @@ class FrontPageController extends Controller
             'coordinator_signature' => 'nullable|mimes:jpeg,png,jpg,gif,pdf|max:5120',
         ]);
 
-        $data = $request->except(['important_updates', 'coordinator_signature']);
+        // Whitelist the real columns. This used to be $request->except([...]) — a
+        // blacklist — and FrontPage has $guarded = [], so EVERY posted field was
+        // mass-assigned straight into the UPDATE. Any extra input then produced
+        // "Unknown column": `files` from the Summernote image uploader, and `menu`
+        // whenever the form was submitted from a ?menu=183 URL.
+        $data = $request->only([
+            'course_start_date',
+            'course_end_date',
+            'registration_start_date',
+            'registration_end_date',
+            'course_title',
+            'coordinator_name',
+            'coordinator_designation',
+            'coordinator_info',
+        ]);
         $data['important_updates'] = html_entity_decode($request->input('important_updates'));
 
         // File Upload
@@ -171,15 +226,79 @@ class FrontPageController extends Controller
         return view('fc.login');
     }
 
-    //validates user exists 
+    /**
+     * A1 — Send registration OTP (web_auth must match; existing verify flow unchanged).
+     */
+    public function sendRegistrationOtp(Request $request)
+    {
+        $request->validate([
+            'reg_mobile' => 'required|digits:10',
+            'reg_web_code' => 'required|string',
+        ]);
+
+        // OTP-flooding guard: max 5 sends per number, then a 10-minute cool-down.
+        if (($wait = $this->fcOtp->sendBlockedSeconds('registration', $request->reg_mobile)) > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Too many OTP requests for this number. Please try again after '.(int) ceil($wait / 60).' minute(s).',
+            ], 429);
+        }
+
+        $registration = DB::table('fc_registration_master')
+            ->where('contact_no', $request->reg_mobile)
+            ->where('web_auth', $request->reg_web_code)
+            ->first();
+
+        if (!$registration) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid contact number or web auth code.',
+            ], 422);
+        }
+
+        if ($blocked = $this->rosterGuard->registrationBlockedReason($registration)) {
+            return response()->json(['success' => false, 'message' => $blocked], 422);
+        }
+
+        $programmeName = $this->resolvedIntendedProgrammeName()
+            ?: (string) config('gupshup.default_programme_name', 'Foundation Course');
+
+        $result = $this->fcNotify->registrationOtp(
+            $request->reg_mobile,
+            trim((string) ($registration->display_name ?? '')),
+            $programmeName,
+            isset($registration->pk) ? (int) $registration->pk : null,
+        );
+
+        if (!($result['sent'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to send OTP SMS right now. Please try again, or check SMS gateway / DLT delivery.',
+            ], 502);
+        }
+
+        // Count this successful send toward the 5-per-number limit.
+        $this->fcOtp->registerSend('registration', $request->reg_mobile);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OTP sent to your registered mobile number and email address.',
+            'validity_minutes' => $this->fcOtp->validityMinutes(),
+        ]);
+    }
+
+    //validates user exists
     public function verify(Request $request)
     {
-        // Step 1: Validate input, including captcha
+        // Step 1: Validate input, including captcha + mandatory OTP (A1)
         $request->validate([
             'reg_mobile'   => 'required|digits:10',
             'reg_web_code' => 'required|string',
+            'otp'          => 'required|digits:6',
             'captcha'      => 'required|captcha',
         ], [
+            'otp.required' => 'Please enter the OTP sent to your mobile.',
+            'otp.digits' => 'OTP must be a 6-digit code.',
             'captcha.captcha' => 'Invalid captcha.',
         ]);
 
@@ -194,6 +313,31 @@ class FrontPageController extends Controller
                 ->withErrors(['web_auth' => 'Invalid contact number or web auth code.'])
                 ->withInput();
         }
+
+        // Verify-attempt guard: 5 wrong OTPs per number, then a 10-minute cool-down.
+        if (($wait = $this->fcOtp->verifyBlockedSeconds('registration', $request->reg_mobile)) > 0) {
+            return back()
+                ->withErrors(['otp' => 'Too many incorrect OTP attempts. Please try again after '.(int) ceil($wait / 60).' minute(s).'])
+                ->withInput();
+        }
+
+        // A1: OTP is mandatory — wrong / expired / missing OTP must block login.
+        if (!$this->fcOtp->hasPending('registration', $request->reg_mobile)) {
+            return back()
+                ->withErrors(['otp' => 'Please click Send OTP and enter the code sent to your mobile.'])
+                ->withInput();
+        }
+
+        if (!$this->fcOtp->verify('registration', $request->reg_mobile, $request->input('otp'))) {
+            $this->fcOtp->registerVerifyFailure('registration', $request->reg_mobile);
+
+            return back()
+                ->withErrors(['otp' => 'Invalid or expired OTP. Please request a new OTP.'])
+                ->withInput();
+        }
+
+        // Correct OTP — reset the wrong-attempt counter for this number.
+        $this->fcOtp->clearVerifyFailures('registration', $request->reg_mobile);
 
         if ($blocked = $this->rosterGuard->registrationBlockedReason($registration)) {
             return $this->redirectToChoosePathWithWarning($blocked);
@@ -325,12 +469,22 @@ class FrontPageController extends Controller
                 'password' => Hash::make($request->reg_password),
             ]);
 
-        // Email only the username — never email the plain-text password (CWE-312).
-        $this->sendCredentialsEmail($registration->email ?? null, $request->reg_name, $registration->pk ?? null);
+        // A2 SMS + Email (best-effort) — does not affect save/redirect.
+        $programmeName = $this->resolvedIntendedProgrammeName()
+            ?: (string) config('gupshup.default_programme_name', 'Foundation Course');
+        $this->fcNotify->credentialsCreated(
+            $request->reg_mobile,
+            trim((string) ($registration->display_name ?? '')),
+            $programmeName,
+            $request->reg_name,
+            $request->reg_password,
+            isset($registration->pk) ? (int) $registration->pk : null,
+            $registration->email ?? null,
+        );
 
         return redirect()->route('fc.login', $this->intentQueryForFcFormLinks())->with(
             'sweet_success',
-            'Credentials saved successfully. Please log in to complete your registration form.'
+            'Credentials created successfully. Please log in to complete your registration form.'
         );
     }
 
@@ -357,43 +511,6 @@ class FrontPageController extends Controller
         return redirect()->route('fc.login', $formQuery);
     }
 
-    /**
-     * Email the FC login credentials (username + password) to the trainee.
-     * Best-effort: any mail failure is logged but never blocks account creation.
-     */
-    protected function sendCredentialsEmail(?string $email, string $username, ?int $registrationPk = null): void
-    {
-        $email = trim((string) $email);
-        if ($email === '') {
-            return;
-        }
-
-        try {
-            $fromAddress = config('mail.from.address') ?: 'no-reply@lbsnaa.gov.in';
-            $fromName = config('mail.from.name') ?: 'LBSNAA Foundation Course';
-
-            // Plain-text password is intentionally NOT included in this email (CWE-312:
-            // Cleartext Storage of Sensitive Information). The candidate just set their
-            // own password and already knows it.
-            $body = "Dear Candidate,\n\n"
-                . "Your login credentials for the LBSNAA Foundation Course registration portal have been created successfully.\n\n"
-                . "Username: {$username}\n\n"
-                . "Please keep your credentials confidential and do not share them with anyone.\n\n"
-                . "Regards,\n"
-                . "Lal Bahadur Shastri National Academy of Administration, Mussoorie";
-
-            Mail::raw($body, function ($mail) use ($email, $fromAddress, $fromName) {
-                $mail->from($fromAddress, $fromName)
-                    ->to($email)
-                    ->subject('Your Foundation Course Login Credentials');
-            });
-        } catch (\Throwable $e) {
-            Log::error('Failed to send FC credentials email: ' . $e->getMessage(), [
-                'registration_pk' => $registrationPk,
-            ]);
-        }
-    }
-
     //user login verification
     public function verifyLogin(Request $request, FcRosterAuthService $rosterAuth)
     {
@@ -401,7 +518,17 @@ class FrontPageController extends Controller
         $request->validate([
             'reg_name' => 'required|string',
             'reg_password' => 'required|string',
+            'captcha' => 'required|captcha',
+        ], [
+            'captcha.required' => 'Please enter the captcha code.',
+            'captcha.captcha'  => 'The captcha you entered is incorrect. Please try again.',
         ]);
+
+        // The login page encrypts reg_password (AES-256-CBC) in the browser before
+        // POST, so the field is not literal plaintext in an intercepting proxy. Undo
+        // that here. When no key is configured (or the client sent plaintext), this
+        // returns the value unchanged so logins keep working during rollout.
+        $plainPassword = $this->decryptLoginPassword($request->input('reg_password'));
 
         $regName = $rosterAuth->normalizeLoginUsername($request->reg_name);
 
@@ -432,7 +559,7 @@ class FrontPageController extends Controller
 
         // FC login: authenticate only against fc_registration_master (main /login uses user_credentials).
         $roster = $rosterAuth->findStagedRosterByLogin($regName);
-        if ($roster && $rosterAuth->verifyStagedPassword($roster, $request->reg_password)) {
+        if ($roster && $rosterAuth->verifyStagedPassword($roster, $plainPassword)) {
             // Reset lockout counters on success
             DB::table('fc_registration_master')
                 ->where('pk', $roster->pk)
@@ -456,6 +583,47 @@ class FrontPageController extends Controller
         }
 
         return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
+    }
+
+    /**
+     * Decrypt the AES-256-CBC login password produced by the login page (CryptoJS),
+     * mirroring fc_login.blade.php: same key (config app.password_enc_key, base64 →
+     * 32 bytes) and the same fixed IV.
+     *
+     * Rollout-safe fallbacks (all return the input unchanged, never break login):
+     *  - key not configured / malformed  → treat input as plaintext (logged once)
+     *  - input is not valid base64        → '' (auth fails naturally)
+     *  - decrypt fails (wrong/plain data) → '' (auth fails naturally)
+     */
+    private function decryptLoginPassword(?string $cipher): string
+    {
+        $cipher = (string) $cipher;
+        if ($cipher === '') {
+            return '';
+        }
+
+        $b64Key = (string) config('app.password_enc_key');
+        if ($b64Key === '') {
+            // Key not set yet — the client also skips encryption in this state, so the
+            // value really is plaintext. Keep login working; surface the misconfig.
+            logger()->warning('PASSWORD_ENC_KEY not set; FC login password treated as plaintext.');
+            return $cipher;
+        }
+
+        $key = base64_decode($b64Key, true);
+        if ($key === false || strlen($key) !== 32) {
+            logger()->warning('PASSWORD_ENC_KEY is not a base64-encoded 32-byte key; FC login treated as plaintext.');
+            return $cipher;
+        }
+
+        $raw = base64_decode($cipher, true);
+        if ($raw === false) {
+            return '';
+        }
+
+        $plain = openssl_decrypt($raw, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, '1234567890123456');
+
+        return $plain === false ? '' : $plain;
     }
 
     // FC Form Show (session-based auth for FC users)
@@ -737,8 +905,11 @@ class FrontPageController extends Controller
             'guidelines'         => 'required|string',
 
             // Course Dates
-            'course_start_date'  => ['required', 'date', 'after_or_equal:today'],
-            'course_end_date'    => ['required', 'date', 'after:course_start_date', 'after_or_equal:today'],
+            // No after_or_equal:today on any of these — an admin has to be able to record a
+            // course or registration window that already began (back-dating). Every rule
+            // BETWEEN the dates is unchanged and still enforced here.
+            'course_start_date'  => ['required', 'date'],
+            'course_end_date'    => ['required', 'date', 'after:course_start_date'],
 
             // Registration Dates
             'registration_start_date' => [
@@ -749,7 +920,6 @@ class FrontPageController extends Controller
             'registration_end_date' => [
                 'nullable',
                 'date',
-                'after_or_equal:today',
                 'after_or_equal:registration_start_date',
                 'before_or_equal:' . $oneDayBeforeStart, // course_start_date - 1 day
             ],
@@ -759,7 +929,6 @@ class FrontPageController extends Controller
             'exemption_start_date' => [
                 'nullable',
                 'date',
-                'after_or_equal:today',
             ],
             'exemption_end_date' => [
                 'nullable',
@@ -991,6 +1160,26 @@ class FrontPageController extends Controller
             abort(404, 'Exemption category not found.');
         }
 
+        // "Registered but Now Seeking Exemption" is a chooser, not a form of its own:
+        // show the OTHER exemption categories and let the user pick one, which opens
+        // that category's existing application form (no new form, same save flow).
+        // View-only change — the save logic and flag handling are untouched.
+        if (stripos((string) $exemption->Exemption_name, 'now seeking exemption') !== false) {
+            $otherCategories = DB::table('fc_exemption_master')
+                ->where('visible', 1)
+                ->where('is_notice', false)
+                ->where('pk', '!=', $exemption->pk)
+                ->orderBy('pk')
+                ->get()
+                ->reject(fn ($c) => stripos((string) $c->Exemption_name, 'now seeking exemption') !== false)
+                ->values();
+
+            return view('fc.exemption_registered_select', [
+                'exemption'       => $exemption,
+                'otherCategories' => $otherCategories,
+            ]);
+        }
+
         return view('fc.exemption_application', [
             'exemption' => $exemption,
             'medicalDocMaxKb' => self::MEDICAL_DOC_MAX_KB,
@@ -1003,13 +1192,13 @@ class FrontPageController extends Controller
     {
         $rules = [
             'ex_mobile' => 'required|digits_between:7,15',
-            'reg_web_code' => 'required|string',
+            'reg_web_code' => 'required|string|no_html',
             'exemption_category' => 'required|exists:fc_exemption_master,Pk',
             'captcha' => 'required|captcha',
-            'course' => 'nullable|string|max:255',   // Blade field -> DB previous_fc_course_name
+            'course' => 'nullable|string|max:255|no_html',   // Blade field -> DB previous_fc_course_name
             'year' => 'nullable|digits:4',           // Blade field -> DB fc_date
-            'institution_name' => 'nullable|string|max:255', // Blade field -> DB previous_fc_institution_name
-            'roll_number' => 'nullable|string|max:50', // Blade field -> DB appearing_roll_no
+            'institution_name' => 'nullable|string|max:255|no_html', // Blade field -> DB previous_fc_institution_name
+            'roll_number' => 'nullable|string|max:50|no_html', // Blade field -> DB appearing_roll_no
         ];
 
         // Custom error messages
@@ -1045,16 +1234,34 @@ class FrontPageController extends Controller
         }
 
         if ($exemption && stripos($exemption->Exemption_name, 'completed foundation course') !== false) {
-            $rules['course'] = 'required|string|max:255';
+            $rules['course'] = 'required|string|max:255|no_html';
             $rules['year'] = 'required|digits:4';
-            $rules['institution_name'] = 'required|string|max:255';
+            $rules['institution_name'] = 'required|string|max:255|no_html';
+            // Completion certificate of the previously attended Foundation Course. Same file
+            // rules as the medical document: type + size, single extension, and byte-level
+            // inspection for script/macro content (this is a public, unauthenticated upload).
+            $rules['fc_prev_comp_doc'] = [
+                'required', 'file', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'max:'.self::MEDICAL_DOC_MAX_KB,
+                new SingleFileExtension(),
+                new SafeUploadedDocument(['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png']),
+            ];
             $messages['course.required'] = 'Course name is required for this exemption category.';
             $messages['year.required'] = 'Year is required for this exemption category.';
             $messages['institution_name.required'] = 'Institution name is required for this exemption category.';
+            $messages['fc_prev_comp_doc.required'] = 'The Foundation Course completion certificate is required for this exemption category.';
+            $messages['fc_prev_comp_doc.max'] = 'The completion certificate must not be larger than '.(self::MEDICAL_DOC_MAX_KB / 1024).' MB.';
+            $messages['fc_prev_comp_doc.mimes'] = 'The completion certificate must be PDF, Word (.doc, .docx), JPG, JPEG, or PNG.';
         }
 
-        if ($exemption && strtolower($exemption->Exemption_name) === 'medical') {
-            $rules['medical_doc'] = 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:'.self::MEDICAL_DOC_MAX_KB;
+        // Match "Medical Grounds" (and any medical-named category) — the previous exact
+        // `=== 'medical'` never matched the real category name, so the file rules below
+        // (required / type / size / active-content / double-extension) were skipped.
+        if ($exemption && stripos($exemption->Exemption_name, 'medical') !== false) {
+            $rules['medical_doc'] = [
+                'required', 'file', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'max:'.self::MEDICAL_DOC_MAX_KB,
+                new SingleFileExtension(),                                   // block double extension (name.pdf.pdf)
+                new SafeUploadedDocument(['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png']), // verify bytes; block script/macro/active content
+            ];
             $messages['medical_doc.required'] = 'Medical exemption document is required for medical exemptions.';
             $messages['medical_doc.max'] = 'Medical document must not be larger than '.(self::MEDICAL_DOC_MAX_KB / 1024).' MB.';
             $messages['medical_doc.mimes'] = 'Medical document must be PDF, Word (.doc, .docx), JPG, JPEG, or PNG.';
@@ -1092,31 +1299,90 @@ class FrontPageController extends Controller
             $medicalDocPath = $request->file('medical_doc')->store('medical_docs', 'public');
         }
 
-        // Update if exists, otherwise insert
-        DB::table('fc_registration_master')->updateOrInsert(
-            [
+        $prevFcDocPath = null;
+        if ($request->hasFile('fc_prev_comp_doc') && $request->file('fc_prev_comp_doc')->isValid()) {
+            $prevFcDocPath = $request->file('fc_prev_comp_doc')->store('previous_fc_docs', 'public');
+        }
+
+        $registrationValues = [
+            'user_id' => $username,
+            'fc_exemption_master_pk' => $request->exemption_category,
+            'previous_fc_course_name' => !empty($request->course) ? $request->course : null,
+            'fc_date'                 => !empty($request->year) ? $request->year : null,
+            'previous_fc_institution_name' => !empty($request->institution_name) ? $request->institution_name : null,
+            'appearing_roll_no'       => !empty($request->roll_number) ? $request->roll_number : null,
+        ];
+
+        // Document columns are written ONLY when a file was actually uploaded. Assigning them
+        // unconditionally set the other category's column to NULL on every submission, so a
+        // trainee who re-applied under a different category (possible once an admin resets
+        // application_type) silently lost the document reference from the first application —
+        // the file stayed on disk with nothing pointing at it. The exemption list picks the
+        // document that matches the category, so keeping both columns cannot show a stale one.
+        if ($medicalDocPath !== null) {
+            $registrationValues['medical_exemption_doc'] = $medicalDocPath;
+        }
+
+        // Written only when the column exists, so the form keeps working on an environment
+        // where 2026_08_02_000000_add_fc_prev_comp_doc_to_fc_registration_master has not run
+        // yet (code is routinely deployed ahead of migrations here).
+        if ($prevFcDocPath !== null && fc_schema_has_column('fc_registration_master', 'fc_Prev_comp_doc')) {
+            $registrationValues['fc_Prev_comp_doc'] = $prevFcDocPath;
+        }
+
+        try {
+            // Both writes together: without the transaction a failure between them left a row
+            // carrying the exemption answers but never marked as an exemption application.
+            DB::transaction(function () use ($request, $registrationValues) {
+                DB::table('fc_registration_master')->updateOrInsert(
+                    [
+                        'contact_no' => $request->ex_mobile,
+                        'web_auth' => $request->reg_web_code
+                    ],
+                    $registrationValues
+                );
+
+                DB::table('fc_registration_master')
+                    ->where('contact_no', $request->ex_mobile)
+                    ->where('web_auth', $request->reg_web_code)
+                    ->update([
+                        'application_type' => FcRosterApplicationGuardService::APPLICATION_EXEMPTION,
+                        'exemption_count' => DB::raw('GREATEST(COALESCE(exemption_count, 0), 1)'),
+                    ]);
+            });
+        } catch (\Throwable $e) {
+            // The uploads are written to disk before the row exists; drop them rather than
+            // leave files nothing will ever reference.
+            foreach (array_filter([$medicalDocPath, $prevFcDocPath]) as $orphan) {
+                try {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($orphan);
+                } catch (\Throwable $ignored) {
+                    // Best effort.
+                }
+            }
+
+            Log::error('FC exemption application save failed', [
                 'contact_no' => $request->ex_mobile,
-                'web_auth' => $request->reg_web_code
-            ],
-            [
-                'user_id' => $username,
-                'fc_exemption_master_pk' => $request->exemption_category,
-                'medical_exemption_doc' => $medicalDocPath,
-                'previous_fc_course_name' => !empty($request->course) ? $request->course : null,
-                'fc_date'                 => !empty($request->year) ? $request->year : null,
-                'previous_fc_institution_name' => !empty($request->institution_name) ? $request->institution_name : null,
-                'appearing_roll_no'       => !empty($request->roll_number) ? $request->roll_number : null,
-
-            ]
-        );
-
-        DB::table('fc_registration_master')
-            ->where('contact_no', $request->ex_mobile)
-            ->where('web_auth', $request->reg_web_code)
-            ->update([
-                'application_type' => FcRosterApplicationGuardService::APPLICATION_EXEMPTION,
-                'exemption_count' => DB::raw('GREATEST(COALESCE(exemption_count, 0), 1)'),
+                'message' => $e->getMessage(),
             ]);
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Your application could not be saved. Please try again, or contact the Academy office if the problem continues.');
+        }
+
+        // C1 SMS (best-effort via Gupshup/log driver) — does not affect save/redirect.
+        $programmeName = $this->resolvedIntendedProgrammeName()
+            ?: (string) config('gupshup.default_programme_name', 'Foundation Course');
+        $applicationNo = 'EXM'.now()->format('Y').str_pad((string) ($registration->pk ?? 0), 4, '0', STR_PAD_LEFT);
+        $this->fcNotify->exemptionConfirmation(
+            $request->ex_mobile,
+            trim((string) ($registration->display_name ?? '')),
+            $programmeName,
+            trim((string) ($exemption->Exemption_name ?? '')),
+            $applicationNo,
+            isset($registration->pk) ? (int) $registration->pk : null,
+        );
 
         return redirect()->route('fc.thank_you')->with('success', 'Exemption form submitted successfully.');
     }
@@ -1142,11 +1408,32 @@ class FrontPageController extends Controller
                 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/',
             ],
             'confirm_password' => 'required|same:new_password',
+            'otp' => 'required|string',
         ], [
             'new_password.min' => 'The password must be at least 8 characters.',
             'new_password.regex' => 'Password must include uppercase, lowercase, a number and a special character.',
             'confirm_password.same' => 'The confirm password and password must match.',
+            'otp.required' => 'Please verify web auth again to receive an OTP.',
         ]);
+
+        // Verify-attempt guard: 5 wrong OTPs per number, then a 10-minute cool-down.
+        if (($wait = $this->fcOtp->verifyBlockedSeconds('forgot_password', $request->mobile_number)) > 0) {
+            return back()
+                ->withErrors(['otp' => 'Too many incorrect OTP attempts. Please try again after '.(int) ceil($wait / 60).' minute(s).'])
+                ->withInput();
+        }
+
+        // A4: a verified forgot_password OTP is mandatory — no bypass when none is pending.
+        if (!$this->fcOtp->verify('forgot_password', $request->mobile_number, $request->input('otp'))) {
+            $this->fcOtp->registerVerifyFailure('forgot_password', $request->mobile_number);
+
+            return back()
+                ->withErrors(['otp' => 'Invalid or expired OTP. Please verify web auth again to receive a new OTP.'])
+                ->withInput();
+        }
+
+        // Correct OTP — reset the wrong-attempt counter for this number.
+        $this->fcOtp->clearVerifyFailures('forgot_password', $request->mobile_number);
 
         // Check user exists by mobile number
         $user = DB::table('user_credentials')
@@ -1159,12 +1446,26 @@ class FrontPageController extends Controller
                 ->withInput();
         }
 
-        // Update password
-        DB::table('user_credentials')
-            ->where('mobile_no', $request->mobile_number)
-            ->update([
-                'jbp_password' => Hash::make($request->new_password),
-            ]);
+        $hashed = Hash::make($request->new_password);
+
+        DB::transaction(function () use ($request, $hashed) {
+            // Also update staged FC roster password when present (same mobile).
+            $roster = DB::table('fc_registration_master')
+                ->where('contact_no', $request->mobile_number)
+                ->first();
+            if ($roster) {
+                DB::table('fc_registration_master')
+                    ->where('pk', $roster->pk)
+                    ->update(['password' => $hashed]);
+            }
+
+            // Update password
+            DB::table('user_credentials')
+                ->where('mobile_no', $request->mobile_number)
+                ->update([
+                    'jbp_password' => $hashed,
+                ]);
+        });
 
         // return redirect()->route('fc.login')->with('success', 'Password reset successful. Please login with new credentials.');
         return redirect()->route('fc.login', $this->intentQueryForFcFormLinks())
@@ -1180,6 +1481,14 @@ class FrontPageController extends Controller
             'mobile_number' => 'required|digits:10',
             'web_auth' => 'required|string',
         ]);
+
+        // OTP-flooding guard: max 5 sends per number, then a 10-minute cool-down.
+        if (($wait = $this->fcOtp->sendBlockedSeconds('forgot_password', $request->mobile_number)) > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Too many OTP requests for this number. Please try again after '.(int) ceil($wait / 60).' minute(s).',
+            ], 429);
+        }
 
         // Step 1: Check if the mobile number and web_auth exist in fc_registration_master
         $user = DB::table('fc_registration_master')
@@ -1200,10 +1509,130 @@ class FrontPageController extends Controller
             return response()->json(['success' => false, 'message' => 'User credentials not found.']);
         }
 
+        // A4 — send forgot-password OTP after web_auth succeeds (best-effort).
+        $this->fcNotify->forgotPasswordOtp(
+            $request->mobile_number,
+            trim((string) ($user->display_name ?? '')),
+            isset($user->pk) ? (int) $user->pk : null,
+        );
+
+        // Count this successful send toward the 5-per-number limit.
+        $this->fcOtp->registerSend('forgot_password', $request->mobile_number);
+
         return response()->json([
             'success' => true,
             'user_name' => $credentials->user_name,
+            'otp_sent' => true,
+            'message' => 'OTP sent to your registered mobile number and email address.',
+            'validity_minutes' => $this->fcOtp->validityMinutes(),
         ]);
+    }
+
+    /**
+     * A5 — Send password-change OTP for logged-in / staged FC trainee.
+     */
+    public function sendPasswordChangeOtp(Request $request)
+    {
+        $mobile = session('fc_user_mobile') ?: Auth::user()?->mobile_no;
+        $mobile = is_string($mobile) ? trim($mobile) : '';
+
+        if ($mobile === '') {
+            return response()->json(['success' => false, 'message' => 'Session expired. Please login again.'], 401);
+        }
+
+        // OTP-flooding guard: max 5 sends per number, then a 10-minute cool-down.
+        if (($wait = $this->fcOtp->sendBlockedSeconds('password_change', $mobile)) > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Too many OTP requests for this number. Please try again after '.(int) ceil($wait / 60).' minute(s).',
+            ], 429);
+        }
+
+        $registration = DB::table('fc_registration_master')
+            ->where('contact_no', $mobile)
+            ->orderByDesc('pk')
+            ->first();
+
+        if (!$registration) {
+            return response()->json(['success' => false, 'message' => 'Registration not found.'], 404);
+        }
+
+        $this->fcNotify->passwordChangeOtp(
+            $mobile,
+            trim((string) ($registration->display_name ?? '')),
+            isset($registration->pk) ? (int) $registration->pk : null,
+        );
+
+        // Count this successful send toward the 5-per-number limit.
+        $this->fcOtp->registerSend('password_change', $mobile);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OTP sent to your registered mobile number and email address.',
+            'validity_minutes' => $this->fcOtp->validityMinutes(),
+        ]);
+    }
+
+    /**
+     * A5 — Change FC roster password after OTP verification.
+     */
+    public function changePasswordWithOtp(Request $request)
+    {
+        $request->validate([
+            'otp' => 'required|string',
+            'new_password' => [
+                'required',
+                'string',
+                'min:8',
+                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/',
+            ],
+            'confirm_password' => 'required|same:new_password',
+        ], [
+            'new_password.regex' => 'Password must include uppercase, lowercase, a number and a special character.',
+            'confirm_password.same' => 'The confirm password and password must match.',
+        ]);
+
+        $mobile = session('fc_user_mobile') ?: Auth::user()?->mobile_no;
+        $mobile = is_string($mobile) ? trim($mobile) : '';
+
+        if ($mobile === '') {
+            return back()->withErrors(['otp' => 'Session expired. Please login again.']);
+        }
+
+        // Verify-attempt guard: 5 wrong OTPs per number, then a 10-minute cool-down.
+        if (($wait = $this->fcOtp->verifyBlockedSeconds('password_change', $mobile)) > 0) {
+            return back()
+                ->withErrors(['otp' => 'Too many incorrect OTP attempts. Please try again after '.(int) ceil($wait / 60).' minute(s).'])
+                ->withInput();
+        }
+
+        if (!$this->fcOtp->verify('password_change', $mobile, $request->input('otp'))) {
+            $this->fcOtp->registerVerifyFailure('password_change', $mobile);
+
+            return back()->withErrors(['otp' => 'Invalid or expired OTP.'])->withInput();
+        }
+
+        // Correct OTP — reset the wrong-attempt counter for this number.
+        $this->fcOtp->clearVerifyFailures('password_change', $mobile);
+
+        $hashed = Hash::make($request->new_password);
+
+        DB::transaction(function () use ($mobile, $hashed) {
+            $roster = DB::table('fc_registration_master')
+                ->where('contact_no', $mobile)
+                ->first();
+            if ($roster) {
+                DB::table('fc_registration_master')
+                    ->where('pk', $roster->pk)
+                    ->update(['password' => $hashed]);
+            }
+
+            DB::table('user_credentials')
+                ->where('mobile_no', $mobile)
+                ->update(['jbp_password' => $hashed]);
+        });
+
+        return back()->with('sweet_success', 'Password changed successfully.');
     }
 
     // app/Http/Controllers/FoundationCourseController.php
@@ -1276,7 +1705,8 @@ class FrontPageController extends Controller
         return view('fc.status', [
             'activeTab' => $payload['activeTab'],
             'counts' => $this->fcRegistrationStatus->counts(),
-            'courseMeta' => $this->fcRegistrationStatus->courseMeta(),
+            // courseMeta dropped with the course title / date line — it read the whole
+            // fc_front_pages row on every page load for output that no longer exists.
             'tabMeta' => $payload['tabMeta'],
             'serviceList' => $payload['serviceList'],
             'participants' => $payload['participants'],

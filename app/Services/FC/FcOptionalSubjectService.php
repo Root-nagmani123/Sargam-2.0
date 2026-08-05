@@ -3,7 +3,6 @@
 namespace App\Services\FC;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Service-aware options for the "Optional Subject First / Second" dropdowns on the
@@ -59,12 +58,12 @@ class FcOptionalSubjectService
      */
     public function subjectRows(string $serviceType)
     {
-        if (! Schema::hasTable(self::SUBJECT_TABLE)) {
+        if (! fc_schema_has_table(self::SUBJECT_TABLE)) {
             return collect();
         }
 
         $query = DB::table(self::SUBJECT_TABLE)->where('service_type', $serviceType);
-        if (Schema::hasColumn(self::SUBJECT_TABLE, 'active_inactive')) {
+        if (fc_schema_has_column(self::SUBJECT_TABLE, 'active_inactive')) {
             $query->where('active_inactive', 1);
         }
 
@@ -103,7 +102,7 @@ class FcOptionalSubjectService
      */
     public function userServicePk(int $userId): ?int
     {
-        if (Schema::hasTable('student_master_firsts') && Schema::hasColumn('student_master_firsts', 'service_id')) {
+        if (fc_schema_has_table('student_master_firsts') && fc_schema_has_column('student_master_firsts', 'service_id')) {
             $value = DB::table('student_master_firsts')
                 ->where(fc_user_col('student_master_firsts'), fc_user_val('student_master_firsts', $userId))
                 ->value('service_id');
