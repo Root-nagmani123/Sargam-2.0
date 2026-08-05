@@ -1585,6 +1585,15 @@
     outline-offset: 1px;
 }
 
+.dashboard-notice-item:active {
+    background: #e2e5ea;
+}
+
+.dashboard-notice-item:focus-visible {
+    outline: 2px solid var(--dashboard-feed-navy, #004a8f);
+    outline-offset: 1px;
+}
+
 .dashboard-notice-item .notice-icon-wrap {
     display: none;
 }
