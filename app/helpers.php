@@ -1492,7 +1492,16 @@ if (!function_exists('notice_feed_base_query')) {
             ->leftJoin('employee_master as notice_author_emp', 'notice_author_emp.pk', '=', 'notice_author.user_id')
             ->leftJoin('department_master as notice_author_dept', 'notice_author_dept.pk', '=', 'notice_author_emp.department_master_pk')
             ->select(
-                'notices_notification.*',
+                'notices_notification.pk',
+                'notices_notification.notice_title',
+                'notices_notification.notice_type',
+                'notices_notification.target_audience',
+                'notices_notification.course_master_pk',
+                'notices_notification.document',
+                'notices_notification.display_date',
+                'notices_notification.expiry_date',
+                'notices_notification.created_at',
+                'notices_notification.created_by',
                 DB::raw("NULLIF(TRIM(CONCAT_WS(' ', notice_author.first_name, notice_author.last_name)), '') as author_name"),
                 'notice_author_dept.department_name as author_department'
             )
