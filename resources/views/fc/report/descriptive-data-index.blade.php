@@ -4,8 +4,16 @@
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
 <style>
-    #ddColMenu { max-height: 340px; overflow-y: auto; min-width: 250px; }
+    #ddColMenu { max-height: 420px; overflow-y: auto; min-width: 290px; }
     #ddColMenu .form-check-label { cursor: pointer; }
+    /* Section headers keep ~100 checkboxes navigable; each one toggles its whole section. */
+    #ddColMenu .dd-col-group {
+        position: sticky; top: 0; z-index: 1;
+        background: #f1f4f8; border-top: 1px solid #dee2e6;
+        font-size: 11px; font-weight: 600; letter-spacing: .02em;
+        text-transform: uppercase; color: #24486e;
+    }
+    #ddColMenu .dd-col-group:first-child { border-top: 0; }
     #descriptiveDataTable_wrapper .dataTables_filter { text-align: right; }
     #descriptiveDataTable_wrapper .dataTables_filter input { width: auto; min-width: 220px; }
     .dd-course-picker .choices-wrap { flex: 0 1 380px; max-width: 380px; min-width: 0; }
@@ -53,6 +61,10 @@
             <a href="#" id="btnExportPdf" class="btn btn-sm btn-danger {{ $form ? '' : 'd-none' }}"
                title="Export the rows currently filtered, as PDF (landscape)">
                 <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+            </a>
+            <a href="#" id="btnExportPhotos" class="btn btn-sm btn-outline-primary {{ $form ? '' : 'd-none' }}"
+               title="Download every photo for the filtered trainees as one ZIP, named Name_Rank_ExamYear">
+                <i class="bi bi-file-earmark-zip me-1"></i>Photos (ZIP)
             </a>
         </div>
     </div>
@@ -109,6 +121,7 @@ $(function () {
     var excelBase   = "{{ route('admin.reports.descriptive-data.export.excel') }}";
     var csvBase     = "{{ route('admin.reports.descriptive-data.export.csv') }}";
     var pdfBase     = "{{ route('admin.reports.descriptive-data.export.pdf') }}";
+    var photosBase  = "{{ route('admin.reports.descriptive-data.export.photos') }}";
     var ALL_COURSES = @json(collect($forms)->map(fn ($f) => ['id' => (string) $f->id, 'label' => ($f->course_name ?: $f->form_name)])->values());
     var preselectId = "{{ (int) request('form_id') ?: '' }}";
 
@@ -215,7 +228,18 @@ $(function () {
                     next: '<i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">chevron_right</i>'
                 }
             },
-            ajax: { url: ajaxUrl, type: 'GET', data: function (d) { $.extend(d, filterParams()); } },
+            ajax: {
+                url: ajaxUrl,
+                type: 'GET',
+                data: function (d) {
+                    // Tell the server which columns are on screen so it can skip the lookup
+                    // joins — and the whole extra query per repeating section — for the ones
+                    // that are hidden. Omitted on the first draw, when the table does not
+                    // exist yet; the server then sends everything.
+                    var keys = visibleColumnKeys();
+                    $.extend(d, filterParams(), keys.length ? { cols: keys.join(',') } : {});
+                }
+            },
             columns: columnDefs(),
             dom: "<'row mb-2 align-items-center'<'col-sm-6'l><'col-sm-6'f>>" +
                  "<'row'<'col-sm-12'tr>>" +
@@ -278,7 +302,11 @@ $(function () {
     function syncExportButtons() {
         var id = currentFormId();
         var $x = $('#btnExportExcel'), $p = $('#btnExportPdf'), $c = $('#btnExportCsv');
-        if (!id) { $x.addClass('d-none'); $p.addClass('d-none'); $c.addClass('d-none'); return; }
+        var $z = $('#btnExportPhotos');
+        if (!id) {
+            $x.addClass('d-none'); $p.addClass('d-none'); $c.addClass('d-none'); $z.addClass('d-none');
+            return;
+        }
         var qs = $.param($.extend(filterParams(), {
             search_term: table ? (table.search() || '') : '',
             cols: visibleColumnKeys().join(',')
@@ -286,22 +314,82 @@ $(function () {
         $x.removeClass('d-none').attr('href', excelBase + '?' + qs);
         $c.removeClass('d-none').attr('href', csvBase + '?' + qs);
         $p.removeClass('d-none').attr('href', pdfBase + '?' + qs);
+        // The photo archive follows the filters but not the visible columns — it contains
+        // images, so `cols` means nothing to it.
+        $('#btnExportPhotos').removeClass('d-none')
+            .attr('href', photosBase + '?' + $.param($.extend(filterParams(), {
+                search_term: table ? (table.search() || '') : ''
+            })));
+    }
+
+    // Showing a column that was hidden needs a redraw: the server did not send its data on the
+    // previous draw, so the cells would otherwise come up blank. Debounced, so ticking a
+    // section header (nine columns at once) costs one request, not nine.
+    var colReloadTimer = null;
+    function reloadForColumnChange() {
+        clearTimeout(colReloadTimer);
+        colReloadTimer = setTimeout(function () {
+            if (table) { table.ajax.reload(null, false); }   // keep the current page
+        }, 200);
+    }
+
+    // Section name per column index, so the menu can group. Index 0/1 are S.No. and Username,
+    // which come before META.fields.
+    function groupForColumnIndex(idx) {
+        if (idx <= 1) { return 'General'; }
+        var f = META.fields[idx - 2];
+        return (f && f.group) ? f.group : 'Other';
     }
 
     function buildColMenu() {
         var $menu = $('#ddColMenu').empty();
         if (!table) { return; }
+
+        var lastGroup = null;
+        var groupBoxes = {};
+
         table.columns().every(function () {
             var col = this;
+            var idx = col.index();
             var title = ($(col.header()).text() || '').trim();
             if (!title || title.toLowerCase() === 's.no.') { return; }
+
+            var group = groupForColumnIndex(idx);
+            if (group !== lastGroup) {
+                lastGroup = group;
+                var $head = $('<li class="dd-col-group px-3 py-1"><div class="form-check mb-0">' +
+                    '<input type="checkbox" class="form-check-input me-2" checked>' +
+                    '<label class="form-check-label"></label></div></li>');
+                $head.find('label').text(group);
+                // One click shows or hides the whole section — ticking 9 Education boxes by
+                // hand is the difference between the menu being usable and not.
+                $head.find('input').on('change', function () {
+                    var on = $(this).prop('checked');
+                    $(this).closest('li').nextUntil('.dd-col-group').find('input')
+                        .prop('checked', on).each(function () {
+                            table.column($(this).data('colIdx')).visible(on, false);
+                        });
+                    table.columns.adjust();
+                    syncExportButtons();
+                    reloadForColumnChange();
+                });
+                groupBoxes[group] = $head.find('input');
+                $menu.append($head);
+            }
+
             var $li = $('<li class="px-3 py-1"><div class="form-check mb-0">' +
                 '<input type="checkbox" class="form-check-input me-2"' + (col.visible() ? ' checked' : '') + '>' +
                 '<label class="form-check-label"></label></div></li>');
             $li.find('label').text(title);
-            $li.find('input').on('change', function () {
+            $li.find('input').data('colIdx', idx).on('change', function () {
                 col.visible($(this).prop('checked'));
+                // Keep the section box honest: it is only ticked when every column under it is.
+                var $siblings = $(this).closest('li').prevAll('.dd-col-group').first()
+                    .nextUntil('.dd-col-group').find('input');
+                var box = groupBoxes[groupForColumnIndex(idx)];
+                if (box) { box.prop('checked', $siblings.not(':checked').length === 0); }
                 syncExportButtons();
+                reloadForColumnChange();
             });
             $li.find('label').on('click', function (e) {
                 e.preventDefault();

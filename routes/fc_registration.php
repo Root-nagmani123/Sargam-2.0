@@ -304,6 +304,7 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     Route::get('/descriptive-data/export-pdf',   [DescriptiveDataReportController::class, 'exportPdf'])->name('descriptive-data.export.pdf');
     // CSV streams from a cursor — the no-row-limit path for large courses.
     Route::get('/descriptive-data/export-csv',   [DescriptiveDataReportController::class, 'exportCsv'])->name('descriptive-data.export.csv');
+    Route::get('/descriptive-data/export-photos', [DescriptiveDataReportController::class, 'exportPhotos'])->name('descriptive-data.export.photos');
 
     // Aggregated reports
     Route::get('/by-service',   [ReportController::class, 'byService'])->name('service');
