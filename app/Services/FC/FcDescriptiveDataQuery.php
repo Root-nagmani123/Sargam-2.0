@@ -45,8 +45,22 @@ class FcDescriptiveDataQuery
 
         // One join per DISTINCT lookup table+column pair, aliased by field key so two fields
         // pointing at state_master (birth state, permanent-address state) do not collide.
+        $needsChildLink = false;
         foreach ($fields as $key => $field) {
+            // Repeating sections are not selectable SQL — they are batched in afterwards by
+            // FcDescriptiveDataChildLoader. Joining them here would multiply the rows.
+            if (($field['type'] ?? '') === 'child') {
+                $needsChildLink = true;
+                continue;
+            }
+
             $select[] = $this->selectExpression($key, $field, $query);
+        }
+
+        // Only carried when something actually needs it, so the common query is unchanged.
+        if ($needsChildLink) {
+            $s1Col = fc_user_col('student_master_firsts');
+            $select[] = DB::raw("`s1`.`{$s1Col}` as `".FcDescriptiveDataChildLoader::LINK_COLUMN.'`');
         }
 
         return $query->select($select);
@@ -80,6 +94,14 @@ class FcDescriptiveDataQuery
         $s1Col = fc_user_col('student_master_firsts');
         $s2Col = fc_user_col('student_master_seconds');
         $query->leftJoin('student_master_seconds as s2', "s2.{$s2Col}", '=', "s1.{$s1Col}");
+
+        // Language Details table, joined the same way. Guarded because it is the only source
+        // table that a deployment could plausibly not have; its user_id carries a UNIQUE
+        // index, so this cannot multiply the driving row.
+        if (fc_schema_has_table('student_knowledge_hindi_masters')) {
+            $s3Col = fc_user_col('student_knowledge_hindi_masters');
+            $query->leftJoin('student_knowledge_hindi_masters as s3', "s3.{$s3Col}", '=', "s1.{$s1Col}");
+        }
 
         $this->joinServiceMaster($query, $tracker);
 
@@ -277,7 +299,7 @@ class FcDescriptiveDataQuery
     {
         foreach ($fields as $key => $field) {
             $filter = $field['filter'] ?? null;
-            if ($filter === null) {
+            if ($filter === null || ($field['type'] ?? '') === 'child') {
                 continue;
             }
 

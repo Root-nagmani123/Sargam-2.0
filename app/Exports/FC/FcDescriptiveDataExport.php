@@ -3,6 +3,7 @@
 namespace App\Exports\FC;
 
 use App\Models\FC\FcForm;
+use App\Services\FC\FcDescriptiveDataChildLoader;
 use App\Services\FC\FcDescriptiveDataQuery;
 use App\Support\FC\FcUploadUrl;
 use Illuminate\Http\Request;
@@ -52,6 +53,18 @@ class FcDescriptiveDataExport implements FromQuery, WithChunkReading, WithCustom
 
     private const COLUMN_WIDTH_WIDE = 46;    // address / file URLs
 
+    /** Ceiling on the measured heading height, so one very long label cannot eat the sheet. */
+    private const HEADING_MAX_LINES = 4;
+
+    /**
+     * Data row height, in points — two wrapped lines of the 10pt body font.
+     *
+     * Two rather than one because the widest cells (assembled addresses, and the repeating
+     * sections, which hold several values joined by " | ") routinely need a second line. Not
+     * measured per row: that is what ShouldAutoSize does, and it cost 60% of the export.
+     */
+    private const DATA_ROW_HEIGHT = 30;
+
     /** Banner rows above the heading row; the table therefore starts at row 6. */
     private const BANNER_ROWS = 5;
 
@@ -89,6 +102,24 @@ class FcDescriptiveDataExport implements FromQuery, WithChunkReading, WithCustom
     public function chunkSize(): int
     {
         return self::CHUNK;
+    }
+
+    /**
+     * Per-chunk hook (Maatwebsite\Excel\Sheet::appendRows calls it when it exists).
+     *
+     * The repeating sections — Educational Details, Languages Known, Previous Job Experience,
+     * Hobbies, ... — are not in the SQL, because joining a table with many rows per trainee
+     * would multiply the export. They are batch-loaded here instead: one query per child
+     * table per chunk of {@see self::CHUNK} rows, rather than one per row.
+     *
+     * @param  iterable<int,object>  $rows
+     * @return iterable<int,object>
+     */
+    public function prepareRows($rows)
+    {
+        app(FcDescriptiveDataChildLoader::class)->hydrate($rows, $this->fields);
+
+        return $rows;
     }
 
     public function headings(): array
@@ -162,6 +193,7 @@ class FcDescriptiveDataExport implements FromQuery, WithChunkReading, WithCustom
                 $recordCount = max(0, $lastRow - $headingRow);
 
                 $this->setColumnWidths($sheet);
+                $this->setHeadingRowHeight($sheet, $headingRow);
                 $this->writeBanner($sheet, $lastCol, $recordCount);
                 $this->styleTable($sheet, $lastCol, $headingRow, $firstDataRow, $lastRow);
                 $this->linkFileColumns($sheet, $firstDataRow, $lastRow);
@@ -172,25 +204,98 @@ class FcDescriptiveDataExport implements FromQuery, WithChunkReading, WithCustom
     }
 
     /**
-     * Explicit widths, in place of ShouldAutoSize (see COLUMN_WIDTH). Set once per column
-     * rather than derived per cell, so this costs nothing as the row count grows.
+     * Width in characters per 1-based column index.
+     *
+     * Explicit widths, in place of ShouldAutoSize (see COLUMN_WIDTH). Derived once from the
+     * field list rather than from the cells, so this costs nothing as the row count grows.
+     *
+     * @return array<int,int>
      */
-    private function setColumnWidths($sheet): void
+    private function columnWidths(): array
     {
-        $sheet->getColumnDimension('A')->setWidth(self::COLUMN_WIDTH_NARROW);
+        $widths = [1 => self::COLUMN_WIDTH_NARROW];
 
         $index = 1;
         if ($this->includeUsername) {
-            $index++;
-            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($index))->setWidth(self::COLUMN_WIDTH);
+            $widths[++$index] = self::COLUMN_WIDTH;
         }
 
         foreach ($this->fields as $field) {
-            $index++;
-            $wide = $field['type'] === 'address';   // file cells now show a short name
-            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($index))
-                ->setWidth($wide ? self::COLUMN_WIDTH_WIDE : self::COLUMN_WIDTH);
+            // Addresses, and the repeating sections, hold several values in one cell.
+            $wide = in_array($field['type'], ['address', 'child'], true);
+            $widths[++$index] = $wide ? self::COLUMN_WIDTH_WIDE : self::COLUMN_WIDTH;
         }
+
+        return $widths;
+    }
+
+    private function setColumnWidths($sheet): void
+    {
+        foreach ($this->columnWidths() as $index => $width) {
+            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($index))->setWidth($width);
+        }
+    }
+
+    /**
+     * Explicit height for the heading row, tall enough for the longest wrapped label.
+     *
+     * Required, not cosmetic: with wrapText and no height, PhpSpreadsheet writes no row
+     * height at all, and Excel does NOT auto-fit wrapped rows when it opens a file — it only
+     * does that on edit. The row keeps the default ~15pt, so any heading that needs two lines
+     * is rendered as a clipped sliver of both ("Highest Qualification Stream", "High-Altitude
+     * Medical Condition"). The labels come from the form definition and differ per course, so
+     * the height is measured rather than hardcoded.
+     */
+    private function setHeadingRowHeight($sheet, int $headingRow): void
+    {
+        $widths = $this->columnWidths();
+
+        $lines = 1;
+        foreach (array_values($this->headings()) as $i => $label) {
+            $lines = max($lines, $this->wrappedLineCount((string) $label, $widths[$i + 1] ?? self::COLUMN_WIDTH));
+        }
+
+        // 11pt bold needs ~14pt a line; the extra 6 is the cell's own padding.
+        $sheet->getRowDimension($headingRow)->setRowHeight(min($lines, self::HEADING_MAX_LINES) * 14 + 6);
+    }
+
+    /**
+     * Lines a label takes when wrapped inside a column of $width characters.
+     *
+     * Greedy word wrap, with the width discounted because the heading is bold (a bold glyph is
+     * wider than the average character Excel's column width is measured in). A single word
+     * longer than the column is broken, the way Excel breaks it.
+     */
+    private function wrappedLineCount(string $label, int $width): int
+    {
+        $usable = max(4, (int) floor($width * 0.88));
+
+        $lines = 1;
+        $current = 0;
+
+        foreach (preg_split('/\s+/u', trim($label)) ?: [] as $word) {
+            if ($word === '') {
+                continue;
+            }
+
+            $length = mb_strlen($word);
+
+            if ($current > 0 && $current + 1 + $length > $usable) {
+                $lines++;
+                $current = 0;
+            }
+
+            // A word wider than the whole column spills onto further lines by itself.
+            if ($length > $usable) {
+                $lines += (int) ceil($length / $usable) - 1;
+                $current = $length % $usable;
+                continue;
+            }
+
+            $current += ($current > 0 ? 1 : 0) + $length;
+        }
+
+        return $lines;
     }
 
     /**
@@ -228,6 +333,7 @@ class FcDescriptiveDataExport implements FromQuery, WithChunkReading, WithCustom
             'font' => ['size' => 9, 'color' => ['rgb' => '555555']],
             'alignment' => $bannerAlign,
         ]);
+        $sheet->getRowDimension(3)->setRowHeight(14);
 
         $sheet->mergeCells("A4:{$lastCol}4");
         $sheet->setCellValue('A4', 'Total records: '.$recordCount);
@@ -236,6 +342,7 @@ class FcDescriptiveDataExport implements FromQuery, WithChunkReading, WithCustom
             'alignment' => $bannerAlign,
             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F0F4FA']],
         ]);
+        $sheet->getRowDimension(4)->setRowHeight(15);
 
         $sheet->getRowDimension(5)->setRowHeight(6);
 
@@ -278,6 +385,13 @@ class FcDescriptiveDataExport implements FromQuery, WithChunkReading, WithCustom
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]],
             'alignment' => ['vertical' => Alignment::VERTICAL_TOP, 'wrapText' => true],
         ]);
+
+        // Data cells wrap too, and hit the same Excel behaviour as the heading row: with no
+        // height set, a value that needs two lines is shown as a clipped sliver. Set on the
+        // sheet default rather than per row — one dimension object instead of one per row, so
+        // a 10,000-row export pays nothing for it. Rows 1-6 all carry explicit heights, so
+        // this only reaches the data.
+        $sheet->getDefaultRowDimension()->setRowHeight(self::DATA_ROW_HEIGHT);
 
         // S.No. plus the short codes read better centred; free text stays left-aligned.
         foreach ($this->centredColumnLetters() as $letter) {
