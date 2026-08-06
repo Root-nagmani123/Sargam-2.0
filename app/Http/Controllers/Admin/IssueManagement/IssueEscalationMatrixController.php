@@ -10,6 +10,8 @@ use App\Models\{
 };
 use App\Support\DataTableRedisCache;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\{DB, Auth};
 
@@ -148,7 +150,53 @@ class IssueEscalationMatrixController extends Controller
     /**
      * Display escalation matrix - categories with 3-level hierarchy (employees + days).
      */
-    public function index()
+    /** Page-size choices offered by the "Showing N of M items" footer select. */
+    private const PER_PAGE_OPTIONS = [10, 20, 50, 100, 200];
+
+    private const INDEX_PER_PAGE = 10;
+
+    /**
+     * The matrix is assembled in memory (one row per category), so search and
+     * sort run over the built collection rather than as SQL.
+     *
+     * @param  array<int, array<string, mixed>>  $matrix
+     * @return array<int, array<string, mixed>>
+     */
+    private function filterAndSortMatrix(array $matrix, string $search, string $sortKey, string $sortDir): array
+    {
+        $name = fn ($level) => $level?->employee?->name ?? '';
+
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $matrix = array_values(array_filter($matrix, function ($row) use ($needle, $name) {
+                $haystack = mb_strtolower(implode(' ', [
+                    $row['category']->issue_category ?? '',
+                    $name($row['level1']),
+                    $name($row['level2']),
+                    $name($row['level3']),
+                ]));
+
+                return str_contains($haystack, $needle);
+            }));
+        }
+
+        $value = function (array $row) use ($sortKey, $name) {
+            return match ($sortKey) {
+                'level1' => mb_strtolower($name($row['level1'])),
+                'level2' => mb_strtolower($name($row['level2'])),
+                'level3' => mb_strtolower($name($row['level3'])),
+                default => mb_strtolower($row['category']->issue_category ?? ''),
+            };
+        };
+
+        usort($matrix, fn ($a, $b) => $sortDir === 'desc'
+            ? $value($b) <=> $value($a)
+            : $value($a) <=> $value($b));
+
+        return $matrix;
+    }
+
+    public function index(Request $request)
     {
         $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
         $cacheKey = 'admin_issue_escalation_matrix:v1:' . md5(json_encode(['epoch' => $epoch]));
@@ -173,11 +221,110 @@ class IssueEscalationMatrixController extends Controller
         }
 
         $hydrated = $this->matrixFromCacheArray($cached);
-        $matrix = $hydrated['matrix'];
         $categories = $hydrated['categories'];
         $employees = $this->getEmployeesForDropdown();
 
-        return view('admin.issue_management.escalation_matrix.index', compact('matrix', 'categories', 'employees'));
+        $search = trim((string) $request->query('q', ''));
+        $sortKey = (string) $request->query('sort', 'category');
+        if (! in_array($sortKey, ['category', 'level1', 'level2', 'level3'], true)) {
+            $sortKey = 'category';
+        }
+        $sortDir = strtolower((string) $request->query('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+
+        $perPage = (int) $request->query('per_page', self::INDEX_PER_PAGE);
+        if (! in_array($perPage, self::PER_PAGE_OPTIONS, true)) {
+            $perPage = self::INDEX_PER_PAGE;
+        }
+
+        $rows = $this->filterAndSortMatrix($hydrated['matrix'], $search, $sortKey, $sortDir);
+
+        $page = Paginator::resolveCurrentPage('page');
+        $matrix = new LengthAwarePaginator(
+            array_slice($rows, ($page - 1) * $perPage, $perPage),
+            count($rows),
+            $perPage,
+            $page,
+            ['path' => Paginator::resolveCurrentPath(), 'pageName' => 'page']
+        );
+        $matrix->withQueryString();
+
+        $perPageOptions = self::PER_PAGE_OPTIONS;
+
+        return view('admin.issue_management.escalation_matrix.index', compact(
+            'matrix',
+            'categories',
+            'employees',
+            'perPage',
+            'perPageOptions',
+            'search',
+            'sortKey',
+            'sortDir'
+        ));
+    }
+
+    /**
+     * Download / print the escalation matrix (same filter + order as the grid).
+     */
+    public function export(Request $request, string $format = 'csv')
+    {
+        $format = strtolower($format);
+        abort_unless(in_array($format, ['csv', 'print'], true), 404);
+
+        $built = $this->buildMatrixData();
+        $search = trim((string) $request->query('q', ''));
+        $sortKey = (string) $request->query('sort', 'category');
+        if (! in_array($sortKey, ['category', 'level1', 'level2', 'level3'], true)) {
+            $sortKey = 'category';
+        }
+        $sortDir = strtolower((string) $request->query('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+
+        $rows = $this->filterAndSortMatrix($built['matrix'], $search, $sortKey, $sortDir);
+
+        $header = ['S. No.', 'Complaint Category', 'Level 1 (Escalation Days)', 'Level 2 (Escalation Days)', 'Level 3 (Escalation Days)'];
+
+        $cell = function ($level) {
+            if (! $level) {
+                return '-';
+            }
+            $days = (int) $level->days_notify;
+
+            return trim(($level->employee->name ?? 'N/A') . ' - ' . $days . ' ' . ($days === 1 ? 'Day' : 'Days'));
+        };
+
+        $lines = [];
+        foreach ($rows as $i => $row) {
+            $lines[] = [
+                $i + 1,
+                $row['category']->issue_category ?? '',
+                $cell($row['level1']),
+                $cell($row['level2']),
+                $cell($row['level3']),
+            ];
+        }
+
+        if ($format === 'print') {
+            return view('admin.issue_management.escalation_matrix.export_print', [
+                'header' => $header,
+                'rows' => $lines,
+                'search' => $search,
+                'exportDate' => now()->format('d-m-Y h:i A'),
+            ]);
+        }
+
+        $filename = 'EscalationMatrix_' . now()->format('YmdHis') . '.csv';
+
+        return response()->streamDownload(function () use ($header, $lines) {
+            $handle = fopen('php://output', 'w');
+            // BOM so Excel opens the UTF-8 file with the right encoding.
+            fwrite($handle, "\xEF\xBB\xBF");
+            fputcsv($handle, $header);
+            foreach ($lines as $line) {
+                fputcsv($handle, $line);
+            }
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 
     /**

@@ -1502,6 +1502,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
 
     // Escalation Matrix (3-level hierarchy)
     Route::get('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'index'])->name('issue-escalation-matrix.index');
+    Route::get('issue-escalation-matrix/export/{format?}', [IssueEscalationMatrixController::class, 'export'])->name('issue-escalation-matrix.export');
     Route::post('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'store'])->name('issue-escalation-matrix.store');
     Route::put('issue-escalation-matrix/{categoryId}', [IssueEscalationMatrixController::class, 'update'])->name('issue-escalation-matrix.update');
 });

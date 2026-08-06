@@ -1,97 +1,242 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Escalation Matrix - Sargam | Lal Bahadur')
+@section('title', 'Escalation Matrix')
 
-@section('css')
-<style>
-.modal-body { background-color: #fff !important; color: #212529 !important; }
-.modal-content { background-color: #fff !important; }
-</style>
-@endsection
+@push('styles')
+{{-- Shared Centcom chrome — same file the other Centcom screens use. --}}
+<link rel="stylesheet"
+      href="{{ asset('css/issue-management-admin.css') }}?v={{ @filemtime(public_path('css/issue-management-admin.css')) ?: time() }}">
+{{-- Select2 (JS is global in footer.blade.php:66; the CSS is per-page by convention). --}}
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
+@endpush
 
 @section('setup_content')
-<div class="container-fluid">
-    <x-breadcrum title="Escalation Matrix" />
-    <div class="datatables">
-        <div class="card" >
-            <div class="card-body">
-                <div class="row mb-2">
-                    <div class="col-6">
-                        <h4 class="mb-0">Escalation Matrix - 3 Level Hierarchy</h4>
-                        <p class="text-muted small mb-0 mt-1">Employees mapped with complaint category. Days define escalation timeline from Level 1 → 2 → 3.</p>
-                    </div>
-                    <div class="col-6 text-end">
-                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMatrixModal">
-                            <i class="bi bi-plus-circle-fill" aria-hidden="true"></i> Add Mapping
-                        </button>
-                    </div>
-                </div>
-                <hr>
-                @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        {{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                @endif
-                @if(session('error'))
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        {{ session('error') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                @endif
+@php
+    $baseQuery = ['q' => $search, 'per_page' => $perPage, 'sort' => $sortKey, 'dir' => $sortDir];
 
+    $sortUrl = function (string $key) use ($baseQuery, $sortKey, $sortDir) {
+        $dir = ($sortKey === $key && $sortDir === 'asc') ? 'desc' : 'asc';
+
+        return request()->fullUrlWithQuery(array_merge($baseQuery, ['sort' => $key, 'dir' => $dir, 'page' => 1]));
+    };
+
+    $exportQuery = ['q' => $search, 'sort' => $sortKey, 'dir' => $sortDir];
+
+    // "Trevor Swanson - 1 Day", days tinted by level.
+    $levelCell = function ($level, int $n) {
+        if (! $level) {
+            return '<span class="text-muted">—</span>';
+        }
+        $days = (int) $level->days_notify;
+
+        return '<span class="ic-level ic-level--' . $n . '">'
+            . e($level->employee->name ?? 'N/A')
+            . ' - <span class="ic-level__days">' . $days . ' ' . ($days === 1 ? 'Day' : 'Days') . '</span>'
+            . '</span>';
+    };
+@endphp
+<div class="container-fluid ic-page">
+    <x-breadcrum title="Escalation Matrix" :showBack="false">
+        <button type="button"
+                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
+                data-bs-toggle="modal" data-bs-target="#addMatrixModal">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+            <span>Add Escalation Matrix</span>
+        </button>
+    </x-breadcrum>
+
+    <x-session_message />
+
+    {{-- Secondary actions (Download / Print) — above the card, per §1 --}}
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 ic-secondary-actions">
+        <a href="{{ route('admin.issue-escalation-matrix.export', array_merge(['format' => 'csv'], $exportQuery)) }}"
+           class="btn programme-dt-btn-columns border-0 text-primary" title="Download as CSV">
+            <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+        </a>
+        <a href="{{ route('admin.issue-escalation-matrix.export', array_merge(['format' => 'print'], $exportQuery)) }}"
+           target="_blank" rel="noopener" class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
+            <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
+        </a>
+    </div>
+
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
+
+            {{-- Toolbar: columns + search on the right (§2) --}}
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4 ic-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="emBtnColumns"
+                            data-bs-toggle="modal" data-bs-target="#emColumnVisibilityModal"
+                            title="Show / hide columns"
+                            style="border: 1px solid #d0d5dd; background: #fff; color: #344054;">
+                        <span>Columns</span><i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+
+                    <button type="button" class="btn programme-dt-btn-columns" id="emSearchToggle"
+                            aria-label="Search escalation matrix" title="Search"
+                            style="border: 1px solid #d0d5dd; background: #fff; color: #344054;">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                    </button>
+
+                    <form method="GET" action="{{ route('admin.issue-escalation-matrix.index') }}"
+                          class="ic-search-wrap {{ filled($search) ? '' : 'd-none' }}" id="emSearchWrap">
+                        <input type="hidden" name="per_page" value="{{ $perPage }}">
+                        <input type="hidden" name="sort" value="{{ $sortKey }}">
+                        <input type="hidden" name="dir" value="{{ $sortDir }}">
+                        <input type="search" class="ic-search-input" id="emSearchInput" name="q"
+                               value="{{ $search }}" placeholder="Search category or employee…" autocomplete="off"
+                               aria-label="Search escalation matrix">
+                    </form>
+                </div>
+            </div>
+
+            <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <table class="table">
+                    <table id="escalationMatrixTable" data-sargam-dt-ui="false"
+                           class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                         <thead>
                             <tr>
-                                <th width="5%">#</th>
-                                <th width="20%">Complaint Category</th>
-                                <th width="25%">Level 1 (Employee / Days)</th>
-                                <th width="25%">Level 2 (Employee / Days)</th>
-                                <th width="25%">Level 3 (Employee / Days)</th>
-                                <th width="10%">Actions</th>
+                                <th scope="col">S. No.</th>
+                                <th scope="col">
+                                    <a class="ic-sort {{ $sortKey === 'category' ? 'is-active' : '' }}" href="{{ $sortUrl('category') }}">
+                                        Complaint Category
+                                        <i class="bi {{ $sortKey === 'category' && $sortDir === 'desc' ? 'bi-caret-down-fill' : 'bi-caret-up-fill' }}" aria-hidden="true"></i>
+                                    </a>
+                                </th>
+                                @foreach([1, 2, 3] as $n)
+                                    <th scope="col">
+                                        <a class="ic-sort {{ $sortKey === 'level' . $n ? 'is-active' : '' }}" href="{{ $sortUrl('level' . $n) }}">
+                                            Level {{ $n }} (Escalation Days)
+                                            <i class="bi {{ $sortKey === 'level' . $n && $sortDir === 'desc' ? 'bi-caret-down-fill' : 'bi-caret-up-fill' }}" aria-hidden="true"></i>
+                                        </a>
+                                    </th>
+                                @endforeach
+                                <th scope="col">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($matrix as $index => $row)
-                            <tr>
-                                <td>{{ $index + 1 }}</td>
-                                <td><strong>{{ $row['category']->issue_category }}</strong></td>
-                                <td>
-                                    @if($row['level1'])
-                                        {{ $row['level1']->employee->name ?? 'N/A' }} <span class="badge bg-info">{{ $row['level1']->days_notify }} days</span>
-                                    @else
-                                        <span class="text-muted">—</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($row['level2'])
-                                        {{ $row['level2']->employee->name ?? 'N/A' }} <span class="badge bg-info">{{ $row['level2']->days_notify }} days</span>
-                                    @else
-                                        <span class="text-muted">—</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($row['level3'])
-                                        {{ $row['level3']->employee->name ?? 'N/A' }} <span class="badge bg-info">{{ $row['level3']->days_notify }} days</span>
-                                    @else
-                                        <span class="text-muted">—</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-warning" onclick="editMatrix({{ $row['category']->pk }}, {{ json_encode($row['category']->issue_category) }}, {{ $row['level1']?->employee_master_pk ?? 'null' }}, {{ $row['level1']?->days_notify ?? 0 }}, {{ $row['level2']?->employee_master_pk ?? 'null' }}, {{ $row['level2']?->days_notify ?? 0 }}, {{ $row['level3']?->employee_master_pk ?? 'null' }}, {{ $row['level3']?->days_notify ?? 0 }})">
-                                        <iconify-icon icon="solar:pen-bold"></iconify-icon> Edit
-                                    </button>
-                                </td>
-                            </tr>
+                            @forelse($matrix as $row)
+                                <tr>
+                                    <td>{{ $matrix->firstItem() + $loop->index }}</td>
+                                    <td>{{ $row['category']->issue_category }}</td>
+                                    <td>{!! $levelCell($row['level1'], 1) !!}</td>
+                                    <td>{!! $levelCell($row['level2'], 2) !!}</td>
+                                    <td>{!! $levelCell($row['level3'], 3) !!}</td>
+                                    <td>
+                                        <div class="ic-act-group" role="group" aria-label="Row actions">
+                                            {{-- There is no detail route for a mapping, so View opens a
+                                                 read-only modal built from the row's own data. --}}
+                                            <button type="button" class="ic-act ic-act--view em-view-btn"
+                                                    aria-label="View escalation mapping for {{ $row['category']->issue_category }}"
+                                                    data-category="{{ $row['category']->issue_category }}"
+                                                    data-category-id="{{ $row['category']->pk }}"
+                                                    data-l1-name="{{ $row['level1']->employee->name ?? '' }}"
+                                                    data-l1-days="{{ $row['level1']->days_notify ?? '' }}"
+                                                    data-l1-emp="{{ $row['level1']->employee_master_pk ?? '' }}"
+                                                    data-l2-name="{{ $row['level2']->employee->name ?? '' }}"
+                                                    data-l2-days="{{ $row['level2']->days_notify ?? '' }}"
+                                                    data-l2-emp="{{ $row['level2']->employee_master_pk ?? '' }}"
+                                                    data-l3-name="{{ $row['level3']->employee->name ?? '' }}"
+                                                    data-l3-days="{{ $row['level3']->days_notify ?? '' }}"
+                                                    data-l3-emp="{{ $row['level3']->employee_master_pk ?? '' }}">
+                                                <span class="ic-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span>
+                                                <span class="ic-act__label">View</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
                             @empty
-                            <tr>
-                                <td colspan="6" class="text-center">No categories found. Add mapping to get started.</td>
-                            </tr>
+                                <tr>
+                                    <td colspan="6" class="ic-empty">
+                                        <i class="bi bi-diagram-3 d-block mb-2" aria-hidden="true"></i>
+                                        <h6 class="fw-semibold mb-1">No Mappings Found</h6>
+                                        <p class="mb-0 small">
+                                            {{ filled($search) ? 'No category or employee matches “' . $search . '”.' : 'Add a mapping to get started.' }}
+                                        </p>
+                                    </td>
+                                </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
+
+                {{-- Footer variant B — Laravel paginates this grid (§4) --}}
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
+                    <div class="programme-dt-pagination">
+                        {{ $matrix->links('vendor.pagination.custom') }}
+                    </div>
+                    <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                        <div class="dataTables_length">
+                            <label class="mb-0">Showing
+                                <select id="emPerPage" class="form-select form-select-sm" aria-label="Rows per page">
+                                    @foreach($perPageOptions as $option)
+                                        <option value="{{ $option }}" {{ (int) $perPage === (int) $option ? 'selected' : '' }}>{{ $option }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                        </div>
+                        <div class="dataTables_info">of {{ number_format($matrix->total()) }} items</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- View Mapping Modal -->
+<div class="modal fade" id="viewMatrixModal" tabindex="-1" aria-labelledby="viewMatrixModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content ic-modal border-0 shadow">
+            <div class="modal-header ic-modal-header">
+                <h5 class="modal-title" id="viewMatrixModalLabel">Escalation Mapping</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body ic-modal-body">
+                <div class="ic-field-card">
+                    <div class="ic-facts" style="grid-template-columns:1fr;">
+                        <div>
+                            <span class="ic-fact__label">Complaint Category</span>
+                            <span class="ic-fact__value" id="vm_category">—</span>
+                        </div>
+                        <div>
+                            <span class="ic-fact__label">Level 1 (Escalation Days)</span>
+                            <span class="ic-fact__value" id="vm_level1">—</span>
+                        </div>
+                        <div>
+                            <span class="ic-fact__label">Level 2 (Escalation Days)</span>
+                            <span class="ic-fact__value" id="vm_level2">—</span>
+                        </div>
+                        <div>
+                            <span class="ic-fact__label">Level 3 (Escalation Days)</span>
+                            <span class="ic-fact__value" id="vm_level3">—</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer ic-modal-footer">
+                <button type="button" class="btn ic-btn-cancel" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn ic-btn-submit" id="vm_edit_btn">Edit Mapping</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="emColumnVisibilityModal" tabindex="-1" aria-labelledby="emColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="emColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="escalationColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -99,20 +244,20 @@
 
 <!-- Add Mapping Modal -->
 <div class="modal fade" id="addMatrixModal" tabindex="-1" aria-labelledby="addMatrixModalLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content ic-modal border-0 shadow">
             <form action="{{ route('admin.issue-escalation-matrix.store') }}" method="POST">
                 @csrf
-                <div class="modal-header" style="background:#004a93;">
-                    <h5 class="modal-title text-white" id="addMatrixModalLabel">Add Employee Complaint Mapping</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-header ic-modal-header">
+                    <h5 class="modal-title" id="addMatrixModalLabel">Add Escalation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body ic-modal-body">
                     @include('admin.issue_management.escalation_matrix._form', ['employees' => $employees])
                 </div>
-                <div class="modal-footer gap-2">
-                    <button type="submit" class="btn btn-success">Save</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="modal-footer ic-modal-footer">
+                    <button type="button" class="btn ic-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn ic-btn-submit">Add Escalation</button>
                 </div>
             </form>
         </div>
@@ -121,21 +266,21 @@
 
 <!-- Edit Mapping Modal -->
 <div class="modal fade" id="editMatrixModal" tabindex="-1" aria-labelledby="editMatrixModalLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content ic-modal border-0 shadow">
             <form id="editMatrixForm" method="POST">
                 @csrf
                 @method('PUT')
-                <div class="modal-header" style="background:#004a93;">
-                    <h5 class="modal-title text-white" id="editMatrixModalLabel">Edit Employee Complaint Mapping</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-header ic-modal-header">
+                    <h5 class="modal-title" id="editMatrixModalLabel">Edit Escalation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body ic-modal-body">
                     @include('admin.issue_management.escalation_matrix._form', ['employees' => $employees, 'isEdit' => true])
                 </div>
-                <div class="modal-footer gap-2">
-                    <button type="submit" class="btn btn-success">Update</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="modal-footer ic-modal-footer">
+                    <button type="button" class="btn ic-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn ic-btn-submit">Update Escalation</button>
                 </div>
             </form>
         </div>
@@ -146,7 +291,9 @@
 @section('scripts')
 <script>
 (function() {
+    // Single copy for the whole page — editMatrix() used to embed a second one.
     var escalationEmployees = @json($employees);
+    window.escalationEmployees = escalationEmployees;
 
     function optionHtml(emp) {
         return '<option value="' + emp.employee_pk + '">' + (emp.employee_name || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</option>';
@@ -256,7 +403,7 @@ function editMatrix(categoryId, categoryName, emp1, days1, emp2, days2, emp3, da
 
     document.getElementById('editMatrixForm').action = "{{ url('admin/issue-escalation-matrix') }}/" + categoryId;
 
-    var escalationEmployees = @json($employees);
+    var escalationEmployees = window.escalationEmployees || [];
     function opt(emp) { return '<option value="' + emp.employee_pk + '">' + (emp.employee_name || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</option>'; }
     var L1 = document.getElementById('edit_level1_employee');
     var L2 = document.getElementById('edit_level2_employee');
@@ -275,5 +422,201 @@ function editMatrix(categoryId, categoryName, emp1, days1, emp2, days2, emp3, da
 
     new bootstrap.Modal(document.getElementById('editMatrixModal')).show();
 }
+
+/* ── Page chrome: search toggle, per-page, column visibility, View modal ── */
+$(function () {
+    'use strict';
+
+    $('#emPerPage').on('change', function () {
+        var url = new URL(window.location.href);
+        url.searchParams.set('per_page', this.value);
+        url.searchParams.set('page', '1');
+        window.location.href = url.toString();
+    });
+
+    $('#emSearchToggle').on('click', function () {
+        var $wrap = $('#emSearchWrap');
+        $wrap.toggleClass('d-none');
+        if (!$wrap.hasClass('d-none')) { $('#emSearchInput').trigger('focus'); }
+    });
+    $('#emSearchInput').on('search', function () {
+        if (this.value === '') { $('#emSearchWrap').trigger('submit'); }
+    });
+
+    /* Column visibility (plain table → toggle by column index) */
+    var COL_KEY = 'escalationGrid:hiddenColumns:v1';
+    var $table = $('#escalationMatrixTable');
+
+    function hidden() {
+        try { var a = JSON.parse(localStorage.getItem(COL_KEY) || '[]'); return Array.isArray(a) ? a : []; }
+        catch (e) { return []; }
+    }
+    function persist(a) { try { localStorage.setItem(COL_KEY, JSON.stringify(a)); } catch (e) {} }
+    function apply(i, vis) {
+        var n = i + 1;
+        $table.find('thead th:nth-child(' + n + '), tbody td:nth-child(' + n + ')').toggle(vis);
+    }
+
+    var $grid = $('#escalationColumnToggleGrid');
+    if ($grid.length) {
+        var h = hidden();
+        $grid.empty();
+        $table.find('thead th').each(function (i) {
+            var title = $(this).text().replace(/\s+/g, ' ').trim();
+            if (!title) { return; }
+            var vis = h.indexOf(i) === -1;
+            apply(i, vis);
+            var id = 'emcolvis_' + i;
+            var $cb = $('<input type="checkbox" class="form-check-input m-0">').attr('id', id).prop('checked', vis);
+            $cb.on('change', function () {
+                var cols = hidden(), pos = cols.indexOf(i);
+                if (this.checked) { if (pos !== -1) { cols.splice(pos, 1); } }
+                else if (pos === -1) { cols.push(i); }
+                persist(cols);
+                apply(i, this.checked);
+            });
+            $('<div class="col-12 col-sm-6 col-md-4"></div>').append(
+                $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                    .attr('for', id).append($cb).append($('<span></span>').text(title))
+            ).appendTo($grid);
+        });
+    }
+
+    /* View modal — read-only, with a hand-off to the existing edit modal. */
+    var pending = null;
+
+    function levelText(name, days) {
+        if (!name) { return 'Not mapped'; }
+        var d = parseInt(days, 10);
+        return name + ' - ' + (isNaN(d) ? 0 : d) + ' ' + (d === 1 ? 'Day' : 'Days');
+    }
+
+    $(document).on('click', '.em-view-btn', function () {
+        var d = $(this).data();
+        pending = d;
+        $('#vm_category').text(d.category || '—');
+        $('#vm_level1').text(levelText(d.l1Name, d.l1Days));
+        $('#vm_level2').text(levelText(d.l2Name, d.l2Days));
+        $('#vm_level3').text(levelText(d.l3Name, d.l3Days));
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('viewMatrixModal')).show();
+    });
+
+    $('#vm_edit_btn').on('click', function () {
+        if (!pending) { return; }
+        bootstrap.Modal.getInstance(document.getElementById('viewMatrixModal'))?.hide();
+        // Options must exist before editMatrix() assigns values, or the
+        // assignments land on empty selects and are silently dropped.
+        if (typeof window.icFillLevels === 'function') { window.icFillLevels('edit_'); }
+        // Reuse the page's existing edit modal wiring verbatim.
+        editMatrix(
+            pending.categoryId,
+            pending.category,
+            pending.l1Emp === '' ? null : pending.l1Emp,
+            pending.l1Days || 0,
+            pending.l2Emp === '' ? null : pending.l2Emp,
+            pending.l2Days || 0,
+            pending.l3Emp === '' ? null : pending.l3Emp,
+            pending.l3Days || 0
+        );
+    });
+});
+
+/* ── Searchable employee selects (Select2) ──
+   ~1,800 employees: a plain <select> is unusable, so each modal's selects get a
+   type-ahead. Options are injected from the shared `escalationEmployees` array
+   on open rather than server-rendered six times over.
+
+   Select2 must be told when we replace <option>s ourselves: the page's own
+   level-exclusion handlers rewrite L2/L3 innerHTML, and the widget only
+   re-renders its *selection* on `change.select2`. This block is registered
+   after that IIFE, so its change listener runs after the rebuild. */
+$(function () {
+    'use strict';
+    if (typeof $.fn.select2 === 'undefined') { return; }
+
+    var MODALS = ['addMatrixModal', 'editMatrixModal'];
+
+    function employees() { return window.escalationEmployees || []; }
+
+    function optionsHtml(excluded) {
+        var html = '<option value="">Select Employee</option>';
+        employees().forEach(function (emp) {
+            var pk = String(emp.employee_pk);
+            if (excluded.indexOf(pk) !== -1) { return; }
+            var name = String(emp.employee_name || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            html += '<option value="' + pk + '">' + name + '</option>';
+        });
+        return html;
+    }
+
+    /* Fill L1/L2/L3, honouring the "same person can't hold two levels" rule and
+       keeping any value already set (edit prefill runs before this). */
+    window.icFillLevels = fillLevels;
+
+    function fillLevels(prefix) {
+        var ids = [1, 2, 3].map(function (n) { return document.getElementById(prefix + 'level' + n + '_employee'); });
+        var keep = ids.map(function (el) { return el && el.value ? String(el.value) : ''; });
+
+        ids.forEach(function (el, i) {
+            if (!el) { return; }
+            var excluded = keep.filter(function (v, j) { return v !== '' && j !== i; });
+            el.innerHTML = optionsHtml(excluded);
+            if (keep[i]) { el.value = keep[i]; }
+        });
+    }
+
+    function initSelect2(modalId) {
+        var $modal = $('#' + modalId);
+        $modal.find('select').each(function () {
+            var $sel = $(this);
+            if ($sel.data('select2')) { $sel.select2('destroy'); }
+            $sel.select2({
+                width: '100%',
+                placeholder: $sel.find('option').first().text() || 'Select',
+                allowClear: false,
+                // Without this the search box inside a Bootstrap modal cannot be focused.
+                dropdownParent: $modal,
+                minimumResultsForSearch: 10
+            });
+        });
+    }
+
+    function refresh(modalId) {
+        $('#' + modalId).find('select').each(function () {
+            if ($(this).data('select2')) { $(this).trigger('change.select2'); }
+        });
+    }
+
+    MODALS.forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!el) { return; }
+        var prefix = id === 'editMatrixModal' ? 'edit_' : '';
+
+        el.addEventListener('shown.bs.modal', function () {
+            fillLevels(prefix);
+            initSelect2(id);
+        });
+
+        /* Select2 signals a pick with jQuery's .trigger('change'), which does NOT
+           run listeners registered via addEventListener — and the level-exclusion
+           logic above uses exactly those. Re-dispatch a native event (guarded
+           against the re-entry that dispatch itself causes), then re-render. */
+        $('#' + id).on('change', 'select', function () {
+            var el = this;
+            if (el.__icBridging) { return; }
+            el.__icBridging = true;
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            el.__icBridging = false;
+            setTimeout(function () { refresh(id); }, 0);
+        });
+
+        // Drop the widgets on close so the next open rebuilds from current data.
+        el.addEventListener('hidden.bs.modal', function () {
+            $('#' + id).find('select').each(function () {
+                if ($(this).data('select2')) { $(this).select2('destroy'); }
+            });
+        });
+    });
+});
 </script>
 @endsection

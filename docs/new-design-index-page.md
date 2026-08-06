@@ -443,6 +443,59 @@ the **first** card as the template and blank its values — deriving visibility
 afterwards is what stops a clone inheriting the template's hidden state (the bug
 in §9's `.d-flex` note had exactly this shape).
 
+### Long option lists → Select2, and don't server-render them
+
+Select2's **JS is already global** (`footer.blade.php:66`, ~41 views use it); only
+its CSS is per-page by convention:
+
+```blade
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
+```
+
+```js
+$sel.select2({
+    width: '100%',
+    dropdownParent: $modal,        // without this the search box in a modal can't be focused
+    minimumResultsForSearch: 10,   // short lists don't need a search box
+});
+```
+
+**Feed it from one JSON array, not from server-rendered `<option>`s.** Escalation
+Matrix rendered its ~1,800 employees into six selects *and* embedded the list
+twice as JSON: **11,017 `<option>` elements, 1,354 KB per page load**. Rendering
+just a placeholder and filling the selects from a single shared array on
+`shown.bs.modal` took it to **34 options / 375 KB — a 73% cut** with no change
+in behaviour.
+
+### ⚠️ Select2 fires a jQuery event; `addEventListener` never hears it
+
+Select2 signals a pick with `$(el).trigger('change')`. jQuery's `.trigger()`
+runs **jQuery-bound handlers only** — a listener registered with
+`el.addEventListener('change', …)` is never called. On Escalation Matrix that
+silently broke the "same person can't hold two levels" rule: picking a Level 1
+employee no longer removed them from Levels 2 and 3.
+
+Bridge it explicitly, guarding the re-entry the dispatch itself causes:
+
+```js
+$modal.on('change', 'select', function () {
+    if (this.__bridging) { return; }
+    this.__bridging = true;
+    this.dispatchEvent(new Event('change', { bubbles: true }));
+    this.__bridging = false;
+});
+```
+
+Two more Select2 details worth knowing:
+
+- **It re-reads `<option>`s live**, so code that rewrites `innerHTML` still
+  works — but the *rendered selection* only refreshes on
+  `$(el).trigger('change.select2')`. Call it after any rebuild.
+- **Order matters when prefilling.** Assigning `select.value = x` before the
+  options exist is silently dropped. Populate first, then prefill — this is
+  what broke Edit's Level 1 until the filler was called ahead of `editMatrix()`.
+
 ### ⚠️ `required` + an optional extra card = dead end
 
 If the user adds a card and leaves it empty, native validation blocks submit and
@@ -500,6 +553,15 @@ never matches. Anything used by both a modal and a page needs both selectors:
 .ic-modal .ic-btn-submit,
 .ic-page  .ic-btn-submit { … }
 ```
+
+This bites in both directions and has already cost two rounds: the buttons /
+`.ic-field-card` / `.ic-form-label` / `.ic-req` were page-blind, then
+`.ic-facts` / `.ic-fact__label` / `.ic-fact__value` were modal-blind (a
+label-over-value list inside a modal collapsed onto one line, because the modal
+markup lives **outside** the `.container-fluid.ic-page`). When you reuse an
+`ic-*` component in the other context, grep the stylesheet for it first and add
+the missing root — including inside any `@media` override, or the responsive
+collapse silently stops applying.
 
 ### ⚠️ Restyling a JS-heavy form: inventory the hooks first
 

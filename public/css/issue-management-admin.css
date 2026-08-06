@@ -131,6 +131,12 @@
 .ic-page .ic-state--pending     { background: #fef0c7; color: #b54708; }
 .ic-page .ic-state--reopened    { background: #fee4e2; color: #b42318; }
 
+/* ── Escalation levels: "Name - N Days", days tinted by level ── */
+.ic-page .ic-level__days { font-weight: 600; }
+.ic-page .ic-level--1 .ic-level__days { color: #2563eb; }
+.ic-page .ic-level--2 .ic-level__days { color: #b54708; }
+.ic-page .ic-level--3 .ic-level__days { color: #b42318; }
+
 /* ── Tab strip (All Requests / Raised By You / …) ── */
 .ic-page .ic-tabs {
     display: inline-flex;
@@ -280,6 +286,21 @@
 .ic-modal .ic-req,
 .ic-page .ic-req { color: #dc2626; margin-left: 1px; }
 
+/* Section heading inside a modal form ("Level 1", "Level 2", …). */
+.ic-modal .ic-level-heading,
+.ic-page .ic-level-heading {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: #101828;
+    border-bottom: 1px solid #eaecf0;
+    padding-bottom: 0.5rem;
+    margin: 1.25rem 0 0.75rem;
+}
+.ic-modal .ic-level-heading:first-child,
+.ic-page .ic-level-heading:first-child { margin-top: 0; }
+
+.ic-modal .ic-control[readonly] { background-color: #f2f4f7; color: #475467; }
+
 .ic-modal .ic-control {
     background-color: #fff;
     border: 1px solid #e5e7eb;
@@ -403,7 +424,8 @@
 }
 
 /* Label-over-value pairs. */
-.ic-page .ic-facts {
+.ic-page .ic-facts,
+.ic-modal .ic-facts {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1rem 1.5rem;
@@ -417,18 +439,22 @@
     gap: 0.5rem 3.5rem;
 }
 @media (max-width: 991.98px) {
-    .ic-page .ic-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ic-page .ic-facts,
+.ic-modal .ic-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 575.98px) {
-    .ic-page .ic-facts { grid-template-columns: 1fr; }
+    .ic-page .ic-facts,
+.ic-modal .ic-facts { grid-template-columns: 1fr; }
 }
-.ic-page .ic-fact__label {
+.ic-page .ic-fact__label,
+.ic-modal .ic-fact__label {
     display: block;
     font-size: 0.75rem;
     color: #667085;
     margin-bottom: 2px;
 }
-.ic-page .ic-fact__value {
+.ic-page .ic-fact__value,
+.ic-modal .ic-fact__value {
     font-size: 0.875rem;
     font-weight: 600;
     color: #101828;
