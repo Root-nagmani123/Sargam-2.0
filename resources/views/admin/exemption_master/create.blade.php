@@ -71,12 +71,20 @@
     @endif
 
     @php
+        $selectedCourse = $courses->firstWhere('pk', (int) old('course_master_pk', $courseMasterPk));
+
         $cutoffValue = old(
             'apply_cutoff_time',
             $maleRecord?->apply_cutoff_time
                 ? \Carbon\Carbon::parse($maleRecord->apply_cutoff_time)->format('H:i')
-                : '06:00'
+                : (filled($selectedCourse?->pt_start_time)
+                    ? \Carbon\Carbon::parse($selectedCourse->pt_start_time)->format('H:i')
+                    : '')
         );
+
+        $ptEndTimeValue = filled($selectedCourse?->pt_end_time)
+            ? \Carbon\Carbon::parse($selectedCourse->pt_end_time)->format('H:i')
+            : '';
     @endphp
 
     <div class="card border-0 shadow-sm rounded-3">
@@ -85,7 +93,7 @@
                 @csrf
 
                 <div class="row g-4 mb-4">
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-3">
                         <label for="course_master_pk" class="form-label fw-semibold">Select Course <span class="text-danger">*</span></label>
                         <select id="course_master_pk" name="course_master_pk" class="form-select" required
                             @if(($isEditing ?? false) || $courses->isEmpty()) disabled @endif>
@@ -93,6 +101,8 @@
                             @foreach ($courses as $course)
                                 <option value="{{ $course->pk }}"
                                     data-start-date="{{ filled($course->start_year) ? \Carbon\Carbon::parse($course->start_year)->format('Y-m-d') : '' }}"
+                                    data-pt-start-time="{{ filled($course->pt_start_time) ? \Carbon\Carbon::parse($course->pt_start_time)->format('H:i') : '' }}"
+                                    data-pt-end-time="{{ filled($course->pt_end_time) ? \Carbon\Carbon::parse($course->pt_end_time)->format('H:i') : '' }}"
                                     {{ (string) old('course_master_pk', $courseMasterPk) === (string) $course->pk ? 'selected' : '' }}>
                                     {{ $course->course_name }}
                                 </option>
@@ -102,18 +112,25 @@
                             <input type="hidden" name="course_master_pk" value="{{ old('course_master_pk', $courseMasterPk) }}">
                         @endif
                     </div>
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-3">
                         <label for="effective_from" class="form-label fw-semibold">Effective From <span class="text-danger">*</span></label>
                         <input type="date" id="effective_from" name="effective_from" class="form-control" required
                             placeholder="Select the date"
                             value="{{ old('effective_from', $effectiveFrom ? \Carbon\Carbon::parse($effectiveFrom)->format('Y-m-d') : '') }}"
                             @if($isEditing ?? false) readonly @endif>
                     </div>
-                    <div class="col-12 col-md-4">
-                        <label for="apply_cutoff_time" class="form-label fw-semibold">PT Time <span class="text-danger">*</span></label>
+                    <div class="col-12 col-md-3">
+                        <label for="apply_cutoff_time" class="form-label fw-semibold">PT Start Time <span class="text-danger">*</span></label>
                         <input type="time" id="apply_cutoff_time" name="apply_cutoff_time" class="form-control" required
                             placeholder="Select the time"
-                            value="{{ $cutoffValue }}">
+                            value="{{ $cutoffValue }}"
+                            readonly>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label for="pt_end_time_display" class="form-label fw-semibold">PT End Time</label>
+                        <input type="time" id="pt_end_time_display" class="form-control"
+                            value="{{ $ptEndTimeValue }}"
+                            readonly>
                     </div>
                 </div>
 
@@ -182,7 +199,16 @@ $(function () {
         }
     }
 
-    $('#course_master_pk').on('change', setEffectiveFromCourseStart);
+    function setPtTimesFromCourse() {
+        const selected = $('#course_master_pk option:selected');
+        $('#apply_cutoff_time').val(selected.data('ptStartTime') || '');
+        $('#pt_end_time_display').val(selected.data('ptEndTime') || '');
+    }
+
+    $('#course_master_pk').on('change', function () {
+        setEffectiveFromCourseStart();
+        setPtTimesFromCourse();
+    });
 
     if ($('#course_master_pk').val() && !$('#effective_from').val()) {
         setEffectiveFromCourseStart();

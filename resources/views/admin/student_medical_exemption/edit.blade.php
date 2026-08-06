@@ -93,7 +93,10 @@
                         <select name="course_master_pk" id="courseDropdown" class="form-select" required>
                             <option value="">Select Course Name</option>
                             @foreach($courses as $course)
-                            <option value="{{ $course->pk }}" {{ $record->course_master_pk == $course->pk ? 'selected' : '' }}>
+                            <option value="{{ $course->pk }}"
+                                data-pt-start-time="{{ filled($course->pt_start_time) ? \Carbon\Carbon::parse($course->pt_start_time)->format('H:i') : '' }}"
+                                data-pt-end-time="{{ filled($course->pt_end_time) ? \Carbon\Carbon::parse($course->pt_end_time)->format('H:i') : '' }}"
+                                {{ $record->course_master_pk == $course->pk ? 'selected' : '' }}>
                                 {{ $course->couse_short_name ?: $course->course_name }}
                             </option>
                             @endforeach
@@ -149,7 +152,7 @@
                     <div class="col-md-6">
                         <div class="sme-field">
                             <label class="form-label">Medical Case <span class="text-danger">*</span></label>
-                            <select name="opd_category" class="form-select" required>
+                            <select name="opd_category" id="smeMedicalCase" class="form-select" required>
                                 <option value="">Select Category</option>
                                 @foreach($opdOptions as $opt)
                                 <option value="{{ $opt }}" {{ $record->opd_category == $opt ? 'selected' : '' }}>{{ $opt }}</option>
@@ -294,6 +297,18 @@ $(document).ready(function() {
         $.get('{{ route("student.medical.exemption.getStudentsByCourse") }}', { course_id: courseId })
             .done(function(res) { setStudents(res.students, 'Select Officer Trainee'); });
     });
+
+    // Medical Case = PT Exemption -> fill Start/End Time from the selected course's PT window.
+    function applyPtTimesIfExempted() {
+        if ($('#smeMedicalCase').val() !== 'PT Exemption') return;
+        var selected = $('#courseDropdown option:selected');
+        var ptStart = selected.data('ptStartTime') || '';
+        var ptEnd = selected.data('ptEndTime') || '';
+        if (ptStart) { $('#arrivalTime').val(ptStart); }
+        if (ptEnd) { $('#departureTime').val(ptEnd); }
+    }
+    $('#smeMedicalCase').on('change', applyPtTimesIfExempted);
+    $('#courseDropdown').on('change', applyPtTimesIfExempted);
 
     function recalcDays() {
         var a = document.getElementById('arrivalDate');

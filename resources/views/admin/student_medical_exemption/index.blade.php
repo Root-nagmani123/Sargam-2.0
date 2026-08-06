@@ -1316,6 +1316,16 @@ $(document).ready(function() {
                 rebuildModalStudents(res.students, 'Search Student');
             });
         });
+
+        // Medical Case = PT Exemption -> fill Start/End Time from the selected course's PT window.
+        $form.on('change', '#smeMedicalCase, #courseDropdown', function(){
+            if ($form.find('#smeMedicalCase').val() !== 'PT Exemption') return;
+            var selected = $form.find('#courseDropdown option:selected');
+            var ptStart = selected.data('ptStartTime') || '';
+            var ptEnd = selected.data('ptEndTime') || '';
+            if (ptStart) { $form.find('#arrivalTime').val(ptStart); }
+            if (ptEnd) { $form.find('#departureTime').val(ptEnd); }
+        });
     }
 
     function submitModalForm(){
