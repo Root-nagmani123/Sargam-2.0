@@ -7,11 +7,12 @@ built on the Attendance page.
 **Canonical reference:** `resources/views/admin/attendance/index.blade.php`.
 It is not the `employee_idcard` layout and not the old DataTables default chrome.
 
-**Second reference —** `resources/views/admin/issue_management/categories/index.blade.php`
-(+ its sibling `sub_categories/index.blade.php`, same stylesheet) for everything
-Attendance doesn't show: the status badge + row-action stack (§3b), the matching
-Add/Edit modals (§3c), the Laravel-paginated footer with its own
-sort/search/per-page wiring (§4B), and the Download + Print export pair (§1).
+**Second reference —** the Centcom trio
+(`issue_management/{categories,sub_categories,priorities}/index.blade.php`, one
+shared stylesheet) for everything Attendance doesn't show: the status badge +
+row-action stack (§3b), the matching Add/Edit modals (§3c), the Laravel-paginated
+footer with its own sort/search/per-page wiring (§4B), and the Download + Print
+export pair (§1).
 
 This doc covers page *chrome*. The `--ds-*` token and `.ds-*` component layer is
 documented separately in [design.md](design.md); column visibility has its own
@@ -33,10 +34,10 @@ doc, [column-visibility.md](column-visibility.md).
 for the first screen. The moment a sibling needs the same look, extract it —
 copy-pasting the block is how two pages that are supposed to be identical start
 to drift. `public/css/issue-management-admin.css` is the worked example: the
-`ic-*` layer for Manage Categories **and** Manage Sub-Categories, scoped
+`ic-*` layer for Manage Categories, Sub-Categories **and** Priorities, scoped
 `.ic-page` (page root) / `.ic-modal` (modal root) so it can beat Bootstrap
-without `!important` and still can't leak. Both pages then carry only the link
-tag. See §7 for the naming rule.
+without `!important` and still can't leak. All three pages then carry only the
+link tag — the third one cost no CSS at all. See §7 for the naming rule.
 
 Page CSS is cache-busted with:
 
@@ -226,9 +227,15 @@ Yajra pages pass the same class list server-side:
 {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
 ```
 
-`.programme-dt-table` (custom.css:359) gives `#f2f4f7` headers, 16px cell
+`.programme-dt-table` (custom.css:368) gives `#f2f4f7` headers, 16px cell
 padding, a 3%-primary hover row, a muted first column (S. No.) and a wrapping,
 420px-max second column.
+
+> ⚠️ **Only column 2 wraps** (`custom.css:416`). A long-text column anywhere else
+> — a Description in column 3, say — renders as one unbroken line and blows the
+> table out sideways. Give it a wrap class of your own
+> (`.ic-col-wrap { white-space: normal; max-width: 420px }`) rather than widening
+> the global rule.
 
 > **Never hand-roll `dom`/`colVis` options on a Yajra table** — it breaks the
 > init. Use the global UI script plus the column-visibility modal.
@@ -296,10 +303,20 @@ The layout splits status **display** from the **control**:
       setTimeout(function () { window.location.reload(); }, 600);
   });
   ```
-- **Guard Delete against the server's own rule.** If `destroy()` refuses (e.g.
-  "can't delete an active row"), render a muted disabled `<span>` with a `title`
-  saying why, and the real DELETE `<form>` only in the allowed state. A red icon
-  that always fails is worse than a greyed one.
+- **Guard Delete against the server's own rule.** Read `destroy()` and mirror its
+  refusal in the markup: a muted disabled `<span>` with a `title` saying why, and
+  the real DELETE `<form>` only in the allowed state. A red icon that always
+  fails is worse than a greyed one. The rule differs per table — Categories and
+  Sub-Categories block on `status == 1`, Priorities block on *referenced by an
+  issue log*, which needs `withCount('issueLogs')` in the hydration query so the
+  blade can test `issue_logs_count > 0`. Derive the guard from data, never
+  hard-code it: on Priorities all three seeded rows are in use and render
+  disabled, while a freshly created one is immediately deletable.
+- **The switch is not mandatory on tiny lookup tables.** Priorities ships
+  Edit + Delete only, per its design; status is then set from the Edit modal, so
+  put a Status field there or the row becomes impossible to deactivate. If you
+  drop the switch, drop it deliberately — the default remains Edit · switch ·
+  Delete.
 - **The switch caption names the ACTION, not the state** — an Active row reads
   "Deactivate". The state is already shown by the badge one column over, so
   repeating it there is redundant *and* reads as a contradiction.
@@ -569,7 +586,7 @@ Page CSS is namespaced under a page-root class (`.disc-page .disc-tab`,
 | `gm-*` | Group Mapping |
 | `sm-*` | Subject Master / Module |
 | `attendance-*` | Attendance |
-| `ic-*` | Centcom / Issue Management — **all** its index pages (`public/css/issue-management-admin.css`) |
+| `ic-*` | Centcom / Issue Management — **all** its index pages: categories, sub-categories, priorities (`public/css/issue-management-admin.css`) |
 
 Within a prefix, the row-action stack uses BEM-ish element names — `.ic-act` /
 `.ic-act__icon` / `.ic-act__label`, modifiers `--edit` / `--toggle` / `--del`
@@ -606,7 +623,7 @@ still differ (`#issueCategoriesTable` vs `#issueSubCategoriesTable`,
    `sort` / `dir` yourself (§4). Whitelist all three server-side and include them
    in the listing cache key.
 9. Column visibility → [column-visibility.md](column-visibility.md). Add the new
-   grid's **own** ID to the `colvis-item` list in `custom.css:238-275` (§9) —
+   grid's **own** ID to the `colvis-item` list in `custom.css:238-278` (§9) —
    don't reuse a sibling page's grid ID just because the rule already exists.
 10. CSS namespaced under a page root, or the module stylesheet if a sibling page
     shares it ("Where the CSS lives"). Tokens from [design.md](design.md),
@@ -629,7 +646,7 @@ Real traps, not nitpicks:
   vs `#f04438` (`disc-reset`).
 - **Two column-visibility modals** — the `sn-colvis-*` chip grid and the
   `colvis-item` card grid. The latter is styled by a hard-coded **ID list** at
-  `custom.css:238-275`, so a new page must be added there (three separate
+  `custom.css:238-278`, so a new page must be added there (three separate
   selector lists: base, `:hover`, `.form-check-input`).
 - **`.d-flex` beats `jQuery.hide()`.** Bootstrap's display utilities are
   `!important`, so `.hide()` — which writes inline `display:none` — silently does

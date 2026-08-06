@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'CENTCOM Complaints - Sargam | Lal Bahadur')
+@section('title', 'CENTCOM Complaints')
 
 @section('css')
 <style>

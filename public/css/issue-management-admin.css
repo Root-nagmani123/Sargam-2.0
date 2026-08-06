@@ -100,6 +100,13 @@
     white-space: nowrap;
 }
 
+/* .programme-dt-table only wraps its 2nd column (custom.css:413). Put this on any
+   other long-text cell — e.g. a Description that isn't in column 2. */
+.ic-page .programme-dt-table td.ic-col-wrap {
+    white-space: normal;
+    max-width: 420px;
+}
+
 /* ── Sortable headers — same caret language as the DataTables pages ── */
 .ic-page .ic-sort {
     display: inline-flex;

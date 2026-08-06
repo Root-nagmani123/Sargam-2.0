@@ -1493,6 +1493,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
 
     // Priority Management
     Route::get('issue-priorities', [IssuePriorityController::class, 'index'])->name('issue-priorities.index');
+    Route::get('issue-priorities/export/{format?}', [IssuePriorityController::class, 'export'])->name('issue-priorities.export');
     Route::post('issue-priorities', [IssuePriorityController::class, 'store'])->name('issue-priorities.store');
     Route::put('issue-priorities/{id}', [IssuePriorityController::class, 'update'])->name('issue-priorities.update');
     Route::delete('issue-priorities/{id}', [IssuePriorityController::class, 'destroy'])->name('issue-priorities.destroy');
