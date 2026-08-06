@@ -57,6 +57,12 @@ class FcDescriptiveDataReportDataTable extends DataTable
      *
      * Absent parameter (first draw, or a client that does not send it) means "everything".
      *
+     * The column being SORTED is always included, even when hidden. dataTable() registers an
+     * ORDER BY for every field naming its `lk_<key>` lookup alias, and that alias only exists
+     * if the column is selected — so sorting a column and then hiding it (the sort survives the
+     * redraw) produced "Unknown column 'lk_<key>.<label>' in 'order clause'". Selecting one
+     * extra column is cheaper than reproducing Yajra's order resolution here.
+     *
      * @return array<string,array<string,mixed>>
      */
     protected function selectedFields(): array
@@ -70,10 +76,40 @@ class FcDescriptiveDataReportDataTable extends DataTable
             return $this->selected = $this->fields;
         }
 
-        return $this->selected = array_intersect_key(
-            $this->fields,
-            array_flip(array_filter(array_map('trim', explode(',', $cols))))
-        );
+        $keys = array_filter(array_map('trim', explode(',', $cols)));
+
+        foreach ($this->orderedColumnKeys() as $ordered) {
+            $keys[] = $ordered;
+        }
+
+        return $this->selected = array_intersect_key($this->fields, array_flip($keys));
+    }
+
+    /**
+     * Field keys named by the request's ORDER BY, resolved through the DataTables
+     * `order[i][column]` → `columns[n][data|name]` indirection the client actually sends.
+     *
+     * @return list<string>
+     */
+    protected function orderedColumnKeys(): array
+    {
+        $request = request();
+        $columns = (array) $request->input('columns', []);
+        $out = [];
+
+        foreach ((array) $request->input('order', []) as $order) {
+            $index = $order['column'] ?? null;
+            if ($index === null || ! isset($columns[$index])) {
+                continue;
+            }
+
+            $key = (string) ($columns[$index]['data'] ?? $columns[$index]['name'] ?? '');
+            if ($key !== '' && isset($this->fields[$key])) {
+                $out[] = $key;
+            }
+        }
+
+        return $out;
     }
 
     public function query()
@@ -136,6 +172,11 @@ class FcDescriptiveDataReportDataTable extends DataTable
 
         // Yajra's own global search would emit invalid SQL against these aliases; the report's
         // search closure in FcDescriptiveDataQuery is already applied in query().
+        //
+        // DO NOT put predicates in this closure. FcChildHydratingQueryDataTable::prepareCountQuery()
+        // counts off a freshly built scopedBase() + applyFilters(), NOT off $this->query — so any
+        // filtering added here would be invisible to the count and recordsFiltered would silently
+        // report the unfiltered total. Filters belong in query(), where both paths see them.
         $dt->filter(function ($q) {
             // no-op: search is applied in query() via applyFilters()
         }, false);

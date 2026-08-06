@@ -320,7 +320,14 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     Route::get('/descriptive-data/export-pdf',   [DescriptiveDataReportController::class, 'exportPdf'])->name('descriptive-data.export.pdf');
     // CSV streams from a cursor — the no-row-limit path for large courses.
     Route::get('/descriptive-data/export-csv',   [DescriptiveDataReportController::class, 'exportCsv'])->name('descriptive-data.export.csv');
-    Route::get('/descriptive-data/export-photos', [DescriptiveDataReportController::class, 'exportPhotos'])->name('descriptive-data.export.photos');
+    // fc.reg.admin, unlike its siblings: this one endpoint returns EVERY trainee photograph on a
+    // course in a single file. The rest of the report is a screen an admin reads; this is a bulk
+    // PII extract, so it does not inherit the group's auth-only gate. Super Admin passes, as does
+    // anyone holding `bulk_smsemail`; a trainee does not. Widening the gate to the whole report
+    // group is a separate decision — see PR #283 review M-1 / #282 M-3.
+    Route::get('/descriptive-data/export-photos', [DescriptiveDataReportController::class, 'exportPhotos'])
+        ->middleware('fc.reg.admin')
+        ->name('descriptive-data.export.photos');
 
     // Aggregated reports
     Route::get('/by-service',   [ReportController::class, 'byService'])->name('service');

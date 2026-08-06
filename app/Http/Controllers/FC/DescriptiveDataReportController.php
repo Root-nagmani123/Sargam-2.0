@@ -471,8 +471,32 @@ class DescriptiveDataReportController extends Controller
             'Content-Type' => 'application/zip',
         ])->deleteFileAfterSend(true);
 
-        // Surfaced in the headers rather than swallowed: a partial archive that looks complete
-        // is the worst outcome here.
+        // Flashed as well as sent as headers: a browser download shows no headers at all, so an
+        // admin would otherwise receive a short archive with nothing to indicate it. The flash
+        // surfaces on their next page view.
+        $notices = [];
+        if ($truncated) {
+            $notices[] = sprintf(
+                'the %s size limit was reached, so the archive is incomplete',
+                round(self::PHOTO_MAX_BYTES / 1073741824, 1).' GB'
+            );
+        }
+        if ($missing > 0) {
+            $notices[] = $missing.' photo file(s) could not be found on disk and were skipped';
+        }
+        if ($notices !== []) {
+            // 'error', not 'warning': the shared <x-session_message /> component renders only
+            // error / errors / success, and it is used across the whole application — adding a
+            // key there to serve one export is a shared-component change for a local need.
+            // An incomplete archive is worth the error styling anyway.
+            session()->flash('error', sprintf(
+                'Photo archive: %s photo(s) included — %s.',
+                number_format($added),
+                implode('; ', $notices)
+            ));
+        }
+
+        // Kept as headers too, for anything calling this programmatically.
         $response->headers->set('X-Photo-Count', (string) $added);
         if ($missing > 0) {
             $response->headers->set('X-Photo-Missing', (string) $missing);
