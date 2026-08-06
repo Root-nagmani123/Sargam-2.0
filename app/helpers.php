@@ -1494,7 +1494,6 @@ if (!function_exists('notice_feed_base_query')) {
             ->select(
                 'notices_notification.pk',
                 'notices_notification.notice_title',
-                'notices_notification.description',
                 'notices_notification.notice_type',
                 'notices_notification.target_audience',
                 'notices_notification.course_master_pk',
@@ -1532,21 +1531,15 @@ if (!function_exists('get_notice_notification_by_role')) {
         $isStudent      = !empty(array_intersect($roleStudent, $sessionRoles));
 
 
-        $commonNotices = DB::table('notices_notification')
-            ->where('target_audience', 'All')
-            ->where('active_inactive', 1)
-            ->where('expiry_date', '>=', date('Y-m-d'))
-            ->orderBy('display_date', 'desc')
+        $commonNotices = notice_feed_base_query()
+            ->where('notices_notification.target_audience', 'All')
             ->get();
 
         // 🔥 Staff/Faculty Notices
         if ($isStaffFaculty) {
 
-            $data = DB::table('notices_notification')
-                ->where('target_audience', 'like', '%Staff/Faculty%')
-                ->where('active_inactive', 1)
-                ->where('expiry_date', '>=', date('Y-m-d'))
-                ->orderBy('display_date', 'desc')
+            $data = notice_feed_base_query()
+                ->where('notices_notification.target_audience', 'like', '%Staff/Faculty%')
                 ->get();
 
 
@@ -1555,13 +1548,10 @@ if (!function_exists('get_notice_notification_by_role')) {
 
         // 🔥 Student OT Notices
         if ($isStudent) {
-            $roleNotices =  DB::table('notices_notification')
+            $roleNotices = notice_feed_base_query()
                 ->join('student_master_course__map as smcm', 'notices_notification.course_master_pk', '=', 'smcm.course_master_pk')
-                ->where('target_audience', 'like', '%Office trainee%')
-                ->where('notices_notification.active_inactive', 1)
+                ->where('notices_notification.target_audience', 'like', '%Office trainee%')
                 ->where('smcm.student_master_pk', $user->user_id)
-                ->where('expiry_date', '>=', date('Y-m-d'))
-                ->orderBy('display_date', 'desc')
                 ->get();
 
 
