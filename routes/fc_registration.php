@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\FC\{
+    DescriptiveDataReportController,
     FcActivityController,
     FcActivityDepartmentController,
     FcActivityHomeController,
@@ -239,6 +240,28 @@ Route::middleware(['auth'])->prefix('admin/travel')->name('admin.travel.')->grou
 });
 
 // ── Report Routes ─────────────────────────────────────────────
+// Descriptive Data upload passthrough (photo / signature).
+//
+// ─── ACCESS DECISION — reviewed and accepted, 2026-08-06 (PR #282, finding H-01) ───────────
+// This route is registered OUTSIDE the auth group DELIBERATELY. It serves trainee photographs
+// and specimen signatures to anyone holding the link, without a login.
+//
+// Why that is the accepted position, not an oversight:
+//   • It REPLACES links to public files under public/storage, which the web server already
+//     served to anyone who knew the path, with no Laravel auth in the loop. Exposure is
+//     therefore unchanged; the token version is strictly harder to abuse.
+//   • The token is an encrypted stored path, so the URL leaks neither the storage layout nor
+//     the internal user id, cannot be enumerated, and fails closed if tampered with.
+//   • The requirement is that an exported workbook mailed to a colleague keeps working for a
+//     recipient who is not a Sargam user. Gating this route breaks exactly that.
+//
+// Residual risk, accepted: a forwarded export hands the images to whoever receives it.
+// To require a login instead, move this line inside the group below — and expect emailed
+// exports to stop resolving for anyone not signed in.
+// ──────────────────────────────────────────────────────────────────────────────────────────
+Route::get('/admin/reports/descriptive-data/file', [DescriptiveDataReportController::class, 'file'])
+    ->name('admin.reports.descriptive-data.file');
+
 Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->group(function () {
 
     // Main overview table of all registered students
@@ -271,6 +294,16 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     Route::get('/descriptive-roll',                        [ReportController::class, 'firstTwoStepsIndex'])->name('descriptive-roll');
     Route::get('/descriptive-roll/zip',                    [ReportController::class, 'firstTwoStepsZip'])->name('descriptive-roll.zip');
     Route::get('/descriptive-roll/student/{username}/pdf', [ReportController::class, 'firstTwoStepsStudentPdf'])->name('descriptive-roll.student.pdf');
+
+    // Descriptive Data — the Descriptive Roll fields as a filterable table + Excel/PDF export.
+    // Columns are resolved per course from the form definition (FcDescriptiveDataFieldResolver).
+    Route::get('/descriptive-data',              [DescriptiveDataReportController::class, 'index'])->name('descriptive-data');
+    // Column + filter metadata, so switching course rebuilds the table without a page load.
+    Route::get('/descriptive-data/columns',      [DescriptiveDataReportController::class, 'columns'])->name('descriptive-data.columns');
+    Route::get('/descriptive-data/export-excel', [DescriptiveDataReportController::class, 'exportExcel'])->name('descriptive-data.export.excel');
+    Route::get('/descriptive-data/export-pdf',   [DescriptiveDataReportController::class, 'exportPdf'])->name('descriptive-data.export.pdf');
+    // CSV streams from a cursor — the no-row-limit path for large courses.
+    Route::get('/descriptive-data/export-csv',   [DescriptiveDataReportController::class, 'exportCsv'])->name('descriptive-data.export.csv');
 
     // Aggregated reports
     Route::get('/by-service',   [ReportController::class, 'byService'])->name('service');
