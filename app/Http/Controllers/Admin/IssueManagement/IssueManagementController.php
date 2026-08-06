@@ -36,7 +36,47 @@ class IssueManagementController extends Controller
 
     private const CENTCOM_LISTING_CACHE_EPOCH_KEY = 'admin_issue_management_centcom_list_epoch';
 
-    private const INDEX_PER_PAGE = 20;
+    private const INDEX_PER_PAGE = 10;
+
+    /** Page-size choices offered by the Centcom "Showing N of M items" footer select. */
+    private const CENTCOM_PER_PAGE_OPTIONS = [10, 20, 50, 100, 200];
+
+    /**
+     * Sortable Centcom headers → column on issue_log_management.
+     *
+     * Deliberately excludes Category / Priority / Complainant / Nodal Employee:
+     * those live in joined tables and the 65k-row issue_log_management has no
+     * secondary indexes, so ordering by them measured 110-470ms per request.
+     */
+    private const CENTCOM_SORTABLE_COLUMNS = [
+        'id' => 'pk',
+        'date' => 'created_date',
+        'description' => 'description',
+        'status' => 'issue_status',
+    ];
+
+    /**
+     * @return array{key: string, dir: string}
+     */
+    private function centcomResolveSort(Request $request): array
+    {
+        $key = (string) $request->query('sort', 'date');
+        if (! array_key_exists($key, self::CENTCOM_SORTABLE_COLUMNS)) {
+            $key = 'date';
+        }
+        // Newest-first is the useful default for an issue queue.
+        $default = $key === 'date' ? 'desc' : 'asc';
+        $dir = strtolower((string) $request->query('dir', $default)) === 'desc' ? 'desc' : 'asc';
+
+        return ['key' => $key, 'dir' => $dir];
+    }
+
+    private function centcomResolvePerPage(Request $request): int
+    {
+        $perPage = (int) $request->query('per_page', self::INDEX_PER_PAGE);
+
+        return in_array($perPage, self::CENTCOM_PER_PAGE_OPTIONS, true) ? $perPage : self::INDEX_PER_PAGE;
+    }
 
     /**
      * Bump cache epochs for main index and Centcom listing (shared issue mutations).
@@ -137,7 +177,14 @@ class IssueManagementController extends Controller
 
         $applyUserScope($query);
         $applyRaisedBy($query);
-        $query->orderBy('created_date', 'desc');
+
+        // Same restriction as the Centcom queue: only columns on
+        // issue_log_management are sortable (no secondary indexes on 65k rows).
+        $sort = $this->centcomResolveSort($request);
+        $query->orderBy(self::CENTCOM_SORTABLE_COLUMNS[$sort['key']], $sort['dir']);
+        if ($sort['key'] !== 'id') {
+            $query->orderBy('pk', 'desc');   // stable tiebreaker for snapshot pagination
+        }
 
         // Single list: all complaints. Status filter only when user selects from dropdown.
         if ($request->filled('status') && $request->status !== '') {
@@ -154,10 +201,10 @@ class IssueManagementController extends Controller
      *
      * @return array{total: int, ids: array<int, int>}
      */
-    private function issueManagementIndexPageSnapshot(Request $request, int $page): array
+    private function issueManagementIndexPageSnapshot(Request $request, int $page, ?int $perPage = null): array
     {
         $base = $this->issueManagementIndexFilteredQuery($request);
-        $perPage = self::INDEX_PER_PAGE;
+        $perPage = $perPage ?: self::INDEX_PER_PAGE;
         $total = (int) (clone $base)->toBase()->getCountForPagination();
         $ids = [];
         if ($total > 0) {
@@ -207,6 +254,9 @@ class IssueManagementController extends Controller
         }
 
         $page = Paginator::resolveCurrentPage('page');
+        $perPage = $this->centcomResolvePerPage($request);
+        $sort = $this->centcomResolveSort($request);
+
         $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
         $cacheKey = 'admin_issue_management_index:v2:' . md5(json_encode([
             'epoch' => $epoch,
@@ -221,6 +271,8 @@ class IssueManagementController extends Controller
             'date_from' => $request->get('date_from'),
             'date_to' => $request->get('date_to'),
             'page' => $page,
+            'per_page' => $perPage,
+            'sort' => $sort,
         ]));
 
         $snapshot = DataTableRedisCache::remember(
@@ -230,32 +282,108 @@ class IssueManagementController extends Controller
                 'seconds' => 'ISSUE_MANAGEMENT_INDEX_CACHE_SECONDS',
             ],
             'IssueManagementController@index',
-            fn () => $this->issueManagementIndexPageSnapshot($request, $page)
+            fn () => $this->issueManagementIndexPageSnapshot($request, $page, $perPage)
         );
 
         if (! is_array($snapshot) || ! array_key_exists('total', $snapshot) || ! array_key_exists('ids', $snapshot) || ! is_array($snapshot['ids'])) {
-            $snapshot = $this->issueManagementIndexPageSnapshot($request, $page);
+            $snapshot = $this->issueManagementIndexPageSnapshot($request, $page, $perPage);
         }
 
         $total = (int) $snapshot['total'];
         $ids = array_map('intval', $snapshot['ids']);
-        $items = $this->issueManagementHydrateIndexRows($ids);
+        // Lean hydration — this grid renders category/priority/complainant/nodal only.
+        $items = $this->issueManagementHydrateCentcomRows($ids);
 
         $issues = new LengthAwarePaginator(
             $items,
             $total,
-            self::INDEX_PER_PAGE,
+            $perPage,
             $page,
             [
                 'path' => Paginator::resolveCurrentPath(),
                 'pageName' => 'page',
             ]
         );
+        $issues->withQueryString();
 
         $categories = IssueCategoryMaster::active()->get();
         $priorities = IssuePriorityMaster::active()->ordered()->get();
 
-        return view('admin.issue_management.index', compact('issues', 'categories', 'priorities'));
+        $perPageOptions = self::CENTCOM_PER_PAGE_OPTIONS;
+        $sortKey = $sort['key'];
+        $sortDir = $sort['dir'];
+        $search = trim((string) $request->get('search', ''));
+        $raisedBy = $request->get('raised_by') === 'self' ? 'self' : 'all';
+        $hasFilters = filled($search)
+            || $request->filled('category')
+            || $request->filled('priority')
+            || $request->filled('date_from')
+            || $request->filled('date_to')
+            || ($request->has('status') && $request->get('status') !== '');
+
+        return view('admin.issue_management.index', compact(
+            'issues',
+            'categories',
+            'priorities',
+            'perPage',
+            'perPageOptions',
+            'search',
+            'sortKey',
+            'sortDir',
+            'raisedBy',
+            'hasFilters'
+        ));
+    }
+
+    /**
+     * Download / print the All Requests queue (same scope + filters as the grid).
+     */
+    public function indexExport(Request $request, string $format = 'csv')
+    {
+        $format = strtolower($format);
+        abort_unless(in_array($format, ['csv', 'print'], true), 404);
+
+        $rows = $this->issueManagementIndexFilteredQuery($request)
+            ->with(['category', 'priority', 'creator', 'nodal_officer'])
+            ->get();
+
+        $header = ['ID No.', 'Date & Time', 'Category', 'Description', 'Complainant', 'Nodal Employee', 'Priority', 'Status'];
+
+        $line = fn ($row) => [
+            $row->pk,
+            optional($row->created_date)->format('d-m-Y H:i'),
+            $row->category->issue_category ?? '',
+            $row->description,
+            $row->creator->name ?? '',
+            $row->nodal_officer->name ?? '',
+            $row->priority->priority ?? '',
+            $row->status_label,
+        ];
+
+        if ($format === 'print') {
+            return view('admin.issue_management.centcom_export_print', [
+                'header' => $header,
+                'title' => 'All Requests',
+                'rows' => $rows->map($line),
+                'search' => trim((string) $request->get('search', '')),
+                'exportDate' => now()->format('d-m-Y h:i A'),
+            ]);
+        }
+
+        $filename = 'AllRequests_' . now()->format('YmdHis') . '.csv';
+
+        return response()->streamDownload(function () use ($header, $rows, $line) {
+            $handle = fopen('php://output', 'w');
+            // BOM so Excel opens the UTF-8 file with the right encoding.
+            fwrite($handle, "\xEF\xBB\xBF");
+            fputcsv($handle, $header);
+            foreach ($rows as $row) {
+                fputcsv($handle, $line($row));
+            }
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 
     /**
@@ -363,7 +491,16 @@ class IssueManagementController extends Controller
                 ->orWhereIn('assigned_to', $ids);
         });
 
-        $query->orderBy('created_date', 'desc');
+        // Sorting is restricted to columns on issue_log_management itself.
+        // The table carries no secondary indexes (65k+ rows, PRIMARY only), so
+        // ordering by a joined category/priority/employee name costs 100-470ms
+        // per request. Those headers are deliberately not sortable — see
+        // docs/new-design-index-page.md §4B.
+        $sort = $this->centcomResolveSort($request);
+        $query->orderBy(self::CENTCOM_SORTABLE_COLUMNS[$sort['key']], $sort['dir']);
+        if ($sort['key'] !== 'id') {
+            $query->orderBy('pk', 'desc');   // stable tiebreaker for snapshot pagination
+        }
 
         // Search (ID, description, category name, sub-category)
         if ($request->filled('search')) {
@@ -407,12 +544,42 @@ class IssueManagementController extends Controller
     }
 
     /**
+     * Hydrate Centcom rows with ONLY what that grid renders.
+     *
+     * Deliberately not issueManagementHydrateIndexRows(): its eager-load list
+     * also pulls subCategoryMappings / buildingMapping / hostelMapping /
+     * statusHistory / reproducibility for the detail view. Those chains hit
+     * unindexed FK columns and measured ~700ms for a 4-row page here, versus
+     * ~30ms for the four relations the columns actually use.
+     *
+     * @param  array<int, int>  $ids
+     * @return \Illuminate\Support\Collection<int, IssueLogManagement>
+     */
+    private function issueManagementHydrateCentcomRows(array $ids): \Illuminate\Support\Collection
+    {
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        if ($ids === []) {
+            return collect();
+        }
+
+        $byPk = IssueLogManagement::with(['category', 'priority', 'creator', 'nodal_officer'])
+            ->whereIn('pk', $ids)
+            ->get()
+            ->keyBy(fn (IssueLogManagement $m) => (int) $m->pk);
+
+        return collect($ids)
+            ->map(fn (int $id) => $byPk->get($id))
+            ->filter()
+            ->values();
+    }
+
+    /**
      * @return array{total: int, ids: array<int, int>}
      */
-    private function issueManagementCentcomPageSnapshot(Request $request, int $page): array
+    private function issueManagementCentcomPageSnapshot(Request $request, int $page, ?int $perPage = null): array
     {
         $base = $this->issueManagementCentcomFilteredQuery($request);
-        $perPage = self::INDEX_PER_PAGE;
+        $perPage = $perPage ?: self::INDEX_PER_PAGE;
         $total = (int) (clone $base)->toBase()->getCountForPagination();
         $ids = [];
         if ($total > 0) {
@@ -437,6 +604,9 @@ class IssueManagementController extends Controller
         sort($scopedIds);
 
         $page = Paginator::resolveCurrentPage('page');
+        $perPage = $this->centcomResolvePerPage($request);
+        $sort = $this->centcomResolveSort($request);
+
         $epoch = DataTableRedisCache::readListEpoch(self::CENTCOM_LISTING_CACHE_EPOCH_KEY);
         $cacheKey = 'admin_issue_management_centcom:v1:' . md5(json_encode([
             'epoch' => $epoch,
@@ -449,6 +619,8 @@ class IssueManagementController extends Controller
             'date_from' => $request->get('date_from'),
             'date_to' => $request->get('date_to'),
             'page' => $page,
+            'per_page' => $perPage,
+            'sort' => $sort,
         ]));
 
         $snapshot = DataTableRedisCache::remember(
@@ -458,32 +630,106 @@ class IssueManagementController extends Controller
                 'seconds' => 'ISSUE_MANAGEMENT_CENTCOM_CACHE_SECONDS',
             ],
             'IssueManagementController@centcom',
-            fn () => $this->issueManagementCentcomPageSnapshot($request, $page)
+            fn () => $this->issueManagementCentcomPageSnapshot($request, $page, $perPage)
         );
 
         if (! is_array($snapshot) || ! array_key_exists('total', $snapshot) || ! array_key_exists('ids', $snapshot) || ! is_array($snapshot['ids'])) {
-            $snapshot = $this->issueManagementCentcomPageSnapshot($request, $page);
+            $snapshot = $this->issueManagementCentcomPageSnapshot($request, $page, $perPage);
         }
 
         $total = (int) $snapshot['total'];
         $ids = array_map('intval', $snapshot['ids']);
-        $items = $this->issueManagementHydrateIndexRows($ids);
+        $items = $this->issueManagementHydrateCentcomRows($ids);
 
         $issues = new LengthAwarePaginator(
             $items,
             $total,
-            self::INDEX_PER_PAGE,
+            $perPage,
             $page,
             [
                 'path' => Paginator::resolveCurrentPath(),
                 'pageName' => 'page',
             ]
         );
+        $issues->withQueryString();
 
         $categories = IssueCategoryMaster::active()->get();
         $priorities = IssuePriorityMaster::active()->ordered()->get();
 
-        return view('admin.issue_management.centcom', compact('issues', 'categories', 'priorities'));
+        $perPageOptions = self::CENTCOM_PER_PAGE_OPTIONS;
+        $sortKey = $sort['key'];
+        $sortDir = $sort['dir'];
+        $search = trim((string) $request->get('search', ''));
+        $hasFilters = filled($search)
+            || $request->filled('category')
+            || $request->filled('priority')
+            || $request->filled('date_from')
+            || $request->filled('date_to')
+            || ($request->has('status') && $request->get('status') !== '');
+
+        return view('admin.issue_management.centcom', compact(
+            'issues',
+            'categories',
+            'priorities',
+            'perPage',
+            'perPageOptions',
+            'search',
+            'sortKey',
+            'sortDir',
+            'hasFilters'
+        ));
+    }
+
+    /**
+     * Download / print the Centcom queue (same scope + filters as the grid).
+     */
+    public function centcomExport(Request $request, string $format = 'csv')
+    {
+        $format = strtolower($format);
+        abort_unless(in_array($format, ['csv', 'print'], true), 404);
+
+        $rows = $this->issueManagementCentcomFilteredQuery($request)
+            ->with(['category', 'priority', 'creator', 'nodal_officer'])
+            ->get();
+
+        $header = ['ID No.', 'Date & Time', 'Category', 'Description', 'Complainant', 'Nodal Employee', 'Priority', 'Status'];
+
+        // ID No. is the ticket's pk — the same value the grid's first column shows.
+        $line = fn ($row) => [
+            $row->pk,
+            optional($row->created_date)->format('d-m-Y H:i'),
+            $row->category->issue_category ?? '',
+            $row->description,
+            $row->creator->name ?? '',
+            $row->nodal_officer->name ?? '',
+            $row->priority->priority ?? '',
+            $row->status_label,
+        ];
+
+        if ($format === 'print') {
+            return view('admin.issue_management.centcom_export_print', [
+                'header' => $header,
+                'title' => 'Centcom Assign',
+                'rows' => $rows->map($line),
+                'search' => trim((string) $request->get('search', '')),
+                'exportDate' => now()->format('d-m-Y h:i A'),
+            ]);
+        }
+
+        $filename = 'CentcomAssign_' . now()->format('YmdHis') . '.csv';
+
+        return response()->streamDownload(function () use ($header, $rows, $line) {
+            $handle = fopen('php://output', 'w');
+            // BOM so Excel opens the UTF-8 file with the right encoding.
+            fwrite($handle, "\xEF\xBB\xBF");
+            fputcsv($handle, $header);
+            foreach ($rows as $row) {
+                fputcsv($handle, $line($row));
+            }
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 
     /**

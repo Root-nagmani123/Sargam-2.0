@@ -7,9 +7,10 @@ built on the Attendance page.
 **Canonical reference:** `resources/views/admin/attendance/index.blade.php`.
 It is not the `employee_idcard` layout and not the old DataTables default chrome.
 
-**Second reference —** the Centcom trio
-(`issue_management/{categories,sub_categories,priorities}/index.blade.php`, one
-shared stylesheet) for everything Attendance doesn't show: the status badge +
+**Second reference —** the Centcom module
+(`issue_management/{categories,sub_categories,priorities}/index.blade.php` plus
+the `centcom.blade.php` issue queue, one shared stylesheet) for everything
+Attendance doesn't show: the status badge +
 row-action stack (§3b), the matching Add/Edit modals (§3c), the Laravel-paginated
 footer with its own sort/search/per-page wiring (§4B), and the Download + Print
 export pair (§1).
@@ -98,6 +99,20 @@ The status pills and Download button sit **above the card**, not inside it.
 If the page exports more than one format, make Download a dropdown instead
 (`memo_discipline/index.blade.php:202-210` has the Excel + PDF version).
 
+### Scope tabs instead of status pills
+
+Where the "pills" select a **scope** rather than a status, they are links, not
+JS filters — each is a different route/query, so the active one is a server-side
+class (`centcom.blade.php`, `.ic-tabs` / `.ic-tab.is-active`):
+
+```blade
+<nav class="ic-tabs" aria-label="Issue scope">
+    <a href="{{ route('…index') }}" class="ic-tab">All Requests</a>
+    <a href="{{ route('…index', ['raised_by' => 'self']) }}" class="ic-tab">Raised By You</a>
+    <a href="{{ route('…centcom') }}" class="ic-tab is-active" aria-current="page">Assign to you</a>
+</nav>
+```
+
 ### No status pills? Right-align the export row
 
 A grid with nothing to filter by status still keeps the row — just drop the `<ul>`
@@ -124,6 +139,12 @@ apart (`IssueCategoryController@export`, `categories/export_print.blade.php` —
 `<body onload="window.print()">` page branded like the module's `export_pdf`).
 Carry the grid's own `q` / `sort` / `dir` into the export links so the user gets
 what they are looking at, not the unfiltered table.
+
+**Never drop an export the page already had.** All Requests already shipped Excel
+and PDF, so its Download became a dropdown (CSV · Excel · PDF) rather than a
+single button — same chrome, no lost feature. And keep the export's first column
+identical to the grid's: an "ID No." that is the ticket `pk` on screen must not
+become a running 1..n in the CSV, or the two can't be reconciled.
 
 ---
 
@@ -312,6 +333,11 @@ The layout splits status **display** from the **control**:
   blade can test `issue_logs_count > 0`. Derive the guard from data, never
   hard-code it: on Priorities all three seeded rows are in use and render
   disabled, while a freshly created one is immediately deletable.
+- **Workflow states need their own badge, not the Active/Inactive pill.** A
+  multi-state column (Reported / In Progress / Completed / Pending / Reopened)
+  can't be expressed with two `*-subtle` tints. Use `.ic-state` +
+  a `--<state>` modifier per state, mapped from the status constant in the
+  blade, so an unknown value degrades to a default instead of rendering blank.
 - **The switch is not mandatory on tiny lookup tables.** Priorities ships
   Edit + Delete only, per its design; status is then set from the Edit modal, so
   put a Status field there or the row becomes impossible to deactivate. If you
@@ -434,6 +460,73 @@ browser from enforcing them.
 
 ---
 
+## 3d. Detail and full-page form views
+
+The same module often owns a **detail** view and a **full-page form** (Log New
+Issue / Edit). They reuse the modal's language rather than inventing a third:
+`.ic-card` panels, `.ic-field-label` + `.ic-req`, `.ic-btn-cancel` /
+`.ic-btn-submit`. References: `issue_management/show.blade.php` and
+`create.blade.php`.
+
+**Detail = hero + facts grid.** `.ic-hero` carries the record number, two or
+three headline facts and the current state badge; below it `.ic-facts` is a
+4-column grid of `.ic-fact__label` over `.ic-fact__value`. Long-form content
+(Description, Location, Remarks, Attachments, history) each get their own
+`.ic-card`. A `<table>` in a detail view still gets `.programme-dt-table` inside
+a `.programme-dt-panel` so it matches the grids.
+
+Two things that only show up once it renders:
+
+- **The hero's facts row is flex, not grid.** `.ic-facts` uses
+  `grid-template-columns: repeat(auto-fit, …)`, and inside the hero's
+  shrink-to-fit flex child that collapses to a single column — the facts stack
+  and the hero doubles in height. `.ic-facts--hero` overrides to
+  `display:flex; gap:.5rem 3.5rem`.
+- **The state badge goes white on the tinted hero.** A `*-subtle` tint on top of
+  `#e8ecfb` reads as a smudge. `.ic-hero .ic-state` is white with a light border;
+  the colour-coded badges stay in the tables.
+
+**Form = `.ic-form-grid`** — a 3-column grid collapsing to 2 then 1, with
+`.ic-form-grid--full` for anything spanning the row (a conditional sub-panel).
+Footer is `.ic-form-footer`, right-aligned.
+
+### ⚠️ Scope shared components to BOTH roots
+
+`.ic-btn-submit` and friends were first written under `.ic-modal`. Reused on a
+full-page form they silently render as unstyled `<button>`s — the rule simply
+never matches. Anything used by both a modal and a page needs both selectors:
+
+```css
+.ic-modal .ic-btn-submit,
+.ic-page  .ic-btn-submit { … }
+```
+
+### ⚠️ Restyling a JS-heavy form: inventory the hooks first
+
+`create.blade.php` is driven by ~430 lines of jQuery + Choices.js: dependent
+category → sub-category → nodal dropdowns, an escalation-matrix lookup, a
+location-conditional building/floor/room block, a character counter and file
+validation. Before touching the markup, list every selector the script binds:
+
+```sh
+grep -oE "(getElementById\('[^']+'\)|\\\$\('#[^']+'\))" <view> | sort -u
+```
+
+Keep every one of those `id`s, `name`s and hook classes (`choices-select`, and
+the page-root class the Choices CSS is scoped to). Then verify **behaviour**,
+not markup: dependent dropdown populates, conditional block reveals, counter
+updates.
+
+> Testing note: Choices.js **hides the native `<select>` and empties its
+> `options`**, so Playwright's `selectOption` and reading `.options` both fail.
+> Drive the widget (click `.choices`, click `.choices__item--selectable`) — that
+> is also the only path that proves the real user flow works. And fire **native**
+> events (`dispatchEvent`) rather than `jQuery(...).trigger()`: the page may hold
+> a different jQuery instance than `window.jQuery`, in which case `.trigger()`
+> reaches nothing and you will misread working code as broken.
+
+---
+
 ## 4. Footer
 
 Two variants, visually identical.
@@ -507,6 +600,45 @@ $sortUrl = fn (string $key) => request()->fullUrlWithQuery(array_merge($baseQuer
 ```
 
 Only give a caret to columns you actually sort — a running "S. No." isn't one.
+
+### ⚠️ Measure before you make a relation column sortable
+
+Ordering by a joined name needs a `leftJoin`, and on a big table without the
+right index that is not a nice-to-have — it is the page's whole budget. Measured
+on `issue_log_management` (65,739 rows, **PRIMARY key only, no secondary
+indexes**):
+
+| order by | cost |
+|---|---|
+| `pk` | 1 ms |
+| `created_date` | 39 ms |
+| join `issue_category_master` | 110 ms |
+| join `employee_master` ×2 (Complainant + Nodal) | **467 ms** |
+| all 4 joins + pagination count | **~860 ms** |
+
+So the Centcom grid sorts only on its own columns (ID / Date / Description /
+Status) and the four relation headers carry **no caret**. Shipping a caret that
+costs half a second is worse than shipping none. If a relation sort is genuinely
+required, add the index first — don't pay for it on every request.
+
+### ⚠️ Don't reuse the detail page's eager-load list for a grid
+
+A shared `…IndexEagerLoads()` grows to whatever the *heaviest* consumer needs.
+Centcom's hydration originally borrowed one carrying
+`subCategoryMappings.subCategory`, `buildingMapping.building`,
+`hostelMapping.hostelBuilding`, `statusHistory` and `reproducibility` — none of
+which the grid renders. Cost for a **4-row** page: **~700 ms across 18 queries**.
+A dedicated loader with just the four relations the columns use:
+
+```php
+IssueLogManagement::with(['category', 'priority', 'creator', 'nodal_officer'])
+    ->whereIn('pk', $ids)->get()
+```
+
+**~9 ms, 5 queries — a ~70× improvement.** Give a grid its own hydration method
+and list exactly the relations its `<td>`s touch. Then verify both directions:
+zero queries fired while rendering (no N+1) *and* no relation loaded that no
+column reads.
 
 ---
 
@@ -648,6 +780,15 @@ Real traps, not nitpicks:
   `colvis-item` card grid. The latter is styled by a hard-coded **ID list** at
   `custom.css:238-278`, so a new page must be added there (three separate
   selector lists: base, `:hover`, `.form-check-input`).
+- **Client-side DataTable on top of a server-side paginator = only page 1 exists.**
+  The All Requests grid initialised `$('#issueManagementTable').DataTable()` over
+  a `LengthAwarePaginator` and rendered **no `links()` at all**. DataTables then
+  paginated the 20 rows the server had already sliced, so the pager looked
+  healthy while the other 65,719 rows were unreachable. Symptom: the row count in
+  the pager never matches the real total. Either let the server paginate (variant
+  B footer, `data-sargam-dt-ui="false"`) or give DataTables the whole set — never
+  both. Worth grepping for: a `->paginate()`/`LengthAwarePaginator` view with a
+  `.DataTable(` init and no `->links()`.
 - **`.d-flex` beats `jQuery.hide()`.** Bootstrap's display utilities are
   `!important`, so `.hide()` — which writes inline `display:none` — silently does
   nothing on an element carrying `d-flex`. This shipped as a live bug in the

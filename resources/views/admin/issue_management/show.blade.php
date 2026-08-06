@@ -1,327 +1,343 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Issue Details - Sargam | Lal Bahadur')
+@section('title', 'View Issue')
 
-@section('css')
-<style>
-.table {
-    background-color: #cc8989 !important;
-}
-.table thead th {
-    background-color: #f8f9fa;
-    font-weight: 600;
-}
-</style>
-@endsection
-
+@push('styles')
+{{-- Shared Centcom chrome — same file the queues and master grids use. --}}
+<link rel="stylesheet"
+      href="{{ asset('css/issue-management-admin.css') }}?v={{ @filemtime(public_path('css/issue-management-admin.css')) ?: time() }}">
+@endpush
 
 @section('setup_content')
-@if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        {{ session('success') }}
+@php
+    $isNodalOrAssigned = $issue->employee_master_pk == Auth::user()->user_id || $issue->assigned_to == Auth::user()->user_id;
+    $isComplainant = $issue->created_by == Auth::user()->user_id;
+    $isLogger = $issue->issue_logger == Auth::user()->user_id;
+    $isCompleted = (int) $issue->issue_status === 2;
+    $canUpdateStatus = $isNodalOrAssigned || ($isComplainant && $isCompleted) || ($isLogger && $isCompleted);
+    $showReopenOnly = ($isComplainant || $isLogger) && $isCompleted;
+    $canEdit = ($isComplainant || $isLogger) && !$isCompleted;
+
+    $stateClass = [
+        0 => 'ic-state--reported',
+        1 => 'ic-state--in-progress',
+        2 => 'ic-state--completed',
+        3 => 'ic-state--pending',
+        6 => 'ic-state--reopened',
+    ];
+
+    // Location block — mirrors the original resolution order (explicit mapping
+    // first, then the controller's DB fallback) but yields one array to render.
+    $locationLabel = 'Hostel Name';
+    $locationName = 'N/A';
+    $locationFloor = 'N/A';
+    $locationRoom = 'N/A';
+
+    if ($issue->location === 'O' && !empty($locationFallback)) {
+        $locationLabel = 'Building';
+        $locationName = $locationFallback['name'];
+        $locationFloor = $locationFallback['floor'];
+        $locationRoom = $locationFallback['room'];
+    } elseif ($issue->buildingMapping) {
+        $locationLabel = 'Building';
+        $locationName = trim($issue->buildingMapping->building->building_name ?? '') ?: 'N/A';
+        $locationFloor = filled($issue->buildingMapping->floor_name) ? $issue->buildingMapping->floor_name : 'N/A';
+        $locationRoom = filled($issue->buildingMapping->room_name) ? $issue->buildingMapping->room_name : 'N/A';
+    } elseif ($issue->hostelMapping) {
+        $locationLabel = 'Hostel Name';
+        if ($issue->hostelMapping->hostelBuilding) {
+            $locationName = trim($issue->hostelMapping->hostelBuilding->hostel_name ?? $issue->hostelMapping->hostelBuilding->building_name ?? '') ?: 'N/A';
+        } else {
+            $hostelRow = \DB::table('hostel_building_master')->where('pk', $issue->hostelMapping->hostel_building_master_pk)->first();
+            $locationName = $hostelRow ? (trim($hostelRow->hostel_name ?? $hostelRow->building_name ?? '') ?: 'N/A') : 'N/A';
+        }
+        $locationFloor = filled($issue->hostelMapping->floor_name) ? $issue->hostelMapping->floor_name : 'N/A';
+        $locationRoom = filled($issue->hostelMapping->room_name) ? $issue->hostelMapping->room_name : 'N/A';
+    } elseif (!empty($locationFallback)) {
+        $locationLabel = $locationFallback['type'] === 'building'
+            ? 'Building'
+            : ($locationFallback['type'] === 'residential' ? 'Residential' : 'Hostel Name');
+        $locationName = $locationFallback['name'];
+        $locationFloor = $locationFallback['floor'];
+        $locationRoom = $locationFallback['room'];
+    }
+
+    // Attachments — `document` may be a JSON array or a single path; `complaint_img` is JSON.
+    $docPaths = [];
+    $d = $issue->document ?? '';
+    $cimg = $issue->complaint_img ?? '';
+    if (!empty($d)) {
+        $docPaths = str_starts_with(trim($d), '[') ? (json_decode($d, true) ?: []) : [$d];
+    }
+    if (!empty($cimg)) {
+        $decoded = is_string($cimg) ? json_decode($cimg, true) : $cimg;
+        if (is_array($decoded)) {
+            $docPaths = array_merge($docPaths, $decoded);
+        }
+    }
+    $docPaths = array_values(array_filter($docPaths));
+@endphp
+<div class="container-fluid ic-page">
+    <x-breadcrum title="View Issue">
+        <div class="d-flex flex-wrap gap-2">
+            @if($canUpdateStatus)
+                <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
+                        data-bs-toggle="modal" data-bs-target="#updateStatusModal">
+                    @if($showReopenOnly)
+                        <i class="bi bi-arrow-repeat" aria-hidden="true"></i><span>Reopen Issue</span>
+                    @else
+                        <i class="bi bi-arrow-up-circle" aria-hidden="true"></i><span>Update Status</span>
+                    @endif
+                </button>
+                {{-- Deep link from the grid's "Update Status" action. Inside the
+                     $canUpdateStatus gate on purpose: a user who may not update the
+                     issue must not get the modal just by editing the URL. --}}
+                @if(request('action') === 'update-status')
+                <script>
+                    document.addEventListener('DOMContentLoaded', function () {
+                        var el = document.getElementById('updateStatusModal');
+                        if (el && window.bootstrap) {
+                            bootstrap.Modal.getOrCreateInstance(el).show();
+                        }
+                    });
+                </script>
+                @endif
+            @endif
+            @if($canEdit)
+                <a href="{{ route('admin.issue-management.edit', $issue->pk) }}"
+                   class="btn programme-dt-btn-columns border-0 text-primary">
+                    <i class="bi bi-pencil-square" aria-hidden="true"></i><span>Edit Issue</span>
+                </a>
+            @endif
         </div>
-@endif
-@if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        {{ session('error') }}
-        </div>
-@endif
-<div class="container-fluid">
-    <x-breadcrum title="Issue Details" />
-    <div class="datatables">
-        <div class="card" >
-            <div class="card-body">
-                <div class="row mb-2">
-                    <div class="col-6">
-                        <h4 class="mb-0">Issue #{{ $issue->pk }} Details</h4>
-                    </div>
-                    <div class="col-6 text-end">
-                        <a href="{{ route('admin.issue-management.index') }}" class="btn btn-secondary">
-                            <i class="bi bi-arrow-left"></i> Back to List
-                        </a>
-                        @php
-                            $isNodalOrAssigned = $issue->employee_master_pk == Auth::user()->user_id || $issue->assigned_to == Auth::user()->user_id;
-                            $isComplainant = $issue->created_by == Auth::user()->user_id;
-                            $isLogger = $issue->issue_logger == Auth::user()->user_id;
-                            $isCompleted = (int) $issue->issue_status === 2;
-                            $canUpdateStatus = $isNodalOrAssigned || ($isComplainant && $isCompleted) || ($isLogger && $isCompleted);
-                            $showReopenOnly = ($isComplainant || $isLogger) && $isCompleted;
-                            $canEdit = ($isComplainant || $isLogger) && !$isCompleted;
-                        @endphp
-                        @once
-                        @if($canUpdateStatus)
-                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateStatusModal">
-                            @if($showReopenOnly)
-                                <i class="bi bi-arrow-repeat"></i> Reopen Issue
-                            @else
-                                <i class="bi bi-arrow-up-circle"></i> Update Status
-                            @endif
-                        </button>
-                        @endif
-                        @endonce
-                        @if($canEdit)
-                            <a href="{{ route('admin.issue-management.edit', $issue->pk) }}" class="btn btn-info">
-                                <i class="bi bi-pencil"></i> Edit Issue
-                            </a>
-                        @endif
-                    </div>
+    </x-breadcrum>
+
+    <x-session_message />
+
+    {{-- Hero: ticket number + headline facts + current state --}}
+    <div class="ic-hero d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div>
+            <h2 class="ic-hero__id">Issue #{{ $issue->pk }}</h2>
+            <div class="ic-facts ic-facts--hero">
+                <div>
+                    <span class="ic-fact__label">Category</span>
+                    <span class="ic-fact__value">{{ $issue->category->issue_category ?? 'N/A' }}</span>
                 </div>
-                <hr>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <table class="table table-bordered">
-                                <tr>
-                                    <th width="40%">Issue ID</th>
-                                    <td>{{ $issue->pk }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Category</th>
-                                    <td>{{ $issue->category->issue_category ?? 'N/A' }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Sub-Categories</th>
-                                    <td>
-                                        @forelse($issue->subCategoryMappings as $mapping)
-                                            <span class="badge bg-secondary">{{ $mapping->subCategory->issue_sub_category ?? '' }}</span>
-                                        @empty
-                                            N/A
-                                        @endforelse
-                                    </td>
-                                </tr>
-                               
-                              
-                                <tr>
-                                    <th>Status</th>
-                                    <td>
-                                        <span class="badge bg-{{ $issue->issue_status == 2 ? 'success' : ($issue->issue_status == 1 ? 'info' : 'warning') }}">
-                                            {{ $issue->status_label }}
-                                        </span>
-                                    </td>
-                                </tr>
-                                 <tr>
-                                    <th width="40%">Created Date</th>
-                                    <td>{{ $issue->created_date->format('d-m-Y H:i:s') }}</td>
-                                </tr>
-                            </table>
-                        </div>
+                <div>
+                    <span class="ic-fact__label">Created on</span>
+                    <span class="ic-fact__value">{{ optional($issue->created_date)->format('d/m/Y H:i') ?? 'N/A' }}</span>
+                </div>
+            </div>
+        </div>
+        <span class="ic-state {{ $stateClass[(int) $issue->issue_status] ?? 'ic-state--reported' }}">
+            {{ $issue->status_label }}
+        </span>
+    </div>
 
-                        <div class="col-md-6">
-                            <table class="table table-bordered">
-                               
-                                <tr>
-                                    <th>Created By</th>
-                                    <td>{{ $issue->logger->name ?? 'N/A' }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Issue Logger</th>
-                                    <td>{{ $issue->creator->name ?? 'N/A' }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Assigned To</th>
-                                    <td>
-                                        @if($issue->assigned_to)
-                                            @php
-                                                if (is_numeric($issue->assigned_to)) {
-                                                    $assignedEmployee = \DB::table('employee_master')->where('pk', $issue->assigned_to)->first();
-                                                    echo $assignedEmployee ? trim($assignedEmployee->first_name . ' ' . ($assignedEmployee->middle_name ?? '') . ' ' . $assignedEmployee->last_name) : 'N/A';
-                                                } else {
-                                                    echo e($issue->assigned_to);
-                                                }
-                                            @endphp
-                                        @else
-                                            Not Assigned
-                                        @endif
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Assigned Person Contact Number</th>
-                                    <td>{{ $issue->assigned_to_contact ?? 'N/A' }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Nodal Officer</th>
-                                    <td>{{ $issue->nodal_officer->name ?? 'N/A' }}</td>
-                                </tr>
-                                @if($issue->clear_date)
-                                <tr>
-                                    <th>Resolved On</th>
-                                    <td>{{ $issue->clear_date->format('d-m-Y H:i:s') }}</td>
-                                </tr>
-                                @endif
-                            </table>
-                        </div>
-                    </div>
+    {{-- Facts --}}
+    <div class="ic-card">
+        <div class="ic-card__body">
+            <div class="ic-facts">
+                <div>
+                    <span class="ic-fact__label">Issue ID</span>
+                    <span class="ic-fact__value">{{ $issue->pk }}</span>
+                </div>
+                <div>
+                    <span class="ic-fact__label">Category</span>
+                    <span class="ic-fact__value">{{ $issue->category->issue_category ?? 'N/A' }}</span>
+                </div>
+                <div>
+                    <span class="ic-fact__label">Sub-Categories</span>
+                    <span class="ic-fact__value">
+                        @forelse($issue->subCategoryMappings as $mapping)
+                            {{ $mapping->subCategory->issue_sub_category ?? '' }}@if(!$loop->last), @endif
+                        @empty
+                            NA
+                        @endforelse
+                    </span>
+                </div>
+                <div>
+                    <span class="ic-fact__label">Created on</span>
+                    <span class="ic-fact__value">{{ optional($issue->created_date)->format('d/m/Y H:i') ?? 'N/A' }}</span>
+                </div>
+                {{-- created_by is the complainant, issue_logger is whoever filed it.
+                     These two labels used to be mapped to each other's relation. --}}
+                <div>
+                    <span class="ic-fact__label">Created By</span>
+                    <span class="ic-fact__value">{{ $issue->creator->name ?? 'NA' }}</span>
+                </div>
+                <div>
+                    <span class="ic-fact__label">Issue Logger</span>
+                    <span class="ic-fact__value">{{ $issue->logger->name ?? 'NA' }}</span>
+                </div>
+                <div>
+                    <span class="ic-fact__label">Assigned To</span>
+                    <span class="ic-fact__value">
+                        @if($issue->assigned_to)
+                            @php
+                                if (is_numeric($issue->assigned_to)) {
+                                    $assignedEmployee = \DB::table('employee_master')->where('pk', $issue->assigned_to)->first();
+                                    echo $assignedEmployee
+                                        ? e(trim($assignedEmployee->first_name . ' ' . ($assignedEmployee->middle_name ?? '') . ' ' . $assignedEmployee->last_name))
+                                        : 'NA';
+                                } else {
+                                    echo e($issue->assigned_to);
+                                }
+                            @endphp
+                        @else
+                            Not Assigned
+                        @endif
+                    </span>
+                </div>
+                <div>
+                    <span class="ic-fact__label">Assignee Contact</span>
+                    <span class="ic-fact__value">{{ $issue->assigned_to_contact ?? 'NA' }}</span>
+                </div>
+                <div>
+                    <span class="ic-fact__label">Nodal Officer</span>
+                    <span class="ic-fact__value">{{ $issue->nodal_officer->name ?? 'NA' }}</span>
+                </div>
+                @if($issue->clear_date)
+                <div>
+                    <span class="ic-fact__label">Resolved On</span>
+                    <span class="ic-fact__value">{{ $issue->clear_date->format('d/m/Y H:i') }}</span>
+                </div>
+                @endif
+            </div>
+        </div>
+    </div>
 
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <h5>Description</h5>
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    {{ $issue->description }}
-                                </div>
-                            </div>
+    {{-- Description + Location, side by side --}}
+    <div class="row g-3 mt-0">
+        <div class="col-12 col-lg-6">
+            <div class="ic-card h-100" style="margin-top:0;">
+                <div class="ic-card__body">
+                    <h3 class="ic-card__title">Description</h3>
+                    <p class="mb-0" style="font-size:0.875rem; color:#475467;">{{ $issue->description ?: 'N/A' }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="ic-card h-100" style="margin-top:0;">
+                <div class="ic-card__body">
+                    <h3 class="ic-card__title">Location Details</h3>
+                    <div class="ic-facts" style="grid-template-columns:repeat(2,minmax(0,1fr));">
+                        <div>
+                            <span class="ic-fact__label">{{ $locationLabel }}</span>
+                            <span class="ic-fact__value">{{ $locationName }}</span>
                         </div>
-                    </div>
-
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <h5>Location Details</h5>
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    @if($issue->location === 'O' && !empty($locationFallback))
-                                        <strong>Building:</strong> {{ $locationFallback['name'] }}<br>
-                                        <strong>Floor:</strong> {{ $locationFallback['floor'] }}<br>
-                                        <strong>Room:</strong> {{ $locationFallback['room'] }}<br>
-                                    @elseif($issue->buildingMapping)
-                                        @php
-                                            $bldgName = $issue->buildingMapping->building->building_name ?? '';
-                                            $bldgFloor = $issue->buildingMapping->floor_name ?? '';
-                                            $bldgRoom = $issue->buildingMapping->room_name ?? '';
-                                        @endphp
-                                        <strong>Building:</strong> {{ trim($bldgName) ?: 'N/A' }}<br>
-                                        <strong>Floor:</strong> {{ ($bldgFloor !== null && $bldgFloor !== '') ? $bldgFloor : 'N/A' }}<br>
-                                        <strong>Room:</strong> {{ ($bldgRoom !== null && $bldgRoom !== '') ? $bldgRoom : 'N/A' }}<br>
-                                    @elseif($issue->hostelMapping)
-                                        @php
-                                            $hostelName = 'N/A';
-                                            if ($issue->hostelMapping->hostelBuilding) {
-                                                $hostelName = trim($issue->hostelMapping->hostelBuilding->hostel_name ?? $issue->hostelMapping->hostelBuilding->building_name ?? '') ?: 'N/A';
-                                            } else {
-                                                $hostelRow = \DB::table('hostel_building_master')->where('pk', $issue->hostelMapping->hostel_building_master_pk)->first();
-                                                $hostelName = $hostelRow ? (trim($hostelRow->hostel_name ?? $hostelRow->building_name ?? '') ?: 'N/A') : 'N/A';
-                                            }
-                                            $hostelFloor = ($issue->hostelMapping->floor_name !== null && $issue->hostelMapping->floor_name !== '') ? $issue->hostelMapping->floor_name : 'N/A';
-                                            $hostelRoom = ($issue->hostelMapping->room_name !== null && $issue->hostelMapping->room_name !== '') ? $issue->hostelMapping->room_name : 'N/A';
-                                        @endphp
-                                        <strong>Hostel:</strong> {{ $hostelName }}<br>
-                                        <strong>Floor:</strong> {{ $hostelFloor }}<br>
-                                        <strong>Room:</strong> {{ $hostelRoom }}<br>
-                                    @elseif(!empty($locationFallback))
-                                        <strong>{{ $locationFallback['type'] === 'building' ? 'Building' : ($locationFallback['type'] === 'residential' ? 'Residential' : 'Hostel') }}:</strong> {{ $locationFallback['name'] }}<br>
-                                        <strong>Floor:</strong> {{ $locationFallback['floor'] }}<br>
-                                        <strong>Room:</strong> {{ $locationFallback['room'] }}<br>
-                                    @else
-                                        <strong>Hostel:</strong> N/A<br>
-                                        <strong>Floor:</strong> N/A<br>
-                                        <strong>Room:</strong> N/A<br>
-                                    @endif
-                                    <strong>Additional Location:</strong> {{ trim($issue->location ?? '') ?: 'N/A' }}
-                                </div>
-                            </div>
+                        <div>
+                            <span class="ic-fact__label">Floor</span>
+                            <span class="ic-fact__value">{{ $locationFloor }}</span>
                         </div>
-                    </div>
-
-                    @if($issue->remark)
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <h5>Remarks</h5>
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    {{ $issue->remark }}
-                                </div>
-                            </div>
+                        <div>
+                            <span class="ic-fact__label">Room</span>
+                            <span class="ic-fact__value">{{ $locationRoom }}</span>
                         </div>
-                    </div>
-                    @endif
-
-                    @if($issue->feedback)
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <h5>Feedback</h5>
-                            <div class="card bg-success text-white">
-                                <div class="card-body">
-                                    {{ $issue->feedback }}
-                                </div>
-                            </div>
+                        <div>
+                            <span class="ic-fact__label">Additional Location</span>
+                            <span class="ic-fact__value">{{ trim($issue->location ?? '') ?: 'NA' }}</span>
                         </div>
-                    </div>
-                    @endif
-
-                    @php
-                        $docPaths = [];
-                        $d = $issue->document ?? '';
-                        $cimg = $issue->complaint_img ?? '';
-                        if (!empty($d)) {
-                            if (str_starts_with(trim($d), '[')) {
-                                $docPaths = json_decode($d, true) ?: [];
-                            } else {
-                                $docPaths = [$d];
-                            }
-                        }
-                        if (!empty($cimg)) {
-                            $decoded = is_string($cimg) ? json_decode($cimg, true) : $cimg;
-                            if (is_array($decoded)) {
-                                $docPaths = array_merge($docPaths, $decoded);
-                            }
-                        }
-                        $docPaths = array_values(array_filter($docPaths));
-                    @endphp
-                    @if(count($docPaths) > 0)
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <h5>Attachments</h5>
-                            <div class="d-flex flex-wrap gap-3 align-items-start">
-                                @foreach($docPaths as $path)
-                                @php
-                                    $url = (str_starts_with(trim($path), 'http://') || str_starts_with(trim($path), 'https://')) 
-                                        ? $path 
-                                        : asset('storage/' . ltrim($path, '/'));
-                                @endphp
-                                <div class="d-inline-block">
-                                    <a href="{{ $url }}" target="_blank" class="d-block text-decoration-none">
-                                        <img src="{{ $url }}" alt="Attachment" class="img-thumbnail" style="max-height: 120px; max-width: 180px; object-fit: cover;">
-                                    </a>
-                                    <small class="d-block text-muted text-center mt-1">Image</small>
-                                </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    </div>
-                    @endif
-
-                    @if($issue->statusHistory->count() > 0)
-                    <div class="row mt-4">
-                        <div class="col-12">
-                            <h5>Status History</h5>
-                            <div class="table-responsive">
-                                <table class="table table-bordered">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Date & Time</th>
-                                            <th>Status</th>
-                                            <th>Updated By</th>
-                                            <th>Remarks</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($issue->statusHistory as $history)
-                                        @php
-                                            $statusUpdatedBy = \App\Models\EmployeeMaster::findByIdOrPkOld($history->created_by);
-                                        @endphp
-                                        <tr>
-                                            <td>{{ $history->issue_date->format('d-m-Y H:i:s') }}</td>
-                                            <td>
-                                                <span class="badge bg-{{ $history->issue_status == 2 ? 'success' : ($history->issue_status == 1 ? 'info' : 'warning') }}">
-                                                    {{ $history->status_label }}
-                                                </span>
-                                            </td>
-                                            <td>{{ $statusUpdatedBy?->name ?? 'System' }}</td>
-                                            <td>{{ $history->remarks ?? '-' }}</td>
-                                        </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    @endif
-
-                    <div class="mt-4">
-                        <a href="{{ route('admin.issue-management.index') }}" class="btn btn-secondary">Back to List</a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    @if($issue->remark)
+    <div class="ic-card">
+        <div class="ic-card__body">
+            <h3 class="ic-card__title">Remarks</h3>
+            <p class="mb-0" style="font-size:0.875rem; color:#475467;">{{ $issue->remark }}</p>
+        </div>
+    </div>
+    @endif
+
+    @if($issue->feedback)
+    <div class="ic-card">
+        <div class="ic-card__body">
+            <h3 class="ic-card__title">Feedback</h3>
+            <p class="mb-0" style="font-size:0.875rem; color:#475467;">{{ $issue->feedback }}</p>
+        </div>
+    </div>
+    @endif
+
+    @if(count($docPaths) > 0)
+    <div class="ic-card">
+        <div class="ic-card__body">
+            <h3 class="ic-card__title">Attachments</h3>
+            <div class="d-flex flex-wrap gap-3 align-items-start">
+                @foreach($docPaths as $path)
+                    @php
+                        $url = (str_starts_with(trim($path), 'http://') || str_starts_with(trim($path), 'https://'))
+                            ? $path
+                            : asset('storage/' . ltrim($path, '/'));
+                    @endphp
+                    <a href="{{ $url }}" target="_blank" rel="noopener" class="d-block text-decoration-none">
+                        <img src="{{ $url }}" alt="Attachment" class="rounded-3 border"
+                             style="max-height: 120px; max-width: 180px; object-fit: cover;">
+                    </a>
+                @endforeach
+            </div>
+        </div>
+    </div>
+    @endif
+
+    @if($issue->statusHistory->count() > 0)
+    <div class="ic-card" style="margin-top: 1rem;">
+        <div class="ic-card__body">
+            <h3 class="ic-card__title">Status History</h3>
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    {{-- Sorted in the browser: the whole history is already on the page
+                         (a handful of rows), so there is nothing to fetch. --}}
+                    <table id="icHistoryTable" data-sargam-dt-ui="false"
+                           class="table table-hover align-middle mb-0 w-100 programme-dt-table ic-history-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">
+                                    <button type="button" class="ic-sort ic-sort-btn" data-sort-index="0" data-sort-type="date">
+                                        Date &amp; Time <i class="bi bi-arrow-down-up" aria-hidden="true"></i>
+                                    </button>
+                                </th>
+                                <th scope="col" class="ic-th-center">Status</th>
+                                <th scope="col">
+                                    <button type="button" class="ic-sort ic-sort-btn" data-sort-index="2" data-sort-type="text">
+                                        Updated By <i class="bi bi-arrow-down-up" aria-hidden="true"></i>
+                                    </button>
+                                </th>
+                                <th scope="col">
+                                    <button type="button" class="ic-sort ic-sort-btn" data-sort-index="3" data-sort-type="text">
+                                        Remarks <i class="bi bi-arrow-down-up" aria-hidden="true"></i>
+                                    </button>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($issue->statusHistory as $history)
+                                @php
+                                    $statusUpdatedBy = \App\Models\EmployeeMaster::findByIdOrPkOld($history->created_by);
+                                @endphp
+                                <tr>
+                                    <td data-sort-value="{{ optional($history->issue_date)->format('Y-m-d H:i:s') }}">
+                                        {{ optional($history->issue_date)->format('d/m/Y H:i') ?? '—' }}
+                                    </td>
+                                    <td class="ic-td-center">
+                                        <span class="ic-state {{ $stateClass[(int) $history->issue_status] ?? 'ic-state--reported' }}">
+                                            {{ $history->status_label }}
+                                        </span>
+                                    </td>
+                                    <td>{{ $statusUpdatedBy?->name ?? 'System' }}</td>
+                                    <td class="ic-col-wrap">{{ $history->remarks ?: '—' }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 </div>
 
 <!-- Update Status Modal -->
@@ -570,6 +586,39 @@ $(document).ready(function() {
             $('#assigned_to_hidden').val('');
             $('#assigned_to_contact_hidden').val(otherPhone);
         }
+    });
+});
+
+/* ── Status History: client-side sort ──
+   The whole history is already rendered, so sorting is a DOM reorder. Dates use
+   the ISO value in data-sort-value; text falls back to the cell's own text. */
+$(function () {
+    var $table = $('#icHistoryTable');
+    if (!$table.length) { return; }
+
+    $table.on('click', '.ic-sort-btn', function () {
+        var $btn = $(this);
+        var idx = parseInt($btn.data('sort-index'), 10);
+        // Flip only when THIS column is already sorted ascending; a fresh column
+        // starts ascending. (Reading a class that is cleared further down would
+        // make every click sort ascending again.)
+        var asc = !$btn.hasClass('is-asc');
+
+        var rows = $table.find('tbody tr').get();
+        rows.sort(function (a, b) {
+            var av = $(a).children().eq(idx);
+            var bv = $(b).children().eq(idx);
+            var x = (av.attr('data-sort-value') || av.text()).trim().toLowerCase();
+            var y = (bv.attr('data-sort-value') || bv.text()).trim().toLowerCase();
+            if (x === y) { return 0; }
+            return (x < y ? -1 : 1) * (asc ? 1 : -1);
+        });
+        $table.children('tbody').append(rows);
+
+        $table.find('.ic-sort-btn').removeClass('is-active is-asc')
+              .find('i').attr('class', 'bi bi-arrow-down-up');
+        $btn.addClass('is-active').toggleClass('is-asc', asc)
+            .find('i').attr('class', asc ? 'bi bi-caret-up-fill' : 'bi bi-caret-down-fill');
     });
 });
 </script>

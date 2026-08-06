@@ -244,7 +244,9 @@ body.custom-loaded {
 #estateBillReportColumnGrid .colvis-item,
 #issueCatColumnToggleGrid .colvis-item,
 #issueSubCatColumnToggleGrid .colvis-item,
-#issuePriorityColumnToggleGrid .colvis-item {
+#issuePriorityColumnToggleGrid .colvis-item,
+#centcomColumnToggleGrid .colvis-item,
+#issueMgmtColumnToggleGrid .colvis-item {
     cursor: pointer;
     transition: border-color 0.15s ease, background-color 0.15s ease;
 }
@@ -258,7 +260,9 @@ body.custom-loaded {
 #estateBillReportColumnGrid .colvis-item:hover,
 #issueCatColumnToggleGrid .colvis-item:hover,
 #issueSubCatColumnToggleGrid .colvis-item:hover,
-#issuePriorityColumnToggleGrid .colvis-item:hover {
+#issuePriorityColumnToggleGrid .colvis-item:hover,
+#centcomColumnToggleGrid .colvis-item:hover,
+#issueMgmtColumnToggleGrid .colvis-item:hover {
     border-color: #004a93 !important;
     background-color: rgba(0, 74, 147, 0.04);
 }
@@ -272,7 +276,9 @@ body.custom-loaded {
 #estateBillReportColumnGrid .colvis-item .form-check-input,
 #issueCatColumnToggleGrid .colvis-item .form-check-input,
 #issueSubCatColumnToggleGrid .colvis-item .form-check-input,
-#issuePriorityColumnToggleGrid .colvis-item .form-check-input {
+#issuePriorityColumnToggleGrid .colvis-item .form-check-input,
+#centcomColumnToggleGrid .colvis-item .form-check-input,
+#issueMgmtColumnToggleGrid .colvis-item .form-check-input {
     cursor: pointer;
     flex-shrink: 0;
 }

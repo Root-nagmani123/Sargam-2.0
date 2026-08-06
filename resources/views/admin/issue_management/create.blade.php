@@ -1,210 +1,185 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Log New Issue - Sargam | Lal Bahadur')
+@section('title', 'Log New Issue')
 
-@section('content')
-<div class="container-fluid py-4 issue-log-choices">
+@section('setup_content')
+{{-- `issue-log-choices` stays: the Choices.js overrides in @push('styles') below
+     are scoped to it. `ic-page` adds the shared Centcom chrome. --}}
+<div class="container-fluid ic-page issue-log-choices">
     <x-breadcrum title="Log New Issue" />
-   @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
-    <strong>Success - </strong> {{ session('success') }}
-    </div>
-   @endif
-   @if(session('error'))
+
+    <x-session_message />
+
+    @if($errors->any())
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
-    <strong>Error - </strong> {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <strong>Validation Error —</strong>
+        <ul class="mb-0 mt-1">
+            @foreach($errors->all() as $message)
+                <li>{{ $message }}</li>
+            @endforeach
+        </ul>
     </div>
-   @endif
-   @if($errors->any())
-   <div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
-    <strong>Validation Error - </strong>
-    <ul class="mb-0 mt-1">
-        @foreach($errors->all() as $message)
-        <li>{{ $message }}</li>
-        @endforeach
-    </ul>
-   </div>
-   @endif
+    @endif
 
-    <div class="datatables">
-        <div class="card shadow-sm border-0 border-start border-4 border-primary rounded-3 overflow-hidden">
-            <div class="card-body p-4 p-md-5">
-                <form action="{{ route('admin.issue-management.store') }}" method="POST" enctype="multipart/form-data">
-                    @csrf
+    <div class="ic-card">
+        <div class="ic-card__body p-3 p-md-4">
+            <form action="{{ route('admin.issue-management.store') }}" method="POST" enctype="multipart/form-data">
+                @csrf
 
-                    <div class="row g-3 g-md-4">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold text-body-secondary">Complaint Category <span class="text-danger">*</span></label>
-                            <select name="issue_category_id" id="issue_category" class="form-select choices-select" required>
-                                <option value="">— Select category —</option>
-                                @foreach($categories as $category)
-                                    <option value="{{ $category->pk }}" {{ old('issue_category_id') == $category->pk ? 'selected' : '' }}>{{ $category->issue_category }}</option>
+                <div class="ic-form-grid">
+                    <div>
+                        <label for="issue_category" class="ic-field-label">Complaint Category<span class="ic-req">*</span></label>
+                        <select name="issue_category_id" id="issue_category" class="form-select ic-input choices-select" required>
+                            <option value="">Select Category</option>
+                            @foreach($categories as $category)
+                                <option value="{{ $category->pk }}" {{ old('issue_category_id') == $category->pk ? 'selected' : '' }}>{{ $category->issue_category }}</option>
+                            @endforeach
+                        </select>
+                        @error('issue_category_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+
+                    <div>
+                        <label for="sub_categories" class="ic-field-label">Complaint Sub-Category<span class="ic-req">*</span></label>
+                        <select name="issue_sub_category_id" id="sub_categories" class="form-select ic-input choices-select" required>
+                            <option value="">Select Sub-Category</option>
+                        </select>
+                        @error('issue_sub_category_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+
+                    <div>
+                        <label for="issue_priority" class="ic-field-label">Priority<span class="ic-req">*</span></label>
+                        <select name="issue_priority_id" id="issue_priority" class="form-select ic-input choices-select" required>
+                            <option value="">Select Priority</option>
+                            @foreach($priorities as $priority)
+                                <option value="{{ $priority->pk }}" {{ old('issue_priority_id') == $priority->pk ? 'selected' : '' }}>{{ $priority->priority }}</option>
+                            @endforeach
+                        </select>
+                        @error('issue_priority_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+
+                    <div>
+                        <label for="complainant" class="ic-field-label">Complainant<span class="ic-req">*</span></label>
+                        <select name="created_by" id="complainant" class="form-select ic-input choices-select" required>
+                            <option value="">Select Complainant</option>
+                            @if(isset($employees))
+                                @foreach($employees as $employee)
+                                    <option value="{{ $employee->employee_pk }}" data-mobile="{{ $employee->mobile }}" {{ (old('created_by', isset($currentUserEmployeeId) ? $currentUserEmployeeId : null) == $employee->employee_pk) ? 'selected' : '' }}>{{ $employee->employee_name }}</option>
                                 @endforeach
-                            </select>
-                            @error('issue_category_id')
-                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold text-body-secondary">Complaint Sub-Category <span class="text-danger">*</span></label>
-                            <select name="issue_sub_category_id" id="sub_categories" class="form-select choices-select" required>
-                                <option value="">— Select sub-category —</option>
-                            </select>
-                            @error('issue_sub_category_id')
-                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                            @enderror
-                        </div>
+                            @endif
+                        </select>
+                        <div class="form-text text-muted">Type to search when logging on behalf of others.</div>
+                        @error('created_by')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
-                    <div class="row g-3 g-md-4 mt-0">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold text-body-secondary">Priority <span class="text-danger">*</span></label>
-                            <select name="issue_priority_id" id="issue_priority" class="form-select choices-select" required>
-                                <option value="">— Select priority —</option>
-                                @foreach($priorities as $priority)
-                                    <option value="{{ $priority->pk }}" {{ old('issue_priority_id') == $priority->pk ? 'selected' : '' }}>{{ $priority->priority }}</option>
-                                @endforeach
-                            </select>
-                            @error('issue_priority_id')
-                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                            @enderror
-                        </div>
+                    <div>
+                        <label for="mobile_number" class="ic-field-label">Mobile Number</label>
+                        <input type="text" class="form-control ic-input" placeholder="Auto-filled" readonly
+                               id="mobile_number" name="mobile_number" aria-readonly="true">
                     </div>
 
-                    <hr class="my-4">
-
-                    <div class="row g-3 g-md-4">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold text-body-secondary">Complainant <span class="text-danger">*</span></label>
-                            <select name="created_by" id="complainant" class="form-select choices-select" required>
-                                <option value="">Search complainant by name...</option>
-                                @if(isset($employees))
-                                    @foreach($employees as $employee)
-                                        <option value="{{ $employee->employee_pk }}" data-mobile="{{ $employee->mobile }}" {{ (old('created_by', isset($currentUserEmployeeId) ? $currentUserEmployeeId : null) == $employee->employee_pk) ? 'selected' : '' }}>{{ $employee->employee_name }}</option>
-                                    @endforeach
-                                @endif
-                            </select>
-                            <div class="form-text text-muted">Type to search when creating issue on behalf of others.</div>
-                            @error('created_by')
-                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold text-body-secondary">Mobile Number</label>
-                            <input type="text" class="form-control bg-light" placeholder="Auto-filled" readonly id="mobile_number" name="mobile_number" aria-readonly="true">
-                        </div>
+                    <div>
+                        <label for="nodal_employee" class="ic-field-label">Nodal Employee (Level I)<span class="ic-req">*</span></label>
+                        <select name="nodal_employee_id" id="nodal_employee" class="form-select ic-input choices-select" required>
+                            <option value="">Select Category first</option>
+                        </select>
+                        <div class="form-text text-muted">Auto-selected from the escalation matrix.</div>
+                        @error('nodal_employee_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
-                    <div class="row g-3 g-md-4 mt-0">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold text-body-secondary">Nodal Employee (Level 1) <span class="text-danger">*</span></label>
-                            <select name="nodal_employee_id" id="nodal_employee" class="form-select choices-select" required>
-                                <option value="">— Select category first —</option>
-                            </select>
-                            <div class="form-text text-muted">Auto-selected from escalation matrix.</div>
-                            @error('nodal_employee_id')
-                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <input type="hidden" name="sub_category_name" id="sub_category_name" required value="{{ old('sub_category_name') }}">
-                    </div>
-
-                    <div id="escalation_levels_display" class="mb-0 d-none">
-                        <label class="form-label fw-semibold text-body-secondary">Escalation Hierarchy (read-only)</label>
-                        <div class="card bg-body-secondary border-0 rounded-3">
-                            <div class="card-body py-3 px-4 small">
-                                <div class="mb-1"><strong>Level 2:</strong> <span id="level2_display">—</span></div>
-                                <div><strong>Level 3:</strong> <span id="level3_display">—</span></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr class="my-4">
-
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold text-body-secondary">Detail Description <span class="text-danger">*</span></label>
-                        <textarea name="description" id="description" class="form-control" rows="5" maxlength="1000" placeholder="Enter detailed description of the issue…" required>{{ old('description') }}</textarea>
+                    <div>
+                        <label for="description" class="ic-field-label">Description<span class="ic-req">*</span></label>
+                        <textarea name="description" id="description" class="form-control ic-input" rows="3"
+                                  maxlength="1000" placeholder="e.g. Lorem Ipsum dolor sit amet" required>{{ old('description') }}</textarea>
                         <div class="form-text text-muted"><span id="char-count">0</span>/1000 characters</div>
-                        @error('description')
-                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                        @enderror
+                        @error('description')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold text-body-secondary d-block">Location <span class="text-danger">*</span></label>
-                        <div class="d-flex flex-wrap gap-3 pt-1">
-                            <div class="form-check">
+                    <div>
+                        <label class="ic-field-label">Location<span class="ic-req">*</span></label>
+                        <div class="ic-radio-row">
+                            <div class="form-check mb-0">
                                 <input class="form-check-input" type="radio" name="location" id="loc_hostel" value="H" required {{ old('location') == 'H' ? 'checked' : '' }}>
                                 <label class="form-check-label" for="loc_hostel">Hostel</label>
                             </div>
-                            <div class="form-check">
+                            <div class="form-check mb-0">
                                 <input class="form-check-input" type="radio" name="location" id="loc_other" value="O" {{ old('location') == 'O' ? 'checked' : '' }}>
-                                <label class="form-check-label" for="loc_other">Others</label>
+                                <label class="form-check-label" for="loc_other">Other</label>
                             </div>
-                            <div class="form-check">
+                            <div class="form-check mb-0">
                                 <input class="form-check-input" type="radio" name="location" id="loc_residential" value="R" {{ old('location') == 'R' ? 'checked' : '' }}>
                                 <label class="form-check-label" for="loc_residential">Residential</label>
                             </div>
                         </div>
-                        @error('location')
-                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                        @enderror
+                        @error('location')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
-                    <div id="building_section" class="d-none rounded-3 bg-body-secondary border p-4 mb-3">
-                        <h6 class="fw-semibold text-body-secondary mb-3">Building details</h6>
-                        <div class="row g-3 g-md-4">
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold text-body-secondary">Building / Hostel <span class="text-danger">*</span></label>
-                                <select name="building_master_pk" id="building_select" class="form-select choices-select">
-                                    <option value="">— Select —</option>
-                                    @foreach($buildings as $building)
-                                        <option value="{{ $building->pk }}">{{ $building->building_name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold text-body-secondary">Floor</label>
-                                <select id="floor_select" class="form-select choices-select" name="floor_id">
-                                    <option value="">— Select floor —</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold text-body-secondary">Room / House no.</label>
-                                <select name="room_name" id="room_select" class="form-select choices-select">
-                                    <option value="">— Select room —</option>
-                                </select>
-                            </div>
+                    <div>
+                        <label for="complaint_img_url" class="ic-field-label">Attachment</label>
+                        <input type="file" name="complaint_img_url[]" id="complaint_img_url"
+                               class="form-control ic-input {{ $errors->has('complaint_img_url') ? 'is-invalid' : '' }}"
+                               accept=".jpg,.jpeg,.png" multiple>
+                        <div class="form-text text-muted">Optional. Max 5MB per file, JPG/PNG only.</div>
+                        <div id="attachment_validation_error" class="text-danger small mt-1 d-none"></div>
+                        @error('complaint_img_url')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+
+                    {{-- Populated by the escalation-matrix lookup; hidden until a category is chosen. --}}
+                    <div id="escalation_levels_display" class="ic-form-grid--full d-none">
+                        <label class="ic-field-label">Escalation Hierarchy (read-only)</label>
+                        <div class="ic-field-card">
+                            <div class="mb-1 small"><strong>Level 2:</strong> <span id="level2_display">—</span></div>
+                            <div class="small"><strong>Level 3:</strong> <span id="level3_display">—</span></div>
                         </div>
                     </div>
 
-                    <hr class="my-4">
-
-                    <div class="row g-3 g-md-4">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold text-body-secondary">Attach image (optional)</label>
-                            <input type="file" name="complaint_img_url[]" id="complaint_img_url" class="form-control {{ $errors->has('complaint_img_url') ? 'is-invalid' : '' }}" accept=".jpg,.jpeg,.png" multiple>
-                            <div class="form-text text-muted">Max 5MB per file. JPG and PNG only.</div>
-                            <div id="attachment_validation_error" class="text-danger small mt-1 d-none"></div>
-                            @error('complaint_img_url')
-                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                            @enderror
+                    {{-- Revealed by the Location radios (Other / Residential). --}}
+                    <div id="building_section" class="ic-form-grid--full d-none">
+                        <div class="ic-field-card">
+                            <label class="ic-field-label">Building details</label>
+                            <div class="ic-form-grid">
+                                <div>
+                                    <label for="building_select" class="ic-field-label">Building / Hostel<span class="ic-req">*</span></label>
+                                    <select name="building_master_pk" id="building_select" class="form-select ic-input choices-select">
+                                        <option value="">— Select —</option>
+                                        @foreach($buildings as $building)
+                                            <option value="{{ $building->pk }}">{{ $building->building_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="floor_select" class="ic-field-label">Floor</label>
+                                    <select id="floor_select" class="form-select ic-input choices-select" name="floor_id">
+                                        <option value="">— Select floor —</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="room_select" class="ic-field-label">Room / House no.</label>
+                                    <select name="room_name" id="room_select" class="form-select ic-input choices-select">
+                                        <option value="">— Select room —</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="d-flex flex-wrap justify-content-end gap-2 pt-3 mt-2">
-                        <a href="{{ route('admin.issue-management.index') }}" class="btn btn-outline-secondary">Cancel</a>
-                        <button type="submit" class="btn btn-primary px-4" id="btn_log_issue">Log Issue</button>
-                    </div>
-                </form>
-            </div>
+                <input type="hidden" name="sub_category_name" id="sub_category_name" required value="{{ old('sub_category_name') }}">
+
+                <div class="ic-form-footer">
+                    <a href="{{ route('admin.issue-management.index') }}" class="btn ic-btn-cancel">Cancel</a>
+                    <button type="submit" class="btn ic-btn-submit" id="btn_log_issue">Log Issue</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 @endsection
+
+@push('styles')
+<link rel="stylesheet"
+      href="{{ asset('css/issue-management-admin.css') }}?v={{ @filemtime(public_path('css/issue-management-admin.css')) ?: time() }}">
+@endpush
 
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
