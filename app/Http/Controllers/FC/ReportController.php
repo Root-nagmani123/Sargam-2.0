@@ -445,7 +445,9 @@ class ReportController extends Controller
         $viewData = $this->fcStudentRegistrationPdfViewData($username, self::FIRST_TWO_STEP_LIMIT);
         abort_unless($viewData !== null, 404, "Student '{$username}' not found.");
 
-        return view('fc.report.student-detail-pdf', $viewData + ['autoPrint' => true]);
+        // pagedShell: browsers repeat thead/tfoot per printed page, so Ctrl+P keeps the same
+        // gap inside the page rule that the Chrome-rendered download has.
+        return view('fc.report.student-detail-pdf', $viewData + ['autoPrint' => true, 'pagedShell' => true]);
     }
 
     /**
@@ -580,11 +582,43 @@ class ReportController extends Controller
             $this->fcRegistrationPruneChromeProfiles($root);
         }
         if (is_dir($profile) && is_writable($profile)) {
+            $this->fcRegistrationClearStaleProfileLock($profile);
             $flags[] = '--user-data-dir='.$profile;
             $flags[] = '--crash-dumps-dir='.$profile;
         }
 
         return $flags;
+    }
+
+    /**
+     * Drop the process-singleton links a killed Chrome leaves in its profile.
+     *
+     * A worker pid is reused, so the next render picks the same profile and finds
+     * SingletonLock -> "host-pid" pointing at a dead process. Chrome then tries to hand the
+     * job to that non-existent instance over a socket that answers nothing, and blocks until
+     * our 120 s process timeout — after which every PDF from that worker silently comes out
+     * of the lower-quality Dompdf fallback instead. Clearing the links is safe: the lock is
+     * only re-created by a live Chrome, and one worker never runs two renders at once.
+     */
+    private function fcRegistrationClearStaleProfileLock(string $profile): void
+    {
+        $lock = $profile.'/SingletonLock';
+        if (! is_link($lock) && ! file_exists($lock)) {
+            return;
+        }
+
+        // "hostname-pid": ours only if the hostname matches, otherwise the profile is on a
+        // shared mount and another machine may legitimately be holding it.
+        $target = is_link($lock) ? (string) @readlink($lock) : '';
+        if ($target !== '' && preg_match('/^(.*)-(\d+)$/', $target, $m)) {
+            if ($m[1] !== gethostname() || $this->fcProcessIsRunning((int) $m[2])) {
+                return;
+            }
+        }
+
+        foreach (['SingletonLock', 'SingletonCookie', 'SingletonSocket'] as $name) {
+            @unlink($profile.'/'.$name);
+        }
     }
 
     /**
@@ -2320,8 +2354,11 @@ class ReportController extends Controller
             ? "'FcRegPdf', 'DejaVu Sans', sans-serif"
             : "'DejaVu Sans', sans-serif";
 
-        $engine    = strtolower((string) env('FC_REGISTRATION_PDF_ENGINE', 'auto'));
-        $useChrome = $engine !== 'dompdf' && $this->fcRegistrationChromeBinary() !== null;
+        // Only the 'chrome' engine uses the parallel pool. Under the mPDF default every
+        // trainee goes through fcStudentRegistrationPdfBytes() below, so the ZIP holds the
+        // same document the trainee downloads — a pool that rendered a visibly different
+        // PDF from the single download is exactly the drift this change removes.
+        $useChrome = $this->fcRegistrationWillUseChrome();
 
         $added = 0;
         // Flush the in-memory ZIP buffer to disk periodically so a 1000+ file export
@@ -2423,6 +2460,9 @@ class ReportController extends Controller
         return view('fc.report.student-detail-pdf', array_merge($data, [
             'pdfFontFaceCss'   => $fontFaceCss,
             'pdfFontFamilyCss' => $fontFamilyCss,
+            // Only ever fed to the parallel Chrome pool; the no-Chrome branch of the ZIP
+            // export goes through fcStudentRegistrationPdfBytes(), which picks for itself.
+            'pagedShell'       => true,
         ]))->render();
     }
 
@@ -2579,9 +2619,16 @@ class ReportController extends Controller
             return null;
         }
 
-        $html = view('fc.report.student-detail-pdf', $viewData)->render();
-
-        return $this->fcRenderPdfFromHtml($html, 'FC Registration - '.$username);
+        // The template is rendered per engine — each needs different markup: only Chrome
+        // gets the repeating page shell (Dompdf cannot paginate inside a table cell), and
+        // only mPDF drops @page and the fixed page frame.
+        return $this->fcRenderPdfFromHtml(
+            fn (string $engine) => view(
+                'fc.report.student-detail-pdf',
+                $this->fcRegistrationPdfViewDataForEngine($viewData, $engine)
+            )->render(),
+            'FC Registration - '.$username
+        );
     }
 
     /**
@@ -2639,12 +2686,75 @@ class ReportController extends Controller
         ];
     }
 
-    private function fcRenderPdfFromHtml(string $html, string $titleInfo): string
+    /**
+     * Per-engine additions to the registration-profile view data.
+     *
+     * @param  array<string,mixed>  $viewData
+     * @return array<string,mixed>
+     */
+    private function fcRegistrationPdfViewDataForEngine(array $viewData, string $engine): array
     {
-        $engine = strtolower((string) env('FC_REGISTRATION_PDF_ENGINE', 'auto'));
+        if ($engine !== 'mpdf') {
+            return $viewData + ['pagedShell' => $engine === 'chrome'];
+        }
 
-        if ($engine !== 'dompdf' && ($engine === 'chrome' || $engine === 'auto')) {
-            $chromePdf = $this->fcRegistrationPdfRenderChrome($html);
+        // mPDF resolves a Devanagari font per text run itself (autoLangToFont). Handing it
+        // the base64 @font-face the other two engines need would embed 580 KB for nothing.
+        return array_merge($viewData, [
+            'mpdfMode' => true,
+            'pagedShell' => false,
+            'pdfFontFaceCss' => '',
+            'pdfFontFamilyCss' => 'sans-serif',
+        ]);
+    }
+
+    /**
+     * Which engine renders the registration PDF.
+     *
+     * mPDF by default, and that is the point: it ships with the application (composer.lock
+     * pins the version), so a server with no headless Chrome produces the SAME document as
+     * a developer's laptop instead of silently dropping to a looser, differently-paginated
+     * Dompdf render. It also shapes Devanagari properly — Dompdf drops the anusvara, so
+     * "लिंग" printed as "लिग" on any Chrome-less box.
+     *
+     * FC_REGISTRATION_PDF_ENGINE=chrome|dompdf forces the old paths; 'chrome' still falls
+     * back to Dompdf when no binary is found, which is what 'auto' used to mean.
+     */
+    private function fcRegistrationPdfEngine(): string
+    {
+        $engine = strtolower(trim((string) env('FC_REGISTRATION_PDF_ENGINE', 'mpdf')));
+
+        return in_array($engine, ['mpdf', 'chrome', 'dompdf'], true) ? $engine : 'mpdf';
+    }
+
+    /**
+     * Will this render go through headless Chrome? Callers need to know BEFORE building the
+     * HTML, because the repeating page shell in the template is Chrome-only: Dompdf cannot
+     * paginate content inside a table cell and drops everything after page one.
+     */
+    private function fcRegistrationWillUseChrome(): bool
+    {
+        return $this->fcRegistrationPdfEngine() === 'chrome'
+            && $this->fcRegistrationChromeBinary() !== null;
+    }
+
+    /**
+     * @param  string|\Closure(string):string  $html  A closure is called with the name of the
+     *                                                engine actually used ('mpdf'|'chrome'|
+     *                                                'dompdf'), so the template can be built
+     *                                                for it — each one needs different markup.
+     */
+    private function fcRenderPdfFromHtml(string|\Closure $html, string $titleInfo): string
+    {
+        $engine = $this->fcRegistrationPdfEngine();
+        $build = $html instanceof \Closure ? $html : fn (string $for) => $html;
+
+        if ($engine === 'mpdf') {
+            return $this->fcRegistrationPdfRenderMpdf($build('mpdf'), $titleInfo);
+        }
+
+        if ($this->fcRegistrationWillUseChrome()) {
+            $chromePdf = $this->fcRegistrationPdfRenderChrome($build('chrome'));
             if ($chromePdf !== null) {
                 return $chromePdf;
             }
@@ -2656,12 +2766,75 @@ class ReportController extends Controller
 
         $this->fcEnsureDompdfFontCacheDir();
 
-        return Pdf::loadHTML($html)
+        return Pdf::loadHTML($build('dompdf'))
             ->setOption('isRemoteEnabled', true)
             ->setOption('isFontSubsettingEnabled', false)
             ->setPaper('a4', 'portrait')
             ->addInfo(['Title' => $titleInfo])
             ->output();
+    }
+
+    /**
+     * mPDF render — the default, and the only engine that needs no system binary.
+     *
+     * Two things are done here rather than in the template because mPDF cannot do them in
+     * CSS: the page margins (it mis-parses @page) and the double page rule (it loops on a
+     * position:fixed block). Stroking the rule per page also puts it in the margin band,
+     * OUTSIDE the text area — which is what finally gives an even gap between rule and
+     * content on every page, including continuation pages. Chrome cannot do that at all:
+     * it clips a fixed box to the page content area.
+     */
+    private function fcRegistrationPdfRenderMpdf(string $html, string $titleInfo): string
+    {
+        $tempDir = storage_path('app/mpdf-temp');
+        if (! is_dir($tempDir)) {
+            @mkdir($tempDir, 0775, true);
+        }
+
+        // RULE_MM is where the rule is stroked; the margins are 4mm inside it, and that
+        // difference IS the visible gap. Move them together or the gap changes.
+        $ruleMm = 13.0;
+        $marginMm = 17.0;
+
+        $config = [
+            'mode' => 'utf-8',
+            'format' => 'A4',
+            'tempDir' => $tempDir,
+            // Picks a font per script for anything the default font cannot cover. mPDF does
+            // the Devanagari shaping itself, which is why the Hindi labels come out right
+            // without the 580 KB of base64 @font-face the other engines need.
+            'autoScriptToLang' => true,
+            'autoLangToFont' => true,
+            'margin_top' => $marginMm,
+            'margin_bottom' => $marginMm,
+            'margin_left' => $marginMm,
+            'margin_right' => $marginMm,
+        ];
+
+        // Not registering resources/fonts/mpdf/NotoSansDevanagari-*.ttf here, though the
+        // Chrome and Dompdf paths embed exactly that family: mPDF cannot parse its GPOS
+        // table ("Lookup Type 5, Format 3 not supported") and throws mid-render. mPDF's own
+        // bundled Devanagari font shapes the conjuncts and reph correctly, which is what
+        // matters; the cost is that Hindi sets in a serif face beside sans-serif Latin.
+        $mpdf = new \Mpdf\Mpdf($config);
+        $mpdf->SetTitle($titleInfo);
+        $mpdf->WriteHTML($html);
+
+        $pageCount = (int) $mpdf->page;
+        $w = $mpdf->w;
+        $h = $mpdf->h;
+        for ($i = 1; $i <= $pageCount; $i++) {
+            // Draw colour is per page state in mPDF, so it has to be set inside the loop.
+            $mpdf->page = $i;
+            $mpdf->SetDrawColor(10, 61, 107);
+            $mpdf->SetLineWidth(0.55);
+            $mpdf->Rect($ruleMm, $ruleMm, $w - 2 * $ruleMm, $h - 2 * $ruleMm, 'D');
+            $mpdf->SetLineWidth(0.2);
+            $inner = $ruleMm + 0.9;
+            $mpdf->Rect($inner, $inner, $w - 2 * $inner, $h - 2 * $inner, 'D');
+        }
+
+        return (string) $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
     }
 
     private function fcStudentPdfViewData(string $username, ?int $stepLimit = null, ?FcForm $form = null): ?array

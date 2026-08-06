@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\FC\{
+    DescriptiveDataReportController,
     FcActivityController,
     FcActivityDepartmentController,
     FcActivityHomeController,
@@ -239,6 +240,16 @@ Route::middleware(['auth'])->prefix('admin/travel')->name('admin.travel.')->grou
 });
 
 // ── Report Routes ─────────────────────────────────────────────
+// Descriptive Data upload passthrough (photo / signature).
+//
+// Registered OUTSIDE the auth group on purpose: it replaces links to public files under
+// public/storage, which were readable by anyone holding the URL. The token is encrypted so
+// the storage path and the internal user id are no longer exposed and the folder cannot be
+// walked — but access is unchanged, so exports already sent out keep working.
+// To require a login instead, move this line inside the group below.
+Route::get('/admin/reports/descriptive-data/file', [DescriptiveDataReportController::class, 'file'])
+    ->name('admin.reports.descriptive-data.file');
+
 Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->group(function () {
 
     // Main overview table of all registered students
@@ -271,6 +282,16 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     Route::get('/descriptive-roll',                        [ReportController::class, 'firstTwoStepsIndex'])->name('descriptive-roll');
     Route::get('/descriptive-roll/zip',                    [ReportController::class, 'firstTwoStepsZip'])->name('descriptive-roll.zip');
     Route::get('/descriptive-roll/student/{username}/pdf', [ReportController::class, 'firstTwoStepsStudentPdf'])->name('descriptive-roll.student.pdf');
+
+    // Descriptive Data — the Descriptive Roll fields as a filterable table + Excel/PDF export.
+    // Columns are resolved per course from the form definition (FcDescriptiveDataFieldResolver).
+    Route::get('/descriptive-data',              [DescriptiveDataReportController::class, 'index'])->name('descriptive-data');
+    // Column + filter metadata, so switching course rebuilds the table without a page load.
+    Route::get('/descriptive-data/columns',      [DescriptiveDataReportController::class, 'columns'])->name('descriptive-data.columns');
+    Route::get('/descriptive-data/export-excel', [DescriptiveDataReportController::class, 'exportExcel'])->name('descriptive-data.export.excel');
+    Route::get('/descriptive-data/export-pdf',   [DescriptiveDataReportController::class, 'exportPdf'])->name('descriptive-data.export.pdf');
+    // CSV streams from a cursor — the no-row-limit path for large courses.
+    Route::get('/descriptive-data/export-csv',   [DescriptiveDataReportController::class, 'exportCsv'])->name('descriptive-data.export.csv');
 
     // Aggregated reports
     Route::get('/by-service',   [ReportController::class, 'byService'])->name('service');
