@@ -1377,6 +1377,10 @@
     transition: background 0.2s ease;
 }
 
+.dashboard-notice-item[data-notice-pk] {
+    cursor: pointer;
+}
+
 .dashboard-notice-item:hover {
     background: #eceef1;
 }

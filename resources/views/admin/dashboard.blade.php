@@ -274,7 +274,15 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                             );
                             @endphp
                             <li class="dashboard-notice-row">
-                                <div class="dashboard-notice-item">
+                                <div class="dashboard-notice-item"
+                                    data-notice-pk="{{ $notice->pk }}"
+                                    data-notice-title="{{ $notice->notice_title ?? '' }}"
+                                    data-notice-desc='@json($notice->description ?? "")'
+                                    data-notice-badge="{{ $noticeCategory }}"
+                                    data-notice-meta="{{ $noticeMeta }}"
+                                    data-notice-doc="{{ $notice->document ? asset('storage/' . $notice->document) : '' }}"
+                                    role="button" tabindex="0"
+                                    aria-label="View notice: {{ $notice->notice_title ?? 'Notice' }}">
                                     <span class="dashboard-notice-title">{{ $notice->notice_title }}</span>
                                     <div class="dashboard-notice-meta">
                                         <small class="dashboard-notice-byline">

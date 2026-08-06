@@ -154,6 +154,25 @@
                                 @endif
                             </div>
                         </div>
+                        <div class="notices-feed-item__panel" id="notice-panel-{{ $feedNotice->pk }}"
+                            role="region" aria-labelledby="notice-head-{{ $feedNotice->pk }}">
+                            <div class="notices-feed-item__panel-inner">
+                                @if(trim(strip_tags((string) ($feedNotice->description ?? ''))) !== '')
+                                <div class="notice-description-content">{!! $feedNotice->description !!}</div>
+                                @else
+                                <p class="text-muted fst-italic mb-0">No description provided.</p>
+                                @endif
+                                @if($feedNotice->document)
+                                <div class="mt-3">
+                                    <a href="{{ asset('storage/' . $feedNotice->document) }}" target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="notices-feed-item__attachment small text-danger text-decoration-none d-inline-flex align-items-center gap-1">
+                                        <i class="bi bi-paperclip" aria-hidden="true"></i> View Attachment
+                                    </a>
+                                </div>
+                                @endif
+                            </div>
+                        </div>
                         @endif
                         @if($feedNotice->document)
                         <a href="{{ asset('storage/' . $feedNotice->document) }}" target="_blank"
