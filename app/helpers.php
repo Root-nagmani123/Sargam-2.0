@@ -1549,10 +1549,13 @@ if (!function_exists('get_notice_notification_by_role')) {
 
         // 🔥 Student OT Notices
         if ($isStudent) {
+            // distinct(): a student mapped to the same course more than once in
+            // student_master_course__map would otherwise see each notice duplicated.
             $roleNotices = notice_feed_base_query()
                 ->join('student_master_course__map as smcm', 'notices_notification.course_master_pk', '=', 'smcm.course_master_pk')
                 ->where('notices_notification.target_audience', 'like', '%Office trainee%')
                 ->where('smcm.student_master_pk', $user->user_id)
+                ->distinct()
                 ->get();
 
 

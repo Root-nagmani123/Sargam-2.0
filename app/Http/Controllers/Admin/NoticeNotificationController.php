@@ -118,9 +118,14 @@ public function store(Request $request)
                                     ->store('notice_docs', 'public');
     }
 
-    Notice::create($data);
+    $notice = DB::transaction(fn () => Notice::create($data));
 
-        $this->sendNoticeNotifications($data['target_audience'] ?? 'All', $data['course_master_pk'] ?? null, $data['notice_title'] ?? 'New Notice');
+    $this->sendNoticeNotifications(
+        $data['target_audience'] ?? 'All',
+        $data['course_master_pk'] ?? null,
+        $data['notice_title'] ?? 'New Notice',
+        (int) $notice->pk
+    );
 
     return redirect()
         ->route('admin.notice.index')
@@ -174,9 +179,20 @@ public function store(Request $request)
         $data['document'] = $path;
     }
 
-    $notice->update($data);
+    DB::transaction(fn () => $notice->update($data));
 
-        $this->sendNoticeNotifications($data['target_audience'] ?? $notice->target_audience ?? 'All', $data['course_master_pk'] ?? $notice->course_master_pk ?? null, $data['notice_title'] ?? $notice->notice_title ?? 'Updated Notice');
+    // Only re-alert recipients when something they'd actually care about moved. Editing the
+    // body or swapping the attachment must not re-notify everyone — the feed always shows
+    // the current version. (Previously every save re-blasted a "New Notice" to all recipients.)
+    if ($notice->wasChanged(self::NOTIFIABLE_NOTICE_FIELDS)) {
+        $this->sendNoticeNotifications(
+            $notice->target_audience ?? 'All',
+            $notice->course_master_pk !== null ? (int) $notice->course_master_pk : null,
+            $notice->notice_title ?? 'Updated Notice',
+            (int) $notice->pk,
+            true
+        );
+    }
 
     return redirect()->route('admin.notice.index')->with('success','Notice updated!');
 }
@@ -207,31 +223,68 @@ public function getCourses()
     ]);
 }
 
-    // Resolve recipient user_ids and send in-app notifications for a new/updated notice.
-    private function sendNoticeNotifications(string $targetAudience, ?int $coursePk, string $noticeTitle): void
-    {
-        $senderUserId = Auth::user()?->user_id;
-        $recipientIds = $this->resolveNoticeRecipients($targetAudience, $coursePk);
+    /**
+     * Resolve recipients and send in-app notifications for a new/updated notice.
+     *
+     * Never allowed to break the notice save: the notice is already committed by the time
+     * this runs, so a fan-out failure is logged and swallowed rather than 500-ing a
+     * successful save. $isUpdate only changes the wording — callers decide whether to
+     * notify at all.
+     */
+    private function sendNoticeNotifications(
+        string $targetAudience,
+        ?int $coursePk,
+        string $noticeTitle,
+        int $noticePk,
+        bool $isUpdate = false
+    ): void {
+        try {
+            $senderUserId = Auth::user()?->user_id;
+            $recipientIds = $this->resolveNoticeRecipients($targetAudience, $coursePk);
 
-        if (empty($recipientIds)) {
-            return;
+            if (empty($recipientIds)) {
+                return;
+            }
+
+            // Exclude the creator from receiving their own notification. Both sides are cast:
+            // resolve* returns ints, but user_id can arrive as a numeric string.
+            if ($senderUserId !== null) {
+                $senderUserId = (int) $senderUserId;
+                $recipientIds = array_filter($recipientIds, fn ($id) => (int) $id !== $senderUserId);
+            }
+
+            $recipientIds = array_values(array_unique($recipientIds));
+
+            if (empty($recipientIds)) {
+                return;
+            }
+
+            notification()->createMultiple(
+                $recipientIds,
+                'notice',
+                'Notice',
+                $noticePk,
+                $isUpdate ? 'Notice Updated' : 'New Notice',
+                $noticeTitle,
+                $senderUserId
+            );
+        } catch (\Throwable $e) {
+            report($e);
         }
-
-        // Exclude the creator from receiving their own notification.
-        if ($senderUserId) {
-            $recipientIds = array_values(array_filter($recipientIds, fn($id) => $id !== $senderUserId));
-        }
-
-        notification()->createMultiple(
-            array_values(array_unique($recipientIds)),
-            'notice',
-            'Notice',
-            0,
-            'New Notice',
-            $noticeTitle,
-            $senderUserId
-        );
     }
+
+    /**
+     * Fields whose change is worth re-notifying recipients about. Editing anything else
+     * (typo in the body, a document swap) must not re-alert everyone — see the notice
+     * feed, which always shows the current version anyway.
+     */
+    private const NOTIFIABLE_NOTICE_FIELDS = [
+        'notice_title',
+        'target_audience',
+        'course_master_pk',
+        'display_date',
+        'expiry_date',
+    ];
 
     private function resolveNoticeRecipients(string $targetAudience, ?int $coursePk): array
     {
@@ -255,15 +308,25 @@ public function getCourses()
             return DB::table('user_credentials')
                 ->whereIn('user_category', ['E', 'F'])
                 ->where('active_inactive', 1)
+                ->whereNotNull('user_id')
                 ->pluck('user_id')
                 ->map(fn($id) => (int) $id)
                 ->toArray();
         }
 
-        // 'All' — everyone except students
+        // 'All' — everyone except students.
+        //
+        // NOTE: this must NOT be a bare where('user_category', '!=', 'S'). SQL three-valued
+        // logic makes NULL != 'S' evaluate to NULL rather than TRUE, so that form silently
+        // drops every NULL-category user — the large majority of this table — even though
+        // 'All' notices are visible to them in the feed. Keep the explicit NULL branch.
         return DB::table('user_credentials')
-            ->where('user_category', '!=', 'S')
+            ->where(function ($q) {
+                $q->whereNull('user_category')
+                  ->orWhere('user_category', '!=', 'S');
+            })
             ->where('active_inactive', 1)
+            ->whereNotNull('user_id')
             ->pluck('user_id')
             ->map(fn($id) => (int) $id)
             ->toArray();
