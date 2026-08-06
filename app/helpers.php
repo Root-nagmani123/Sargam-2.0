@@ -1495,6 +1495,7 @@ if (!function_exists('notice_feed_base_query')) {
                 'notices_notification.pk',
                 'notices_notification.notice_title',
                 'notices_notification.notice_type',
+                'notices_notification.description',
                 'notices_notification.target_audience',
                 'notices_notification.course_master_pk',
                 'notices_notification.document',

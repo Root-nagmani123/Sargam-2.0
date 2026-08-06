@@ -162,22 +162,41 @@
                         data-notice-type="{{ $noticeTypeLower }}"
                         data-notice-dept="{{ $noticeDeptLower }}"
                         data-notice-audience="{{ $noticeAudienceLower }}"
-                        data-notice-pk="{{ $feedNotice->pk }}"
-                        data-notice-title="{{ e($feedNotice->notice_title ?? '') }}"
-                        data-notice-desc='@json($feedNotice->description ?? "")'
-                        data-notice-badge="{{ e($noticeBadgeLabel) }}"
-                        data-notice-meta="{{ e('~by ' . ($feedNotice->author_name ?? 'System') . ($feedNotice->author_department ? ' (' . $feedNotice->author_department . ')' : '') . ' on ' . $feedNoticeDate) }}"
-                        data-notice-doc="{{ $feedNotice->document ? asset('storage/' . $feedNotice->document) : '' }}"
-                        role="button" tabindex="0" aria-label="View notice: {{ e($feedNotice->notice_title ?? 'Notice') }}">
-                        <div class="d-flex justify-content-between align-items-center gap-3">
-                            <div class="notices-feed-item__body min-w-0">
-                                <span class="notices-feed-item__title d-block mb-1">{{ $feedNotice->notice_title }}</span>
-                                <small class="notices-feed-item__meta">
-                                    ~by <strong>{{ $feedNotice->author_name ?? 'System' }}@if($feedNotice->author_department ?? '') ({{ $feedNotice->author_department }})@endif</strong>
-                                    on {{ $feedNoticeDate }}
-                                </small>
+                        data-notice-pk="{{ $feedNotice->pk }}">
+                        <div class="notices-feed-item__header" role="button" tabindex="0"
+                            id="notice-head-{{ $feedNotice->pk }}"
+                            aria-expanded="false" aria-controls="notice-panel-{{ $feedNotice->pk }}"
+                            aria-label="View notice: {{ e($feedNotice->notice_title ?? 'Notice') }}">
+                            <div class="d-flex justify-content-between align-items-center gap-3">
+                                <div class="notices-feed-item__body min-w-0">
+                                    <span class="notices-feed-item__title d-block mb-1">{{ $feedNotice->notice_title }}</span>
+                                    <small class="notices-feed-item__meta">
+                                        ~by <strong>{{ $feedNotice->author_name ?? 'System' }}@if($feedNotice->author_department ?? '') ({{ $feedNotice->author_department }})@endif</strong>
+                                        on {{ $feedNoticeDate }}
+                                    </small>
+                                </div>
+                                <span class="notices-feed-badge {{ $noticeBadgeClass }} flex-shrink-0">{{ $noticeBadgeLabel }}</span>
+                                <i class="bi bi-chevron-down notices-feed-item__chevron flex-shrink-0" aria-hidden="true"></i>
                             </div>
-                            <span class="notices-feed-badge {{ $noticeBadgeClass }} flex-shrink-0">{{ $noticeBadgeLabel }}</span>
+                        </div>
+                        <div class="notices-feed-item__panel" id="notice-panel-{{ $feedNotice->pk }}"
+                            role="region" aria-labelledby="notice-head-{{ $feedNotice->pk }}">
+                            <div class="notices-feed-item__panel-inner">
+                                @if(trim(strip_tags((string) ($feedNotice->description ?? ''))) !== '')
+                                <div class="notice-description-content">{!! $feedNotice->description !!}</div>
+                                @else
+                                <p class="text-muted fst-italic mb-0">No description provided.</p>
+                                @endif
+                                @if($feedNotice->document)
+                                <div class="mt-3">
+                                    <a href="{{ asset('storage/' . $feedNotice->document) }}" target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="notices-feed-item__attachment small text-danger text-decoration-none d-inline-flex align-items-center gap-1">
+                                        <i class="bi bi-paperclip" aria-hidden="true"></i> View Attachment
+                                    </a>
+                                </div>
+                                @endif
+                            </div>
                         </div>
                     </div>
                     @empty
@@ -242,37 +261,10 @@
 </div>
 
 @include('admin.dashboard.partials.wish-modal')
-
-{{-- Notice detail modal --}}
-<div class="modal fade" id="notice-detail-modal" tabindex="-1"
-    aria-labelledby="notice-detail-modal-label" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header border-bottom-0 pb-1">
-                <div class="flex-grow-1 min-w-0 pe-2">
-                    <h5 class="modal-title fw-semibold lh-sm mb-1" id="notice-detail-modal-label"></h5>
-                    <small class="text-muted" id="notice-detail-modal-meta"></small>
-                </div>
-                <span class="notices-feed-badge flex-shrink-0 me-2 mt-1" id="notice-detail-modal-badge"></span>
-                <button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body pt-2">
-                <hr class="mt-0 mb-3">
-                <div class="notice-description-content" id="notice-detail-modal-body"></div>
-                <div class="mt-3 d-none" id="notice-detail-modal-attachment">
-                    <a id="notice-detail-modal-doc" href="#" target="_blank" rel="noopener noreferrer"
-                        class="small text-danger text-decoration-none d-inline-flex align-items-center gap-1">
-                        <i class="bi bi-paperclip" aria-hidden="true"></i> View Attachment
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-feed.css') }}?v=11">
+<link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-feed.css') }}?v=12">
 @endpush
 
 @push('scripts')
@@ -473,65 +465,94 @@ document.addEventListener('click', function(e) {
     window.markAsReadDashboard(notifItem.dataset.notificationId, notifItem);
 });
 
-// Notice card → open detail modal
+// Notices accordion: hover expands, click pins open/closed. One notice open at a time.
 (function () {
-    const noticeModal = document.getElementById('notice-detail-modal');
-    if (!noticeModal) return;
+    const list = document.getElementById('dashboard-feed-page-list-notices');
+    if (!list) return;
 
-    function openNoticeModal(card) {
-        document.getElementById('notice-detail-modal-label').textContent = card.dataset.noticeTitle || '';
-        document.getElementById('notice-detail-modal-meta').textContent  = card.dataset.noticeMeta  || '';
+    const OPEN_DELAY  = 120;   // ignore pointers just passing over the list
+    const CLOSE_DELAY = 180;   // let the pointer travel into the panel without it snapping shut
+    let hoverTimer = null;
 
-        const badgeEl = document.getElementById('notice-detail-modal-badge');
-        badgeEl.textContent = card.dataset.noticeBadge || '';
-        badgeEl.className   = 'notices-feed-badge flex-shrink-0 me-2 mt-1 ' + (card.querySelector('.notices-feed-badge')?.className.split(' ').find(c => c.startsWith('notices-feed-badge--')) || '');
-
-        let desc = '';
-        try { desc = JSON.parse(card.dataset.noticeDesc || '""'); } catch (e) { desc = ''; }
-        document.getElementById('notice-detail-modal-body').innerHTML = desc || '<p class="text-muted fst-italic mb-0">No description provided.</p>';
-
-        const attachEl   = document.getElementById('notice-detail-modal-attachment');
-        const attachLink = document.getElementById('notice-detail-modal-doc');
-        const docUrl     = card.dataset.noticeDoc || '';
-        if (docUrl) {
-            attachLink.href = docUrl;
-            attachEl.classList.remove('d-none');
-        } else {
-            attachEl.classList.add('d-none');
+    function setOpen(item, open) {
+        const panel = item.querySelector('.notices-feed-item__panel');
+        const head  = item.querySelector('.notices-feed-item__header');
+        if (!panel) return;
+        // Collapsing an already-collapsed panel would re-run the animation and flicker
+        // (happens when the pointer leaves before the open delay elapsed).
+        if (!open && !item.classList.contains('is-open')) {
+            item.classList.remove('is-pinned');
+            return;
         }
 
-        bootstrap.Modal.getOrCreateInstance(noticeModal).show();
+        if (open) {
+            item.classList.add('is-open');
+            panel.style.maxHeight = panel.scrollHeight + 'px';
+        } else {
+            item.classList.remove('is-open', 'is-pinned');
+            // maxHeight may be 'none' (see transitionend below); pin it to a number so it can animate down
+            panel.style.maxHeight = panel.scrollHeight + 'px';
+            void panel.offsetHeight;
+            panel.style.maxHeight = '';
+        }
+        if (head) head.setAttribute('aria-expanded', open ? 'true' : 'false');
     }
 
-    document.addEventListener('click', function (e) {
-        const card = e.target.closest('.notices-feed-item[data-notice-pk]');
-        if (card) openNoticeModal(card);
+    function closeOthers(except) {
+        list.querySelectorAll('.notices-feed-item.is-open').forEach(function (other) {
+            if (other !== except) setOpen(other, false);
+        });
+    }
+
+    // Once open, drop the fixed height so late-loading images/tables aren't clipped.
+    list.addEventListener('transitionend', function (e) {
+        if (e.propertyName !== 'max-height') return;
+        const panel = e.target;
+        if (!panel.classList || !panel.classList.contains('notices-feed-item__panel')) return;
+        const item = panel.closest('.notices-feed-item');
+        if (item && item.classList.contains('is-open')) panel.style.maxHeight = 'none';
     });
 
-    document.addEventListener('keydown', function (e) {
+    list.querySelectorAll('.notices-feed-item').forEach(function (item) {
+        item.addEventListener('mouseenter', function () {
+            clearTimeout(hoverTimer);
+            hoverTimer = setTimeout(function () {
+                closeOthers(item);
+                setOpen(item, true);
+            }, OPEN_DELAY);
+        });
+
+        item.addEventListener('mouseleave', function () {
+            clearTimeout(hoverTimer);
+            if (item.classList.contains('is-pinned')) return;
+            hoverTimer = setTimeout(function () { setOpen(item, false); }, CLOSE_DELAY);
+        });
+    });
+
+    list.addEventListener('click', function (e) {
+        if (e.target.closest('.notices-feed-item__attachment')) return; // let the attachment link open
+        const head = e.target.closest('.notices-feed-item__header');
+        if (!head) return;
+        const item = head.closest('.notices-feed-item');
+        if (!item) return;
+
+        clearTimeout(hoverTimer);
+        if (item.classList.contains('is-pinned')) {
+            setOpen(item, false);
+        } else {
+            closeOthers(item);
+            setOpen(item, true);
+            item.classList.add('is-pinned');
+        }
+    });
+
+    list.addEventListener('keydown', function (e) {
         if (e.key !== 'Enter' && e.key !== ' ') return;
-        const card = document.activeElement?.closest('.notices-feed-item[data-notice-pk]');
-        if (card) { e.preventDefault(); openNoticeModal(card); }
+        const head = e.target.closest ? e.target.closest('.notices-feed-item__header') : null;
+        if (!head) return;
+        e.preventDefault();
+        head.click();
     });
 }());
-document.addEventListener('click', function(e) {
-    const toggleBtn = e.target && e.target.closest ? e.target.closest('.notice-desc-toggle') : null;
-    if (!toggleBtn) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const container = toggleBtn.closest('.notice-description-content');
-    if (!container) return;
-    const preview = container.querySelector('.notice-desc-preview');
-    const full = container.querySelector('.notice-desc-full');
-    if (!preview || !full) return;
-    const isCollapsed = full.classList.contains('d-none');
-    if (isCollapsed) {
-        preview.classList.add('d-none');
-        full.classList.remove('d-none');
-    } else {
-        full.classList.add('d-none');
-        preview.classList.remove('d-none');
-    }
-});
 </script>
 @endpush
