@@ -313,7 +313,10 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
 
     // Descriptive Data — the Descriptive Roll fields as a filterable table + Excel/PDF export.
     // Columns are resolved per course from the form definition (FcDescriptiveDataFieldResolver).
-    Route::get('/descriptive-data',              [DescriptiveDataReportController::class, 'index'])->name('descriptive-data');
+    // match(get|post): GET renders the page; the DataTable POSTs its draw request. DataTables
+    // sends 6 parameters per column, and this report has ~99 columns — as a GET that is a ~25 KB
+    // query string, which the web server rejects with 414 URI Too Long. POST puts it in the body.
+    Route::match(['get', 'post'], '/descriptive-data', [DescriptiveDataReportController::class, 'index'])->name('descriptive-data');
     // Column + filter metadata, so switching course rebuilds the table without a page load.
     Route::get('/descriptive-data/columns',      [DescriptiveDataReportController::class, 'columns'])->name('descriptive-data.columns');
     Route::get('/descriptive-data/export-excel', [DescriptiveDataReportController::class, 'exportExcel'])->name('descriptive-data.export.excel');
