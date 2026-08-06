@@ -7,6 +7,7 @@ use App\Models\CourseMaster;
 use App\Models\FC\FcForm;
 use App\Models\FC\FcFormStep;
 use App\Models\FC\FcFormFieldGroup;
+use App\Services\FC\FcDescriptiveDataFieldResolver;
 use App\Services\FC\FcStepApplicabilityService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -280,6 +281,8 @@ class FormManagementController extends Controller
             $this->ensureTrackerColumn($form->trackerStorageTable(), $validated['tracker_column']);
         }
 
+        $this->forgetFormDerivedCaches((int) $form->id);
+
         return back()->with('success', 'Step added.');
     }
 
@@ -325,21 +328,61 @@ class FormManagementController extends Controller
             $this->ensureTrackerColumn($step->form->trackerStorageTable(), $validated['tracker_column']);
         }
 
+        $this->forgetFormDerivedCaches((int) $step->form_id);
+
         return back()->with('success', 'Step updated.');
+    }
+
+    /**
+     * Drop the caches derived from this form's step/field structure.
+     *
+     * The Descriptive Data report resolves its columns — and its filter dropdowns — from
+     * fc_form_steps joined to fc_form_fields, filtered on `s.is_active = 1`, and caches the
+     * result per form. The form BUILDER already invalidates that through its own
+     * bumpFormStructure() hook; the step mutators on THIS controller did not, so deactivating
+     * or deleting a step here left the report rendering that step's columns, populated with
+     * data, until the 60-minute TTL expired.
+     *
+     * Best-effort by contract: FcDescriptiveDataFieldResolver::forgetForm() swallows cache
+     * failures, so a cache outage can never break saving a form step.
+     */
+    private function forgetFormDerivedCaches(int $formId): void
+    {
+        if ($formId > 0) {
+            FcDescriptiveDataFieldResolver::forgetForm($formId);
+        }
     }
 
     public function deleteStep(FcFormStep $step)
     {
+        // Read the owning form BEFORE the row is gone — afterwards $step->form_id is still
+        // populated in memory, but relying on that is a trap for the next edit.
+        $formId = (int) $step->form_id;
+
         $step->delete();
+        $this->forgetFormDerivedCaches($formId);
+
         return back()->with('success', 'Step and all its fields deleted.');
     }
 
     public function reorderSteps(Request $request)
     {
         $request->validate(['order' => 'required|array', 'order.*' => 'integer']);
+
+        // One query for the owning form ids, before the reorder — not one per step (G5).
+        $formIds = FcFormStep::whereIn('id', $request->order)
+            ->distinct()
+            ->pluck('form_id')
+            ->all();
+
         foreach ($request->order as $position => $id) {
             FcFormStep::where('id', $id)->update(['step_number' => $position + 1]);
         }
+
+        foreach ($formIds as $formId) {
+            $this->forgetFormDerivedCaches((int) $formId);
+        }
+
         return response()->json(['ok' => true]);
     }
 
