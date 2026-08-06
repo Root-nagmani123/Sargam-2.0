@@ -70,6 +70,8 @@
     </div>
 
     <x-session_message />
+    {{-- Filled by the DataTables error handler below; hidden until something actually fails. --}}
+    <div id="ddTableError" class="alert alert-warning d-none py-2 px-3 mb-3" role="alert"></div>
 
     {{-- Course + field filters --}}
     <div class="card border-0 shadow-sm mb-3" style="border-radius:8px;">
@@ -202,6 +204,39 @@ $(function () {
         return cols;
     }
 
+    // DataTables' default "Ajax error" alert says nothing useful. The overwhelmingly common cause
+    // here is an expired session: the AJAX call gets 401, or a 302 to the login page that returns
+    // HTML, and the JSON parse fails. Say what actually happened instead.
+    $.fn.dataTable.ext.errMode = 'none';
+
+    function describeAjaxError(xhr) {
+        if (!xhr || xhr.status === 0) {
+            return 'Could not reach the server. Check your connection and try again.';
+        }
+        if (xhr.status === 401 || xhr.status === 419) {
+            return 'Your session has expired. Please log in again — this page will reload.';
+        }
+        if (xhr.status === 403) {
+            return 'You do not have access to this report.';
+        }
+        // A 302 to the login page arrives at jQuery as a 200 carrying HTML, so the redirect is
+        // detected by content type rather than status.
+        var ct = (xhr.getResponseHeader && xhr.getResponseHeader('Content-Type')) || '';
+        if (xhr.status === 302 || ct.indexOf('text/html') === 0) {
+            return 'Your session has expired. Please log in again — this page will reload.';
+        }
+        if (xhr.status >= 500) {
+            return 'The report failed to load (server error ' + xhr.status + '). Try again, or narrow the filters.';
+        }
+        return 'The report could not be loaded (HTTP ' + xhr.status + ').';
+    }
+
+    function sessionHasExpired(xhr) {
+        if (!xhr) { return false; }
+        var ct = (xhr.getResponseHeader && xhr.getResponseHeader('Content-Type')) || '';
+        return xhr.status === 401 || xhr.status === 419 || xhr.status === 302 || ct.indexOf('text/html') === 0;
+    }
+
     function initTable() {
         table = $('#descriptiveDataTable').DataTable({
             processing: true,
@@ -246,6 +281,16 @@ $(function () {
                  "<'row mt-2 align-items-center'<'col-sm-5'i><'col-sm-7'p>>"
         });
         table.on('draw', syncExportButtons);
+
+        table.on('error.dt', function (e, settings) {
+            var xhr = settings && settings.jqXHR;
+            $('#ddTableError').removeClass('d-none').text(describeAjaxError(xhr));
+            // An expired session is only fixable by logging in again — reload so the user lands
+            // on the login page instead of staring at a dead table.
+            if (sessionHasExpired(xhr)) {
+                setTimeout(function () { window.location.reload(); }, 2500);
+            }
+        });
     }
 
     // Full rebuild for the new column set. destroy(true) is NOT used: it removes the <table>
