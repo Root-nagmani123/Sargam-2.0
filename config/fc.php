@@ -147,4 +147,27 @@ return [
         // 'fc_template' => '',   // example: no letter on the reusable template
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Registration-PDF rendering engine
+    |--------------------------------------------------------------------------
+    |
+    | Which engine renders the Descriptive Roll / Descriptive Data PDFs:
+    |
+    |   mpdf   (default) ships with the application and is pinned by composer.lock, so a
+    |          server with no headless Chrome produces the SAME document as a developer's
+    |          laptop. It also shapes Devanagari correctly.
+    |   chrome headless Chrome when a binary is found, falling back to Dompdf when not.
+    |   dompdf forces the Dompdf path.
+    |
+    | This lives in config/ rather than being read straight from env() in the controller
+    | BECAUSE of `php artisan config:cache`: env() outside a config file returns its default
+    | once the config is cached, so an FC_REGISTRATION_PDF_ENGINE override in .env was
+    | silently ignored on a config-cached deployment — the operator believed they had rolled
+    | back to Chrome and had not. Reading it through config() makes the override work in both
+    | states, and the env() call here is evaluated at config-build time where it is valid.
+    |
+    */
+    'pdf_engine' => env('FC_REGISTRATION_PDF_ENGINE', 'mpdf'),
+
 ];

@@ -2722,7 +2722,12 @@ class ReportController extends Controller
      */
     private function fcRegistrationPdfEngine(): string
     {
-        $engine = strtolower(trim((string) env('FC_REGISTRATION_PDF_ENGINE', 'mpdf')));
+        // config(), not env(): env() outside a config file returns its default once
+        // `php artisan config:cache` has run, so an .env override was silently ignored on a
+        // config-cached deployment — the documented one-line rollback did not actually roll
+        // back. config/fc.php still reads the same env var, so existing .env files keep
+        // working in both states.
+        $engine = strtolower(trim((string) config('fc.pdf_engine', 'mpdf')));
 
         return in_array($engine, ['mpdf', 'chrome', 'dompdf'], true) ? $engine : 'mpdf';
     }

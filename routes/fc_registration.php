@@ -242,11 +242,23 @@ Route::middleware(['auth'])->prefix('admin/travel')->name('admin.travel.')->grou
 // ── Report Routes ─────────────────────────────────────────────
 // Descriptive Data upload passthrough (photo / signature).
 //
-// Registered OUTSIDE the auth group on purpose: it replaces links to public files under
-// public/storage, which were readable by anyone holding the URL. The token is encrypted so
-// the storage path and the internal user id are no longer exposed and the folder cannot be
-// walked — but access is unchanged, so exports already sent out keep working.
-// To require a login instead, move this line inside the group below.
+// ─── ACCESS DECISION — reviewed and accepted, 2026-08-06 (PR #282, finding H-01) ───────────
+// This route is registered OUTSIDE the auth group DELIBERATELY. It serves trainee photographs
+// and specimen signatures to anyone holding the link, without a login.
+//
+// Why that is the accepted position, not an oversight:
+//   • It REPLACES links to public files under public/storage, which the web server already
+//     served to anyone who knew the path, with no Laravel auth in the loop. Exposure is
+//     therefore unchanged; the token version is strictly harder to abuse.
+//   • The token is an encrypted stored path, so the URL leaks neither the storage layout nor
+//     the internal user id, cannot be enumerated, and fails closed if tampered with.
+//   • The requirement is that an exported workbook mailed to a colleague keeps working for a
+//     recipient who is not a Sargam user. Gating this route breaks exactly that.
+//
+// Residual risk, accepted: a forwarded export hands the images to whoever receives it.
+// To require a login instead, move this line inside the group below — and expect emailed
+// exports to stop resolving for anyone not signed in.
+// ──────────────────────────────────────────────────────────────────────────────────────────
 Route::get('/admin/reports/descriptive-data/file', [DescriptiveDataReportController::class, 'file'])
     ->name('admin.reports.descriptive-data.file');
 
