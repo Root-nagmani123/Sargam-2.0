@@ -1,112 +1,123 @@
-<style>
-    /* Mobile-first: Bottom navigation for mobile devices only */
-    @media (max-width: 991.98px) {
-        #navbarNav {
-            display: flex !important;
-            visibility: visible !important;
-            position: fixed !important;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 1030;
-            background: white;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-            padding-bottom: env(safe-area-inset-bottom, 0);
-        }
+{{-- ==========================================================================
+     FC portal header — visual language ported from resources/views/auth/login.blade.php
+     (GIGW toolbar → tricolour strip → white sticky brand bar), built on the
+     --ds-* design tokens from public/css/sargam-app.css (see docs/design.md).
 
-        #navbarNav .navbar-nav {
-            justify-content: space-around;
-            width: 100%;
-        }
+     Styles live in the .fc-* section of public/css/sargam-app.css and the
+     accessibility controls in public/js/fc-chrome.js — one cacheable copy each,
+     rather than ~17 KB inlined into all 31 FC pages (docs/design.md rule 1).
 
-        /* Add padding to body to prevent content from being hidden behind fixed bottom nav */
-        body {
-            padding-bottom: 70px;
-        }
-    }
+     Structural contracts kept intentionally:
+       • `.top-header > .container` / `.header > .container` — widened by
+         fc/registration/partials/fc-form-theme.blade.php on the form pages.
+       • `#uw-widget-custom-trigger` — admin_assets/js/weights.js binds to this
+         id at line 778 without a null guard. That line is currently unreachable
+         (the script throws at line 117 on FC pages, where the widget panel it
+         expects does not exist), but the hidden anchor below is kept so that
+         repairing weights.js cannot turn into a TypeError here.
+       • `#navbarNav` fixed bottom bar on phones/tablets.
+     ========================================================================== --}}
+@php
+    $fcAssetV = fn (string $p) => asset($p) . '?v=' . (@filemtime(public_path($p)) ?: 1);
+@endphp
 
-    /* Desktop view: Keep original positioning */
-    @media (min-width: 992px) {
-        #navbarNav {
-            position: static !important;
-            box-shadow: none !important;
-        }
+<!-- GIGW accessibility toolbar -->
+<div class="top-header fc-topbar" role="navigation" aria-label="Accessibility Options">
+    <div class="container">
+        <div class="fc-topbar-left">
+            <a href="#content">Skip to Main Content</a>
+            <a href="https://screenreaderaccess.com" target="_blank" rel="noopener noreferrer"
+                title="Screen Reader Access Information">
+                <i class="bi bi-ear" aria-hidden="true"></i> Screen Reader Access
+            </a>
+            <a href="https://www.india.gov.in" target="_blank" rel="noopener noreferrer"
+                title="National Portal of India">
+                <i class="bi bi-globe2" aria-hidden="true"></i> india.gov.in
+            </a>
+        </div>
+        <div class="fc-topbar-right">
+            <div class="fc-font-controls" role="group" aria-label="Text Size Controls">
+                <span>Text Size:</span>
+                <button type="button" class="fc-font-btn" data-size="small" aria-label="Decrease text size"
+                    title="Decrease Text Size">A-</button>
+                <button type="button" class="fc-font-btn active" data-size="normal" aria-label="Normal text size"
+                    title="Normal Text Size">A</button>
+                <button type="button" class="fc-font-btn" data-size="large" aria-label="Increase text size"
+                    title="Increase Text Size">A+</button>
+            </div>
+            <button type="button" class="fc-contrast-btn" id="fcContrastToggle" aria-pressed="false"
+                aria-label="Toggle high contrast" title="High Contrast Mode">
+                <i class="bi bi-circle-half" aria-hidden="true"></i> Contrast
+            </button>
+            {{-- Not rendered as a control: the widget it would open (#uw-main) exists
+                 nowhere in the app, and weights.js throws before it can bind a handler,
+                 so a visible "Accessibility" button would do nothing while sitting next
+                 to two that work. Kept hidden purely to satisfy that unguarded
+                 getElementById. The real accessibility controls are the text-size and
+                 contrast buttons above. --}}
+            <a id="uw-widget-custom-trigger" hidden aria-hidden="true" tabindex="-1"></a>
+        </div>
+    </div>
+</div>
 
-        body {
-            padding-bottom: 0;
-        }
-    }
-</style>
+<!-- Sticky brand bar -->
+<div class="header fc-header sticky-top container-fluid" role="banner">
+    <div class="fc-header-tricolor"></div>
+    <div class="container">
+        <div class="fc-header-inner">
+            <div class="fc-brand">
+                <img src="{{ $fcAssetV('admin_assets/images/logos/ashoka.png') }}"
+                    alt="National Emblem of India - Satyameva Jayate" class="fc-emblem" loading="eager"
+                    onerror="this.style.display='none'">
+                <div class="fc-govt">
+                    <img src="{{ asset('images/flag-of-india.svg') }}" alt="National Flag of India" loading="eager"
+                        onerror="this.style.display='none'">
+                    <span lang="hi">भारत सरकार</span>
+                    <span class="d-none d-sm-inline">| Government of India</span>
+                </div>
+                <a href="{{ url('/') }}" class="fc-lbsnaa d-flex align-items-center text-decoration-none"
+                    aria-label="LBSNAA Home">
+                    {{-- Right-sized web variants (400px); the 1193px logo.png stays for PDF/print. --}}
+                    <picture>
+                        <source srcset="{{ $fcAssetV('admin_assets/images/logos/logo-web.webp') }}" type="image/webp">
+                        <img src="{{ $fcAssetV('admin_assets/images/logos/logo-web.png') }}"
+                            alt="LBSNAA - Lal Bahadur Shastri National Academy of Administration" loading="eager"
+                            onerror="this.style.display='none'">
+                    </picture>
+                </a>
+            </div>
 
-   <!-- Top Blue Bar (Govt of India) - Hidden on mobile -->
-   <div class="top-header d-none d-md-block">
-       <div class="container">
-           <div class="row align-items-center">
-               <div class="col-md-3 d-flex align-items-center">
-                   <img src="{{ asset('images/flag-of-india.svg') }}"
-                       alt="GoI Logo" height="30">
-                   <span class="ms-2" style="font-size: 14px;">Government of India</span>
-               </div>
-               <div class="col-md-9 text-end d-flex justify-content-end align-items-center">
-                   <ul class="nav justify-content-end align-items-center">
-                       <li class="nav-item"><a href="#content" class="text-white text-decoration-none"
-                               style=" font-size: 12px;">Skip to Main Content</a></li>
-                       <span class="text-muted me-3 ">|</span>
-                       <li class="nav-item"><a class="text-white text-decoration-none" id="uw-widget-custom-trigger" contenteditable="false" style="cursor: pointer;"><img
-                                   src="{{ asset('images/accessible.png') }}" alt="" width="20">
-                               <span class="text-white ms-1" style=" font-size: 12px;">
-                                   More
-                               </span>
-                           </a>
-                       </li>
-                   </ul>
-               </div>
-           </div>
-       </div>
-   </div>
-   <!-- Sticky Header -->
-   <div class="header sticky-top bg-white shadow-sm">
-       <div class="container">
-           <nav class="navbar navbar-expand-lg navbar-light">
-               <div class="container-fluid px-0">
-                   <!-- Logo 1 -->
-                   <a class="navbar-brand me-1 me-md-2" href="#">
-                       <img src="https://i.pinimg.com/736x/a8/fa/ef/a8faef978e6230b6a12d1c29c62d5edf.jpg" alt="Logo 1"
-                           class="img-fluid" height="80">
-                   </a>
-                   <!-- Divider - Hidden on mobile -->
-                   <span class="vr mx-1 mx-md-2 d-none d-sm-block"></span>
-                   <!-- Logo 2 -->
-                   <a class="navbar-brand me-auto" href="#">
-                       <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="Logo 2" class="img-fluid" height="80">
-                   </a>
+            <nav class="navbar navbar-expand-lg navbar-light p-0" aria-label="Primary Navigation">
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto mb-0">
+                        <li class="nav-item">
+                            <a class="fc-nav-link" href="https://www.lbsnaa.gov.in/menu/about-lbsnaa" target="_blank"
+                                rel="noopener noreferrer">
+                                <i class="bi bi-info-circle" aria-hidden="true"></i> About Us
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="fc-nav-link" href="https://www.lbsnaa.gov.in/footer_menu/contact-us"
+                                target="_blank" rel="noopener noreferrer">
+                                <i class="bi bi-envelope" aria-hidden="true"></i> Contact
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            @php($fcHeaderFormQuery = $fcHeaderFormQuery ?? [])
+                            @if (auth()->check())
+                                <a class="fc-btn-auth" href="{{ route('fc.logout', $fcHeaderFormQuery) }}">
+                                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Logout
+                                </a>
+                            @else
+                                <a class="fc-btn-auth" href="{{ route('fc.login', $fcHeaderFormQuery) }}">
+                                    <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Login
+                                </a>
+                            @endif
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+        </div>
+    </div>
+</div>
 
-                   <!-- Mobile toggle button -->
-                   <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                       aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                       <span class="navbar-toggler-icon"></span>
-                   </button>
-
-                   <!-- Navigation Menu -->
-                   <div class="collapse navbar-collapse" id="navbarNav">
-                       <ul class="navbar-nav ms-auto align-items-lg-center">
-                           <li class="nav-item">
-                               <a class="nav-link fw-medium" href="https://www.lbsnaa.gov.in/menu/about-lbsnaa" target="_blank">About Us</a>
-                           </li>
-                           <li class="nav-item">
-                               <a class="nav-link fw-medium" href="https://www.lbsnaa.gov.in/footer_menu/contact-us" target="_blank">Contact</a>
-                           </li>
-                           <li class="nav-item mt-2 mt-lg-0">
-                               @php($fcHeaderFormQuery = $fcHeaderFormQuery ?? [])
-                               @if (auth()->check())
-                                   <a class="btn btn-outline-primary" href="{{ route('fc.logout', $fcHeaderFormQuery) }}">Logout</a>
-                               @else
-                                   <a class="btn btn-outline-primary" href="{{ route('fc.login', $fcHeaderFormQuery) }}">Login</a>
-                               @endif
-                           </li>
-                       </ul>
-                   </div>
-               </div>
-           </nav>
-       </div>
-   </div>

@@ -13,6 +13,9 @@ class NotificationService
     /** Invisible trailer on notification message: combined mess bill id + date range for correct print-receipt URL */
     private const MESS_COMBINED_RECEIPT_MARKER = "\u{2060}MESS_COMBINED_RECEIPT\x1F";
 
+    /** Rows per INSERT in createMultiple() — keeps large fan-outs under max_allowed_packet. */
+    private const INSERT_CHUNK_SIZE = 500;
+
     /**
      * Estate workflow alerts (new request / HAC routing): Estate Admin and Super Admin only.
      */
@@ -113,7 +116,21 @@ class NotificationService
             ];
         }
 
-        return DB::table('notifications')->insert($notifications) ? count($notifications) : 0;
+        if (empty($notifications)) {
+            return 0;
+        }
+
+        // Audience-wide fan-outs (a notice targeted at "All") resolve to five figures of
+        // recipients. One INSERT that size is a multi-megabyte statement and can exceed
+        // max_allowed_packet, so write it in chunks and count what actually landed.
+        $inserted = 0;
+        foreach (array_chunk($notifications, self::INSERT_CHUNK_SIZE) as $chunk) {
+            if (DB::table('notifications')->insert($chunk)) {
+                $inserted += count($chunk);
+            }
+        }
+
+        return $inserted;
     }
 
     /**
