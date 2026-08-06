@@ -265,7 +265,11 @@ $(function () {
             },
             ajax: {
                 url: ajaxUrl,
-                type: 'GET',
+                // POST, not GET: DataTables sends 6 parameters per column and this report has
+                // ~99 columns, which as a query string is ~25 KB — past the server's URL limit
+                // (observed: 414 URI Too Long on production). The body has no such limit.
+                type: 'POST',
+                headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
                 data: function (d) {
                     // Tell the server which columns are on screen so it can skip the lookup
                     // joins — and the whole extra query per repeating section — for the ones
