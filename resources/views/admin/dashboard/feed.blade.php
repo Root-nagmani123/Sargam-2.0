@@ -112,25 +112,47 @@
                     $feedNoticeDates = ($feedNoticeFrom && $feedNoticeTo) ? $feedNoticeFrom . ' to ' . $feedNoticeTo : ($feedNoticeFrom ?? '—');
                     $feedNoticeSearch = strtolower(($feedNotice->notice_title ?? '') . ' ' . ($feedNotice->notice_type ?? '') . ' ' . $feedNoticeDates);
                     @endphp
-                    @php
-                        $plainDesc = !empty($feedNotice->description) ? strip_tags($feedNotice->description) : '';
-                        $descWordCount = $plainDesc !== '' ? str_word_count($plainDesc) : 0;
-                        $needsTruncation = $descWordCount > 50;
-                        $truncatedText = $needsTruncation ? Str::words($plainDesc, 50, '') : null;
-                    @endphp
-                    <div class="dashboard-notice-item {{ $noticeTab !== $defaultNoticeTab ? 'd-none' : '' }}"
-                        data-notice-tab-item="{{ $noticeTab }}"
-                        data-feed-search="{{ $feedNoticeSearch }}">
-                        <span class="dashboard-notice-title">{{ $feedNotice->notice_title }}</span>
-                        <small class="dashboard-notice-date">{{ $feedNoticeDates }}</small>
-                        @if(!empty($feedNotice->description))
-                        <div class="notice-description-content mt-2">
-                            @if($needsTruncation)
-                            <span class="notice-desc-preview">{{ $truncatedText }}<span class="notice-desc-ellipsis">... </span><button type="button" class="btn btn-link btn-sm p-0 notice-desc-toggle align-baseline">See more</button></span>
-                            <span class="notice-desc-full d-none">{!! $feedNotice->description !!}<button type="button" class="btn btn-link btn-sm p-0 ms-1 notice-desc-toggle align-baseline">See less</button></span>
-                            @else
-                            {!! $feedNotice->description !!}
-                            @endif
+                    <div class="notices-feed-item"
+                        data-feed-search="{{ $feedNoticeSearch }}"
+                        data-notice-year="{{ $noticeYear }}"
+                        data-notice-type="{{ $noticeTypeLower }}"
+                        data-notice-dept="{{ $noticeDeptLower }}"
+                        data-notice-audience="{{ $noticeAudienceLower }}"
+                        data-notice-pk="{{ $feedNotice->pk }}">
+                        <div class="notices-feed-item__header" role="button" tabindex="0"
+                            id="notice-head-{{ $feedNotice->pk }}"
+                            aria-expanded="false" aria-controls="notice-panel-{{ $feedNotice->pk }}"
+                            aria-label="View notice: {{ e($feedNotice->notice_title ?? 'Notice') }}">
+                            <div class="d-flex justify-content-between align-items-center gap-3">
+                                <div class="notices-feed-item__body min-w-0">
+                                    <span class="notices-feed-item__title d-block mb-1">{{ $feedNotice->notice_title }}</span>
+                                    <small class="notices-feed-item__meta">
+                                        ~by <strong>{{ $feedNotice->author_name ?? 'System' }}@if($feedNotice->author_department ?? '') ({{ $feedNotice->author_department }})@endif</strong>
+                                        on {{ $feedNoticeDate }}
+                                    </small>
+                                </div>
+                                <span class="notices-feed-badge {{ $noticeBadgeClass }} flex-shrink-0">{{ $noticeBadgeLabel }}</span>
+                                <i class="bi bi-chevron-down notices-feed-item__chevron flex-shrink-0" aria-hidden="true"></i>
+                            </div>
+                        </div>
+                        <div class="notices-feed-item__panel" id="notice-panel-{{ $feedNotice->pk }}"
+                            role="region" aria-labelledby="notice-head-{{ $feedNotice->pk }}">
+                            <div class="notices-feed-item__panel-inner">
+                                @if(trim(strip_tags((string) ($feedNotice->description ?? ''))) !== '')
+                                <div class="notice-description-content">{!! $feedNotice->description !!}</div>
+                                @else
+                                <p class="text-muted fst-italic mb-0">No description provided.</p>
+                                @endif
+                                @if($feedNotice->document)
+                                <div class="mt-3">
+                                    <a href="{{ asset('storage/' . $feedNotice->document) }}" target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="notices-feed-item__attachment small text-danger text-decoration-none d-inline-flex align-items-center gap-1">
+                                        <i class="bi bi-paperclip" aria-hidden="true"></i> View Attachment
+                                    </a>
+                                </div>
+                                @endif
+                            </div>
                         </div>
                         @endif
                         @if($feedNotice->document)
@@ -205,7 +227,7 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-feed.css') }}?v=6">
+<link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-feed.css') }}?v=12">
 @endpush
 
 @push('scripts')
@@ -398,25 +420,94 @@ document.addEventListener('click', function(e) {
     window.markAsReadDashboard(notifItem.dataset.notificationId, notifItem);
 });
 
-// Notice description See more / See less toggle
-document.addEventListener('click', function(e) {
-    const toggleBtn = e.target && e.target.closest ? e.target.closest('.notice-desc-toggle') : null;
-    if (!toggleBtn) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const container = toggleBtn.closest('.notice-description-content');
-    if (!container) return;
-    const preview = container.querySelector('.notice-desc-preview');
-    const full = container.querySelector('.notice-desc-full');
-    if (!preview || !full) return;
-    const isCollapsed = full.classList.contains('d-none');
-    if (isCollapsed) {
-        preview.classList.add('d-none');
-        full.classList.remove('d-none');
-    } else {
-        full.classList.add('d-none');
-        preview.classList.remove('d-none');
+// Notices accordion: hover expands, click pins open/closed. One notice open at a time.
+(function () {
+    const list = document.getElementById('dashboard-feed-page-list-notices');
+    if (!list) return;
+
+    const OPEN_DELAY  = 120;   // ignore pointers just passing over the list
+    const CLOSE_DELAY = 180;   // let the pointer travel into the panel without it snapping shut
+    let hoverTimer = null;
+
+    function setOpen(item, open) {
+        const panel = item.querySelector('.notices-feed-item__panel');
+        const head  = item.querySelector('.notices-feed-item__header');
+        if (!panel) return;
+        // Collapsing an already-collapsed panel would re-run the animation and flicker
+        // (happens when the pointer leaves before the open delay elapsed).
+        if (!open && !item.classList.contains('is-open')) {
+            item.classList.remove('is-pinned');
+            return;
+        }
+
+        if (open) {
+            item.classList.add('is-open');
+            panel.style.maxHeight = panel.scrollHeight + 'px';
+        } else {
+            item.classList.remove('is-open', 'is-pinned');
+            // maxHeight may be 'none' (see transitionend below); pin it to a number so it can animate down
+            panel.style.maxHeight = panel.scrollHeight + 'px';
+            void panel.offsetHeight;
+            panel.style.maxHeight = '';
+        }
+        if (head) head.setAttribute('aria-expanded', open ? 'true' : 'false');
     }
-});
+
+    function closeOthers(except) {
+        list.querySelectorAll('.notices-feed-item.is-open').forEach(function (other) {
+            if (other !== except) setOpen(other, false);
+        });
+    }
+
+    // Once open, drop the fixed height so late-loading images/tables aren't clipped.
+    list.addEventListener('transitionend', function (e) {
+        if (e.propertyName !== 'max-height') return;
+        const panel = e.target;
+        if (!panel.classList || !panel.classList.contains('notices-feed-item__panel')) return;
+        const item = panel.closest('.notices-feed-item');
+        if (item && item.classList.contains('is-open')) panel.style.maxHeight = 'none';
+    });
+
+    list.querySelectorAll('.notices-feed-item').forEach(function (item) {
+        item.addEventListener('mouseenter', function () {
+            clearTimeout(hoverTimer);
+            hoverTimer = setTimeout(function () {
+                closeOthers(item);
+                setOpen(item, true);
+            }, OPEN_DELAY);
+        });
+
+        item.addEventListener('mouseleave', function () {
+            clearTimeout(hoverTimer);
+            if (item.classList.contains('is-pinned')) return;
+            hoverTimer = setTimeout(function () { setOpen(item, false); }, CLOSE_DELAY);
+        });
+    });
+
+    list.addEventListener('click', function (e) {
+        if (e.target.closest('.notices-feed-item__attachment')) return; // let the attachment link open
+        const head = e.target.closest('.notices-feed-item__header');
+        if (!head) return;
+        const item = head.closest('.notices-feed-item');
+        if (!item) return;
+
+        clearTimeout(hoverTimer);
+        if (item.classList.contains('is-pinned')) {
+            setOpen(item, false);
+        } else {
+            closeOthers(item);
+            setOpen(item, true);
+            item.classList.add('is-pinned');
+        }
+    });
+
+    list.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const head = e.target.closest ? e.target.closest('.notices-feed-item__header') : null;
+        if (!head) return;
+        e.preventDefault();
+        head.click();
+    });
+}());
 </script>
 @endpush
