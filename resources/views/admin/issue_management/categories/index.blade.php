@@ -10,16 +10,6 @@
 @endpush
 
 @section('setup_content')
-@php
-    // Query string carried across sort / paging / per-page changes.
-    $baseQuery = ['q' => $search, 'per_page' => $perPage, 'sort' => $sortKey, 'dir' => $sortDir];
-
-    $sortUrl = function (string $key) use ($baseQuery, $sortKey, $sortDir) {
-        $dir = ($sortKey === $key && $sortDir === 'asc') ? 'desc' : 'asc';
-
-        return request()->fullUrlWithQuery(array_merge($baseQuery, ['sort' => $key, 'dir' => $dir, 'page' => 1]));
-    };
-@endphp
 <div class="container-fluid ic-page">
     <x-breadcrum title="Manage Categories" :showBack="false">
         <button type="button"
@@ -34,11 +24,41 @@
 
     {{-- Secondary actions (Download / Print) — above the card, per §1 --}}
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 ic-secondary-actions">
-        <a href="{{ route('admin.issue-categories.export', ['format' => 'csv', 'q' => $search, 'sort' => $sortKey, 'dir' => $sortDir]) }}"
-           class="btn programme-dt-btn-columns border-0 text-primary" title="Download as CSV">
-            <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-        </a>
-        <a href="{{ route('admin.issue-categories.export', ['format' => 'print', 'q' => $search, 'sort' => $sortKey, 'dir' => $sortDir]) }}"
+        {{-- Searching/sorting is client-side now, so the server has no filter to
+             mirror: these export the full list. --}}
+        {{-- ?cols= is stamped on by icUpdateExportCols() so both exports carry the
+             same columns the grid is showing. Searching/sorting is client-side, so
+             the row set is always the full list. --}}
+        {{-- More than one download format → dropdown, per §1 of the doc. --}}
+        <div class="dropdown">
+            <button type="button" id="icDownloadToggle"
+                    class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                    data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="icDownloadToggle">
+                <li>
+                    <a class="dropdown-item" id="icDownloadLink"
+                       href="{{ route('admin.issue-categories.export', ['format' => 'csv']) }}">
+                        <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i> CSV
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" id="icExcelLink"
+                       href="{{ route('admin.issue-categories.export', ['format' => 'excel']) }}">
+                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Excel (.xlsx)
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" id="icPdfLink"
+                       href="{{ route('admin.issue-categories.export', ['format' => 'pdf']) }}">
+                        <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <a href="{{ route('admin.issue-categories.export', ['format' => 'print']) }}"
+           id="icPrintLink"
            target="_blank" rel="noopener" class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
             <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
         </a>
@@ -57,66 +77,38 @@
                         <span>Columns</span><i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
 
-                    <button type="button" class="btn programme-dt-btn-columns" id="icSearchToggle"
-                            aria-label="Search categories" title="Search"
-                            style="border: 1px solid #d0d5dd; background: #fff; color: #344054;">
-                        <i class="bi bi-search" aria-hidden="true"></i>
-                    </button>
-
-                    <form method="GET" action="{{ route('admin.issue-categories.index') }}"
-                          class="ic-search-wrap {{ filled($search) ? '' : 'd-none' }}" id="icSearchWrap">
-                        <input type="hidden" name="per_page" value="{{ $perPage }}">
-                        <input type="hidden" name="sort" value="{{ $sortKey }}">
-                        <input type="hidden" name="dir" value="{{ $sortDir }}">
-                        <input type="search" class="ic-search-input" id="icSearchInput" name="q"
-                               value="{{ $search }}" placeholder="Search categories…" autocomplete="off"
-                               aria-label="Search categories">
-                    </form>
+                    {{-- datatable-global-ui.js moves DataTables' own filter in here. --}}
+                    <div id="icDtSearch" class="programme-dt-search" data-dt-search-for="issueCategoriesTable"></div>
                 </div>
             </div>
 
             <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <table id="issueCategoriesTable" data-sargam-dt-ui="false"
+                    {{-- No data-sargam-dt-ui opt-out: DataTables paginates this grid now,
+                         so the global enhancer supplies the search slot and footer.
+                         Sorting is DataTables' too — hence plain <th> text. --}}
+                    <table id="issueCategoriesTable"
                            class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                         <thead>
                             <tr>
                                 <th scope="col">S. No.</th>
-                                <th scope="col">
-                                    <a class="ic-sort {{ $sortKey === 'category' ? 'is-active' : '' }}" href="{{ $sortUrl('category') }}">
-                                        Category
-                                        <i class="bi {{ $sortKey === 'category' && $sortDir === 'desc' ? 'bi-caret-down-fill' : 'bi-caret-up-fill' }}" aria-hidden="true"></i>
-                                    </a>
-                                </th>
-                                <th scope="col">
-                                    <a class="ic-sort {{ $sortKey === 'description' ? 'is-active' : '' }}" href="{{ $sortUrl('description') }}">
-                                        Description
-                                        <i class="bi {{ $sortKey === 'description' && $sortDir === 'desc' ? 'bi-caret-down-fill' : 'bi-caret-up-fill' }}" aria-hidden="true"></i>
-                                    </a>
-                                </th>
-                                <th scope="col">
-                                    <a class="ic-sort {{ $sortKey === 'sub_categories' ? 'is-active' : '' }}" href="{{ $sortUrl('sub_categories') }}">
-                                        Sub-Categories
-                                        <i class="bi {{ $sortKey === 'sub_categories' && $sortDir === 'desc' ? 'bi-caret-down-fill' : 'bi-caret-up-fill' }}" aria-hidden="true"></i>
-                                    </a>
-                                </th>
-                                <th scope="col">
-                                    <a class="ic-sort {{ $sortKey === 'status' ? 'is-active' : '' }}" href="{{ $sortUrl('status') }}">
-                                        Status
-                                        <i class="bi {{ $sortKey === 'status' && $sortDir === 'desc' ? 'bi-caret-down-fill' : 'bi-caret-up-fill' }}" aria-hidden="true"></i>
-                                    </a>
-                                </th>
+                                <th scope="col">Category</th>
+                                <th scope="col">Description</th>
+                                <th scope="col">Sub-Categories</th>
+                                <th scope="col">Status</th>
                                 <th scope="col">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($categories as $category)
+                            @foreach($categories as $category)
                                 @php $isActive = (int) $category->status === 1; @endphp
                                 <tr>
-                                    <td>{{ $categories->firstItem() + $loop->index }}</td>
+                                    {{-- Renumbered on every draw (see the JS) so the serial follows
+                                         the sorted/filtered order rather than the original rows. --}}
+                                    <td>{{ $loop->iteration }}</td>
                                     <td>{{ $category->issue_category }}</td>
                                     <td>{{ $category->description ?: '—' }}</td>
-                                    <td>{{ $category->subCategories->count() }}</td>
+                                    <td>{{ $category->sub_categories_count }}</td>
                                     <td data-order="{{ (int) $category->status }}">
                                         <span class="status-pill badge {{ $isActive ? 'bg-success-subtle' : 'bg-danger-subtle' }}">
                                             {{ $isActive ? 'Active' : 'Inactive' }}
@@ -132,7 +124,7 @@
                                                     data-name="{{ $category->issue_category }}"
                                                     data-description="{{ $category->description }}"
                                                     data-status="{{ (int) $category->status }}">
-                                                <span class="ic-act__icon"><i class="bi bi-pencil-square" aria-hidden="true"></i></span>
+                                                <span class="ic-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
                                                 <span class="ic-act__label">Edit</span>
                                             </button>
 
@@ -171,39 +163,15 @@
                                         </div>
                                     </td>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="ic-empty">
-                                        <i class="bi bi-folder-x d-block mb-2" aria-hidden="true"></i>
-                                        <h6 class="fw-semibold mb-1">No Categories Found</h6>
-                                        <p class="mb-0 small">
-                                            {{ filled($search) ? 'No category matches “' . $search . '”.' : 'Get started by creating your first complaint category.' }}
-                                        </p>
-                                    </td>
-                                </tr>
-                            @endforelse
+                            @endforeach
                         </tbody>
                     </table>
                 </div>
 
-                {{-- Footer variant B — Laravel paginates this grid (§4) --}}
-                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
-                    <div class="programme-dt-pagination">
-                        {{ $categories->links('vendor.pagination.custom') }}
-                    </div>
-                    <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
-                        <div class="dataTables_length">
-                            <label class="mb-0">Showing
-                                <select id="icPerPage" class="form-select form-select-sm" aria-label="Rows per page">
-                                    @foreach($perPageOptions as $option)
-                                        <option value="{{ $option }}" {{ (int) $perPage === (int) $option ? 'selected' : '' }}>{{ $option }}</option>
-                                    @endforeach
-                                </select>
-                            </label>
-                        </div>
-                        <div class="dataTables_info">of {{ number_format($categories->total()) }} items</div>
-                    </div>
-                </div>
+                {{-- Footer variant A — DataTables paginates, datatable-global-ui.js fills
+                     this in with the pager and "Showing [10] of N items" (§4). --}}
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3"
+                     data-dt-footer-for="issueCategoriesTable"></div>
             </div>
 
         </div>
@@ -239,7 +207,7 @@
                                 <label class="ic-form-label">Description<span class="ic-req">*</span></label>
                                 <textarea class="form-control ic-control description-field" rows="3"
                                           name="categories[0][description]"
-                                          placeholder="e.g. Lorem Ipsum dolor sit amet" required></textarea>
+                                          placeholder="e.g. Add Description...." required></textarea>
                             </div>
                             <div class="ic-field-actions">
                                 <button type="button" class="ic-field-btn ic-field-btn--remove remove-field-btn"
@@ -331,33 +299,78 @@
 $(function () {
     'use strict';
 
-    /* ── Footer: rows-per-page ───────────────────────────────────────────── */
-    $('#icPerPage').on('change', function () {
-        var url = new URL(window.location.href);
-        url.searchParams.set('per_page', this.value);
-        url.searchParams.set('page', '1');
-        window.location.href = url.toString();
-    });
-
-    /* ── Toolbar: search toggle (server-side ?q=) ────────────────────────── */
-    $('#icSearchToggle').on('click', function () {
-        var $wrap = $('#icSearchWrap');
-        $wrap.toggleClass('d-none');
-        if (!$wrap.hasClass('d-none')) {
-            $('#icSearchInput').trigger('focus');
-        }
-    });
-
-    // Clearing the box (the native "x" or emptying it) returns to the unfiltered list.
-    $('#icSearchInput').on('search', function () {
-        if (this.value === '') {
-            $('#icSearchWrap').trigger('submit');
-        }
-    });
-
-    /* ── Column visibility (plain table → toggle by column index) ────────── */
-    var COL_KEY = 'issueCatGrid:hiddenColumns:v1';
+    /* ── DataTable ───────────────────────────────────────────────────────────
+       Search, sort, paging and the "Showing N of M items" footer are all
+       DataTables' now; datatable-global-ui.js supplies the page defaults and
+       moves the filter/pager into the toolbar and footer slots. No `dom` or
+       colVis options here — the global script owns that. ── */
     var $table = $('#issueCategoriesTable');
+
+    var dt = $table.DataTable({
+        order: [[1, 'asc']],                       // Category A→Z, matching the old default
+        columnDefs: [
+            { targets: 0, orderable: false, searchable: false, className: 'text-center' },
+            { targets: -1, orderable: false, searchable: false }   // Action
+        ],
+        language: {
+            emptyTable: '<div class="ic-empty">' +
+                '<i class="bi bi-folder-x d-block mb-2" aria-hidden="true"></i>' +
+                '<h6 class="fw-semibold mb-1">No Categories Found</h6>' +
+                '<p class="mb-0 small">Get started by creating your first complaint category.</p>' +
+                '</div>',
+            zeroRecords: '<div class="ic-empty">' +
+                '<i class="bi bi-search d-block mb-2" aria-hidden="true"></i>' +
+                '<h6 class="fw-semibold mb-1">No Categories Found</h6>' +
+                '<p class="mb-0 small">No category matches your search.</p>' +
+                '</div>'
+        }
+    });
+
+    // S. No. follows what is on screen, not the original row order.
+    function renumberSerial() {
+        var start = dt.page.info().start;
+        dt.column(0, { search: 'applied', order: 'applied', page: 'current' })
+          .nodes()
+          .each(function (cell, i) { cell.innerHTML = start + i + 1; });
+    }
+    dt.on('draw.dt', renumberSerial);
+    renumberSerial();
+
+    /* ── Column visibility (DataTables column API) ────────────────────────
+       Hidden columns are stored by LABEL, not index: an index would point at a
+       different column the moment one is added, silently hiding the wrong one.
+       An unknown label is simply ignored, so a renamed column comes back
+       visible — the safe direction to fail in. ── */
+    var COL_KEY = 'issueCatGrid:hiddenColumns:v2';
+
+    /* Header index -> the export key the server understands
+       (IssueCategoryController::exportColumnDefs()). Positional: '' marks a
+       column that is not in the export at all — here, Action.
+       ⚠️ Adding a column to the table means adding an entry here too. */
+    var IC_EXPORT_COLUMN_KEYS = ['sno', 'category', 'description', 'sub_categories', 'status', ''];
+    var IC_EXPORT_COL_COUNT = IC_EXPORT_COLUMN_KEYS.filter(Boolean).length;
+
+    /* Keep Download and Print carrying exactly the columns still on screen. */
+    function icUpdateExportCols() {
+        var keys = [];
+        dt.columns().every(function () {
+            var key = IC_EXPORT_COLUMN_KEYS[this.index()];
+            if (key && this.visible()) { keys.push(key); }
+        });
+
+        ['icDownloadLink', 'icExcelLink', 'icPdfLink', 'icPrintLink'].forEach(function (id) {
+            var link = document.getElementById(id);
+            if (!link) { return; }
+            var base = link.href.split('?')[0];
+            var params = new URLSearchParams(link.href.split('?')[1] || '');
+            params.delete('cols');
+            // Omit ?cols= entirely while nothing is hidden — the server reads
+            // "no cols" as "every column".
+            if (keys.length !== IC_EXPORT_COL_COUNT) { params.set('cols', keys.join(',')); }
+            var qs = params.toString();
+            link.href = base + (qs ? '?' + qs : '');
+        });
+    }
 
     function getHiddenCols() {
         try {
@@ -370,40 +383,42 @@ $(function () {
         try { localStorage.setItem(COL_KEY, JSON.stringify(cols)); } catch (e) { /* noop */ }
     }
 
-    function applyColumnVisibility(index, visible) {
-        var nth = index + 1;
-        $table.find('thead th:nth-child(' + nth + '), tbody td:nth-child(' + nth + ')')
-              .toggle(visible);
-    }
-
     function buildColumnToggles() {
         var $grid = $('#issueCatColumnToggleGrid');
-        if (!$grid.length) { return; }
         var hidden = getHiddenCols();
+
+        dt.columns().every(function () {
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (title) { this.visible(hidden.indexOf(title) === -1, false); }
+        });
+        dt.columns.adjust();
+
+        if (!$grid.length) { return; }
         $grid.empty();
 
-        $table.find('thead th').each(function (index) {
-            var title = $(this).text().replace(/\s+/g, ' ').trim();
+        dt.columns().every(function () {
+            var index = this.index();
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
             if (!title) { return; }
-
-            var visible = hidden.indexOf(index) === -1;
-            applyColumnVisibility(index, visible);
 
             var inputId = 'iccolvis_' + index;
             var $checkbox = $('<input type="checkbox" class="form-check-input m-0">')
                 .attr('id', inputId)
-                .prop('checked', visible);
+                .prop('checked', hidden.indexOf(title) === -1);
 
             $checkbox.on('change', function () {
                 var cols = getHiddenCols();
-                var pos = cols.indexOf(index);
+                var pos = cols.indexOf(title);
                 if (this.checked) {
                     if (pos !== -1) { cols.splice(pos, 1); }
                 } else if (pos === -1) {
-                    cols.push(index);
+                    cols.push(title);
                 }
                 persistHiddenCols(cols);
-                applyColumnVisibility(index, this.checked);
+                dt.column(index).visible(this.checked, false);
+                dt.columns.adjust();
+                renumberSerial();
+                icUpdateExportCols();
             });
 
             $('<div class="col-12 col-sm-6 col-md-4"></div>').append(
@@ -416,6 +431,10 @@ $(function () {
     }
 
     buildColumnToggles();
+    // Stamp the saved column state onto the export links on first paint too —
+    // otherwise a preference restored from localStorage wouldn't reach the server
+    // until the user opened the modal and toggled something.
+    icUpdateExportCols();
 
     /* ── Status toggle: repaint the row (badge + caption + delete guard) ──
        custom.js does the AJAX; the badge and the switch live in different

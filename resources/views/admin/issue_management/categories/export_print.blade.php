@@ -2,64 +2,53 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Manage Categories</title>
+    <title>Manage Categories — LBSNAA</title>
+    @include('admin.issue_management.partials.export_print_styles')
     <style>
-        body { font-family: Arial, sans-serif; font-size: 11px; color: #333; margin: 0; padding: 16px; }
-        .header { text-align: center; margin-bottom: 14px; border-bottom: 2px solid #004384; padding-bottom: 8px; }
-        .title { color: #004384; font-size: 18px; font-weight: bold; }
-        .subtitle { font-size: 11px; color: #666; margin-top: 4px; }
-        .timestamp { font-size: 9px; color: #888; font-style: italic; margin-top: 2px; }
-        .filters { background: #f8f9fa; border: 1px solid #dee2e6; padding: 6px 10px; margin-bottom: 10px; font-size: 10px; border-radius: 4px; }
-        .main-table { width: 100%; border-collapse: collapse; font-size: 10px; }
-        .main-table th { background: #004384; color: #fff; padding: 6px 5px; text-align: left; border: 1px solid #003a73; }
-        .main-table td { padding: 5px; border: 1px solid #dee2e6; vertical-align: top; word-wrap: break-word; }
-        .main-table tr:nth-child(even) td { background: #f8f9fa; }
-        .col-sno { width: 6%; }
+        /* Column widths are the only per-report part of the table. */
+        .col-sno      { width: 8%;  text-align: center; }
         .col-category { width: 24%; }
-        .col-desc { width: 44%; }
-        .col-sub { width: 12%; }
-        .col-status { width: 14%; }
-        @media print {
-            body { padding: 0; }
-        }
+        .col-desc     { width: 40%; }
+        .col-sub      { width: 14%; text-align: center; }
+        .col-status   { width: 14%; text-align: center; }
     </style>
 </head>
 <body onload="window.print();">
-    <div class="header">
-        <div class="title">Manage Categories</div>
-        <div class="subtitle">Sargam | Lal Bahadur Shastri National Academy of Administration (LBSNAA), Mussoorie</div>
-        <div class="timestamp">Generated: {{ $exportDate }}</div>
-    </div>
 
-    @if (filled($search))
-        <div class="filters"><strong>Search:</strong> {{ $search }}</div>
-    @endif
+    @include('admin.issue_management.partials.export_print_header', [
+        'title'      => 'Manage Categories',
+        'exportDate' => $exportDate,
+        'filterLine' => filled($search) ? '<strong>Search:</strong> ' . e($search) : null,
+        'total'      => $rows->count(),
+    ])
 
-    <table class="main-table">
+    {{-- Columns come from IssueCategoryController::exportColumnDefs(), already
+         filtered to whatever is still ticked in the grid's Columns modal, so the
+         printout matches the screen and can't drift from the CSV. Cells are keyed
+         by column key — never by position. --}}
+    <table class="ic-print-table">
         <thead>
             <tr>
-                <th class="col-sno">{{ $header[0] }}</th>
-                <th class="col-category">{{ $header[1] }}</th>
-                <th class="col-desc">{{ $header[2] }}</th>
-                <th class="col-sub">{{ $header[3] }}</th>
-                <th class="col-status">{{ $header[4] }}</th>
+                @foreach ($columns as $col)
+                    <th class="{{ $col['class'] }}">{{ $col['heading'] }}</th>
+                @endforeach
             </tr>
         </thead>
         <tbody>
             @forelse ($rows as $index => $row)
                 <tr>
-                    <td class="col-sno">{{ $index + 1 }}</td>
-                    <td class="col-category">{{ $row->issue_category }}</td>
-                    <td class="col-desc">{{ $row->description ?: '-' }}</td>
-                    <td class="col-sub">{{ (int) $row->sub_categories_count }}</td>
-                    <td class="col-status">{{ (int) $row->status === 1 ? 'Active' : 'Inactive' }}</td>
+                    @foreach ($columns as $col)
+                        <td class="{{ $col['class'] }}">{{ $col['value']($row, $index) }}</td>
+                    @endforeach
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" style="text-align: center; padding: 20px;">No categories to print</td>
+                    <td colspan="{{ count($columns) }}" class="ic-print-empty">No categories to print</td>
                 </tr>
             @endforelse
         </tbody>
     </table>
+
+    <div class="ic-print-foot">Sargam 2.0 · Centcom · Lal Bahadur Shastri National Academy of Administration</div>
 </body>
 </html>
