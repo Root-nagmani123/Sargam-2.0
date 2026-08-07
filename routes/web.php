@@ -1456,10 +1456,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
 
     // Issue Management - Main Routes
     Route::get('issue-management', [IssueManagementController::class, 'index'])->name('issue-management.index');
+    // Server-side rows for the All Requests grid (65k rows — never client-side).
+    Route::get('issue-management/data', [IssueManagementController::class, 'indexData'])->name('issue-management.data');
     Route::get('issue-management/export/list/{format?}', [IssueManagementController::class, 'indexExport'])->name('issue-management.export.list');
     Route::get('issue-management/export/excel', [IssueManagementController::class, 'exportExcel'])->name('issue-management.export.excel');
     Route::get('issue-management/export/pdf', [IssueManagementController::class, 'exportPdf'])->name('issue-management.export.pdf');
     Route::get('issue-management/centcom', [IssueManagementController::class, 'centcom'])->name('issue-management.centcom');
+    // Server-side rows for the Centcom grid, as for All Requests above.
+    Route::get('issue-management/centcom/data', [IssueManagementController::class, 'centcomData'])->name('issue-management.centcom.data');
     Route::get('issue-management/centcom/export/{format?}', [IssueManagementController::class, 'centcomExport'])->name('issue-management.centcom.export');
     Route::get('issue-management/create', [IssueManagementController::class, 'create'])->name('issue-management.create');
     Route::post('issue-management', [IssueManagementController::class, 'store'])->name('issue-management.store');

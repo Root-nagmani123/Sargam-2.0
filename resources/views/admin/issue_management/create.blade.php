@@ -90,7 +90,9 @@
                     <div>
                         <label for="description" class="ic-field-label">Description<span class="ic-req">*</span></label>
                         <textarea name="description" id="description" class="form-control ic-input" rows="3"
-                                  maxlength="1000" placeholder="e.g. Lorem Ipsum dolor sit amet" required>{{ old('description') }}</textarea>
+                                  maxlength="1000"
+                                  placeholder="Describe the problem — what is wrong, where, and since when"
+                                  required>{{ old('description') }}</textarea>
                         <div class="form-text text-muted"><span id="char-count">0</span>/1000 characters</div>
                         @error('description')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
@@ -257,7 +259,11 @@ $(document).ready(function() {
         el._issueChoices = new Choices(el, {
             searchEnabled: true,
             shouldSort: false,
-            allowHTML: false,
+            // true, not false: labels arrive as DOM option innerHTML, which the
+            // browser has already escaped — escaping again turns "A & B" into
+            // "A &amp; B" on screen. Every option here is built with
+            // new Option(), so nothing reaches this as raw markup.
+            allowHTML: true,
             itemSelectText: '',
             placeholder: true,
             placeholderValue: placeholder || '— Search / Select —',
@@ -302,7 +308,7 @@ $(document).ready(function() {
                     destroyIssueChoices($('#sub_categories'));
                     $('#sub_categories').html('<option value="">— Select sub-category —</option>');
                     $.each(data, function(key, value) {
-                        $('#sub_categories').append('<option value="'+ value.pk +'">'+ value.issue_sub_category +'</option>');
+                        $('#sub_categories').append(new Option(value.issue_sub_category, value.pk));
                     });
                     initIssueChoices($('#sub_categories'), '— Select sub-category —');
                 }
@@ -320,7 +326,7 @@ $(document).ready(function() {
                         $.each(response.level1, function(key, employee) {
                             var fullName = employee.employee_name || (employee.first_name + ' ' + (employee.middle_name ? employee.middle_name + ' ' : '') + employee.last_name);
                             var selected = (autoSelect && employee.employee_pk == autoSelect) ? 'selected' : '';
-                            $('#nodal_employee').append('<option value="'+ employee.employee_pk +'" '+ selected +'>'+ fullName +'</option>');
+                            $('#nodal_employee').append(new Option(fullName, employee.employee_pk, !!selected, !!selected));
                         });
                         initIssueChoices($('#nodal_employee'), '— Select —');
                         // Level 2 & 3 - display only
@@ -418,7 +424,7 @@ $(document).ready(function() {
                         destroyIssueChoices($('#building_select'));
                         $('#building_select').html('<option value="">— Select —</option>');
                         $.each(response.data, function(key, value) {
-                            $('#building_select').append('<option value="'+ value.pk +'">'+ value.building_name +'</option>');
+                            $('#building_select').append(new Option(value.building_name, value.pk));
                         });
                         initIssueChoices($('#building_select'), '— Select —');
                     }
@@ -448,7 +454,7 @@ $(document).ready(function() {
                             // Use ?? so 0 is preserved (|| would treat 0 as falsy and show undefined)
                             var floorId = value.floor_id ?? value.pk ?? value.estate_unit_sub_type_master_pk ?? '';
                             var floorName = value.floor_name ?? value.floor ?? value.unit_sub_type ?? '';
-                            $('#floor_select').append('<option value="'+ floorId +'">'+ floorName +'</option>');
+                            $('#floor_select').append(new Option(floorName, floorId));
                         });
                         initIssueChoices($('#floor_select'), '— Select floor —');
                     }
@@ -486,7 +492,7 @@ $(document).ready(function() {
                             // Use ?? so 0 is preserved (|| would treat 0 as falsy and show undefined)
                             var roomId = value.pk;
                             var roomName = value.room_name ?? value.house_no ?? value.floor ?? '';
-                            $('#room_select').append('<option value="'+ roomName +'">'+ roomName +'</option>');
+                            $('#room_select').append(new Option(roomName, roomName));
                         });
                         initIssueChoices($('#room_select'), '— Select room —');
                     }
