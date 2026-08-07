@@ -728,8 +728,15 @@ class CourseRepositoryController extends Controller
                 $detail->topic_pk = $validated['timetable_name'] ?? $detail->topic_pk;
                 $detail->session_date = $validated['session_date'] ?? $detail->session_date;
                 $detail->author_name = $validated['author_name'] ?? $detail->author_name;
-                $detail->sector_master_pk = $validated['sector_master'] ?? $detail->sector_master_pk;
-                $detail->ministry_master_pk = $validated['ministry_master'] ?? $detail->ministry_master_pk;
+                // Sector/Ministry are optional and clearable: when the field is submitted
+                // (even as null via ConvertEmptyStringsToNull) honour it so the value can be
+                // un-set; only fall back to the existing value when the key is absent entirely.
+                $detail->sector_master_pk = array_key_exists('sector_master', $validated)
+                    ? $validated['sector_master']
+                    : $detail->sector_master_pk;
+                $detail->ministry_master_pk = array_key_exists('ministry_master', $validated)
+                    ? $validated['ministry_master']
+                    : $detail->ministry_master_pk;
                 $detail->keyword = $validated['keywords'] ?? $detail->keyword;
                 $detail->videolink = $validated['video_link'] ?? $detail->videolink;
                 if ($category && isset($typeMap[$category])) {
