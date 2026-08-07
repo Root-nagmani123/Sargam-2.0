@@ -291,7 +291,7 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-feed.css') }}?v=14">
+<link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-feed.css') }}?v=15">
 @endpush
 
 @push('scripts')
@@ -366,15 +366,21 @@ document.addEventListener('DOMContentLoaded', function() {
         updateCount();
     }
 
-    // Notices search: submit to the server. Enter (or leaving the field after a
-    // change) reloads with ?q=, rather than firing a navigation per keystroke.
+    // Notices search runs in SQL. The typed text is mirrored into the filter
+    // form's hidden `q` on every keystroke, so whichever control the user reaches
+    // for next — Enter, a filter select, Reset — carries the search with it.
+    function syncNoticeSearchField() {
+        const qField = document.getElementById('notice-filter-q');
+        if (qField && searchInput) qField.value = searchInput.value.trim();
+    }
+
     function submitNoticeSearch() {
         const form = document.getElementById('notice-filter-form');
-        const qField = document.getElementById('notice-filter-q');
-        if (!form || !qField || !searchInput) return;
-        const value = searchInput.value.trim();
-        if (value === qField.value) return;
-        qField.value = value;
+        if (!form || !searchInput) return;
+        // Compare against what the server actually applied, not the hidden field:
+        // that one tracks the box live, so it would never look different.
+        if (searchInput.value.trim() === noticeServerQuery) return;
+        syncNoticeSearchField();
         form.submit();
     }
 
@@ -427,17 +433,26 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     if (searchInput) {
-        searchInput.addEventListener('input', applySearch);
+        searchInput.addEventListener('input', function() {
+            if (activeTab === 'notices') syncNoticeSearchField();
+            applySearch();
+        });
 
-        // Notices search runs server-side: commit on Enter, or when the field
-        // loses focus after being changed.
         searchInput.addEventListener('keydown', function(e) {
             if (e.key !== 'Enter' || activeTab !== 'notices') return;
             e.preventDefault();
             submitNoticeSearch();
         });
-        searchInput.addEventListener('blur', function() {
-            if (activeTab === 'notices') submitNoticeSearch();
+
+        searchInput.addEventListener('blur', function(e) {
+            if (activeTab !== 'notices') return;
+            // Reset Filters, Add New Notice and the four selects all live INSIDE
+            // the filter form. Submitting here when focus moves to one of them
+            // would navigate first and swallow that click — the select would not
+            // even open. Their own action already carries the synced `q`.
+            const form = document.getElementById('notice-filter-form');
+            if (form && e.relatedTarget && form.contains(e.relatedTarget)) return;
+            submitNoticeSearch();
         });
     }
 

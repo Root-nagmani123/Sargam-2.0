@@ -418,6 +418,47 @@ a.notices-feed-item__title:hover {
     color: #d97706;
 }
 
+/* Notices pagination (server-side). The pill treatment in pre_header.blade.php is
+   scoped to .dataTables_wrapper, so this paginator would otherwise fall back to
+   bare Bootstrap. 4px radius, not pills — per the house rule. */
+.notices-feed-pagination {
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+    padding-top: 0.875rem;
+}
+
+.notices-feed-pagination .page-link {
+    color: var(--dashboard-feed-navy, #004a8f);
+    border-color: #e2e5ea;
+    border-radius: 0.25rem;
+    margin: 0 0.125rem;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.8125rem;
+}
+
+.notices-feed-pagination .page-link:hover {
+    background: #eef0f3;
+    border-color: #d5d9e0;
+    color: var(--dashboard-feed-navy, #004a8f);
+}
+
+.notices-feed-pagination .page-item.active .page-link {
+    background: var(--dashboard-feed-navy, #004a8f);
+    border-color: var(--dashboard-feed-navy, #004a8f);
+    color: #fff;
+}
+
+.notices-feed-pagination .page-item.disabled .page-link {
+    color: #98a2b3;
+    background: #fff;
+    border-color: #eceef1;
+}
+
+.notices-feed-pagination .page-link:focus-visible {
+    outline: 2px solid var(--dashboard-feed-navy, #004a8f);
+    outline-offset: 1px;
+    box-shadow: none;
+}
+
 
 .dashboard-feed-page .dashboard-birthdays-block__title {
     font-size: 1rem;
