@@ -1511,14 +1511,24 @@ if (!function_exists('notice_feed_base_query')) {
             ->orderBy('notices_notification.display_date', 'desc');
     }
 }
-if (!function_exists('get_notice_notification_by_role')) {
-    function get_notice_notification_by_role()
+if (!function_exists('notice_feed_query_by_role')) {
+    /**
+     * Role-scoped notice feed as an UNEXECUTED query builder.
+     *
+     * Returning the builder (rather than a Collection) is what lets callers add
+     * filters and ->paginate() in SQL instead of pulling every live notice into
+     * memory and filtering in PHP.
+     *
+     * Each role resolves to ONE statement — the previous version ran a second
+     * query per role and merged the two collections, which cannot be paginated.
+     *
+     * @return \Illuminate\Database\Query\Builder|null  null when unauthenticated
+     */
+    function notice_feed_query_by_role()
     {
         $user = Auth::user();
-
-        // Return empty collection if user is not authenticated
         if (!$user) {
-            return collect([]);
+            return null;
         }
 
         $sessionRoles = Session::get('user_roles', []);
@@ -1529,36 +1539,56 @@ if (!function_exists('get_notice_notification_by_role')) {
         $isStaffFaculty = !empty(array_intersect($roleStaffFaculty, $sessionRoles));
         $isStudent      = !empty(array_intersect($roleStudent, $sessionRoles));
 
+        $query = notice_feed_base_query();
 
-        $commonNotices = notice_feed_base_query()
-            ->where('notices_notification.target_audience', 'All')
-            ->get();
-
-        // 🔥 Staff/Faculty Notices
+        // Staff/Faculty: everyone's "All" notices plus their own audience.
         if ($isStaffFaculty) {
-
-            $data = notice_feed_base_query()
-                ->where('notices_notification.target_audience', 'like', '%Staff/Faculty%')
-                ->get();
-
-
-            return $commonNotices->merge($data);
+            return $query->where(function ($w) {
+                $w->where('notices_notification.target_audience', 'All')
+                    ->orWhere('notices_notification.target_audience', 'like', '%Staff/Faculty%');
+            });
         }
 
-        // 🔥 Student OT Notices
+        // Student-OT: "All" notices plus Office-trainee notices for the courses
+        // they are enrolled in. The course ids are resolved in their own small
+        // query rather than joined in: the old inner join on
+        // student_master_course__map emitted the same notice once per mapping
+        // row (duplicate cards), and a joined query cannot be counted for
+        // pagination without a distinct().
         if ($isStudent) {
-            $roleNotices = notice_feed_base_query()
-                ->join('student_master_course__map as smcm', 'notices_notification.course_master_pk', '=', 'smcm.course_master_pk')
-                ->where('notices_notification.target_audience', 'like', '%Office trainee%')
-                ->where('smcm.student_master_pk', $user->user_id)
-                ->get();
+            $courseIds = DB::table('student_master_course__map')
+                ->where('student_master_pk', $user->user_id)
+                ->distinct()
+                ->pluck('course_master_pk');
 
+            return $query->where(function ($w) use ($courseIds) {
+                $w->where('notices_notification.target_audience', 'All');
 
-            return $commonNotices->merge($roleNotices);
+                if ($courseIds->isNotEmpty()) {
+                    $w->orWhere(function ($o) use ($courseIds) {
+                        $o->where('notices_notification.target_audience', 'like', '%Office trainee%')
+                            ->whereIn('notices_notification.course_master_pk', $courseIds);
+                    });
+                }
+            });
         }
 
-        // Roles not matching → return only "All"
-        return $commonNotices;
+        // Roles not matching → only "All"
+        return $query->where('notices_notification.target_audience', 'All');
+    }
+}
+if (!function_exists('get_notice_notification_by_role')) {
+    /**
+     * Every live notice for the current user, as a Collection.
+     *
+     * Unbounded by design — only use it where the caller needs the whole set.
+     * For listing screens prefer notice_feed_query_by_role() with ->paginate().
+     */
+    function get_notice_notification_by_role()
+    {
+        $query = notice_feed_query_by_role();
+
+        return $query ? $query->get() : collect([]);
     }
 }
 

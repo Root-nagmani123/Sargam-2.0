@@ -27,7 +27,9 @@
     };
 @endphp
 
-<div class="container-fluid">
+{{-- `otmdo` is the page-root scope for _styles.blade.php — every rule in it is
+     written as `.otmdo .otmdo-*`, so removing this class unstyles the page. --}}
+<div class="container-fluid otmdo px-2 py-2">
     <x-breadcrum title="Session Moderator/Escort Duty" :showBack="true"></x-breadcrum>
 
     {{-- ===================== HEADER ===================== --}}

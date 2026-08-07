@@ -17,7 +17,13 @@ collect();
 $notificationBadgeCount = ($user && $user->user_id)
 ? ($isAdminSummary ? notification()->getUnreadCount($user->user_id, $daysOld) : $notifications->count())
 : 0;
-$notices = get_notice_notification_by_role();
+// Summary widget: only the latest few notices are rendered — "See all" links to
+// the paginated feed. Fetching every live notice here just to show a short list
+// was the same unbounded read the feed page had.
+$noticeWidgetLimit = 5;
+$noticeFeedQuery = notice_feed_query_by_role();
+$noticeTotalCount = $noticeFeedQuery ? (clone $noticeFeedQuery)->count() : 0;
+$notices = $noticeFeedQuery ? $noticeFeedQuery->limit($noticeWidgetLimit)->get() : collect();
 $hour = (int) date('G');
 $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening' ); $userName=$user ?
     (trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?: ($user->name ?? 'User')) : 'User';
@@ -401,7 +407,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                         <div class="dashboard-tweet-item">
                             <span class="small text-body-secondary">You have <strong
                                     class="text-body">{{ $notifications->count() }}</strong> unread notices and total
-                                <strong class="text-body">{{ count($notices) }}</strong> notices.</span>
+                                <strong class="text-body">{{ $noticeTotalCount }}</strong> notices.</span>
                         </div>
                         <div class="dashboard-tweet-item">
                             <span class="small text-body-secondary">You have <strong
@@ -668,6 +674,37 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
     </div>
 
     @include('admin.dashboard.partials.report_issue')
+
+    {{-- Notice detail modal — driven by the data-notice-* payload on
+         .dashboard-notice-item. Without this the cards carry role="button" and
+         cursor:pointer but do nothing when clicked. --}}
+    <div class="modal fade" id="dashboard-notice-modal" tabindex="-1"
+        aria-labelledby="dashboard-notice-modal-label" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-bottom-0 pb-1">
+                    <div class="flex-grow-1 min-w-0 pe-2">
+                        <h5 class="modal-title fw-semibold lh-sm mb-1" id="dashboard-notice-modal-label"></h5>
+                        <small class="text-muted" id="dashboard-notice-modal-meta"></small>
+                    </div>
+                    <span class="dashboard-notice-type-pill flex-shrink-0 me-2 mt-1"
+                        id="dashboard-notice-modal-badge"></span>
+                    <button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-2">
+                    <hr class="mt-0 mb-3">
+                    <div class="notice-description-content" id="dashboard-notice-modal-body"></div>
+                    <div class="mt-3 d-none" id="dashboard-notice-modal-attachment">
+                        <a id="dashboard-notice-modal-doc" href="#" target="_blank" rel="noopener noreferrer"
+                            class="small text-danger text-decoration-none d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-paperclip" aria-hidden="true"></i> View attachment
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     @push('scripts')
     <script>
@@ -1367,6 +1404,56 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     btn.innerHTML =
                         '<i class="bi bi-stars" aria-hidden="true"></i><span class="small">Wish All</span>';
                 });
+        });
+    })();
+
+    // Notice card -> detail modal. The card carries the whole payload in
+    // data-notice-* so no request is needed to open it.
+    (function () {
+        var modalEl = document.getElementById('dashboard-notice-modal');
+        if (!modalEl) return;
+
+        function openNoticeModal(card) {
+            document.getElementById('dashboard-notice-modal-label').textContent = card.dataset.noticeTitle || '';
+            document.getElementById('dashboard-notice-modal-meta').textContent = card.dataset.noticeMeta || '';
+
+            var badgeEl = document.getElementById('dashboard-notice-modal-badge');
+            badgeEl.textContent = card.dataset.noticeBadge || '';
+            badgeEl.classList.toggle('d-none', !(card.dataset.noticeBadge || '').trim());
+
+            // data-notice-desc holds the description JSON-encoded (escaped for the
+            // attribute), so parse it back before injecting it as HTML.
+            var desc = '';
+            try { desc = JSON.parse(card.dataset.noticeDesc || '""'); } catch (e) { desc = ''; }
+            document.getElementById('dashboard-notice-modal-body').innerHTML =
+                desc || '<p class="text-muted fst-italic mb-0">No description provided.</p>';
+
+            var attachWrap = document.getElementById('dashboard-notice-modal-attachment');
+            var attachLink = document.getElementById('dashboard-notice-modal-doc');
+            var docUrl = card.dataset.noticeDoc || '';
+            if (docUrl) {
+                attachLink.href = docUrl;
+                attachWrap.classList.remove('d-none');
+            } else {
+                attachWrap.classList.add('d-none');
+            }
+
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+
+        document.addEventListener('click', function (e) {
+            // The inline "View attachment" link opens the file directly.
+            if (e.target.closest('.dashboard-notice-attachment')) return;
+            var card = e.target.closest('.dashboard-notice-item[data-notice-pk]');
+            if (card) openNoticeModal(card);
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            var card = e.target.closest ? e.target.closest('.dashboard-notice-item[data-notice-pk]') : null;
+            if (!card) return;
+            e.preventDefault();
+            openNoticeModal(card);
         });
     })();
     </script>
