@@ -31,9 +31,14 @@
                 <h4>{{ $form->form_name }}</h4>
                 <p>Step {{ (isset($allSteps) ? ($allSteps->search(fn ($s) => $s->id === $step->id)) : 0) + 1 }}@isset($allSteps) of {{ $allSteps->count() }}@endisset — {{ $step->step_name }}</p>
             </div>
-            <a href="{{ route('fc-reg.forms.dashboard', $form) }}" class="btn btn-light btn-sm ms-auto rounded-pill px-3">
-                <i class="bi bi-grid me-1"></i>All Steps
-            </a>
+            <div class="ms-auto d-flex flex-wrap gap-2">
+                <a href="{{ $form->landingPageUrl() }}" class="btn btn-light btn-sm rounded-pill px-3">
+                    <i class="bi bi-house-door me-1"></i>Home
+                </a>
+                <a href="{{ route('fc-reg.forms.dashboard', $form) }}" class="btn btn-light btn-sm rounded-pill px-3">
+                    <i class="bi bi-grid me-1"></i>All Steps
+                </a>
+            </div>
         </div>
     </div>
 

@@ -185,6 +185,26 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/students/export/{format}', [UserController::class, 'studentListExport'])->name('admin.dashboard.students.export');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
+    Route::post('/dashboard/report-issue', [\App\Http\Controllers\Admin\IssueReportController::class, 'store'])->middleware('throttle:10,1')->name('admin.dashboard.report-issue');
+    // Admin console for issues submitted via the dashboard "Report Issue" launcher
+    // index() keeps its own in-body redirect for non-privileged users (unchanged UX);
+    // every other admin action is destructive/PII-bearing and is gated by 'issue.reports.admin'.
+    Route::get('/issue-reports', [\App\Http\Controllers\Admin\IssueReportController::class, 'index'])->name('admin.issue-reports.index');
+    Route::middleware(['issue.reports.admin'])->group(function () {
+        Route::get('/issue-reports/filter-options', [\App\Http\Controllers\Admin\IssueReportController::class, 'filterOptions'])->name('admin.issue-reports.filter-options');
+        Route::get('/issue-reports/export', [\App\Http\Controllers\Admin\IssueReportController::class, 'export'])->name('admin.issue-reports.export');
+        Route::get('/issue-reports/export-excel', [\App\Http\Controllers\Admin\IssueReportController::class, 'exportExcel'])->name('admin.issue-reports.export-excel');
+        Route::get('/issue-reports/{id}', [\App\Http\Controllers\Admin\IssueReportController::class, 'show'])->whereNumber('id')->name('admin.issue-reports.show');
+        Route::post('/issue-reports/{id}/status', [\App\Http\Controllers\Admin\IssueReportController::class, 'updateStatus'])->whereNumber('id')->name('admin.issue-reports.status');
+        Route::delete('/issue-reports/{id}', [\App\Http\Controllers\Admin\IssueReportController::class, 'destroy'])->whereNumber('id')->name('admin.issue-reports.destroy');
+    });
+    // User-facing: only the current user's own reported issues
+    Route::get('/my-reported-issues', [\App\Http\Controllers\Admin\IssueReportController::class, 'myIssues'])->name('my.issue-reports.index');
+    Route::get('/my-reported-issues/filter-options', [\App\Http\Controllers\Admin\IssueReportController::class, 'myFilterOptions'])->name('my.issue-reports.filter-options');
+    Route::get('/my-reported-issues/export', [\App\Http\Controllers\Admin\IssueReportController::class, 'myExport'])->name('my.issue-reports.export');
+    Route::get('/my-reported-issues/export-excel', [\App\Http\Controllers\Admin\IssueReportController::class, 'myExportExcel'])->name('my.issue-reports.export-excel');
+    // Shared: attachment download, gated in-body to the admin or the issue's own reporter
+    Route::get('/issue-reports/{id}/attachment', [\App\Http\Controllers\Admin\IssueReportController::class, 'attachment'])->whereNumber('id')->name('issue-reports.attachment');
     Route::get('/directory/lbsnaa', [DirectoryController::class, 'lbsnaa'])->name('admin.directory.lbsnaa');
     Route::get('/directory/ot', [DirectoryController::class, 'ot'])->name('admin.directory.ot');
 
@@ -1485,10 +1505,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
 // Mess Management (auth required — layout assumes logged-in user)
 Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(function () {
     // Master Data
-    Route::resource('events', \App\Http\Controllers\Mess\EventController::class)->only(['index', 'create', 'store']);
-    Route::resource('inventories', \App\Http\Controllers\Mess\InventoryController::class)->only(['index', 'create', 'store']);
     Route::resource('vendors', \App\Http\Controllers\Mess\VendorController::class)->except(['show']);
-    Route::resource('invoices', \App\Http\Controllers\Mess\InvoiceController::class)->only(['index', 'create', 'store']);
     Route::resource('itemcategories', \App\Http\Controllers\Mess\ItemCategoryController::class)->except(['show']);
     Route::resource('itemsubcategories', \App\Http\Controllers\Mess\ItemSubcategoryController::class)->except(['show']);
     Route::resource('storeallocations', \App\Http\Controllers\Mess\StoreAllocationController::class)->only(['index', 'store']);
@@ -1501,16 +1518,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
 
     Route::resource('sub-stores', \App\Http\Controllers\Mess\SubStoreController::class)->except(['show']);
 
-    // NEW: Setup - Configuration Modules
-    Route::resource('vendor-item-mappings', \App\Http\Controllers\Mess\VendorItemMappingController::class);
-    Route::resource('menu-rate-lists', \App\Http\Controllers\Mess\MenuRateListController::class);
-    Route::resource('sale-counters', \App\Http\Controllers\Mess\SaleCounterController::class);
-    Route::resource('sale-counter-mappings', \App\Http\Controllers\Mess\SaleCounterMappingController::class);
-    Route::resource('credit-limits', \App\Http\Controllers\Mess\CreditLimitController::class);
     Route::resource('client-types', \App\Http\Controllers\Mess\ClientTypeController::class)->except(['show']);
-    Route::post('meal-rate-master/{id}/toggle-status', [\App\Http\Controllers\Mess\MealRateMasterController::class, 'toggleStatus'])->name('meal-rate-master.toggle-status');
-    Route::resource('meal-rate-master', \App\Http\Controllers\Mess\MealRateMasterController::class)->except(['show']);
-    Route::resource('number-configs', \App\Http\Controllers\Mess\NumberConfigController::class);
 
     // Purchase Order Management
     Route::resource('purchaseorders', \App\Http\Controllers\Mess\PurchaseOrderController::class)->except(['edit', 'update', 'destroy']);
@@ -1529,9 +1537,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     Route::resource('material-management', \App\Http\Controllers\Mess\KitchenIssueController::class);
     Route::get('material-management/{id}/return', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'returnData'])->name('material-management.return');
     Route::put('material-management/{id}/return', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'updateReturn'])->name('material-management.update-return');
-    Route::post('material-management/{id}/send-for-approval', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'sendForApproval'])->name('material-management.send-for-approval');
     Route::get('material-management/records/ajax', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getKitchenIssueRecords'])->name('material-management.records');
-    Route::get('material-management/reports/bill', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'billReport'])->name('material-management.bill-report');
 
     // Selling Voucher with Date Range (standalone module - design like Selling Voucher, data separate)
     Route::get('selling-voucher-date-range/students-by-course/{course_pk}', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'getStudentsByCourse'])->name('selling-voucher-date-range.students-by-course');
@@ -1543,15 +1549,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     Route::get('selling-voucher-date-range/{id}/return', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'returnData'])->name('selling-voucher-date-range.return');
     Route::put('selling-voucher-date-range/{id}/return', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'updateReturn'])->name('selling-voucher-date-range.update-return');
 
-    // Material Management Approval
-    Route::prefix('material-management-approvals')->name('material-management-approvals.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'index'])->name('index');
-        Route::get('/{id}', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'show'])->name('show');
-        Route::post('/{id}/approve', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'approve'])->name('approve');
-        Route::post('/{id}/reject', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'reject'])->name('reject');
-    });
-
-    // NEW: Billing & Finance
+    // Billing & Finance
     Route::get('my-bills', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'myBillsIndex'])->name('my-bills.index');
     Route::get('process-mess-bills-employee', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'index'])->name('process-mess-bills-employee.index');
     Route::get('process-mess-bills-employee/modal-data', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'modalData'])->name('process-mess-bills-employee.modal-data');
@@ -1560,17 +1558,6 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     Route::post('process-mess-bills-employee/{id}/generate-payment', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'generatePayment'])->name('process-mess-bills-employee.generate-payment');
     Route::get('process-mess-bills-employee/{id}/print-receipt', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'printReceipt'])->name('process-mess-bills-employee.print-receipt');
     Route::get('process-mess-bills-employee/export', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'export'])->name('process-mess-bills-employee.export');
-    Route::resource('monthly-bills', \App\Http\Controllers\Mess\MonthlyBillController::class);
-    Route::post('monthly-bills/generate', [\App\Http\Controllers\Mess\MonthlyBillController::class, 'generateBills'])->name('monthly-bills.generate');
-    Route::resource('finance-bookings', \App\Http\Controllers\Mess\FinanceBookingController::class);
-    Route::post('finance-bookings/{id}/approve', [\App\Http\Controllers\Mess\FinanceBookingController::class, 'approve'])->name('finance-bookings.approve');
-    Route::post('finance-bookings/{id}/reject', [\App\Http\Controllers\Mess\FinanceBookingController::class, 'reject'])->name('finance-bookings.reject');
-
-    // NEW: Mess RBAC - Permission Management
-    // IMPORTANT: Custom routes MUST come BEFORE resource route
-    // Route::get('permissions/users-by-role', [\App\Http\Controllers\Mess\MessPermissionController::class, 'getUsersByRole'])->name('permissions.getUsersByRole');
-    // Route::get('permissions/check/{action}', [\App\Http\Controllers\Mess\MessPermissionController::class, 'checkPermission'])->name('permissions.check');
-    // Route::resource('permissions', \App\Http\Controllers\Mess\MessPermissionController::class);
 
     // Reports
     Route::prefix('reports')->name('reports.')->group(function () {
@@ -1589,18 +1576,11 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
         Route::get('stock-balance-till-date', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDate'])->name('stock-balance-till-date');
         Route::get('stock-balance-till-date/export', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDateExcel'])->name('stock-balance-till-date.excel');
         Route::get('stock-balance-till-date/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDatePdf'])->name('stock-balance-till-date.pdf');
-        Route::get('selling-voucher-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'sellingVoucherPrintSlip'])->name('selling-voucher-print-slip');
-        Route::get('selling-voucher-print-slip/export', [\App\Http\Controllers\Mess\ReportController::class, 'sellingVoucherPrintSlipExcel'])->name('selling-voucher-print-slip.excel');
         Route::get('purchase-sale-quantity', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseSaleQuantityReport'])->name('purchase-sale-quantity');
         Route::get('purchase-sale-quantity/export', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseSaleQuantityExcel'])->name('purchase-sale-quantity.excel');
         Route::get('purchase-sale-quantity/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseSaleQuantityPdf'])->name('purchase-sale-quantity.pdf');
         Route::get('low-stock', [\App\Http\Controllers\Mess\ReportController::class, 'lowStockReport'])->name('low-stock');
         Route::get('low-stock/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'lowStockPdf'])->name('low-stock.pdf');
-        Route::get('stock-issue-detail', [\App\Http\Controllers\Mess\ReportController::class, 'stockIssueDetailReport'])->name('stock-issue-detail');
-        Route::get('items-list', [\App\Http\Controllers\Mess\ReportController::class, 'itemsListReport'])->name('items-list');
-        Route::get('purchase-orders', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseOrdersReport'])->name('purchase-orders');
-        Route::get('pending-orders', [\App\Http\Controllers\Mess\ReportController::class, 'pendingOrdersReport'])->name('pending-orders');
-        Route::get('mess-bill', [\App\Http\Controllers\Mess\ReportController::class, 'messBillReport'])->name('mess-bill');
     });
 });
 

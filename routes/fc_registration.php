@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\FC\{
+    DescriptiveDataReportController,
     FcActivityController,
     FcActivityDepartmentController,
     FcActivityHomeController,
@@ -81,28 +82,37 @@ Route::middleware(['auth'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->grou
 
     // Step field editor (opened from Form Management → Edit form → Fields)
     Route::prefix('form-builder')->name('form-builder.')->group(function () {
-        Route::get('/steps/{step}',           [FormBuilderController::class, 'editStep'])->name('step');
-        Route::put('/steps/{step}',           [FormBuilderController::class, 'updateStep'])->name('step.update');
+        // The field editor is reached ONLY from the Actions column on Form Management, so the
+        // page AND every endpoint it posts to carry the same flag as the button.
+        //
+        // Guarding the page alone was not enough: hiding a button and 403-ing the screen still
+        // left PUT /form-builder/fields/{id} open, so DevTools — or curl — could rename, retype
+        // or reorder a question trainees are answering, without ever loading the editor. A lock
+        // that only holds while you use the UI is not a lock.
+        Route::get('/steps/{step}',           [FormBuilderController::class, 'editStep'])->middleware('fc.builder.action:form_step_actions_enabled')->name('step');
+        Route::put('/steps/{step}',           [FormBuilderController::class, 'updateStep'])->middleware('fc.builder.action:form_step_actions_enabled')->name('step.update');
         Route::get('/steps/{step}/preview',   [FormBuilderController::class, 'preview'])->name('preview');
 
-        Route::post('/steps/{step}/fields',   [FormBuilderController::class, 'storeField'])->name('field.store');
-        Route::put('/fields/{field}',         [FormBuilderController::class, 'updateField'])->name('field.update');
-        Route::delete('/fields/{field}',      [FormBuilderController::class, 'deleteField'])->name('field.delete');
-        Route::post('/fields/reorder',        [FormBuilderController::class, 'reorderFields'])->name('field.reorder');
+        Route::post('/steps/{step}/fields',   [FormBuilderController::class, 'storeField'])->middleware('fc.builder.action:form_step_actions_enabled')->name('field.store');
+        Route::put('/fields/{field}',         [FormBuilderController::class, 'updateField'])->middleware('fc.builder.action:form_step_actions_enabled')->name('field.update');
+        Route::delete('/fields/{field}',      [FormBuilderController::class, 'deleteField'])->middleware('fc.builder.delete')->name('field.delete');
+        Route::post('/fields/reorder',        [FormBuilderController::class, 'reorderFields'])->middleware('fc.builder.action:form_step_actions_enabled')->name('field.reorder');
+        // Renames a section heading across every field of the step in one edit
+        Route::post('/steps/{step}/rename-section', [FormBuilderController::class, 'renameSection'])->middleware('fc.builder.action:form_step_actions_enabled')->name('section.rename');
 
-        Route::post('/steps/{step}/groups',   [FormBuilderController::class, 'storeGroup'])->name('group.store');
-        Route::put('/groups/{group}',         [FormBuilderController::class, 'updateGroup'])->name('group.update');
-        Route::delete('/groups/{group}',      [FormBuilderController::class, 'deleteGroup'])->name('group.delete');
+        Route::post('/steps/{step}/groups',   [FormBuilderController::class, 'storeGroup'])->middleware('fc.builder.action:form_step_actions_enabled')->name('group.store');
+        Route::put('/groups/{group}',         [FormBuilderController::class, 'updateGroup'])->middleware('fc.builder.action:form_step_actions_enabled')->name('group.update');
+        Route::delete('/groups/{group}',      [FormBuilderController::class, 'deleteGroup'])->middleware('fc.builder.delete')->name('group.delete');
 
-        Route::post('/groups/{group}/fields', [FormBuilderController::class, 'storeGroupField'])->name('group-field.store');
-        Route::put('/group-fields/{field}',   [FormBuilderController::class, 'updateGroupField'])->name('group-field.update');
-        Route::delete('/group-fields/{field}',[FormBuilderController::class, 'deleteGroupField'])->name('group-field.delete');
-        Route::post('/group-fields/reorder',  [FormBuilderController::class, 'reorderGroupFields'])->name('group-field.reorder');
+        Route::post('/groups/{group}/fields', [FormBuilderController::class, 'storeGroupField'])->middleware('fc.builder.action:form_step_actions_enabled')->name('group-field.store');
+        Route::put('/group-fields/{field}',   [FormBuilderController::class, 'updateGroupField'])->middleware('fc.builder.action:form_step_actions_enabled')->name('group-field.update');
+        Route::delete('/group-fields/{field}',[FormBuilderController::class, 'deleteGroupField'])->middleware('fc.builder.delete')->name('group-field.delete');
+        Route::post('/group-fields/reorder',  [FormBuilderController::class, 'reorderGroupFields'])->middleware('fc.builder.action:form_step_actions_enabled')->name('group-field.reorder');
 
-        Route::post('/doc-masters',           [FormBuilderController::class, 'storeDocMaster'])->name('doc-master.store');
-        Route::put('/doc-masters/{doc}',      [FormBuilderController::class, 'updateDocMaster'])->name('doc-master.update');
-        Route::delete('/doc-masters/{doc}',   [FormBuilderController::class, 'deleteDocMaster'])->name('doc-master.delete');
-        Route::post('/doc-masters/reorder',   [FormBuilderController::class, 'reorderDocMasters'])->name('doc-master.reorder');
+        Route::post('/doc-masters',           [FormBuilderController::class, 'storeDocMaster'])->middleware('fc.builder.action:form_step_actions_enabled')->name('doc-master.store');
+        Route::put('/doc-masters/{doc}',      [FormBuilderController::class, 'updateDocMaster'])->middleware('fc.builder.action:form_step_actions_enabled')->name('doc-master.update');
+        Route::delete('/doc-masters/{doc}',   [FormBuilderController::class, 'deleteDocMaster'])->middleware('fc.builder.delete')->name('doc-master.delete');
+        Route::post('/doc-masters/reorder',   [FormBuilderController::class, 'reorderDocMasters'])->middleware('fc.builder.action:form_step_actions_enabled')->name('doc-master.reorder');
     });
 
     // ── Sample Document Master (downloadable blank forms per joining document) ──
@@ -142,16 +152,25 @@ Route::middleware(['auth'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->grou
         Route::post('/',                       [FormManagementController::class, 'store'])->name('store');
         Route::get('/{form}/edit',             [FormManagementController::class, 'edit'])->name('edit');
         Route::put('/{form}',                  [FormManagementController::class, 'update'])->name('update');
-        Route::delete('/{form}',               [FormManagementController::class, 'destroy'])->name('destroy');
+        Route::delete('/{form}',               [FormManagementController::class, 'destroy'])->middleware('fc.builder.delete')->name('destroy');
 
         // API: get columns for a table
         Route::get('/api/table-columns',       [FormManagementController::class, 'getTableColumns'])->name('api.table-columns');
 
-        // Step CRUD within a form
-        Route::post('/{form}/steps',           [FormManagementController::class, 'storeStep'])->name('step.store');
+        // Step CRUD within a form.
+        //
+        // step.store / step.reorder are all-or-nothing, so they carry their flag as
+        // route middleware. update / step.update stay open on purpose — the safe
+        // fields on those forms (name, description, icon) must remain editable
+        // during a live intake, so their locks are per-FIELD inside the controller.
+        Route::post('/{form}/steps',           [FormManagementController::class, 'storeStep'])->middleware('fc.builder.action:form_step_add_enabled')->name('step.store');
+        // NOT gated on form_step_actions_enabled, even though its button is hidden by it:
+        // every field in the Edit Step modal already has its own per-field lock, and blanket-
+        // refusing this endpoint would take the always-safe step NAME down with it — which is
+        // the one thing the per-field design deliberately keeps editable during a live intake.
         Route::put('/steps/{step}',            [FormManagementController::class, 'updateStep'])->name('step.update');
-        Route::delete('/steps/{step}',         [FormManagementController::class, 'deleteStep'])->name('step.delete');
-        Route::post('/steps/reorder',          [FormManagementController::class, 'reorderSteps'])->name('step.reorder');
+        Route::delete('/steps/{step}',         [FormManagementController::class, 'deleteStep'])->middleware('fc.builder.delete')->name('step.delete');
+        Route::post('/steps/reorder',          [FormManagementController::class, 'reorderSteps'])->middleware('fc.builder.action:form_step_reorder_enabled')->name('step.reorder');
     });
 
     // ── FC Post-Arrival Activities ───────────────────────────────────────
@@ -237,6 +256,28 @@ Route::middleware(['auth'])->prefix('admin/travel')->name('admin.travel.')->grou
 });
 
 // ── Report Routes ─────────────────────────────────────────────
+// Descriptive Data upload passthrough (photo / signature).
+//
+// ─── ACCESS DECISION — reviewed and accepted, 2026-08-06 (PR #282, finding H-01) ───────────
+// This route is registered OUTSIDE the auth group DELIBERATELY. It serves trainee photographs
+// and specimen signatures to anyone holding the link, without a login.
+//
+// Why that is the accepted position, not an oversight:
+//   • It REPLACES links to public files under public/storage, which the web server already
+//     served to anyone who knew the path, with no Laravel auth in the loop. Exposure is
+//     therefore unchanged; the token version is strictly harder to abuse.
+//   • The token is an encrypted stored path, so the URL leaks neither the storage layout nor
+//     the internal user id, cannot be enumerated, and fails closed if tampered with.
+//   • The requirement is that an exported workbook mailed to a colleague keeps working for a
+//     recipient who is not a Sargam user. Gating this route breaks exactly that.
+//
+// Residual risk, accepted: a forwarded export hands the images to whoever receives it.
+// To require a login instead, move this line inside the group below — and expect emailed
+// exports to stop resolving for anyone not signed in.
+// ──────────────────────────────────────────────────────────────────────────────────────────
+Route::get('/admin/reports/descriptive-data/file', [DescriptiveDataReportController::class, 'file'])
+    ->name('admin.reports.descriptive-data.file');
+
 Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->group(function () {
 
     // Main overview table of all registered students
@@ -269,6 +310,27 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     Route::get('/descriptive-roll',                        [ReportController::class, 'firstTwoStepsIndex'])->name('descriptive-roll');
     Route::get('/descriptive-roll/zip',                    [ReportController::class, 'firstTwoStepsZip'])->name('descriptive-roll.zip');
     Route::get('/descriptive-roll/student/{username}/pdf', [ReportController::class, 'firstTwoStepsStudentPdf'])->name('descriptive-roll.student.pdf');
+
+    // Descriptive Data — the Descriptive Roll fields as a filterable table + Excel/PDF export.
+    // Columns are resolved per course from the form definition (FcDescriptiveDataFieldResolver).
+    // match(get|post): GET renders the page; the DataTable POSTs its draw request. DataTables
+    // sends 6 parameters per column, and this report has ~99 columns — as a GET that is a ~25 KB
+    // query string, which the web server rejects with 414 URI Too Long. POST puts it in the body.
+    Route::match(['get', 'post'], '/descriptive-data', [DescriptiveDataReportController::class, 'index'])->name('descriptive-data');
+    // Column + filter metadata, so switching course rebuilds the table without a page load.
+    Route::get('/descriptive-data/columns',      [DescriptiveDataReportController::class, 'columns'])->name('descriptive-data.columns');
+    Route::get('/descriptive-data/export-excel', [DescriptiveDataReportController::class, 'exportExcel'])->name('descriptive-data.export.excel');
+    Route::get('/descriptive-data/export-pdf',   [DescriptiveDataReportController::class, 'exportPdf'])->name('descriptive-data.export.pdf');
+    // CSV streams from a cursor — the no-row-limit path for large courses.
+    Route::get('/descriptive-data/export-csv',   [DescriptiveDataReportController::class, 'exportCsv'])->name('descriptive-data.export.csv');
+    // fc.reg.admin, unlike its siblings: this one endpoint returns EVERY trainee photograph on a
+    // course in a single file. The rest of the report is a screen an admin reads; this is a bulk
+    // PII extract, so it does not inherit the group's auth-only gate. Super Admin passes, as does
+    // anyone holding `bulk_smsemail`; a trainee does not. Widening the gate to the whole report
+    // group is a separate decision — see PR #283 review M-1 / #282 M-3.
+    Route::get('/descriptive-data/export-photos', [DescriptiveDataReportController::class, 'exportPhotos'])
+        ->middleware('fc.reg.admin')
+        ->name('descriptive-data.export.photos');
 
     // Aggregated reports
     Route::get('/by-service',   [ReportController::class, 'byService'])->name('service');

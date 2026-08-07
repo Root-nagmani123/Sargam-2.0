@@ -117,9 +117,14 @@
                 <p>@if($travelStepTotal > 0)Step {{ $travelStepNo }} of {{ $travelStepTotal }} — @endif Travel Plan</p>
             </div>
             @if($navForm)
-                <a href="{{ route('fc-reg.forms.dashboard', $navForm) }}" class="btn btn-light btn-sm ms-auto rounded-pill px-3">
-                    <i class="bi bi-grid me-1"></i>All Steps
-                </a>
+                <div class="ms-auto d-flex flex-wrap gap-2">
+                    <a href="{{ $navForm->landingPageUrl() }}" class="btn btn-light btn-sm rounded-pill px-3">
+                        <i class="bi bi-house-door me-1"></i>Home
+                    </a>
+                    <a href="{{ route('fc-reg.forms.dashboard', $navForm) }}" class="btn btn-light btn-sm rounded-pill px-3">
+                        <i class="bi bi-grid me-1"></i>All Steps
+                    </a>
+                </div>
             @endif
         </div>
     </div>

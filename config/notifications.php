@@ -184,6 +184,15 @@ return [
         ],
     ],
 
+    // Issue Report Notifications (raised issue -> notify Super Admin; resolved -> notify reporter).
+    // Non-admin recipients are auto-redirected to their own list by IssueReportController@index.
+    'issue_report' => [
+        'IssueReport' => [
+            'route'  => 'admin.issue-reports.index',
+            'params' => [],
+        ],
+    ],
+
     // Leave Request Notifications (faculty approver clicks through to the leave)
     'leave' => [
         'StationedLeave' => [

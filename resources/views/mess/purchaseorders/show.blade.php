@@ -128,7 +128,7 @@
                     <tbody>
                         @foreach($purchaseOrder->items as $item)
                             <tr>
-                                <td>{{ optional($item->itemSubcategory)->item_name ?? optional($item->inventory)->item_name ?? 'N/A' }}</td>
+                                <td>{{ optional($item->itemSubcategory)->item_name ?? 'N/A' }}</td>
                                 <td>{{ optional($item->itemSubcategory)->item_code ?? '-' }}</td>
                                 <td>{{ $item->quantity }}</td>
                                 <td>{{ $item->unit ?? '-' }}</td>

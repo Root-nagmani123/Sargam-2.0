@@ -226,27 +226,20 @@ class ReportController extends Controller
             ?: trim(implode(' ', array_filter([(string)($step1->first_name ?? ''), (string)($step1->last_name ?? '')])))
             ?: (string) $username;
 
-        // Photo URL for web display
+        // Photo + Step-1 signature for web display. Existence is checked with
+        // fc_resolve_storage_file_path() and the URL built by view_file_link(), the same pair
+        // the rest of the application uses — a hand-rolled storage/app/public check hid the
+        // image on any deployment that keeps uploads elsewhere (e.g. a real public/storage
+        // directory where the symlink cannot be created).
         $photoUrl = null;
-        if (!empty($step1->photo_path)) {
-            $p = ltrim(str_replace('\\', '/', (string) $step1->photo_path), '/');
-            if (str_starts_with($p, 'public/')) { $p = substr($p, 7); }
-            elseif (str_starts_with($p, 'storage/')) { $p = substr($p, 8); }
-            if (is_file(storage_path('app/public/'.$p))) {
-                $photoUrl = \Illuminate\Support\Facades\Storage::url($p);
-            }
+        if (!empty($step1->photo_path) && fc_resolve_storage_file_path($step1->photo_path) !== null) {
+            $photoUrl = view_file_link($step1->photo_path);
         }
 
-        // Step-1 signature, shown under the photo in the identity box.
         $signatureUrl = null;
         $signaturePath = $this->fcRegistrationSignaturePath($step1, (string) $username);
-        if ($signaturePath !== null) {
-            $sp = ltrim(str_replace('\\', '/', $signaturePath), '/');
-            if (str_starts_with($sp, 'public/')) { $sp = substr($sp, 7); }
-            elseif (str_starts_with($sp, 'storage/')) { $sp = substr($sp, 8); }
-            if (is_file(storage_path('app/public/'.$sp))) {
-                $signatureUrl = \Illuminate\Support\Facades\Storage::url($sp);
-            }
+        if ($signaturePath !== null && fc_resolve_storage_file_path($signaturePath) !== null) {
+            $signatureUrl = view_file_link($signaturePath);
         }
 
         // Course duration (Path Page) + coordinator (Front Page) for the report header.
@@ -424,10 +417,13 @@ class ReportController extends Controller
      */
     public function studentDetailPdf(string $username)
     {
-        $bytes = $this->fcStudentRegistrationPdfBytes($username);
+        // FIRST_TWO_STEP_LIMIT: the admin download is the same document the trainee gets from
+        // their dashboard — same steps, same omitted groups, no internal user id. The on-screen
+        // report above it still shows every section, including the ones left out here.
+        $bytes = $this->fcStudentRegistrationPdfBytes($username, self::FIRST_TWO_STEP_LIMIT);
         abort_unless($bytes !== null, 404, "Student '{$username}' not found.");
 
-        $filename = 'FC_Registration_'.$username.'_'.now()->format('Ymd_His').'.pdf';
+        $filename = 'FC_Registration_'.$this->fcPdfFileNameStem($username).'_'.now()->format('Ymd_His').'.pdf';
 
         return response($bytes, 200, [
             'Content-Type'        => 'application/pdf',
@@ -444,10 +440,14 @@ class ReportController extends Controller
      */
     public function studentDetailPrint(string $username)
     {
-        $viewData = $this->fcStudentRegistrationPdfViewData($username);
+        // Same limit as studentDetailPdf() so Print and Download stay identical to each other
+        // and to the trainee's own copy.
+        $viewData = $this->fcStudentRegistrationPdfViewData($username, self::FIRST_TWO_STEP_LIMIT);
         abort_unless($viewData !== null, 404, "Student '{$username}' not found.");
 
-        return view('fc.report.student-detail-pdf', $viewData + ['autoPrint' => true]);
+        // pagedShell: browsers repeat thead/tfoot per printed page, so Ctrl+P keeps the same
+        // gap inside the page rule that the Chrome-rendered download has.
+        return view('fc.report.student-detail-pdf', $viewData + ['autoPrint' => true, 'pagedShell' => true]);
     }
 
     /**
@@ -582,11 +582,43 @@ class ReportController extends Controller
             $this->fcRegistrationPruneChromeProfiles($root);
         }
         if (is_dir($profile) && is_writable($profile)) {
+            $this->fcRegistrationClearStaleProfileLock($profile);
             $flags[] = '--user-data-dir='.$profile;
             $flags[] = '--crash-dumps-dir='.$profile;
         }
 
         return $flags;
+    }
+
+    /**
+     * Drop the process-singleton links a killed Chrome leaves in its profile.
+     *
+     * A worker pid is reused, so the next render picks the same profile and finds
+     * SingletonLock -> "host-pid" pointing at a dead process. Chrome then tries to hand the
+     * job to that non-existent instance over a socket that answers nothing, and blocks until
+     * our 120 s process timeout — after which every PDF from that worker silently comes out
+     * of the lower-quality Dompdf fallback instead. Clearing the links is safe: the lock is
+     * only re-created by a live Chrome, and one worker never runs two renders at once.
+     */
+    private function fcRegistrationClearStaleProfileLock(string $profile): void
+    {
+        $lock = $profile.'/SingletonLock';
+        if (! is_link($lock) && ! file_exists($lock)) {
+            return;
+        }
+
+        // "hostname-pid": ours only if the hostname matches, otherwise the profile is on a
+        // shared mount and another machine may legitimately be holding it.
+        $target = is_link($lock) ? (string) @readlink($lock) : '';
+        if ($target !== '' && preg_match('/^(.*)-(\d+)$/', $target, $m)) {
+            if ($m[1] !== gethostname() || $this->fcProcessIsRunning((int) $m[2])) {
+                return;
+            }
+        }
+
+        foreach (['SingletonLock', 'SingletonCookie', 'SingletonSocket'] as $name) {
+            @unlink($profile.'/'.$name);
+        }
     }
 
     /**
@@ -819,11 +851,16 @@ class ReportController extends Controller
         return trim(implode(' ', array_map(fn ($p) => trim((string) $p), $parts)));
     }
 
-    private function fcStudentPdfSanitizeSections(array $sections): array
+    /**
+     * @param  bool  $descriptiveRoll  true for the trainee-facing / bulk "Descriptive Roll"
+     *                                 document, false for the full admin profile PDF.
+     */
+    private function fcStudentPdfSanitizeSections(array $sections, bool $descriptiveRoll = false): array
     {
         $sections = array_values(array_filter(
             $sections,
             fn ($sec) => ! $this->fcPdfSectionIsExcluded((array) $sec)
+                && ! ($descriptiveRoll && $this->fcDescriptiveRollExcludesGroup((array) $sec))
         ));
 
         foreach ($sections as &$sec) {
@@ -868,6 +905,43 @@ class ReportController extends Controller
         return $sections;
     }
 
+    /**
+     * Groups left OUT of the Descriptive Roll document only.
+     *
+     * The descriptive roll is the trainee's own printable record; these three groups are
+     * administrative (kit sizing, spouse cross-registration, medical history) and are not part
+     * of it.
+     *
+     * Where they still appear — this filter only runs when a step limit is passed, i.e. for the
+     * Descriptive Roll:
+     *   • the on-screen admin report  /admin/reports/student/{id}        — every section
+     *   • the per-form bulk ZIP export (fcStudentRegistrationPdfBytes with no limit,
+     *     exportFormStudentPdfZip) — full profile PDFs, User ID row included
+     * The single-student download and Print at /admin/reports/student/{id}/pdf and /print are
+     * deliberately the SAME document the trainee gets, so they exclude these groups too.
+     *
+     * If the bulk ZIP is ever expected to match the single download, pass
+     * self::FIRST_TWO_STEP_LIMIT there as well — it is the one remaining full-profile path.
+     *
+     * Matched on the group label, loosely, so an admin renaming a group in the form builder
+     * (e.g. adding a suffix) does not silently put it back into the document.
+     */
+    private function fcDescriptiveRollExcludesGroup(array $sec): bool
+    {
+        $label = mb_strtolower(trim((string) ($sec['group_label'] ?? $sec['title_en'] ?? '')));
+        if ($label === '') {
+            return false;
+        }
+
+        foreach (['dress code', 'spouse is in civil service', 'pre-medical', 'pre medical'] as $needle) {
+            if (str_contains($label, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function fcPdfSanitizeScalar(mixed $v): mixed
     {
         if ($v === null || is_bool($v) || is_int($v) || is_float($v)) {
@@ -909,15 +983,20 @@ class ReportController extends Controller
         if ($path === null || $path === '') {
             return null;
         }
-        $path = trim(str_replace('\\', '/', (string) $path));
-        $path = ltrim($path, '/');
-        if (str_starts_with($path, 'public/')) {
-            $path = substr($path, strlen('public/'));
+
+        // fc_resolve_storage_file_path() is the codebase's own resolver and looks in every
+        // place an upload can actually live: the public disk (which honours a non-default
+        // FILESYSTEM root), storage/app/public, public/storage — a REAL directory on hosts
+        // where the symlink cannot be created — public/ itself, and storage/app. Resolving
+        // only storage/app/public here meant a deployment using any of the others rendered
+        // the placeholder in the PDF while every on-screen view showed the image, because
+        // those go through the helper.
+        $full = fc_resolve_storage_file_path($path);
+        if ($full === null) {
+            Log::warning('FC PDF: image not found on any known storage path', ['stored_path' => $path]);
+
+            return null;
         }
-        if (str_starts_with($path, 'storage/')) {
-            $path = substr($path, strlen('storage/'));
-        }
-        $full = storage_path('app/public/'.$path);
 
         return $this->fcPdfImageDataUri($full, $maxW, $maxH);
     }
@@ -946,10 +1025,20 @@ class ReportController extends Controller
             (string) $maxH,
         ]));
 
+        // Only a URI with an actual payload counts as a hit. A "data:image/jpeg;base64," with
+        // nothing after the comma is a valid string but a blank image, and must never be
+        // served or re-stored — see fcPdfEncodeImageDataUri() for how one could arise.
+        $isUsable = static fn ($v) => is_string($v)
+            && str_starts_with($v, 'data:image/')
+            && strlen($v) > 64;
+
         try {
             $cached = Cache::get($cacheKey);
-            if (is_string($cached) && $cached !== '') {
+            if ($isUsable($cached)) {
                 return $cached;
+            }
+            if (is_string($cached)) {
+                Cache::forget($cacheKey);   // evict a value cached by an earlier, laxer build
             }
         } catch (\Throwable $e) {
             // Cache store unavailable — fall through and encode.
@@ -957,15 +1046,17 @@ class ReportController extends Controller
 
         $encoded = $this->fcPdfEncodeImageDataUri($full, $maxW, $maxH);
 
-        if ($encoded !== null) {
+        if ($isUsable($encoded)) {
             try {
                 Cache::put($cacheKey, $encoded, now()->addDays(7));
             } catch (\Throwable $e) {
                 // Encoding succeeded; failing to cache it is not worth an error.
             }
+
+            return $encoded;
         }
 
-        return $encoded;
+        return null;
     }
 
     private function fcPdfEncodeImageDataUri(string $full, int $maxW, int $maxH): ?string
@@ -975,7 +1066,21 @@ class ReportController extends Controller
             return null;
         }
 
-        $binary = (string) file_get_contents($full);
+        // A read can fail even when is_file() passed — a file the PHP user cannot read, a
+        // half-written upload, a disconnected mount. Bail out instead of continuing with an
+        // empty string: the encode below would then return a syntactically valid but empty
+        // data: URI, which the caller happily caches for SEVEN DAYS. One transient read
+        // failure would blank that trainee's photo in every PDF for a week.
+        $binary = @file_get_contents($full);
+        if ($binary === false || $binary === '') {
+            Log::warning('FC PDF: image present but unreadable', [
+                'path' => $full,
+                'readable' => is_readable($full),
+            ]);
+
+            return null;
+        }
+
         if (function_exists('imagecreatefromstring')) {
             $src = @imagecreatefromstring($binary);
             if ($src !== false) {
@@ -995,8 +1100,14 @@ class ReportController extends Controller
                         imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
                         ob_start();
                         imagejpeg($dst, null, 88);
-                        $binary = (string) ob_get_clean();
-                        $mime = 'image/jpeg';
+                        $resized = (string) ob_get_clean();
+                        // Keep the original bytes if the re-encode produced nothing (GD out of
+                        // memory on a large source); a downscale failing is not a reason to
+                        // lose the image.
+                        if ($resized !== '') {
+                            $binary = $resized;
+                            $mime = 'image/jpeg';
+                        }
                         imagedestroy($dst);
                     }
                 }
@@ -1119,9 +1230,18 @@ class ReportController extends Controller
             return $stored;
         }
 
+        // Same upload roots fc_resolve_storage_file_path() knows about, so the fallback works
+        // on a deployment that does not keep uploads under storage/app/public.
         $segment = fc_upload_path_segment((int) $username);
-        $dir = storage_path('app/public/uploads/'.$segment);
-        if (is_dir($dir)) {
+        foreach ([
+            storage_path('app/public/uploads/'.$segment),
+            public_path('storage/uploads/'.$segment),
+            public_path('uploads/'.$segment),
+            storage_path('app/uploads/'.$segment),
+        ] as $dir) {
+            if (! is_dir($dir)) {
+                continue;
+            }
             foreach (glob($dir.'/signature*.*') ?: [] as $full) {
                 if (is_file($full)) {
                     return 'uploads/'.$segment.'/'.basename($full);
@@ -2105,7 +2225,7 @@ class ReportController extends Controller
         $bytes = $this->fcStudentRegistrationPdfBytes($username, self::FIRST_TWO_STEP_LIMIT);
         abort_unless($bytes !== null, 404, "Student '{$username}' not found.");
 
-        $filename = 'Descriptive_Roll_'.$username.'_'.now()->format('Ymd_His').'.pdf';
+        $filename = 'Descriptive_Roll_'.$this->fcPdfFileNameStem($username).'_'.now()->format('Ymd_His').'.pdf';
 
         return response($bytes, 200, [
             'Content-Type'        => 'application/pdf',
@@ -2156,7 +2276,7 @@ class ReportController extends Controller
                 ->with('error', 'Your registration details could not be found. Please contact the academy.');
         }
 
-        $filename = 'Descriptive_Roll_'.$identifier.'_'.now()->format('Ymd_His').'.pdf';
+        $filename = 'Descriptive_Roll_'.$this->fcPdfFileNameStem($identifier).'_'.now()->format('Ymd_His').'.pdf';
 
         return response($bytes, 200, [
             'Content-Type'        => 'application/pdf',
@@ -2234,8 +2354,11 @@ class ReportController extends Controller
             ? "'FcRegPdf', 'DejaVu Sans', sans-serif"
             : "'DejaVu Sans', sans-serif";
 
-        $engine    = strtolower((string) env('FC_REGISTRATION_PDF_ENGINE', 'auto'));
-        $useChrome = $engine !== 'dompdf' && $this->fcRegistrationChromeBinary() !== null;
+        // Only the 'chrome' engine uses the parallel pool. Under the mPDF default every
+        // trainee goes through fcStudentRegistrationPdfBytes() below, so the ZIP holds the
+        // same document the trainee downloads — a pool that rendered a visibly different
+        // PDF from the single download is exactly the drift this change removes.
+        $useChrome = $this->fcRegistrationWillUseChrome();
 
         $added = 0;
         // Flush the in-memory ZIP buffer to disk periodically so a 1000+ file export
@@ -2337,6 +2460,9 @@ class ReportController extends Controller
         return view('fc.report.student-detail-pdf', array_merge($data, [
             'pdfFontFaceCss'   => $fontFaceCss,
             'pdfFontFamilyCss' => $fontFamilyCss,
+            // Only ever fed to the parallel Chrome pool; the no-Chrome branch of the ZIP
+            // export goes through fcStudentRegistrationPdfBytes(), which picks for itself.
+            'pagedShell'       => true,
         ]))->render();
     }
 
@@ -2493,9 +2619,16 @@ class ReportController extends Controller
             return null;
         }
 
-        $html = view('fc.report.student-detail-pdf', $viewData)->render();
-
-        return $this->fcRenderPdfFromHtml($html, 'FC Registration - '.$username);
+        // The template is rendered per engine — each needs different markup: only Chrome
+        // gets the repeating page shell (Dompdf cannot paginate inside a table cell), and
+        // only mPDF drops @page and the fixed page frame.
+        return $this->fcRenderPdfFromHtml(
+            fn (string $engine) => view(
+                'fc.report.student-detail-pdf',
+                $this->fcRegistrationPdfViewDataForEngine($viewData, $engine)
+            )->render(),
+            'FC Registration - '.$username
+        );
     }
 
     /**
@@ -2521,8 +2654,10 @@ class ReportController extends Controller
         // here as well — six queries per PDF whose results this template never reads (it
         // renders from $sections). The bulk ZIP export ran them once per trainee.
 
+        // A step limit means this is the Descriptive Roll, not the full admin profile.
         $sections = $this->fcStudentPdfSanitizeSections(
-            app(RegistrationService::class)->buildPdfSectionsFromFormDefinition((int) $username, null, $stepLimit)
+            app(RegistrationService::class)->buildPdfSectionsFromFormDefinition((int) $username, null, $stepLimit),
+            $stepLimit !== null
         );
 
         $pdfFontFaceCss = $this->fcRegistrationEmbeddedFontFaceCss();
@@ -2544,17 +2679,87 @@ class ReportController extends Controller
             ),
             'courseHeader'   => $this->fcPdfCourseHeader(),
             'lbsnaaLogoDataUri' => $this->fcReportLbsnaaLogoDataUri(),
+            // Drives the Descriptive-Roll-only omissions in the template (User ID row).
+            'isDescriptiveRoll' => $stepLimit !== null,
             'pdfFontFaceCss' => $pdfFontFaceCss,
             'pdfFontFamilyCss' => $pdfFontFamilyCss,
         ];
     }
 
-    private function fcRenderPdfFromHtml(string $html, string $titleInfo): string
+    /**
+     * Per-engine additions to the registration-profile view data.
+     *
+     * @param  array<string,mixed>  $viewData
+     * @return array<string,mixed>
+     */
+    private function fcRegistrationPdfViewDataForEngine(array $viewData, string $engine): array
     {
-        $engine = strtolower((string) env('FC_REGISTRATION_PDF_ENGINE', 'auto'));
+        if ($engine !== 'mpdf') {
+            return $viewData + ['pagedShell' => $engine === 'chrome'];
+        }
 
-        if ($engine !== 'dompdf' && ($engine === 'chrome' || $engine === 'auto')) {
-            $chromePdf = $this->fcRegistrationPdfRenderChrome($html);
+        // mPDF resolves a Devanagari font per text run itself (autoLangToFont). Handing it
+        // the base64 @font-face the other two engines need would embed 580 KB for nothing.
+        return array_merge($viewData, [
+            'mpdfMode' => true,
+            'pagedShell' => false,
+            'pdfFontFaceCss' => '',
+            'pdfFontFamilyCss' => 'sans-serif',
+        ]);
+    }
+
+    /**
+     * Which engine renders the registration PDF.
+     *
+     * mPDF by default, and that is the point: it ships with the application (composer.lock
+     * pins the version), so a server with no headless Chrome produces the SAME document as
+     * a developer's laptop instead of silently dropping to a looser, differently-paginated
+     * Dompdf render. It also shapes Devanagari properly — Dompdf drops the anusvara, so
+     * "लिंग" printed as "लिग" on any Chrome-less box.
+     *
+     * FC_REGISTRATION_PDF_ENGINE=chrome|dompdf forces the old paths; 'chrome' still falls
+     * back to Dompdf when no binary is found, which is what 'auto' used to mean.
+     */
+    private function fcRegistrationPdfEngine(): string
+    {
+        // config(), not env(): env() outside a config file returns its default once
+        // `php artisan config:cache` has run, so an .env override was silently ignored on a
+        // config-cached deployment — the documented one-line rollback did not actually roll
+        // back. config/fc.php still reads the same env var, so existing .env files keep
+        // working in both states.
+        $engine = strtolower(trim((string) config('fc.pdf_engine', 'mpdf')));
+
+        return in_array($engine, ['mpdf', 'chrome', 'dompdf'], true) ? $engine : 'mpdf';
+    }
+
+    /**
+     * Will this render go through headless Chrome? Callers need to know BEFORE building the
+     * HTML, because the repeating page shell in the template is Chrome-only: Dompdf cannot
+     * paginate content inside a table cell and drops everything after page one.
+     */
+    private function fcRegistrationWillUseChrome(): bool
+    {
+        return $this->fcRegistrationPdfEngine() === 'chrome'
+            && $this->fcRegistrationChromeBinary() !== null;
+    }
+
+    /**
+     * @param  string|\Closure(string):string  $html  A closure is called with the name of the
+     *                                                engine actually used ('mpdf'|'chrome'|
+     *                                                'dompdf'), so the template can be built
+     *                                                for it — each one needs different markup.
+     */
+    private function fcRenderPdfFromHtml(string|\Closure $html, string $titleInfo): string
+    {
+        $engine = $this->fcRegistrationPdfEngine();
+        $build = $html instanceof \Closure ? $html : fn (string $for) => $html;
+
+        if ($engine === 'mpdf') {
+            return $this->fcRegistrationPdfRenderMpdf($build('mpdf'), $titleInfo);
+        }
+
+        if ($this->fcRegistrationWillUseChrome()) {
+            $chromePdf = $this->fcRegistrationPdfRenderChrome($build('chrome'));
             if ($chromePdf !== null) {
                 return $chromePdf;
             }
@@ -2566,12 +2771,75 @@ class ReportController extends Controller
 
         $this->fcEnsureDompdfFontCacheDir();
 
-        return Pdf::loadHTML($html)
+        return Pdf::loadHTML($build('dompdf'))
             ->setOption('isRemoteEnabled', true)
             ->setOption('isFontSubsettingEnabled', false)
             ->setPaper('a4', 'portrait')
             ->addInfo(['Title' => $titleInfo])
             ->output();
+    }
+
+    /**
+     * mPDF render — the default, and the only engine that needs no system binary.
+     *
+     * Two things are done here rather than in the template because mPDF cannot do them in
+     * CSS: the page margins (it mis-parses @page) and the double page rule (it loops on a
+     * position:fixed block). Stroking the rule per page also puts it in the margin band,
+     * OUTSIDE the text area — which is what finally gives an even gap between rule and
+     * content on every page, including continuation pages. Chrome cannot do that at all:
+     * it clips a fixed box to the page content area.
+     */
+    private function fcRegistrationPdfRenderMpdf(string $html, string $titleInfo): string
+    {
+        $tempDir = storage_path('app/mpdf-temp');
+        if (! is_dir($tempDir)) {
+            @mkdir($tempDir, 0775, true);
+        }
+
+        // RULE_MM is where the rule is stroked; the margins are 4mm inside it, and that
+        // difference IS the visible gap. Move them together or the gap changes.
+        $ruleMm = 13.0;
+        $marginMm = 17.0;
+
+        $config = [
+            'mode' => 'utf-8',
+            'format' => 'A4',
+            'tempDir' => $tempDir,
+            // Picks a font per script for anything the default font cannot cover. mPDF does
+            // the Devanagari shaping itself, which is why the Hindi labels come out right
+            // without the 580 KB of base64 @font-face the other engines need.
+            'autoScriptToLang' => true,
+            'autoLangToFont' => true,
+            'margin_top' => $marginMm,
+            'margin_bottom' => $marginMm,
+            'margin_left' => $marginMm,
+            'margin_right' => $marginMm,
+        ];
+
+        // Not registering resources/fonts/mpdf/NotoSansDevanagari-*.ttf here, though the
+        // Chrome and Dompdf paths embed exactly that family: mPDF cannot parse its GPOS
+        // table ("Lookup Type 5, Format 3 not supported") and throws mid-render. mPDF's own
+        // bundled Devanagari font shapes the conjuncts and reph correctly, which is what
+        // matters; the cost is that Hindi sets in a serif face beside sans-serif Latin.
+        $mpdf = new \Mpdf\Mpdf($config);
+        $mpdf->SetTitle($titleInfo);
+        $mpdf->WriteHTML($html);
+
+        $pageCount = (int) $mpdf->page;
+        $w = $mpdf->w;
+        $h = $mpdf->h;
+        for ($i = 1; $i <= $pageCount; $i++) {
+            // Draw colour is per page state in mPDF, so it has to be set inside the loop.
+            $mpdf->page = $i;
+            $mpdf->SetDrawColor(10, 61, 107);
+            $mpdf->SetLineWidth(0.55);
+            $mpdf->Rect($ruleMm, $ruleMm, $w - 2 * $ruleMm, $h - 2 * $ruleMm, 'D');
+            $mpdf->SetLineWidth(0.2);
+            $inner = $ruleMm + 0.9;
+            $mpdf->Rect($inner, $inner, $w - 2 * $inner, $h - 2 * $inner, 'D');
+        }
+
+        return (string) $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
     }
 
     private function fcStudentPdfViewData(string $username, ?int $stepLimit = null, ?FcForm $form = null): ?array
@@ -2585,7 +2853,8 @@ class ReportController extends Controller
         // Passing the already-resolved form avoids re-resolving it per student
         // (2 extra queries each) — significant when exporting 1000+ profiles.
         $sections = $this->fcStudentPdfSanitizeSections(
-            app(RegistrationService::class)->buildPdfSectionsFromFormDefinition((int) $username, $form, $stepLimit)
+            app(RegistrationService::class)->buildPdfSectionsFromFormDefinition((int) $username, $form, $stepLimit),
+            $stepLimit !== null
         );
 
         return [
@@ -2601,6 +2870,7 @@ class ReportController extends Controller
             ),
             'courseHeader' => $this->fcPdfCourseHeader(),
             'lbsnaaLogoDataUri' => $this->fcReportLbsnaaLogoDataUri(),
+            'isDescriptiveRoll' => $stepLimit !== null,
         ];
     }
 
@@ -2760,5 +3030,31 @@ class ReportController extends Controller
     private function safeZipName(string $name): string
     {
         return trim(preg_replace('/[^A-Za-z0-9_\-\.]+/', '_', $name), '_');
+    }
+
+    /**
+     * Filename stem for a single-trainee PDF: the trainee's name rather than the numeric id,
+     * because the id means nothing to whoever receives the file. Falls back to the id when
+     * the name is empty or reduces to nothing once non-filename characters are stripped
+     * (a name written only in Devanagari, for instance).
+     *
+     * Reads only the four name columns (G1) — student_master_firsts is the widest table in the
+     * FC schema — and memoises per request, because the PDF build a few lines earlier has
+     * already loaded the same row and every caller here asks right after it (G4).
+     */
+    private function fcPdfFileNameStem(string $username): string
+    {
+        static $stems = [];
+
+        if (! array_key_exists($username, $stems)) {
+            $step1 = StudentMasterFirst::where(fc_user_col('student_master_firsts'), $username)
+                ->select(['full_name', 'first_name', 'middle_name', 'last_name'])
+                ->first();
+
+            $stem = $this->safeZipName($this->fcPdfDisplayName($step1));
+            $stems[$username] = $stem !== '' ? $stem : $this->safeZipName($username);
+        }
+
+        return $stems[$username];
     }
 }

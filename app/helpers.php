@@ -2064,6 +2064,28 @@ if (! function_exists('fc_document_date')) {
     }
 }
 
+if (! function_exists('sanitize_export_cell')) {
+    /**
+     * Neutralise CSV/XLSX formula injection: a cell whose first character is one
+     * Excel/LibreOffice/Sheets treats as a formula prefix (= + - @) or a leading
+     * tab/CR gets a leading single quote, forcing spreadsheet apps to treat it as
+     * text instead of evaluating it. Use for any exported column sourced from
+     * free text an unprivileged user typed (description, remarks, comments, ...).
+     *
+     * @param  mixed  $value
+     */
+    function sanitize_export_cell($value): string
+    {
+        $value = (string) $value;
+
+        if ($value !== '' && preg_match('/^[=+\-@\t\r]/', $value)) {
+            return "'" . $value;
+        }
+
+        return $value;
+    }
+}
+
 if (! function_exists('fc_kra_sn_img')) {
     /**
      * Return an inline <img> for the Devanagari "क्र.सं." label, as a base64 data URI.

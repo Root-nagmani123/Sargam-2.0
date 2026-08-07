@@ -1,9 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Sub Store Master')
 @section('content')
-@php
-    $canDeleteSubStore = hasRole('Super Admin') || hasRole('Mess-Admin');
-@endphp
 <div class="container-fluid">
     <x-breadcrum title="Sub Store Master"></x-breadcrum>
     <div class="datatables">
@@ -36,37 +33,7 @@
                             <th>Action</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @foreach($subStores as $subStore)
-                            <tr>
-                                <td><div class="fw-semibold">{{ $subStore->sub_store_name }}</div></td>
-                                <td>
-                                    <span class="badge bg-{{ $subStore->status_badge_class }}">
-                                        {{ $subStore->status_label }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="d-flex gap-2 flex-wrap">
-                                        <button type="button" class="text-primary btn-edit-substore bg-transparent border-0"
-                                                data-id="{{ $subStore->id }}"
-                                                data-sub-store-name="{{ e($subStore->sub_store_name) }}"
-                                                data-status="{{ e($subStore->status ?? 'active') }}"
-                                                title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
-                                        @if($canDeleteSubStore)
-                                            <form method="POST" action="{{ route('admin.mess.sub-stores.destroy', $subStore->id) }}" class="d-inline"
-                                                  onsubmit="return confirm('Are you sure you want to delete this sub store?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">
-                                                    <i class="material-icons material-symbol-rounded">delete</i>
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
@@ -145,7 +112,15 @@
     </div>
 </div>
 
-@include('components.mess-master-datatables', ['tableId' => 'subStoresTable', 'searchPlaceholder' => 'Search sub stores...', 'orderColumn' => 0, 'actionColumnIndex' => 2, 'infoLabel' => 'sub stores'])
+@include('components.mess-master-datatables', [
+    'tableId' => 'subStoresTable',
+    'searchPlaceholder' => 'Search sub stores...',
+    'orderColumn' => 0,
+    'actionColumnIndex' => 2,
+    'infoLabel' => 'sub stores',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.sub-stores.index'),
+])
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {

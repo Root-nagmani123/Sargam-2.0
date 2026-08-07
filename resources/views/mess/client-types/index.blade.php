@@ -3,7 +3,6 @@
 @section('content')
 @php
     $clientTypeOptions = \App\Models\Mess\ClientType::clientTypes();
-    $canDeleteClientType = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid">
     <x-breadcrum title="Client Types Master"></x-breadcrum>
@@ -34,39 +33,7 @@
                             <th>Action</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @foreach($clientTypes as $clientType)
-                            <tr>
-                                <td><div class="fw-semibold">{{ $clientTypeOptions[$clientType->client_type] ?? $clientType->client_type }}</div></td>
-                                <td><div class="fw-semibold">{{ $clientType->client_name }}</div></td>
-                                <td>
-                                    <span class="badge bg-{{ $clientType->status_badge_class }}">
-                                        {{ $clientType->status_label }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="d-flex gap-2 flex-wrap">
-                                        <button type="button" class="text-primary btn-edit-clienttype bg-transparent border-0"
-                                                data-id="{{ $clientType->id }}"
-                                                data-client-type="{{ e($clientType->client_type) }}"
-                                                data-client-name="{{ e($clientType->client_name) }}"
-                                                data-status="{{ e($clientType->status ?? 'active') }}"
-                                                title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
-                                        @if($canDeleteClientType)
-                                            <form method="POST" action="{{ route('admin.mess.client-types.destroy', $clientType->id) }}" class="d-inline"
-                                                  onsubmit="return confirm('Are you sure you want to delete this client type?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">
-                                                    <i class="material-icons material-symbol-rounded">delete</i>
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
@@ -165,7 +132,15 @@
     </div>
 </div>
 
-@include('components.mess-master-datatables', ['tableId' => 'clientTypesTable', 'searchPlaceholder' => 'Search client types...', 'orderColumn' => 0, 'actionColumnIndex' => 3, 'infoLabel' => 'client types'])
+@include('components.mess-master-datatables', [
+    'tableId' => 'clientTypesTable',
+    'searchPlaceholder' => 'Search client types...',
+    'orderColumn' => 0,
+    'actionColumnIndex' => 3,
+    'infoLabel' => 'client types',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.client-types.index'),
+])
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {

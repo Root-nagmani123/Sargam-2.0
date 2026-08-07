@@ -10,6 +10,8 @@ use App\Models\FC\FcFormGroupField;
 use App\Models\FC\FcJoiningRelatedDocumentsMaster;
 use App\Services\FC\DynamicFormService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Validation\Rule;
@@ -37,6 +39,11 @@ class FormBuilderController extends Controller
 
         if ($formId > 0) {
             GenericFormController::bumpFormStructureEpoch($formId);
+
+            // The Descriptive Data report resolves its columns (and its filter dropdowns)
+            // from this same form definition and caches both. Without this, a field added
+            // here stays invisible on that report until the cache TTL expires.
+            \App\Services\FC\FcDescriptiveDataFieldResolver::forgetForm($formId);
         }
     }
 
@@ -146,6 +153,88 @@ class FormBuilderController extends Controller
             $this->bumpFormStructure($first);
         }
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Rename a section heading across every field of one step.
+     *
+     * A "section" is not a record — it is the plain string in fc_form_fields.section_heading,
+     * repeated on each field that belongs to it. Renaming therefore meant editing every field
+     * by hand and typing the identical text each time; one different character silently splits
+     * the section in two (this step already carries both "Mother's Detail" and
+     * "Mother's Details" for that reason).
+     *
+     * Nothing about how sections are stored or read changes here — this only performs the same
+     * edit an admin can already make field by field, in one statement and without typos.
+     */
+    public function renameSection(Request $request, FcFormStep $step)
+    {
+        $data = $request->validate([
+            'old_section_heading' => 'required|string|max:200',
+            'new_section_heading' => 'required|string|max:200',
+        ]);
+
+        $old = trim($data['old_section_heading']);
+        $new = trim($data['new_section_heading']);
+
+        if ($old === '' || $new === '') {
+            return back()->with('error', 'Both the current and the new section name are required.');
+        }
+
+        if ($old === $new) {
+            return back()->with('error', 'The new section name is the same as the current one.');
+        }
+
+        // Scoped to THIS step and THIS heading: a section name repeated on another step is a
+        // different section and must not be touched.
+        //
+        // Compared on TRIM(section_heading), because the picker lists trimmed headings while the
+        // column may hold " Personal Details" — matching the raw column would offer that section
+        // and then refuse to rename it. (Trailing spaces are already forgiven by MySQL's PAD
+        // SPACE collations; leading ones are not.)
+        $matches = FcFormField::where('step_id', $step->id)
+            ->whereRaw('TRIM(section_heading) = ?', [$old])
+            ->count();
+
+        if ($matches === 0) {
+            return back()->with('error', 'No fields on this step use the section "'.$old.'".');
+        }
+
+        // Renaming onto a name already in use merges the two — legitimate, and the only way to
+        // repair a section split by a typo — but say so plainly rather than silently merging.
+        $mergesInto = FcFormField::where('step_id', $step->id)
+            ->whereRaw('TRIM(section_heading) = ?', [$new])
+            ->count();
+
+        try {
+            DB::transaction(function () use ($step, $old, $new) {
+                // Same TRIM comparison as the count above, so the rows counted are the rows
+                // updated — and a heading stored with stray whitespace is normalised on the way.
+                FcFormField::where('step_id', $step->id)
+                    ->whereRaw('TRIM(section_heading) = ?', [$old])
+                    ->update(['section_heading' => $new]);
+            });
+        } catch (\Throwable $e) {
+            Log::error('FC form builder: section rename failed', [
+                'step_id' => $step->id,
+                'old' => $old,
+                'new' => $new,
+                'message' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'The section could not be renamed. Please try again.');
+        }
+
+        // Publishes the change to trainees immediately instead of waiting out the
+        // form-structure cache TTL.
+        $this->bumpFormStructure($step);
+
+        $message = $matches.' field'.($matches === 1 ? '' : 's').' moved from "'.$old.'" to "'.$new.'".';
+        if ($mergesInto > 0) {
+            $message .= ' Merged with the '.$mergesInto.' field'.($mergesInto === 1 ? '' : 's').' already in "'.$new.'".';
+        }
+
+        return back()->with('success', $message);
     }
 
     // ── GROUP CRUD ──────────────────────────────────────────────────

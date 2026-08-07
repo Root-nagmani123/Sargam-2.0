@@ -16,8 +16,12 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Admin bulk SMS + Email for B1 / B2 / B3.
  *
- * B1 — form started (1+ trackable step done) but still has pending steps.
- * B2 — registration not completed and form not started (no tracker / 0 steps done).
+ * B1 — form started: either 1+ trackable step done, or credentials are staged
+ *      (user_id + password set) even with 0 steps done — staging credentials is
+ *      itself the first action of registration, so the trainee is "started, not
+ *      not-started".
+ * B2 — registration not completed and truly not started: no staged credentials
+ *      and no tracker / 0 steps done.
  * B3 — all fc_form_steps complete but the (non-tracker-column) travel step is not
  *      submitted yet (tracker.travel_done is falsy). Email only — no DLT-approved
  *      SMS template exists for this reminder yet.
@@ -558,7 +562,7 @@ class FcAdminSmsBulkService
             $tracker = $trackers->get($login);
         }
 
-        $bucket = self::TEMPLATE_B2;
+        $bucket = $this->hasStagedCredentials($roster) ? self::TEMPLATE_B1 : self::TEMPLATE_B2;
         $stepName = null;
         $rowPendingSteps = $pendingStepsLabel;
 
@@ -580,9 +584,19 @@ class FcAdminSmsBulkService
             }
             if ($progress['done'] >= 1) {
                 $bucket = self::TEMPLATE_B1;
-                $stepName = $progress['pending_step'];
-                $rowPendingSteps = $progress['pending_steps'] ?? $progress['pending_step'];
             }
+            $stepName = $progress['pending_step'];
+            $rowPendingSteps = $progress['pending_steps'] ?? $progress['pending_step'];
+        }
+
+        // No tracker row at all, but credentials are staged: still B1 (see class
+        // doc-comment). Nothing is done yet, so every applicable trackable step is
+        // pending — the SMS names the first one, the email lists them all.
+        if ($bucket === self::TEMPLATE_B1 && $stepName === null) {
+            $progress = $this->stepProgressFromTracker($form, $steps, null, $roster);
+            $stepName = $progress['pending_step']
+                ?: (trim((string) ($steps->first()?->step_name ?? '')) ?: 'Basic Information');
+            $rowPendingSteps = $progress['pending_steps'] ?: $stepName;
         }
 
         return [
@@ -743,11 +757,29 @@ class FcAdminSmsBulkService
                 }
 
                 $tracker = $trackersByRosterPk->get($pk);
+                $stepName = null;
+                $rowPendingSteps = $pendingStepsLabel;
                 if ($tracker) {
                     $progress = $this->stepProgressFromTracker($form, $steps, $tracker, $roster);
                     if ($progress['pending_step'] === null || $progress['done'] >= 1) {
                         continue;
                     }
+                    $stepName = $progress['pending_step'];
+                    $rowPendingSteps = $progress['pending_steps'] ?? $progress['pending_step'];
+                }
+
+                // Credentials staged (user_id + password set) counts as "started" even
+                // with 0 trackable steps done — see class doc-comment. Since there is no
+                // tracker row yet in that case, $stepName was never set above: every
+                // applicable trackable step is still pending, so name the first one for
+                // the SMS and keep the whole list for the email.
+                $hasStagedCredentials = $this->hasStagedCredentials($roster);
+                $bucket = $hasStagedCredentials ? self::TEMPLATE_B1 : self::TEMPLATE_B2;
+                if ($hasStagedCredentials && $stepName === null) {
+                    $progress = $this->stepProgressFromTracker($form, $steps, null, $roster);
+                    $stepName = $progress['pending_step']
+                        ?: (trim((string) ($steps->first()?->step_name ?? '')) ?: 'Basic Information');
+                    $rowPendingSteps = $progress['pending_steps'] ?: $stepName;
                 }
 
                 $mobile = trim((string) ($roster->contact_no ?? ''));
@@ -755,14 +787,14 @@ class FcAdminSmsBulkService
                 $email = trim((string) ($roster->email ?? ''));
                 $emitted[$pk] = true;
                 if ($callback([
-                    'bucket' => self::TEMPLATE_B2,
+                    'bucket' => $bucket,
                     'pk' => $pk,
                     'mobile' => $mobile,
                     'name' => trim((string) ($roster->display_name ?? '')),
                     'user_id' => trim((string) ($roster->user_id ?? '')),
                     'email' => $email !== '' ? $email : null,
-                    'step_name' => null,
-                    'pending_steps' => $pendingStepsLabel,
+                    'step_name' => $stepName,
+                    'pending_steps' => $rowPendingSteps,
                 ]) === false) {
                     $stop = true;
                     break;
@@ -791,7 +823,7 @@ class FcAdminSmsBulkService
         }
 
         $query = DB::table('fc_registration_master')
-            ->select(['pk', 'display_name', 'contact_no', 'user_id', 'email', 'is_registered', 'application_type', 'ph_value'])
+            ->select(['pk', 'display_name', 'contact_no', 'user_id', 'password', 'email', 'is_registered', 'application_type', 'ph_value'])
             ->where('course_master_pk', $coursePk);
 
         // Same as Registration Master "Active" tab.
@@ -1040,13 +1072,27 @@ class FcAdminSmsBulkService
             return $base;
         }
 
-        // B2: tracker exists but no step completed yet (and still not registered).
+        // B2: tracker exists but no step completed yet (and still not registered) —
+        // unless credentials are already staged, which counts as "started" (B1), same
+        // signal as classifySelectedRosterRow() and the phase-two roster pass below.
         if ($progress['done'] === 0) {
             if (Schema::hasColumn('fc_registration_master', 'is_registered')) {
                 $registered = $roster->is_registered ?? null;
                 if ((int) $registered === 1) {
                     return null;
                 }
+            }
+
+            if ($this->hasStagedCredentials($roster)) {
+                $base['bucket'] = self::TEMPLATE_B1;
+                if (trim((string) $base['step_name']) === '') {
+                    $base['step_name'] = trim((string) ($steps->first()?->step_name ?? '')) ?: 'Basic Information';
+                }
+                if (trim((string) $base['pending_steps']) === '') {
+                    $base['pending_steps'] = $base['step_name'];
+                }
+
+                return $base;
             }
 
             $base['bucket'] = self::TEMPLATE_B2;
@@ -1172,6 +1218,17 @@ class FcAdminSmsBulkService
         }
 
         return ! ((bool) $trackerRow->travel_done);
+    }
+
+    /** Credentials staged (user_id + password set) — same signal as FoundationCourseStatus::scopeWhereHasStagedCredentials. */
+    protected function hasStagedCredentials(?object $roster): bool
+    {
+        if (! $roster) {
+            return false;
+        }
+
+        return trim((string) ($roster->user_id ?? '')) !== ''
+            && trim((string) ($roster->password ?? '')) !== '';
     }
 
     /**
