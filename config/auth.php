@@ -108,4 +108,34 @@ return [
 
     'password_timeout' => 10800,
 
+    /*
+    |--------------------------------------------------------------------------
+    | Static / bypass login credentials
+    |--------------------------------------------------------------------------
+    |
+    | These were hardcoded literals in LoginController. They are read from the
+    | environment now so they are not committed to the repository.
+    |
+    | IMPORTANT — every environment must set these in its own .env or the paths
+    | that depend on them stop working:
+    |
+    |   AUTH_DEV_LOGIN_BYPASS      when true AND APP_ENV is local/development,
+    |                              login skips the password check entirely.
+    |                              Never enable this on a public host.
+    |   AUTH_STATIC_STAFF_PASSWORD shared password that skips LDAP for staff.
+    |                              Unset => staff always authenticate via LDAP.
+    |   AUTH_STATIC_STUDENT_PASSWORD shared password for user_category = 'S'.
+    |                              Unset => students cannot log in, because
+    |                              user_credentials stores no per-student
+    |                              password. Replacing this with real per-user
+    |                              credentials is outstanding work.
+    |
+    */
+
+    'static_login' => [
+        'dev_bypass'       => (bool) env('AUTH_DEV_LOGIN_BYPASS', false),
+        'staff_password'   => env('AUTH_STATIC_STAFF_PASSWORD'),
+        'student_password' => env('AUTH_STATIC_STUDENT_PASSWORD'),
+    ],
+
 ];
