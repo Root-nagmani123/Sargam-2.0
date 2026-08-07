@@ -3,106 +3,171 @@
 @section('title', 'Foundation Course | Lal Bahadur Shastri National Academy of Administration')
 
 @section('content')
-    @php
-        // Display-only: raise the ordinal suffix (st/nd/rd/th) in formatted dates,
-        // e.g. "June 27th, 2026" -> "June 27<sup>th</sup>, 2026". Does not change stored data.
-        $supOrdinalDate = function ($date) {
-            if (empty($date)) {
-                return '—';
-            }
-            return preg_replace('/(\d+)(st|nd|rd|th)\b/i', '$1<sup>$2</sup>', $date->format('F jS, Y'));
-        };
-    @endphp
+    <style>
+        /* Foundation course landing — page-scoped visual hierarchy + wider layout. */
+        .fc-foundation.academy-box {
+            max-width: 1320px;
+        }
+        .fc-foundation .fc-academy-name {
+            font-size: clamp(1.5rem, 2.4vw, 2.1rem);
+            color: #af2910;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: .25rem;
+        }
+        .fc-foundation .fc-academy-place {
+            font-size: 1.05rem;
+            color: #6c757d;
+            margin-bottom: 0;
+        }
+        .fc-foundation .fc-eyebrow {
+            font-size: clamp(1.25rem, 1.9vw, 1.6rem);
+            color: #004a93;
+            font-weight: 700;
+            letter-spacing: .03em;
+            margin-bottom: .15rem;
+        }
+        .fc-foundation .fc-course-title {
+            font-size: clamp(1.15rem, 1.7vw, 1.5rem);
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 0;
+        }
+        .fc-foundation .fc-info-card {
+            background: #f8faff;
+            border: 1px solid #e3ebf7 !important;
+            transition: box-shadow .2s ease, transform .2s ease;
+        }
+        .fc-foundation .fc-info-card:hover {
+            box-shadow: 0 .4rem 1rem rgba(0, 74, 147, .12);
+            transform: translateY(-2px);
+        }
+        .fc-foundation .fc-info-label {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #004a93;
+            margin-bottom: .2rem;
+        }
+        .fc-foundation .fc-info-value {
+            font-size: 1.02rem;
+            color: #475569;
+        }
+        .fc-foundation sup {
+            font-size: .62em;
+        }
+    </style>
 
-    <div class="fc-page fc-front-page">
-        <div class="container">
-            <div class="fc-card fc-card--tricolor">
-                <div class="fc-card-body">
+    <!-- Main Content Box -->
+    <div class="academy-box fc-foundation">
+        <div class="text-center mb-2">
+            <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo" height="80">
+            <h1 class="fc-academy-name mt-3">Lal Bahadur Shastri National Academy of Administration</h1>
+            <p class="fc-academy-place">Mussoorie, Uttarakhand</p>
+        </div>
+        <hr>
+        <div class="container-fluid px-0 px-md-2">
+            @php
+                // Display-only: raise the ordinal suffix (st/nd/rd/th) in formatted dates,
+                // e.g. "June 27th, 2026" -> "June 27<sup>th</sup>, 2026". Does not change stored data.
+                $supOrdinalDate = function ($date) {
+                    if (empty($date)) {
+                        return '—';
+                    }
+                    return preg_replace('/(\d+)(st|nd|rd|th)\b/i', '$1<sup>$2</sup>', $date->format('F jS, Y'));
+                };
+            @endphp
 
-                    <!-- Academy masthead -->
-                    <header class="fc-masthead">
-                        <img src="{{ asset('images/lbsnaa_logo.jpg') }}"
-                            alt="Lal Bahadur Shastri National Academy of Administration">
-                        <h1 class="fc-masthead-name">Lal Bahadur Shastri National Academy of Administration</h1>
-                        <p class="fc-masthead-place">Mussoorie, Uttarakhand</p>
-                    </header>
-
-                    <hr class="my-4">
-
-                    <!-- Key dates -->
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="fc-info-tile">
-                                <span class="fc-info-icon" aria-hidden="true">
-                                    <i class="bi bi-calendar3"></i>
-                                </span>
-                                <div>
-                                    <h2 class="fc-info-label">Course Duration</h2>
-                                    <div class="fc-info-value">
-                                        {!! $supOrdinalDate($pathPage?->course_start_date) !!}
-                                        &ndash;
-                                        {!! $supOrdinalDate($pathPage?->course_end_date) !!}
-                                    </div>
-                                </div>
+            <div class="row g-3 justify-content-center">
+                <!-- Course Duration -->
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center justify-content-center fc-info-card border rounded-4 p-3 h-100">
+                        <i class="material-icons menu-icon me-3 fs-3" style="color: #004a93;">calendar_today</i>
+                        <div class="text-start">
+                            <h4 class="fc-info-label">Course Duration</h4>
+                            <div class="fc-info-value">
+                                {!! $supOrdinalDate($pathPage?->course_start_date) !!}
+                                –
+                                {!! $supOrdinalDate($pathPage?->course_end_date) !!}
                             </div>
                         </div>
-
-                        <div class="col-md-6">
-                            <div class="fc-info-tile">
-                                <span class="fc-info-icon" aria-hidden="true">
-                                    <i class="bi bi-pencil-square"></i>
-                                </span>
-                                <div>
-                                    <h2 class="fc-info-label">Online Registration</h2>
-                                    <div class="fc-info-value">
-                                        {!! $supOrdinalDate($pathPage?->registration_start_date) !!}
-                                        &ndash;
-                                        {!! $supOrdinalDate($pathPage?->registration_end_date) !!}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
-
-                    <!-- Important updates -->
-                    @if (isset($data) && !empty($data->important_updates))
-                        <div class="fc-notice fc-rte mt-4">
-                            {!! $data->important_updates !!}
-                        </div>
-                    @endif
-
-                    <!-- Coordinator sign-off -->
-                    <div class="fc-signature mt-5">
-                        @if (isset($data) && !empty($data->coordinator_signature))
-                            <img src="{{ asset('storage/' . $data->coordinator_signature) }}"
-                                alt="Coordinator signature">
-                        @endif
-
-                        <p>
-                            {{ isset($data) ? $data->coordinator_name ?? 'Coordinator Name' : 'Coordinator Name' }}<br>
-                            {{ isset($data) ? $data->coordinator_designation ?? 'Coordinator Designation' : 'Coordinator Designation' }}<br>
-                            {!! isset($data) && !empty($data->coordinator_info) ? $data->coordinator_info : 'Additional Info' !!}
-                        </p>
-                    </div>
-
-                    <div class="text-center mt-4">
-                        <a href="{{ route('fc.choose.path', $intentQuery ?? []) }}" class="btn btn-primary px-4">
-                            <i class="bi bi-arrow-right-circle" aria-hidden="true"></i>
-                            Click Here to Proceed
-                        </a>
-                    </div>
-
                 </div>
+
+                <!-- Online Registration -->
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center justify-content-center fc-info-card border rounded-4 p-3 h-100">
+                        <i class="material-icons menu-icon me-3 fs-3" style="color: #004a93;">location_on</i>
+                        <div class="text-start">
+                            <h4 class="fc-info-label">Online Registration</h4>
+                            <div class="fc-info-value">
+                                {!! $supOrdinalDate($pathPage?->registration_start_date) !!}
+                                –
+                                {!! $supOrdinalDate($pathPage?->registration_end_date) !!}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Online Exemption -->
+                {{-- <div class="col-md-6">
+                    <div class="d-flex align-items-center border rounded-4 p-3 h-100">
+                        <i class="material-icons menu-icon me-3 fs-3" style="color: #004a93;">group</i>
+                        <div>
+                            <h6 class="mb-1 fw-semibold">Online Exemption</h6>
+                            <div class="text-muted">Available after registration</div>
+                        </div>
+                    </div>
+                </div> --}}
+
+                <!-- Laptop Requirement -->
+                {{-- <div class="col-md-6">
+                    <div class="d-flex align-items-center border rounded-4 p-3 h-100">
+                        <i class="material-icons menu-icon me-3 fs-3" style="color: #004a93;">laptop_windows</i>
+                        <div>
+                            <h6 class="mb-1 fw-semibold">Laptop Requirement</h6>
+                            <div class="text-muted">Mandatory for all participants</div>
+                        </div>
+                    </div>
+                </div> --}}
             </div>
         </div>
+
+        <!-- Important Updates -->
+        <div class="notice-box mt-4">
+            @if (isset($data) && !empty($data->important_updates))
+                <div class="important-updates-content">
+                    {!! $data->important_updates !!}
+                </div>
+            @endif
+        </div>
+
+        {{-- <div class="text-center mt-4">
+            <a href="{{ route('fc.choose.path') }}" class="btn btn-primary px-4"
+                style="background-color: #004a93; border: #004a93;">
+                Click Here to Proceed
+            </a>
+        </div> --}}
+        {{-- <hr> --}}
+         <!-- Signature Block -->
+        <div class="signature mt-5 text-end">
+            @if (isset($data) && !empty($data->coordinator_signature))
+                <img src="{{ asset('storage/' . $data->coordinator_signature) }}" alt="Coordinator Signature" height="50"
+                    class="mb-2">
+            @endif
+
+
+            <p class="text-muted mb-0">
+                {{ isset($data) ? $data->coordinator_name ?? 'Coordinator Name' : 'Coordinator Name' }}<br>
+                {{ isset($data) ? $data->coordinator_designation ?? 'Coordinator Designation' : 'Coordinator Designation' }}<br>
+                {!! isset($data) && ! empty($data->coordinator_info) ? $data->coordinator_info : 'Additional Info' !!}
+            </p>
+        </div>
+         <div class="text-center mt-4">
+            <a href="{{ route('fc.choose.path', $intentQuery ?? []) }}" class="btn btn-primary px-4"
+                style="background-color: #004a93; border: #004a93;">
+                Click Here to Proceed
+            </a>
+        </div>
+
     </div>
 @endsection
-
-@push('styles')
-    {{-- Page-scoped: only the width of this single-column letter page, which is
-         wider than the default container. Everything else comes from the .fc-*
-         component layer in sargam-app.css (docs/design.md rules 1 and 4). --}}
-    <style>
-        .fc-front-page .container { max-width: 1120px; }
-    </style>
-@endpush

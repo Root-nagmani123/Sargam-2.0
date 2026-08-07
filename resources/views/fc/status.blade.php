@@ -18,7 +18,7 @@
     ];
 @endphp
 
-<div class="fc-status-page" id="fcStatusPage"
+<main class="fc-status-page" id="fcStatusPage"
     data-data-url="{{ route('fc.status.data') }}"
     data-initial-tab="{{ $activeTab }}"
     data-initial-page="{{ $participants?->currentPage() ?? 1 }}">
@@ -71,7 +71,7 @@
                 <span>Logged user: {{ (int) $loggedUserCount }}</span>
         </div>
     </footer>
-</div>
+</main>
 @endsection
 
 @push('scripts')

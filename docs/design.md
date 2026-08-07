@@ -123,39 +123,6 @@ Inert until a page adds the class. Use these when **modernizing a screen**.
    Bootstrap utilities + `.ds-*` can't.
 5. **Load order matters** — this file must remain the last stylesheet so it
    overrides the theme without `!important`.
-6. **Area-scoped chrome still lives here** — but scope it and own the cost.
-   See "Layer D" below.
-
----
-
-## Layer D — Area-scoped chrome
-
-Some UI belongs to one area of the app rather than all of it: the FC public
-portal header/footer, for example. Rule 1 still applies — it goes in **this
-file**, not a new stylesheet — but two extra obligations come with it, because
-this file is linked by *every* layout (admin, faculty, mess, FC).
-
-**1. Scope every selector to a body class.** The FC block is prefixed with
-`.fc-portal`, set on `<body>` by `fc/layouts/master.blade.php`. Without this,
-generic ids and classes leak: `#navbarNav`, `#content`, `.card` and
-`.btn-primary` all exist in several unrelated layouts. A mobile bottom-nav rule
-written as bare `#navbarNav` will silently restyle the admin navbar.
-
-**2. Accept the transfer cost knowingly.** An area block is inert elsewhere but
-still downloaded by everyone. Measure it (raw *and* gzip) when you add one, and
-record the number. Current state:
-
-| Block | Raw | Gzip | Scope |
-|---|---:|---:|---|
-| Layers A–C (tokens, refinements, `.ds-*`) | 17.0 KB | 4.7 KB | app-wide, used app-wide |
-| Layer D — FC portal (`.fc-*`) | 31.2 KB | 7.0 KB | FC only, shipped app-wide |
-
-**Decision on record:** the FC block stays in this file. The alternative — a
-separate `fc.css` loaded only by the FC layout — trades a fragmented system for
-~7 KB gzip on a long-cached, `filemtime`-busted asset, which is a poor trade at
-this size. **Revisit if Layer D passes ~15 KB gzip**, at which point a
-per-area stylesheet loaded from its own layout becomes the better answer and
-rule 1 should be amended rather than worked around.
 
 See also:
 
