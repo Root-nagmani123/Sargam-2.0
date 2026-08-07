@@ -135,7 +135,10 @@
                     <a href="{{ route('admin.dashboard.feed', ['tab' => 'notices']) }}"
                         class="btn btn-sm notices-feed-reset-btn" id="notice-filter-reset">Reset Filters</a>
 
-                    @if(hasRole('Admin'))
+                    {{-- Same gate as the dashboard widget's Add New Notice button
+                         (dashboard.blade.php:240,256). Checking only 'Admin' hid this
+                         from Super Admins, who could still add a notice from the widget. --}}
+                    @if(hasRole('Admin') || hasRole('Super Admin'))
                     <a href="{{ route('admin.notice.create') }}" class="btn btn-sm notices-feed-add-btn ms-auto">
                         <i class="bi bi-plus-square me-1" aria-hidden="true"></i>Add New Notice
                     </a>
