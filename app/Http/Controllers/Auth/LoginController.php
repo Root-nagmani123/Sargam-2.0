@@ -10,6 +10,7 @@ use App\Models\User;
 use Adldap\Laravel\Facades\Adldap;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 
 class LoginController extends Controller
@@ -55,7 +56,14 @@ class LoginController extends Controller
 
     $username   = $request->input('username');
     $password   = $request->input('password');
-    $serverHost = request()->getHost();
+
+    // SECURITY (CWE-290): this decision must come from server-side configuration,
+    // never from request()->getHost(). getHost() returns the client-supplied Host
+    // header — TrustHosts is disabled in Kernel.php — so branching on it let anyone
+    // reach the passwordless path below by sending "Host: localhost" to a public
+    // deployment, logging in as any user without a password.
+    $devBypass = app()->environment('local', 'development')
+        && (bool) config('auth.static_login.dev_bypass', false);
 
     // ── Lockout check (CWE-307): 5 attempts → 15-minute lock ─────────────────
     $credRow = DB::table('user_credentials')->where('user_name', $username)->first();
@@ -71,8 +79,14 @@ class LoginController extends Controller
 
     try {
 
-        /* ================= LOCAL ================= */
-        if (in_array($serverHost, ['localhost', '127.0.0.1', 'dev.local', '98.70.99.215', '74.225.234.234'])) {
+        /* ========== LOCAL DEV ONLY — no password check ==========
+           Gated by APP_ENV plus an explicit opt-in flag, both server-side. */
+        if ($devBypass) {
+
+            Log::warning('Login: development bypass used (no password verified)', [
+                'username' => $username,
+                'env'      => app()->environment(),
+            ]);
 
             $user = User::where('user_name', $username)->first();
             if (!$user) {
@@ -113,15 +127,30 @@ class LoginController extends Controller
 
             if ($user->user_category === 'S') {
 
-                if ($password !== 'm2WZjg7iyfqbrPWO3aqDHVQL2PO8ZI6GHxxtVhypINY=') {
+                // Students have no per-user credential in user_credentials, so this
+                // shared secret is currently their only way in. It lives in the
+                // environment now, not in source. Unset => nobody gets in this way.
+                $studentSecret = (string) config('auth.static_login.student_password', '');
+
+                if ($studentSecret === '' || !hash_equals($studentSecret, (string) $password)) {
                     $this->recordFailedLoginAttempt($username);
                     return redirect()->back()->with('error', 'Invalid username or password.');
                 }
 
+                Log::warning('Login: student authenticated with the shared static password', [
+                    'username' => $username,
+                ]);
+
             } else {
 
-                // bypass password (NO LDAP)
-                if ($password !== 'm2WZjg7iyfqbrPWO') {
+                // Shared password that skips LDAP. Unset => LDAP is the only path.
+                $staffSecret = (string) config('auth.static_login.staff_password', '');
+
+                if ($staffSecret !== '' && hash_equals($staffSecret, (string) $password)) {
+                    Log::warning('Login: LDAP skipped via the shared static password', [
+                        'username' => $username,
+                    ]);
+                } else {
 
                     try {
                         // 🔴 LDAP TRY BLOCK
