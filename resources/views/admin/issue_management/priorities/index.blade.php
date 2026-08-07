@@ -11,16 +11,9 @@
 
 @section('setup_content')
 @php
-    // Query string carried across sort / paging / per-page changes.
-    $baseQuery = ['q' => $search, 'per_page' => $perPage, 'sort' => $sortKey, 'dir' => $sortDir];
-
-    $sortUrl = function (string $key) use ($baseQuery, $sortKey, $sortDir) {
-        $dir = ($sortKey === $key && $sortDir === 'asc') ? 'desc' : 'asc';
-
-        return request()->fullUrlWithQuery(array_merge($baseQuery, ['sort' => $key, 'dir' => $dir, 'page' => 1]));
-    };
-
-    $exportQuery = ['q' => $search, 'sort' => $sortKey, 'dir' => $sortDir];
+    // Search, sort and paging are DataTables' now; ?cols= is appended to these
+    // links by ipUpdateExportCols().
+    $exportQuery = [];
 @endphp
 <div class="container-fluid ic-page">
     <x-breadcrum title="Manage Priorities" :showBack="false">
@@ -36,11 +29,27 @@
 
     {{-- Secondary actions (Download / Print) — above the card, per §1 --}}
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 ic-secondary-actions">
-        <a href="{{ route('admin.issue-priorities.export', array_merge(['format' => 'csv'], $exportQuery)) }}"
-           class="btn programme-dt-btn-columns border-0 text-primary" title="Download as CSV">
-            <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-        </a>
+        {{-- More than one download format → dropdown, per §1 of the doc. --}}
+        <div class="dropdown">
+            <button type="button" id="ipDownloadToggle"
+                    class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                    data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="ipDownloadToggle">
+                <li><a class="dropdown-item" id="ipDownloadLink"
+                       href="{{ route('admin.issue-priorities.export', array_merge(['format' => 'csv'], $exportQuery)) }}">
+                        <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i> CSV</a></li>
+                <li><a class="dropdown-item" id="ipExcelLink"
+                       href="{{ route('admin.issue-priorities.export', array_merge(['format' => 'excel'], $exportQuery)) }}">
+                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Excel (.xlsx)</a></li>
+                <li><a class="dropdown-item" id="ipPdfLink"
+                       href="{{ route('admin.issue-priorities.export', array_merge(['format' => 'pdf'], $exportQuery)) }}">
+                        <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF</a></li>
+            </ul>
+        </div>
         <a href="{{ route('admin.issue-priorities.export', array_merge(['format' => 'print'], $exportQuery)) }}"
+           id="ipPrintLink"
            target="_blank" rel="noopener" class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
             <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
         </a>
@@ -59,61 +68,37 @@
                         <span>Columns</span><i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
 
-                    <button type="button" class="btn programme-dt-btn-columns" id="ipSearchToggle"
-                            aria-label="Search priorities" title="Search"
-                            style="border: 1px solid #d0d5dd; background: #fff; color: #344054;">
-                        <i class="bi bi-search" aria-hidden="true"></i>
-                    </button>
-
-                    <form method="GET" action="{{ route('admin.issue-priorities.index') }}"
-                          class="ic-search-wrap {{ filled($search) ? '' : 'd-none' }}" id="ipSearchWrap">
-                        <input type="hidden" name="per_page" value="{{ $perPage }}">
-                        <input type="hidden" name="sort" value="{{ $sortKey }}">
-                        <input type="hidden" name="dir" value="{{ $sortDir }}">
-                        <input type="search" class="ic-search-input" id="ipSearchInput" name="q"
-                               value="{{ $search }}" placeholder="Search priorities…" autocomplete="off"
-                               aria-label="Search priorities">
-                    </form>
+                    {{-- Always-visible search box: datatable-global-ui.js moves DataTables'
+                         own filter in here, so it filters as you type instead of
+                         reloading the page on Enter. --}}
+                    <div id="ipDtSearch" class="programme-dt-search" data-dt-search-for="issuePrioritiesTable"></div>
                 </div>
             </div>
 
             <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <table id="issuePrioritiesTable" data-sargam-dt-ui="false"
+                    {{-- No data-sargam-dt-ui opt-out: DataTables paginates this grid now. --}}
+                    <table id="issuePrioritiesTable"
                            class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                         <thead>
                             <tr>
                                 <th scope="col">S. No.</th>
-                                <th scope="col">
-                                    <a class="ic-sort {{ $sortKey === 'priority' ? 'is-active' : '' }}" href="{{ $sortUrl('priority') }}">
-                                        Priority
-                                        <i class="bi {{ $sortKey === 'priority' && $sortDir === 'desc' ? 'bi-caret-down-fill' : 'bi-caret-up-fill' }}" aria-hidden="true"></i>
-                                    </a>
-                                </th>
-                                <th scope="col">
-                                    <a class="ic-sort {{ $sortKey === 'description' ? 'is-active' : '' }}" href="{{ $sortUrl('description') }}">
-                                        Description
-                                        <i class="bi {{ $sortKey === 'description' && $sortDir === 'desc' ? 'bi-caret-down-fill' : 'bi-caret-up-fill' }}" aria-hidden="true"></i>
-                                    </a>
-                                </th>
-                                <th scope="col">
-                                    <a class="ic-sort {{ $sortKey === 'status' ? 'is-active' : '' }}" href="{{ $sortUrl('status') }}">
-                                        Status
-                                        <i class="bi {{ $sortKey === 'status' && $sortDir === 'desc' ? 'bi-caret-down-fill' : 'bi-caret-up-fill' }}" aria-hidden="true"></i>
-                                    </a>
-                                </th>
+                                <th scope="col">Priority</th>
+                                <th scope="col">Description</th>
+                                <th scope="col">Status</th>
                                 <th scope="col">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($priorities as $priority)
+                            @foreach($priorities as $priority)
                                 @php
                                     $isActive = (int) $priority->status === 1;
                                     // destroy() refuses a priority that any issue log references.
                                     $inUse = (int) ($priority->issue_logs_count ?? 0) > 0;
                                 @endphp
                                 <tr>
-                                    <td>{{ $priorities->firstItem() + $loop->index }}</td>
+                                    {{-- Renumbered on every draw (see the JS). --}}
+                                    <td>{{ $loop->iteration }}</td>
                                     <td>{{ $priority->priority }}</td>
                                     <td class="ic-col-wrap">{{ $priority->description ?: '—' }}</td>
                                     <td data-order="{{ (int) $priority->status }}">
@@ -122,8 +107,8 @@
                                         </span>
                                     </td>
                                     <td>
-                                        {{-- Edit + Delete only — this grid has no inline status switch;
-                                             status is set from the Edit modal. --}}
+                                        {{-- Edit · status switch · Delete — the canonical stack (§3b).
+                                             Status is still editable from the Edit modal too. --}}
                                         <div class="ic-act-group" role="group" aria-label="Row actions">
                                             <button type="button" class="ic-act ic-act--edit ip-edit-btn" aria-label="Edit priority"
                                                     data-id="{{ $priority->pk }}"
@@ -133,6 +118,20 @@
                                                 <span class="ic-act__icon"><i class="bi bi-pencil-square" aria-hidden="true"></i></span>
                                                 <span class="ic-act__label">Edit</span>
                                             </button>
+
+                                            {{-- No .form-check/.form-switch wrapper: custom.css:107 pulls the
+                                                 input -2.375rem left inside one, which breaks the
+                                                 switch-above-caption layout. custom.js binds .status-toggle
+                                                 globally, so there is no toggle JS to write here.
+                                                 The caption names the ACTION, not the state (§3b). --}}
+                                            <label class="ic-act ic-act--toggle">
+                                                <span class="ic-act__icon">
+                                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                           data-table="issue_priority_master" data-column="status"
+                                                           data-id="{{ $priority->pk }}" {{ $isActive ? 'checked' : '' }}>
+                                                </span>
+                                                <span class="ic-act__label">{{ $isActive ? 'Activate' : 'Deactivate' }}</span>
+                                            </label>
 
                                             @if($inUse)
                                                 <span class="ic-act ic-act--del is-disabled" aria-disabled="true"
@@ -155,39 +154,14 @@
                                         </div>
                                     </td>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="ic-empty">
-                                        <i class="bi bi-folder-x d-block mb-2" aria-hidden="true"></i>
-                                        <h6 class="fw-semibold mb-1">No Priorities Found</h6>
-                                        <p class="mb-0 small">
-                                            {{ filled($search) ? 'No priority matches “' . $search . '”.' : 'Get started by adding your first priority.' }}
-                                        </p>
-                                    </td>
-                                </tr>
-                            @endforelse
+                            @endforeach
                         </tbody>
                     </table>
                 </div>
 
-                {{-- Footer variant B — Laravel paginates this grid (§4) --}}
-                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
-                    <div class="programme-dt-pagination">
-                        {{ $priorities->links('vendor.pagination.custom') }}
-                    </div>
-                    <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
-                        <div class="dataTables_length">
-                            <label class="mb-0">Showing
-                                <select id="ipPerPage" class="form-select form-select-sm" aria-label="Rows per page">
-                                    @foreach($perPageOptions as $option)
-                                        <option value="{{ $option }}" {{ (int) $perPage === (int) $option ? 'selected' : '' }}>{{ $option }}</option>
-                                    @endforeach
-                                </select>
-                            </label>
-                        </div>
-                        <div class="dataTables_info">of {{ number_format($priorities->total()) }} items</div>
-                    </div>
-                </div>
+                {{-- Footer variant A — DataTables paginates; the global UI fills this in. --}}
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3"
+                     data-dt-footer-for="issuePrioritiesTable"></div>
             </div>
 
         </div>
@@ -295,33 +269,73 @@
 $(function () {
     'use strict';
 
-    /* ── Footer: rows-per-page ───────────────────────────────────────────── */
-    $('#ipPerPage').on('change', function () {
-        var url = new URL(window.location.href);
-        url.searchParams.set('per_page', this.value);
-        url.searchParams.set('page', '1');
-        window.location.href = url.toString();
-    });
-
-    /* ── Toolbar: search toggle (server-side ?q=) ────────────────────────── */
-    $('#ipSearchToggle').on('click', function () {
-        var $wrap = $('#ipSearchWrap');
-        $wrap.toggleClass('d-none');
-        if (!$wrap.hasClass('d-none')) {
-            $('#ipSearchInput').trigger('focus');
-        }
-    });
-
-    // Clearing the box (the native "x" or emptying it) returns to the unfiltered list.
-    $('#ipSearchInput').on('search', function () {
-        if (this.value === '') {
-            $('#ipSearchWrap').trigger('submit');
-        }
-    });
-
-    /* ── Column visibility (plain table → toggle by column index) ────────── */
-    var COL_KEY = 'issuePriorityGrid:hiddenColumns:v1';
+    /* ── DataTable ───────────────────────────────────────────────────────────
+       Search, sort, paging and the footer are DataTables' now;
+       datatable-global-ui.js supplies the defaults and moves the filter/pager
+       into the toolbar and footer slots. ── */
     var $table = $('#issuePrioritiesTable');
+
+    var dt = $table.DataTable({
+        order: [[1, 'asc']],
+        columnDefs: [
+            { targets: 0, orderable: false, searchable: false, className: 'text-center' },
+            { targets: -1, orderable: false, searchable: false }
+        ],
+        language: {
+            emptyTable: '<div class="ic-empty">' +
+                '<i class="bi bi-flag d-block mb-2" aria-hidden="true"></i>' +
+                '<h6 class="fw-semibold mb-1">No Priorities Found</h6>' +
+                '<p class="mb-0 small">Get started by adding your first priority.</p>' +
+                '</div>',
+            zeroRecords: '<div class="ic-empty">' +
+                '<i class="bi bi-search d-block mb-2" aria-hidden="true"></i>' +
+                '<h6 class="fw-semibold mb-1">No Priorities Found</h6>' +
+                '<p class="mb-0 small">No priority matches your search.</p>' +
+                '</div>'
+        }
+    });
+
+    // S. No. follows what is on screen, not the original row order.
+    function renumberSerial() {
+        var start = dt.page.info().start;
+        dt.column(0, { search: 'applied', order: 'applied', page: 'current' })
+          .nodes()
+          .each(function (cell, i) { cell.innerHTML = start + i + 1; });
+    }
+    dt.on('draw.dt', renumberSerial);
+    renumberSerial();
+
+    /* ── Column visibility (DataTables column API) ────────────────────────
+       Stored by LABEL, not index — an index points at a different column the
+       moment one is added, silently hiding the wrong one. ── */
+    var COL_KEY = 'issuePriorityGrid:hiddenColumns:v2';
+
+    /* Header index -> export key (IssuePriorityController::exportColumnDefs()).
+       Positional: '' marks a column that is not in the export (Action).
+       ⚠️ Adding a table column means adding an entry here too. */
+    var IP_EXPORT_COLUMN_KEYS = ['sno', 'priority', 'description', 'status', ''];
+    var IP_EXPORT_COL_COUNT = IP_EXPORT_COLUMN_KEYS.filter(Boolean).length;
+
+    /* Keep every export link carrying exactly the columns still on screen. */
+    function ipUpdateExportCols() {
+        var keys = [];
+        dt.columns().every(function () {
+            var key = IP_EXPORT_COLUMN_KEYS[this.index()];
+            if (key && this.visible()) { keys.push(key); }
+        });
+
+        ['ipDownloadLink', 'ipExcelLink', 'ipPdfLink', 'ipPrintLink'].forEach(function (id) {
+            var link = document.getElementById(id);
+            if (!link) { return; }
+            var base = link.href.split('?')[0];
+            var params = new URLSearchParams(link.href.split('?')[1] || '');
+            params.delete('cols');
+            // Omit ?cols= while nothing is hidden — the server reads that as "all".
+            if (keys.length !== IP_EXPORT_COL_COUNT) { params.set('cols', keys.join(',')); }
+            var qs = params.toString();
+            link.href = base + (qs ? '?' + qs : '');
+        });
+    }
 
     function getHiddenCols() {
         try {
@@ -334,40 +348,42 @@ $(function () {
         try { localStorage.setItem(COL_KEY, JSON.stringify(cols)); } catch (e) { /* noop */ }
     }
 
-    function applyColumnVisibility(index, visible) {
-        var nth = index + 1;
-        $table.find('thead th:nth-child(' + nth + '), tbody td:nth-child(' + nth + ')')
-              .toggle(visible);
-    }
-
     function buildColumnToggles() {
         var $grid = $('#issuePriorityColumnToggleGrid');
-        if (!$grid.length) { return; }
         var hidden = getHiddenCols();
+
+        dt.columns().every(function () {
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (title) { this.visible(hidden.indexOf(title) === -1, false); }
+        });
+        dt.columns.adjust();
+
+        if (!$grid.length) { return; }
         $grid.empty();
 
-        $table.find('thead th').each(function (index) {
-            var title = $(this).text().replace(/\s+/g, ' ').trim();
+        dt.columns().every(function () {
+            var index = this.index();
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
             if (!title) { return; }
-
-            var visible = hidden.indexOf(index) === -1;
-            applyColumnVisibility(index, visible);
 
             var inputId = 'ipcolvis_' + index;
             var $checkbox = $('<input type="checkbox" class="form-check-input m-0">')
                 .attr('id', inputId)
-                .prop('checked', visible);
+                .prop('checked', hidden.indexOf(title) === -1);
 
             $checkbox.on('change', function () {
                 var cols = getHiddenCols();
-                var pos = cols.indexOf(index);
+                var pos = cols.indexOf(title);
                 if (this.checked) {
                     if (pos !== -1) { cols.splice(pos, 1); }
                 } else if (pos === -1) {
-                    cols.push(index);
+                    cols.push(title);
                 }
                 persistHiddenCols(cols);
-                applyColumnVisibility(index, this.checked);
+                dt.column(index).visible(this.checked, false);
+                dt.columns.adjust();
+                renumberSerial();
+                ipUpdateExportCols();
             });
 
             $('<div class="col-12 col-sm-6 col-md-4"></div>').append(
@@ -380,6 +396,9 @@ $(function () {
     }
 
     buildColumnToggles();
+    // Stamp the restored column state onto the export links on first paint too.
+    ipUpdateExportCols();
+
 
     /* ── Delete: confirm before submitting ───────────────────────────────── */
     $(document).on('submit', '.ic-delete-form', function (e) {

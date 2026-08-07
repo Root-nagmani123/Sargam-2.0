@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers\Admin\IssueManagement;
 
+use App\Exports\IssuePriorityExport;
 use App\Http\Controllers\Controller;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 use App\Models\IssuePriorityMaster;
 use App\Support\DataTableRedisCache;
 use Illuminate\Database\Eloquent\Builder;
@@ -128,62 +131,28 @@ class IssuePriorityController extends Controller
      */
     public function index(Request $request)
     {
-        $page = Paginator::resolveCurrentPage('page');
-        $perPage = $this->resolvePerPage($request);
-        $search = $this->resolveSearch($request);
-        $sort = $this->resolveSort($request);
-
+        // Client-side DataTable: search, sort and paging happen in the browser,
+        // so the whole (tiny) set is served at once.
         $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_priorities_index:v1:' . md5(json_encode([
-            'epoch' => $epoch,
-            'page' => $page,
-            'per_page' => $perPage,
-            'q' => $search,
-            'sort' => $sort,
-        ]));
+        $cacheKey = 'admin_issue_priorities_index:v2:' . md5(json_encode(['epoch' => $epoch]));
 
-        $snapshot = DataTableRedisCache::remember(
+        $ids = DataTableRedisCache::remember(
             $cacheKey,
             [
                 'enabled' => 'ISSUE_PRIORITY_INDEX_CACHE_ENABLED',
                 'seconds' => 'ISSUE_PRIORITY_INDEX_CACHE_SECONDS',
             ],
             'IssuePriorityController@index',
-            fn () => $this->indexPageSnapshot($page, $perPage, $search, $sort['key'], $sort['dir'])
+            fn () => $this->indexAllPks()
         );
 
-        if (! is_array($snapshot) || ! array_key_exists('total', $snapshot) || ! array_key_exists('ids', $snapshot) || ! is_array($snapshot['ids'])) {
-            $snapshot = $this->indexPageSnapshot($page, $perPage, $search, $sort['key'], $sort['dir']);
+        if (! is_array($ids)) {
+            $ids = $this->indexAllPks();
         }
 
-        $total = (int) $snapshot['total'];
-        $ids = array_map('intval', $snapshot['ids']);
-        $items = $this->hydratePrioritiesByOrderedPks($ids);
+        $priorities = $this->hydratePrioritiesByOrderedPks($ids);
 
-        $priorities = new LengthAwarePaginator(
-            $items,
-            $total,
-            $perPage,
-            $page,
-            [
-                'path' => Paginator::resolveCurrentPath(),
-                'pageName' => 'page',
-            ]
-        );
-        $priorities->withQueryString();
-
-        $perPageOptions = self::PER_PAGE_OPTIONS;
-        $sortKey = $sort['key'];
-        $sortDir = $sort['dir'];
-
-        return view('admin.issue_management.priorities.index', compact(
-            'priorities',
-            'perPage',
-            'perPageOptions',
-            'search',
-            'sortKey',
-            'sortDir'
-        ));
+        return view('admin.issue_management.priorities.index', compact('priorities'));
     }
 
     /**
@@ -191,41 +160,126 @@ class IssuePriorityController extends Controller
      *
      * Both formats share the same header + columns as the index grid.
      */
+    /**
+     * Every priority pk in display order — the full set backing the grid.
+     */
+    private function indexAllPks(): array
+    {
+        return $this->indexFilteredQuery()
+            ->pluck('pk')
+            ->map(fn ($pk) => (int) $pk)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Canonical export columns, in order. Keys must match IP_EXPORT_COLUMN_KEYS
+     * in priorities/index.blade.php.
+     */
+    private function exportColumnDefs(): array
+    {
+        return [
+            'sno' => [
+                'heading' => 'S. No.',
+                'class' => 'col-sno',
+                'value' => fn ($row, int $index) => $index + 1,
+            ],
+            'priority' => [
+                'heading' => 'Priority',
+                'class' => 'col-priority',
+                'value' => fn ($row) => $row->priority,
+            ],
+            'description' => [
+                'heading' => 'Description',
+                'class' => 'col-desc',
+                'value' => fn ($row) => $row->description ?: '-',
+            ],
+            'status' => [
+                'heading' => 'Status',
+                'class' => 'col-status',
+                'value' => fn ($row) => ((int) $row->status === 1) ? 'Active' : 'Inactive',
+            ],
+        ];
+    }
+
+    /**
+     * Intersect ?cols= against the canonical list so a hand-edited value cannot
+     * reorder the report or inject a column. Empty => every column.
+     */
+    private function resolveExportColumns(Request $request): array
+    {
+        $defs = $this->exportColumnDefs();
+        $wanted = array_filter(array_map('trim', explode(',', (string) $request->query('cols', ''))));
+
+        if ($wanted === []) {
+            return $defs;
+        }
+
+        $keys = array_values(array_intersect(array_keys($defs), $wanted));
+
+        return $keys === [] ? $defs : array_intersect_key($defs, array_flip($keys));
+    }
+
     public function export(Request $request, string $format = 'csv')
     {
         $format = strtolower($format);
-        abort_unless(in_array($format, ['csv', 'print'], true), 404);
+        abort_unless(in_array($format, ['csv', 'excel', 'pdf', 'print'], true), 404);
 
         $search = $this->resolveSearch($request);
         $sort = $this->resolveSort($request);
         $rows = $this->indexFilteredQuery($search, $sort['key'], $sort['dir'])->get();
 
-        $header = ['S. No.', 'Priority', 'Description', 'Status'];
+        $columns = $this->resolveExportColumns($request);
+        $header = array_values(array_map(fn ($col) => $col['heading'], $columns));
+        $exportDate = now()->format('d-m-Y h:i A');
+        $stamp = now()->format('YmdHis');
 
         if ($format === 'print') {
             return view('admin.issue_management.priorities.export_print', [
+                'columns' => $columns,
                 'header' => $header,
                 'rows' => $rows,
                 'search' => $search,
-                'exportDate' => now()->format('d-m-Y h:i A'),
+                'exportDate' => $exportDate,
             ]);
         }
 
-        $filename = 'ManagePriorities_' . now()->format('YmdHis') . '.csv';
+        if ($format === 'excel') {
+            return Excel::download(
+                new IssuePriorityExport($rows, $columns, $exportDate, $search),
+                'ManagePriorities_' . $stamp . '.xlsx'
+            );
+        }
 
-        return response()->streamDownload(function () use ($header, $rows) {
+        if ($format === 'pdf') {
+            return Pdf::loadView('admin.issue_management.priorities.export_pdf', [
+                'columns' => $columns,
+                'rows' => $rows,
+                'search' => $search,
+                'exportDate' => $exportDate,
+            ])
+                ->setPaper('a4', 'portrait')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    'isPhpEnabled' => true,
+                ])
+                ->download('ManagePriorities_' . $stamp . '.pdf');
+        }
+
+        $filename = 'ManagePriorities_' . $stamp . '.csv';
+
+        return response()->streamDownload(function () use ($columns, $header, $rows) {
             $handle = fopen('php://output', 'w');
             // BOM so Excel opens the UTF-8 file with the right encoding.
             fwrite($handle, "\xEF\xBB\xBF");
             fputcsv($handle, $header);
 
             foreach ($rows as $index => $row) {
-                fputcsv($handle, [
-                    $index + 1,
-                    $row->priority,
-                    $row->description,
-                    ((int) $row->status === 1) ? 'Active' : 'Inactive',
-                ]);
+                fputcsv($handle, array_values(array_map(
+                    fn ($col) => $col['value']($row, $index),
+                    $columns
+                )));
             }
 
             fclose($handle);

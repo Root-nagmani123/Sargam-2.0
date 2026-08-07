@@ -20,26 +20,27 @@
         'total'      => count($rows),
     ])
 
+    {{-- Columns come from IssuePriorityController::exportColumnDefs(), already
+         filtered to whatever is ticked in the grid's Columns modal. Keyed by
+         column, never by position. --}}
     <table class="ic-print-table">
         <thead>
             <tr>
-                <th class="col-sno">{{ $header[0] }}</th>
-                <th class="col-priority">{{ $header[1] }}</th>
-                <th class="col-desc">{{ $header[2] }}</th>
-                <th class="col-status">{{ $header[3] }}</th>
+                @foreach ($columns as $col)
+                    <th class="{{ $col['class'] }}">{{ $col['heading'] }}</th>
+                @endforeach
             </tr>
         </thead>
         <tbody>
             @forelse ($rows as $index => $row)
                 <tr>
-                    <td class="col-sno">{{ $index + 1 }}</td>
-                    <td class="col-priority">{{ $row->priority }}</td>
-                    <td class="col-desc">{{ $row->description ?: '-' }}</td>
-                    <td class="col-status">{{ (int) $row->status === 1 ? 'Active' : 'Inactive' }}</td>
+                    @foreach ($columns as $col)
+                        <td class="{{ $col['class'] }}">{{ $col['value']($row, $index) }}</td>
+                    @endforeach
                 </tr>
             @empty
                 <tr>
-                    <td colspan="4" class="ic-print-empty">No priorities to print</td>
+                    <td colspan="{{ count($columns) }}" class="ic-print-empty">No priorities to print</td>
                 </tr>
             @endforelse
         </tbody>
