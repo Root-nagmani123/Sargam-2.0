@@ -20,26 +20,28 @@
         'total'      => count($rows),
     ])
 
+    {{-- Columns come from IssueSubCategoryController::exportColumnDefs(), already
+         filtered to whatever is ticked in the grid's Columns modal, so the
+         printout matches the screen and the CSV/Excel/PDF. Keyed by column, never
+         by position. --}}
     <table class="ic-print-table">
         <thead>
             <tr>
-                <th class="col-sno">{{ $header[0] }}</th>
-                <th class="col-category">{{ $header[1] }}</th>
-                <th class="col-sub">{{ $header[2] }}</th>
-                <th class="col-status">{{ $header[3] }}</th>
+                @foreach ($columns as $col)
+                    <th class="{{ $col['class'] }}">{{ $col['heading'] }}</th>
+                @endforeach
             </tr>
         </thead>
         <tbody>
             @forelse ($rows as $index => $row)
                 <tr>
-                    <td class="col-sno">{{ $index + 1 }}</td>
-                    <td class="col-category">{{ $row->category_name ?: '-' }}</td>
-                    <td class="col-sub">{{ $row->issue_sub_category }}</td>
-                    <td class="col-status">{{ (int) $row->status === 1 ? 'Active' : 'Inactive' }}</td>
+                    @foreach ($columns as $col)
+                        <td class="{{ $col['class'] }}">{{ $col['value']($row, $index) }}</td>
+                    @endforeach
                 </tr>
             @empty
                 <tr>
-                    <td colspan="4" class="ic-print-empty">No sub-categories to print</td>
+                    <td colspan="{{ count($columns) }}" class="ic-print-empty">No sub-categories to print</td>
                 </tr>
             @endforelse
         </tbody>

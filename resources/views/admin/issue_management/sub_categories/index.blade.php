@@ -11,22 +11,9 @@
 
 @section('setup_content')
 @php
-    // Query string carried across sort / paging / per-page changes.
-    $baseQuery = [
-        'q' => $search,
-        'per_page' => $perPage,
-        'sort' => $sortKey,
-        'dir' => $sortDir,
-        'category_id' => $categoryId,
-    ];
-
-    $sortUrl = function (string $key) use ($baseQuery, $sortKey, $sortDir) {
-        $dir = ($sortKey === $key && $sortDir === 'asc') ? 'desc' : 'asc';
-
-        return request()->fullUrlWithQuery(array_merge($baseQuery, ['sort' => $key, 'dir' => $dir, 'page' => 1]));
-    };
-
-    $exportQuery = ['q' => $search, 'sort' => $sortKey, 'dir' => $sortDir, 'category_id' => $categoryId];
+    // Only the category scope goes to the server now — search, sort and paging
+    // are DataTables'. ?cols= is appended by iscUpdateExportCols().
+    $exportQuery = ['category_id' => $categoryId];
 @endphp
 <div class="container-fluid ic-page">
     <x-breadcrum title="Manage Sub-Categories" :showBack="false">
@@ -42,11 +29,27 @@
 
     {{-- Secondary actions (Download / Print) — above the card, per §1 --}}
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 ic-secondary-actions">
-        <a href="{{ route('admin.issue-sub-categories.export', array_merge(['format' => 'csv'], $exportQuery)) }}"
-           class="btn programme-dt-btn-columns border-0 text-primary" title="Download as CSV">
-            <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-        </a>
+        {{-- More than one download format → dropdown, per §1 of the doc. --}}
+        <div class="dropdown">
+            <button type="button" id="iscDownloadToggle"
+                    class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                    data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="iscDownloadToggle">
+                <li><a class="dropdown-item" id="iscDownloadLink"
+                       href="{{ route('admin.issue-sub-categories.export', array_merge(['format' => 'csv'], $exportQuery)) }}">
+                        <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i> CSV</a></li>
+                <li><a class="dropdown-item" id="iscExcelLink"
+                       href="{{ route('admin.issue-sub-categories.export', array_merge(['format' => 'excel'], $exportQuery)) }}">
+                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Excel (.xlsx)</a></li>
+                <li><a class="dropdown-item" id="iscPdfLink"
+                       href="{{ route('admin.issue-sub-categories.export', array_merge(['format' => 'pdf'], $exportQuery)) }}">
+                        <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF</a></li>
+            </ul>
+        </div>
         <a href="{{ route('admin.issue-sub-categories.export', array_merge(['format' => 'print'], $exportQuery)) }}"
+           id="iscPrintLink"
            target="_blank" rel="noopener" class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
             <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
         </a>
@@ -58,11 +61,7 @@
             {{-- Toolbar: category filter left, columns + search right (§2) --}}
             <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 ic-toolbar">
                 <form method="GET" action="{{ route('admin.issue-sub-categories.index') }}"
-                      class="d-flex flex-wrap align-items-center gap-3" id="iscFilterForm">
-                    <input type="hidden" name="q" value="{{ $search }}">
-                    <input type="hidden" name="per_page" value="{{ $perPage }}">
-                    <input type="hidden" name="sort" value="{{ $sortKey }}">
-                    <input type="hidden" name="dir" value="{{ $sortDir }}">
+                      class="d-flex flex-wrap align-items-center gap-3" id="iscFilterForm">
 
                     <span class="programme-dt-filters-label">Filters</span>
                     <div class="programme-dt-filter-select">
@@ -76,7 +75,7 @@
                         </select>
                     </div>
 
-                    @if(filled($search) || $categoryId !== null)
+                    @if($categoryId !== null)
                         <a href="{{ route('admin.issue-sub-categories.index') }}" class="btn programme-dt-btn-reset">Reset Filters</a>
                     @endif
                 </form>
@@ -89,58 +88,33 @@
                         <span>Columns</span><i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
 
-                    <button type="button" class="btn programme-dt-btn-columns" id="iscSearchToggle"
-                            aria-label="Search sub-categories" title="Search"
-                            style="border: 1px solid #d0d5dd; background: #fff; color: #344054;">
-                        <i class="bi bi-search" aria-hidden="true"></i>
-                    </button>
-
-                    <form method="GET" action="{{ route('admin.issue-sub-categories.index') }}"
-                          class="ic-search-wrap {{ filled($search) ? '' : 'd-none' }}" id="iscSearchWrap">
-                        <input type="hidden" name="per_page" value="{{ $perPage }}">
-                        <input type="hidden" name="sort" value="{{ $sortKey }}">
-                        <input type="hidden" name="dir" value="{{ $sortDir }}">
-                        <input type="hidden" name="category_id" value="{{ $categoryId }}">
-                        <input type="search" class="ic-search-input" id="iscSearchInput" name="q"
-                               value="{{ $search }}" placeholder="Search sub-categories…" autocomplete="off"
-                               aria-label="Search sub-categories">
-                    </form>
+                    {{-- Always-visible search box: datatable-global-ui.js moves DataTables'
+                         own filter in here, so it filters as you type instead of
+                         reloading the page on Enter. --}}
+                    <div id="iscDtSearch" class="programme-dt-search" data-dt-search-for="issueSubCategoriesTable"></div>
                 </div>
             </div>
 
             <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <table id="issueSubCategoriesTable" data-sargam-dt-ui="false"
+                    {{-- No data-sargam-dt-ui opt-out: DataTables paginates this grid now. --}}
+                    <table id="issueSubCategoriesTable"
                            class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                         <thead>
                             <tr>
                                 <th scope="col">S. No.</th>
-                                <th scope="col">
-                                    <a class="ic-sort {{ $sortKey === 'category' ? 'is-active' : '' }}" href="{{ $sortUrl('category') }}">
-                                        Category
-                                        <i class="bi {{ $sortKey === 'category' && $sortDir === 'desc' ? 'bi-caret-down-fill' : 'bi-caret-up-fill' }}" aria-hidden="true"></i>
-                                    </a>
-                                </th>
-                                <th scope="col">
-                                    <a class="ic-sort {{ $sortKey === 'sub_category' ? 'is-active' : '' }}" href="{{ $sortUrl('sub_category') }}">
-                                        Sub-Categories Name
-                                        <i class="bi {{ $sortKey === 'sub_category' && $sortDir === 'desc' ? 'bi-caret-down-fill' : 'bi-caret-up-fill' }}" aria-hidden="true"></i>
-                                    </a>
-                                </th>
-                                <th scope="col">
-                                    <a class="ic-sort {{ $sortKey === 'status' ? 'is-active' : '' }}" href="{{ $sortUrl('status') }}">
-                                        Status
-                                        <i class="bi {{ $sortKey === 'status' && $sortDir === 'desc' ? 'bi-caret-down-fill' : 'bi-caret-up-fill' }}" aria-hidden="true"></i>
-                                    </a>
-                                </th>
+                                <th scope="col">Category</th>
+                                <th scope="col">Sub-Categories Name</th>
+                                <th scope="col">Status</th>
                                 <th scope="col">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($subCategories as $subCategory)
+                            @foreach($subCategories as $subCategory)
                                 @php $isActive = (int) $subCategory->status === 1; @endphp
                                 <tr>
-                                    <td>{{ $subCategories->firstItem() + $loop->index }}</td>
+                                    {{-- Renumbered on every draw (see the JS). --}}
+                                    <td>{{ $loop->iteration }}</td>
                                     <td>{{ $subCategory->category->issue_category ?? '—' }}</td>
                                     <td>{{ $subCategory->issue_sub_category }}</td>
                                     <td data-order="{{ (int) $subCategory->status }}">
@@ -155,7 +129,7 @@
                                                     data-category="{{ $subCategory->issue_category_master_pk }}"
                                                     data-name="{{ $subCategory->issue_sub_category }}"
                                                     data-status="{{ (int) $subCategory->status }}">
-                                                <span class="ic-act__icon"><i class="bi bi-pencil-square" aria-hidden="true"></i></span>
+                                                <span class="ic-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
                                                 <span class="ic-act__label">Edit</span>
                                             </button>
 
@@ -191,39 +165,14 @@
                                         </div>
                                     </td>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="ic-empty">
-                                        <i class="bi bi-folder-x d-block mb-2" aria-hidden="true"></i>
-                                        <h6 class="fw-semibold mb-1">No Sub-Categories Found</h6>
-                                        <p class="mb-0 small">
-                                            {{ filled($search) ? 'No sub-category matches “' . $search . '”.' : 'Start by adding your first complaint sub-category.' }}
-                                        </p>
-                                    </td>
-                                </tr>
-                            @endforelse
+                            @endforeach
                         </tbody>
                     </table>
                 </div>
 
-                {{-- Footer variant B — Laravel paginates this grid (§4) --}}
-                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
-                    <div class="programme-dt-pagination">
-                        {{ $subCategories->links('vendor.pagination.custom') }}
-                    </div>
-                    <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
-                        <div class="dataTables_length">
-                            <label class="mb-0">Showing
-                                <select id="iscPerPage" class="form-select form-select-sm" aria-label="Rows per page">
-                                    @foreach($perPageOptions as $option)
-                                        <option value="{{ $option }}" {{ (int) $perPage === (int) $option ? 'selected' : '' }}>{{ $option }}</option>
-                                    @endforeach
-                                </select>
-                            </label>
-                        </div>
-                        <div class="dataTables_info">of {{ number_format($subCategories->total()) }} items</div>
-                    </div>
-                </div>
+                {{-- Footer variant A — DataTables paginates; the global UI fills this in. --}}
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3"
+                     data-dt-footer-for="issueSubCategoriesTable"></div>
             </div>
 
         </div>
@@ -345,33 +294,73 @@ $(function () {
         $('#iscFilterForm').trigger('submit');
     });
 
-    /* ── Footer: rows-per-page ───────────────────────────────────────────── */
-    $('#iscPerPage').on('change', function () {
-        var url = new URL(window.location.href);
-        url.searchParams.set('per_page', this.value);
-        url.searchParams.set('page', '1');
-        window.location.href = url.toString();
-    });
-
-    /* ── Toolbar: search toggle (server-side ?q=) ────────────────────────── */
-    $('#iscSearchToggle').on('click', function () {
-        var $wrap = $('#iscSearchWrap');
-        $wrap.toggleClass('d-none');
-        if (!$wrap.hasClass('d-none')) {
-            $('#iscSearchInput').trigger('focus');
-        }
-    });
-
-    // Clearing the box (the native "x" or emptying it) returns to the unfiltered list.
-    $('#iscSearchInput').on('search', function () {
-        if (this.value === '') {
-            $('#iscSearchWrap').trigger('submit');
-        }
-    });
-
-    /* ── Column visibility (plain table → toggle by column index) ────────── */
-    var COL_KEY = 'issueSubCatGrid:hiddenColumns:v1';
+    /* ── DataTable ───────────────────────────────────────────────────────────
+       Search, sort, paging and the footer are DataTables' now;
+       datatable-global-ui.js supplies the defaults and moves the filter/pager
+       into the toolbar and footer slots. ── */
     var $table = $('#issueSubCategoriesTable');
+
+    var dt = $table.DataTable({
+        order: [[1, 'asc']],
+        columnDefs: [
+            { targets: 0, orderable: false, searchable: false, className: 'text-center' },
+            { targets: -1, orderable: false, searchable: false }
+        ],
+        language: {
+            emptyTable: '<div class="ic-empty">' +
+                '<i class="bi bi-diagram-3 d-block mb-2" aria-hidden="true"></i>' +
+                '<h6 class="fw-semibold mb-1">No Sub-Categories Found</h6>' +
+                '<p class="mb-0 small">Get started by creating your first sub-category.</p>' +
+                '</div>',
+            zeroRecords: '<div class="ic-empty">' +
+                '<i class="bi bi-search d-block mb-2" aria-hidden="true"></i>' +
+                '<h6 class="fw-semibold mb-1">No Sub-Categories Found</h6>' +
+                '<p class="mb-0 small">No sub-category matches your search.</p>' +
+                '</div>'
+        }
+    });
+
+    // S. No. follows what is on screen, not the original row order.
+    function renumberSerial() {
+        var start = dt.page.info().start;
+        dt.column(0, { search: 'applied', order: 'applied', page: 'current' })
+          .nodes()
+          .each(function (cell, i) { cell.innerHTML = start + i + 1; });
+    }
+    dt.on('draw.dt', renumberSerial);
+    renumberSerial();
+
+    /* ── Column visibility (DataTables column API) ────────────────────────
+       Stored by LABEL, not index — an index points at a different column the
+       moment one is added, silently hiding the wrong one. ── */
+    var COL_KEY = 'issueSubCatGrid:hiddenColumns:v2';
+
+    /* Header index -> export key (IssueSubCategoryController::exportColumnDefs()).
+       Positional: '' marks a column that is not in the export (Action).
+       ⚠️ Adding a table column means adding an entry here too. */
+    var ISC_EXPORT_COLUMN_KEYS = ['sno', 'category', 'sub_category', 'status', ''];
+    var ISC_EXPORT_COL_COUNT = ISC_EXPORT_COLUMN_KEYS.filter(Boolean).length;
+
+    /* Keep every export link carrying exactly the columns still on screen. */
+    function iscUpdateExportCols() {
+        var keys = [];
+        dt.columns().every(function () {
+            var key = ISC_EXPORT_COLUMN_KEYS[this.index()];
+            if (key && this.visible()) { keys.push(key); }
+        });
+
+        ['iscDownloadLink', 'iscExcelLink', 'iscPdfLink', 'iscPrintLink'].forEach(function (id) {
+            var link = document.getElementById(id);
+            if (!link) { return; }
+            var base = link.href.split('?')[0];
+            var params = new URLSearchParams(link.href.split('?')[1] || '');
+            params.delete('cols');
+            // Omit ?cols= while nothing is hidden — the server reads that as "all".
+            if (keys.length !== ISC_EXPORT_COL_COUNT) { params.set('cols', keys.join(',')); }
+            var qs = params.toString();
+            link.href = base + (qs ? '?' + qs : '');
+        });
+    }
 
     function getHiddenCols() {
         try {
@@ -384,40 +373,42 @@ $(function () {
         try { localStorage.setItem(COL_KEY, JSON.stringify(cols)); } catch (e) { /* noop */ }
     }
 
-    function applyColumnVisibility(index, visible) {
-        var nth = index + 1;
-        $table.find('thead th:nth-child(' + nth + '), tbody td:nth-child(' + nth + ')')
-              .toggle(visible);
-    }
-
     function buildColumnToggles() {
         var $grid = $('#issueSubCatColumnToggleGrid');
-        if (!$grid.length) { return; }
         var hidden = getHiddenCols();
+
+        dt.columns().every(function () {
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (title) { this.visible(hidden.indexOf(title) === -1, false); }
+        });
+        dt.columns.adjust();
+
+        if (!$grid.length) { return; }
         $grid.empty();
 
-        $table.find('thead th').each(function (index) {
-            var title = $(this).text().replace(/\s+/g, ' ').trim();
+        dt.columns().every(function () {
+            var index = this.index();
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
             if (!title) { return; }
-
-            var visible = hidden.indexOf(index) === -1;
-            applyColumnVisibility(index, visible);
 
             var inputId = 'isccolvis_' + index;
             var $checkbox = $('<input type="checkbox" class="form-check-input m-0">')
                 .attr('id', inputId)
-                .prop('checked', visible);
+                .prop('checked', hidden.indexOf(title) === -1);
 
             $checkbox.on('change', function () {
                 var cols = getHiddenCols();
-                var pos = cols.indexOf(index);
+                var pos = cols.indexOf(title);
                 if (this.checked) {
                     if (pos !== -1) { cols.splice(pos, 1); }
                 } else if (pos === -1) {
-                    cols.push(index);
+                    cols.push(title);
                 }
                 persistHiddenCols(cols);
-                applyColumnVisibility(index, this.checked);
+                dt.column(index).visible(this.checked, false);
+                dt.columns.adjust();
+                renumberSerial();
+                iscUpdateExportCols();
             });
 
             $('<div class="col-12 col-sm-6 col-md-4"></div>').append(
@@ -430,6 +421,9 @@ $(function () {
     }
 
     buildColumnToggles();
+    // Stamp the restored column state onto the export links on first paint too.
+    iscUpdateExportCols();
+
 
     /* ── Status toggle: repaint the row (badge + caption + delete guard) ──
        custom.js does the AJAX; the badge and the switch live in different

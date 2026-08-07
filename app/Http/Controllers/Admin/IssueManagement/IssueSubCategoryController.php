@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers\Admin\IssueManagement;
 
+use App\Exports\IssueSubCategoryExport;
 use App\Http\Controllers\Controller;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 use App\Models\{
     IssueCategoryMaster,
     IssueSubCategoryMaster,
@@ -157,67 +160,102 @@ class IssueSubCategoryController extends Controller
      */
     public function index(Request $request)
     {
-        $page = Paginator::resolveCurrentPage('page');
-        $perPage = $this->resolvePerPage($request);
-        $search = $this->resolveSearch($request);
-        $sort = $this->resolveSort($request);
+        // Client-side DataTable: search, sort and paging happen in the browser, so
+        // the whole (small) set is served at once. The Category filter stays
+        // server-side — it selects a genuinely different scope, and the export
+        // links mirror it.
         $categoryId = $this->resolveCategoryFilter($request);
 
         $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_sub_categories_index:v1:' . md5(json_encode([
+        $cacheKey = 'admin_issue_sub_categories_index:v2:' . md5(json_encode([
             'epoch' => $epoch,
             'category_id' => $categoryId,
-            'page' => $page,
-            'per_page' => $perPage,
-            'q' => $search,
-            'sort' => $sort,
         ]));
 
-        $snapshot = DataTableRedisCache::remember(
+        $ids = DataTableRedisCache::remember(
             $cacheKey,
             [
                 'enabled' => 'ISSUE_SUB_CATEGORY_INDEX_CACHE_ENABLED',
                 'seconds' => 'ISSUE_SUB_CATEGORY_INDEX_CACHE_SECONDS',
             ],
             'IssueSubCategoryController@index',
-            fn () => $this->indexPageSnapshot($page, $perPage, $search, $sort['key'], $sort['dir'], $categoryId)
+            fn () => $this->indexAllPks($categoryId)
         );
 
-        if (! is_array($snapshot) || ! array_key_exists('total', $snapshot) || ! array_key_exists('ids', $snapshot) || ! is_array($snapshot['ids'])) {
-            $snapshot = $this->indexPageSnapshot($page, $perPage, $search, $sort['key'], $sort['dir'], $categoryId);
+        if (! is_array($ids)) {
+            $ids = $this->indexAllPks($categoryId);
         }
 
-        $total = (int) $snapshot['total'];
-        $ids = array_map('intval', $snapshot['ids']);
-        $items = $this->hydrateSubCategoriesByOrderedPks($ids);
-
-        $subCategories = new LengthAwarePaginator(
-            $items,
-            $total,
-            $perPage,
-            $page,
-            [
-                'path' => Paginator::resolveCurrentPath(),
-                'pageName' => 'page',
-            ]
-        );
-        $subCategories->withQueryString();
+        $subCategories = $this->hydrateSubCategoriesByOrderedPks($ids);
 
         $categories = IssueCategoryMaster::active()->orderBy('issue_category')->get();
-        $perPageOptions = self::PER_PAGE_OPTIONS;
-        $sortKey = $sort['key'];
-        $sortDir = $sort['dir'];
 
         return view('admin.issue_management.sub_categories.index', compact(
             'subCategories',
             'categories',
-            'perPage',
-            'perPageOptions',
-            'search',
-            'sortKey',
-            'sortDir',
             'categoryId'
         ));
+    }
+
+    /**
+     * Every sub-category pk in display order, for the given category scope.
+     */
+    private function indexAllPks(?int $categoryId): array
+    {
+        // Table-qualified: the category join makes a bare `pk` ambiguous.
+        return $this->indexFilteredQuery('', 'category', 'asc', $categoryId)
+            ->pluck('issue_sub_category_master.pk')
+            ->map(fn ($pk) => (int) $pk)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Canonical export columns, in order. Keys must match ISC_EXPORT_COLUMN_KEYS
+     * in sub_categories/index.blade.php.
+     */
+    private function exportColumnDefs(): array
+    {
+        return [
+            'sno' => [
+                'heading' => 'S. No.',
+                'class' => 'col-sno',
+                'value' => fn ($row, int $index) => $index + 1,
+            ],
+            'category' => [
+                'heading' => 'Category',
+                'class' => 'col-category',
+                'value' => fn ($row) => $row->category_name ?? ($row->category->issue_category ?? '-'),
+            ],
+            'sub_category' => [
+                'heading' => 'Sub-Categories Name',
+                'class' => 'col-sub',
+                'value' => fn ($row) => $row->issue_sub_category,
+            ],
+            'status' => [
+                'heading' => 'Status',
+                'class' => 'col-status',
+                'value' => fn ($row) => ((int) $row->status === 1) ? 'Active' : 'Inactive',
+            ],
+        ];
+    }
+
+    /**
+     * Intersect the requested ?cols= against the canonical list so a hand-edited
+     * value can't reorder the report or inject a column. Empty => every column.
+     */
+    private function resolveExportColumns(Request $request): array
+    {
+        $defs = $this->exportColumnDefs();
+        $wanted = array_filter(array_map('trim', explode(',', (string) $request->query('cols', ''))));
+
+        if ($wanted === []) {
+            return $defs;
+        }
+
+        $keys = array_values(array_intersect(array_keys($defs), $wanted));
+
+        return $keys === [] ? $defs : array_intersect_key($defs, array_flip($keys));
     }
 
     /**
@@ -228,7 +266,7 @@ class IssueSubCategoryController extends Controller
     public function export(Request $request, string $format = 'csv')
     {
         $format = strtolower($format);
-        abort_unless(in_array($format, ['csv', 'print'], true), 404);
+        abort_unless(in_array($format, ['csv', 'excel', 'pdf', 'print'], true), 404);
 
         $search = $this->resolveSearch($request);
         $sort = $this->resolveSort($request);
@@ -236,32 +274,57 @@ class IssueSubCategoryController extends Controller
 
         $rows = $this->indexFilteredQuery($search, $sort['key'], $sort['dir'], $categoryId)->get();
 
-        $header = ['S. No.', 'Category', 'Sub-Categories Name', 'Status'];
+        $columns = $this->resolveExportColumns($request);
+        $header = array_values(array_map(fn ($col) => $col['heading'], $columns));
+        $exportDate = now()->format('d-m-Y h:i A');
+        $stamp = now()->format('YmdHis');
 
         if ($format === 'print') {
             return view('admin.issue_management.sub_categories.export_print', [
+                'columns' => $columns,
                 'header' => $header,
                 'rows' => $rows,
                 'search' => $search,
-                'exportDate' => now()->format('d-m-Y h:i A'),
+                'exportDate' => $exportDate,
             ]);
         }
 
-        $filename = 'ManageSubCategories_' . now()->format('YmdHis') . '.csv';
+        if ($format === 'excel') {
+            return Excel::download(
+                new IssueSubCategoryExport($rows, $columns, $exportDate, $search),
+                'ManageSubCategories_' . $stamp . '.xlsx'
+            );
+        }
 
-        return response()->streamDownload(function () use ($header, $rows) {
+        if ($format === 'pdf') {
+            return Pdf::loadView('admin.issue_management.sub_categories.export_pdf', [
+                'columns' => $columns,
+                'rows' => $rows,
+                'search' => $search,
+                'exportDate' => $exportDate,
+            ])
+                ->setPaper('a4', 'portrait')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    'isPhpEnabled' => true,
+                ])
+                ->download('ManageSubCategories_' . $stamp . '.pdf');
+        }
+
+        $filename = 'ManageSubCategories_' . $stamp . '.csv';
+
+        return response()->streamDownload(function () use ($columns, $header, $rows) {
             $handle = fopen('php://output', 'w');
             // BOM so Excel opens the UTF-8 file with the right encoding.
             fwrite($handle, "\xEF\xBB\xBF");
             fputcsv($handle, $header);
 
             foreach ($rows as $index => $row) {
-                fputcsv($handle, [
-                    $index + 1,
-                    $row->category_name,
-                    $row->issue_sub_category,
-                    ((int) $row->status === 1) ? 'Active' : 'Inactive',
-                ]);
+                fputcsv($handle, array_values(array_map(
+                    fn ($col) => $col['value']($row, $index),
+                    $columns
+                )));
             }
 
             fclose($handle);
