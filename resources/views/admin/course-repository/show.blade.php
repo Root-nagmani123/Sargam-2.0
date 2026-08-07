@@ -755,9 +755,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6">
                                         <label for="sector_master" class="form-label">
-                                            Sector <span class="text-danger">*</span>
+                                            Sector
                                         </label>
-                                        <select class="form-select" id="sector_master" name="sector_master" required>
+                                        <select class="form-select" id="sector_master" name="sector_master">
                                             <option value="" selected>Select</option>
                                             @foreach(($sectors ?? []) as $sector)
                                             <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
@@ -766,10 +766,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>
                                     <div class="col-md-6">
                                         <label for="ministry_master" class="form-label">
-                                            Ministry <span class="text-danger">*</span>
+                                            Ministry
                                         </label>
-                                        <select class="form-select" id="ministry_master" name="ministry_master"
-                                            required>
+                                        <select class="form-select" id="ministry_master" name="ministry_master">
                                             <option value="" selected>Select</option>
                                             @foreach(($ministries ?? []) as $ministry)
                                             <option value="{{ $ministry->pk }}"
@@ -943,7 +942,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6">
                                         <label for="sector_master_other" class="form-label">
-                                            Sector <span class="text-danger">*</span>
+                                            Sector
                                         </label>
                                         <select class="form-select" id="sector_master_other" name="sector_master_other">
                                             <option value="" selected>Select</option>
@@ -954,7 +953,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>
                                     <div class="col-md-6">
                                         <label for="ministry_master_other" class="form-label">
-                                            Ministry <span class="text-danger">*</span>
+                                            Ministry
                                         </label>
                                         <select class="form-select" id="ministry_master_other"
                                             name="ministry_master_other">
@@ -1038,7 +1037,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6">
                                         <label for="sector_master_institutional" class="form-label">
-                                            Sector <span class="text-danger">*</span>
+                                            Sector
                                         </label>
                                         <select class="form-select" id="sector_master_institutional"
                                             name="sector_master_institutional">
@@ -1049,8 +1048,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </select>
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="ministry_master_institutional" class="form-label">Ministry <span
-                                                class="text-danger">*</span></label>
+                                        <label for="ministry_master_institutional" class="form-label">Ministry</label>
                                         <select class="form-select" id="ministry_master_institutional"
                                             name="ministry_master_institutional">
                                             <option value="" selected>Select</option>
@@ -1345,8 +1343,6 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             var author_name = formData.get('author_name');
             var keywordsEl = document.getElementById('keywords_course');
             var keywords = keywordsEl ? keywordsEl.value.trim() : '';
-            var sector = formData.get('sector_master');
-            var ministry = formData.get('ministry_master');
             var req = [];
             if (!course_name) req.push('Course Name');
             if (!subject_name) req.push('Major Subject Name');
@@ -1354,8 +1350,6 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             if (!session_date) req.push('Session Date');
             if (!author_name) req.push('Author Name');
             if (!keywords) req.push('Keywords');
-            if (!sector) req.push('Sector');
-            if (!ministry) req.push('Ministry');
             if (req.length > 0) {
                 showUploadError('Please fill required fields: ' + req.join(', '));
                 return;
@@ -1368,8 +1362,6 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             var author_name_other = formData.get('author_name_other');
             var keywordsOtherEl = document.getElementById('keywords_other');
             var keywords_other = keywordsOtherEl ? keywordsOtherEl.value.trim() : '';
-            var sector_other = formData.get('sector_master_other');
-            var ministry_other = formData.get('ministry_master_other');
             var req = [];
             if (!course_name_other) req.push('Course Name');
             if (!major_subject_other) req.push('Major Subject Name');
@@ -1377,8 +1369,6 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             if (!session_date_other) req.push('Session Date');
             if (!author_name_other) req.push('Author Name');
             if (!keywords_other) req.push('Keywords');
-            if (!sector_other) req.push('Sector');
-            if (!ministry_other) req.push('Ministry');
             if (req.length > 0) {
                 showUploadError('Please fill required fields: ' + req.join(', '));
                 return;
