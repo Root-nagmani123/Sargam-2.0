@@ -1,40 +1,24 @@
 @extends('fc.layouts.master')
 
-@section('title', 'Exemption Application - Foundation Course | Lal Bahadur Shastri National Academy of Administration')
-
-{{-- Declared outside the section so these flags are in scope for @push('scripts') too. --}}
-@php
-    $exName = strtolower($exemption->Exemption_name);
-    $isCompletedFc = str_contains($exName, 'completed foundation course');
-    $isReappearing = str_contains($exName, 'reappearing') || str_contains($exName, 'civil services');
-    $isMedical = str_contains($exName, 'medical');
-@endphp
+@section('title', 'Exemption Category - Foundation Course | Lal Bahadur Shastri National Academy of Administration')
 
 @section('content')
-    <div class="fc-page">
+    <main id="content" class="flex-grow-1 py-4 py-md-5">
         <div class="container">
-            <nav aria-label="Breadcrumb">
-                <ol class="breadcrumb fc-breadcrumb">
-                    <li class="breadcrumb-item">
-                        <a href="{{ route('fc.choose.path') }}">Home</a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="{{ route('fc.exemption_category.index') }}">Exemption Category</a>
-                    </li>
-                    <li class="breadcrumb-item active" aria-current="page">Exemption Application</li>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item" style="font-size:20px;">Home</li>
+                    <li class="breadcrumb-item" style="font-size:20px;">Exemption Category</li>
+                    <li class="breadcrumb-item active" aria-current="page" style="font-size:20px;">Exemption Application</li>
                 </ol>
             </nav>
 
-            <div class="row justify-content-center">
-                <div class="col-12 col-lg-10 col-xl-9">
-                    <div class="fc-card fc-card--tricolor">
-                        <div class="fc-card-body">
-                            <header class="fc-page-head">
-                                <h1 class="fc-page-title">{{ $exemption->Exemption_name }}</h1>
-                                <p class="fc-page-sub">
-                                    Please fill in all required information for your exemption application.
-                                </p>
-                            </header>
+            <div class="card border-0 shadow-lg rounded-4 mx-auto" style="max-width: 960px;">
+                <div class="card-body p-4 p-md-5">
+                    <header class="mb-4">
+                        <h1 class="h3 fw-bold text-primary mb-2">{{ $exemption->Exemption_name }}</h1>
+                        <p class="text-muted small mb-0">Please fill in all required information for your exemption application.</p>
+                    </header>
 
                     <form method="POST" action="{{ route('fc.exemption.apply', $exemption->pk) }}" enctype="multipart/form-data"
                         id="exemptionApplicationForm" novalidate autocomplete="off">
@@ -70,18 +54,17 @@
                                     </div>
                                 </div>
 
-                                        @if ($isCompletedFc)
-                                            <div class="col-md-6">
-                                                <label for="course" class="fc-label">
-                                                    <i class="bi bi-mortarboard" aria-hidden="true"></i>
-                                                    Already Completed Foundation Course
-                                                    <span class="fc-req" aria-hidden="true">*</span>
-                                                </label>
-                                                <input type="text"
-                                                    class="form-control fc-input @error('course') is-invalid @enderror"
-                                                    id="course" name="course" placeholder="Enter your course"
-                                                    value="{{ old('course') }}" required>
-                                            </div>
+                                <div class="col-md-6">
+                                    <label for="year" class="form-label fw-semibold">Year of completion <span
+                                            class="text-danger">*</span></label>
+                                    <select class="form-select rounded-3 @error('year') is-invalid @enderror" id="year"
+                                        name="year" required>
+                                        <option value="" selected disabled>Select Year</option>
+                                        @for ($y = date('Y'); $y >= 1970; $y--)
+                                            <option value="{{ $y }}" @selected(old('year') == $y)>{{ $y }}</option>
+                                        @endfor
+                                    </select>
+                                </div>
 
                                 <div class="col-md-6">
                                     <label for="institution_name" class="form-label fw-semibold">Institution
@@ -112,32 +95,19 @@
                                 </div>
                             @endif
 
-                                            <div class="col-md-6">
-                                                <label for="institution_name" class="fc-label">
-                                                    <i class="bi bi-building" aria-hidden="true"></i>
-                                                    Institution Name <span class="fc-req" aria-hidden="true">*</span>
-                                                </label>
-                                                <input type="text"
-                                                    class="form-control fc-input @error('institution_name') is-invalid @enderror"
-                                                    id="institution_name" name="institution_name"
-                                                    placeholder="Enter institution name"
-                                                    value="{{ old('institution_name') }}" required>
-                                            </div>
-                                        @endif
+                            @php
+                                $exName = strtolower($exemption->Exemption_name);
+                            @endphp
 
-                                        @if ($isReappearing)
-                                            <div class="col-md-6">
-                                                <label for="roll_number" class="fc-label">
-                                                    <i class="bi bi-hash" aria-hidden="true"></i>
-                                                    Roll Number (Mains-2026) <span class="fc-req" aria-hidden="true">*</span>
-                                                </label>
-                                                <input type="text"
-                                                    class="form-control fc-input @error('roll_number') is-invalid @enderror"
-                                                    id="roll_number" name="roll_number"
-                                                    placeholder="Enter your UPSC Roll Number"
-                                                    value="{{ old('roll_number') }}" required>
-                                            </div>
-                                        @endif
+                            @if (str_contains($exName, 'reappearing') || str_contains($exName, 'civil services'))
+                                <div class="col-md-6">
+                                    <label for="roll_number" class="form-label fw-semibold">Roll Number (Mains-2026) <span
+                                            class="text-danger">*</span></label>
+                                    <input type="text" class="form-control rounded-3 @error('roll_number') is-invalid @enderror"
+                                        id="roll_number" name="roll_number" placeholder="Enter your UPSC Roll Number"
+                                        value="{{ old('roll_number') }}" required>
+                                </div>
+                            @endif
 
                             @if (stripos($exemption->Exemption_name, 'medical') !== false)
                                 <div class="col-12">
@@ -153,55 +123,64 @@
                                         {{ $errors->first('medical_doc') }}
                                     </div>
                                 </div>
+                            @endif
 
-                                <div class="ds-form-section">
-                                    <h2 class="ds-form-section-title">Verification</h2>
-
-                                    <label for="captcha" class="fc-label">
-                                        <i class="bi bi-patch-check" aria-hidden="true"></i>
-                                        Enter the code shown <span class="fc-req" aria-hidden="true">*</span>
-                                    </label>
-                                    <div class="fc-captcha">
-                                        <div class="fc-captcha-row">
-                                            <img src="{{ captcha_src() }}" alt="Captcha challenge" id="captchaImage">
-                                            <button type="button" class="btn btn-outline-secondary btn-sm"
-                                                id="refreshCaptchaBtn">
-                                                <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Refresh
+                            <div class="col-12">
+                                <label class="form-label fw-semibold mb-2">Verification <span class="text-danger">*</span></label>
+                                <div class="bg-light border border-light rounded-4 p-4 text-center">
+                                    <div class="d-flex flex-column align-items-center gap-3">
+                                        <div class="d-flex flex-wrap align-items-center justify-content-center gap-2">
+                                            <img src="{{ captcha_src() }}" alt="Captcha" id="captchaImage"
+                                                class="img-fluid border rounded-3 shadow-sm bg-white p-2" style="max-height: 52px;">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3"
+                                                onclick="refreshCaptcha()">
+                                                <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Refresh
                                             </button>
                                         </div>
-                                        <div class="fc-captcha-input">
-                                            <input type="text" id="captcha" name="captcha"
-                                                class="form-control fc-input text-center @error('captcha') is-invalid @enderror"
+                                        <div class="w-100" style="max-width: 280px;">
+                                            <input type="text" name="captcha"
+                                                class="form-control form-control-sm text-center rounded-3 @error('captcha') is-invalid @enderror"
                                                 placeholder="Enter captcha code" autocomplete="off" required>
                                         </div>
                                     </div>
-
-                                    <div class="form-check mt-3">
-                                        <input class="form-check-input" type="checkbox" id="declaration" required>
-                                        <label class="form-check-label small text-body-secondary" for="declaration">
-                                            I hereby declare that the information provided above is true and correct. I
-                                            understand that any false information may lead to rejection of my exemption
-                                            application.
-                                        </label>
-                                    </div>
                                 </div>
+                            </div>
 
-                                <div class="d-flex flex-wrap justify-content-center gap-3">
-                                    <button type="submit" id="exemptionSubmitBtn" class="btn btn-primary px-4">
-                                        <i class="bi bi-send" aria-hidden="true"></i> Submit Application
-                                    </button>
-                                    <a href="{{ route('fc.choose.path') }}" id="cancelApplicationBtn"
-                                        class="btn btn-outline-danger px-4">
-                                        <i class="bi bi-x-circle" aria-hidden="true"></i> Cancel Application
-                                    </a>
+                            <div class="col-12">
+                                <div class="form-check mt-1">
+                                    <input class="form-check-input rounded border-primary" type="checkbox" id="declaration"
+                                        required>
+                                    <label class="form-check-label small text-body-secondary" for="declaration">
+                                        I hereby declare that the information provided above is true and correct. I
+                                        understand that any false information may lead to rejection of my exemption
+                                        application.
+                                    </label>
                                 </div>
-                            </form>
+                            </div>
+
+                            <div class="col-12 d-flex flex-wrap justify-content-center gap-3 pt-2">
+                                <button type="submit" id="exemptionSubmitBtn" class="btn btn-primary rounded-3 px-4 py-2 fw-semibold"
+                                    style="background-color: #004a93; border-color: #004a93;">
+                                    Submit Application
+                                </button>
+                                <a href="{{ route('fc.choose.path') }}"
+                                    onclick="return confirm('Are you sure you want to cancel your application? This action cannot be undone.')"
+                                    class="btn btn-danger rounded-3 px-4 py-2 fw-semibold">
+                                    Cancel Application
+                                </a>
+                            </div>
                         </div>
-                    </div>
+                    </form>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
+
+    <script>
+        function refreshCaptcha() {
+            document.getElementById('captchaImage').src = '{{ captcha_src() }}' + '?' + Math.random();
+        }
+    </script>
 @endsection
 
 @push('scripts')
@@ -313,12 +292,12 @@
 
     @if (session('already_applied'))
         <script>
-            document.addEventListener('DOMContentLoaded', function () {
+            document.addEventListener("DOMContentLoaded", function() {
                 Swal.fire({
                     title: 'Notice',
-                    text: @json(session('already_applied')),
+                    text: '{{ session('already_applied') }}',
                     icon: 'info',
-                    confirmButtonColor: FC_BRAND,
+                    confirmButtonColor: '#004a93',
                     confirmButtonText: 'OK'
                 });
             });
@@ -334,7 +313,7 @@
                         title: 'Validation Error',
                         text: errorMessages.join('\n'),
                         icon: 'error',
-                        confirmButtonColor: FC_BRAND,
+                        confirmButtonColor: '#004a93',
                         confirmButtonText: 'OK'
                     });
                 }

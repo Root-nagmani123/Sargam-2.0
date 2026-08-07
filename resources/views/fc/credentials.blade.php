@@ -13,7 +13,7 @@
 </style>
 
 <!-- Main Content Box -->
-<div style="flex:1;">
+<main style="flex:1;">
     <div class="container mt-5 mb-5">
     <div class="row">
         <!-- Form Content -->
@@ -109,7 +109,7 @@
     </div>
 </div>
 
-</div>
+</main>
 <!-- Toggle Password Visibility Script -->
 <script>
 (function () {
