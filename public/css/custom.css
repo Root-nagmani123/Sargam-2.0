@@ -241,6 +241,7 @@ body.custom-loaded {
 #smColumnToggleGrid .colvis-item,
 #smModuleColumnToggleGrid .colvis-item,
 #attendanceColumnToggleGrid .colvis-item,
+#cpColumnToggleGrid .colvis-item,
 #estateBillReportColumnGrid .colvis-item {
     cursor: pointer;
     transition: border-color 0.15s ease, background-color 0.15s ease;
@@ -252,6 +253,7 @@ body.custom-loaded {
 #smColumnToggleGrid .colvis-item:hover,
 #smModuleColumnToggleGrid .colvis-item:hover,
 #attendanceColumnToggleGrid .colvis-item:hover,
+#cpColumnToggleGrid .colvis-item:hover,
 #estateBillReportColumnGrid .colvis-item:hover {
     border-color: #004a93 !important;
     background-color: rgba(0, 74, 147, 0.04);
@@ -263,6 +265,7 @@ body.custom-loaded {
 #smColumnToggleGrid .colvis-item .form-check-input,
 #smModuleColumnToggleGrid .colvis-item .form-check-input,
 #attendanceColumnToggleGrid .colvis-item .form-check-input,
+#cpColumnToggleGrid .colvis-item .form-check-input,
 #estateBillReportColumnGrid .colvis-item .form-check-input {
     cursor: pointer;
     flex-shrink: 0;
