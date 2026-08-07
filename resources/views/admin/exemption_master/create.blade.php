@@ -75,10 +75,10 @@
 
         $cutoffValue = old(
             'apply_cutoff_time',
-            $maleRecord?->apply_cutoff_time
-                ? \Carbon\Carbon::parse($maleRecord->apply_cutoff_time)->format('H:i')
-                : (filled($selectedCourse?->pt_start_time)
-                    ? \Carbon\Carbon::parse($selectedCourse->pt_start_time)->format('H:i')
+            filled($selectedCourse?->pt_start_time)
+                ? \Carbon\Carbon::parse($selectedCourse->pt_start_time)->format('H:i')
+                : ($maleRecord?->apply_cutoff_time
+                    ? \Carbon\Carbon::parse($maleRecord->apply_cutoff_time)->format('H:i')
                     : '')
         );
 
