@@ -13,15 +13,9 @@
 
 @section('setup_content')
 @php
-    $baseQuery = ['q' => $search, 'per_page' => $perPage, 'sort' => $sortKey, 'dir' => $sortDir];
-
-    $sortUrl = function (string $key) use ($baseQuery, $sortKey, $sortDir) {
-        $dir = ($sortKey === $key && $sortDir === 'asc') ? 'desc' : 'asc';
-
-        return request()->fullUrlWithQuery(array_merge($baseQuery, ['sort' => $key, 'dir' => $dir, 'page' => 1]));
-    };
-
-    $exportQuery = ['q' => $search, 'sort' => $sortKey, 'dir' => $sortDir];
+    // Search, sort and paging are DataTables' now; ?cols= is appended to the
+    // export links by emUpdateExportCols().
+    $exportQuery = [];
 
     // "Trevor Swanson - 1 Day", days tinted by level.
     $levelCell = function ($level, int $n) {
@@ -50,11 +44,27 @@
 
     {{-- Secondary actions (Download / Print) — above the card, per §1 --}}
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 ic-secondary-actions">
-        <a href="{{ route('admin.issue-escalation-matrix.export', array_merge(['format' => 'csv'], $exportQuery)) }}"
-           class="btn programme-dt-btn-columns border-0 text-primary" title="Download as CSV">
-            <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-        </a>
+        {{-- More than one download format → dropdown, per §1 of the doc. --}}
+        <div class="dropdown">
+            <button type="button" id="emDownloadToggle"
+                    class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                    data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="emDownloadToggle">
+                <li><a class="dropdown-item" id="emDownloadLink"
+                       href="{{ route('admin.issue-escalation-matrix.export', array_merge(['format' => 'csv'], $exportQuery)) }}">
+                        <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i> CSV</a></li>
+                <li><a class="dropdown-item" id="emExcelLink"
+                       href="{{ route('admin.issue-escalation-matrix.export', array_merge(['format' => 'excel'], $exportQuery)) }}">
+                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Excel (.xlsx)</a></li>
+                <li><a class="dropdown-item" id="emPdfLink"
+                       href="{{ route('admin.issue-escalation-matrix.export', array_merge(['format' => 'pdf'], $exportQuery)) }}">
+                        <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF</a></li>
+            </ul>
+        </div>
         <a href="{{ route('admin.issue-escalation-matrix.export', array_merge(['format' => 'print'], $exportQuery)) }}"
+           id="emPrintLink"
            target="_blank" rel="noopener" class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
             <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
         </a>
@@ -73,52 +83,33 @@
                         <span>Columns</span><i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
 
-                    <button type="button" class="btn programme-dt-btn-columns" id="emSearchToggle"
-                            aria-label="Search escalation matrix" title="Search"
-                            style="border: 1px solid #d0d5dd; background: #fff; color: #344054;">
-                        <i class="bi bi-search" aria-hidden="true"></i>
-                    </button>
-
-                    <form method="GET" action="{{ route('admin.issue-escalation-matrix.index') }}"
-                          class="ic-search-wrap {{ filled($search) ? '' : 'd-none' }}" id="emSearchWrap">
-                        <input type="hidden" name="per_page" value="{{ $perPage }}">
-                        <input type="hidden" name="sort" value="{{ $sortKey }}">
-                        <input type="hidden" name="dir" value="{{ $sortDir }}">
-                        <input type="search" class="ic-search-input" id="emSearchInput" name="q"
-                               value="{{ $search }}" placeholder="Search category or employee…" autocomplete="off"
-                               aria-label="Search escalation matrix">
-                    </form>
+                    {{-- Always-visible search box: datatable-global-ui.js moves DataTables'
+                         own filter in here, so it filters as you type instead of
+                         reloading the page on Enter. --}}
+                    <div id="emDtSearch" class="programme-dt-search" data-dt-search-for="escalationMatrixTable"></div>
                 </div>
             </div>
 
             <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <table id="escalationMatrixTable" data-sargam-dt-ui="false"
+                    {{-- No data-sargam-dt-ui opt-out: DataTables paginates this grid now. --}}
+                    <table id="escalationMatrixTable"
                            class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                         <thead>
                             <tr>
                                 <th scope="col">S. No.</th>
-                                <th scope="col">
-                                    <a class="ic-sort {{ $sortKey === 'category' ? 'is-active' : '' }}" href="{{ $sortUrl('category') }}">
-                                        Complaint Category
-                                        <i class="bi {{ $sortKey === 'category' && $sortDir === 'desc' ? 'bi-caret-down-fill' : 'bi-caret-up-fill' }}" aria-hidden="true"></i>
-                                    </a>
-                                </th>
+                                <th scope="col">Complaint Category</th>
                                 @foreach([1, 2, 3] as $n)
-                                    <th scope="col">
-                                        <a class="ic-sort {{ $sortKey === 'level' . $n ? 'is-active' : '' }}" href="{{ $sortUrl('level' . $n) }}">
-                                            Level {{ $n }} (Escalation Days)
-                                            <i class="bi {{ $sortKey === 'level' . $n && $sortDir === 'desc' ? 'bi-caret-down-fill' : 'bi-caret-up-fill' }}" aria-hidden="true"></i>
-                                        </a>
-                                    </th>
+                                    <th scope="col">Level {{ $n }} (Escalation Days)</th>
                                 @endforeach
                                 <th scope="col">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($matrix as $row)
+                            @foreach($matrix as $row)
                                 <tr>
-                                    <td>{{ $matrix->firstItem() + $loop->index }}</td>
+                                    {{-- Renumbered on every draw (see the JS). --}}
+                                    <td>{{ $loop->iteration }}</td>
                                     <td>{{ $row['category']->issue_category }}</td>
                                     <td>{!! $levelCell($row['level1'], 1) !!}</td>
                                     <td>{!! $levelCell($row['level2'], 2) !!}</td>
@@ -146,39 +137,14 @@
                                         </div>
                                     </td>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="ic-empty">
-                                        <i class="bi bi-diagram-3 d-block mb-2" aria-hidden="true"></i>
-                                        <h6 class="fw-semibold mb-1">No Mappings Found</h6>
-                                        <p class="mb-0 small">
-                                            {{ filled($search) ? 'No category or employee matches “' . $search . '”.' : 'Add a mapping to get started.' }}
-                                        </p>
-                                    </td>
-                                </tr>
-                            @endforelse
+                            @endforeach
                         </tbody>
                     </table>
                 </div>
 
-                {{-- Footer variant B — Laravel paginates this grid (§4) --}}
-                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
-                    <div class="programme-dt-pagination">
-                        {{ $matrix->links('vendor.pagination.custom') }}
-                    </div>
-                    <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
-                        <div class="dataTables_length">
-                            <label class="mb-0">Showing
-                                <select id="emPerPage" class="form-select form-select-sm" aria-label="Rows per page">
-                                    @foreach($perPageOptions as $option)
-                                        <option value="{{ $option }}" {{ (int) $perPage === (int) $option ? 'selected' : '' }}>{{ $option }}</option>
-                                    @endforeach
-                                </select>
-                            </label>
-                        </div>
-                        <div class="dataTables_info">of {{ number_format($matrix->total()) }} items</div>
-                    </div>
-                </div>
+                {{-- Footer variant A — DataTables paginates; the global UI fills this in. --}}
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3"
+                     data-dt-footer-for="escalationMatrixTable"></div>
             </div>
 
         </div>
@@ -423,64 +389,139 @@ function editMatrix(categoryId, categoryName, emp1, days1, emp2, days2, emp3, da
     new bootstrap.Modal(document.getElementById('editMatrixModal')).show();
 }
 
-/* ── Page chrome: search toggle, per-page, column visibility, View modal ── */
+/* ── Page chrome: DataTable, column visibility, View modal ── */
 $(function () {
     'use strict';
 
-    $('#emPerPage').on('change', function () {
-        var url = new URL(window.location.href);
-        url.searchParams.set('per_page', this.value);
-        url.searchParams.set('page', '1');
-        window.location.href = url.toString();
-    });
-
-    $('#emSearchToggle').on('click', function () {
-        var $wrap = $('#emSearchWrap');
-        $wrap.toggleClass('d-none');
-        if (!$wrap.hasClass('d-none')) { $('#emSearchInput').trigger('focus'); }
-    });
-    $('#emSearchInput').on('search', function () {
-        if (this.value === '') { $('#emSearchWrap').trigger('submit'); }
-    });
-
-    /* Column visibility (plain table → toggle by column index) */
-    var COL_KEY = 'escalationGrid:hiddenColumns:v1';
+    /* ── DataTable ───────────────────────────────────────────────────────────
+       Search, sort, paging and the footer are DataTables' now;
+       datatable-global-ui.js supplies the defaults and moves the filter/pager
+       into the toolbar and footer slots. ── */
     var $table = $('#escalationMatrixTable');
 
-    function hidden() {
-        try { var a = JSON.parse(localStorage.getItem(COL_KEY) || '[]'); return Array.isArray(a) ? a : []; }
-        catch (e) { return []; }
+    var dt = $table.DataTable({
+        order: [[1, 'asc']],
+        columnDefs: [
+            { targets: 0, orderable: false, searchable: false, className: 'text-center' },
+            { targets: -1, orderable: false, searchable: false }
+        ],
+        language: {
+            emptyTable: '<div class="ic-empty">' +
+                '<i class="bi bi-diagram-3 d-block mb-2" aria-hidden="true"></i>' +
+                '<h6 class="fw-semibold mb-1">No Mappings Found</h6>' +
+                '<p class="mb-0 small">Add a mapping to get started.</p>' +
+                '</div>',
+            zeroRecords: '<div class="ic-empty">' +
+                '<i class="bi bi-search d-block mb-2" aria-hidden="true"></i>' +
+                '<h6 class="fw-semibold mb-1">No Mappings Found</h6>' +
+                '<p class="mb-0 small">No category or employee matches your search.</p>' +
+                '</div>'
+        }
+    });
+
+    // S. No. follows what is on screen, not the original row order.
+    function renumberSerial() {
+        var start = dt.page.info().start;
+        dt.column(0, { search: 'applied', order: 'applied', page: 'current' })
+          .nodes()
+          .each(function (cell, i) { cell.innerHTML = start + i + 1; });
     }
-    function persist(a) { try { localStorage.setItem(COL_KEY, JSON.stringify(a)); } catch (e) {} }
-    function apply(i, vis) {
-        var n = i + 1;
-        $table.find('thead th:nth-child(' + n + '), tbody td:nth-child(' + n + ')').toggle(vis);
+    dt.on('draw.dt', renumberSerial);
+    renumberSerial();
+
+    /* ── Column visibility (DataTables column API) ────────────────────────
+       Stored by LABEL, not index — an index points at a different column the
+       moment one is added, silently hiding the wrong one. ── */
+    var COL_KEY = 'escalationGrid:hiddenColumns:v2';
+
+    /* Header index -> export key (IssueEscalationMatrixController::exportColumnDefs()).
+       Positional: '' marks a column that is not in the export (Action).
+       ⚠️ Adding a table column means adding an entry here too. */
+    var EM_EXPORT_COLUMN_KEYS = ['sno', 'category', 'level1', 'level2', 'level3', ''];
+    var EM_EXPORT_COL_COUNT = EM_EXPORT_COLUMN_KEYS.filter(Boolean).length;
+
+    /* Keep every export link carrying exactly the columns still on screen. */
+    function emUpdateExportCols() {
+        var keys = [];
+        dt.columns().every(function () {
+            var key = EM_EXPORT_COLUMN_KEYS[this.index()];
+            if (key && this.visible()) { keys.push(key); }
+        });
+
+        ['emDownloadLink', 'emExcelLink', 'emPdfLink', 'emPrintLink'].forEach(function (id) {
+            var link = document.getElementById(id);
+            if (!link) { return; }
+            var base = link.href.split('?')[0];
+            var params = new URLSearchParams(link.href.split('?')[1] || '');
+            params.delete('cols');
+            // Omit ?cols= while nothing is hidden — the server reads that as "all".
+            if (keys.length !== EM_EXPORT_COL_COUNT) { params.set('cols', keys.join(',')); }
+            var qs = params.toString();
+            link.href = base + (qs ? '?' + qs : '');
+        });
     }
 
-    var $grid = $('#escalationColumnToggleGrid');
-    if ($grid.length) {
-        var h = hidden();
+    function getHiddenCols() {
+        try {
+            var parsed = JSON.parse(localStorage.getItem(COL_KEY) || '[]');
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) { return []; }
+    }
+
+    function persistHiddenCols(cols) {
+        try { localStorage.setItem(COL_KEY, JSON.stringify(cols)); } catch (e) { /* noop */ }
+    }
+
+    function buildColumnToggles() {
+        var $grid = $('#escalationColumnToggleGrid');
+        var hidden = getHiddenCols();
+
+        dt.columns().every(function () {
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (title) { this.visible(hidden.indexOf(title) === -1, false); }
+        });
+        dt.columns.adjust();
+
+        if (!$grid.length) { return; }
         $grid.empty();
-        $table.find('thead th').each(function (i) {
-            var title = $(this).text().replace(/\s+/g, ' ').trim();
+
+        dt.columns().every(function () {
+            var index = this.index();
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
             if (!title) { return; }
-            var vis = h.indexOf(i) === -1;
-            apply(i, vis);
-            var id = 'emcolvis_' + i;
-            var $cb = $('<input type="checkbox" class="form-check-input m-0">').attr('id', id).prop('checked', vis);
-            $cb.on('change', function () {
-                var cols = hidden(), pos = cols.indexOf(i);
-                if (this.checked) { if (pos !== -1) { cols.splice(pos, 1); } }
-                else if (pos === -1) { cols.push(i); }
-                persist(cols);
-                apply(i, this.checked);
+
+            var inputId = 'emcolvis_' + index;
+            var $checkbox = $('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .prop('checked', hidden.indexOf(title) === -1);
+
+            $checkbox.on('change', function () {
+                var cols = getHiddenCols();
+                var pos = cols.indexOf(title);
+                if (this.checked) {
+                    if (pos !== -1) { cols.splice(pos, 1); }
+                } else if (pos === -1) {
+                    cols.push(title);
+                }
+                persistHiddenCols(cols);
+                dt.column(index).visible(this.checked, false);
+                dt.columns.adjust();
+                renumberSerial();
+                emUpdateExportCols();
             });
+
             $('<div class="col-12 col-sm-6 col-md-4"></div>').append(
                 $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
-                    .attr('for', id).append($cb).append($('<span></span>').text(title))
+                    .attr('for', inputId)
+                    .append($checkbox)
+                    .append($('<span></span>').text(title))
             ).appendTo($grid);
         });
     }
+
+    buildColumnToggles();
+    // Stamp the restored column state onto the export links on first paint too.
+    emUpdateExportCols();
 
     /* View modal — read-only, with a hand-off to the existing edit modal. */
     var pending = null;

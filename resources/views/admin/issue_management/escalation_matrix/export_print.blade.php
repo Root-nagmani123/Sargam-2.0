@@ -19,28 +19,27 @@
         'total'      => count($rows),
     ])
 
+    {{-- Columns come from IssueEscalationMatrixController::exportColumnDefs(),
+         already filtered to whatever is ticked in the grid's Columns modal.
+         Keyed by column, never by position. --}}
     <table class="ic-print-table">
         <thead>
             <tr>
-                <th class="col-sno">{{ $header[0] }}</th>
-                <th class="col-category">{{ $header[1] }}</th>
-                <th class="col-level">{{ $header[2] }}</th>
-                <th class="col-level">{{ $header[3] }}</th>
-                <th class="col-level">{{ $header[4] }}</th>
+                @foreach ($columns as $col)
+                    <th class="{{ $col['class'] }}">{{ $col['heading'] }}</th>
+                @endforeach
             </tr>
         </thead>
         <tbody>
-            @forelse ($rows as $row)
+            @forelse ($rows as $index => $row)
                 <tr>
-                    <td class="col-sno">{{ $row[0] }}</td>
-                    <td class="col-category">{{ $row[1] ?: '-' }}</td>
-                    <td class="col-level">{{ $row[2] }}</td>
-                    <td class="col-level">{{ $row[3] }}</td>
-                    <td class="col-level">{{ $row[4] }}</td>
+                    @foreach ($columns as $col)
+                        <td class="{{ $col['class'] }}">{{ $col['value']($row, $index) }}</td>
+                    @endforeach
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" class="ic-print-empty">No mappings to print</td>
+                    <td colspan="{{ count($columns) }}" class="ic-print-empty">No mappings to print</td>
                 </tr>
             @endforelse
         </tbody>

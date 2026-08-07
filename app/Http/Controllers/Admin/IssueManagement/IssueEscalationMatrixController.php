@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers\Admin\IssueManagement;
 
+use App\Exports\IssueEscalationMatrixExport;
 use App\Http\Controllers\Controller;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 use App\Models\{
     IssueCategoryMaster,
     IssueCategoryEmployeeMap,
@@ -224,51 +227,78 @@ class IssueEscalationMatrixController extends Controller
         $categories = $hydrated['categories'];
         $employees = $this->getEmployeesForDropdown();
 
-        $search = trim((string) $request->query('q', ''));
-        $sortKey = (string) $request->query('sort', 'category');
-        if (! in_array($sortKey, ['category', 'level1', 'level2', 'level3'], true)) {
-            $sortKey = 'category';
-        }
-        $sortDir = strtolower((string) $request->query('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
-
-        $perPage = (int) $request->query('per_page', self::INDEX_PER_PAGE);
-        if (! in_array($perPage, self::PER_PAGE_OPTIONS, true)) {
-            $perPage = self::INDEX_PER_PAGE;
-        }
-
-        $rows = $this->filterAndSortMatrix($hydrated['matrix'], $search, $sortKey, $sortDir);
-
-        $page = Paginator::resolveCurrentPage('page');
-        $matrix = new LengthAwarePaginator(
-            array_slice($rows, ($page - 1) * $perPage, $perPage),
-            count($rows),
-            $perPage,
-            $page,
-            ['path' => Paginator::resolveCurrentPath(), 'pageName' => 'page']
-        );
-        $matrix->withQueryString();
+        // Client-side DataTable: search, sort and paging happen in the browser,
+        // so the whole (small) matrix is handed over in one go.
+        $matrix = $this->filterAndSortMatrix($hydrated['matrix'], '', 'category', 'asc');
 
         $perPageOptions = self::PER_PAGE_OPTIONS;
 
-        return view('admin.issue_management.escalation_matrix.index', compact(
-            'matrix',
-            'categories',
-            'employees',
-            'perPage',
-            'perPageOptions',
-            'search',
-            'sortKey',
-            'sortDir'
-        ));
+        return view('admin.issue_management.escalation_matrix.index', compact('matrix', 'categories', 'employees'));
     }
 
     /**
      * Download / print the escalation matrix (same filter + order as the grid).
      */
+    /**
+     * Canonical export columns, in order. Keys must match EM_EXPORT_COLUMN_KEYS
+     * in escalation_matrix/index.blade.php.
+     *
+     * Rows reaching these resolvers are the flat arrays built in export(), keyed
+     * by the same slugs — this grid has no single model per row.
+     */
+    private function exportColumnDefs(): array
+    {
+        return [
+            'sno' => [
+                'heading' => 'S. No.',
+                'class' => 'col-sno',
+                'value' => fn (array $row) => $row['sno'],
+            ],
+            'category' => [
+                'heading' => 'Complaint Category',
+                'class' => 'col-category',
+                'value' => fn (array $row) => $row['category'],
+            ],
+            'level1' => [
+                'heading' => 'Level 1 (Escalation Days)',
+                'class' => 'col-level',
+                'value' => fn (array $row) => $row['level1'],
+            ],
+            'level2' => [
+                'heading' => 'Level 2 (Escalation Days)',
+                'class' => 'col-level',
+                'value' => fn (array $row) => $row['level2'],
+            ],
+            'level3' => [
+                'heading' => 'Level 3 (Escalation Days)',
+                'class' => 'col-level',
+                'value' => fn (array $row) => $row['level3'],
+            ],
+        ];
+    }
+
+    /**
+     * Intersect ?cols= against the canonical list so a hand-edited value cannot
+     * reorder the report or inject a column. Empty => every column.
+     */
+    private function resolveExportColumns(Request $request): array
+    {
+        $defs = $this->exportColumnDefs();
+        $wanted = array_filter(array_map('trim', explode(',', (string) $request->query('cols', ''))));
+
+        if ($wanted === []) {
+            return $defs;
+        }
+
+        $keys = array_values(array_intersect(array_keys($defs), $wanted));
+
+        return $keys === [] ? $defs : array_intersect_key($defs, array_flip($keys));
+    }
+
     public function export(Request $request, string $format = 'csv')
     {
         $format = strtolower($format);
-        abort_unless(in_array($format, ['csv', 'print'], true), 404);
+        abort_unless(in_array($format, ['csv', 'excel', 'pdf', 'print'], true), 404);
 
         $built = $this->buildMatrixData();
         $search = trim((string) $request->query('q', ''));
@@ -280,7 +310,10 @@ class IssueEscalationMatrixController extends Controller
 
         $rows = $this->filterAndSortMatrix($built['matrix'], $search, $sortKey, $sortDir);
 
-        $header = ['S. No.', 'Complaint Category', 'Level 1 (Escalation Days)', 'Level 2 (Escalation Days)', 'Level 3 (Escalation Days)'];
+        $columns = $this->resolveExportColumns($request);
+        $header = array_values(array_map(fn ($col) => $col['heading'], $columns));
+        $exportDate = now()->format('d-m-Y h:i A');
+        $stamp = now()->format('YmdHis');
 
         $cell = function ($level) {
             if (! $level) {
@@ -291,35 +324,60 @@ class IssueEscalationMatrixController extends Controller
             return trim(($level->employee->name ?? 'N/A') . ' - ' . $days . ' ' . ($days === 1 ? 'Day' : 'Days'));
         };
 
-        $lines = [];
+        // Keyed by column slug so a hidden column drops cleanly from every format.
+        $lines = collect();
         foreach ($rows as $i => $row) {
-            $lines[] = [
-                $i + 1,
-                $row['category']->issue_category ?? '',
-                $cell($row['level1']),
-                $cell($row['level2']),
-                $cell($row['level3']),
-            ];
+            $lines->push([
+                'sno' => $i + 1,
+                'category' => $row['category']->issue_category ?? '',
+                'level1' => $cell($row['level1']),
+                'level2' => $cell($row['level2']),
+                'level3' => $cell($row['level3']),
+            ]);
         }
 
         if ($format === 'print') {
             return view('admin.issue_management.escalation_matrix.export_print', [
+                'columns' => $columns,
                 'header' => $header,
                 'rows' => $lines,
                 'search' => $search,
-                'exportDate' => now()->format('d-m-Y h:i A'),
+                'exportDate' => $exportDate,
             ]);
         }
 
-        $filename = 'EscalationMatrix_' . now()->format('YmdHis') . '.csv';
+        if ($format === 'excel') {
+            return Excel::download(
+                new IssueEscalationMatrixExport($lines, $columns, $exportDate, $search),
+                'EscalationMatrix_' . $stamp . '.xlsx'
+            );
+        }
 
-        return response()->streamDownload(function () use ($header, $lines) {
+        if ($format === 'pdf') {
+            return Pdf::loadView('admin.issue_management.escalation_matrix.export_pdf', [
+                'columns' => $columns,
+                'rows' => $lines,
+                'search' => $search,
+                'exportDate' => $exportDate,
+            ])
+                ->setPaper('a4', 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    'isPhpEnabled' => true,
+                ])
+                ->download('EscalationMatrix_' . $stamp . '.pdf');
+        }
+
+        $filename = 'EscalationMatrix_' . $stamp . '.csv';
+
+        return response()->streamDownload(function () use ($columns, $header, $lines) {
             $handle = fopen('php://output', 'w');
             // BOM so Excel opens the UTF-8 file with the right encoding.
             fwrite($handle, "\xEF\xBB\xBF");
             fputcsv($handle, $header);
             foreach ($lines as $line) {
-                fputcsv($handle, $line);
+                fputcsv($handle, array_values(array_map(fn ($col) => $col['value']($line), $columns)));
             }
             fclose($handle);
         }, $filename, [
