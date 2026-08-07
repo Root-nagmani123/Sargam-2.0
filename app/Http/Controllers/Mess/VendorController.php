@@ -5,6 +5,8 @@ use App\Http\Controllers\Controller;
 use App\Exports\VendorMasterExport;
 use App\Models\Mess\Vendor;
 use App\Support\DataTableRedisCache;
+use App\Support\DataTableSearchHelper;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
@@ -14,28 +16,157 @@ use Barryvdh\DomPDF\Facade\Pdf;
 class VendorController extends Controller
 {
     private const LIST_CACHE_EPOCH_KEY = 'mess_vendor_master_list_epoch';
+    private const DT_LIST_EPOCH_KEY = 'mess_vendor_master_dt_list_epoch';
 
     public static function bumpListCacheEpoch(): void
     {
         DataTableRedisCache::bumpListEpoch(self::LIST_CACHE_EPOCH_KEY, 'VendorController');
+        DataTableRedisCache::bumpListEpoch(self::DT_LIST_EPOCH_KEY, 'VendorController');
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $epoch = DataTableRedisCache::readListEpoch(self::LIST_CACHE_EPOCH_KEY);
-        $cacheKey = 'mess_vendor_master_list:v1:' . md5(json_encode(['epoch' => $epoch]));
+        if ($request->ajax() && $request->has('draw')) {
+            return DataTableRedisCache::serveCachedAjax(
+                $request,
+                'mess_vendor_master_dt:v1:',
+                self::DT_LIST_EPOCH_KEY,
+                [
+                    'enabled' => 'MESS_VENDOR_MASTER_DATATABLE_CACHE_ENABLED',
+                    'seconds' => 'MESS_VENDOR_MASTER_DATATABLE_CACHE_SECONDS',
+                ],
+                'VendorController@index',
+                fn () => $this->buildVendorDatatableResponse($request)
+            );
+        }
 
-        $vendors = DataTableRedisCache::remember(
-            $cacheKey,
-            [
-                'enabled' => 'MESS_VENDOR_MASTER_LIST_CACHE_ENABLED',
-                'seconds' => 'MESS_VENDOR_MASTER_LIST_CACHE_SECONDS',
-            ],
-            'VendorController@index',
-            fn () => Vendor::orderByDesc('id')->get()
-        );
+        return view('mess.vendors.index');
+    }
 
-        return view('mess.vendors.index', compact('vendors'));
+    private function buildVendorDatatableResponse(Request $request): JsonResponse
+    {
+        $query = Vendor::query();
+
+        $draw = (int) $request->input('draw', 0);
+        $start = max((int) $request->input('start', 0), 0);
+        $length = (int) $request->input('length', 10);
+        if ($length < 1 || $length > 100) {
+            $length = 10;
+        }
+
+        $searchTokens = DataTableSearchHelper::tokens((string) $request->input('search.value', ''));
+
+        $recordsTotal = (clone $query)->count();
+
+        if ($searchTokens !== []) {
+            $query->where(function ($q) use ($searchTokens) {
+                foreach ($searchTokens as $token) {
+                    $like = DataTableSearchHelper::likePattern($token);
+                    $q->where(function ($inner) use ($like) {
+                        $inner->where('name', 'like', $like)
+                            ->orWhere('email', 'like', $like)
+                            ->orWhere('contact_person', 'like', $like)
+                            ->orWhere('phone', 'like', $like)
+                            ->orWhere('address', 'like', $like);
+                    });
+                }
+            });
+        }
+
+        $recordsFiltered = (clone $query)->count();
+
+        $paged = clone $query;
+        $orderCol = DataTableSearchHelper::orderColumnIndex($request, 0);
+        $orderDir = DataTableSearchHelper::orderDirection($request, 'asc');
+
+        switch ($orderCol) {
+            case 0:
+                $paged->orderBy('name', $orderDir);
+                break;
+            case 1:
+                $paged->orderBy('email', $orderDir);
+                break;
+            case 2:
+                $paged->orderBy('contact_person', $orderDir);
+                break;
+            case 3:
+                $paged->orderBy('phone', $orderDir);
+                break;
+            case 4:
+                $paged->orderBy('address', $orderDir);
+                break;
+            default:
+                $paged->orderByDesc('id');
+        }
+        $paged->orderByDesc('id');
+
+        if ($length !== -1) {
+            $paged->skip($start)->take($length);
+        }
+
+        $rows = $paged->get();
+        $canDelete = function_exists('hasRole') && (hasRole('Super Admin') || hasRole('Mess-Admin'));
+
+        $data = $rows->map(fn (Vendor $vendor) => $this->buildVendorDatatableRow($vendor, $canDelete))->all();
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+        ]);
+    }
+
+    /**
+     * @return string[]
+     */
+    private function buildVendorDatatableRow(Vendor $vendor, bool $canDelete): array
+    {
+        $nameCell = '<div class="fw-semibold">' . e($vendor->name) . '</div>';
+        $emailCell = e($vendor->email ?? '-');
+        $contactPersonCell = e($vendor->contact_person ?? '-');
+        $phoneCell = e($vendor->phone ?? '-');
+        $addressCell = e($vendor->address ?? '-');
+
+        $dataAttrs = ' data-id="' . (int) $vendor->id . '"'
+            . ' data-name="' . e($vendor->name) . '"'
+            . ' data-email="' . e($vendor->email ?? '') . '"'
+            . ' data-contact-person="' . e($vendor->contact_person ?? '') . '"'
+            . ' data-phone="' . e($vendor->phone ?? '') . '"'
+            . ' data-address="' . e($vendor->address ?? '') . '"'
+            . ' data-gst-number="' . e($vendor->gst_number ?? '') . '"'
+            . ' data-bank-name="' . e($vendor->bank_name ?? '') . '"'
+            . ' data-ifsc-code="' . e($vendor->ifsc_code ?? '') . '"'
+            . ' data-account-number="' . e($vendor->account_number ?? '') . '"';
+
+        $viewBtn = '<button type="button" class="text-primary btn-view-vendor bg-transparent border-0"'
+            . $dataAttrs . ' title="View"><i class="material-icons material-symbol-rounded">visibility</i></button>';
+
+        $editBtn = '<button type="button" class="text-primary btn-edit-vendor bg-transparent border-0"'
+            . $dataAttrs . ' title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>';
+
+        $deleteForm = '';
+        if ($canDelete) {
+            $deleteUrl = route('admin.mess.vendors.destroy', $vendor->id);
+            $deleteForm = '<form method="POST" action="' . e($deleteUrl) . '" class="d-inline"'
+                . ' onsubmit="return confirm(\'Are you sure you want to delete this vendor?\');">'
+                . '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">'
+                . '<input type="hidden" name="_method" value="DELETE">'
+                . '<button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">'
+                . '<i class="material-icons material-symbol-rounded">delete</i></button>'
+                . '</form>';
+        }
+
+        $actions = '<div class="d-flex gap-2 flex-wrap">' . $viewBtn . $editBtn . $deleteForm . '</div>';
+
+        return [
+            $nameCell,
+            $emailCell,
+            $contactPersonCell,
+            $phoneCell,
+            $addressCell,
+            $actions,
+        ];
     }
 
     public function create()

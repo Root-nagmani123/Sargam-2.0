@@ -33,19 +33,43 @@ body:has(#fcStatusPage) .top-header .container {
     margin-bottom: 0.5rem;
 }
 
-.fc-status-hero .course-title {
-    color: #004a93;
-    font-size: clamp(1.35rem, 2.8vw, 2.1rem);
-    font-weight: 700;
-    line-height: 1.25;
-    margin: 0 0 0.35rem;
+/* Academy masthead — mirrors the printed registration profile so the on-screen report and
+   the PDF carry the same letterhead. */
+.fc-status-hero .academy-masthead {
+    margin: 0 0 0.6rem;
 }
 
-.fc-status-hero .course-dates {
-    font-size: 1rem;
-    color: #444;
+.fc-status-hero .academy-name-hi {
+    font-size: clamp(1.05rem, 2.1vw, 1.5rem);
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1.5;
+    margin: 0 0 0.15rem;
+}
+
+.fc-status-hero .academy-name-en {
+    font-size: clamp(0.9rem, 1.6vw, 1.15rem);
+    font-weight: 600;
+    color: #1a1a1a;
+    line-height: 1.35;
+    margin: 0 0 0.3rem;
+}
+
+.fc-status-hero .academy-place-hi {
+    font-size: clamp(0.85rem, 1.4vw, 1.05rem);
+    color: #333;
+    line-height: 1.5;
+    margin: 0 0 0.1rem;
+}
+
+.fc-status-hero .academy-place-en {
+    font-size: clamp(0.82rem, 1.35vw, 1rem);
+    color: #333;
     margin: 0;
 }
+
+/* .course-title / .course-dates removed with the course heading — the hero now carries the
+   academy masthead only. */
 
 .fc-status-board {
     width: 100%;
@@ -270,16 +294,43 @@ html.fc-status-smooth-scroll {
     table-layout: auto;
 }
 
+/* Sticky header.
+   Bootstrap paints every cell background with `box-shadow: inset 0 0 0 9999px` rather than
+   background-color. That shadow is drawn over a sticky th's plain background-color, so rows
+   scrolling underneath showed THROUGH the header and its labels became unreadable. Painting
+   the header colour with the same inset-shadow mechanism makes it genuinely opaque, and the
+   colour is taken from --fc-thead-bg so background and shadow can never disagree. */
 .fc-status-table thead th {
     position: sticky;
     top: 0;
-    z-index: 2;
-    color: #fff;
+    z-index: 3;
+    background-color: var(--fc-thead-bg, #004a93) !important;
+    box-shadow: inset 0 0 0 9999px var(--fc-thead-bg, #004a93) !important;
+    background-clip: padding-box;
+    color: var(--fc-thead-fg, #fff) !important;
     font-weight: 700;
     text-align: center;
     vertical-align: middle;
     border: 1px solid rgba(255, 255, 255, 0.3) !important;
     padding: 0.55rem 0.65rem !important;
+}
+
+/* Header labels must never inherit the body link colour. */
+.fc-status-table thead th,
+.fc-status-table thead th * {
+    color: var(--fc-thead-fg, #fff) !important;
+    -webkit-text-fill-color: var(--fc-thead-fg, #fff);
+}
+
+/* Body cells opaque, so nothing shows through the header while scrolling. */
+.fc-status-table tbody tr > * {
+    background-color: #fff;
+    box-shadow: inset 0 0 0 9999px #fff;
+}
+
+.fc-status-table tbody tr:nth-child(even) > * {
+    background-color: #f5f6f7;
+    box-shadow: inset 0 0 0 9999px #f5f6f7;
 }
 
 .fc-status-table tbody td {
@@ -293,14 +344,13 @@ html.fc-status-smooth-scroll {
     background: #f5f6f7;
 }
 
-.fc-status-table--not-responded thead th { background: #c62828 !important; }
-.fc-status-table--registered thead th { background: #2e7d32 !important; }
-.fc-status-table--service thead th { background: #1565c0 !important; }
-.fc-status-table--exemption thead th { background: #6d4c41 !important; }
-.fc-status-table--incomplete thead th {
-    background: #f9a825 !important;
-    color: #1a1a1a !important;
-}
+/* One variable per theme — consumed by the sticky-header rule above for both the
+   background-color and the inset shadow that actually renders it. */
+.fc-status-table--not-responded { --fc-thead-bg: #c62828; }
+.fc-status-table--registered    { --fc-thead-bg: #2e7d32; }
+.fc-status-table--service       { --fc-thead-bg: #1565c0; }
+.fc-status-table--exemption     { --fc-thead-bg: #6d4c41; }
+.fc-status-table--incomplete    { --fc-thead-bg: #f9a825; --fc-thead-fg: #1a1a1a; }
 
 .fc-status-pagination {
     margin-top: 0;

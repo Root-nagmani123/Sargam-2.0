@@ -37,6 +37,9 @@ class Kernel extends HttpKernel
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,
             // \Illuminate\Session\Middleware\AuthenticateSession::class,
+            // Reject a session cookie replayed from a different browser (copied-cookie
+            // hijacking). Runs right after the session is available.
+            \App\Http\Middleware\BindSessionToUserAgent::class,
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
@@ -71,5 +74,9 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'fc.activity.coordinator' => \App\Http\Middleware\EnsureFcActivityCoordinator::class,
         'fc.activity.matrix' => \App\Http\Middleware\EnsureFcActivityMatrixAccess::class,
+        'fc.reg.admin' => \App\Http\Middleware\EnsureFcRegAdmin::class,
+        'fc.builder.delete' => \App\Http\Middleware\BlockFcFormBuilderDelete::class,
+        'issue.reports.admin' => \App\Http\Middleware\EnsureIssueReportsAdmin::class,
+        'fc.builder.action' => \App\Http\Middleware\BlockFcFormBuilderAction::class,
     ];
 }

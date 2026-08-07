@@ -163,7 +163,6 @@
 @section('content')
 @php
     $clientTypeOptions = \App\Models\Mess\ClientType::clientTypes();
-    $canDeleteClientType = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid client-master-page">
     <x-breadcrum title="Client Master" :showBack="false">
@@ -199,59 +198,27 @@
                 <div class="programme-dt-search" data-dt-search-for="clientTypesTable"></div>
             </div>
 
-            <div class="programme-dt-panel">
-                <div class="table-responsive">
-                    <table id="clientTypesTable" class="table programme-dt-table align-middle w-100 mb-0">
-                        <thead>
-                            <tr>
-                                <th>S. No.</th>
-                                <th>Client Type</th>
-                                <th>Client Name</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($clientTypes as $clientType)
-                                @php $isActive = ($clientType->status ?? 'active') === 'active'; @endphp
-                                <tr>
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td>{{ $clientTypeOptions[$clientType->client_type] ?? $clientType->client_type }}</td>
-                                    <td><div class="client-name-primary">{{ $clientType->client_name }}</div></td>
-                                    <td>
-                                        <span class="badge programme-status-badge programme-status-badge--{{ $isActive ? 'active' : 'inactive' }}">
-                                            {{ ucfirst($clientType->status_label) }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-start justify-content-start client-actions">
-                                            <button type="button" class="client-action-btn btn-edit-clienttype text-primary"
-                                                    data-id="{{ $clientType->id }}"
-                                                    data-client-type="{{ e($clientType->client_type) }}"
-                                                    data-client-name="{{ e($clientType->client_name) }}"
-                                                    data-description="{{ e($clientType->description ?? '') }}"
-                                                    data-status="{{ e($clientType->status ?? 'active') }}"
-                                                    title="Edit"><i class="material-symbols-rounded">edit</i><span>Edit</span></button>
-                                            @if($canDeleteClientType)
-                                                <form method="POST" action="{{ route('admin.mess.client-types.destroy', $clientType->id) }}"
-                                                      class="mess-delete-form" data-confirm-title="Delete Client Type?"
-                                                      data-confirm-message="Are you sure you want to delete this client type?">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="client-action-btn text-danger" title="Delete"><i class="material-symbols-rounded">delete</i><span>Delete</span></button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+            @if(session('success'))
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
+            @endif
+<hr class="my-2">
+            <div class="table-responsive">
+                <table id="clientTypesTable" class="table  align-middle w-100">
+                    <thead>
+                        <tr>
+                            <th>Client Types</th>
+                            <th>Client Name</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
             </div>
-
-            {{-- Footer: pagination (left) + "Showing [N] of M items" (right), populated by the global enhancer --}}
-            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3" data-dt-footer-for="clientTypesTable"></div>
+        </div>
         </div>
     </div>
 </div>
@@ -357,37 +324,15 @@
     </div>
 </div>
 
-{{-- Column Visibility Modal (programme/attendance style) --}}
-<div class="modal fade" id="clientColumnVisibilityModal" tabindex="-1" aria-labelledby="clientColumnVisibilityLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
-            <div class="modal-header border-0 pb-2">
-                <h5 class="modal-title fw-bold" id="clientColumnVisibilityLabel">Column Visibility</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body pt-0">
-                <hr class="mt-0">
-                <div class="row g-3" id="clientColumnToggleGrid"></div>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- Branded delete-confirmation dialog + global success toast --}}
-@include('mess.partials.delete-confirm')
-
 @include('components.mess-master-datatables', [
     'tableId' => 'clientTypesTable',
-    'searchPlaceholder' => 'Search',
+    'searchPlaceholder' => 'Search client types...',
     'orderColumn' => 0,
-    'actionColumnIndex' => 4,
-    'infoLabel' => 'items',
-    'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
+    'actionColumnIndex' => 3,
+    'infoLabel' => 'client types',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.client-types.index'),
 ])
-
 @push('scripts')
 {{-- Download / Print → branded server-side report (admin.mess.client-types.export). --}}
 <script>

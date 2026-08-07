@@ -67,6 +67,9 @@ use Carbon\Carbon;
 
 class UserController extends Controller
 {
+    /** Notices per page on the dashboard feed. */
+    private const NOTICE_FEED_PER_PAGE = 10;
+
     private const ADMIN_USERS_INDEX_LIST_EPOCH_KEY = 'admin_users_index_list_epoch';
 
     /**
@@ -213,8 +216,8 @@ class UserController extends Controller
           $upcomingBirthdays = $upcomingBirthdays->merge($upcoming);
       }
 
-      $totalActiveCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '<', now())->where('end_date', '>=', now())->count();
-      $upcomingCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '>', now())->count();
+      $totalActiveCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '<=', now()->toDateString())->where('end_date', '>=', now()->toDateString())->count();
+      $upcomingCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '>', now()->toDateString())->count();
       $upcomingEventsCount = Holiday::active()->where('holiday_date', '>', now())->count();
 
 
@@ -387,6 +390,8 @@ class UserController extends Controller
 
         $enabledWidgetKeys = $baseCards->filter(fn($c) => str_starts_with($c->key, 'widget_'))->pluck('key')->toArray();
 
+        $issueReportModules = \App\Http\Controllers\Admin\IssueReportController::moduleOptions();
+
         $cardsToRender = $baseCards->filter(fn($c) => !str_starts_with($c->key, 'widget_'))->map(function ($card) use ($cardDefinitions, $cardCounts) {
             $def = $cardDefinitions[$card->key] ?? null;
             return [
@@ -436,7 +441,8 @@ class UserController extends Controller
             'fullDuplicateContractualIdCardRequests',
             'idCardApprovalRoute',
             'cardsToRender',
-            'enabledWidgetKeys'
+            'enabledWidgetKeys',
+            'issueReportModules'
         ));
     }
 
@@ -451,17 +457,103 @@ class UserController extends Controller
             $activeTab = 'notifications';
         }
 
-        $data = $this->buildDashboardFeedData();
+        $data = $this->buildDashboardFeedData($request);
         $data['activeTab'] = $activeTab;
 
         return view('admin.dashboard.feed', $data);
     }
 
     /**
-     * Shared data for dashboard feed page.
+     * Notices tab: role-scoped, filtered and paginated in SQL.
+     *
+     * Returns [paginator, filterOptions, appliedFilters].
      */
-    protected function buildDashboardFeedData(): array
+    protected function buildNoticeFeed(?Request $request): array
     {
+        $filters = [
+            'year'     => trim((string) ($request?->query('notice_year') ?? '')),
+            'type'     => trim((string) ($request?->query('notice_type') ?? '')),
+            'dept'     => trim((string) ($request?->query('notice_dept') ?? '')),
+            'audience' => trim((string) ($request?->query('notice_audience') ?? '')),
+            'q'        => trim((string) ($request?->query('q') ?? '')),
+        ];
+
+        $base = notice_feed_query_by_role();
+
+        if (!$base) {
+            $empty = new \Illuminate\Pagination\LengthAwarePaginator([], 0, self::NOTICE_FEED_PER_PAGE, 1, [
+                'path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(),
+            ]);
+
+            return [$empty, ['years' => collect(), 'types' => collect(), 'depts' => collect(), 'audiences' => collect()], $filters];
+        }
+
+        // Dropdown options come from the UNFILTERED role-scoped set, so choosing a
+        // Type never empties the Year list (and a filtered-away option can still be
+        // un-chosen). Four small columns, distinct — not the full notice rows.
+        $optionRows = (clone $base)
+            ->reorder()
+            ->select([
+                'notices_notification.notice_type',
+                'notices_notification.target_audience',
+                'notice_author_dept.department_name as author_department',
+                'notices_notification.display_date',
+            ])
+            ->distinct()
+            ->get();
+
+        $filterOptions = [
+            'years' => $optionRows
+                ->map(fn ($r) => !empty($r->display_date) ? (int) date('Y', strtotime($r->display_date)) : null)
+                ->filter()->unique()->sortDesc()->values(),
+            'types'     => $optionRows->pluck('notice_type')->filter()->unique()->sort()->values(),
+            'depts'     => $optionRows->pluck('author_department')->filter()->unique()->sort()->values(),
+            'audiences' => $optionRows->pluck('target_audience')->filter()->unique()->sort()->values(),
+        ];
+
+        // Year as a datetime range, never YEAR(display_date) — a function on the
+        // column would make the index unusable (G8).
+        if ($filters['year'] !== '' && ctype_digit($filters['year'])) {
+            $base->where('notices_notification.display_date', '>=', $filters['year'] . '-01-01 00:00:00')
+                ->where('notices_notification.display_date', '<=', $filters['year'] . '-12-31 23:59:59');
+        }
+
+        if ($filters['type'] !== '') {
+            $base->where('notices_notification.notice_type', $filters['type']);
+        }
+
+        if ($filters['audience'] !== '') {
+            $base->where('notices_notification.target_audience', $filters['audience']);
+        }
+
+        if ($filters['dept'] !== '') {
+            $base->where('notice_author_dept.department_name', $filters['dept']);
+        }
+
+        if ($filters['q'] !== '') {
+            $like = '%' . $filters['q'] . '%';
+            $base->where(function ($w) use ($like) {
+                $w->where('notices_notification.notice_title', 'like', $like)
+                    ->orWhere('notices_notification.notice_type', 'like', $like)
+                    ->orWhere('notice_author_dept.department_name', 'like', $like)
+                    ->orWhereRaw("CONCAT_WS(' ', notice_author.first_name, notice_author.last_name) like ?", [$like]);
+            });
+        }
+
+        $notices = $base->paginate(self::NOTICE_FEED_PER_PAGE)->withQueryString();
+
+        return [$notices, $filterOptions, $filters];
+    }
+
+    /**
+     * Shared data for dashboard feed page.
+     *
+     * $request is optional so the dashboard widget can call this without one;
+     * the notices tab reads its filters from it when present.
+     */
+    protected function buildDashboardFeedData(?Request $request = null): array
+    {
+        $noticeRequest = $request;
         $user = Auth::user();
         $isAdminSummary = hasRole('Admin');
         $daysOld = $isAdminSummary ? 10 : null;
@@ -521,26 +613,9 @@ class UserController extends Controller
             $upcomingBirthdays = $upcomingBirthdays->merge($upcoming);
         }
 
-        $notices = get_notice_notification_by_role();
-
-        $noticeTabKeys = ['office-orders', 'work-allocation', 'notice-circular'];
-        $noticeTabLabels = [
-            'office-orders' => 'Office Orders',
-            'work-allocation' => 'Work Allocation',
-            'notice-circular' => 'Notice/ Circular/ Order',
-        ];
-        $noticeTabCounts = ['office-orders' => 0, 'work-allocation' => 0, 'notice-circular' => 0];
-        foreach ($notices as $noticeForTab) {
-            $tabKey = $this->resolveDashboardNoticeTabKey($noticeForTab->notice_type ?? '');
-            $noticeTabCounts[$tabKey]++;
-        }
-        $defaultNoticeTab = 'office-orders';
-        foreach ($noticeTabKeys as $tabKeyCandidate) {
-            if ($noticeTabCounts[$tabKeyCandidate] > 0) {
-                $defaultNoticeTab = $tabKeyCandidate;
-                break;
-            }
-        }
+        // Notices are filtered and paginated in SQL (see buildNoticeFeed) rather
+        // than fetched whole and filtered in the browser.
+        [$notices, $noticeFilterOptions, $noticeFilters] = $this->buildNoticeFeed($noticeRequest);
 
         $feedExpandedNotifications = collect();
         $feedExpandedWishes = collect();
@@ -573,10 +648,8 @@ class UserController extends Controller
             'upcomingBirthdays',
             'birthdayWishCounts',
             'notices',
-            'noticeTabKeys',
-            'noticeTabLabels',
-            'noticeTabCounts',
-            'defaultNoticeTab',
+            'noticeFilterOptions',
+            'noticeFilters',
             'feedExpandedNotifications',
             'feedExpandedWishes',
             'notificationBadgeCount'
@@ -2603,6 +2676,7 @@ class UserController extends Controller
                 'a.Student_master_pk as spk',
                 'a.pk as attendance_pk',
                 'a.status',
+                'a.other_exemption_comments',
                 'a.timetable_pk',
                 'a.course_master_pk',
                 't.START_DATE as session_date',
@@ -2619,6 +2693,7 @@ class UserController extends Controller
                     'course_master_pk' => $r->course_master_pk,
                     'status' => $r->status,
                     'present' => (int) $r->status !== 3,
+                    'other_exemption_comments' => $r->other_exemption_comments ?? null,
                     'session_date' => $r->session_date ?? null,
                     'session_time' => $r->session_time ?? null,
                     'session_topic' => $r->session_topic ?? null,
@@ -2702,6 +2777,7 @@ class UserController extends Controller
             if (empty($sessions)) {
                 $studentMap->attendance_present = true;
                 $studentMap->attendance_status = null;
+                $studentMap->other_exemption_comments = null;
                 $studentMap->session_date = null;
                 $studentMap->session_time = null;
                 $studentMap->session_topic = null;
@@ -2716,6 +2792,7 @@ class UserController extends Controller
                 $row = clone $studentMap;
                 $row->attendance_present = $session['present'];
                 $row->attendance_status = $session['status'];
+                $row->other_exemption_comments = $session['other_exemption_comments'] ?? null;
                 $row->session_date = $session['session_date'];
                 $row->session_time = $session['session_time'];
                 $row->session_topic = $session['session_topic'];
@@ -3161,11 +3238,21 @@ class UserController extends Controller
                 'escort' => $showEscort
                     ? '<a href="' . e($detailUrl . '?section=dutiesSection' . $linkDateQs) . '" class="sl-count">Escort</a>'
                     : '-',
-                'other_exempt' => $showMedical
-                    ? '<a href="' . e($detailUrl . '?section=medicalExceptionsSection' . $linkDateQs) . '" class="sl-count">Medical</a>'
-                    : ($showOther
-                        ? '<a href="' . e($detailUrl . ($linkDateQs !== '' ? '?' . ltrim($linkDateQs, '&') : '')) . '" class="sl-count">Other</a>'
-                        : '-'),
+                'other_exempt' => (function () use ($showMedical, $showOther, $studentMap, $detailUrl, $linkDateQs) {
+                    if ($showMedical) {
+                        return '<a href="' . e($detailUrl . '?section=medicalExceptionsSection' . $linkDateQs) . '" class="sl-count">Medical</a>';
+                    }
+                    if ($showOther) {
+                        return '<a href="' . e($detailUrl . ($linkDateQs !== '' ? '?' . ltrim($linkDateQs, '&') : '')) . '" class="sl-count">Other</a>';
+                    }
+                    // Inline Other Exemption from the mark-attendance screen (Absent +
+                    // a typed reason) — show the reason text in this column.
+                    $otherComment = trim((string) ($studentMap->other_exemption_comments ?? ''));
+                    if ($otherComment !== '') {
+                        return '<span class="text-muted small" title="Other Exemption">' . e($otherComment) . '</span>';
+                    }
+                    return '-';
+                })(),
             ];
         }
 
@@ -3567,6 +3654,13 @@ class UserController extends Controller
             $showMedical = $statusCode === 6 || $flags['medical'];
             $showOther = $statusCode === 7 || $flags['other'];
 
+            // Inline Other Exemption (Absent + typed reason) shows its reason text in
+            // the Other Exemptions column, mirroring the on-screen table.
+            $otherComment = trim((string) ($studentMap->other_exemption_comments ?? ''));
+            $otherExemptionColumn = $showMedical
+                ? 'Medical'
+                : ($showOther ? 'Other' : ($otherComment !== '' ? $otherComment : '-'));
+
             $rows[] = [
                 $index + 1,
                 $student->generated_OT_code ?? 'N/A',
@@ -3584,7 +3678,7 @@ class UserController extends Controller
                 $statusText,
                 $showMdo ? 'MDO' : '-',
                 $showEscort ? 'Escort' : '-',
-                $showMedical ? 'Medical' : ($showOther ? 'Other' : '-'),
+                $otherExemptionColumn,
             ];
         }
 
@@ -4979,7 +5073,7 @@ public function uploadPdf(Request $request)
 
         return CourseMaster::whereIn('pk', $coordinatorCourses)
             ->where('active_inactive', 1)
-            ->where('end_date', '>=', now())
+            ->where('end_date', '>=', now()->toDateString())
             ->pluck('pk');
     }
 
@@ -5011,7 +5105,7 @@ public function uploadPdf(Request $request)
 
         $activeCourseIds = CourseMaster::whereIn('pk', $groupMappings->pluck('course_name')->unique())
             ->where('active_inactive', 1)
-            ->where('end_date', '>=', now())
+            ->where('end_date', '>=', now()->toDateString())
             ->pluck('pk');
 
         if ($activeCourseIds->isEmpty()) {

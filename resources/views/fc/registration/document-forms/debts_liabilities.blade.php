@@ -115,7 +115,7 @@
             <div class="dc-footer">
                 <div class="row">
                     <div class="col-md-6">Dated / दिनांक:
-                        <input type="date" name="declaration_date" class="dc-blank" value="{{ $val('declaration_date') }}" style="min-width:150px;">
+                        <input type="date" name="declaration_date" class="dc-blank" value="{{ old('declaration_date', fc_document_date('iso')) }}" style="min-width:150px;" readonly>
                     </div>
                     <div class="col-md-6">
                         <div>Signature / हस्ताक्षर: ______________________</div>
@@ -134,7 +134,8 @@
             </div>
         </div>
 
-        {{-- Signature upload --}}
+        {{-- Signature upload section — commented out per request (hidden on the fill form) --}}
+        {{--
         @if(! empty($template['signatures']))
             <div class="card fc-card border-0 shadow-sm mb-3">
                 <div class="card-header bg-white py-3"><h6 class="mb-0 text-uppercase small fw-bold text-muted">Signatures / हस्ताक्षर</h6></div>
@@ -154,6 +155,7 @@
                 </div>
             </div>
         @endif
+        --}}
 
         <div class="d-flex justify-content-between mb-5">
             <a href="{{ route('fc-reg.forms.step', [$form, $step]) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Cancel</a>

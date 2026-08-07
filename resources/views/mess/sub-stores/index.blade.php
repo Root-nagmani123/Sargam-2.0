@@ -160,92 +160,42 @@
 @endpush
 
 @section('content')
-@php
-    $canDeleteSubStore = hasRole('Super Admin') || hasRole('Mess-Admin');
-@endphp
-<div class="container-fluid substore-master-page">
-    <x-breadcrum title="Sub Store Master" :showBack="false">
-        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createSubStoreModal">
-            <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
-            <span>Add Sub Store</span>
-        </button>
-    </x-breadcrum>
-
-    {{-- Success feedback is rendered as the global green toast — see mess.partials.delete-confirm --}}
-
-    {{-- Download / Print bar (branded server-side exports — see admin.mess.sub-stores.export) --}}
-    <div class="d-flex justify-content-end gap-2 mb-3">
-        <button type="button" class="btn substore-master-export-btn border-0" id="substoreDownloadBtn">
-            <i class="material-symbols-rounded">download</i>
-            <span>Download</span>
-        </button>
-        <button type="button" class="btn substore-master-export-btn border-0" id="substorePrintBtn">
-            <i class="material-symbols-rounded">print</i>
-            <span>Print</span>
-        </button>
-    </div>
-
-    <div class="card substore-master-card border-0">
-        <div class="card-body">
-            {{-- Toolbar: Columns modal trigger + search (the global enhancer relocates the search box here) --}}
-            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3">
-                <button type="button" class="btn programme-dt-btn-columns" id="btnSubstoreColumns"
-                        data-bs-toggle="modal" data-bs-target="#substoreColumnVisibilityModal" title="Show / hide columns">
-                    <span>Columns</span>
-                    <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+<div class="container-fluid">
+    <x-breadcrum title="Sub Store Master"></x-breadcrum>
+    <div class="datatables">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header border-0 bg-body-tertiary d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h4 class="mb-0 fw-semibold">Sub Store Master</h4>
+                    <p class="mb-0 text-muted small">Manage all mess sub stores in one place.</p>
+                </div>
+                <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createSubStoreModal">
+                    <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
+                    <span>Add Sub Store</span>
                 </button>
                 <div class="programme-dt-search" data-dt-search-for="subStoresTable"></div>
             </div>
 
-            <div class="programme-dt-panel">
-                <div class="table-responsive">
-                    <table id="subStoresTable" class="table programme-dt-table align-middle w-100 mb-0">
-                        <thead>
-                            <tr>
-                                <th>S. No.</th>
-                                <th>Sub Store Name</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($subStores as $subStore)
-                                @php $isActive = ($subStore->status ?? 'active') === 'active'; @endphp
-                                <tr>
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td><div class="substore-name-primary">{{ $subStore->sub_store_name }}</div></td>
-                                    <td>
-                                        <span class="badge programme-status-badge programme-status-badge--{{ $isActive ? 'active' : 'inactive' }}">
-                                            {{ ucfirst($subStore->status_label) }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-start justify-content-start substore-actions">
-                                            <button type="button" class="substore-action-btn btn-edit-substore text-primary"
-                                                    data-id="{{ $subStore->id }}"
-                                                    data-sub-store-name="{{ e($subStore->sub_store_name) }}"
-                                                    data-status="{{ e($subStore->status ?? 'active') }}"
-                                                    title="Edit"><i class="material-symbols-rounded">edit</i><span>Edit</span></button>
-                                            @if($canDeleteSubStore)
-                                                <form method="POST" action="{{ route('admin.mess.sub-stores.destroy', $subStore->id) }}"
-                                                      class="mess-delete-form" data-confirm-title="Delete Sub Store?"
-                                                      data-confirm-message="Are you sure you want to delete this sub store?">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="substore-action-btn text-danger" title="Delete"><i class="material-symbols-rounded">delete</i><span>Delete</span></button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <div class="card-body">
+                @if(session('success'))
+                    <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+                        {{ session('success') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
 
-            {{-- Footer: pagination (left) + "Showing [N] of M items" (right), populated by the global enhancer --}}
-            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3" data-dt-footer-for="subStoresTable"></div>
+            <div class="table-responsive">
+                <table id="subStoresTable" class="table  align-middle w-100">
+                    <thead>
+                        <tr>
+                            <th>Sub Store Name</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -323,37 +273,15 @@
     </div>
 </div>
 
-{{-- Column Visibility Modal (programme/attendance style) --}}
-<div class="modal fade" id="substoreColumnVisibilityModal" tabindex="-1" aria-labelledby="substoreColumnVisibilityLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
-            <div class="modal-header border-0 pb-2">
-                <h5 class="modal-title fw-bold" id="substoreColumnVisibilityLabel">Column Visibility</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body pt-0">
-                <hr class="mt-0">
-                <div class="row g-3" id="substoreColumnToggleGrid"></div>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- Branded delete-confirmation dialog + global success toast --}}
-@include('mess.partials.delete-confirm')
-
 @include('components.mess-master-datatables', [
     'tableId' => 'subStoresTable',
-    'searchPlaceholder' => 'Search',
+    'searchPlaceholder' => 'Search sub stores...',
     'orderColumn' => 0,
-    'actionColumnIndex' => 3,
-    'infoLabel' => 'items',
-    'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
+    'actionColumnIndex' => 2,
+    'infoLabel' => 'sub stores',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.sub-stores.index'),
 ])
-
 @push('scripts')
 {{-- Download / Print → branded server-side report (admin.mess.sub-stores.export). --}}
 <script>

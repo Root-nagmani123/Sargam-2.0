@@ -189,8 +189,8 @@ class CourseRepositoryController extends Controller
                 // This used to split on active_inactive alone, which is an enabled/disabled
                 // flag, not a lifecycle one: nearly every course is enabled, so "Active"
                 // listed 141 of 143 courses — i.e. the filter appeared to do nothing.
-                'activeCourses' => CourseMaster::activeRunning()->get(),
-                'archivedCourses' => CourseMaster::archived()->get(),
+                'activeCourses' => CourseMaster::activeRunning()->orderBy('pk')->get(),
+                'archivedCourses' => CourseMaster::archived()->orderBy('pk')->get(),
                 'subjects' => SubjectMaster::where('active_inactive', 1)->get(),
                 'topics' => CourseRepositorySubtopic::all(),
                 'authors' => FacultyMaster::select('pk','full_name')->get(),
@@ -728,8 +728,15 @@ class CourseRepositoryController extends Controller
                 $detail->topic_pk = $validated['timetable_name'] ?? $detail->topic_pk;
                 $detail->session_date = $validated['session_date'] ?? $detail->session_date;
                 $detail->author_name = $validated['author_name'] ?? $detail->author_name;
-                $detail->sector_master_pk = $validated['sector_master'] ?? $detail->sector_master_pk;
-                $detail->ministry_master_pk = $validated['ministry_master'] ?? $detail->ministry_master_pk;
+                // Sector/Ministry are optional and clearable: when the field is submitted
+                // (even as null via ConvertEmptyStringsToNull) honour it so the value can be
+                // un-set; only fall back to the existing value when the key is absent entirely.
+                $detail->sector_master_pk = array_key_exists('sector_master', $validated)
+                    ? $validated['sector_master']
+                    : $detail->sector_master_pk;
+                $detail->ministry_master_pk = array_key_exists('ministry_master', $validated)
+                    ? $validated['ministry_master']
+                    : $detail->ministry_master_pk;
                 $detail->keyword = $validated['keywords'] ?? $detail->keyword;
                 $detail->videolink = $validated['video_link'] ?? $detail->videolink;
                 if ($category && isset($typeMap[$category])) {
@@ -1165,6 +1172,120 @@ class CourseRepositoryController extends Controller
             Log::error('Error fetching ministries: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Error fetching ministries'], 500);
         }
+    }
+
+    /**
+     * Get every timetable session for a course on a given date (AJAX endpoint).
+     * Each row carries the subject, topic and faculty; the front-end fills those
+     * fields when a single row matches and offers dropdowns when several do.
+     * GET /course-repository/sessions-by-course-date?course_pk=X&session_date=Y-m-d
+     */
+    public function getSessionsByCourseDate(Request $request)
+    {
+        try {
+            $coursePk = $request->query('course_pk');
+            $sessionDate = $request->query('session_date');
+
+            if (!$coursePk || !$sessionDate) {
+                return response()->json(['success' => false, 'data' => []], 422);
+            }
+
+            // F-278-03: Validate date format before using in a DB query.
+            $parsedDate = \DateTime::createFromFormat('Y-m-d', (string) $sessionDate);
+            if (!$parsedDate || $parsedDate->format('Y-m-d') !== (string) $sessionDate) {
+                return response()->json(['success' => false, 'data' => []], 422);
+            }
+
+            // NOTE: timetable.faculty_master is NOT a plain fk — it stores a JSON
+            // array of faculty pks, e.g. ["84"] or ["110","22"] (a session can have
+            // several co-faculty). So it can't be joined directly; we parse it below
+            // and resolve names in one lookup.
+            $rows = Timetable::leftJoin('subject_master', 'timetable.subject_master_pk', '=', 'subject_master.pk')
+                ->where('timetable.course_master_pk', $coursePk)
+                ->whereBetween('timetable.START_DATE', [$sessionDate . ' 00:00:00', $sessionDate . ' 23:59:59'])
+                ->select(
+                    'timetable.pk',
+                    'timetable.subject_master_pk',
+                    'subject_master.subject_name',
+                    'timetable.subject_topic',
+                    'timetable.faculty_master'
+                )
+                ->get();
+
+            // Collect every referenced faculty pk across all rows, resolve their
+            // names in a single query, then attach an authors: [{pk, name}] list.
+            $rowFaculty = [];
+            $facultyIds = [];
+            foreach ($rows as $i => $row) {
+                $ids = $this->parseFacultyIds($row->faculty_master);
+                $rowFaculty[$i] = $ids;
+                foreach ($ids as $id) {
+                    $facultyIds[$id] = true;
+                }
+            }
+
+            $names = [];
+            if (!empty($facultyIds)) {
+                $names = FacultyMaster::whereIn('pk', array_keys($facultyIds))
+                    ->pluck('full_name', 'pk')
+                    ->toArray();
+            }
+
+            $data = [];
+            foreach ($rows as $i => $row) {
+                $authors = [];
+                foreach ($rowFaculty[$i] as $id) {
+                    $authors[] = [
+                        'pk' => $id,
+                        'name' => $names[$id] ?? ('Faculty #' . $id),
+                    ];
+                }
+                $data[] = [
+                    'pk' => $row->pk,
+                    'subject_master_pk' => $row->subject_master_pk,
+                    'subject_name' => $row->subject_name,
+                    'subject_topic' => $row->subject_topic,
+                    'authors' => $authors,
+                ];
+            }
+
+            return response()->json(['success' => true, 'data' => $data]);
+        } catch (Exception $e) {
+            Log::error('Error in getSessionsByCourseDate: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => 'Failed to load sessions'], 500);
+        }
+    }
+
+    /**
+     * Parse timetable.faculty_master into a list of faculty pks.
+     * The column holds a JSON array of pks (["84"], ["110","22"]); this also
+     * tolerates a bare "84" or a comma-separated "84,90" as a fallback.
+     */
+    private function parseFacultyIds($raw)
+    {
+        if ($raw === null || $raw === '') {
+            return [];
+        }
+
+        $ids = [];
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $v) {
+                $v = trim((string) $v);
+                if ($v !== '') {
+                    $ids[] = $v;
+                }
+            }
+        } else {
+            foreach (explode(',', (string) $raw) as $v) {
+                $v = trim($v, " \t\n\r\0\x0B[]\"'");
+                if ($v !== '') {
+                    $ids[] = $v;
+                }
+            }
+        }
+
+        return array_values(array_unique($ids));
     }
 
     /**

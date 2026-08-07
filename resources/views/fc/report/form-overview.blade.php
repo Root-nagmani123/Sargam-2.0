@@ -82,11 +82,22 @@
         </div>
         {{-- One card per step --}}
         @foreach($steps as $step)
+        @php
+            // Per step: how many completed it, out of how many it actually applies to.
+            // A conditional step (e.g. Special Assistant) applies to a subset, so a bare
+            // count against the full roster always looked like a shortfall.
+            $stepCounts     = $summary[$step->tracker_column] ?? ['done' => 0, 'applicable' => 0];
+            $stepDone       = is_array($stepCounts) ? ($stepCounts['done'] ?? 0) : $stepCounts;
+            $stepApplicable = is_array($stepCounts) ? ($stepCounts['applicable'] ?? 0) : ($summary['total'] ?? 0);
+            $stepIsLimited  = $stepApplicable < ($summary['total'] ?? 0);
+        @endphp
         <div class="col-6 col-sm-4 col-md-3 col-xl-auto" style="flex:1 1 100px">
             <div class="card border-0 shadow-sm text-center py-2 px-2 h-100" style="border-radius:8px;">
                 <div><i class="bi {{ $step->icon ?? 'bi-check-circle-fill' }} fs-4" style="color:#7c3aed;"></i></div>
                 <div class="fw-bold" style="font-size:1.3rem;color:#7c3aed;">
-                    {{ number_format($summary[$step->tracker_column] ?? 0) }}
+                    {{ number_format($stepDone) }}@if($stepIsLimited)<span
+                        style="font-size:.8rem;opacity:.7;"
+                        title="Applies to {{ number_format($stepApplicable) }} of {{ number_format($summary['total'] ?? 0) }} trainees">/{{ number_format($stepApplicable) }}</span>@endif
                 </div>
                 <div class="text-muted" style="font-size:.68rem;line-height:1.2;">{{ Str::limit($step->step_name, 18) }}</div>
             </div>

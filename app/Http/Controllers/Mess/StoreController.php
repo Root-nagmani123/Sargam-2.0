@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Mess;
 use App\Http\Controllers\Controller;
 use App\Exports\StoreMasterExport;
 use App\Support\DataTableRedisCache;
+use App\Support\DataTableSearchHelper;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\Mess\Store;
 use Maatwebsite\Excel\Facades\Excel;
@@ -13,28 +16,155 @@ use Barryvdh\DomPDF\Facade\Pdf;
 class StoreController extends Controller
 {
     private const LIST_CACHE_EPOCH_KEY = 'mess_store_master_list_epoch';
+    private const DT_LIST_EPOCH_KEY = 'mess_store_master_dt_list_epoch';
 
     public static function bumpListCacheEpoch(): void
     {
         DataTableRedisCache::bumpListEpoch(self::LIST_CACHE_EPOCH_KEY, 'StoreController');
+        DataTableRedisCache::bumpListEpoch(self::DT_LIST_EPOCH_KEY, 'StoreController');
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $epoch = DataTableRedisCache::readListEpoch(self::LIST_CACHE_EPOCH_KEY);
-        $cacheKey = 'mess_store_master_list:v1:' . md5(json_encode(['epoch' => $epoch]));
+        if ($request->ajax() && $request->has('draw')) {
+            return DataTableRedisCache::serveCachedAjax(
+                $request,
+                'mess_store_master_dt:v1:',
+                self::DT_LIST_EPOCH_KEY,
+                [
+                    'enabled' => 'MESS_STORE_MASTER_DATATABLE_CACHE_ENABLED',
+                    'seconds' => 'MESS_STORE_MASTER_DATATABLE_CACHE_SECONDS',
+                ],
+                'StoreController@index',
+                fn () => $this->buildStoreDatatableResponse($request)
+            );
+        }
 
-        $stores = DataTableRedisCache::remember(
-            $cacheKey,
-            [
-                'enabled' => 'MESS_STORE_MASTER_LIST_CACHE_ENABLED',
-                'seconds' => 'MESS_STORE_MASTER_LIST_CACHE_SECONDS',
-            ],
-            'StoreController@index',
-            fn () => Store::orderByDesc('id')->get()
-        );
+        return view('mess.stores.index');
+    }
 
-        return view('mess.stores.index', compact('stores'));
+    private function storeFilteredQuery(Request $request): Builder
+    {
+        return Store::query();
+    }
+
+    private function buildStoreDatatableResponse(Request $request): JsonResponse
+    {
+        $query = $this->storeFilteredQuery($request);
+
+        $draw = (int) $request->input('draw', 0);
+        $start = max((int) $request->input('start', 0), 0);
+        $length = (int) $request->input('length', 10);
+        if ($length < 1 || $length > 100) {
+            $length = 10;
+        }
+
+        $searchTokens = DataTableSearchHelper::tokens((string) $request->input('search.value', ''));
+
+        $recordsTotal = (clone $query)->count();
+
+        if ($searchTokens !== []) {
+            $query->where(function ($q) use ($searchTokens) {
+                foreach ($searchTokens as $token) {
+                    $like = DataTableSearchHelper::likePattern($token);
+                    $q->where(function ($inner) use ($like) {
+                        $inner->where('store_name', 'like', $like)
+                            ->orWhere('store_code', 'like', $like)
+                            ->orWhere('store_type', 'like', $like)
+                            ->orWhere('location', 'like', $like)
+                            ->orWhere('status', 'like', $like);
+                    });
+                }
+            });
+        }
+
+        $recordsFiltered = (clone $query)->count();
+
+        $paged = clone $query;
+        $orderCol = DataTableSearchHelper::orderColumnIndex($request, 0);
+        $orderDir = DataTableSearchHelper::orderDirection($request, 'desc');
+
+        switch ($orderCol) {
+            case 0:
+                $paged->orderBy('id', $orderDir);
+                break;
+            case 1:
+                $paged->orderBy('store_name', $orderDir);
+                break;
+            case 2:
+                $paged->orderBy('store_type', $orderDir);
+                break;
+            case 3:
+                $paged->orderBy('location', $orderDir);
+                break;
+            case 4:
+                $paged->orderBy('status', $orderDir);
+                break;
+            default:
+                $paged->orderByDesc('id');
+        }
+
+        if ($length !== -1) {
+            $paged->skip($start)->take($length);
+        }
+
+        $rows = $paged->get();
+        $canDelete = function_exists('hasRole') && (hasRole('Super Admin') || hasRole('Mess-Admin'));
+        $storeTypes = Store::storeTypes();
+
+        $data = $rows->map(fn (Store $store) => $this->buildStoreDatatableRow($store, $canDelete, $storeTypes))->all();
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+        ]);
+    }
+
+    /**
+     * @return string[]
+     */
+    private function buildStoreDatatableRow(Store $store, bool $canDelete, array $storeTypes): array
+    {
+        $nameCell = '<div class="fw-semibold">' . e($store->store_name) . '</div>'
+            . '<div class="text-muted small">Code: ' . e($store->store_code) . '</div>';
+        $typeLabel = $storeTypes[$store->store_type ?? 'mess'] ?? ($store->store_type ?? '-');
+        $typeCell = '<span class="text-capitalize">' . e($typeLabel) . '</span>';
+        $locationCell = e($store->location ?? '-');
+        $statusCell = '<span class="badge bg-' . e($store->status_badge_class) . '">'
+            . e($store->status_label) . '</span>';
+
+        $editBtn = '<button type="button" class="btn btn-sm btn-warning btn-edit-store bg-transparent border-0 p-0 text-primary"'
+            . ' data-id="' . (int) $store->id . '"'
+            . ' data-store-name="' . e($store->store_name) . '"'
+            . ' data-store-type="' . e(trim((string) ($store->store_type ?? '')) ?: 'mess') . '"'
+            . ' data-location="' . e($store->location ?? '') . '"'
+            . ' data-status="' . e($store->status ?? 'active') . '"'
+            . ' title="Edit"><i class="material-symbols-rounded">edit</i></button>';
+
+        $deleteForm = '';
+        if ($canDelete) {
+            $deleteUrl = route('admin.mess.stores.destroy', $store->id);
+            $deleteForm = '<form method="POST" action="' . e($deleteUrl) . '" class="d-inline"'
+                . ' onsubmit="return confirm(\'Are you sure you want to delete this store?\');">'
+                . '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">'
+                . '<input type="hidden" name="_method" value="DELETE">'
+                . '<button type="submit" class="btn btn-sm btn-danger bg-transparent border-0 p-0 text-primary" title="Delete">'
+                . '<i class="material-symbols-rounded">delete</i></button>'
+                . '</form>';
+        }
+
+        $actions = '<div class="d-flex gap-2 flex-wrap">' . $editBtn . $deleteForm . '</div>';
+
+        return [
+            (string) $store->id,
+            $nameCell,
+            $typeCell,
+            $locationCell,
+            $statusCell,
+            $actions,
+        ];
     }
 
     public function create()

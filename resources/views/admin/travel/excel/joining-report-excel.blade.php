@@ -25,7 +25,6 @@
         <th>Mobile</th>
         <th>Arrival date</th>
         <th>Activity slot</th>
-        <th>Activity slot<br>time</th>
         <th>Mode of journey</th>
         <th>Flight No / Train No /<br>Vehicle No</th>
         <th>Arrival time at Dehradun<br>Airport/Railway Station</th>
@@ -43,7 +42,6 @@
             <td>{{ $row['mobile'] }}</td>
             <td>{{ $row['arrival_date'] }}</td>
             <td>{{ $row['slot'] }}</td>
-            <td>{{ $row['time_slot'] }}</td>
             <td>{{ $row['mode'] }}</td>
             <td>{{ $row['vehicle_no'] }}</td>
             <td>{{ $row['dehradun_time'] }}</td>

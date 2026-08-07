@@ -85,10 +85,12 @@
                         <input type="text" name="officer_name" class="blank" required value="{{ $val('officer_name') }}"></div>
                     <div style="padding-left:42%;">पदनाम / Designation:
                         <input type="text" name="designation" class="blank" value="{{ $val('designation') }}" placeholder="name of your service followed by (Probationer)"></div>
-                    <div style="padding-left:42%;">स्थान / Place:
-                        <input type="text" name="place" class="blank" value="{{ $val('place') }}"></div>
-                    <div style="padding-left:42%;">तारीख / Dated:
-                        <input type="date" name="declaration_date" class="blank blank--sm" value="{{ $val('declaration_date') }}"></div>
+                    <div style="margin-top:.5rem;">
+                        <span style="display:inline-block; width:42%; vertical-align:top;">स्थान / Place:
+                            <input type="text" name="place" class="blank" value="{{ old('place', $data['place'] ?? config('fc.document_place')) }}"></span>
+                        <span>तारीख / Dated:
+                            <input type="date" name="declaration_date" class="blank blank--sm" value="{{ old('declaration_date', fc_document_date('iso')) }}" readonly></span>
+                    </div>
                 </div>
 
                 <div class="ht-def">
@@ -103,7 +105,8 @@
             </div>
         </div>
 
-        {{-- Signature upload --}}
+        {{-- Signature upload section — commented out per request (hidden on the fill form) --}}
+        {{--
         @if(! empty($template['signatures']))
             <div class="card fc-card border-0 shadow-sm mb-3">
                 <div class="card-header bg-white py-3"><h6 class="mb-0 text-uppercase small fw-bold text-muted">Signatures / हस्ताक्षर</h6></div>
@@ -123,6 +126,7 @@
                 </div>
             </div>
         @endif
+        --}}
 
         <div class="d-flex justify-content-between mb-5">
             <a href="{{ route('fc-reg.forms.step', [$form, $step]) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Cancel</a>

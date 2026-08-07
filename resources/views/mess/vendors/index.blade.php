@@ -185,30 +185,18 @@
 @endpush
 
 @section('content')
-@php
-    $canDeleteVendor = hasRole('Super Admin') || hasRole('Mess-Admin');
-@endphp
-<div class="container-fluid vendor-master-page">
-    <x-breadcrum title="Vendor Master" :showBack="false">
-        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createVendorModal">
-            <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
-            <span>Add Vendor</span>
-        </button>
-    </x-breadcrum>
-
-    {{-- Success feedback is rendered as the global green toast — see mess.partials.delete-confirm --}}
-
-    {{-- Download / Print bar (branded server-side exports — see admin.mess.vendors.export) --}}
-    <div class="d-flex justify-content-end gap-2 mb-3">
-        <button type="button" class="btn vendor-master-export-btn border-0" id="vendorsDownloadBtn">
-            <i class="material-symbols-rounded">download</i>
-            <span>Download</span>
-        </button>
-        <button type="button" class="btn vendor-master-export-btn border-0" id="vendorsPrintBtn">
-            <i class="material-symbols-rounded">print</i>
-            <span>Print</span>
-        </button>
-    </div>
+<div class="container-fluid">
+    <x-breadcrum title="Mess Stores"></x-breadcrum>
+    <div class="datatables">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">Vendor Master</h4>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal"
+                        data-bs-target="#createVendorModal">
+                        Add Vendor
+                    </button>
+                </div>
 
     <div class="card vendor-master-card border-0">
         <div class="card-body">
@@ -236,58 +224,7 @@
                                 <th>Action</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @foreach($vendors as $vendor)
-                            <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td><div class="vendor-name-primary">{{ $vendor->name }}</div></td>
-                                <td>{{ $vendor->email ?? '-' }}</td>
-                                <td>{{ $vendor->contact_person ?? '-' }}</td>
-                                <td>{{ $vendor->phone ?? '-' }}</td>
-                                <td>{{ $vendor->address ?? '-' }}</td>
-                                <td>
-                                    <div class="d-flex align-items-start justify-content-start vendor-actions">
-                                        <button type="button"
-                                            class="vendor-action-btn btn-view-vendor text-primary"
-                                            data-id="{{ $vendor->id }}" data-name="{{ e($vendor->name) }}"
-                                            data-email="{{ e($vendor->email ?? '') }}"
-                                            data-contact-person="{{ e($vendor->contact_person ?? '') }}"
-                                            data-phone="{{ e($vendor->phone ?? '') }}"
-                                            data-address="{{ e($vendor->address ?? '') }}"
-                                            data-gst-number="{{ e($vendor->gst_number ?? '') }}"
-                                            data-bank-name="{{ e($vendor->bank_name ?? '') }}"
-                                            data-ifsc-code="{{ e($vendor->ifsc_code ?? '') }}"
-                                            data-account-number="{{ e($vendor->account_number ?? '') }}" title="View"><i
-                                                class="material-symbols-rounded">visibility</i><span>See</span></button>
-                                        <button type="button"
-                                            class="vendor-action-btn btn-edit-vendor text-primary"
-                                            data-id="{{ $vendor->id }}" data-name="{{ e($vendor->name) }}"
-                                            data-email="{{ e($vendor->email ?? '') }}"
-                                            data-contact-person="{{ e($vendor->contact_person ?? '') }}"
-                                            data-phone="{{ e($vendor->phone ?? '') }}"
-                                            data-address="{{ e($vendor->address ?? '') }}"
-                                            data-gst-number="{{ e($vendor->gst_number ?? '') }}"
-                                            data-bank-name="{{ e($vendor->bank_name ?? '') }}"
-                                            data-ifsc-code="{{ e($vendor->ifsc_code ?? '') }}"
-                                            data-account-number="{{ e($vendor->account_number ?? '') }}" title="Edit"><i
-                                                class="material-symbols-rounded">edit</i><span>Edit</span></button>
-                                        @if($canDeleteVendor)
-                                            <form method="POST"
-                                                action="{{ route('admin.mess.vendors.destroy', $vendor->id) }}"
-                                                class="mess-delete-form" data-confirm-title="Delete Vendor?"
-                                                data-confirm-message="Are you sure you want to delete this vendor?">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="vendor-action-btn text-danger" title="Delete">
-                                                    <i class="material-symbols-rounded">delete</i><span>Delete</span>
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
             </div>
@@ -490,241 +427,101 @@
                     <h4 class="modal-title" id="editVendorModalLabel">Edit Vendor</h4>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label vendor-modal-label">Vendor Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" id="edit_vendor_name" class="form-control vendor-modal-control" required
-                                pattern="[a-zA-Z0-9\s\-]+" maxlength="255" autocomplete="off" placeholder="e.g. LBSNAA Store">
-                            <div class="text-danger small mt-1" id="edit_vendor_name_error" role="alert"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label vendor-modal-label">Email</label>
-                            <input type="email" name="email" id="edit_vendor_email" class="form-control vendor-modal-control"
-                                maxlength="255" placeholder="e.g. xyz@gmail.com">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label vendor-modal-label">Contact Person <span class="text-danger">*</span></label>
-                            <input type="text" name="contact_person" id="edit_vendor_contact_person"
-                                class="form-control vendor-modal-control" required pattern="[a-zA-Z0-9\s\-]+" maxlength="255"
-                                autocomplete="off" placeholder="e.g. John Doe">
-                            <div class="text-danger small mt-1" id="edit_vendor_contact_person_error" role="alert"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label vendor-modal-label">Phone Number <span class="text-danger">*</span></label>
-                            <input type="text" name="phone" id="edit_vendor_phone" class="form-control vendor-modal-control" required
-                                inputmode="numeric" pattern="[0-9]{10}" maxlength="10" placeholder="e.g. 1234567890">
-                            <div class="text-danger small mt-1" id="edit_phone_error" role="alert"></div>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label vendor-modal-label">Address <span class="text-danger">*</span></label>
-                            <textarea name="address" id="edit_vendor_address" class="form-control vendor-modal-control" rows="3"
-                                required maxlength="2000" autocomplete="off"
-                                placeholder="e.g. 274, Greater Kailash, New Delhi..."></textarea>
-                            <div class="text-danger small mt-1" id="edit_vendor_address_error" role="alert"></div>
-                        </div>
-
-                        <div class="col-12">
-                            <div class="vendor-modal-section">Other Informations</div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label vendor-modal-label">GST Number</label>
-                            <input type="text" name="gst_number" id="edit_vendor_gst_number"
-                                class="form-control vendor-modal-control" maxlength="15" pattern="[A-Za-z0-9]+"
-                                placeholder="e.g. JEDG294792402234">
-                            <div class="text-danger small mt-1" id="edit_gst_number_error" role="alert"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label vendor-modal-label">Bank Name</label>
-                            <input type="text" name="bank_name" id="edit_vendor_bank_name" class="form-control vendor-modal-control"
-                                maxlength="255" pattern="[a-zA-Z0-9\s\-]+" placeholder="e.g. SBI">
-                            <div class="text-danger small mt-1" id="edit_bank_name_error" role="alert"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label vendor-modal-label">IFSC Code</label>
-                            <input type="text" name="ifsc_code" id="edit_vendor_ifsc_code"
-                                class="form-control vendor-modal-control text-uppercase" maxlength="11" pattern="[A-Za-z0-9]+"
-                                placeholder="e.g. BKID927423">
-                            <div class="text-danger small mt-1" id="edit_ifsc_code_error" role="alert"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label vendor-modal-label">Account Number</label>
-                            <input type="text" name="account_number" id="edit_vendor_account_number"
-                                class="form-control vendor-modal-control" inputmode="numeric" pattern="[0-9]*" maxlength="18"
-                                placeholder="e.g. 2648628462342742">
-                            <div class="text-danger small mt-1" id="edit_account_number_error" role="alert"></div>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label vendor-modal-label">Upload Licence</label>
-                            <input type="file" name="licence_document" class="form-control vendor-modal-control">
+                <div class="modal-body p-3 p-lg-4 bg-body-tertiary">
+                    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                        <div class="card-body p-3 p-lg-4">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label fw-medium">Vendor Name <span
+                                            class="text-danger">*</span></label>
+                                    <input type="text" name="name" id="edit_vendor_name" class="form-control form-control-sm" required
+                                        pattern="[a-zA-Z0-9\s\-]+" maxlength="255" autocomplete="off">
+                                    <div class="text-danger small mt-1" id="edit_vendor_name_error" role="alert"></div>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-medium">Email</label>
+                                    <input type="email" name="email" id="edit_vendor_email" class="form-control form-control-sm"
+                                        maxlength="255" placeholder="Optional">
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fw-medium">Contact Person <span
+                                            class="text-danger">*</span></label>
+                                    <input type="text" name="contact_person" id="edit_vendor_contact_person"
+                                        class="form-control form-control-sm" required pattern="[a-zA-Z0-9\s\-]+" maxlength="255"
+                                        autocomplete="off">
+                                    <div class="text-danger small mt-1" id="edit_vendor_contact_person_error"
+                                        role="alert"></div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fw-medium">Phone <span class="text-danger">*</span></label>
+                                    <input type="text" name="phone" id="edit_vendor_phone" class="form-control form-control-sm" required
+                                        inputmode="numeric" pattern="[0-9]{10}" maxlength="10"
+                                        placeholder="10 digit mobile number">
+                                    <div class="text-danger small mt-1" id="edit_phone_error" role="alert"></div>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-medium">Address <span
+                                            class="text-danger">*</span></label>
+                                    <textarea name="address" id="edit_vendor_address" class="form-control form-control-sm" rows="3"
+                                        required maxlength="2000" autocomplete="off"
+                                        placeholder="Up to 2000 characters"></textarea>
+                                    <div class="text-danger small mt-1" id="edit_vendor_address_error" role="alert">
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fw-medium">GST Number</label>
+                                    <input type="text" name="gst_number" id="edit_vendor_gst_number"
+                                        class="form-control form-control-sm" maxlength="15" pattern="[A-Za-z0-9]+"
+                                        placeholder="Letters & numbers, max 15">
+                                    <div class="text-danger small mt-1" id="edit_gst_number_error" role="alert"></div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fw-medium">Bank Name</label>
+                                    <input type="text" name="bank_name" id="edit_vendor_bank_name" class="form-control form-control-sm"
+                                        maxlength="255" pattern="[a-zA-Z0-9\s\-]+"
+                                        placeholder="No special characters, max 255">
+                                    <div class="text-danger small mt-1" id="edit_bank_name_error" role="alert"></div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fw-medium">IFSC Code</label>
+                                    <input type="text" name="ifsc_code" id="edit_vendor_ifsc_code"
+                                        class="form-control form-control-sm text-uppercase" maxlength="11" pattern="[A-Za-z0-9]+"
+                                        placeholder="Letters & numbers, max 11">
+                                    <div class="text-danger small mt-1" id="edit_ifsc_code_error" role="alert"></div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fw-medium">Account Number</label>
+                                    <input type="text" name="account_number" id="edit_vendor_account_number"
+                                        class="form-control form-control-sm" inputmode="numeric" pattern="[0-9]*" maxlength="18"
+                                        placeholder="Digits only, max 18">
+                                    <div class="text-danger small mt-1" id="edit_account_number_error" role="alert">
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fw-medium">Upload Licence</label>
+                                    <input type="file" name="licence_document" class="form-control form-control-sm">
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn vendor-modal-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary vendor-modal-submit">Update Vendor</button>
+                <div class="modal-footer bg-body border-top py-3 px-3 px-lg-4 position-sticky bottom-0 z-3">
+                    <button type="button" class="btn btn-outline-secondary btn-sm px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm px-4">Update</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-{{-- Column Visibility Modal (programme/attendance style). It toggles the mess
-     Column-manager state so Download / Print exports stay in sync with the view. --}}
-<div class="modal fade" id="vendorsColumnVisibilityModal" tabindex="-1" aria-labelledby="vendorsColumnVisibilityLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
-            <div class="modal-header border-0 pb-2">
-                <h5 class="modal-title fw-bold" id="vendorsColumnVisibilityLabel">Column Visibility</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body pt-0">
-                <hr class="mt-0">
-                <div class="row g-3" id="vendorsColumnToggleGrid"></div>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- Branded delete-confirmation dialog + global success toast --}}
-@include('mess.partials.delete-confirm')
-
 @include('components.mess-master-datatables', [
     'tableId' => 'vendorsTable',
-    'searchPlaceholder' => 'Search',
+    'searchPlaceholder' => 'Search vendors...',
     'orderColumn' => 0,
-    'actionColumnIndex' => 6,
-    'infoLabel' => 'items',
-    'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
+    'actionColumnIndex' => 5,
+    'infoLabel' => 'vendors',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.vendors.index'),
 ])
-
-@push('scripts')
-{{-- Download / Print → branded server-side report (admin.mess.vendors.export).
-     Passes the live search term + the Column-Visibility-chosen columns so the
-     report matches what's on screen. Print opens the PDF inline for printing. --}}
-<script>
-(function () {
-    var TABLE_ID = 'vendorsTable';
-    var BASE = @json(route('admin.mess.vendors.export'));
-    var $ = window.jQuery;
-
-    function buildUrl(format, inline) {
-        var params = ['format=' + format];
-
-        var dt = ($ && $.fn.DataTable && $.fn.DataTable.isDataTable('#' + TABLE_ID))
-            ? $('#' + TABLE_ID).DataTable() : null;
-        var search = dt ? dt.search() : '';
-        if (search) params.push('search=' + encodeURIComponent(search));
-
-        var cols = (window.MessColumnManager && typeof window.MessColumnManager.resolveExportIndexes === 'function')
-            ? window.MessColumnManager.resolveExportIndexes(TABLE_ID) : null;
-        if (cols && cols.length) params.push('columns=' + encodeURIComponent(cols.join(',')));
-
-        if (inline) params.push('inline=1');
-        return BASE + '?' + params.join('&');
-    }
-
-    var downloadBtn = document.getElementById('vendorsDownloadBtn');
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', function () {
-            window.location.href = buildUrl('excel', false);
-        });
-    }
-
-    var printBtn = document.getElementById('vendorsPrintBtn');
-    if (printBtn) {
-        printBtn.addEventListener('click', function () {
-            window.open(buildUrl('pdf', true), '_blank');
-        });
-    }
-})();
-</script>
-{{-- Column Visibility modal ⇄ mess Column-manager bridge (see the Store Master
-     reference — the manager owns the visibility state; this modal is its UI). --}}
-<script>
-(function () {
-    var TABLE_ID = 'vendorsTable';
-    var $ = window.jQuery;
-    var grid = document.getElementById('vendorsColumnToggleGrid');
-    var modalEl = document.getElementById('vendorsColumnVisibilityModal');
-    if (!$ || !grid || !modalEl) return;
-
-    function getMgr() {
-        return (window.MessColumnManager && typeof window.MessColumnManager.get === 'function')
-            ? window.MessColumnManager.get(TABLE_ID)
-            : null;
-    }
-
-    function visibleCount(mgr) {
-        return mgr.baseColumns.filter(function (c) {
-            return mgr.state.visibility[String(c.index)] !== false;
-        }).length;
-    }
-
-    function buildGrid() {
-        var mgr = getMgr();
-        if (!mgr || !mgr.baseColumns || !mgr.baseColumns.length) return false;
-
-        grid.innerHTML = '';
-        (mgr.state.order || []).forEach(function (idx) {
-            var col = mgr.baseColumns.filter(function (c) { return c.index === idx; })[0];
-            if (!col) return;
-
-            var isVisible = mgr.state.visibility[String(col.index)] !== false;
-            var inputId = 'vendorscolvis_' + col.index;
-
-            var cell = document.createElement('div');
-            cell.className = 'col-12 col-sm-6 col-md-4';
-
-            var label = document.createElement('label');
-            label.className = 'colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100';
-            label.setAttribute('for', inputId);
-
-            var cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.className = 'form-check-input m-0';
-            cb.id = inputId;
-            cb.checked = isVisible;
-            if (col.locked) cb.disabled = true;
-
-            cb.addEventListener('change', function () {
-                var m = getMgr();
-                if (!m) return;
-                if (!cb.checked && visibleCount(m) <= 1) {
-                    cb.checked = true;
-                    window.alert('At least one column must remain visible.');
-                    return;
-                }
-                m.state.visibility[String(col.index)] = cb.checked;
-                m.saveState();
-                m.apply();
-            });
-
-            var span = document.createElement('span');
-            span.textContent = col.label;
-
-            label.appendChild(cb);
-            label.appendChild(span);
-            cell.appendChild(label);
-            grid.appendChild(cell);
-        });
-        return true;
-    }
-
-    modalEl.addEventListener('show.bs.modal', function () {
-        if (buildGrid()) return;
-        var tries = 0;
-        var timer = setInterval(function () {
-            if (buildGrid() || ++tries > 20) clearInterval(timer);
-        }, 100);
-    });
-})();
-</script>
-@endpush
-
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {

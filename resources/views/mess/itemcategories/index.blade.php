@@ -180,7 +180,6 @@
 @php
     $categoryTypes = \App\Models\Mess\ItemCategory::categoryTypes();
     $selectedCategoryType = $categoryTypeFilter ?? request('category_type', '');
-    $canDeleteItemCategory = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid itemcat-master-page">
     <x-breadcrum title="Category Item Master" :showBack="false">
@@ -233,61 +232,21 @@
                 </div>
             </div>
 
-            <div class="programme-dt-panel">
-                <div class="table-responsive">
-                    <table id="itemCategoriesTable" class="table programme-dt-table align-middle w-100 mb-0">
-                        <thead>
-                            <tr>
-                                <th>S. No.</th>
-                                <th>Category Name</th>
-                                <th>Category Type</th>
-                                <th>Item Category Description</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($itemcategories as $itemcategory)
-                                @php $isActive = ($itemcategory->status ?? 'active') === 'active'; @endphp
-                                <tr>
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td><div class="itemcat-name-primary">{{ $itemcategory->category_name }}</div></td>
-                                    <td>{{ $categoryTypes[$itemcategory->category_type ?? 'raw_material'] ?? ucfirst(str_replace('_', ' ', $itemcategory->category_type ?? '')) }}</td>
-                                    <td>{{ $itemcategory->description ?? '-' }}</td>
-                                    <td>
-                                        <span class="badge programme-status-badge programme-status-badge--{{ $isActive ? 'active' : 'inactive' }}">
-                                            {{ $itemcategory->status_label }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-start justify-content-start itemcat-actions">
-                                            <button type="button" class="itemcat-action-btn btn-edit-itemcategory text-primary"
-                                                    data-id="{{ $itemcategory->id }}"
-                                                    data-category-name="{{ e($itemcategory->category_name) }}"
-                                                    data-category-type="{{ e($itemcategory->category_type ?? 'raw_material') }}"
-                                                    data-description="{{ e($itemcategory->description ?? '') }}"
-                                                    data-status="{{ e($itemcategory->status ?? 'active') }}"
-                                                    title="Edit"><i class="material-symbols-rounded">edit</i><span>Edit</span></button>
-                                            @if($canDeleteItemCategory)
-                                                <form method="POST" action="{{ route('admin.mess.itemcategories.destroy', $itemcategory->id) }}"
-                                                      class="mess-delete-form" data-confirm-title="Delete Category Item?"
-                                                      data-confirm-message="Are you sure you want to delete this category item?">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="itemcat-action-btn text-danger" title="Delete"><i class="material-symbols-rounded">delete</i><span>Delete</span></button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+            <div class="table-responsive">
+                <table id="itemCategoriesTable" class="table align-middle w-100">
+                    <thead>
+                        <tr>
+                            <th>Category Name</th>
+                            <th>Category Type</th>
+                            <th>Item Category Description</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
             </div>
-
-            {{-- Footer: pagination (left) + "Showing [N] of M items" (right), populated by the global enhancer --}}
-            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3" data-dt-footer-for="itemCategoriesTable"></div>
+        </div>
         </div>
     </div>
 </div>
@@ -395,38 +354,15 @@
     </div>
 </div>
 
-{{-- Column Visibility Modal (programme/attendance style). It toggles the mess
-     Column-manager state so Download / Print exports stay in sync with the view. --}}
-<div class="modal fade" id="itemcatColumnVisibilityModal" tabindex="-1" aria-labelledby="itemcatColumnVisibilityLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
-            <div class="modal-header border-0 pb-2">
-                <h5 class="modal-title fw-bold" id="itemcatColumnVisibilityLabel">Column Visibility</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body pt-0">
-                <hr class="mt-0">
-                <div class="row g-3" id="itemcatColumnToggleGrid"></div>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- Branded delete-confirmation dialog + global success toast --}}
-@include('mess.partials.delete-confirm')
-
 @include('components.mess-master-datatables', [
     'tableId' => 'itemCategoriesTable',
-    'searchPlaceholder' => 'Search',
+    'searchPlaceholder' => 'Search category items...',
     'orderColumn' => 0,
-    'actionColumnIndex' => 5,
-    'infoLabel' => 'items',
-    'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
+    'actionColumnIndex' => 4,
+    'infoLabel' => 'category items',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.itemcategories.index'),
 ])
-
 @push('scripts')
 {{-- Download / Print → branded server-side report (admin.mess.itemcategories.export).
      Passes the live search term + Category-type filter + chosen columns so the

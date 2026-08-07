@@ -8,6 +8,7 @@ use App\Models\Mess\StoreAllocation;
 use App\Models\Mess\StoreAllocationItem;
 use App\Models\Mess\SubStore;
 use App\Models\Mess\ItemSubcategory;
+use App\Services\Mess\AvailableQuantityService;
 use App\Support\DataTableSearchHelper;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Query\Builder;
@@ -19,14 +20,23 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class StoreAllocationController extends Controller
 {
+    /**
+     * Invalidate the available-quantity cache after mutations that change
+     * mess_store_allocation_items (create/update/delete).
+     */
+    private static function bumpAvailableQuantityCacheEpoch(): void
+    {
+        AvailableQuantityService::bumpCacheEpoch();
+    }
+
     public function index(Request $request)
     {
         if ($request->ajax() && $request->has('draw')) {
             return $this->storeAllocationsDatatable($request);
         }
 
-        $subStores = SubStore::active()->orderBy('sub_store_name')->get();
-        $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get()
+        $subStores = SubStore::active()->orderBy('sub_store_name')->get(['id', 'sub_store_name']);
+        $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get(ItemSubcategory::listSelectColumns())
             ->map(fn ($s) => [
                 'id' => $s->id,
                 'item_name' => $s->item_name ?? $s->name ?? '—',
@@ -365,6 +375,7 @@ class StoreAllocationController extends Controller
                 ]);
             }
         });
+        self::bumpAvailableQuantityCacheEpoch();
 
         return redirect()->route('admin.mess.storeallocations.index')->with('success', 'Store allocation added successfully.');
     }
@@ -426,6 +437,7 @@ class StoreAllocationController extends Controller
                 ]);
             }
         });
+        self::bumpAvailableQuantityCacheEpoch();
 
         return redirect()->route('admin.mess.storeallocations.index')->with('success', 'Store allocation updated successfully.');
     }
@@ -435,6 +447,7 @@ class StoreAllocationController extends Controller
         $allocation = StoreAllocation::whereNotNull('sub_store_id')->findOrFail($id);
         $allocation->items()->delete();
         $allocation->delete();
+        self::bumpAvailableQuantityCacheEpoch();
 
         return redirect()->route('admin.mess.storeallocations.index')->with('success', 'Store allocation deleted successfully.');
     }

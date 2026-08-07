@@ -172,7 +172,6 @@
 @section('content')
 @php
     $storeTypes = \App\Models\Mess\Store::storeTypes();
-    $canDeleteStore = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid store-master-page">
     <x-breadcrum title="Store Master" :showBack="false">
@@ -208,60 +207,27 @@
                 <div class="programme-dt-search" data-dt-search-for="storesTable"></div>
             </div>
 
-            <div class="programme-dt-panel">
-                <div class="table-responsive">
-                    <table id="storesTable" class="table programme-dt-table align-middle w-100 mb-0">
-                        <thead>
-                            <tr>
-                                <th>S. No.</th>
-                                <th>Store Name</th>
-                                <th>Store Type</th>
-                                <th>Location</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($stores as $store)
-                                @php $isActive = ($store->status ?? 'active') === 'active'; @endphp
-                                <tr>
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td>
-                                        <div class="store-name-primary">{{ $store->store_name }}</div>
-                                        <div class="store-name-code">Code: {{ $store->store_code }}</div>
-                                    </td>
-                                    <td class="text-capitalize">{{ $storeTypes[$store->store_type ?? 'mess'] ?? ($store->store_type ?? '-') }}</td>
-                                    <td>{{ $store->location ?? '-' }}</td>
-                                    <td>
-                                        <span class="badge programme-status-badge programme-status-badge--{{ $isActive ? 'active' : 'inactive' }}">
-                                            {{ $store->status_label }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-start justify-content-start store-actions">
-                                            <button type="button" class="store-action-btn btn-edit-store text-primary"
-                                                    data-id="{{ $store->id }}"
-                                                    data-store-name="{{ e($store->store_name) }}"
-                                                    data-store-type="{{ e(trim((string)($store->store_type ?? '')) ?: 'mess') }}"
-                                                    data-location="{{ e($store->location ?? '') }}"
-                                                    data-status="{{ e($store->status ?? 'active') }}"
-                                                    title="Edit"><i class="material-symbols-rounded">edit</i><span>Edit</span></button>
-                                            @if($canDeleteStore)
-                                                <form method="POST" action="{{ route('admin.mess.stores.destroy', $store->id) }}"
-                                                      class="mess-delete-form" data-confirm-title="Delete Store?"
-                                                      data-confirm-message="Are you sure you want to delete this store?">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="store-action-btn text-danger" title="Delete"><i class="material-symbols-rounded">delete</i><span>Delete</span></button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+            @if(session('success'))
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
+            @endif
+
+            <div class="table-responsive">
+                <table id="storesTable" class="table text-nowrap align-middle w-100">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Store Name</th>
+                            <th>Store Type</th>
+                            <th>Location</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
             </div>
 
             {{-- Footer: pagination (left) + "Showing [N] of M items" (right), populated by the global enhancer --}}
@@ -387,36 +353,15 @@
     </div>
 </div>
 
-{{-- Column Visibility Modal (programme/attendance style). It toggles the mess
-     Column-manager state so Download / Print exports stay in sync with the view. --}}
-<div class="modal fade" id="storesColumnVisibilityModal" tabindex="-1" aria-labelledby="storesColumnVisibilityLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
-            <div class="modal-header border-0 pb-2">
-                <h5 class="modal-title fw-bold" id="storesColumnVisibilityLabel">Column Visibility</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body pt-0">
-                <hr class="mt-0">
-                <div class="row g-3" id="storesColumnToggleGrid"></div>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- Branded delete-confirmation dialog + global success toast --}}
-@include('mess.partials.delete-confirm')
-
 @include('components.mess-master-datatables', [
     'tableId' => 'storesTable',
-    'searchPlaceholder' => 'Search',
+    'searchPlaceholder' => 'Search stores...',
     'orderColumn' => 0,
+    'orderDir' => 'desc',
     'actionColumnIndex' => 5,
-    'infoLabel' => 'items',
-    'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
+    'infoLabel' => 'stores',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.stores.index'),
 ])
 @push('scripts')
 {{-- Download / Print → branded server-side report (admin.mess.stores.export).

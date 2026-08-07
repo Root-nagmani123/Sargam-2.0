@@ -81,69 +81,158 @@
                 </div>
             </div>
 
-            {{-- Notices (with category tabs like dashboard) --}}
-            <div data-feed-panel="notices" class="{{ $activeTab !== 'notices' ? 'd-none' : '' }}">
-                @if(count($notices) > 0)
-                <div class="dashboard-notice-tabs" role="tablist" aria-label="Notice categories">
-                    @foreach($noticeTabKeys as $tabKey)
-                    <button type="button"
-                        class="dashboard-notice-tab rounded-1 {{ $tabKey === $defaultNoticeTab ? 'active' : '' }}"
-                        role="tab" data-notice-tab="{{ $tabKey }}">
-                        {{ $noticeTabLabels[$tabKey] }}@if($noticeTabCounts[$tabKey] > 0): {{ $noticeTabCounts[$tabKey] }}@endif
-                    </button>
-                    @endforeach
-                </div>
-                <p class="dashboard-feed-empty d-none mb-3" id="dashboard-feed-notice-tab-empty">No notices in this category.</p>
-                @endif
+            {{-- Notices (with filter bar) --}}
+            <div data-feed-panel="notices" class="{{ $activeTab !== 'notices' ? 'd-none' : '' }}"
+                data-notice-total="{{ $notices->total() }}">
+
+                <h2 class="notices-feed-section-title">Notices</h2>
+
+                {{-- Filters are applied in SQL, so the toolbar is a plain GET form:
+                     changing a select reloads the page with the filter in the URL.
+                     That keeps deep links, browser back/forward and pagination
+                     consistent, and means the page never renders more than one
+                     page of notices. --}}
+                <form method="GET" action="{{ route('admin.dashboard.feed') }}"
+                    class="notices-feed-toolbar d-flex flex-wrap align-items-center gap-2 mb-3"
+                    id="notice-filter-form">
+                    <input type="hidden" name="tab" value="notices">
+                    <input type="hidden" name="q" id="notice-filter-q" value="{{ $noticeFilters['q'] }}">
+
+                    <span class="notices-feed-toolbar__label">Filters</span>
+
+                    <select class="form-select form-select-sm notices-feed-filter" name="notice_year"
+                        id="notice-filter-year" aria-label="Filter by year">
+                        <option value="">Year</option>
+                        @foreach($noticeFilterOptions['years'] as $yr)
+                        <option value="{{ $yr }}" {{ (string) $noticeFilters['year'] === (string) $yr ? 'selected' : '' }}>{{ $yr }}</option>
+                        @endforeach
+                    </select>
+
+                    <select class="form-select form-select-sm notices-feed-filter" name="notice_type"
+                        id="notice-filter-type" aria-label="Filter by type">
+                        <option value="">Type</option>
+                        @foreach($noticeFilterOptions['types'] as $nt)
+                        <option value="{{ $nt }}" {{ $noticeFilters['type'] === $nt ? 'selected' : '' }}>{{ $nt }}</option>
+                        @endforeach
+                    </select>
+
+                    <select class="form-select form-select-sm notices-feed-filter" name="notice_dept"
+                        id="notice-filter-dept" aria-label="Filter by department">
+                        <option value="">Department</option>
+                        @foreach($noticeFilterOptions['depts'] as $nd)
+                        <option value="{{ $nd }}" {{ $noticeFilters['dept'] === $nd ? 'selected' : '' }}>{{ $nd }}</option>
+                        @endforeach
+                    </select>
+
+                    <select class="form-select form-select-sm notices-feed-filter" name="notice_audience"
+                        id="notice-filter-audience" aria-label="Filter by target audience">
+                        <option value="">Target Audience</option>
+                        @foreach($noticeFilterOptions['audiences'] as $na)
+                        <option value="{{ $na }}" {{ $noticeFilters['audience'] === $na ? 'selected' : '' }}>{{ $na }}</option>
+                        @endforeach
+                    </select>
+
+                    <a href="{{ route('admin.dashboard.feed', ['tab' => 'notices']) }}"
+                        class="btn btn-sm notices-feed-reset-btn" id="notice-filter-reset">Reset Filters</a>
+
+                    {{-- Same gate as the dashboard widget's Add New Notice button
+                         (dashboard.blade.php:240,256). Checking only 'Admin' hid this
+                         from Super Admins, who could still add a notice from the widget. --}}
+                    @if(hasRole('Admin') || hasRole('Super Admin'))
+                    <a href="{{ route('admin.notice.create') }}" class="btn btn-sm notices-feed-add-btn ms-auto">
+                        <i class="bi bi-plus-square me-1" aria-hidden="true"></i>Add New Notice
+                    </a>
+                    @endif
+                </form>
+
                 <div id="dashboard-feed-page-list-notices">
                     @forelse($notices as $feedNotice)
                     @php
-                    $noticeType = $feedNotice->notice_type ?? '';
-                    $noticeTypeLower = strtolower((string) $noticeType);
-                    if (str_contains($noticeTypeLower, 'office order')) {
-                        $noticeTab = 'office-orders';
-                    } elseif (str_contains($noticeTypeLower, 'course notice')) {
-                        $noticeTab = 'work-allocation';
-                    } else {
-                        $noticeTab = 'notice-circular';
-                    }
-                    $feedNoticeFrom = !empty($feedNotice->display_date) ? \Carbon\Carbon::parse($feedNotice->display_date)->format('j F, Y') : null;
-                    $feedNoticeTo = !empty($feedNotice->expiry_date) ? \Carbon\Carbon::parse($feedNotice->expiry_date)->format('j F, Y') : null;
-                    $feedNoticeDates = ($feedNoticeFrom && $feedNoticeTo) ? $feedNoticeFrom . ' to ' . $feedNoticeTo : ($feedNoticeFrom ?? '—');
-                    $feedNoticeSearch = strtolower(($feedNotice->notice_title ?? '') . ' ' . ($feedNotice->notice_type ?? '') . ' ' . $feedNoticeDates);
+                        $noticeTypeLower     = strtolower((string) ($feedNotice->notice_type ?? ''));
+                        $noticeDeptLower     = strtolower((string) ($feedNotice->author_department ?? ''));
+                        $noticeAudienceLower = strtolower((string) ($feedNotice->target_audience ?? ''));
+                        $noticeYear          = !empty($feedNotice->display_date) ? \Carbon\Carbon::parse($feedNotice->display_date)->year : '';
+                        $feedNoticeDate      = !empty($feedNotice->display_date) ? \Carbon\Carbon::parse($feedNotice->display_date)->format('d/m/Y h:i A') : '—';
+                        $feedNoticeSearch    = strtolower(($feedNotice->notice_title ?? '') . ' ' . ($feedNotice->notice_type ?? '') . ' ' . ($feedNotice->author_name ?? '') . ' ' . ($feedNotice->author_department ?? ''));
+
+                        if (str_contains($noticeTypeLower, 'office order')) {
+                            $noticeBadgeClass = 'notices-feed-badge--order';
+                            $noticeBadgeLabel = $feedNotice->notice_type;
+                        } elseif (str_contains($noticeTypeLower, 'course notice')) {
+                            $noticeBadgeClass = 'notices-feed-badge--work';
+                            $noticeBadgeLabel = 'Work Allocations';
+                        } elseif (str_contains($noticeTypeLower, 'work allocation')) {
+                            $noticeBadgeClass = 'notices-feed-badge--work';
+                            $noticeBadgeLabel = $feedNotice->notice_type;
+                        } else {
+                            $noticeBadgeClass = 'notices-feed-badge--notice';
+                            $noticeBadgeLabel = $feedNotice->notice_type ?? 'Notice';
+                        }
                     @endphp
-                    @php
-                        $plainDesc = !empty($feedNotice->description) ? strip_tags($feedNotice->description) : '';
-                        $descWordCount = $plainDesc !== '' ? str_word_count($plainDesc) : 0;
-                        $needsTruncation = $descWordCount > 50;
-                        $truncatedText = $needsTruncation ? Str::words($plainDesc, 50, '') : null;
-                    @endphp
-                    <div class="dashboard-notice-item {{ $noticeTab !== $defaultNoticeTab ? 'd-none' : '' }}"
-                        data-notice-tab-item="{{ $noticeTab }}"
-                        data-feed-search="{{ $feedNoticeSearch }}">
-                        <span class="dashboard-notice-title">{{ $feedNotice->notice_title }}</span>
-                        <small class="dashboard-notice-date">{{ $feedNoticeDates }}</small>
-                        @if(!empty($feedNotice->description))
-                        <div class="notice-description-content mt-2">
-                            @if($needsTruncation)
-                            <span class="notice-desc-preview">{{ $truncatedText }}<span class="notice-desc-ellipsis">... </span><button type="button" class="btn btn-link btn-sm p-0 notice-desc-toggle align-baseline">See more</button></span>
-                            <span class="notice-desc-full d-none">{!! $feedNotice->description !!}<button type="button" class="btn btn-link btn-sm p-0 ms-1 notice-desc-toggle align-baseline">See less</button></span>
-                            @else
-                            {!! $feedNotice->description !!}
-                            @endif
+                    <div class="notices-feed-item"
+                        data-feed-search="{{ $feedNoticeSearch }}"
+                        data-notice-year="{{ $noticeYear }}"
+                        data-notice-type="{{ $noticeTypeLower }}"
+                        data-notice-dept="{{ $noticeDeptLower }}"
+                        data-notice-audience="{{ $noticeAudienceLower }}"
+                        data-notice-pk="{{ $feedNotice->pk }}">
+                        <div class="notices-feed-item__header" role="button" tabindex="0"
+                            id="notice-head-{{ $feedNotice->pk }}"
+                            aria-expanded="false" aria-controls="notice-panel-{{ $feedNotice->pk }}"
+                            aria-label="View notice: {{ e($feedNotice->notice_title ?? 'Notice') }}">
+                            <div class="d-flex justify-content-between align-items-center gap-3">
+                                <div class="notices-feed-item__body min-w-0">
+                                    <span class="notices-feed-item__title d-block mb-1">{{ $feedNotice->notice_title }}</span>
+                                    <small class="notices-feed-item__meta">
+                                        ~by <strong>{{ $feedNotice->author_name ?? 'System' }}@if($feedNotice->author_department ?? '') ({{ $feedNotice->author_department }})@endif</strong>
+                                        on {{ $feedNoticeDate }}
+                                    </small>
+                                </div>
+                                <span class="notices-feed-badge {{ $noticeBadgeClass }} flex-shrink-0">{{ $noticeBadgeLabel }}</span>
+                            </div>
                         </div>
-                        @endif
-                        @if($feedNotice->document)
-                        <a href="{{ asset('storage/' . $feedNotice->document) }}" target="_blank"
-                            class="small text-danger text-decoration-none d-inline-flex align-items-center gap-1 mt-2">
-                            <i class="bi bi-paperclip" aria-hidden="true"></i> View attachment
-                        </a>
-                        @endif
+                        <div class="notices-feed-item__panel" id="notice-panel-{{ $feedNotice->pk }}"
+                            role="region" aria-labelledby="notice-head-{{ $feedNotice->pk }}">
+                            <div class="notices-feed-item__panel-inner">
+                                @if(trim(strip_tags((string) ($feedNotice->description ?? ''))) !== '')
+                                <div class="notice-description-content">{!! $feedNotice->description !!}</div>
+                                @else
+                                <p class="text-muted fst-italic mb-0">No description provided.</p>
+                                @endif
+                                @if($feedNotice->document)
+                                <div class="mt-3">
+                                    {{-- `notices-feed-item__attachment` carries no CSS — it is the hook the
+                                         accordion click handler uses to let this link through instead of
+                                         collapsing the panel. Do not remove it as an "unused" class. --}}
+                                    <a href="{{ asset('storage/' . $feedNotice->document) }}" target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="notices-feed-item__attachment small text-danger text-decoration-none d-inline-flex align-items-center gap-1">
+                                        <i class="bi bi-paperclip" aria-hidden="true"></i> View Attachment
+                                    </a>
+                                </div>
+                                @endif
+                            </div>
+                        </div>
                     </div>
                     @empty
-                    <p class="dashboard-feed-empty mb-0">No notices available.</p>
+                    <p class="dashboard-feed-empty mb-0">
+                        @if($noticeFilters['q'] !== '' || $noticeFilters['year'] !== '' || $noticeFilters['type'] !== '' || $noticeFilters['dept'] !== '' || $noticeFilters['audience'] !== '')
+                        No notices match these filters.
+                        @else
+                        No notices available.
+                        @endif
+                    </p>
                     @endforelse
                 </div>
+
+                @if($notices->hasPages())
+                <div class="notices-feed-pagination d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3">
+                    <small class="text-body-secondary">
+                        Showing {{ $notices->firstItem() }}–{{ $notices->lastItem() }} of {{ number_format($notices->total()) }}
+                    </small>
+                    {{ $notices->onEachSide(1)->links('vendor.pagination.custom') }}
+                </div>
+                @endif
             </div>
 
             {{-- Birthdays: today + upcoming --}}
@@ -205,7 +294,7 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-feed.css') }}?v=6">
+<link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-feed.css') }}?v=15">
 @endpush
 
 @push('scripts')
@@ -227,6 +316,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     let activeTab = tabFromUrl();
+    // The notices search term the server actually applied (drives the search box).
+    const noticeServerQuery = @json($noticeFilters['q'] ?? '');
     const searchInput = document.getElementById('dashboard-feed-page-search');
     const countEl = document.getElementById('dashboard-feed-page-count');
     const markAllBtn = document.getElementById('dashboard-feed-page-mark-all');
@@ -240,24 +331,60 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateCount() {
         const panel = getActivePanel();
         if (!panel || !countEl) return;
+        const label = tabLabels[activeTab] || 'Items';
+
+        // Notices are paginated server-side, so the visible-row count would only
+        // ever report the current page. Use the server's total instead.
+        if (activeTab === 'notices') {
+            const total = parseInt(panel.dataset.noticeTotal || '0', 10) || 0;
+            countEl.textContent = String(total).padStart(2, '0') + ' ' + label;
+            return;
+        }
+
         const items = panel.querySelectorAll('[data-feed-search]');
         let visible = 0;
         items.forEach(function(item) {
             if (!item.classList.contains('d-none')) visible++;
         });
-        const label = tabLabels[activeTab] || 'Items';
         countEl.textContent = String(visible).padStart(2, '0') + ' ' + label;
     }
 
     function applySearch() {
-        const query = (searchInput && searchInput.value ? searchInput.value : '').trim().toLowerCase();
         const panel = getActivePanel();
         if (!panel) return;
+
+        // The notices tab searches in SQL (submitNoticeSearch below). Filtering the
+        // rendered page here as well would silently narrow one page of results and
+        // contradict the count, so it is skipped.
+        if (activeTab === 'notices') {
+            updateCount();
+            return;
+        }
+
+        const query = (searchInput && searchInput.value ? searchInput.value : '').trim().toLowerCase();
         panel.querySelectorAll('[data-feed-search]').forEach(function(item) {
             const haystack = (item.getAttribute('data-feed-search') || '').toLowerCase();
             item.classList.toggle('d-none', query !== '' && haystack.indexOf(query) === -1);
         });
         updateCount();
+    }
+
+    // Notices search runs in SQL. The typed text is mirrored into the filter
+    // form's hidden `q` on every keystroke, so whichever control the user reaches
+    // for next — Enter, a filter select, Reset — carries the search with it.
+    function syncNoticeSearchField() {
+        const qField = document.getElementById('notice-filter-q');
+        if (qField && searchInput) qField.value = searchInput.value.trim();
+    }
+
+    function submitNoticeSearch() {
+        const form = document.getElementById('notice-filter-form');
+        if (!form || !searchInput) return;
+        // Compare against what the server actually applied, not the hidden field:
+        // that one tracks the box live, so it would never look different.
+        if (searchInput.value.trim() === noticeServerQuery) return;
+        syncNoticeSearchField();
+        form.submit();
     }
 
     function updateFeedUrl(tab) {
@@ -290,7 +417,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (searchInput) {
-            searchInput.value = '';
+            // On the notices tab the box mirrors the query the server actually
+            // applied, so it stays in step with the rendered (paginated) list.
+            searchInput.value = (activeTab === 'notices') ? noticeServerQuery : '';
         }
 
         if (updateUrl !== false) {
@@ -307,7 +436,27 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     if (searchInput) {
-        searchInput.addEventListener('input', applySearch);
+        searchInput.addEventListener('input', function() {
+            if (activeTab === 'notices') syncNoticeSearchField();
+            applySearch();
+        });
+
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key !== 'Enter' || activeTab !== 'notices') return;
+            e.preventDefault();
+            submitNoticeSearch();
+        });
+
+        searchInput.addEventListener('blur', function(e) {
+            if (activeTab !== 'notices') return;
+            // Reset Filters, Add New Notice and the four selects all live INSIDE
+            // the filter form. Submitting here when focus moves to one of them
+            // would navigate first and swallow that click — the select would not
+            // even open. Their own action already carries the synced `q`.
+            const form = document.getElementById('notice-filter-form');
+            if (form && e.relatedTarget && form.contains(e.relatedTarget)) return;
+            submitNoticeSearch();
+        });
     }
 
     setActiveTab(activeTab, false);
@@ -316,21 +465,12 @@ document.addEventListener('DOMContentLoaded', function() {
         setActiveTab(tabFromUrl(), false);
     });
 
-    document.querySelectorAll('.dashboard-notice-tab[data-notice-tab]').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const tab = btn.dataset.noticeTab;
-            document.querySelectorAll('.dashboard-notice-tab').forEach(function(b) {
-                b.classList.toggle('active', b.dataset.noticeTab === tab);
-            });
-            let visible = 0;
-            document.querySelectorAll('[data-notice-tab-item]').forEach(function(item) {
-                const show = item.dataset.noticeTabItem === tab;
-                item.classList.toggle('d-none', !show);
-                if (show && !item.classList.contains('d-none')) visible++;
-            });
-            const emptyEl = document.getElementById('dashboard-feed-notice-tab-empty');
-            if (emptyEl) emptyEl.classList.toggle('d-none', visible > 0);
-            applySearch();
+    // Each select is a form field now — changing one reloads with the filter applied.
+    // "Reset Filters" is a plain link back to the unfiltered tab, so it needs no JS.
+    document.querySelectorAll('.notices-feed-filter').forEach(function(sel) {
+        sel.addEventListener('change', function() {
+            const form = document.getElementById('notice-filter-form');
+            if (form) form.submit();
         });
     });
 
@@ -398,7 +538,102 @@ document.addEventListener('click', function(e) {
     window.markAsReadDashboard(notifItem.dataset.notificationId, notifItem);
 });
 
-// Notice description See more / See less toggle
+// Notices accordion: hover expands, click pins open/closed. One notice open at a time.
+(function () {
+    const list = document.getElementById('dashboard-feed-page-list-notices');
+    if (!list) return;
+
+    const OPEN_DELAY  = 120;   // ignore pointers just passing over the list
+    const CLOSE_DELAY = 180;   // let the pointer travel into the panel without it snapping shut
+    let hoverTimer = null;
+
+    function setOpen(item, open) {
+        const panel = item.querySelector('.notices-feed-item__panel');
+        const head  = item.querySelector('.notices-feed-item__header');
+        if (!panel) return;
+        // Collapsing an already-collapsed panel would re-run the animation and flicker
+        // (happens when the pointer leaves before the open delay elapsed).
+        if (!open && !item.classList.contains('is-open')) {
+            item.classList.remove('is-pinned');
+            return;
+        }
+
+        if (open) {
+            item.classList.add('is-open');
+            panel.style.maxHeight = panel.scrollHeight + 'px';
+        } else {
+            item.classList.remove('is-open', 'is-pinned');
+            // maxHeight may be 'none' (see transitionend below); pin it to a number so it can animate down
+            panel.style.maxHeight = panel.scrollHeight + 'px';
+            void panel.offsetHeight;
+            panel.style.maxHeight = '';
+        }
+        if (head) head.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    function closeOthers(except) {
+        list.querySelectorAll('.notices-feed-item.is-open').forEach(function (other) {
+            if (other !== except) setOpen(other, false);
+        });
+    }
+
+    // Once open, drop the fixed height so late-loading images/tables aren't clipped.
+    list.addEventListener('transitionend', function (e) {
+        if (e.propertyName !== 'max-height') return;
+        const panel = e.target;
+        if (!panel.classList || !panel.classList.contains('notices-feed-item__panel')) return;
+        const item = panel.closest('.notices-feed-item');
+        if (item && item.classList.contains('is-open')) panel.style.maxHeight = 'none';
+    });
+
+    // A pinned notice owns the list: hover neither closes it nor opens another,
+    // so "pinned" survives the pointer moving elsewhere. Only a click changes it.
+    function hasPinned() {
+        return !!list.querySelector('.notices-feed-item.is-pinned');
+    }
+
+    list.querySelectorAll('.notices-feed-item').forEach(function (item) {
+        item.addEventListener('mouseenter', function () {
+            clearTimeout(hoverTimer);
+            if (hasPinned()) return;
+            hoverTimer = setTimeout(function () {
+                closeOthers(item);
+                setOpen(item, true);
+            }, OPEN_DELAY);
+        });
+
+        item.addEventListener('mouseleave', function () {
+            clearTimeout(hoverTimer);
+            if (item.classList.contains('is-pinned') || hasPinned()) return;
+            hoverTimer = setTimeout(function () { setOpen(item, false); }, CLOSE_DELAY);
+        });
+    });
+
+    list.addEventListener('click', function (e) {
+        if (e.target.closest('.notices-feed-item__attachment')) return; // let the attachment link open
+        const head = e.target.closest('.notices-feed-item__header');
+        if (!head) return;
+        const item = head.closest('.notices-feed-item');
+        if (!item) return;
+
+        clearTimeout(hoverTimer);
+        if (item.classList.contains('is-pinned')) {
+            setOpen(item, false);
+        } else {
+            closeOthers(item);
+            setOpen(item, true);
+            item.classList.add('is-pinned');
+        }
+    });
+
+    list.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const head = e.target.closest ? e.target.closest('.notices-feed-item__header') : null;
+        if (!head) return;
+        e.preventDefault();
+        head.click();
+    });
+}());
 document.addEventListener('click', function(e) {
     const toggleBtn = e.target && e.target.closest ? e.target.closest('.notice-desc-toggle') : null;
     if (!toggleBtn) return;

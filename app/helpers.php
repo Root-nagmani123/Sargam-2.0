@@ -378,7 +378,38 @@ function fc_user_val(string $table, int $userId): string|int
     }
 
     // Pre-migration: resolve the username string from user_credentials.
-    return fc_user_name_for_id($userId) ?? '';
+    $name = trim((string) (fc_user_name_for_id($userId) ?? ''));
+    if ($name !== '') {
+        return $name;
+    }
+
+    // Not in user_credentials — the id is a staged roster pk (fc_registration_master.pk),
+    // which is what the admin screens pass for a trainee who registered through /fc/login
+    // and has not been migrated yet. Their rows in the few still-username-keyed tables
+    // (e.g. student_cloth_size_master_details) were written under the roster login name,
+    // exactly as the $userId < 0 branch above resolves it. Without this the lookup returned
+    // '' and matched nothing, so those sections silently vanished from the profile report.
+    //
+    // The fallback is deliberately narrow. user_credentials.pk and fc_registration_master.pk
+    // are SEPARATE id spaces, so an integer can be a dead credentials pk and, by coincidence,
+    // a live roster pk belonging to somebody else. It is therefore only accepted for a roster
+    // entry that has NOT been migrated into user_credentials — a migrated trainee is always
+    // addressed by their credentials pk, so a roster-pk hit on one is an ambiguous id, and
+    // returning '' (the previous behaviour: matches nothing) is the safe answer.
+    if (! array_key_exists($userId, $usernameCache)) {
+        $rosterName = trim((string) (\Illuminate\Support\Facades\DB::table('fc_registration_master')
+            ->where('pk', $userId)
+            ->value('user_id') ?? ''));
+
+        $migrated = $rosterName !== ''
+            && \Illuminate\Support\Facades\DB::table('user_credentials')
+                ->where('user_name', $rosterName)
+                ->exists();
+
+        $usernameCache[$userId] = $migrated ? '' : $rosterName;
+    }
+
+    return $usernameCache[$userId];
 }
 
 /**
@@ -1448,14 +1479,56 @@ function get_profile_pic()
         return $profile_pic;
     }
 }
-if (!function_exists('get_notice_notification_by_role')) {
-    function get_notice_notification_by_role()
+if (!function_exists('notice_feed_base_query')) {
+    /**
+     * Base notice query with the author name and department resolved.
+     * Columns are table-qualified because user_credentials / department_master
+     * carry their own active_inactive + pk columns.
+     */
+    function notice_feed_base_query()
+    {
+        return DB::table('notices_notification')
+            ->leftJoin('user_credentials as notice_author', 'notice_author.pk', '=', 'notices_notification.created_by')
+            ->leftJoin('employee_master as notice_author_emp', 'notice_author_emp.pk', '=', 'notice_author.user_id')
+            ->leftJoin('department_master as notice_author_dept', 'notice_author_dept.pk', '=', 'notice_author_emp.department_master_pk')
+            ->select(
+                'notices_notification.pk',
+                'notices_notification.notice_title',
+                'notices_notification.notice_type',
+                'notices_notification.description',
+                'notices_notification.target_audience',
+                'notices_notification.course_master_pk',
+                'notices_notification.document',
+                'notices_notification.display_date',
+                'notices_notification.expiry_date',
+                'notices_notification.created_at',
+                'notices_notification.created_by',
+                DB::raw("NULLIF(TRIM(CONCAT_WS(' ', notice_author.first_name, notice_author.last_name)), '') as author_name"),
+                'notice_author_dept.department_name as author_department'
+            )
+            ->where('notices_notification.active_inactive', 1)
+            ->where('notices_notification.expiry_date', '>=', date('Y-m-d'))
+            ->orderBy('notices_notification.display_date', 'desc');
+    }
+}
+if (!function_exists('notice_feed_query_by_role')) {
+    /**
+     * Role-scoped notice feed as an UNEXECUTED query builder.
+     *
+     * Returning the builder (rather than a Collection) is what lets callers add
+     * filters and ->paginate() in SQL instead of pulling every live notice into
+     * memory and filtering in PHP.
+     *
+     * Each role resolves to ONE statement — the previous version ran a second
+     * query per role and merged the two collections, which cannot be paginated.
+     *
+     * @return \Illuminate\Database\Query\Builder|null  null when unauthenticated
+     */
+    function notice_feed_query_by_role()
     {
         $user = Auth::user();
-
-        // Return empty collection if user is not authenticated
         if (!$user) {
-            return collect([]);
+            return null;
         }
 
         $sessionRoles = Session::get('user_roles', []);
@@ -1466,45 +1539,56 @@ if (!function_exists('get_notice_notification_by_role')) {
         $isStaffFaculty = !empty(array_intersect($roleStaffFaculty, $sessionRoles));
         $isStudent      = !empty(array_intersect($roleStudent, $sessionRoles));
 
+        $query = notice_feed_base_query();
 
-        $commonNotices = DB::table('notices_notification')
-            ->where('target_audience', 'All')
-            ->where('active_inactive', 1)
-            ->where('expiry_date', '>=', date('Y-m-d'))
-            ->orderBy('display_date', 'desc')
-            ->get();
-
-        // 🔥 Staff/Faculty Notices
+        // Staff/Faculty: everyone's "All" notices plus their own audience.
         if ($isStaffFaculty) {
-
-            $data = DB::table('notices_notification')
-                ->where('target_audience', 'like', '%Staff/Faculty%')
-                ->where('active_inactive', 1)
-                ->where('expiry_date', '>=', date('Y-m-d'))
-                ->orderBy('display_date', 'desc')
-                ->get();
-
-
-            return $commonNotices->merge($data);
+            return $query->where(function ($w) {
+                $w->where('notices_notification.target_audience', 'All')
+                    ->orWhere('notices_notification.target_audience', 'like', '%Staff/Faculty%');
+            });
         }
 
-        // 🔥 Student OT Notices
+        // Student-OT: "All" notices plus Office-trainee notices for the courses
+        // they are enrolled in. The course ids are resolved in their own small
+        // query rather than joined in: the old inner join on
+        // student_master_course__map emitted the same notice once per mapping
+        // row (duplicate cards), and a joined query cannot be counted for
+        // pagination without a distinct().
         if ($isStudent) {
-            $roleNotices =  DB::table('notices_notification')
-                ->join('student_master_course__map as smcm', 'notices_notification.course_master_pk', '=', 'smcm.course_master_pk')
-                ->where('target_audience', 'like', '%Office trainee%')
-                ->where('notices_notification.active_inactive', 1)
-                ->where('smcm.student_master_pk', $user->user_id)
-                ->where('expiry_date', '>=', date('Y-m-d'))
-                ->orderBy('display_date', 'desc')
-                ->get();
+            $courseIds = DB::table('student_master_course__map')
+                ->where('student_master_pk', $user->user_id)
+                ->distinct()
+                ->pluck('course_master_pk');
 
+            return $query->where(function ($w) use ($courseIds) {
+                $w->where('notices_notification.target_audience', 'All');
 
-            return $commonNotices->merge($roleNotices);
+                if ($courseIds->isNotEmpty()) {
+                    $w->orWhere(function ($o) use ($courseIds) {
+                        $o->where('notices_notification.target_audience', 'like', '%Office trainee%')
+                            ->whereIn('notices_notification.course_master_pk', $courseIds);
+                    });
+                }
+            });
         }
 
-        // Roles not matching → return only "All"
-        return $commonNotices;
+        // Roles not matching → only "All"
+        return $query->where('notices_notification.target_audience', 'All');
+    }
+}
+if (!function_exists('get_notice_notification_by_role')) {
+    /**
+     * Every live notice for the current user, as a Collection.
+     *
+     * Unbounded by design — only use it where the caller needs the whole set.
+     * For listing screens prefer notice_feed_query_by_role() with ->paginate().
+     */
+    function get_notice_notification_by_role()
+    {
+        $query = notice_feed_query_by_role();
+
+        return $query ? $query->get() : collect([]);
     }
 }
 
@@ -2006,5 +2090,79 @@ if (! function_exists('resolve_default_discipline_memo_template_pk')) {
             ->orderByRaw('discipline_master_pk IS NULL')
             ->orderBy('title')
             ->value('pk');
+    }
+}
+
+if (! function_exists('fc_document_date')) {
+    /**
+     * Batch-frozen ceremony date for FC joining documents (single source:
+     * config('fc.document_declaration_date')).
+     *
+     * @param  string  $format  'iso' → Y-m-d (for <input type="date">);
+     *                          'display' → d-m-Y (the form the PDFs print).
+     */
+    function fc_document_date(string $format = 'display'): string
+    {
+        $iso = (string) config('fc.document_declaration_date');
+
+        if ($format === 'iso') {
+            return $iso;
+        }
+
+        try {
+            return \Carbon\Carbon::parse($iso)->format('d-m-Y');
+        } catch (\Throwable $e) {
+            return $iso;
+        }
+    }
+}
+
+if (! function_exists('sanitize_export_cell')) {
+    /**
+     * Neutralise CSV/XLSX formula injection: a cell whose first character is one
+     * Excel/LibreOffice/Sheets treats as a formula prefix (= + - @) or a leading
+     * tab/CR gets a leading single quote, forcing spreadsheet apps to treat it as
+     * text instead of evaluating it. Use for any exported column sourced from
+     * free text an unprivileged user typed (description, remarks, comments, ...).
+     *
+     * @param  mixed  $value
+     */
+    function sanitize_export_cell($value): string
+    {
+        $value = (string) $value;
+
+        if ($value !== '' && preg_match('/^[=+\-@\t\r]/', $value)) {
+            return "'" . $value;
+        }
+
+        return $value;
+    }
+}
+
+if (! function_exists('fc_kra_sn_img')) {
+    /**
+     * Return an inline <img> for the Devanagari "क्र.सं." label, as a base64 data URI.
+     *
+     * mPDF's Indic shaper renders the "क्र" rakaar conjunct as a faint/near-invisible
+     * stroke at small header sizes, so the document-form PDFs embed this pre-rendered
+     * (Chrome/HarfBuzz-shaped) image instead — only this one label is an image, the rest
+     * of every form stays plain mPDF text. Cached per request.
+     *
+     * @param  string  $height  CSS height for the label (match the surrounding font).
+     */
+    function fc_kra_sn_img(string $height = '9pt'): string
+    {
+        static $data = null;
+        if ($data === null) {
+            $path = resource_path('images/fc/kra_sn.png');
+            $data = (is_file($path) && is_readable($path))
+                ? 'data:image/png;base64,'.base64_encode((string) file_get_contents($path))
+                : '';
+        }
+        if ($data === '') {
+            return 'क्र.सं.'; // asset missing → fall back to text
+        }
+
+        return '<img src="'.$data.'" alt="क्र.सं." style="height:'.$height.'; vertical-align:middle;">';
     }
 }

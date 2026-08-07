@@ -115,6 +115,10 @@ class SidebarController extends Controller
         $html = '';
 
         foreach ($group->menus as $menu) {
+            if ($isAdmin && $menu->exclude_from_admin) {
+                continue;
+            }
+
             $children = $menu->children->filter(function ($child) use ($permissions, $isAdmin) {
                 if ($isAdmin) {
                     return true;

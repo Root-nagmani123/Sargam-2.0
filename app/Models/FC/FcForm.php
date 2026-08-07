@@ -13,12 +13,27 @@ class FcForm extends Model
 {
     protected $fillable = [
         'form_name', 'form_slug', 'description', 'icon',
-        'consolidation_table', 'user_identifier', 'is_active', 'course_master_pk',
+        'consolidation_table', 'user_identifier', 'registration_requires_all_steps',
+        'is_active', 'course_master_pk',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'registration_requires_all_steps' => 'boolean',
     ];
+
+    /**
+     * Whether fc_registration_master.is_registered for this form means "every applicable
+     * step done" rather than the default "first two steps done". Opt-in per form so the
+     * rule can change for an upcoming intake without touching existing cohorts.
+     *
+     * Reads defensively: the column is absent until the migration runs, and a form loaded
+     * from a cache written before it would not carry the attribute.
+     */
+    public function registrationRequiresAllSteps(): bool
+    {
+        return (bool) ($this->registration_requires_all_steps ?? false);
+    }
 
     public function courseMaster(): BelongsTo
     {
@@ -88,13 +103,38 @@ class FcForm extends Model
     }
 
     /**
-     * Active Foundation Course registration form used by the dynamic trainee UI (/fc-reg/forms/…).
+     * The form with slug fc-registration, if active. Null means "no fc-registration
+     * intake is currently open" — callers that gate a legacy/fallback UI on that
+     * exact meaning (e.g. RegistrationStep1Controller::dashboard()) must use this,
+     * not activeRegistrationDynamicForm().
      */
-    public static function activeRegistrationDynamicForm(): ?self
+    public static function strictActiveRegistrationForm(): ?self
     {
         return static::query()
             ->where('form_slug', 'fc-registration')
             ->where('is_active', true)
+            ->first();
+    }
+
+    /**
+     * Active Foundation Course registration form used by the dynamic trainee UI (/fc-reg/forms/…).
+     * Falls back to the newest other active intake when slug fc-registration is not
+     * present (e.g. fc-102) — only safe for callers that just need *some* current
+     * intake (portal links, bulk-notification scoping), not per-user form attribution.
+     */
+    public static function activeRegistrationDynamicForm(): ?self
+    {
+        $form = static::strictActiveRegistrationForm();
+
+        if ($form) {
+            return $form;
+        }
+
+        // Fallback: current intake when slug fc-registration is not present (e.g. fc-102).
+        return static::query()
+            ->where('is_active', true)
+            ->where('form_slug', '!=', 'fc_template')
+            ->orderByDesc('id')
             ->first();
     }
 
@@ -121,7 +161,37 @@ class FcForm extends Model
             return $ninetyNinth;
         }
 
-        return static::activeRegistrationDynamicForm();
+        // Strict match only: this resolves which specific form a user belongs to
+        // (reports/PDFs/registration sync) — an arbitrary "some other active form"
+        // would misattribute the user, so the broader fallback does not apply here.
+        return static::strictActiveRegistrationForm();
+    }
+
+    /**
+     * Form URL for Users (/fc-reg/forms/{token}), as shown in Form Management.
+     */
+    public function formUrlForUsers(): string
+    {
+        return route('fc-reg.forms.dashboard', $this);
+    }
+
+    /**
+     * Public landing page URL for this form (?form= encrypted token), as shown in Form Management.
+     */
+    public function landingPageUrl(): string
+    {
+        return route('frontpage.index', ['form' => $this->getRouteKey()]);
+    }
+
+    /**
+     * Login page URL — same query-string shape as landingPageUrl() (BSNL CTA
+     * whitelisting constraint, see FcNotifyService::portal()) but points trainees
+     * who are already registered straight to login instead of the registration
+     * landing page.
+     */
+    public function loginUrl(): string
+    {
+        return route('fc.login', ['form' => $this->getRouteKey()]);
     }
 }
 
