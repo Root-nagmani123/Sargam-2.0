@@ -4,12 +4,11 @@
 
 @section('content')
 @php
-    // Filters that must survive on the Download links and the rows-per-page jump.
+    // Server-side filters that must survive on the download links. The search
+    // term isn't here: it's the DataTables filter now, and the JS stamps it on.
     $otFilters = [
         'status' => $status !== 'active' ? $status : null,
         'course_id' => $selectedCourseId ?: null,
-        'search' => $search ?: null,
-        'per_page' => $perPage !== '10' ? $perPage : null,
     ];
     $otExportParams = array_filter($otFilters, fn ($value) => filled($value));
     $otExportUrl = fn (string $format) => route('admin.directory.ot', $otExportParams + ['export' => $format]);
@@ -57,16 +56,16 @@
                  in a new tab, which pops its own print dialog — going in place
                  would lose the directory you came from. --}}
             <a href="{{ $otExportUrl('print') }}" id="{{ $otPrintLinkId }}"
-                class="btn ot-download-btn {{ $students->total() ? '' : 'disabled' }}"
+                class="btn ot-download-btn {{ $students->count() ? '' : 'disabled' }}"
                 target="_blank" rel="noopener"
-                @if(! $students->total()) aria-disabled="true" tabindex="-1" @endif>
+                @if(! $students->count()) aria-disabled="true" tabindex="-1" @endif>
                 <i class="bi bi-printer" aria-hidden="true"></i>
                 <span>Print</span>
             </a>
 
             <div class="dropdown">
                 <button type="button" id="otDownloadToggle" class="btn ot-download-btn border-0 dropdown-toggle"
-                    data-bs-toggle="dropdown" aria-expanded="false" {{ $students->total() ? '' : 'disabled' }}>
+                    data-bs-toggle="dropdown" aria-expanded="false" {{ $students->count() ? '' : 'disabled' }}>
                     <i class="bi bi-download" aria-hidden="true"></i>
                     <span>Download</span>
                 </button>
@@ -91,10 +90,8 @@
                  GET form — this page filters server-side, so both controls submit it. --}}
             <form method="GET" action="{{ route('admin.directory.ot') }}" id="otFilterForm"
                 class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
-                {{-- Carried so a filter submit doesn't silently drop the active tab
-                     or the footer's rows-per-page choice. --}}
+                {{-- Carried so a filter submit doesn't silently drop the active tab. --}}
                 <input type="hidden" name="status" value="{{ $status }}">
-                <input type="hidden" name="per_page" value="{{ $perPage }}">
 
                 <div class="d-flex flex-wrap align-items-center gap-3">
                     <span class="programme-dt-filters-label">Filters</span>
@@ -125,28 +122,18 @@
                         <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
 
-                    {{-- Server-side search: a real input (not the DataTables filter slot),
-                         styled to match .programme-dt-search. Enter submits the form. --}}
-                    <div class="ot-search">
-                        <input type="text" name="search" id="otSearchInput" class="ot-search-input"
-                            value="{{ $search }}" placeholder="Search name, OT code, email, cadre"
-                            autocomplete="off" aria-label="Search officer trainees">
-                        <button type="button" class="ot-search-clear" id="otSearchClear"
-                            aria-label="Clear search" title="Clear search" {{ $search ? '' : 'hidden' }}>
-                            <i class="bi bi-x-lg" aria-hidden="true"></i>
-                        </button>
-                    </div>
+                    {{-- Empty slot: datatable-global-ui.js moves the DataTables filter
+                         in here, so the search is instant and needs no markup of ours. --}}
+                    <div class="programme-dt-search" data-dt-search-for="otDirectoryTable"></div>
                 </div>
             </form>
 
             <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    {{-- data-sargam-dt-ui="false": Laravel paginates this page server-side and
-                         the .programme-dt-footer below is hand-written. Without the opt-out the
-                         global DataTables enhancer hijacks and empties that footer. --}}
+                    {{-- DataTables sorts, searches and pages this table client-side;
+                         datatable-global-ui.js fills the search slot and the footer. --}}
                     <table id="otDirectoryTable"
-                        class="table table-hover align-middle mb-0 w-100 programme-dt-table"
-                        data-sargam-dt-ui="false">
+                        class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                         <thead>
                             <tr>
                                 {{-- Photo, name and OT code share one identity column.
@@ -163,7 +150,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($students as $index => $student)
+                            @foreach($students as $index => $student)
                                 @php
                                     // Already entity-decoded by the controller, so the export and
                                     // the screen show the same text — see decodeEntities().
@@ -176,8 +163,13 @@
                                         : null;
                                 @endphp
                                 <tr>
-                                    <td>{{ ($students->firstItem() ?? 1) + $index }}</td>
-                                    <td>
+                                    {{-- Placeholder only: renumbered on every draw so the
+                                         serial follows the current sort and page. --}}
+                                    <td>{{ $index + 1 }}</td>
+                                    {{-- data-order / data-search keep the avatar's initials out
+                                         of the sort and search keys: without them DataTables reads
+                                         the cell as "AK Agam Komut A01" and orders by the monogram. --}}
+                                    <td data-order="{{ $otName }}" data-search="{{ $otName }} {{ $otCode }}">
                                         <span class="ot-name-cell">
                                             {{-- Initials sit underneath; the photo is layered over
                                                  them and only revealed once it actually decodes, so
@@ -190,7 +182,10 @@
                                                     <i class="bi bi-person ot-avatar-icon"></i>
                                                 @endif
                                                 @if($otPhoto)
-                                                    <img src="{{ $otPhoto }}" alt="" class="ot-avatar-img"
+                                                    {{-- data-src, not src: every row is in the DOM up
+                                                         front, so a real src would fire one request per
+                                                         record. The JS promotes it per drawn page. --}}
+                                                    <img data-src="{{ $otPhoto }}" alt="" class="ot-avatar-img"
                                                         loading="lazy" decoding="async">
                                                 @endif
                                             </span>
@@ -212,46 +207,16 @@
                                     </td>
                                     <td>{{ $student->cadre_name ?: '-' }}</td>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="7" class="text-center py-5 text-muted">
-                                        <i class="bi bi-people fs-1 d-block mb-2"></i>
-                                        <span class="fw-medium">
-                                            @if($courses->isEmpty())
-                                                No {{ $status === 'archive' ? 'archived' : 'active' }} programmes
-                                            @elseif($search !== '')
-                                                No officer trainees match &ldquo;{{ $search }}&rdquo;
-                                            @else
-                                                No officer trainees in this programme
-                                            @endif
-                                        </span>
-                                    </td>
-                                </tr>
-                            @endforelse
+                            @endforeach
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            {{-- Footer variant B — Laravel paginates, so this is hand-written and reuses the
-                 .dataTables_length / .dataTables_info class names for the shared styling. --}}
-            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
-                <div class="programme-dt-pagination">
-                    {{ $students->links('vendor.pagination.custom') }}
-                </div>
-                <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
-                    <div class="dataTables_length">
-                        <label class="mb-0">Showing
-                            <select id="otPerPage" class="form-select form-select-sm" aria-label="Rows per page">
-                                @foreach(['10' => '10', '25' => '25', '50' => '50', '100' => '100', '200' => '200', 'all' => 'All'] as $ppValue => $ppLabel)
-                                    <option value="{{ $ppValue }}" {{ $perPage === $ppValue ? 'selected' : '' }}>{{ $ppLabel }}</option>
-                                @endforeach
-                            </select>
-                        </label>
-                    </div>
-                    <div class="dataTables_info">of {{ number_format($students->total()) }} items</div>
-                </div>
-            </div>
+            {{-- Footer variant A — left empty; datatable-global-ui.js fills it with the
+                 pager and "Showing [10] of N items". --}}
+            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3"
+                data-dt-footer-for="otDirectoryTable"></div>
         </div>
     </div>
 </div>
@@ -322,65 +287,6 @@
     line-height: 1;
 }
 
-/* Search — mirrors .programme-dt-search, but wraps a real <input> because this
-   page filters on the server instead of through the DataTables filter slot. */
-.ot-page .ot-search {
-    position: relative;
-    flex: 0 0 auto;
-    width: 300px;
-    max-width: 100%;
-}
-
-.ot-page .ot-search::before {
-    content: "\F52A";
-    font-family: "bootstrap-icons";
-    position: absolute;
-    left: 0.875rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #98a2b3;
-    font-size: 1rem;
-    pointer-events: none;
-    z-index: 2;
-}
-
-.ot-page .ot-search-input {
-    width: 100%;
-    height: 40px;
-    padding: 0.5rem 2.25rem 0.5rem 2.375rem;
-    border: 1px solid #d0d5dd;
-    border-radius: 8px;
-    font-size: 0.9375rem;
-    color: #344054;
-    background: var(--ds-surface, #fff);
-}
-
-.ot-page .ot-search-input::placeholder {
-    color: #98a2b3;
-}
-
-.ot-page .ot-search-input:focus {
-    outline: 0;
-    border-color: var(--ds-primary, #004a93);
-    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
-}
-
-.ot-page .ot-search-clear {
-    position: absolute;
-    top: 50%;
-    right: 0.5rem;
-    transform: translateY(-50%);
-    display: inline-flex;
-    align-items: center;
-    padding: 0.15rem;
-    border: 0;
-    background: transparent;
-    color: #98a2b3;
-    line-height: 1;
-}
-
-.ot-page .ot-search-clear:hover {
-    color: #475467;
 }
 
 /* Identity cell = photo + name over OT code. The old markup used a
@@ -481,12 +387,6 @@
     text-underline-offset: 0.15em;
 }
 
-@media (max-width: 991.98px) {
-    .ot-page .ot-search {
-        width: 100%;
-    }
-}
-
 @media (max-width: 767.98px) {
     .ot-page .ot-avatar {
         width: 32px;
@@ -502,92 +402,17 @@
 
 @push('scripts')
 <script>
-(function () {
+$(function () {
     'use strict';
 
+    var $table = $('#otDirectoryTable');
     var form = document.getElementById('otFilterForm');
-    var table = document.getElementById('otDirectoryTable');
-    if (!form || !table) return;
+    if (!$table.length || !form) return;
 
-    // ── Filters ──────────────────────────────────────────────────────────────
-    var courseSelect = document.getElementById('otCourseSelect');
-    var searchInput = document.getElementById('otSearchInput');
-    var searchClear = document.getElementById('otSearchClear');
-
-    // A GET submit rebuilds the query string from the form's own fields, so ?page=
-    // is dropped and every filter change lands back on page 1 — which is what we
-    // want, since page N of the previous result set is meaningless.
-    function submitFiltered() {
-        form.submit();
-    }
-
-    if (courseSelect) {
-        courseSelect.addEventListener('change', submitFiltered);
-    }
-
-    if (searchInput) {
-        searchInput.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                submitFiltered();
-            }
-        });
-        searchInput.addEventListener('input', function () {
-            if (searchClear) searchClear.hidden = this.value === '';
-        });
-    }
-
-    if (searchClear) {
-        searchClear.addEventListener('click', function () {
-            searchInput.value = '';
-            this.hidden = true;
-            submitFiltered();
-        });
-    }
-
-    // Rows per page: a plain URL jump, so it composes with whatever filters and
-    // sort are already in the query string.
-    var perPage = document.getElementById('otPerPage');
-    if (perPage) {
-        perPage.addEventListener('change', function () {
-            var url = new URL(window.location.href);
-            url.searchParams.set('per_page', this.value);
-            url.searchParams.delete('page');
-            window.location.href = url.toString();
-        });
-    }
-
-    // ── Avatars ──────────────────────────────────────────────────────────────
-    // Reveal a photo only once it has actually decoded; drop it on error so the
-    // initials underneath stay visible. load/error don't bubble, hence capture.
-    function settleAvatar(img) {
-        if (img.naturalWidth > 0) {
-            img.classList.add('is-loaded');
-        } else {
-            img.remove();
-        }
-    }
-
-    table.addEventListener('load', function (e) {
-        if (e.target.classList && e.target.classList.contains('ot-avatar-img')) settleAvatar(e.target);
-    }, true);
-
-    table.addEventListener('error', function (e) {
-        if (e.target.classList && e.target.classList.contains('ot-avatar-img')) settleAvatar(e.target);
-    }, true);
-
-    // This script runs after the table has painted, so images that already
-    // finished (cached hits, and any that failed) never fire an event for us.
-    table.querySelectorAll('.ot-avatar-img').forEach(function (img) {
-        if (img.complete) settleAvatar(img);
-    });
-
-    // ── Column visibility ────────────────────────────────────────────────────
     // Header index -> the export column key(s) that column stands for, matching
     // DirectoryController::OT_EXPORT_COLUMNS. Index 1 carries two: the identity
     // column merges name + OT code on screen, but they stay separate fields in
-    // the report. Positional — adding a <th> means editing this array and the
-    // empty-state colspan.
+    // the report. Positional — adding a <th> means editing this array.
     var OT_EXPORT_COLUMN_KEYS = [
         ['sno'], ['name', 'ot_code'], ['room_no'], ['room_ext'], ['email'], ['course'], ['cadre']
     ];
@@ -616,56 +441,118 @@
         } catch (e) { /* storage unavailable — the choice just won't persist */ }
     }
 
-    var headers = Array.prototype.slice.call(table.querySelectorAll('thead th'));
-    var labels = headers.map(function (th) {
+    // ── Filters (still server-side: they change which rows are loaded) ───────
+    var courseSelect = document.getElementById('otCourseSelect');
+    if (courseSelect) {
+        courseSelect.addEventListener('change', function () { form.submit(); });
+    }
+
+    // ── DataTable ───────────────────────────────────────────────────────────
+    // dom / language / pageLength / pagingType all come from datatable-global-ui.js,
+    // which also moves the filter into .programme-dt-search and builds the footer.
+    var dt = $table.DataTable({
+        order: [[1, 'asc']],          // Name / OT Code, matching the server's sort
+        // The Responsive extension is loaded globally and self-starts; it stamps a
+        // ► expand control onto the first column and collapses cells we already
+        // handle with .table-responsive horizontal scrolling.
+        responsive: false,
+        columnDefs: [
+            // S. No. is a running count, not data: never sort or search on it.
+            { targets: 0, orderable: false, searchable: false }
+        ],
+        language: {
+            searchPlaceholder: 'Search name, OT code, email, cadre',
+            emptyTable: 'No officer trainees in this programme',
+            zeroRecords: 'No officer trainees match your search'
+        }
+    });
+
+    // S. No. follows the current sort and page rather than the original row order.
+    function renumberSerial() {
+        var start = dt.page.info().start;
+        dt.column(0, { search: 'applied', order: 'applied', page: 'current' }).nodes().each(function (cell, i) {
+            cell.textContent = start + i + 1;
+        });
+    }
+
+    // ── Avatars ─────────────────────────────────────────────────────────────
+    // Reveal a photo only once it has actually decoded; drop it on error so the
+    // initials underneath stay visible. Re-run per draw: DataTables detaches the
+    // rows that aren't on the current page, so images settle as pages are shown.
+    function settleAvatar(img) {
+        if (img.naturalWidth > 0) {
+            img.classList.add('is-loaded');
+        } else {
+            img.remove();
+        }
+    }
+
+    // load/error don't bubble, hence capture.
+    $table[0].addEventListener('load', function (e) {
+        if (e.target.classList && e.target.classList.contains('ot-avatar-img')) settleAvatar(e.target);
+    }, true);
+    $table[0].addEventListener('error', function (e) {
+        if (e.target.classList && e.target.classList.contains('ot-avatar-img')) settleAvatar(e.target);
+    }, true);
+
+    function settleVisibleAvatars() {
+        $table[0].querySelectorAll('.ot-avatar-img').forEach(function (img) {
+            // Promote data-src -> src for the rows actually on screen. Only these
+            // ever hit the network; the rest of the set stays request-free.
+            if (!img.getAttribute('src') && img.dataset.src) {
+                img.src = img.dataset.src;
+                return; // load/error will call back through the capture listeners
+            }
+            if (img.complete) settleAvatar(img);
+        });
+    }
+
+    // ── Downloads follow what's on screen ───────────────────────────────────
+    var labels = dt.columns().header().toArray().map(function (th) {
         return th.textContent.replace(/\s+/g, ' ').trim();
     });
 
-    function setColumnVisible(index, visible) {
-        var nth = index + 1;
-        table.querySelectorAll('tr').forEach(function (row) {
-            // The empty-state row spans every column; hiding a cell in it would
-            // wipe the whole message.
-            if (row.querySelector('[colspan]')) return;
-            var cell = row.children[nth - 1];
-            if (cell) cell.style.display = visible ? '' : 'none';
-        });
-    }
-
-    function applyHidden(hidden) {
-        labels.forEach(function (label, i) {
-            if (!label) return;
-            setColumnVisible(i, hidden.indexOf(label) === -1);
-        });
-    }
-
-    function syncDownloadLinks(hidden) {
+    function syncDownloadLinks() {
+        var hidden = readHidden();
         var keys = [];
         labels.forEach(function (label, i) {
             if (hidden.indexOf(label) !== -1) return;
             (OT_EXPORT_COLUMN_KEYS[i] || []).forEach(function (key) { keys.push(key); });
         });
 
-        // Every format follows what's on screen, so Print and the PDF show the
-        // same columns the user left visible.
+        var term = dt.search();
+
         OT_DOWNLOAD_LINK_IDS.forEach(function (id) {
             var link = document.getElementById(id);
             if (!link) return;
             var url = new URL(link.href, window.location.origin);
-            // Omit ?cols= entirely while nothing is hidden — the server reads
-            // "no cols" as "every column".
+            // Omit either param entirely when it isn't narrowing anything — the
+            // server reads "no cols" as every column and "no search" as every row.
             if (keys.length && keys.length !== OT_EXPORT_COL_COUNT) {
                 url.searchParams.set('cols', keys.join(','));
             } else {
                 url.searchParams.delete('cols');
             }
+            if (term) {
+                url.searchParams.set('search', term);
+            } else {
+                url.searchParams.delete('search');
+            }
             link.href = url.toString();
         });
     }
 
-    var grid = document.getElementById('otColumnToggleGrid');
+    // ── Column visibility ───────────────────────────────────────────────────
+    function applyHidden() {
+        var hidden = readHidden();
+        dt.columns().every(function () {
+            this.visible(hidden.indexOf(labels[this.index()]) === -1, false);
+        });
+        dt.columns.adjust();
+    }
 
     function buildGrid() {
+        var grid = document.getElementById('otColumnToggleGrid');
         if (!grid) return;
         var hidden = readHidden();
         grid.innerHTML = '';
@@ -697,8 +584,9 @@
                     current.push(label);
                 }
                 saveHidden(current);
-                setColumnVisible(i, this.checked);
-                syncDownloadLinks(current);
+                dt.column(i).visible(this.checked, false);
+                dt.columns.adjust();
+                syncDownloadLinks();
             });
 
             var text = document.createElement('span');
@@ -711,11 +599,31 @@
         });
     }
 
-    var hiddenOnLoad = readHidden();
-    applyHidden(hiddenOnLoad);       // before paint, so hidden columns don't flash back
-    syncDownloadLinks(hiddenOnLoad);
+    dt.on('draw.dt', function () {
+        renumberSerial();
+        settleVisibleAvatars();
+        stampSearchPlaceholder();
+    });
+    dt.on('search.dt', syncDownloadLinks);
+
+    // datatable-global-ui.js resolves language before our init options merge and
+    // moves the filter into the slot after init, so searchPlaceholder can only be
+    // set on the moved input — from the draw handler, once it exists.
+    var SEARCH_PLACEHOLDER = 'Search name, OT code, email, cadre';
+    function stampSearchPlaceholder() {
+        var input = document.querySelector('.programme-dt-search input');
+        if (input && input.getAttribute('placeholder') !== SEARCH_PLACEHOLDER) {
+            input.setAttribute('placeholder', SEARCH_PLACEHOLDER);
+        }
+    }
+
+    applyHidden();
+    renumberSerial();
+    settleVisibleAvatars();
+    syncDownloadLinks();
+    stampSearchPlaceholder();
     buildGrid();
-})();
+});
 </script>
 @endpush
 

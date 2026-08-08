@@ -10,10 +10,8 @@ use App\Models\StudentMasterCourseMap;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Maatwebsite\Excel\Excel as ExcelWriter;
 use Maatwebsite\Excel\Facades\Excel;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DirectoryController extends Controller
 {
@@ -35,36 +33,92 @@ class DirectoryController extends Controller
         'cadre' => 'Cadre Name',
     ];
 
-    /** Rows-per-page choices offered by the footer select. */
-    private const PER_PAGE_OPTIONS = ['10', '25', '50', '100', '200', 'all'];
+    /**
+     * Same contract as OT_EXPORT_COLUMNS, for the LBSNAA staff directory. Keys
+     * must stay aligned with LBS_EXPORT_COLUMN_KEYS in lbsnaa.blade.php.
+     */
+    private const LBSNAA_EXPORT_COLUMNS = [
+        'sno' => 'S.No.',
+        'name' => 'Name',
+        'designation' => 'Designation',
+        'section' => 'Section',
+        'address' => 'Address',
+        'office_ext' => 'Office Extension',
+        'mobile' => 'Mobile',
+        'residence' => 'Residence No.',
+        'email' => 'Email ID',
+    ];
 
     /**
-     * Download formats offered by the OT directory. Print / PDF / Excel share one
+     * The employee's displayed name, assembled in SQL so ORDER BY matches what
+     * the Name column actually shows. NULLIF(TRIM(...), '') drops the blank
+     * middle names that would otherwise leave a double space mid-sort.
+     */
+    private const EMPLOYEE_NAME_SQL = "TRIM(CONCAT_WS(' ',"
+        . " NULLIF(TRIM(employee_master.first_name), ''),"
+        . " NULLIF(TRIM(employee_master.middle_name), ''),"
+        . " NULLIF(TRIM(employee_master.last_name), '')))";
+
+    /**
+     * Download formats offered by both directories. Print / PDF / Excel share one
      * branded report layout; `csv` stays a flat machine-readable data file.
      */
-    private const OT_EXPORT_FORMATS = ['csv', 'excel', 'pdf', 'print'];
+    private const EXPORT_FORMATS = ['csv', 'excel', 'pdf', 'print'];
 
     public function lbsnaa(Request $request)
     {
-        $search = trim((string) $request->input('search', ''));
-        $sort = (string) $request->input('sort', 'name_asc');
-        $perPage = (int) $request->input('per_page', 10);
-        if (!in_array($perPage, [25, 50, 100], true)) {
-            $perPage = 10;
+        // Active / Inactive split. EmployeeMaster::scopeActive() is the single
+        // source of truth for what "active" means (status = 1); everything else
+        // is a former or otherwise inactive record.
+        $status = (string) $request->input('status', 'active');
+        if (!in_array($status, ['active', 'inactive'], true)) {
+            $status = 'active';
         }
-        $export = (string) $request->input('export', '');
-        $sortMap = [
-            'name_asc' => ['employee_master.first_name', 'asc'],
-            'name_desc' => ['employee_master.first_name', 'desc'],
-            'designation_asc' => ['d.designation_name', 'asc'],
-            'designation_desc' => ['d.designation_name', 'desc'],
-        ];
-        [$sortColumn, $sortDirection] = $sortMap[$sort] ?? $sortMap['name_asc'];
 
-        $employeesQuery = EmployeeMaster::query()
-            ->leftJoin('designation_master as d', 'employee_master.designation_master_pk', '=', 'd.pk')
-            ->leftJoin('department_master as dept', 'employee_master.department_master_pk', '=', 'dept.pk')
-            ->where('employee_master.status', 1)
+        $selectedDepartment = (int) $request->input('department_id', 0);
+        $selectedDesignation = (int) $request->input('designation_id', 0);
+        // Only the exports read this now — on screen the search is the DataTables
+        // filter, which stamps its term onto the download links.
+        $search = trim((string) $request->input('search', ''));
+        $export = (string) $request->input('export', '');
+
+        $scopeStatus = fn ($query) => $query->when(
+            $status === 'active',
+            fn ($q) => $q->where('employee_master.status', 1),
+            fn ($q) => $q->where('employee_master.status', '<>', 1)
+        );
+
+        // Section / Designation options are drawn from the employees actually in
+        // this tab — the raw masters hold 145 and 227 rows, most of them unused.
+        $departments = $scopeStatus(
+            EmployeeMaster::query()
+                ->join('department_master as dept', 'employee_master.department_master_pk', '=', 'dept.pk')
+                ->whereNotNull('dept.department_name')
+                ->where('dept.department_name', '<>', '')
+        )->distinct()->orderBy('dept.department_name')->pluck('dept.department_name', 'dept.pk');
+
+        $designations = $scopeStatus(
+            EmployeeMaster::query()
+                ->join('designation_master as d', 'employee_master.designation_master_pk', '=', 'd.pk')
+                ->whereNotNull('d.designation_name')
+                ->where('d.designation_name', '<>', '')
+        )->distinct()->orderBy('d.designation_name')->pluck('d.designation_name', 'd.pk');
+
+        // A filter carried over from the other tab would silently return nothing.
+        if ($selectedDepartment > 0 && !$departments->has($selectedDepartment)) {
+            $selectedDepartment = 0;
+        }
+        if ($selectedDesignation > 0 && !$designations->has($selectedDesignation)) {
+            $selectedDesignation = 0;
+        }
+
+        $employeesQuery = $scopeStatus(
+            EmployeeMaster::query()
+                ->leftJoin('designation_master as d', 'employee_master.designation_master_pk', '=', 'd.pk')
+                ->leftJoin('department_master as dept', 'employee_master.department_master_pk', '=', 'dept.pk')
+        )
+            ->when($selectedDepartment > 0, fn ($q) => $q->where('employee_master.department_master_pk', $selectedDepartment))
+            ->when($selectedDesignation > 0, fn ($q) => $q->where('employee_master.designation_master_pk', $selectedDesignation))
             ->select([
                 'employee_master.pk',
                 'employee_master.first_name',
@@ -89,22 +143,62 @@ class DirectoryController extends Controller
                     ->orWhere('employee_master.email', 'like', "%{$search}%")
                     ->orWhere('employee_master.officalemail', 'like', "%{$search}%")
                     ->orWhere('employee_master.mobile', 'like', "%{$search}%")
+                    ->orWhere('employee_master.office_extension_no', 'like', "%{$search}%")
                     ->orWhere('d.designation_name', 'like', "%{$search}%")
                     ->orWhere('dept.department_name', 'like', "%{$search}%");
             });
         }
 
-        $employeesQuery = $employeesQuery
-            ->orderBy($sortColumn, $sortDirection)
-            ->orderBy('employee_master.last_name');
+        // Alphabetical by the name as displayed. Sorting on the raw first_name
+        // puts " BALVIR" (one record carries a leading space) ahead of every A,
+        // and ignores the middle/last name entirely on shared first names.
+        $employeesQuery->orderByRaw(self::EMPLOYEE_NAME_SQL . ' asc');
 
-        if (in_array($export, ['csv', 'excel'], true)) {
-            return $this->streamEmployeesExport($employeesQuery->cursor(), $export);
+        if (in_array($export, self::EXPORT_FORMATS, true)) {
+            return $this->exportResponse(
+                $export,
+                $employeesQuery,
+                self::LBSNAA_EXPORT_COLUMNS,
+                $this->resolveExportCols(self::LBSNAA_EXPORT_COLUMNS, (string) $request->input('cols', '')),
+                fn (object $row, int $serial) => $this->employeeRowValues($row, $serial),
+                'LBSNAA Directory',
+                $this->lbsnaaFilterSummary(
+                    $status,
+                    (string) ($departments[$selectedDepartment] ?? ''),
+                    (string) ($designations[$selectedDesignation] ?? ''),
+                    $search
+                ),
+                'lbsnaa_directory_' . now()->format('Ymd_His')
+            );
         }
 
+        // The whole filtered set: sorting, searching and paging are DataTables'
+        // job on this page. Section/Designation/status stay server-side so the
+        // payload only ever carries the bucket you asked for.
         $employees = $employeesQuery->get();
 
-        return view('admin.directory.lbsnaa', compact('employees'));
+        $employees->transform(function ($row) {
+            $row->full_name = $this->employeeName($row);
+            $row->initials = $this->initialsFor($row->full_name);
+            // The official address is the directory answer; the personal one is
+            // only a fallback.
+            $row->contact_email = $row->officalemail ?: $row->email;
+            $row->office_extension_no = $this->trimDecimalZeros($row->office_extension_no);
+            $row->residence_no = $this->trimDecimalZeros($row->residence_no);
+            $row->mobile = $this->trimDecimalZeros($row->mobile);
+
+            return $row;
+        });
+
+        return view('admin.directory.lbsnaa', compact(
+            'employees',
+            'departments',
+            'designations',
+            'selectedDepartment',
+            'selectedDesignation',
+            'search',
+            'status'
+        ));
     }
 
     public function ot(Request $request)
@@ -130,23 +224,19 @@ class DirectoryController extends Controller
             ->get(['pk', 'course_name', 'couse_short_name']);
 
         $selectedCourseId = (int) $request->input('course_id', 0);
+        // Only the exports read this now — on screen the search is the DataTables
+        // filter, which stamps its term onto the download links.
         $search = trim((string) $request->input('search', ''));
         $sort = (string) $request->input('sort', 'name_asc');
-
-        // The footer select round-trips as a string ('all' is a valid choice), so
-        // keep the raw option for the view and derive the numeric page size here.
-        $perPage = (string) $request->input('per_page', '10');
-        if (!in_array($perPage, self::PER_PAGE_OPTIONS, true)) {
-            $perPage = '10';
-        }
-        $rowsPerPage = $perPage === 'all' ? 100000 : (int) $perPage;
-
         $export = (string) $request->input('export', '');
+        // TRIM(): one student_master row carries a leading space in display_name,
+        // which would otherwise sort ahead of every letter. Both halves come from
+        // this whitelist, never from the request, so the raw order is safe.
         $sortMap = [
-            'name_asc' => ['sm.display_name', 'asc'],
-            'name_desc' => ['sm.display_name', 'desc'],
-            'ot_code_asc' => ['sm.generated_OT_code', 'asc'],
-            'ot_code_desc' => ['sm.generated_OT_code', 'desc'],
+            'name_asc' => ['TRIM(sm.display_name)', 'asc'],
+            'name_desc' => ['TRIM(sm.display_name)', 'desc'],
+            'ot_code_asc' => ['TRIM(sm.generated_OT_code)', 'asc'],
+            'ot_code_desc' => ['TRIM(sm.generated_OT_code)', 'desc'],
         ];
         [$sortColumn, $sortDirection] = $sortMap[$sort] ?? $sortMap['name_asc'];
 
@@ -160,7 +250,7 @@ class DirectoryController extends Controller
             $selectedCourseId = (int) $courses->first()->pk;
         }
 
-        $students = new LengthAwarePaginator([], 0, $rowsPerPage);
+        $students = collect();
         if ($selectedCourseId > 0) {
             $studentsQuery = StudentMasterCourseMap::query()
                 ->join('student_master as sm', 'student_master_course__map.student_master_pk', '=', 'sm.pk')
@@ -193,24 +283,30 @@ class DirectoryController extends Controller
                 });
             }
 
-            $studentsQuery = $studentsQuery->orderBy($sortColumn, $sortDirection);
+            $studentsQuery = $studentsQuery->orderByRaw("{$sortColumn} {$sortDirection}");
 
-            if (in_array($export, self::OT_EXPORT_FORMATS, true)) {
-                return $this->otExport(
-                    $studentsQuery,
+            if (in_array($export, self::EXPORT_FORMATS, true)) {
+                $header = $this->buildReportHeaderData($selectedCourseId);
+
+                return $this->exportResponse(
                     $export,
-                    $this->resolveOtExportCols((string) $request->input('cols', '')),
-                    $selectedCourseId,
-                    $status,
-                    $search
+                    $studentsQuery,
+                    self::OT_EXPORT_COLUMNS,
+                    $this->resolveExportCols(self::OT_EXPORT_COLUMNS, (string) $request->input('cols', '')),
+                    fn (object $row, int $serial) => $this->otRowValues($row, $serial),
+                    'OT Directory',
+                    $this->otFilterSummary($status, (string) $header['courseName'], $search),
+                    'ot_directory_' . now()->format('Ymd_His'),
+                    $selectedCourseId
                 );
             }
 
-            $students = $studentsQuery
-                ->paginate($rowsPerPage)
-                ->withQueryString();
+            // The whole course: sorting, searching and paging are DataTables' job
+            // on this page. The tab + programme filter stay server-side so the
+            // payload only ever carries the course you asked for.
+            $students = $studentsQuery->get();
 
-            $students->getCollection()->transform(function ($row) {
+            $students->transform(function ($row) {
                 $row->course_name = $this->decodeEntities((string) $row->course_name);
                 $row->initials = $this->initialsFor((string) $row->display_name);
 
@@ -218,36 +314,30 @@ class DirectoryController extends Controller
             });
         }
 
-        return view('admin.directory.ot', compact('students', 'courses', 'selectedCourseId', 'search', 'sort', 'perPage', 'status'));
+        return view('admin.directory.ot', compact('students', 'courses', 'selectedCourseId', 'search', 'sort', 'status'));
     }
 
-    private function streamEmployeesExport(iterable $rows, string $export): StreamedResponse
+    /** employee_master stores the name in three columns. */
+    private function employeeName(object $row): string
     {
-        $isExcel = $export === 'excel';
-        $filename = $isExcel ? 'lbsnaa-directory.xls' : 'lbsnaa-directory.csv';
-        $delimiter = $isExcel ? "\t" : ',';
+        return trim(
+            trim((string) ($row->first_name ?? '')) . ' '
+            . trim((string) ($row->middle_name ?? '')) . ' '
+            . trim((string) ($row->last_name ?? ''))
+        );
+    }
 
-        return response()->streamDownload(function () use ($rows, $delimiter) {
-            $output = fopen('php://output', 'w');
-            fputcsv($output, ['S.No.', 'Name', 'Designation', 'Section', 'Address', 'Office Extension', 'Mobile', 'Residence', 'Email'], $delimiter);
-            $index = 1;
-            foreach ($rows as $row) {
-                $name = trim(($row->first_name ?? '') . ' ' . ($row->middle_name ?? '') . ' ' . ($row->last_name ?? ''));
-                $email = $row->officalemail ?: $row->email;
-                fputcsv($output, [
-                    $index++,
-                    $name ?: '-',
-                    $row->designation_name ?: '-',
-                    $row->department_name ?: '-',
-                    $row->current_address ?: '-',
-                    $row->office_extension_no ?: '-',
-                    $row->mobile ?: '-',
-                    $row->residence_no ?: '-',
-                    $email ?: '-',
-                ], $delimiter);
-            }
-            fclose($output);
-        }, $filename);
+    /**
+     * employee_master.office_extension_no is a varchar holding float-formatted
+     * text ("2347.0"), so extensions render with a bogus decimal. Only a trailing
+     * ".0" tail is stripped — a blanket numeric cast would eat the leading zeros
+     * that 95 residence numbers and 331 mobile numbers legitimately carry.
+     */
+    private function trimDecimalZeros(?string $value): string
+    {
+        $value = trim((string) $value);
+
+        return preg_match('/^(-?\d+)\.0+$/', $value, $m) ? $m[1] : $value;
     }
 
     /**
@@ -271,9 +361,8 @@ class DirectoryController extends Controller
 
     /**
      * Monogram for the avatar placeholder: first letter of the first name plus
-     * first letter of the last. display_name is one field, so it's split on
-     * whitespace — a single-word name yields one letter, an empty one yields ''
-     * (the view then shows a person glyph instead).
+     * first letter of the last. A single-word name yields one letter, an empty
+     * one yields '' (the view then shows a person glyph instead).
      */
     private function initialsFor(string $name): string
     {
@@ -287,7 +376,7 @@ class DirectoryController extends Controller
             $initials .= mb_substr(end($parts), 0, 1);
         }
 
-        // "-" is the placeholder the directory uses for a missing name.
+        // "-" is the placeholder both directories use for a missing name.
         return preg_match('/^\p{L}/u', $initials) ? mb_strtoupper($initials) : '';
     }
 
@@ -296,11 +385,12 @@ class DirectoryController extends Controller
      * Intersecting against the canonical keys (rather than trusting the request)
      * preserves report order and drops anything unrecognised. Empty/absent = all.
      *
+     * @param  array<string, string>  $columns  Canonical key => header label.
      * @return list<string>
      */
-    private function resolveOtExportCols(string $cols): array
+    private function resolveExportCols(array $columns, string $cols): array
     {
-        $known = array_keys(self::OT_EXPORT_COLUMNS);
+        $known = array_keys($columns);
         $wanted = array_filter(array_map('trim', explode(',', $cols)));
 
         if (!$wanted) {
@@ -313,8 +403,8 @@ class DirectoryController extends Controller
     }
 
     /**
-     * One export row, keyed by export column. Shared by every format so the CSV,
-     * the workbook, the PDF and the print sheet can never drift apart.
+     * One OT export row, keyed by export column. Shared by every format so the
+     * CSV, the workbook, the PDF and the print sheet can never drift apart.
      *
      * @return array<string, string|int>
      */
@@ -335,44 +425,79 @@ class DirectoryController extends Controller
     }
 
     /**
-     * Dispatch a Download choice. `csv` streams row-by-row off a cursor; the three
-     * report formats need the whole set in memory to lay out a paginated document.
+     * One LBSNAA export row, keyed by export column.
      *
-     * @param  list<string>  $cols  Export column keys, in report order.
+     * @return array<string, string|int>
      */
-    private function otExport(
-        $query,
+    private function employeeRowValues(object $row, int $serial): array
+    {
+        return [
+            'sno' => $serial,
+            'name' => $this->employeeName($row) ?: '-',
+            'designation' => $row->designation_name ?: '-',
+            'section' => $row->department_name ?: '-',
+            'address' => $row->current_address ?: '-',
+            'office_ext' => $this->trimDecimalZeros($row->office_extension_no) ?: '-',
+            'mobile' => $this->trimDecimalZeros($row->mobile) ?: '-',
+            'residence' => $this->trimDecimalZeros($row->residence_no) ?: '-',
+            // The official address is the directory answer; the personal one is
+            // only a fallback.
+            'email' => ($row->officalemail ?: $row->email) ?: '-',
+        ];
+    }
+
+    /**
+     * Dispatch a Download choice for either directory. `csv` streams row-by-row
+     * off a cursor; the three report formats need the whole set in memory to lay
+     * out a paginated document.
+     *
+     * @param  array<string, string>  $columns    Canonical key => header label.
+     * @param  list<string>           $cols       Selected keys, in report order.
+     * @param  callable(object, int): array<string, string|int>  $rowValues
+     */
+    private function exportResponse(
         string $format,
+        $query,
+        array $columns,
         array $cols,
-        int $courseId,
-        string $status,
-        string $search
+        callable $rowValues,
+        string $reportTitle,
+        string $filterSummary,
+        string $fileBase,
+        ?int $courseId = null
     ) {
+        $headings = array_map(fn ($key) => $columns[$key], $cols);
+
         if ($format === 'csv') {
-            return $this->streamOtExport($query->cursor(), $cols);
+            return response()->streamDownload(function () use ($query, $cols, $headings, $rowValues) {
+                $output = fopen('php://output', 'w');
+                fputcsv($output, $headings);
+                $serial = 1;
+                foreach ($query->cursor() as $row) {
+                    $values = $rowValues($row, $serial++);
+                    fputcsv($output, array_map(fn ($key) => $values[$key], $cols));
+                }
+                fclose($output);
+            }, "{$fileBase}.csv");
         }
 
-        // A whole course of trainees laid out as one document — same allowance the
+        // A whole directory laid out as one document — same allowance the
         // dashboard student-list report uses.
         ini_set('memory_limit', '512M');
 
-        $headings = array_map(fn ($key) => self::OT_EXPORT_COLUMNS[$key], $cols);
         $rows = [];
         $serial = 1;
         foreach ($query->cursor() as $row) {
-            $values = $this->otRowValues($row, $serial++);
+            $values = $rowValues($row, $serial++);
             $rows[] = array_map(fn ($key) => $values[$key], $cols);
         }
 
-        $header = $this->buildOtExportHeaderData($courseId);
-        $reportTitle = 'OT Directory';
+        $header = $this->buildReportHeaderData($courseId);
         $generatedAt = now()->format('d-m-Y H:i');
-        $filterSummary = $this->otFilterSummary($status, (string) $header['courseName'], $search);
-        $fileBase = 'ot_directory_' . now()->format('Ymd_His');
 
         // The print + PDF blades and StudentListReportExport are generic report
         // shells (headings/rows + institution header) shared with the dashboard
-        // student list — reused so the two reports stay visually identical.
+        // student list — reused so every report stays visually identical.
         $payload = array_merge([
             'headings' => $headings,
             'rows' => $rows,
@@ -398,9 +523,9 @@ class DirectoryController extends Controller
                 ->download("{$fileBase}.pdf");
         }
 
-        // "Excel" is a branded .xlsx, not the tab-delimited .xls this page used to
-        // emit: a flat file cannot carry the logos, the merged academy titles or
-        // the blue report band that Print and PDF show.
+        // "Excel" is a branded .xlsx, not the tab-delimited .xls these pages used
+        // to emit: a flat file cannot carry the logos, the merged academy titles
+        // or the blue report band that Print and PDF show.
         return Excel::download(
             new StudentListReportExport(
                 $headings,
@@ -418,12 +543,13 @@ class DirectoryController extends Controller
     }
 
     /**
-     * Logos + course line for the report header, matching the dashboard student
-     * list so both reports print the same institution block.
+     * Logos (+ the course line, where a report has one) for the report header,
+     * matching the dashboard student list so every report prints the same
+     * institution block.
      *
      * @return array{logoLeft:?string, logoRight:?string, titleHindi:?string, courseName:string, courseDuration:string}
      */
-    private function buildOtExportHeaderData(int $courseId): array
+    private function buildReportHeaderData(?int $courseId = null): array
     {
         // DomPDF and PhpSpreadsheet both need the bytes, not a URL.
         $toDataUri = static function (string $path): ?string {
@@ -445,7 +571,7 @@ class DirectoryController extends Controller
 
         $courseName = '';
         $courseDuration = '';
-        if ($courseId > 0 && $course = CourseMaster::find($courseId)) {
+        if ($courseId && $courseId > 0 && $course = CourseMaster::find($courseId)) {
             $courseName = $this->decodeEntities((string) ($course->course_name ?? ''));
             $start = !empty($course->start_date) ? Carbon::parse($course->start_date)->format('j F Y') : '';
             $end = !empty($course->end_date) ? Carbon::parse($course->end_date)->format('j F Y') : '';
@@ -462,7 +588,7 @@ class DirectoryController extends Controller
         ];
     }
 
-    /** Human-readable line describing which filters produced the report. */
+    /** Human-readable line describing which filters produced the OT report. */
     private function otFilterSummary(string $status, string $courseName, string $search): string
     {
         $parts = [$status === 'archive' ? 'Archived programmes' : 'Active programmes'];
@@ -476,21 +602,20 @@ class DirectoryController extends Controller
         return implode(' | ', $parts);
     }
 
-    /**
-     * @param  list<string>  $cols  Export column keys, in report order.
-     */
-    private function streamOtExport(iterable $rows, array $cols): StreamedResponse
+    /** Human-readable line describing which filters produced the LBSNAA report. */
+    private function lbsnaaFilterSummary(string $status, string $section, string $designation, string $search): string
     {
-        return response()->streamDownload(function () use ($rows, $cols) {
-            $output = fopen('php://output', 'w');
-            fputcsv($output, array_map(fn ($key) => self::OT_EXPORT_COLUMNS[$key], $cols));
-            $serial = 1;
-            foreach ($rows as $row) {
-                $values = $this->otRowValues($row, $serial++);
-                fputcsv($output, array_map(fn ($key) => $values[$key], $cols));
-            }
-            fclose($output);
-        }, 'ot_directory_' . now()->format('Ymd_His') . '.csv');
+        $parts = [$status === 'inactive' ? 'Inactive staff' : 'Active staff'];
+        if ($section !== '') {
+            $parts[] = 'Section: ' . $section;
+        }
+        if ($designation !== '') {
+            $parts[] = 'Designation: ' . $designation;
+        }
+        if ($search !== '') {
+            $parts[] = 'Search: "' . $search . '"';
+        }
+
+        return implode(' | ', $parts);
     }
 }
-
