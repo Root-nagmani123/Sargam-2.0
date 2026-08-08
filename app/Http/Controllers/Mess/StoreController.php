@@ -36,16 +36,38 @@ class StoreController extends Controller
                     'seconds' => 'MESS_STORE_MASTER_DATATABLE_CACHE_SECONDS',
                 ],
                 'StoreController@index',
-                fn () => $this->buildStoreDatatableResponse($request)
+                fn () => $this->buildStoreDatatableResponse($request),
+                // The cache fingerprint covers DataTables' own params only, so the
+                // status pill has to be added by hand — without it Active and
+                // Inactive would share a cache entry and serve each other's rows.
+                ['status' => $this->resolveStatusFilter($request)]
             );
         }
 
         return view('mess.stores.index');
     }
 
+    /**
+     * Status values the pill row may ask for; anything else means "all".
+     */
+    private function resolveStatusFilter(Request $request): ?string
+    {
+        $status = strtolower(trim((string) $request->query('status', '')));
+
+        return in_array($status, [Store::STATUS_ACTIVE, Store::STATUS_INACTIVE], true) ? $status : null;
+    }
+
     private function storeFilteredQuery(Request $request): Builder
     {
-        return Store::query();
+        $query = Store::query();
+
+        // Driven by the status pills above the grid (see mess/stores/index.blade.php).
+        $status = $this->resolveStatusFilter($request);
+        if ($status !== null) {
+            $query->where('status', $status);
+        }
+
+        return $query;
     }
 
     private function buildStoreDatatableResponse(Request $request): JsonResponse
@@ -112,7 +134,11 @@ class StoreController extends Controller
         $canDelete = function_exists('hasRole') && (hasRole('Super Admin') || hasRole('Mess-Admin'));
         $storeTypes = Store::storeTypes();
 
-        $data = $rows->map(fn (Store $store) => $this->buildStoreDatatableRow($store, $canDelete, $storeTypes))->all();
+        // Column 0 is a running serial, not the primary key — the same "S. No."
+        // the branded export prints. It follows the page, so it always reads 1..n.
+        $data = $rows->values()
+            ->map(fn (Store $store, int $i) => $this->buildStoreDatatableRow($store, $canDelete, $storeTypes, $start + $i + 1))
+            ->all();
 
         return response()->json([
             'draw' => $draw,
@@ -125,40 +151,54 @@ class StoreController extends Controller
     /**
      * @return string[]
      */
-    private function buildStoreDatatableRow(Store $store, bool $canDelete, array $storeTypes): array
+    private function buildStoreDatatableRow(Store $store, bool $canDelete, array $storeTypes, int $serial): array
     {
-        $nameCell = '<div class="fw-semibold">' . e($store->store_name) . '</div>'
-            . '<div class="text-muted small">Code: ' . e($store->store_code) . '</div>';
+        // Markup here is the design-system vocabulary the listing's page CSS
+        // styles: .store-name-* for the two-line name, .programme-status-badge
+        // for status, and .store-action-btn for the icon-over-label row actions
+        // (docs/design.md — "Applying the design to a mess-master index page").
+        $nameCell = '<div class="store-name-primary">' . e($store->store_name) . '</div>'
+            . '<div class="store-name-code">Code: ' . e($store->store_code) . '</div>';
         $typeLabel = $storeTypes[$store->store_type ?? 'mess'] ?? ($store->store_type ?? '-');
         $typeCell = '<span class="text-capitalize">' . e($typeLabel) . '</span>';
-        $locationCell = e($store->location ?? '-');
-        $statusCell = '<span class="badge bg-' . e($store->status_badge_class) . '">'
-            . e($store->status_label) . '</span>';
+        $locationCell = e($store->location ?: '-');
 
-        $editBtn = '<button type="button" class="btn btn-sm btn-warning btn-edit-store bg-transparent border-0 p-0 text-primary"'
+        // `badge` stays: .programme-status-badge only carries the colours and
+        // padding, and leans on Bootstrap's .badge for the pill shape.
+        $isActive = ($store->status ?? 'active') === 'active';
+        // status_label is the raw column value ('active'); the pill reads as a word.
+        $statusCell = '<span class="badge programme-status-badge programme-status-badge--'
+            . ($isActive ? 'active' : 'inactive') . '">' . e(ucfirst((string) $store->status_label)) . '</span>';
+
+        $editBtn = '<button type="button" class="store-action-btn text-primary btn-edit-store"'
             . ' data-id="' . (int) $store->id . '"'
             . ' data-store-name="' . e($store->store_name) . '"'
             . ' data-store-type="' . e(trim((string) ($store->store_type ?? '')) ?: 'mess') . '"'
             . ' data-location="' . e($store->location ?? '') . '"'
             . ' data-status="' . e($store->status ?? 'active') . '"'
-            . ' title="Edit"><i class="material-symbols-rounded">edit</i></button>';
+            . ' aria-label="Edit ' . e($store->store_name) . '">'
+            . '<i class="material-symbols-rounded" aria-hidden="true">edit</i><span>Edit</span></button>';
 
         $deleteForm = '';
         if ($canDelete) {
             $deleteUrl = route('admin.mess.stores.destroy', $store->id);
-            $deleteForm = '<form method="POST" action="' . e($deleteUrl) . '" class="d-inline"'
-                . ' onsubmit="return confirm(\'Are you sure you want to delete this store?\');">'
+            // mess-delete-form + no native confirm(): mess.partials.delete-confirm
+            // intercepts the submit and shows the branded dialog instead.
+            $deleteForm = '<form method="POST" action="' . e($deleteUrl) . '" class="d-inline mess-delete-form"'
+                . ' data-confirm-title="Delete Store?"'
+                . ' data-confirm-message="' . e('“' . $store->store_name . '” will be removed. This action cannot be undone.') . '">'
                 . '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">'
                 . '<input type="hidden" name="_method" value="DELETE">'
-                . '<button type="submit" class="btn btn-sm btn-danger bg-transparent border-0 p-0 text-primary" title="Delete">'
-                . '<i class="material-symbols-rounded">delete</i></button>'
+                . '<button type="submit" class="store-action-btn text-danger"'
+                . ' aria-label="Delete ' . e($store->store_name) . '">'
+                . '<i class="material-symbols-rounded" aria-hidden="true">delete</i><span>Delete</span></button>'
                 . '</form>';
         }
 
-        $actions = '<div class="d-flex gap-2 flex-wrap">' . $editBtn . $deleteForm . '</div>';
+        $actions = '<div class="d-flex align-items-center store-actions">' . $editBtn . $deleteForm . '</div>';
 
         return [
-            (string) $store->id,
+            (string) $serial,
             $nameCell,
             $typeCell,
             $locationCell,
@@ -186,8 +226,10 @@ class StoreController extends Controller
 
         $search = $request->get('search');
         $visibleColumns = $this->parseVisibleColumns($request->get('columns'));
+        // The report follows the grid: same search, same status pill, same columns.
+        $status = $this->resolveStatusFilter($request);
 
-        $export = new StoreMasterExport($search, $visibleColumns);
+        $export = new StoreMasterExport($search, $visibleColumns, $status);
         $fileName = 'store-master-' . now()->format('Y-m-d_H-i-s');
 
         if ($format === 'pdf') {
@@ -197,7 +239,7 @@ class StoreController extends Controller
             $pdf = Pdf::loadView('mess.stores.export_pdf', array_merge([
                 'headings' => $export->activeHeadings(),
                 'rows' => $export->pdfRows(),
-                'filterLine' => ($search !== null && trim((string) $search) !== '') ? ('Applied Filters:   Search: ' . trim($search)) : '',
+                'filterLine' => $export->filterLine(),
                 'printedOn' => now()->format('d-m-Y H:i'),
                 'reportTitle' => 'Store Master',
             ], $this->buildExportHeaderData()))

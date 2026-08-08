@@ -89,9 +89,12 @@
     .store-master-page .store-action-btn.text-danger { color: var(--ds-secondary, #d92d20) !important; }
     .store-master-page .store-action-btn:hover { opacity: .78; }
 
-    /* Pagination → arrows + numbers only (drop First/Last, swap word labels). */
+    /* Pagination → arrows + numbers only (drop First/Last, swap word labels).
+       !important is required, not sloppiness: custom.css sets
+       `.programme-dt-footer .paginate_button { display: inline-flex !important }`,
+       which outranks any plain rule here however specific. */
     .store-master-page .programme-dt-footer .paginate_button.first,
-    .store-master-page .programme-dt-footer .paginate_button.last { display: none; }
+    .store-master-page .programme-dt-footer .paginate_button.last { display: none !important; }
 
     .store-master-page .programme-dt-footer .paginate_button.previous .page-link,
     .store-master-page .programme-dt-footer .paginate_button.next .page-link { font-size: 0; }
@@ -183,8 +186,25 @@
 
     {{-- Success feedback is rendered as the global green toast — see mess.partials.delete-confirm --}}
 
-    {{-- Download / Print bar (branded server-side exports — see admin.mess.stores.export) --}}
-    <div class="d-flex justify-content-end gap-2 mb-3">
+    {{-- Status pills (left) + Download / Print (right) — above the card, per §1 of
+         docs/new-design-index-page.md. The pills are this grid's only filter:
+         Store::storeTypes() holds a single value, so a type select would be dead UI. --}}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0"
+            role="group" aria-label="Filter stores by status">
+            @foreach(['' => 'All', 'active' => 'Active', 'inactive' => 'Inactive'] as $value => $label)
+                @php $isOn = (string) request('status', '') === (string) $value; @endphp
+                <li class="nav-item" role="presentation">
+                    <button type="button"
+                            class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $isOn ? 'active' : '' }}"
+                            data-store-status="{{ $value }}"
+                            aria-pressed="{{ $isOn ? 'true' : 'false' }}"
+                            @if($isOn) aria-current="true" @endif>{{ $label }}</button>
+                </li>
+            @endforeach
+        </ul>
+
+        <div class="d-flex flex-wrap gap-2">
         <button type="button" class="btn store-master-export-btn border-0" id="storesDownloadBtn">
             <i class="material-symbols-rounded">download</i>
             <span>Download</span>
@@ -193,45 +213,68 @@
             <i class="material-symbols-rounded">print</i>
             <span>Print</span>
         </button>
+        </div>
     </div>
 
     <div class="card store-master-card border-0">
         <div class="card-body">
-            {{-- Toolbar: Columns modal trigger + search (the global enhancer relocates the search box here) --}}
-            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3">
-                <button type="button" class="btn programme-dt-btn-columns" id="btnStoresColumns"
-                        data-bs-toggle="modal" data-bs-target="#storesColumnVisibilityModal" title="Show / hide columns">
-                    <span>Columns</span>
-                    <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
-                </button>
-                <div class="programme-dt-search" data-dt-search-for="storesTable"></div>
+            {{-- Toolbar: reset on the left, Columns + search on the right (§2).
+                 The global enhancer relocates DataTables' own search box into the slot. --}}
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-3 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <button type="button" class="btn programme-dt-btn-reset {{ request('status') ? '' : 'd-none' }}"
+                            id="storesResetFilters">Reset Filters</button>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="btnStoresColumns"
+                            data-bs-toggle="modal" data-bs-target="#storesColumnVisibilityModal" title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div class="programme-dt-search" data-dt-search-for="storesTable"></div>
+                </div>
             </div>
 
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    <table id="storesTable" class="table programme-dt-table text-nowrap align-middle mb-0 w-100">
+                        <thead>
+                            <tr>
+                                <th scope="col">S. No.</th>
+                                <th scope="col">Store Name</th>
+                                <th scope="col">Store Type</th>
+                                <th scope="col">Location</th>
+                                <th scope="col" class="text-center">Status</th>
+                                <th scope="col" class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
                 </div>
-            @endif
-
-            <div class="table-responsive">
-                <table id="storesTable" class="table text-nowrap align-middle w-100">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Store Name</th>
-                            <th>Store Type</th>
-                            <th>Location</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
             </div>
 
             {{-- Footer: pagination (left) + "Showing [N] of M items" (right), populated by the global enhancer --}}
             <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3" data-dt-footer-for="storesTable"></div>
+        </div>
+    </div>
+</div>
+
+{{-- Column Visibility Modal (programme/attendance style) --}}
+<div class="modal fade" id="storesColumnVisibilityModal" tabindex="-1" aria-labelledby="storesColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="storesColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="storesColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
         </div>
     </div>
 </div>
@@ -353,6 +396,9 @@
     </div>
 </div>
 
+{{-- Branded delete-confirmation dialog + global success toast --}}
+@include('mess.partials.delete-confirm')
+
 @include('components.mess-master-datatables', [
     'tableId' => 'storesTable',
     'searchPlaceholder' => 'Search stores...',
@@ -362,6 +408,10 @@
     'infoLabel' => 'stores',
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.stores.index'),
+    'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
+    'serverSideColumnDefs' => [
+        ['className' => 'text-center', 'targets' => [4, 5]],
+    ],
 ])
 @push('scripts')
 {{-- Download / Print → branded server-side report (admin.mess.stores.export).
@@ -380,6 +430,10 @@
             ? $('#' + TABLE_ID).DataTable() : null;
         var search = dt ? dt.search() : '';
         if (search) params.push('search=' + encodeURIComponent(search));
+
+        // Same status pill the grid is showing, so the report matches the screen.
+        var status = new URLSearchParams(window.location.search).get('status') || '';
+        if (status) params.push('status=' + encodeURIComponent(status));
 
         var cols = (window.MessColumnManager && typeof window.MessColumnManager.resolveExportIndexes === 'function')
             ? window.MessColumnManager.resolveExportIndexes(TABLE_ID) : null;
@@ -400,6 +454,56 @@
     if (printBtn) {
         printBtn.addEventListener('click', function () {
             window.open(buildUrl('pdf', true), '_blank');
+        });
+    }
+})();
+</script>
+{{-- Status pills + Reset. The mess DataTable component builds its ajax URL from
+     window.location.search, so pushing the pill into the URL and reloading the
+     table is all that is needed — no page navigation, and the filter survives a
+     refresh or a shared link. --}}
+<script>
+(function () {
+    var TABLE_ID = 'storesTable';
+    var $ = window.jQuery;
+
+    function dt() {
+        return ($ && $.fn.DataTable && $.fn.DataTable.isDataTable('#' + TABLE_ID))
+            ? $('#' + TABLE_ID).DataTable() : null;
+    }
+
+    function applyStatus(status) {
+        var url = new URL(window.location.href);
+        if (status) { url.searchParams.set('status', status); }
+        else { url.searchParams.delete('status'); }
+        window.history.replaceState({}, '', url.toString());
+
+        document.querySelectorAll('[data-store-status]').forEach(function (btn) {
+            var on = btn.getAttribute('data-store-status') === status;
+            btn.classList.toggle('active', on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            if (on) { btn.setAttribute('aria-current', 'true'); } else { btn.removeAttribute('aria-current'); }
+        });
+
+        var reset = document.getElementById('storesResetFilters');
+        if (reset) { reset.classList.toggle('d-none', !status); }
+
+        var api = dt();
+        if (api) { api.page(0).ajax.reload(null, false); }
+    }
+
+    document.querySelectorAll('[data-store-status]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            applyStatus(btn.getAttribute('data-store-status') || '');
+        });
+    });
+
+    var reset = document.getElementById('storesResetFilters');
+    if (reset) {
+        reset.addEventListener('click', function () {
+            var api = dt();
+            if (api) { api.search(''); }
+            applyStatus('');
         });
     }
 })();
@@ -489,23 +593,6 @@
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Auto-hide success alerts after 5 seconds
-    setTimeout(function() {
-        document.querySelectorAll('.alert.alert-success.alert-dismissible').forEach(function(alertEl) {
-            try {
-                if (window.bootstrap && bootstrap.Alert) {
-                    bootstrap.Alert.getOrCreateInstance(alertEl).close();
-                } else {
-                    alertEl.classList.remove('show');
-                    alertEl.style.display = 'none';
-                }
-            } catch (e) {
-                alertEl.classList.remove('show');
-                alertEl.style.display = 'none';
-            }
-        });
-    }, 5000);
-
     // Validation rules (must match server: StoreController)
     var storeNameRegex = /^[a-zA-Z0-9\s\-]+$/;
     var locationRegex = /^[a-zA-Z0-9\s\-\.\,]*$/;

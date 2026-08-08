@@ -34,10 +34,31 @@ class StoreMasterExport implements FromCollection, WithColumnWidths, WithEvents,
     /** Data-row count, captured while streaming the collection (for the meta line). */
     protected int $rowCount = 0;
 
-    public function __construct(?string $search = null, ?array $visibleColumns = null)
+    /** Status pill the grid had applied ('active' / 'inactive'), or null for all. */
+    protected ?string $status;
+
+    public function __construct(?string $search = null, ?array $visibleColumns = null, ?string $status = null)
     {
         $this->search = ($search !== null && trim($search) !== '') ? trim($search) : null;
         $this->visibleColumns = ($visibleColumns === null || $visibleColumns === []) ? null : array_values($visibleColumns);
+        $this->status = ($status !== null && trim($status) !== '') ? strtolower(trim($status)) : null;
+    }
+
+    /**
+     * "Applied Filters:   Search: x   |   Status: Active" — shared by the
+     * workbook's meta block and the PDF header so the two never disagree.
+     */
+    public function filterLine(): string
+    {
+        $parts = [];
+        if ($this->search !== null) {
+            $parts[] = 'Search: ' . $this->search;
+        }
+        if ($this->status !== null) {
+            $parts[] = 'Status: ' . ucfirst($this->status);
+        }
+
+        return $parts === [] ? '' : 'Applied Filters:   ' . implode('   |   ', $parts);
     }
 
     /**
@@ -164,8 +185,9 @@ class StoreMasterExport implements FromCollection, WithColumnWidths, WithEvents,
                 $metaLines[] = ['text' => 'Lal Bahadur Shastri National Academy of Administration, Mussoorie', 'style' => 'inst'];
                 $metaLines[] = ['text' => 'Store Master', 'style' => 'title'];
 
-                if ($this->search !== null) {
-                    $metaLines[] = ['text' => 'Applied Filters:   Search: ' . $this->search, 'style' => 'meta'];
+                $filterLine = $this->filterLine();
+                if ($filterLine !== '') {
+                    $metaLines[] = ['text' => $filterLine, 'style' => 'meta'];
                 }
 
                 $metaLines[] = [
@@ -285,6 +307,10 @@ class StoreMasterExport implements FromCollection, WithColumnWidths, WithEvents,
     private function recordsQuery()
     {
         $query = Store::query();
+
+        if ($this->status !== null) {
+            $query->where('status', $this->status);
+        }
 
         if ($this->search !== null) {
             $term = $this->search;
