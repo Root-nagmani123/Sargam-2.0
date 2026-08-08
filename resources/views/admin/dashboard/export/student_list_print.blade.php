@@ -1,3 +1,7 @@
+{{-- SHARED report shell — driven entirely by $headings / $rows plus the
+     institution header. Also used by the OT Directory download
+     (DirectoryController::otExport). Keep it generic; anything student-list
+     specific belongs in the caller. --}}
 @php
     $reportTitle    = $reportTitle ?? 'Student List';
     $logoLeft       = $logoLeft ?? null;
