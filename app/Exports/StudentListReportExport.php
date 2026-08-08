@@ -56,9 +56,17 @@ class StudentListReportExport implements
         $this->headingRow = count($this->bannerLines) + 2;
     }
 
+    /**
+     * Sheet name. Derived from the report title so this shell can be reused by
+     * other reports (the OT Directory download uses it too); for the dashboard
+     * student list that still resolves to "Student List". Excel forbids
+     * \ / ? * : [ ] in sheet names and caps them at 31 characters.
+     */
     public function title(): string
     {
-        return 'Student List';
+        $title = trim(preg_replace('/[\\\\\/\?\*\:\[\]]+/', ' ', $this->reportTitle) ?? '');
+
+        return $title !== '' ? mb_substr($title, 0, 31) : 'Report';
     }
 
     public function startCell(): string
