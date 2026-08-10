@@ -11,6 +11,7 @@ use App\DataTables\EstateRequestForEstateDataTable;
 use App\DataTables\EstateReturnHouseDataTable;
 use App\DataTables\EstateRequestPutInHacDataTable;
 use App\DataTables\EstateHacApprovedDataTable;
+use App\Exports\EstateHacApprovedExport;
 use App\Exports\EstateRequestForEstateExport;
 use App\Http\Controllers\Controller;
 use App\Support\RedisBackedCache;
@@ -1768,6 +1769,72 @@ class EstateController extends Controller
     public function changeRequestHacApproved(EstateHacApprovedDataTable $dataTable)
     {
         return $dataTable->render('admin.estate.change_request_hac_approved');
+    }
+
+    /**
+     * Rows + heading line for the HAC Approval downloads.
+     *
+     * Runs the DataTable's own listing query, so the export inherits the same
+     * HAC visibility rules and the same type filter / search that produced the
+     * on-screen list.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function hacApprovedExportPayload(Request $request): array
+    {
+        $rows = EstateHacApprovedDataTable::listingQuery()
+            ->tap(fn ($query) => EstateHacApprovedDataTable::applyFilters(
+                $query,
+                (string) $request->input('search', ''),
+                (string) $request->input('type_filter', '')
+            ))
+            ->get();
+
+        $typeFilter = trim((string) $request->input('type_filter', ''));
+        $typeLabel = match ($typeFilter) {
+            'change' => 'Change Request',
+            'new' => 'New Request',
+            default => 'All',
+        };
+
+        $filters = ['Request Type: ' . $typeLabel];
+        if (trim((string) $request->input('search', '')) !== '') {
+            $filters[] = 'Search: "' . trim((string) $request->input('search')) . '"';
+        }
+
+        return [
+            'rows' => $rows,
+            'cols' => EstateHacApprovedExport::resolveCols($request->input('cols')),
+            'filterLine' => implode('  |  ', $filters),
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /**
+     * HAC Approval — branded .xlsx of the currently filtered queue.
+     */
+    public function exportHacApproved(Request $request)
+    {
+        $payload = $this->hacApprovedExportPayload($request);
+
+        return Excel::download(
+            new EstateHacApprovedExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'hac-approval-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /**
+     * HAC Approval — print-ready view of the currently filtered queue.
+     * Same header and columns as the Excel download.
+     */
+    public function printHacApproved(Request $request)
+    {
+        return view('admin.estate.change_request_hac_approved_print', $this->hacApprovedExportPayload($request));
     }
 
     /**

@@ -1618,6 +1618,8 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     // Change Requests (HAC Approved) + New requests
     // Change Requests (HAC Approved) + New requests
     Route::get('change-request-hac-approved', [EstateController::class, 'changeRequestHacApproved'])->name('change-request-hac-approved');
+    Route::get('change-request-hac-approved/export', [EstateController::class, 'exportHacApproved'])->name('change-request-hac-approved.export');
+    Route::get('change-request-hac-approved/print', [EstateController::class, 'printHacApproved'])->name('change-request-hac-approved.print');
     Route::get('change-request/approve-details/{id}', [EstateController::class, 'getChangeRequestApproveDetails'])->name('change-request.approve-details');
     Route::get('change-request/vacant-houses', [EstateController::class, 'getChangeRequestVacantHouses'])->name('change-request.vacant-houses');
     Route::post('change-request/approve/{id}', [EstateController::class, 'approveChangeRequest'])->name('change-request.approve');

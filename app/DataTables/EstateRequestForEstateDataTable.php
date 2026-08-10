@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\DataTables\Concerns\RendersEstateRowActions;
 use App\Models\EstateHomeRequestDetails;
 use App\Support\DataTableRedisCache;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
@@ -16,6 +17,8 @@ use Yajra\DataTables\Services\DataTable;
 
 class EstateRequestForEstateDataTable extends DataTable
 {
+    use RendersEstateRowActions;
+
     public const LISTING_CACHE_EPOCH_KEY = 'estate_rfet_list_epoch';
 
     public static function bumpListingCacheEpoch(): void
@@ -120,17 +123,7 @@ class EstateRequestForEstateDataTable extends DataTable
                     }
                 }
 
-                if ($name === '' && $id === '') {
-                    return '—';
-                }
-
-                // Name in ink, employee id as a muted suffix — "Darren Kelly - NNP00037".
-                $html = $name !== '' ? '<span class="rfe-name">' . e($name) . '</span>' : '';
-                if ($id !== '') {
-                    $html .= ($html !== '' ? ' ' : '') . '<span class="rfe-emp-id">' . ($html !== '' ? '- ' : '') . e($id) . '</span>';
-                }
-
-                return $html;
+                return self::nameWithId($name, $id);
             })
             ->editColumn('doj_academic', function ($row) {
                 $d = $row->doj_academic;
@@ -566,15 +559,6 @@ class EstateRequestForEstateDataTable extends DataTable
     }
 
     /**
-     * Soft status pill (matching .programme-status-badge sizing, estate tones).
-     */
-    private static function statusBadge(string $label, string $tone): string
-    {
-        return '<span class="badge rounded-1 programme-status-badge rfe-status rfe-status--' . $tone . '">'
-            . e($label) . '</span>';
-    }
-
-    /**
      * Shared label for the latest change-request status, so the listing, the print
      * view and the Excel export can never disagree. null = no change request.
      */
@@ -590,38 +574,5 @@ class EstateRequestForEstateDataTable extends DataTable
             2 => 'Disapproved',
             default => null,
         };
-    }
-
-    /**
-     * One row-action: a stacked material icon + caption.
-     *
-     * Unavailable actions render as a greyed, non-interactive span rather than
-     * disappearing, so the Action column keeps the same shape on every row.
-     *
-     * @param array{href?:string,class?:string,title?:string,attrs?:string,disabled?:bool,static?:bool} $options
-     */
-    private static function actionLink(string $icon, string $label, string $tone, array $options = []): string
-    {
-        $title = e($options['title'] ?? $label);
-        $isDisabled = ! empty($options['disabled']);
-        $isStatic = $isDisabled || ! empty($options['static']);
-
-        $classes = 'rfe-action rfe-action--' . $tone . ($isDisabled ? ' rfe-action--disabled' : '');
-        if (! empty($options['class'])) {
-            $classes .= ' ' . $options['class'];
-        }
-
-        $inner = '<i class="material-icons material-symbols-rounded" aria-hidden="true">' . $icon . '</i>'
-            . '<span class="rfe-action-label">' . e($label) . '</span>';
-
-        if ($isStatic) {
-            return '<span class="' . $classes . '" title="' . $title . '" aria-disabled="true">' . $inner . '</span>';
-        }
-
-        $href = $options['href'] ?? 'javascript:void(0);';
-        $extra = ! empty($options['attrs']) ? ' ' . $options['attrs'] : '';
-
-        return '<a href="' . e($href) . '" class="' . $classes . '" title="' . $title . '"'
-            . ' aria-label="' . $title . '"' . $extra . '>' . $inner . '</a>';
     }
 }

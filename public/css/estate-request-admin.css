@@ -370,3 +370,61 @@
     text-transform: none;
     letter-spacing: 0;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   HAC Approval (admin/estate/change-request-hac-approved)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Request Type pills — amber for a change request, blue for a new one. */
+.hac-page .rfe-status--change-request {
+    background: #fffaeb;
+    color: #b54708;
+}
+
+.hac-page .rfe-status--new-request {
+    background: #eff8ff;
+    color: #175cd3;
+}
+
+/* Approve / Reject tones for the row actions. */
+.hac-page .rfe-action--approve { color: #12b76a; }
+.hac-page .rfe-action--reject { color: #f04438; }
+
+/* Four labelled actions on one row; a fifth would wrap rather than overflow. */
+.hac-page .programme-dt-table th.hac-col-action,
+.hac-page .programme-dt-table td.hac-col-action {
+    min-width: 215px;
+}
+
+.hac-page .programme-dt-table th.hac-col-name,
+.hac-page .programme-dt-table td.hac-col-name {
+    min-width: 190px;
+    white-space: normal;
+    line-height: 1.45;
+}
+
+/* Same cell padding as Request For Estate — seven columns plus a labelled
+   action cluster do not fit at 1rem. */
+.hac-page .programme-dt-table thead th,
+.hac-page .programme-dt-table tbody td {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+}
+
+.hac-page .programme-dt-table thead th {
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* Allotment Details: five dropdowns share one row on wide screens, two per row
+   below that — never five slivers. */
+.hac-page .hac-allot-grid .form-select {
+    min-width: 0;
+}
+
+@media (min-width: 992px) {
+    .hac-page .hac-allot-grid > [class*="col-"] {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+}

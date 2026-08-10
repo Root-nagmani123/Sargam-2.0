@@ -485,6 +485,19 @@ a.dropdown-item:focus-visible {
     border-color: #f5222d;
 }
 .ds-btn-danger:hover { background: #d9202a; color: #fff; }
+/* Affirmative confirm (approve / allot), paired with .ds-modal-confirm--success. */
+.ds-btn-success {
+    color: #fff;
+    background: #12b76a;
+    border-color: #12b76a;
+}
+.ds-btn-success:hover { background: #039855; color: #fff; }
+.ds-btn-cancel--success {
+    color: #039855;
+    border-color: #12b76a;
+    background: var(--ds-surface);
+}
+.ds-btn-cancel--success:hover { background: #ecfdf3; color: #039855; }
 /* Tertiary / navigational (e.g. "Back to …") — no colour claim. */
 .ds-btn-neutral {
     color: var(--ds-ink);
@@ -512,6 +525,11 @@ a.dropdown-item:focus-visible {
     font-size: 2rem;
     font-weight: 700;
     line-height: 1;
+}
+/* Affirmative variant — same dialog, green instead of red. */
+.ds-modal-confirm--success .ds-confirm-icon {
+    background: #d1fadf;
+    color: #039855;
 }
 .ds-modal-confirm .ds-confirm-title {
     margin-bottom: var(--ds-space-2);

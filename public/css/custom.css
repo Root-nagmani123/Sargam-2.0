@@ -243,7 +243,8 @@ body.custom-loaded {
 #attendanceColumnToggleGrid .colvis-item,
 #estateBillReportColumnGrid .colvis-item,
 #rfeColumnToggleGrid .colvis-item,
-#pihColumnToggleGrid .colvis-item {
+#pihColumnToggleGrid .colvis-item,
+#hacColumnToggleGrid .colvis-item {
     cursor: pointer;
     transition: border-color 0.15s ease, background-color 0.15s ease;
 }
@@ -256,7 +257,8 @@ body.custom-loaded {
 #attendanceColumnToggleGrid .colvis-item:hover,
 #estateBillReportColumnGrid .colvis-item:hover,
 #rfeColumnToggleGrid .colvis-item:hover,
-#pihColumnToggleGrid .colvis-item:hover {
+#pihColumnToggleGrid .colvis-item:hover,
+#hacColumnToggleGrid .colvis-item:hover {
     border-color: #004a93 !important;
     background-color: rgba(0, 74, 147, 0.04);
 }
@@ -269,7 +271,8 @@ body.custom-loaded {
 #attendanceColumnToggleGrid .colvis-item .form-check-input,
 #estateBillReportColumnGrid .colvis-item .form-check-input,
 #rfeColumnToggleGrid .colvis-item .form-check-input,
-#pihColumnToggleGrid .colvis-item .form-check-input {
+#pihColumnToggleGrid .colvis-item .form-check-input,
+#hacColumnToggleGrid .colvis-item .form-check-input {
     cursor: pointer;
     flex-shrink: 0;
 }

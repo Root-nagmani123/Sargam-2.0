@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\DataTables\Concerns\RendersEstateRowActions;
 use App\Models\EstateHacApprovedRow;
 use App\Support\DataTableRedisCache;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
@@ -19,6 +20,8 @@ use Yajra\DataTables\Services\DataTable;
  */
 class EstateHacApprovedDataTable extends DataTable
 {
+    use RendersEstateRowActions;
+
     public const LISTING_CACHE_EPOCH_KEY = 'estate_hacap_list_epoch';
 
     public static function bumpListingCacheEpoch(): void
@@ -106,8 +109,9 @@ class EstateHacApprovedDataTable extends DataTable
             })
             ->editColumn('eligibility_label', fn ($row) => e($row->eligibility_label ?? '—'))
             ->editColumn('request_type', fn ($row) => $row->request_type === 'change'
-                ? '<span class="badge bg-danger">Change Request</span>'
-                : '<span class="badge bg-primary">New Request</span>')
+                ? self::statusBadge('Change Request', 'change-request')
+                : self::statusBadge('New Request', 'new-request'))
+            ->addColumn('name_id', fn ($row) => self::nameWithId($row->emp_name ?? '', $row->employee_id ?? ''))
             ->editColumn('current_or_availability', function ($row) {
                 // Change request: show current allotment/availability only after approval
                 if (($row->request_type ?? '') === 'change') {
@@ -118,78 +122,79 @@ class EstateHacApprovedDataTable extends DataTable
             })
             ->editColumn('remarks', fn ($row) => \Illuminate\Support\Str::limit(e($row->remarks ?? ''), 60))
             ->addColumn('action', function ($row) {
+                // Every row shows the same four actions; the ones that don't apply
+                // are greyed rather than removed so the column keeps one shape.
                 $detailsPk = (int) ($row->estate_home_request_details_pk ?? $row->source_pk ?? 0);
-                $detailsUrl = $detailsPk ? route('admin.estate.request-details', ['id' => $detailsPk]) : '#';
-                $detailsLink = $detailsPk
-                    ? '<a href="' . e($detailsUrl) . '" class="text-primary" title="View request &amp; change details">
-                           <i class="material-icons material-symbols-rounded">visibility</i>
-                       </a>'
-                    : '';
-                if ($row->request_type === 'change') {
-                    $status = (int) ($row->change_ap_dis_status ?? 0);
-                    if ($status === 1) {
-                        return '<div class="d-inline-flex align-items-center gap-1 justify-content-center">'
-                            . $detailsLink
-                            . '<span class="text-success" title="Approved">
-                                   <i class="material-icons material-symbols-rounded">check_circle</i>
-                               </span>'
-                            . '</div>';
-                    }
-                    if ($status === 2) {
-                        return '<div class="d-inline-flex align-items-center gap-1 justify-content-center">'
-                            . $detailsLink
-                            . '<span class="text-danger" title="Disapproved">
-                                   <i class="material-icons material-symbols-rounded">cancel</i>
-                               </span>'
-                            . '</div>';
-                    }
-                    $reqId = e($row->request_id ?? 'N/A');
-                    return '<div class="d-inline-flex align-items-center gap-1 justify-content-center">'
-                        . $detailsLink
-                        . '<a href="javascript:void(0);" class="text-success btn-approve-change-request" data-id="' . (int) $row->source_pk . '" data-request-id="' . $reqId . '" title="Approve change request">
-                               <i class="material-icons material-symbols-rounded">check_circle</i>
-                           </a>'
-                        . '<a href="javascript:void(0);" class="text-danger btn-disapprove-change-request" data-id="' . (int) $row->source_pk . '" data-request-id="' . $reqId . '" title="Disapprove change request">
-                               <i class="material-icons material-symbols-rounded">cancel</i>
-                           </a>'
-                        . '</div>';
+                $isChange = ($row->request_type ?? '') === 'change';
+                $sourcePk = (int) $row->source_pk;
+                $reqId = e($row->request_id ?? 'N/A');
+                $decision = $row->change_ap_dis_status !== null ? (int) $row->change_ap_dis_status : null;
+
+                $view = $detailsPk
+                    ? self::actionLink('visibility', 'View', 'view', [
+                        'href' => route('admin.estate.request-details', ['id' => $detailsPk]),
+                        'title' => 'View request & change details',
+                    ])
+                    : self::actionLink('visibility', 'View', 'view', ['disabled' => true, 'title' => 'No linked request']);
+
+                // Allot House belongs to NEW requests only.
+                $allot = $isChange
+                    ? self::actionLink('add_home', 'Allot House', 'possession', [
+                        'disabled' => true,
+                        'title' => 'Allotment applies to new requests; approve the change request instead',
+                    ])
+                    : self::actionLink('add_home', 'Allot House', 'possession', [
+                        'class' => 'btn-allot-new-request',
+                        'title' => 'Allot house (add to Possession Details)',
+                        'attrs' => 'data-id="' . $sourcePk . '"'
+                            . ' data-req-id="' . $reqId . '"'
+                            . ' data-details-url="' . e(route('admin.estate.new-request.allot-details', ['id' => $sourcePk])) . '"',
+                    ]);
+
+                // Approve / Reject belong to CHANGE requests that are still undecided.
+                $pendingChange = $isChange && ($decision === null || $decision === 0);
+
+                if ($pendingChange) {
+                    $approve = self::actionLink('check_circle', 'Approve', 'approve', [
+                        'class' => 'btn-approve-change-request',
+                        'title' => 'Approve change request',
+                        'attrs' => 'data-id="' . $sourcePk . '" data-request-id="' . $reqId . '"',
+                    ]);
+                    $reject = self::actionLink('cancel', 'Reject', 'reject', [
+                        'class' => 'btn-disapprove-change-request',
+                        'title' => 'Reject change request',
+                        'attrs' => 'data-id="' . $sourcePk . '" data-request-id="' . $reqId . '"',
+                    ]);
+                } else {
+                    $decidedTitle = match (true) {
+                        $decision === 1 => 'Already approved',
+                        $decision === 2 => 'Already rejected',
+                        default => 'Approval applies to change requests',
+                    };
+                    $approve = self::actionLink('check_circle', 'Approve', 'approve', ['disabled' => true, 'title' => $decidedTitle]);
+                    $reject = self::actionLink('cancel', 'Reject', 'reject', ['disabled' => true, 'title' => $decidedTitle]);
                 }
-                $url = route('admin.estate.new-request.allot-details', ['id' => $row->source_pk]);
-                return '<div class="d-inline-flex align-items-center gap-1 justify-content-center">'
-                    . $detailsLink
-                    . '<a href="javascript:void(0);" class="text-success btn-allot-new-request" data-id="' . (int) $row->source_pk . '" data-req-id="' . e($row->request_id ?? '') . '" data-details-url="' . e($url) . '" title="Allot house (add to Possession Details)">
-                           <i class="material-icons material-symbols-rounded">add_home</i>
-                       </a>'
+
+                return '<div class="rfe-actions" role="group" aria-label="Row actions">'
+                    . $view . $allot . $approve . $reject
                     . '</div>';
             })
-            ->rawColumns(['request_type', 'action'])
+            ->rawColumns(['request_type', 'name_id', 'action'])
             ->filter(function ($query) {
-                $searchValue = trim((string) request()->input('search.value', ''));
-                $typeFilter = trim((string) request()->input('type_filter', ''));
-
-                if (in_array($typeFilter, ['change', 'new'], true)) {
-                    $query->where('request_type', $typeFilter);
-                }
-
-                if ($searchValue !== '') {
-                    $searchLike = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $searchValue) . '%';
-                    $query->where(function ($q) use ($searchLike) {
-                        $q->where('request_id', 'like', $searchLike)
-                            ->orWhere('emp_name', 'like', $searchLike)
-                            ->orWhere('employee_id', 'like', $searchLike)
-                            ->orWhere('emp_designation', 'like', $searchLike)
-                            ->orWhere('pay_scale', 'like', $searchLike)
-                            ->orWhere('current_or_availability', 'like', $searchLike)
-                            ->orWhere('remarks', 'like', $searchLike);
-                    });
-                }
+                static::applyFilters(
+                    $query,
+                    (string) request()->input('search.value', ''),
+                    (string) request()->input('type_filter', '')
+                );
             }, true)
             ->orderColumn('request_date', fn ($query, $order) => $query->reorder()
                 ->orderBy('request_date', $order)
                 ->orderBy('pk', $order))
             ->orderColumn('request_type', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(request_type, "")) ' . $order))
             ->orderColumn('request_id', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(request_id, "")) ' . $order))
-            ->orderColumn('emp_name', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(emp_name, "")) ' . $order))
+            ->orderColumn('name_id', fn ($query, $order) => $query->reorder()
+                ->orderByRaw('LOWER(COALESCE(emp_name, "")) ' . $order)
+                ->orderByRaw('LOWER(COALESCE(employee_id, "")) ' . $order))
             ->orderColumn('emp_designation', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(emp_designation, "")) ' . $order))
             ->orderColumn('pay_scale', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(pay_scale, "")) ' . $order))
             ->setRowId('pk');
@@ -197,6 +202,19 @@ class EstateHacApprovedDataTable extends DataTable
 
     public function query(EstateHacApprovedRow $model): EloquentBuilder
     {
+        return static::listingQuery($model);
+    }
+
+    /**
+     * The listing query - the change/new union plus the HAC visibility rules.
+     *
+     * The Download / Print exports call this too, so what a user downloads is
+     * always exactly the rows they are allowed to see on screen.
+     */
+    public static function listingQuery(?EstateHacApprovedRow $model = null): EloquentBuilder
+    {
+        $model = $model ?: new EstateHacApprovedRow();
+
         $canSeeHacApproved = hasRole('HAC Person') || isEstateHacAuthority();
 
         $authorityPersonalScope = request('scope') === 'self'
@@ -311,7 +329,10 @@ class EstateHacApprovedDataTable extends DataTable
     {
         return $this->builder()
             ->setTableId('estateHacApprovedTable')
-            ->addTableClass('table table-bordered table-striped table-hover text-nowrap align-middle mb-0')
+            // programme-dt chrome (docs/new-design-index-page.md) - no `dom` and no
+            // `language` here on purpose: datatable-global-ui.js owns both, and a
+            // page-level override would win and break the "Showing N of M items" footer.
+            ->addTableClass('table table-hover align-middle mb-0 w-100 programme-dt-table')
             ->columns($this->getColumns())
             ->minifiedAjax('', null, [
                 'type_filter' => '$("#hacApprovedTypeFilter").val()',
@@ -321,35 +342,80 @@ class EstateHacApprovedDataTable extends DataTable
                 'responsive' => false,
                 'autoWidth' => false,
                 'ordering' => true,
+                // Keep DataTables' native (server-side) ordering so a header click
+                // re-sorts the WHOLE queue instead of just the loaded page.
+                'sargamServerOrder' => true,
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
                 'order' => [[1, 'desc']],
-                'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-                'language' => [
-                    'search' => 'Search within table:',
-                    'lengthMenu' => 'Show _MENU_ entries',
-                    'info' => 'Showing _START_ to _END_ of _TOTAL_ entries',
-                    'infoEmpty' => 'Showing 0 to 0 of 0 entries',
-                    'infoFiltered' => '(filtered from _MAX_ total entries)',
-                    'paginate' => ['first' => 'First', 'last' => 'Last', 'next' => 'Next', 'previous' => 'Previous'],
-                ],
-                'dom' => '<"row flex-wrap align-items-center gap-2 mb-3"<"col-12 col-sm-6 col-md-4"l><"col-12 col-sm-6 col-md-5 ms-auto text-md-end"f>>rt<"row align-items-center mt-3"<"col-12 col-sm-6 col-md-5"i><"col-12 col-sm-6 col-md-7"p>>',
+                'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
             ]);
     }
 
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
-            Column::make('request_date')->title('REQUEST DATE')->orderable(true)->searchable(false)->visible(false),
-            Column::make('request_type')->title('TYPE')->orderable(true)->searchable(false)->width('120px'),
-            Column::make('request_id')->title('REQUEST ID')->orderable(true)->searchable(true),
-            Column::make('emp_name')->title('NAME')->orderable(true)->searchable(true),
-            Column::make('emp_designation')->title('DESIGNATION')->orderable(true)->searchable(true),
-            Column::make('pay_scale')->title('PAY SCALE')->orderable(true)->searchable(true),
-            Column::computed('action')->title('ACTION')->addClass('text-center')->orderable(false)->searchable(false)->width('180px'),
+            Column::computed('DT_RowIndex')->title('S. No.')->orderable(false)->searchable(false)->width('64px'),
+            Column::make('request_date')->title('Request Date')->orderable(true)->searchable(false)->visible(false),
+            Column::make('request_type')->title('Request Type')->orderable(true)->searchable(false)->width('150px'),
+            Column::make('request_id')->title('Request ID')->orderable(true)->searchable(true),
+            Column::computed('name_id')->title('Name & ID')->addClass('hac-col-name')->orderable(true)->searchable(true),
+            Column::make('emp_designation')->title('Designation')->orderable(true)->searchable(true),
+            Column::make('pay_scale')->title('Pay Scale')->orderable(true)->searchable(true),
+            // Wide enough for the four actions to sit on one row - see .hac-col-action.
+            Column::computed('action')->title('Action')->addClass('hac-col-action')->orderable(false)->searchable(false)->width('215px'),
         ];
+    }
+
+    /**
+     * The listing's type filter + free-text search, shared by the DataTable and
+     * the exports so a download of a filtered list matches what the table showed.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $query
+     */
+    public static function applyFilters($query, string $searchValue, string $typeFilter): void
+    {
+        $typeFilter = trim($typeFilter);
+        if (in_array($typeFilter, ['change', 'new'], true)) {
+            $query->where('request_type', $typeFilter);
+        }
+
+        $searchValue = trim($searchValue);
+        if ($searchValue === '') {
+            return;
+        }
+
+        $searchLike = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $searchValue) . '%';
+        $query->where(function ($q) use ($searchLike) {
+            $q->where('request_id', 'like', $searchLike)
+                ->orWhere('emp_name', 'like', $searchLike)
+                ->orWhere('employee_id', 'like', $searchLike)
+                ->orWhere('emp_designation', 'like', $searchLike)
+                ->orWhere('pay_scale', 'like', $searchLike)
+                ->orWhere('current_or_availability', 'like', $searchLike)
+                ->orWhere('remarks', 'like', $searchLike);
+        });
+    }
+
+    /** Plain-text request type, shared with the exports. */
+    public static function requestTypeLabel($row): string
+    {
+        return ($row->request_type ?? '') === 'change' ? 'Change Request' : 'New Request';
+    }
+
+    /** Plain-text decision on a change request ('-' for new requests). */
+    public static function decisionLabel($row): string
+    {
+        if (($row->request_type ?? '') !== 'change') {
+            return '-';
+        }
+
+        return match ((int) ($row->change_ap_dis_status ?? 0)) {
+            1 => 'Approved',
+            2 => 'Rejected',
+            default => 'Pending',
+        };
     }
 
     protected function filename(): string

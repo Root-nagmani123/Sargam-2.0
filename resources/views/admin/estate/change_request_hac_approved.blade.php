@@ -1,244 +1,290 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Change Requests (HAC Approval) - Sargam')
+@section('title', 'HAC Approval - Sargam')
 
 @php
     $estateSelfHomeTab = request('scope') === 'self'
         && (isEstateAuthority());
 @endphp
 @section($estateSelfHomeTab ? 'content' : 'setup_content')
-<div class="container-fluid py-4">
-    <x-breadcrum title="Change Requests (HAC Approval)"></x-breadcrum>
-    <x-estate-workflow-stepper current="hac-approved" />
+<div class="container-fluid rfe-page hac-page">
+    <x-breadcrum title="HAC Approval" :showBack="false" />
+
     <x-session_message />
 
-    <div class="card">
-        <div class="card-header">
-            <div class="d-flex flex-column flex-md-row flex-wrap align-items-start align-items-md-center justify-content-between gap-3">
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <span class="badge bg-primary rounded-pill px-3 py-2 fs-6">
-                        <i class="bi bi-check2-circle me-1"></i> HAC Approval
-                    </span>
-                    <h1 class="h5 fw-bold mb-0 text-body">Change Requests</h1>
-                </div>
-            </div>
-        </div>
-        <div class="card-body p-4 p-lg-5">
-            <p class="text-body-secondary small mb-4 lh-sm">
-                Change requests and new requests in one table. Use <strong class="text-success">Approve</strong> / <strong class="text-danger">Disapprove</strong> for change requests, or <strong class="text-primary">Allot</strong> for new requests to add to Possession Details.
-            </p>
+    {{-- Exports sit above the card (docs/new-design-index-page.md §1). Both honour
+         the applied Request Type filter, the search box and the Columns choice. --}}
+    <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3">
+        <button type="button" class="btn rfe-export-btn border-0" id="hacDownloadBtn">
+            <i class="bi bi-download" aria-hidden="true"></i>
+            <span>Download</span>
+        </button>
+        <button type="button" class="btn rfe-export-btn border-0" id="hacPrintBtn">
+            <i class="bi bi-printer" aria-hidden="true"></i>
+            <span>Print</span>
+        </button>
+    </div>
 
-            <div class="estate-hac-approved-table-wrapper table-responsive">
-                {!! $dataTable->table([
-                    'class' => 'table text-nowrap align-middle mb-0',
-                    'aria-describedby' => 'hac-approved-caption'
-                ]) !!}
+    <div class="card overflow-hidden rounded-1">
+        <div class="card-body p-3 p-md-4">
+            <div id="hac-approved-card-body">
+
+                <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+                        <span class="programme-dt-filters-label">Filter</span>
+
+                        <div class="programme-dt-filter-select">
+                            <select id="hacApprovedTypeFilter" class="form-select" aria-label="Filter by request type">
+                                <option value="">Request Type</option>
+                                <option value="change">Change Request</option>
+                                <option value="new">New Request</option>
+                            </select>
+                        </div>
+
+                        <button type="button" id="hacClearFilter" class="btn programme-dt-btn-reset">
+                            Remove Filter
+                        </button>
+                    </div>
+
+                    <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                        <button type="button" class="btn programme-dt-btn-columns" id="hacBtnColumns"
+                            data-bs-toggle="modal" data-bs-target="#hacColumnVisibilityModal"
+                            title="Show / hide columns">
+                            <span>Columns</span>
+                            <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                        </button>
+                        <div id="hacDtSearch" class="programme-dt-search" data-dt-search-for="estateHacApprovedTable"></div>
+                    </div>
+                </div>
+
+                <div class="programme-dt-panel">
+                    <div class="table-responsive">
+                        {!! $dataTable->table(['aria-describedby' => 'hac-approved-caption']) !!}
+                    </div>
+                    {{-- Left empty on purpose: datatable-global-ui.js fills this with the
+                         pagination and the "Showing [10] of N items" count. --}}
+                    <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                        data-dt-footer-for="estateHacApprovedTable"></div>
+                </div>
+
+                <div id="hac-approved-caption" class="visually-hidden">HAC Approval – change and new requests</div>
             </div>
-            <div id="hac-approved-caption" class="visually-hidden">HAC Approved – change and new requests</div>
         </div>
     </div>
 </div>
 
-{{-- Approve modal - Approved Request House form with dependent dropdowns --}}
-<div class="modal fade" id="approveChangeRequestModal" tabindex="-1" aria-labelledby="approveChangeRequestModalLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div class="modal-content rounded-4 shadow-lg border-0">
-            <div class="modal-header bg-success bg-opacity-10 border-0 py-3 px-4">
-                <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="approveChangeRequestModalLabel">
-                    <i class="bi bi-check2-circle text-success"></i> Approved Request House
-                </h5>
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="hacColumnVisibilityModal" tabindex="-1" aria-labelledby="hacColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="hacColumnVisibilityLabel">Column Visibility</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="formApproveChangeRequest" method="POST" action="">
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="hacColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Approve — confirm only. Used when the house was already chosen at Raise
+     Change Request time, so there is nothing left to pick. --}}
+<div class="modal fade ds-modal ds-modal-confirm ds-modal-confirm--success" id="approveConfirmModal" tabindex="-1"
+    aria-labelledby="approveConfirmModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="formApproveConfirm" method="POST" action="">
                 @csrf
-                <div class="modal-body p-4">
+                <input type="hidden" name="estate_house_master_pk" id="approveConfirmHousePk" value="">
+                <div class="modal-body">
+                    <div class="ds-confirm-icon" aria-hidden="true">&check;</div>
+                    <h5 class="ds-confirm-title" id="approveConfirmModalLabel">Confirm Approval?</h5>
+                    <p class="ds-confirm-text">
+                        Are you sure you want to approve this Estate Request? This action can't be undone.
+                    </p>
+                    <p class="ds-confirm-text mt-2 mb-0" id="approveConfirmDetail"></p>
+                    <div class="alert alert-danger d-none mt-3 mb-0" id="approveConfirmError" role="alert"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn ds-btn-cancel ds-btn-cancel--success" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn ds-btn-success" id="btnSubmitApproveConfirm">Yes, Approve</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- Approve — house picker. Used when no house was chosen at raise time. --}}
+<div class="modal fade ds-modal" id="approveHouseModal" tabindex="-1" aria-labelledby="approveHouseModalLabel"
+    aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <form id="formApproveHouse" method="POST" action="">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title" id="approveHouseModalLabel">Allot House</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
                     <div id="approveModalLoading" class="text-center py-5 d-none">
-                        <div class="spinner-border text-success" role="status"><span class="visually-hidden">Loading...</span></div>
-                        <p class="mt-3 text-body-secondary small mb-0">Loading details...</p>
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading details…
                     </div>
                     <div id="approveModalContent" class="d-none">
-                        {{-- Direct confirm when house was already selected at Raise Change Request --}}
-                        <div id="approveConfirmOnly" class="d-none mb-4">
-                            <div class="row g-3 mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Requester Name</label>
-                                    <input type="text" class="form-control form-control-lg bg-body-secondary border-0" id="approveRequesterNameConfirm" readonly>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Designation</label>
-                                    <input type="text" class="form-control form-control-lg bg-body-secondary border-0" id="approveDesignationConfirm" readonly>
-                                </div>
-                            </div>
-                            <p class="mb-0 text-body">Requested house was already selected when the change request was raised. Approve with house: <strong id="approveRequestedHouseNo" class="text-success"></strong>?</p>
+                        <div class="alert alert-warning d-flex align-items-start gap-2 d-none" id="approveNoHouses" role="alert">
+                            <i class="bi bi-info-circle-fill flex-shrink-0" aria-hidden="true"></i>
+                            <span>No vacant houses available. Select Estate, Unit Type, Building, and Unit Sub Type first.</span>
                         </div>
-                        {{-- Full form (dropdowns) – only when requested house not already set --}}
-                        <div id="approveFullForm">
-                        <p class="text-body-secondary small mb-4">Please select the house to approve for this request.</p>
-                        {{-- Requester Name & Designation (read-only) --}}
-                        <div class="row g-3 mb-4">
+
+                        <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold small text-uppercase text-body-secondary">Requester Name</label>
-                                <input type="text" class="form-control form-control-lg bg-body-secondary border-0" id="approveRequesterName" readonly>
+                                <label for="approveRequesterName" class="form-label">Requester Name <span class="ds-req">*</span></label>
+                                <input type="text" class="form-control" id="approveRequesterName" readonly>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold small text-uppercase text-body-secondary">Designation</label>
-                                <input type="text" class="form-control form-control-lg bg-body-secondary border-0" id="approveDesignation" readonly>
+                                <label for="approveDesignation" class="form-label">Requester Designation <span class="ds-req">*</span></label>
+                                <input type="text" class="form-control" id="approveDesignation" readonly>
                             </div>
                         </div>
-                        {{-- 5 Dependent dropdowns --}}
-                        <div class="row g-3 mb-3">
-                            <div class="col-12 col-md">
-                                <label for="approve_estate_campus" class="form-label fw-semibold text-primary small text-uppercase">Estate Name</label>
-                                <select class="form-select form-select-sm" id="approve_estate_campus">
-                                    <option value="">— Select —</option>
-                                </select>
+
+                        <h6 class="ds-modal-section-title mt-4">Allotment Details</h6>
+
+                        <div class="row g-3 mt-0 hac-allot-grid">
+                            <div class="col-6 col-lg">
+                                <label for="approve_estate_campus" class="form-label">Estate Name <span class="ds-req">*</span></label>
+                                <select class="form-select" id="approve_estate_campus"><option value="">Select Estate</option></select>
                             </div>
-                            <div class="col-12 col-md">
-                                <label for="approve_unit_type" class="form-label fw-semibold text-primary small text-uppercase">Unit Type</label>
-                                <select class="form-select form-select-sm" id="approve_unit_type">
-                                    <option value="">— Select —</option>
-                                </select>
+                            <div class="col-6 col-lg">
+                                <label for="approve_unit_type" class="form-label">Unit Type <span class="ds-req">*</span></label>
+                                <select class="form-select" id="approve_unit_type"><option value="">Select Unit</option></select>
                             </div>
-                            <div class="col-12 col-md">
-                                <label for="approve_building" class="form-label fw-semibold text-primary small text-uppercase">Building Name</label>
-                                <select class="form-select form-select-sm" id="approve_building">
-                                    <option value="">— Select —</option>
-                                </select>
+                            <div class="col-6 col-lg">
+                                <label for="approve_building" class="form-label">Building Name <span class="ds-req">*</span></label>
+                                <select class="form-select" id="approve_building"><option value="">Select Building</option></select>
                             </div>
-                            <div class="col-12 col-md">
-                                <label for="approve_unit_sub_type" class="form-label fw-semibold text-primary small text-uppercase">Unit Sub Type</label>
-                                <select class="form-select form-select-sm" id="approve_unit_sub_type">
-                                    <option value="">— Select —</option>
-                                </select>
+                            <div class="col-6 col-lg">
+                                <label for="approve_unit_sub_type" class="form-label">Unit Sub-type <span class="ds-req">*</span></label>
+                                <select class="form-select" id="approve_unit_sub_type"><option value="">Select Sub-type</option></select>
                             </div>
-                            <div class="col-12 col-md">
-                                <label for="estate_house_master_pk" class="form-label fw-semibold text-primary small text-uppercase">House No.</label>
-                                <select class="form-select form-select-sm" id="estate_house_master_pk" name="estate_house_master_pk" required>
-                                    <option value="">— Select —</option>
-                                </select>
+                            <div class="col-6 col-lg">
+                                <label for="estate_house_master_pk" class="form-label">House Number <span class="ds-req">*</span></label>
+                                <select class="form-select" id="estate_house_master_pk" name="estate_house_master_pk" required><option value="">Select House</option></select>
                             </div>
                         </div>
-                        <div id="approveNoHouses" class="alert alert-warning alert-dismissible fade show small mt-3 d-none" role="alert">No vacant houses available. Select Estate, Unit Type, Building, and Unit Sub Type first.<button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert" aria-label="Close"></button></div>
-                        <div id="approveFormError" class="alert alert-danger alert-dismissible fade show mt-3 d-none" role="alert"></div>
-                        </div>
+
+                        <div class="alert alert-danger d-none mt-3 mb-0" id="approveFormError" role="alert"></div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 bg-body-secondary bg-opacity-50 py-3 px-4 gap-2">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-lg me-1"></i> Cancel
-                    </button>
-                    <button type="submit" class="btn btn-success px-4" id="btnSubmitApprove">
-                        <i class="bi bi-check-lg me-1"></i> Approve
-                    </button>
+                <div class="modal-footer">
+                    <button type="button" class="btn ds-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn ds-btn-submit" id="btnSubmitApprove">Allot House</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-{{-- Disapprove reason modal --}}
-<div class="modal fade" id="disapproveChangeRequestModal" tabindex="-1" aria-labelledby="disapproveChangeRequestModalLabel" aria-hidden="true" data-bs-backdrop="static">
+{{-- Reject. The confirm styling is the mockup's; the reason field stays because
+     the server requires a remark on every disapproval (audit trail). --}}
+<div class="modal fade ds-modal ds-modal-confirm" id="disapproveChangeRequestModal" tabindex="-1"
+    aria-labelledby="disapproveChangeRequestModalLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 shadow-lg border-0">
-            <div class="modal-header bg-danger bg-opacity-10 border-0 py-3 px-4">
-                <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="disapproveChangeRequestModalLabel">
-                    <i class="bi bi-x-circle text-danger"></i> Reason for Disapproval
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
+        <div class="modal-content">
             <form id="formDisapproveChangeRequest" method="POST" action="">
                 @csrf
-                <div class="modal-body p-4">
-                    <p class="text-body-secondary small mb-3">Request ID: <strong class="text-body" id="disapproveModalRequestId"></strong></p>
-                    <label for="disapprove_reason" class="form-label fw-semibold">Reason / Remark <span class="text-danger">*</span></label>
-                    <textarea class="form-control" id="disapprove_reason" name="disapprove_reason" rows="4" maxlength="500" placeholder="Enter reason for disapproval..." required></textarea>
-                    <div class="form-text small">Max 500 characters. This remark will be saved and shown in the table.</div>
-                    <div id="disapproveFormError" class="alert alert-danger alert-dismissible fade show mt-3 d-none" role="alert"></div>
+                <div class="modal-body">
+                    <div class="ds-confirm-icon" aria-hidden="true">!</div>
+                    <h5 class="ds-confirm-title" id="disapproveChangeRequestModalLabel">Confirm Reject?</h5>
+                    <p class="ds-confirm-text">
+                        Are you sure you want to reject this Estate Request? This action can't be undone.
+                    </p>
+                    <p class="ds-confirm-text mt-2">Request ID: <strong id="disapproveModalRequestId"></strong></p>
+
+                    <div class="text-start mt-3">
+                        <label for="disapprove_reason" class="form-label">Reason for rejection <span class="ds-req">*</span></label>
+                        <textarea class="form-control" id="disapprove_reason" name="disapprove_reason" rows="3" maxlength="500"
+                            placeholder="e.g. No suitable vacancy in the requested block" required></textarea>
+                        <div class="form-text">Saved against the request and shown in the listing.</div>
+                    </div>
+
+                    <div class="alert alert-danger d-none mt-3 mb-0" id="disapproveFormError" role="alert"></div>
                 </div>
-                <div class="modal-footer border-0 bg-body-secondary bg-opacity-50 py-3 px-4 gap-2">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-lg me-1"></i> Cancel
-                    </button>
-                    <button type="submit" class="btn btn-danger px-4" id="btnSubmitDisapprove">
-                        <i class="bi bi-x-circle me-1"></i> Submit Disapproval
-                    </button>
+                <div class="modal-footer">
+                    <button type="button" class="btn ds-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn ds-btn-danger" id="btnSubmitDisapprove">Yes, Reject</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-{{-- Allot new request modal (add to Possession Details) --}}
-<div class="modal fade" id="allotNewRequestModal" tabindex="-1" aria-labelledby="allotNewRequestModalLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div class="modal-content rounded-4 shadow-lg border-0">
-            <div class="modal-header bg-primary bg-opacity-10 border-0 py-3 px-4">
-                <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="allotNewRequestModalLabel">
-                    <i class="bi bi-house-add text-primary"></i> Allot House (Add to Possession Details)
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
+{{-- Allot House — new requests, adds the record to Possession Details. --}}
+<div class="modal fade ds-modal" id="allotNewRequestModal" tabindex="-1" aria-labelledby="allotNewRequestModalLabel"
+    aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
             <form id="formAllotNewRequest" method="POST" action="">
                 @csrf
-                <div class="modal-body p-4">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="allotNewRequestModalLabel">Allot House</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
                     <div id="allotModalLoading" class="text-center py-5 d-none">
-                        <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
-                        <p class="mt-3 text-body-secondary small mb-0">Loading details...</p>
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading details…
                     </div>
                     <div id="allotModalContent" class="d-none">
-                        <p class="text-body-secondary small mb-4">Select house to allot. This will add the record to Possession Details.</p>
-                        <div class="row g-3 mb-4">
+                        <div class="alert alert-warning d-flex align-items-start gap-2 d-none" id="allotNoHouses" role="alert">
+                            <i class="bi bi-info-circle-fill flex-shrink-0" aria-hidden="true"></i>
+                            <span>No vacant houses available. Select Estate, Unit Type, Building, and Unit Sub Type first.</span>
+                        </div>
+
+                        <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold small text-uppercase text-body-secondary">Requester Name</label>
-                                <input type="text" class="form-control form-control-lg bg-body-secondary border-0" id="allotRequesterName" readonly>
+                                <label for="allotRequesterName" class="form-label">Requester Name <span class="ds-req">*</span></label>
+                                <input type="text" class="form-control" id="allotRequesterName" readonly>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold small text-uppercase text-body-secondary">Designation</label>
-                                <input type="text" class="form-control form-control-lg bg-body-secondary border-0" id="allotDesignation" readonly>
+                                <label for="allotDesignation" class="form-label">Requester Designation <span class="ds-req">*</span></label>
+                                <input type="text" class="form-control" id="allotDesignation" readonly>
                             </div>
                         </div>
-                        <div class="row g-3 mb-3">
-                            <div class="col-12 col-md">
-                                <label for="allot_estate_campus" class="form-label fw-semibold text-primary small text-uppercase">Estate Name</label>
-                                <select class="form-select form-select-sm allot-required" id="allot_estate_campus">
-                                    <option value="">— Select —</option>
-                                </select>
+
+                        <h6 class="ds-modal-section-title mt-4">Allotment Details</h6>
+
+                        <div class="row g-3 mt-0 hac-allot-grid">
+                            <div class="col-6 col-lg">
+                                <label for="allot_estate_campus" class="form-label">Estate Name <span class="ds-req">*</span></label>
+                                <select class="form-select allot-required" id="allot_estate_campus"><option value="">Select Estate</option></select>
                             </div>
-                            <div class="col-12 col-md">
-                                <label for="allot_unit_type" class="form-label fw-semibold text-primary small text-uppercase">Unit Type</label>
-                                <select class="form-select form-select-sm allot-required" id="allot_unit_type">
-                                    <option value="">— Select —</option>
-                                </select>
+                            <div class="col-6 col-lg">
+                                <label for="allot_unit_type" class="form-label">Unit Type <span class="ds-req">*</span></label>
+                                <select class="form-select allot-required" id="allot_unit_type"><option value="">Select Unit</option></select>
                             </div>
-                            <div class="col-12 col-md">
-                                <label for="allot_building" class="form-label fw-semibold text-primary small text-uppercase">Building Name</label>
-                                <select class="form-select form-select-sm allot-required" id="allot_building">
-                                    <option value="">— Select —</option>
-                                </select>
+                            <div class="col-6 col-lg">
+                                <label for="allot_building" class="form-label">Building Name <span class="ds-req">*</span></label>
+                                <select class="form-select allot-required" id="allot_building"><option value="">Select Building</option></select>
                             </div>
-                            <div class="col-12 col-md">
-                                <label for="allot_unit_sub_type" class="form-label fw-semibold text-primary small text-uppercase">Unit Sub Type</label>
-                                <select class="form-select form-select-sm allot-required" id="allot_unit_sub_type">
-                                    <option value="">— Select —</option>
-                                </select>
+                            <div class="col-6 col-lg">
+                                <label for="allot_unit_sub_type" class="form-label">Unit Sub-type <span class="ds-req">*</span></label>
+                                <select class="form-select allot-required" id="allot_unit_sub_type"><option value="">Select Sub-type</option></select>
                             </div>
-                            <div class="col-12 col-md">
-                                <label for="allot_estate_house_master_pk" class="form-label fw-semibold text-primary small text-uppercase">House No.</label>
-                                <select class="form-select form-select-sm allot-required" id="allot_estate_house_master_pk" name="estate_house_master_pk" required>
-                                    <option value="">— Select —</option>
-                                </select>
+                            <div class="col-6 col-lg">
+                                <label for="allot_estate_house_master_pk" class="form-label">House Number <span class="ds-req">*</span></label>
+                                <select class="form-select allot-required" id="allot_estate_house_master_pk" name="estate_house_master_pk" required><option value="">Select House</option></select>
                             </div>
                         </div>
-                        <div id="allotNoHouses" class="alert alert-warning alert-dismissible fade show small mt-3 d-none" role="alert">No vacant houses available. Select Estate, Unit Type, Building, and Unit Sub Type first.<button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert" aria-label="Close"></button></div>
+
+                        <div class="alert alert-danger d-none mt-3 mb-0" id="allotFormError" role="alert"></div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 bg-body-secondary bg-opacity-50 py-3 px-4 gap-2">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-lg me-1"></i> Cancel
-                    </button>
-                    <button type="submit" class="btn btn-success px-4" id="btnSubmitAllot" disabled>
-                        <i class="bi bi-house-add me-1"></i> Allot
-                    </button>
+                <div class="modal-footer">
+                    <button type="button" class="btn ds-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn ds-btn-submit" id="btnSubmitAllot" disabled>Allot House</button>
                 </div>
             </form>
         </div>
@@ -247,645 +293,458 @@
 @endsection
 
 @push('styles')
-<style>
-    /* DataTables: Bootstrap 5.3 form controls */
-    #estateHacApprovedTable_wrapper .dataTables_length label {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-    }
-    #estateHacApprovedTable_wrapper .dataTables_length select {
-        width: auto;
-        min-width: 4.5rem;
-        display: inline-block;
-        padding: 0.25rem 2rem 0.25rem 0.5rem;
-        font-size: 0.875rem;
-        border-radius: 0.375rem;
-        border: 1px solid var(--bs-border-color, #dee2e6);
-    }
-    #estateHacApprovedTable_wrapper .dataTables_filter {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 0.75rem;
-        flex-wrap: nowrap;
-        text-align: right;
-    }
-    #estateHacApprovedTable_wrapper .dataTables_filter .hac-approved-filter-toolbar {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 0.75rem;
-        flex-wrap: nowrap;
-        width: 100%;
-    }
-    #estateHacApprovedTable_wrapper .dataTables_filter label {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        flex-wrap: nowrap;
-        justify-content: flex-end;
-        margin-bottom: 0;
-        white-space: nowrap;
-    }
-    #estateHacApprovedTable_wrapper .dataTables_filter .form-select,
-    #estateHacApprovedTable_wrapper .dataTables_filter input {
-        height: 38px;
-        padding: 0.375rem 0.75rem;
-        font-size: 0.875rem;
-        border: 1px solid var(--bs-border-color);
-        border-radius: var(--bs-border-radius);
-        line-height: 1.5;
-        box-sizing: border-box;
-        background-color: var(--bs-body-bg);
-    }
-    #estateHacApprovedTable_wrapper .dataTables_filter input {
-        margin-left: 0.25rem;
-        min-width: 180px;
-    }
-    #estateHacApprovedTable_wrapper .dataTables_filter input:focus {
-        border-color: var(--bs-primary);
-        outline: 0;
-        box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
-    }
-    #estateHacApprovedTable_wrapper .hac-approved-type-filter {
-        margin-bottom: 0;
-        flex: 0 0 auto;
-    }
-    #estateHacApprovedTable_wrapper #hacApprovedTypeFilter {
-        min-width: 180px;
-    }
-    @media (max-width: 767.98px) {
-        #estateHacApprovedTable_wrapper .dataTables_filter {
-            justify-content: stretch;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-        #estateHacApprovedTable_wrapper .dataTables_filter .hac-approved-filter-toolbar {
-            width: 100%;
-            flex-wrap: wrap;
-            justify-content: stretch;
-        }
-        #estateHacApprovedTable_wrapper .dataTables_filter label,
-        #estateHacApprovedTable_wrapper .hac-approved-type-filter {
-            width: 100%;
-            justify-content: flex-start;
-        }
-        #estateHacApprovedTable_wrapper .dataTables_filter input,
-        #estateHacApprovedTable_wrapper #hacApprovedTypeFilter {
-            width: 100%;
-            min-width: 0;
-        }
-    }
-    /* Table: primary header, striped rows, hover */
-    #estateHacApprovedTable_wrapper thead th {
-        background-color: var(--bs-primary);
-        color: var(--bs-white);
-        font-weight: 600;
-        border-color: var(--bs-primary);
-        padding: 0.75rem 1rem;
-        white-space: nowrap;
-        font-size: 0.875rem;
-    }
-    #estateHacApprovedTable_wrapper tbody tr:nth-of-type(even) {
-        background-color: rgba(var(--bs-primary-rgb), 0.04);
-    }
-    #estateHacApprovedTable_wrapper tbody tr:hover {
-        background-color: rgba(var(--bs-primary-rgb), 0.08);
-    }
-    #estateHacApprovedTable_wrapper tbody td {
-        padding: 0.75rem 1rem;
-        border-color: var(--bs-border-color);
-        font-size: 0.875rem;
-    }
-    /* Whole table (header + body) scrolls together so columns stay aligned */
-    .estate-hac-approved-table-wrapper {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        display: block;
-    }
-    #estateHacApprovedTable_wrapper .dataTables_scrollHead,
-    #estateHacApprovedTable_wrapper .dataTables_scrollBody {
-        overflow: visible !important;
-    }
-    #estateHacApprovedTable_wrapper table.dataTable {
-        min-width: 1200px;
-    }
-    /* Pagination: btn-like buttons */
-    #estateHacApprovedTable_wrapper .dataTables_paginate .paginate_button {
-        padding: 0.375rem 0.75rem;
-        margin: 0 0.125rem;
-        border-radius: var(--bs-border-radius);
-        border: 1px solid var(--bs-border-color);
-        transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
-    }
-    #estateHacApprovedTable_wrapper .dataTables_paginate .paginate_button:hover {
-        background-color: var(--bs-secondary-bg);
-        border-color: var(--bs-border-color);
-    }
-    #estateHacApprovedTable_wrapper .dataTables_paginate .paginate_button.current {
-        background: var(--bs-primary);
-        color: var(--bs-white) !important;
-        border-color: var(--bs-primary);
-    }
-    #estateHacApprovedTable_wrapper .dataTables_info {
-        font-size: 0.875rem;
-        color: var(--bs-secondary-color);
-    }
-</style>
+<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
 @endpush
 
 @push('scripts')
     {!! $dataTable->scripts() !!}
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        function getHacApprovedTable() {
-            return $.fn.dataTable.isDataTable('#estateHacApprovedTable')
-                ? $('#estateHacApprovedTable').DataTable()
-                : null;
-        }
-
-        function injectTypeFilter() {
-            var hacApprovedTable = getHacApprovedTable();
-            if (!hacApprovedTable || document.getElementById('hacApprovedTypeFilter')) {
-                return;
-            }
-
-            var $filterContainer = $('#estateHacApprovedTable_wrapper .dataTables_filter');
-            var $searchLabel = $filterContainer.find('label').first();
-            if (!$searchLabel.length) {
-                return;
-            }
-
-            if (!$filterContainer.find('.hac-approved-filter-toolbar').length) {
-                $filterContainer.contents().wrapAll('<div class="hac-approved-filter-toolbar"></div>');
-            }
-
-            var typeFilterHtml = `
-                <label class="hac-approved-type-filter">
-                    <select id="hacApprovedTypeFilter" class="form-select form-select-sm">
-                        <option value="">All Types</option>
-                        <option value="change">Change Request</option>
-                        <option value="new">New Request</option>
-                    </select>
-                </label>
-            `;
-
-            $filterContainer.find('.hac-approved-filter-toolbar').prepend(typeFilterHtml);
-        }
-
-        injectTypeFilter();
-        $(document).on('init.dt', function(e, settings) {
-            if (settings && settings.nTable && settings.nTable.id === 'estateHacApprovedTable') {
-                injectTypeFilter();
-            }
-        });
-
-        $(document).on('change', '#hacApprovedTypeFilter', function() {
-            var hacApprovedTable = getHacApprovedTable();
-            if (hacApprovedTable) {
-                hacApprovedTable.ajax.reload();
-            }
-        });
-
-        var approveModalEl = document.getElementById('approveChangeRequestModal');
-        var approveModal = approveModalEl ? new bootstrap.Modal(approveModalEl) : null;
-        var approveForm = document.getElementById('formApproveChangeRequest');
-        var approveLoading = document.getElementById('approveModalLoading');
-        var approveContent = document.getElementById('approveModalContent');
-        var approveFormError = document.getElementById('approveFormError');
-
-        var approveCampuses = [];
-        var approveUnitTypesByCampus = {};
+    $(function() {
+        var $table = $('#estateHacApprovedTable');
         var blocksUrl = '{{ route("admin.estate.possession.blocks") }}';
         var unitSubTypesUrl = '{{ route("admin.estate.possession.unit-sub-types") }}';
         var vacantHousesUrl = '{{ route("admin.estate.change-request.vacant-houses") }}';
 
-        function resetApproveDropdowns() {
-            $('#approve_estate_campus, #approve_unit_type, #approve_building, #approve_unit_sub_type, #estate_house_master_pk')
-                .html('<option value="">---select---</option>').val('').prop('disabled', false);
+        function hacNotify(type, message) {
+            var $host = $('#hac-approved-card-body');
+            var cls = type === 'success' ? 'alert-success' : 'alert-danger';
+            var icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill';
+            $host.find('.' + cls).remove();
+            $host.prepend('<div class="alert ' + cls + ' alert-dismissible fade show d-flex align-items-center rounded-1 shadow-sm" role="alert">' +
+                '<i class="bi ' + icon + ' me-2"></i><span class="flex-grow-1">' + message + '</span>' +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+            if (type === 'success') {
+                setTimeout(function() { $host.find('.alert-success').fadeOut(); }, 4000);
+            }
         }
 
-        function loadApproveBlocks() {
-            var campusId = $('#approve_estate_campus').val();
-            var unitTypeId = $('#approve_unit_type').val();
-            $('#approve_building').html('<option value="">---select---</option>');
-            $('#approve_unit_sub_type').html('<option value="">---select---</option>');
-            $('#estate_house_master_pk').html('<option value="">---select---</option>');
-            if (!campusId) return;
-            $.get(blocksUrl, { campus_id: campusId, unit_type_id: unitTypeId || '' }, function(res) {
-                if (res.status && res.data) {
-                    res.data.forEach(function(b) {
-                        $('#approve_building').append('<option value="' + b.pk + '">' + (b.block_name || b.pk) + '</option>');
-                    });
-                }
+        function reloadTable() {
+            if ($.fn.DataTable.isDataTable($table)) $table.DataTable().ajax.reload(null, false);
+        }
+
+        /* ---------- Filter ---------- */
+        // type_filter rides on the ajax data callback declared in the DataTable class.
+        $(document).on('change', '#hacApprovedTypeFilter', reloadTable);
+
+        $('#hacClearFilter').on('click', function() {
+            $('#hacApprovedTypeFilter').val('');
+            if (!$.fn.DataTable.isDataTable($table)) return;
+            // "Remove Filter" resets the whole toolbar, search included.
+            $table.DataTable().search('').ajax.reload(null, false);
+        });
+
+        /* ---------- Column visibility (persisted per browser, per user) ---------- */
+        // Header index -> export column key. POSITIONAL: adding a table column means
+        // adding an entry here too. Index 1 is the hidden Request Date column.
+        var HAC_EXPORT_COLUMN_KEYS = ['sno', '', 'request_type', 'request_id', 'name_id', 'emp_designation', 'pay_scale', ''];
+        var hacColStorageKey = 'sargam.hacApproved.hiddenCols.{{ auth()->id() ?? 'guest' }}';
+
+        function hacGetHiddenCols() {
+            try {
+                var raw = localStorage.getItem(hacColStorageKey);
+                var arr = raw ? JSON.parse(raw) : [];
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) {
+                return []; // private mode / storage disabled / corrupt value
+            }
+        }
+
+        function hacPersistHiddenCols(arr) {
+            try { localStorage.setItem(hacColStorageKey, JSON.stringify(arr)); } catch (e) {}
+        }
+
+        function hacVisibleExportCols() {
+            var hidden = hacGetHiddenCols();
+            return HAC_EXPORT_COLUMN_KEYS.filter(function(key, idx) {
+                return key !== '' && hidden.indexOf(idx) === -1;
             });
         }
 
-        function loadApproveUnitSubTypes() {
-            var campusId = $('#approve_estate_campus').val();
-            var blockId = $('#approve_building').val();
-            var unitTypeId = $('#approve_unit_type').val();
-            $('#approve_unit_sub_type').html('<option value="">---select---</option>');
-            $('#estate_house_master_pk').html('<option value="">---select---</option>');
-            if (!campusId || !blockId) return;
-            $.get(unitSubTypesUrl, { campus_id: campusId, block_id: blockId, unit_type_id: unitTypeId || '' }, function(res) {
-                if (res.status && res.data) {
-                    res.data.forEach(function(u) {
-                        $('#approve_unit_sub_type').append('<option value="' + u.pk + '">' + (u.unit_sub_type || u.pk) + '</option>');
-                    });
-                }
+        function setupHacColumns(dt) {
+            if (!dt) return;
+            var hidden = hacGetHiddenCols();
+
+            dt.columns().every(function() {
+                var idx = this.index();
+                // Request Date (index 1) is deliberately hidden by the DataTable —
+                // it exists only to drive the default sort, so leave it alone.
+                if (idx === 1) return;
+                this.visible(hidden.indexOf(idx) === -1, false);
+            });
+            dt.columns.adjust();
+
+            var $grid = $('#hacColumnToggleGrid');
+            if (!$grid.length) return;
+            $grid.empty();
+
+            dt.columns().every(function() {
+                var idx = this.index();
+                if (idx === 1) return;
+                var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+                if (!title) return;
+
+                var inputId = 'haccolvis_' + idx;
+                var $cell = $('<div class="col-12 col-sm-6"></div>');
+                var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-1 px-3 py-2 mb-0 w-100"></label>')
+                    .attr('for', inputId);
+                var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                    .attr('id', inputId)
+                    .prop('checked', hidden.indexOf(idx) === -1);
+
+                $cb.on('change', function() {
+                    var h = hacGetHiddenCols();
+                    var pos = h.indexOf(idx);
+                    if (this.checked) {
+                        if (pos !== -1) h.splice(pos, 1);
+                    } else {
+                        if (pos === -1) h.push(idx);
+                    }
+                    hacPersistHiddenCols(h);
+                    dt.column(idx).visible(this.checked, false);
+                    dt.columns.adjust();
+                });
+
+                $label.append($cb).append($('<span></span>').text(title));
+                $cell.append($label);
+                $grid.append($cell);
             });
         }
 
-        function loadApproveVacantHouses() {
-            var campusId = $('#approve_estate_campus').val();
-            var blockId = $('#approve_building').val();
-            var unitSubId = $('#approve_unit_sub_type').val();
-            var unitTypeId = $('#approve_unit_type').val();
-            $('#estate_house_master_pk').html('<option value="">---select---</option>');
-            if (!campusId || !blockId || !unitSubId) return;
-            $.get(vacantHousesUrl, {
-                campus_id: campusId,
-                block_id: blockId,
-                unit_sub_type_id: unitSubId,
-                unit_type_id: unitTypeId || ''
-            }, function(res) {
-                if (res.status && res.data) {
-                    res.data.forEach(function(h) {
-                        $('#estate_house_master_pk').append('<option value="' + h.pk + '">' + (h.house_no || h.pk) + '</option>');
-                    });
-                    $('#approveNoHouses').toggleClass('d-none', (res.data || []).length > 0);
-                }
-            });
+        $table.on('init.dt', function() { setupHacColumns($(this).DataTable()); });
+        if ($.fn.DataTable && $.fn.DataTable.isDataTable($table)) {
+            setupHacColumns($table.DataTable());
         }
+
+        /* ---------- Download / Print ---------- */
+        function hacExportParams() {
+            var params = {};
+            var type = $('#hacApprovedTypeFilter').val();
+            if (type) params.type_filter = type;
+            if ($.fn.DataTable && $.fn.DataTable.isDataTable($table)) {
+                var searchValue = $table.DataTable().search();
+                if (searchValue) params.search = searchValue;
+            }
+            var scope = new URLSearchParams(window.location.search).get('scope');
+            if (scope) params.scope = scope;
+            params.cols = hacVisibleExportCols().join(',');
+            return params;
+        }
+
+        $('#hacDownloadBtn').on('click', function() {
+            window.location.href = '{{ route('admin.estate.change-request-hac-approved.export') }}?' + $.param(hacExportParams());
+        });
+
+        $('#hacPrintBtn').on('click', function() {
+            window.open('{{ route('admin.estate.change-request-hac-approved.print') }}?' + $.param(hacExportParams()), '_blank');
+        });
+
+        /* ---------- Shared cascade: estate → building → sub-type → house ---------- */
+        // Both allotment forms (approve-with-picker and allot-new-request) use the
+        // same four endpoints; only their element ids differ.
+        function buildCascade(cfg) {
+            var $campus = $(cfg.campus), $unitType = $(cfg.unitType), $building = $(cfg.building),
+                $unitSub = $(cfg.unitSub), $house = $(cfg.house), $noHouses = $(cfg.noHouses);
+
+            function fill($sel, items, placeholder, valueKey, labelKey) {
+                $sel.html('<option value="">' + placeholder + '</option>');
+                (items || []).forEach(function(item) {
+                    var val = item[valueKey] != null ? item[valueKey] : item[labelKey];
+                    var label = item[labelKey] != null ? item[labelKey] : item[valueKey];
+                    $sel.append($('<option></option>').attr('value', val).text(label));
+                });
+            }
+
+            function resetHouse() {
+                fill($house, [], cfg.housePlaceholder, 'pk', 'house_no');
+                if ($noHouses.length) $noHouses.addClass('d-none');
+            }
+
+            function loadBlocks() {
+                fill($building, [], cfg.buildingPlaceholder, 'pk', 'block_name');
+                fill($unitSub, [], cfg.unitSubPlaceholder, 'pk', 'unit_sub_type');
+                resetHouse();
+                if (!$campus.val()) return;
+                $.get(blocksUrl, { campus_id: $campus.val(), unit_type_id: $unitType.val() || '' }, function(res) {
+                    if (res.status) fill($building, res.data, cfg.buildingPlaceholder, 'pk', 'block_name');
+                });
+            }
+
+            function loadUnitSubTypes() {
+                fill($unitSub, [], cfg.unitSubPlaceholder, 'pk', 'unit_sub_type');
+                resetHouse();
+                if (!$campus.val() || !$building.val()) return;
+                $.get(unitSubTypesUrl, { campus_id: $campus.val(), block_id: $building.val(), unit_type_id: $unitType.val() || '' }, function(res) {
+                    if (res.status) fill($unitSub, res.data, cfg.unitSubPlaceholder, 'pk', 'unit_sub_type');
+                });
+            }
+
+            function loadHouses() {
+                resetHouse();
+                if (!$campus.val() || !$building.val() || !$unitSub.val()) return;
+                var params = {
+                    campus_id: $campus.val(),
+                    block_id: $building.val(),
+                    unit_sub_type_id: $unitSub.val(),
+                    unit_type_id: $unitType.val() || ''
+                };
+                if (typeof cfg.employeePk === 'function' && cfg.employeePk()) params.employee_pk = cfg.employeePk();
+                $.get(vacantHousesUrl, params, function(res) {
+                    if (!res.status) return;
+                    fill($house, res.data, cfg.housePlaceholder, 'pk', 'house_no');
+                    if ($noHouses.length) $noHouses.toggleClass('d-none', (res.data || []).length > 0);
+                    if (typeof cfg.onChange === 'function') cfg.onChange();
+                });
+            }
+
+            $campus.on('change', function() {
+                // Unit types are scoped per campus and come with the details payload.
+                var list = (cfg.unitTypesByCampus() || {})[$campus.val()] || [];
+                fill($unitType, list, cfg.unitTypePlaceholder, 'pk', 'unit_type');
+                loadBlocks();
+                if (typeof cfg.onChange === 'function') cfg.onChange();
+            });
+            $unitType.on('change', function() { loadBlocks(); if (cfg.onChange) cfg.onChange(); });
+            $building.on('change', function() { loadUnitSubTypes(); if (cfg.onChange) cfg.onChange(); });
+            $unitSub.on('change', function() { loadHouses(); if (cfg.onChange) cfg.onChange(); });
+            $house.on('change', function() { if (cfg.onChange) cfg.onChange(); });
+
+            return {
+                fill: fill,
+                reset: function() {
+                    fill($unitType, [], cfg.unitTypePlaceholder, 'pk', 'unit_type');
+                    fill($building, [], cfg.buildingPlaceholder, 'pk', 'block_name');
+                    fill($unitSub, [], cfg.unitSubPlaceholder, 'pk', 'unit_sub_type');
+                    resetHouse();
+                }
+            };
+        }
+
+        /* ---------- Approve ---------- */
+        var approveConfirmModal = new bootstrap.Modal(document.getElementById('approveConfirmModal'));
+        var approveHouseModal = new bootstrap.Modal(document.getElementById('approveHouseModal'));
+        var approveUnitTypesByCampus = {};
+
+        var approveCascade = buildCascade({
+            campus: '#approve_estate_campus', unitType: '#approve_unit_type', building: '#approve_building',
+            unitSub: '#approve_unit_sub_type', house: '#estate_house_master_pk', noHouses: '#approveNoHouses',
+            unitTypePlaceholder: 'Select Unit', buildingPlaceholder: 'Select Building',
+            unitSubPlaceholder: 'Select Sub-type', housePlaceholder: 'Select House',
+            unitTypesByCampus: function() { return approveUnitTypesByCampus; }
+        });
 
         $(document).on('click', '.btn-approve-change-request', function() {
             var id = $(this).data('id');
-            if (!approveModal || !approveForm) return;
-            approveForm.action = '{{ route("admin.estate.change-request.approve", ["id" => "__ID__"]) }}'.replace('__ID__', id);
-            approveLoading.classList.remove('d-none');
-            approveContent.classList.add('d-none');
-            approveFormError.classList.add('d-none');
-            resetApproveDropdowns();
-            approveModal.show();
-            fetch('{{ url("admin/estate/change-request/approve-details") }}/' + id, {
-                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-            }).then(function(res) { return res.json(); }).then(function(data) {
-                approveLoading.classList.add('d-none');
-                approveContent.classList.remove('d-none');
-                if (data.error) {
-                    approveFormError.textContent = data.error || 'Failed to load details';
-                    approveFormError.classList.remove('d-none');
-                    return;
-                }
-                var emp = data.employee || {};
-                var chReq = data.change_request || {};
-                var requestedHousePk = chReq.requested_house_pk ? parseInt(chReq.requested_house_pk, 10) : null;
-                var requestedHouseNo = chReq.change_house_no || '';
+            var requestId = $(this).data('request-id');
+            var approveAction = '{{ route("admin.estate.change-request.approve", ["id" => "__ID__"]) }}'.replace('__ID__', id);
 
-                if (requestedHousePk && requestedHouseNo) {
-                    document.getElementById('approveConfirmOnly').classList.remove('d-none');
-                    document.getElementById('approveFullForm').classList.add('d-none');
-                    var titleEl = document.getElementById('approveChangeRequestModalLabel');
-                    if (titleEl) titleEl.innerHTML = '<i class="bi bi-check2-circle text-success"></i> Approve Change Request';
-                    $('#approveRequesterNameConfirm').val(emp.emp_name || '');
-                    $('#approveDesignationConfirm').val(emp.emp_designation || '');
-                    document.getElementById('approveRequestedHouseNo').textContent = requestedHouseNo;
-                    var sel = document.getElementById('estate_house_master_pk');
-                    sel.innerHTML = '<option value="' + requestedHousePk + '">' + requestedHouseNo + '</option>';
-                    sel.removeAttribute('required');
-                } else {
-                    var titleEl = document.getElementById('approveChangeRequestModalLabel');
-                    if (titleEl) titleEl.innerHTML = '<i class="bi bi-check2-circle text-success"></i> Approved Request House';
-                    document.getElementById('approveConfirmOnly').classList.add('d-none');
-                    document.getElementById('approveFullForm').classList.remove('d-none');
+            $('#formApproveConfirm').attr('action', approveAction);
+            $('#formApproveHouse').attr('action', approveAction);
+            $('#approveConfirmError, #approveFormError').addClass('d-none').text('');
+
+            $('#approveModalLoading').removeClass('d-none');
+            $('#approveModalContent').addClass('d-none');
+
+            $.get('{{ url("admin/estate/change-request/approve-details") }}/' + id)
+                .done(function(data) {
+                    var emp = data.employee || {};
+                    var chReq = data.change_request || {};
+                    var housePk = chReq.requested_house_pk ? parseInt(chReq.requested_house_pk, 10) : null;
+                    var houseNo = chReq.change_house_no || '';
+
+                    if (housePk && houseNo) {
+                        // Nothing to choose — straight to the confirm dialog.
+                        $('#approveConfirmHousePk').val(housePk);
+                        $('#approveConfirmDetail').text(
+                            (requestId ? requestId + ' — ' : '') + (emp.emp_name || '') + ' → House ' + houseNo
+                        );
+                        approveConfirmModal.show();
+                        return;
+                    }
+
                     $('#approveRequesterName').val(emp.emp_name || '');
                     $('#approveDesignation').val(emp.emp_designation || '');
-                    approveCampuses = data.campuses || [];
                     approveUnitTypesByCampus = data.unit_types_by_campus || {};
-                    $('#approve_estate_campus').html('<option value="">---select---</option>');
-                    approveCampuses.forEach(function(c) {
-                        $('#approve_estate_campus').append('<option value="' + c.pk + '">' + (c.campus_name || c.pk) + '</option>');
-                    });
-                    $('#approve_unit_type, #approve_building, #approve_unit_sub_type, #estate_house_master_pk').html('<option value="">---select---</option>');
-                    document.getElementById('estate_house_master_pk').setAttribute('required', 'required');
-                    $('#approveNoHouses').addClass('d-none');
-                }
-            }).catch(function() {
-                approveLoading.classList.add('d-none');
-                approveContent.classList.remove('d-none');
-                approveFormError.textContent = 'Network error. Please try again.';
-                approveFormError.classList.remove('d-none');
-            });
-        });
-
-        $('#approve_estate_campus').on('change', function() {
-            var campusId = $(this).val();
-            var list = approveUnitTypesByCampus[campusId] || [];
-            $('#approve_unit_type').html('<option value="">---select---</option>');
-            list.forEach(function(ut) {
-                $('#approve_unit_type').append('<option value="' + ut.pk + '">' + (ut.unit_type || ut.pk) + '</option>');
-            });
-            loadApproveBlocks();
-        });
-        $('#approve_unit_type').on('change', loadApproveBlocks);
-        $('#approve_building').on('change', loadApproveUnitSubTypes);
-        $('#approve_unit_sub_type').on('change', loadApproveVacantHouses);
-
-        if (approveForm) {
-            approveForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                var submitBtn = document.getElementById('btnSubmitApprove');
-                var housePk = document.getElementById('estate_house_master_pk').value;
-                if (!housePk) {
-                    approveFormError.textContent = 'Please select Estate, Unit Type, Building, Unit Sub Type, and House No. to allot.';
-                    approveFormError.classList.remove('d-none');
-                    return;
-                }
-                if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Submitting...'; }
-                approveFormError.classList.add('d-none');
-                var formData = new FormData(approveForm);
-                fetch(approveForm.action, {
-                    method: 'POST',
-                    body: formData,
-                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-                }).then(function(res) { return res.json().then(function(d) { return { ok: res.ok, data: d }; }); })
-                .then(function(result) {
-                    if (result.ok && result.data.success) {
-                        approveModal.hide();
-                        var dt = $('#estateHacApprovedTable').DataTable();
-                        if (dt && dt.ajax) dt.ajax.reload(null, false);
-                        var alert = document.createElement('div');
-                        alert.className = 'alert alert-success alert-dismissible fade show';
-                        alert.setAttribute('role', 'alert');
-                        alert.innerHTML = '<span>' + (result.data.message || 'Change request approved and house allotted.') + '</span><button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-                        var cardBody = approveForm.closest('.container-fluid').querySelector('.card-body');
-                        var wrapper = cardBody && cardBody.querySelector('.estate-hac-approved-table-wrapper');
-                        if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
-                    } else {
-                        approveFormError.textContent = (result.data && result.data.message) || 'Something went wrong.';
-                        approveFormError.classList.remove('d-none');
-                    }
-                }).catch(function() {
-                    approveFormError.textContent = 'Network error. Please try again.';
-                    approveFormError.classList.remove('d-none');
-                }).finally(function() {
-                    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Approve'; }
+                    approveCascade.reset();
+                    approveCascade.fill($('#approve_estate_campus'), data.campuses || [], 'Select Estate', 'pk', 'campus_name');
+                    $('#approveModalLoading').addClass('d-none');
+                    $('#approveModalContent').removeClass('d-none');
+                    approveHouseModal.show();
+                })
+                .fail(function() {
+                    hacNotify('error', 'Could not load the approval details. Please try again.');
                 });
+        });
+
+        function submitApprove($form, $btn, $error, modal, busyLabel, idleLabel) {
+            $error.addClass('d-none').text('');
+            $btn.prop('disabled', true).text(busyLabel);
+            $.ajax({
+                url: $form.attr('action'),
+                type: 'POST',
+                data: $form.serialize(),
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                success: function(res) {
+                    if (res && res.success) {
+                        modal.hide();
+                        reloadTable();
+                        hacNotify('success', res.message || 'Change request approved and house allotted.');
+                    } else {
+                        $error.removeClass('d-none').text((res && res.message) || 'Something went wrong.');
+                    }
+                },
+                error: function(xhr) {
+                    var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Something went wrong. Please try again.';
+                    $error.removeClass('d-none').text(msg);
+                },
+                complete: function() { $btn.prop('disabled', false).text(idleLabel); }
             });
         }
 
-        var disapproveModalEl = document.getElementById('disapproveChangeRequestModal');
-        var disapproveModal = disapproveModalEl ? new bootstrap.Modal(disapproveModalEl) : null;
-        var form = document.getElementById('formDisapproveChangeRequest');
-        var disapproveRequestIdSpan = document.getElementById('disapproveModalRequestId');
-        var reasonTextarea = document.getElementById('disapprove_reason');
-        var formErrorEl = document.getElementById('disapproveFormError');
+        $('#formApproveConfirm').on('submit', function(e) {
+            e.preventDefault();
+            submitApprove($(this), $('#btnSubmitApproveConfirm'), $('#approveConfirmError'), approveConfirmModal, 'Approving…', 'Yes, Approve');
+        });
+
+        $('#formApproveHouse').on('submit', function(e) {
+            e.preventDefault();
+            if (!$('#estate_house_master_pk').val()) {
+                $('#approveFormError').removeClass('d-none')
+                    .text('Please select Estate, Unit Type, Building, Unit Sub-type and House Number.');
+                return;
+            }
+            submitApprove($(this), $('#btnSubmitApprove'), $('#approveFormError'), approveHouseModal, 'Allotting…', 'Allot House');
+        });
+
+        /* ---------- Reject ---------- */
+        var disapproveModal = new bootstrap.Modal(document.getElementById('disapproveChangeRequestModal'));
 
         $(document).on('click', '.btn-disapprove-change-request', function() {
             var id = $(this).data('id');
-            var requestId = $(this).data('request-id');
-            if (!disapproveModal || !form) return;
-            form.action = '{{ route("admin.estate.change-request.disapprove", ["id" => "__ID__"]) }}'.replace('__ID__', id);
-            if (disapproveRequestIdSpan) disapproveRequestIdSpan.textContent = requestId || ('#' + id);
-            if (reasonTextarea) { reasonTextarea.value = ''; reasonTextarea.removeAttribute('disabled'); }
-            if (formErrorEl) { formErrorEl.classList.add('d-none'); formErrorEl.textContent = ''; }
+            $('#formDisapproveChangeRequest').attr('action',
+                '{{ route("admin.estate.change-request.disapprove", ["id" => "__ID__"]) }}'.replace('__ID__', id));
+            $('#disapproveModalRequestId').text($(this).data('request-id') || ('#' + id));
+            $('#disapprove_reason').val('');
+            $('#disapproveFormError').addClass('d-none').text('');
             disapproveModal.show();
         });
 
-        $(document).on('submit', 'form[data-confirm]', function(e) {
-            if (!confirm($(this).data('confirm') || 'Are you sure?')) e.preventDefault();
+        $('#formDisapproveChangeRequest').on('submit', function(e) {
+            e.preventDefault();
+            var $form = $(this);
+            var $btn = $('#btnSubmitDisapprove');
+            var $error = $('#disapproveFormError');
+            $error.addClass('d-none').text('');
+            $btn.prop('disabled', true).text('Rejecting…');
+            $.ajax({
+                url: $form.attr('action'),
+                type: 'POST',
+                data: $form.serialize(),
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                success: function(res) {
+                    if (res && res.success) {
+                        disapproveModal.hide();
+                        reloadTable();
+                        hacNotify('success', res.message || 'Change request rejected. Remark saved.');
+                    } else {
+                        $error.removeClass('d-none').text((res && res.message) || 'Something went wrong.');
+                    }
+                },
+                error: function(xhr) {
+                    var j = xhr.responseJSON || {};
+                    var msg = j.message
+                        || (j.errors && Object.keys(j.errors).map(function(k) { return j.errors[k][0]; }).join(' '))
+                        || 'Something went wrong. Please try again.';
+                    $error.removeClass('d-none').text(msg);
+                },
+                complete: function() { $btn.prop('disabled', false).text('Yes, Reject'); }
+            });
         });
 
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                var submitBtn = document.getElementById('btnSubmitDisapprove');
-                if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Submitting...'; }
-                if (formErrorEl) { formErrorEl.classList.add('d-none'); formErrorEl.textContent = ''; }
-
-                var formData = new FormData(form);
-                var actionUrl = form.getAttribute('action');
-
-                fetch(actionUrl, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json'
-                    }
-                })
-                .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
-                .then(function(result) {
-                    if (result.ok && result.data.success) {
-                        disapproveModal.hide();
-                        var dt = $('#estateHacApprovedTable').DataTable();
-                        if (dt && dt.ajax) dt.ajax.reload(null, false);
-                        var alert = document.createElement('div');
-                        alert.className = 'alert alert-success alert-dismissible fade show';
-                        alert.setAttribute('role', 'alert');
-                        alert.innerHTML = '<span>' + (result.data.message || 'Change request disapproved. Remark saved.') + '</span><button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-                        var cardBody = form.closest('.container-fluid').querySelector('.card-body');
-var wrapper = cardBody && cardBody.querySelector('.estate-hac-approved-table-wrapper');
-if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
-                    } else {
-                        var msg = (result.data && result.data.message) || (result.data && result.data.errors && Object.values(result.data.errors).flat().join(' ')) || 'Something went wrong.';
-                        if (formErrorEl) { formErrorEl.textContent = msg; formErrorEl.classList.remove('d-none'); }
-                    }
-                })
-                .catch(function() {
-                    if (formErrorEl) { formErrorEl.textContent = 'Network error. Please try again.'; formErrorEl.classList.remove('d-none'); }
-                })
-                .finally(function() {
-                    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit Disapproval'; }
-                });
-            });
-        }
-
-        // Allot new request (to Possession Details)
-        var allotModalEl = document.getElementById('allotNewRequestModal');
-        var allotModal = allotModalEl ? new bootstrap.Modal(allotModalEl) : null;
-        var allotForm = document.getElementById('formAllotNewRequest');
-        var allotLoading = document.getElementById('allotModalLoading');
-        var allotContent = document.getElementById('allotModalContent');
-        var allotCampuses = [];
+        /* ---------- Allot House (new requests) ---------- */
+        var allotModal = new bootstrap.Modal(document.getElementById('allotNewRequestModal'));
         var allotUnitTypesByCampus = {};
-        var allotEligibilityTypePk = null;
-        var allotEmployeePk = null; // for House No. filter by employee's salary-grade eligibility (DB admin query)
-        var blocksUrlAllot = '{{ route("admin.estate.possession.blocks") }}';
-        var unitSubTypesUrlAllot = '{{ route("admin.estate.possession.unit-sub-types") }}';
-        var vacantHousesUrlAllot = '{{ route("admin.estate.change-request.vacant-houses") }}';
-
-        function resetAllotDropdowns() {
-            $('#allot_estate_campus, #allot_unit_type, #allot_building, #allot_unit_sub_type, #allot_estate_house_master_pk')
-                .html('<option value="">---select---</option>').val('').prop('disabled', false);
-            // House list should not be prefilled; force user to select filters first.
-            $('#allot_estate_house_master_pk').html('<option value="">— Select House —</option>');
-            $('#allotNoHouses').removeClass('d-none');
-        }
+        var allotEmployeePk = null;
 
         function isAllotFormValid() {
-            var estate = $('#allot_estate_campus').val();
-            var unitType = $('#allot_unit_type').val();
-            var building = $('#allot_building').val();
-            var unitSubType = $('#allot_unit_sub_type').val();
-            var housePk = $('#allot_estate_house_master_pk').val();
-            return !!(estate && unitType && building && unitSubType && housePk);
+            return !!($('#allot_estate_campus').val() && $('#allot_unit_type').val() && $('#allot_building').val()
+                && $('#allot_unit_sub_type').val() && $('#allot_estate_house_master_pk').val());
         }
 
         function updateAllotSubmitButton() {
-            var btn = document.getElementById('btnSubmitAllot');
-            if (btn) btn.disabled = !isAllotFormValid();
+            $('#btnSubmitAllot').prop('disabled', !isAllotFormValid());
         }
 
-        function loadAllotBlocks() {
-            var campusId = $('#allot_estate_campus').val();
-            var unitTypeId = $('#allot_unit_type').val();
-            $('#allot_building').html('<option value="">---select---</option>');
-            $('#allot_unit_sub_type').html('<option value="">---select---</option>');
-            $('#allot_estate_house_master_pk').html('<option value="">— Select House —</option>');
-            $('#allotNoHouses').removeClass('d-none');
-            if (!campusId) return;
-            $.get(blocksUrlAllot, { campus_id: campusId, unit_type_id: unitTypeId || '' }, function(res) {
-                if (res.status && res.data) {
-                    res.data.forEach(function(b) {
-                        $('#allot_building').append('<option value="' + b.pk + '">' + (b.block_name || b.pk) + '</option>');
-                    });
-                }
-            });
-        }
-
-        function loadAllotUnitSubTypes() {
-            var campusId = $('#allot_estate_campus').val();
-            var blockId = $('#allot_building').val();
-            var unitTypeId = $('#allot_unit_type').val();
-            $('#allot_unit_sub_type').html('<option value="">---select---</option>');
-            $('#allot_estate_house_master_pk').html('<option value="">— Select House —</option>');
-            $('#allotNoHouses').removeClass('d-none');
-            if (!campusId || !blockId) return;
-            $.get(unitSubTypesUrlAllot, { campus_id: campusId, block_id: blockId, unit_type_id: unitTypeId || '' }, function(res) {
-                if (res.status && res.data) {
-                    res.data.forEach(function(u) {
-                        $('#allot_unit_sub_type').append('<option value="' + u.pk + '">' + (u.unit_sub_type || u.pk) + '</option>');
-                    });
-                }
-            });
-        }
-
-        function loadAllotVacantHouses() {
-            var campusId = $('#allot_estate_campus').val();
-            var blockId = $('#allot_building').val();
-            var unitSubId = $('#allot_unit_sub_type').val();
-            var unitTypeId = $('#allot_unit_type').val();
-            $('#allot_estate_house_master_pk').html('<option value="">— Select House —</option>');
-            if (!campusId || !blockId || !unitSubId) return;
-            var params = {
-                campus_id: campusId,
-                block_id: blockId,
-                unit_sub_type_id: unitSubId,
-                unit_type_id: unitTypeId || ''
-            };
-            if (allotEmployeePk) params.employee_pk = allotEmployeePk;
-            $.get(vacantHousesUrlAllot, params, function(res) {
-                if (res.status && res.data) {
-                    res.data.forEach(function(h) {
-                        $('#allot_estate_house_master_pk').append('<option value="' + h.pk + '">' + (h.house_no || h.pk) + '</option>');
-                    });
-                    $('#allotNoHouses').toggleClass('d-none', (res.data || []).length > 0);
-                }
-            });
-        }
+        var allotCascade = buildCascade({
+            campus: '#allot_estate_campus', unitType: '#allot_unit_type', building: '#allot_building',
+            unitSub: '#allot_unit_sub_type', house: '#allot_estate_house_master_pk', noHouses: '#allotNoHouses',
+            unitTypePlaceholder: 'Select Unit', buildingPlaceholder: 'Select Building',
+            unitSubPlaceholder: 'Select Sub-type', housePlaceholder: 'Select House',
+            unitTypesByCampus: function() { return allotUnitTypesByCampus; },
+            employeePk: function() { return allotEmployeePk; },
+            onChange: updateAllotSubmitButton
+        });
 
         $(document).on('click', '.btn-allot-new-request', function() {
             var id = $(this).data('id');
             var detailsUrl = $(this).data('details-url');
-            if (!allotModal || !allotForm) return;
-            allotForm.action = '{{ route("admin.estate.new-request.allot", ["id" => "__ID__"]) }}'.replace('__ID__', id);
-            allotLoading.classList.remove('d-none');
-            allotContent.classList.add('d-none');
-            resetAllotDropdowns();
+            $('#formAllotNewRequest').attr('action',
+                '{{ route("admin.estate.new-request.allot", ["id" => "__ID__"]) }}'.replace('__ID__', id));
+            $('#allotFormError').addClass('d-none').text('');
+            $('#allotModalLoading').removeClass('d-none');
+            $('#allotModalContent').addClass('d-none');
             allotModal.show();
-            fetch(detailsUrl, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(function(res) { return res.json(); })
-                .then(function(data) {
-                    allotLoading.classList.add('d-none');
-                    allotContent.classList.remove('d-none');
-                    if (data.error) {
-                        return;
-                    }
+
+            $.get(detailsUrl)
+                .done(function(data) {
                     var emp = data.employee || {};
                     $('#allotRequesterName').val(emp.emp_name || '');
                     $('#allotDesignation').val(emp.emp_designation || '');
-                    allotEligibilityTypePk = (emp.eligibility_type_pk != null && emp.eligibility_type_pk !== '') ? parseInt(emp.eligibility_type_pk, 10) : null;
                     allotEmployeePk = (emp.employee_pk != null && emp.employee_pk !== '') ? parseInt(emp.employee_pk, 10) : null;
-                    allotCampuses = data.campuses || [];
                     allotUnitTypesByCampus = data.unit_types_by_campus || {};
-                    $('#allot_estate_campus').html('<option value="">---select---</option>');
-                    allotCampuses.forEach(function(c) {
-                        $('#allot_estate_campus').append('<option value="' + c.pk + '">' + (c.campus_name || c.pk) + '</option>');
-                    });
-                    $('#allot_unit_type, #allot_building, #allot_unit_sub_type').html('<option value="">---select---</option>');
-                    // Do not prefill house list; it must be filtered via dropdown cascade.
-                    $('#allot_estate_house_master_pk').html('<option value="">— Select House —</option>');
+                    allotCascade.reset();
+                    allotCascade.fill($('#allot_estate_campus'), data.campuses || [], 'Select Estate', 'pk', 'campus_name');
                     $('#allotNoHouses').removeClass('d-none');
                     updateAllotSubmitButton();
                 })
-                .catch(function() {
-                    allotLoading.classList.add('d-none');
-                    allotContent.classList.remove('d-none');
+                .fail(function() {
+                    $('#allotFormError').removeClass('d-none').text('Could not load the request details. Please try again.');
+                })
+                .always(function() {
+                    $('#allotModalLoading').addClass('d-none');
+                    $('#allotModalContent').removeClass('d-none');
                 });
         });
 
-        $('#allot_estate_campus').on('change', function() {
-            var campusId = $(this).val();
-            var list = allotUnitTypesByCampus[campusId] || [];
-            $('#allot_unit_type').html('<option value="">---select---</option>');
-            list.forEach(function(ut) {
-                $('#allot_unit_type').append('<option value="' + ut.pk + '">' + (ut.unit_type || ut.pk) + '</option>');
-            });
-            loadAllotBlocks();
-            updateAllotSubmitButton();
-        });
-        $('#allot_unit_type').on('change', function() { loadAllotBlocks(); updateAllotSubmitButton(); });
-        $('#allot_building').on('change', function() { loadAllotUnitSubTypes(); updateAllotSubmitButton(); });
-        $('#allot_unit_sub_type').on('change', function() { loadAllotVacantHouses(); updateAllotSubmitButton(); });
-        $('#allot_estate_house_master_pk').on('change', updateAllotSubmitButton);
-
-        if (allotForm) {
-            allotForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                var submitBtn = document.getElementById('btnSubmitAllot');
-                if (!isAllotFormValid()) {
-                    return;
-                }
-                if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Submitting...'; }
-                var formData = new FormData(allotForm);
-                fetch(allotForm.action, {
-                    method: 'POST',
-                    body: formData,
-                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-                }).then(function(res) { return res.json().then(function(d) { return { ok: res.ok, data: d }; }); })
-                .then(function(result) {
-                    if (result.ok && result.data.success) {
+        $('#formAllotNewRequest').on('submit', function(e) {
+            e.preventDefault();
+            if (!isAllotFormValid()) return;
+            var $form = $(this);
+            var $btn = $('#btnSubmitAllot');
+            var $error = $('#allotFormError');
+            $error.addClass('d-none').text('');
+            $btn.prop('disabled', true).text('Allotting…');
+            $.ajax({
+                url: $form.attr('action'),
+                type: 'POST',
+                data: $form.serialize(),
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                success: function(res) {
+                    if (res && res.success) {
                         allotModal.hide();
-                        var dt = $('#estateHacApprovedTable').DataTable();
-                        if (dt && dt.ajax) dt.ajax.reload(null, false);
-                        var alert = document.createElement('div');
-                        alert.className = 'alert alert-success alert-dismissible fade show';
-                        alert.setAttribute('role', 'alert');
-                        alert.innerHTML = '<span>' + (result.data.message || 'House allotted. Record is now in Possession Details.') + '</span><button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-                        var cardBody = allotForm.closest('.container-fluid').querySelector('.card-body');
-                        var wrapper = cardBody && cardBody.querySelector('.estate-hac-approved-table-wrapper');
-                        if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
+                        reloadTable();
+                        hacNotify('success', res.message || 'House allotted. Record is now in Possession Details.');
+                    } else {
+                        $error.removeClass('d-none').text((res && res.message) || 'Something went wrong.');
                     }
-                }).catch(function() {
-                }).finally(function() {
-                    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="bi bi-house-add me-1"></i> Allot'; }
-                });
+                },
+                error: function(xhr) {
+                    $error.removeClass('d-none').text((xhr.responseJSON && xhr.responseJSON.message)
+                        ? xhr.responseJSON.message
+                        : 'Something went wrong. Please try again.');
+                },
+                complete: function() { $btn.prop('disabled', false).text('Allot House'); updateAllotSubmitButton(); }
             });
-        }
+        });
     });
     </script>
 @endpush
