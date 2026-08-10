@@ -428,3 +428,122 @@
         min-width: 0;
     }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Possession Details (admin/estate/possession-details)
+   Thirteen columns plus row selection — the widest listing in the module.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Selection column */
+.pd-page .programme-dt-table th.pd-col-select,
+.pd-page .programme-dt-table td.pd-col-select {
+    width: 48px;
+    text-align: center;
+}
+
+.pd-page .pd-check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pd-page .pd-check .form-check-input {
+    width: 1.05rem;
+    height: 1.05rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.pd-page .pd-check .form-check-input:checked {
+    background-color: var(--ds-primary, #004a93);
+    border-color: var(--ds-primary, #004a93);
+}
+
+/* Name & ID wraps; the rest stay on one line and the panel scrolls. */
+.pd-page .programme-dt-table th.pd-col-name,
+.pd-page .programme-dt-table td.pd-col-name {
+    min-width: 170px;
+    white-space: normal;
+    line-height: 1.45;
+}
+
+.pd-page .programme-dt-table th.pd-col-action,
+.pd-page .programme-dt-table td.pd-col-action {
+    min-width: 110px;
+}
+
+.pd-page .programme-dt-table tbody td {
+    white-space: nowrap;
+}
+
+.pd-page .programme-dt-table thead th,
+.pd-page .programme-dt-table tbody td {
+    padding-left: 0.625rem !important;
+    padding-right: 0.625rem !important;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* Bulk delete — appears in the toolbar only while rows are selected. */
+.pd-page .pd-btn-bulk-delete {
+    height: var(--ds-control-h, 2.5rem);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-2, 0.5rem);
+    padding: 0 1rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #912018;
+    border: 1px solid #fda29b;
+    border-radius: 8px;
+    background: var(--ds-surface, #fff);
+    white-space: nowrap;
+}
+
+.pd-page .pd-btn-bulk-delete:hover {
+    background: #fff5f5;
+    border-color: #f97066;
+    color: #7a271a;
+}
+
+/* The Allotment date filter is a native date input in a 180px slot. */
+.pd-page .programme-dt-filter-select .form-control[type="date"] {
+    min-height: var(--ds-control-h, 2.5rem);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9375rem;
+    color: #344054;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    box-shadow: none;
+    background-color: var(--ds-surface, #fff);
+}
+
+.pd-page .programme-dt-filter-select .form-control[type="date"]:focus {
+    border-color: var(--ds-primary, #004a93);
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+}
+
+/* Collapsed search: an icon button that reveals the DataTables filter slot. */
+.pd-page .pd-search-toggle {
+    width: var(--ds-control-h, 2.5rem);
+    height: var(--ds-control-h, 2.5rem);
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: var(--ds-surface, #fff);
+    color: #475467;
+}
+
+.pd-page .pd-search-toggle:hover,
+.pd-page .pd-search-toggle[aria-expanded="true"] {
+    background: #f2f7fc;
+    border-color: var(--ds-primary, #004a93);
+    color: var(--ds-primary, #004a93);
+}
+
+.pd-page .programme-dt-search {
+    width: 240px;
+}

@@ -1665,6 +1665,8 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     Route::get('possession/houses', [EstateController::class, 'getPossessionHouses'])->name('possession.houses');
 
     Route::post('possession-details/bulk-delete', [EstateController::class, 'destroyPossessionDetailsBulk'])->name('possession-details.bulk-delete');
+    Route::get('possession-details/export', [EstateController::class, 'exportPossessionDetails'])->name('possession-details.export');
+    Route::get('possession-details/print', [EstateController::class, 'printPossessionDetails'])->name('possession-details.print');
 
     // Update Meter
     Route::get('update-meter-reading', [EstateController::class, 'updateMeterReading'])->name('update-meter-reading');

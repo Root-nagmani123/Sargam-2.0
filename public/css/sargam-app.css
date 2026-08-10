@@ -498,6 +498,13 @@ a.dropdown-item:focus-visible {
     background: var(--ds-surface);
 }
 .ds-btn-cancel--success:hover { background: #ecfdf3; color: #039855; }
+/* Secondary action alongside a primary one (e.g. "Update Reading"). */
+.ds-btn-cancel--primary {
+    color: var(--ds-primary);
+    border-color: var(--ds-primary);
+    background: var(--ds-surface);
+}
+.ds-btn-cancel--primary:hover { background: #f2f7fc; color: var(--ds-primary); }
 /* Tertiary / navigational (e.g. "Back to …") — no colour claim. */
 .ds-btn-neutral {
     color: var(--ds-ink);

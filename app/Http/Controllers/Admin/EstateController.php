@@ -12,6 +12,7 @@ use App\DataTables\EstateReturnHouseDataTable;
 use App\DataTables\EstateRequestPutInHacDataTable;
 use App\DataTables\EstateHacApprovedDataTable;
 use App\Exports\EstateHacApprovedExport;
+use App\Exports\EstatePossessionDetailsExport;
 use App\Exports\EstateRequestForEstateExport;
 use App\Http\Controllers\Controller;
 use App\Support\RedisBackedCache;
@@ -5135,7 +5136,84 @@ class EstateController extends Controller
      */
     public function possessionDetails(EstatePossessionDetailsDataTable $dataTable)
     {
-        return $dataTable->render('admin.estate.possession_details');
+        return $dataTable->render('admin.estate.possession_details', [
+            // Estate Name filter options for the toolbar, reused by the
+            // Update Meter Reading modal.
+            'estateCampuses' => DB::table('estate_campus_master')
+                ->orderBy('campus_name')
+                ->get(['pk', 'campus_name']),
+            'estateUnitTypes' => DB::table('estate_unit_type_master')
+                ->orderBy('unit_type')
+                ->get(['pk', 'unit_type']),
+        ]);
+    }
+
+    /**
+     * Rows + heading line for the Possession Details downloads.
+     *
+     * Runs the DataTable's own listing query, so the export inherits the same
+     * RBAC scope and the same Estate / Allotment date / search filters that
+     * produced the on-screen list.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function possessionDetailsExportPayload(Request $request): array
+    {
+        $rows = EstatePossessionDetailsDataTable::listingQuery()
+            ->tap(fn ($query) => EstatePossessionDetailsDataTable::applyFilters(
+                $query,
+                (string) $request->input('search', ''),
+                (string) $request->input('estate_filter', ''),
+                (string) $request->input('allotment_date_filter', '')
+            ))
+            ->get();
+
+        $estateFilter = trim((string) $request->input('estate_filter', ''));
+        $estateLabel = $estateFilter !== ''
+            ? (DB::table('estate_campus_master')->where('pk', (int) $estateFilter)->value('campus_name') ?: 'All')
+            : 'All';
+
+        $filters = ['Estate: ' . $estateLabel];
+        if (trim((string) $request->input('allotment_date_filter', '')) !== '') {
+            $filters[] = 'Allotment date: ' . trim((string) $request->input('allotment_date_filter'));
+        }
+        if (trim((string) $request->input('search', '')) !== '') {
+            $filters[] = 'Search: "' . trim((string) $request->input('search')) . '"';
+        }
+
+        return [
+            'rows' => $rows,
+            'cols' => EstatePossessionDetailsExport::resolveCols($request->input('cols')),
+            'filterLine' => implode('  |  ', $filters),
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /**
+     * Possession Details — branded .xlsx of the currently filtered list.
+     */
+    public function exportPossessionDetails(Request $request)
+    {
+        $payload = $this->possessionDetailsExportPayload($request);
+
+        return Excel::download(
+            new EstatePossessionDetailsExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'possession-details-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /**
+     * Possession Details — print-ready view of the currently filtered list.
+     * Same header and columns as the Excel download.
+     */
+    public function printPossessionDetails(Request $request)
+    {
+        return view('admin.estate.possession_details_print', $this->possessionDetailsExportPayload($request));
     }
 
     /**
@@ -5279,13 +5357,20 @@ class EstateController extends Controller
 
         $isEdit = $request->filled('requester_id');
 
-        return view('admin.estate.possession_details_form', compact(
+        $payload = compact(
             'requesters',
             'campuses',
             'unitTypesByCampus',
             'preselectedRequester',
             'isEdit'
-        ));
+        );
+
+        // The listing's Add / Edit Possession modal asks for the body only.
+        if ($request->boolean('modal')) {
+            return view('admin.estate._possession_details_form', $payload + ['inModal' => true]);
+        }
+
+        return view('admin.estate.possession_details_form', $payload);
     }
 
 
@@ -6273,6 +6358,27 @@ class EstateController extends Controller
                     $prefill['reading_pk'] = $readingPkForPrefill;
                 }
             }
+        } elseif ($billMonthInput) {
+            // Filters arriving straight from the Update Meter Reading modal on the
+            // Possession Details listing: no possession to resolve, just the
+            // filter values the user picked. Same shape as above so the page's
+            // existing prefill script applies them and auto-loads the grid.
+            $intOrNull = static function ($value) {
+                $value = trim((string) $value);
+
+                return ($value !== '' && ctype_digit($value)) ? (int) $value : null;
+            };
+            $readingDate = trim((string) request('meter_reading_date', ''));
+
+            $prefill = [
+                'possession_pk' => null,
+                'bill_month' => $billMonthInput,
+                'campus_id' => $intOrNull(request('campus_id')),
+                'block_id' => $intOrNull(request('block_id')),
+                'unit_type_id' => $intOrNull(request('unit_type_id')),
+                'unit_sub_type_id' => $intOrNull(request('unit_sub_type_id')),
+                'meter_reading_date' => $readingDate !== '' ? $readingDate : null,
+            ];
         }
 
         return view('admin.estate.update_meter_reading', compact(
