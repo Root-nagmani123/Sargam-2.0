@@ -106,9 +106,12 @@ class EstateRequestPutInHacDataTable extends DataTable
                 return $displayEscaped;
             })
             ->addColumn('put_in_hac', function ($row) {
-                return '<div class="form-check form-check-inline d-flex justify-content-center">
-                    <input type="checkbox" class="form-check-input put-in-hac-checkbox" data-pk="' . (int) $row->pk . '" data-req-id="' . e($row->req_id ?? '') . '">
-                    <label class="form-check-label visually-hidden">Put in HAC</label>
+                $reqId = e($row->req_id ?? '');
+
+                return '<div class="pih-check">
+                    <input type="checkbox" class="form-check-input put-in-hac-checkbox" id="pih-' . (int) $row->pk . '"
+                        data-pk="' . (int) $row->pk . '" data-req-id="' . $reqId . '"
+                        aria-label="Select request ' . $reqId . ' for HAC">
                 </div>';
             })
             ->rawColumns(['remarks', 'put_in_hac'])
@@ -188,7 +191,10 @@ class EstateRequestPutInHacDataTable extends DataTable
     {
         return $this->builder()
             ->setTableId('putInHacTable')
-            ->addTableClass('table table-bordered table-striped table-hover align-middle mb-0')
+            // programme-dt chrome (docs/new-design-index-page.md) — no `dom` and no
+            // `language` here on purpose: datatable-global-ui.js owns both, and a
+            // page-level override would win and break the "Showing N of M items" footer.
+            ->addTableClass('table table-hover align-middle mb-0 w-100 programme-dt-table')
             ->columns($this->getColumns())
             ->minifiedAjax('', null, [
                 'scope' => 'new URLSearchParams(window.location.search).get("scope") || ""',
@@ -196,44 +202,32 @@ class EstateRequestPutInHacDataTable extends DataTable
             ->parameters([
                 'responsive' => false,
                 'autoWidth' => false,
-                'scrollX' => true,
                 'ordering' => true,
+                // Keep DataTables' native (server-side) ordering so a header click
+                // re-sorts the WHOLE queue instead of just the loaded page.
+                'sargamServerOrder' => true,
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
                 'order' => [[2, 'desc']],
-                'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-                'language' => [
-                    'search' => 'Search within table:',
-                    'lengthMenu' => 'Show _MENU_ entries',
-                    'info' => 'Showing _START_ to _END_ of _TOTAL_ entries',
-                    'infoEmpty' => 'Showing 0 to 0 of 0 entries',
-                    'infoFiltered' => '(filtered from _MAX_ total entries)',
-                    'paginate' => [
-                        'first' => 'First',
-                        'last' => 'Last',
-                        'next' => 'Next',
-                        'previous' => 'Previous',
-                    ],
-                ],
-                'dom' => '<"row mb-3"<"col-12 col-md-6"l><"col-12 col-md-6"f>>rt<"row align-items-center mt-3"<"col-12 col-md-5"i><"col-12 col-md-7"p>>',
+                'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
             ]);
     }
 
     public function getColumns(): array
     {
         return [
-            Column::computed('put_in_hac')->title('Put in HAC')->addClass('text-center')->orderable(false)->searchable(false)->width('100px'),
-            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
+            Column::computed('put_in_hac')->title('Select')->addClass('pih-col-select')->orderable(false)->searchable(false)->width('72px'),
+            Column::computed('DT_RowIndex')->title('S. No.')->orderable(false)->searchable(false)->width('64px'),
             Column::make('req_id')->title('Request ID')->orderable(true)->searchable(true),
             Column::make('req_date')->title('Request Date')->orderable(true)->searchable(false),
-            Column::make('emp_name')->title('NAME')->orderable(true)->searchable(true),
+            Column::make('emp_name')->title('Name')->addClass('pih-col-name')->orderable(true)->searchable(true),
             Column::make('employee_id')->title('Employee ID')->orderable(true)->searchable(true),
             Column::make('emp_designation')->title('Designation')->orderable(true)->searchable(true),
             Column::make('pay_scale')->title('Current Pay Scale')->orderable(true)->searchable(true),
-            Column::make('doj_pay_scale')->title('Date of Joining in Current Pay Scale')->orderable(false)->searchable(false),
-            Column::make('doj_service')->title('Date of Joining in Service')->orderable(false)->searchable(false),
-            Column::make('doj_academic')->title('Date of Joining in Academy')->orderable(false)->searchable(false),
+            Column::make('doj_pay_scale')->title('DOJ (Current Pay Scale)')->orderable(false)->searchable(false),
+            Column::make('doj_service')->title('DOJ (Service)')->orderable(false)->searchable(false),
+            Column::make('doj_academic')->title('DOJ (Academy)')->orderable(false)->searchable(false),
             Column::make('current_alot')->title('Current Allotment')->orderable(true)->searchable(true),
             Column::make('remarks')->title('Remarks')->orderable(false)->searchable(true),
         ];

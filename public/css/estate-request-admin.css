@@ -307,3 +307,66 @@
     font-size: 0.875rem;
     color: var(--ds-ink-muted, #667085);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Put In HAC (admin/estate/put-in-hac)
+   A selection queue: same programme-dt chrome, plus the bits a bulk action
+   needs — a checkbox column and a live selection count.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.pih-page .pih-hint {
+    font-size: 0.875rem;
+    color: var(--ds-ink-muted, #667085);
+    max-width: 64ch;
+}
+
+.pih-page .pih-selected-count {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--ds-ink-muted, #667085);
+    white-space: nowrap;
+}
+
+/* Checkbox column — centred, and never squeezed by the 12 data columns. */
+.pih-page .programme-dt-table th.pih-col-select,
+.pih-page .programme-dt-table td.pih-col-select {
+    width: 72px;
+    text-align: center;
+}
+
+.pih-page .pih-check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pih-page .pih-check .form-check-input {
+    width: 1.125rem;
+    height: 1.125rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.pih-page .pih-check .form-check-input:checked {
+    background-color: var(--ds-primary, #004a93);
+    border-color: var(--ds-primary, #004a93);
+}
+
+/* Name is the column worth reading; the rest stay on one line. */
+.pih-page .programme-dt-table th.pih-col-name,
+.pih-page .programme-dt-table td.pih-col-name {
+    min-width: 200px;
+    white-space: normal;
+    line-height: 1.45;
+}
+
+/* 13 columns do not fit the content area — the panel scrolls horizontally, so
+   keep the cells from wrapping into unreadable slivers. */
+.pih-page .programme-dt-table tbody td {
+    white-space: nowrap;
+}
+
+.pih-page .programme-dt-table thead th {
+    text-transform: none;
+    letter-spacing: 0;
+}

@@ -1,58 +1,83 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Put In HAC - Request For Estate - Sargam')
+@section('title', 'Put In HAC - Sargam')
 
 @php
     $estateSelfHomeTab = request('scope') === 'self'
         && (isEstateAuthority());
     $estateSelfQuery = $estateSelfHomeTab ? ['scope' => 'self'] : [];
+
+    // HAC Person (and nothing else) reaches this queue from the HAC side and has
+    // no Request For Estate listing to go back to.
+    $showBackToRequests = ! hasRole('HAC Person')
+        || hasRole('Estate Admin') || hasRole('Super Admin')
+        || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin')
+        || hasRole('Training IST') || hasRole('Staff') || hasRole('Officer Trainee')
+        || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty');
 @endphp
 @section($estateSelfHomeTab ? 'content' : 'setup_content')
-<div class="container-fluid px-2 px-sm-3 px-md-4">
-    <x-breadcrum title="Put In HAC" />
-    <x-estate-workflow-stepper current="put-in-hac" />
+<div class="container-fluid rfe-page pih-page">
+    <x-breadcrum title="Put In HAC" :showBack="false">
+        @if($showBackToRequests)
+            <a href="{{ route('admin.estate.request-for-estate', $estateSelfQuery) }}" class="btn ds-btn-neutral me-3">
+                Back to Request for Estate
+            </a>
+        @endif
+        <span class="pih-selected-count me-3" id="selectedCountText">0 selected</span>
+        <button type="button" class="btn ds-btn-submit" id="btnPutInHac" disabled>
+            Put Selected in HAC
+        </button>
+    </x-breadcrum>
 
     <x-session_message />
 
-    <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
-        <div class="card-header bg-primary text-white py-3">
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                <div>
-                    <h5 class="mb-0 fw-semibold"><i class="bi bi-building-check me-2"></i>Put In HAC</h5>
-                    <p class="small mb-0 opacity-90 mt-1">Select estate requests and put them in House Allotment Committee (HAC)</p>
+    <div class="card overflow-hidden rounded-1">
+        <div class="card-body p-3 p-md-4">
+            <div id="put-in-hac-card-body">
+
+                <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+
+                    <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                        <button type="button" class="btn programme-dt-btn-columns" id="pihBtnColumns"
+                            data-bs-toggle="modal" data-bs-target="#pihColumnVisibilityModal"
+                            title="Show / hide columns">
+                            <span>Columns</span>
+                            <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                        </button>
+                        <div id="pihDtSearch" class="programme-dt-search" data-dt-search-for="putInHacTable"></div>
+                    </div>
                 </div>
-                @if(!hasRole('HAC Person') || hasRole('Estate Admin') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Staff') || hasRole('Officer Trainee') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty'))
-                <div>
-                    <a href="{{ route('admin.estate.request-for-estate', $estateSelfQuery) }}" class="btn btn-light btn-sm">
-                        <i class="bi bi-arrow-left me-1"></i> Back to Request for Estate
-                    </a>
+
+                <div class="programme-dt-panel">
+                    <div class="table-responsive">
+                        {!! $dataTable->table(['aria-describedby' => 'put-in-hac-caption']) !!}
+                    </div>
+                    {{-- Left empty on purpose: datatable-global-ui.js fills this with the
+                         pagination and the "Showing [10] of N items" count. --}}
+                    <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                        data-dt-footer-for="putInHacTable"></div>
                 </div>
-                @endif
+
+                <div id="put-in-hac-caption" class="visually-hidden">Put In HAC - Estate requests list</div>
             </div>
         </div>
-        <div class="card-body p-4 p-lg-5">
-            <div class="alert alert-info border-0 rounded-3 d-flex align-items-start gap-2 mb-4" role="alert">
-                <i class="bi bi-info-circle-fill fs-5 flex-shrink-0 mt-1"></i>
-                <div>
-                    <strong>Authority workflow:</strong> This page displays all estate requests that have not been put in HAC. Check the boxes for requests you want to send to HAC, then click <strong>"Put Selected in HAC"</strong>.
-                </div>
-            </div>
+    </div>
+</div>
 
-            <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-                <button type="button" class="btn btn-success" id="btnPutInHac" disabled>
-                    <i class="bi bi-check2-square me-1"></i> Put Selected in HAC
-                </button>
-                <span class="text-body-secondary small" id="selectedCountText">0 selected</span>
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="pihColumnVisibilityModal" tabindex="-1" aria-labelledby="pihColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="pihColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-
-            <div id="put-in-hac-card-body">
-                <div class="table-responsive text-nowrap put-in-hac-table-wrap">
-                    {!! $dataTable->table([
-                        'class' => 'table table-bordered table-striped table-hover align-middle mb-0',
-                        'aria-describedby' => 'put-in-hac-caption'
-                    ]) !!}
-                </div>
-                <div id="put-in-hac-caption" class="visually-hidden">Put In HAC - Estate requests list</div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="pihColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -60,85 +85,7 @@
 @endsection
 
 @push('styles')
-<style>
-    .put-in-hac-table-wrap {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-    .put-in-hac-table-wrap table {
-        min-width: 1200px;
-    }
-    #putInHacTable_wrapper thead th {
-        background-color: var(--bs-primary);
-        color: #fff;
-        font-weight: 600;
-        border-color: var(--bs-primary);
-        padding: 0.75rem;
-        white-space: nowrap;
-    }
-    #putInHacTable_wrapper .dataTables_length select,
-    #putInHacTable_wrapper .dataTables_filter input {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
-        border: 1px solid var(--bs-border-color);
-        border-radius: 0.375rem;
-    }
-    #putInHacTable_wrapper .dataTables_paginate .paginate_button {
-        padding: 0.25rem 0.5rem;
-        margin: 0 1px;
-        border-radius: 0.375rem;
-        border: 1px solid var(--bs-border-color);
-    }
-    #putInHacTable_wrapper .dataTables_paginate .paginate_button.current {
-        background: var(--bs-primary);
-        color: #fff !important;
-        border-color: var(--bs-primary);
-    }
-    .form-check-input:checked {
-        background-color: var(--bs-primary);
-        border-color: var(--bs-primary);
-    }
-    /* Align DataTables search box to top-right */
-    #putInHacTable_wrapper .dataTables_wrapper .row:first-child,
-    #putInHacTable_wrapper .row:first-child {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-    }
-    #putInHacTable_wrapper .dataTables_length {
-        text-align: left;
-    }
-    #putInHacTable_wrapper .dataTables_filter {
-        width: auto;
-        margin-left: auto;
-        margin-bottom: 0.5rem;
-        float: none !important;
-        text-align: right !important;
-    }
-    #putInHacTable_wrapper .dataTables_filter label {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        justify-content: flex-end;
-        margin: 0 !important;
-    }
-    @media (max-width: 767.98px) {
-        #putInHacTable_wrapper .dataTables_wrapper .row:first-child,
-        #putInHacTable_wrapper .row:first-child {
-            flex-direction: column;
-            align-items: stretch;
-        }
-        #putInHacTable_wrapper .dataTables_filter {
-            width: 100%;
-            margin-left: 0;
-            text-align: left !important;
-        }
-        #putInHacTable_wrapper .dataTables_filter label {
-            justify-content: flex-start;
-        }
-    }
-</style>
+<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
 @endpush
 
 @push('scripts')
@@ -147,52 +94,134 @@
     $(function() {
         var putInHacUrl = '{{ route("admin.estate.put-in-hac.action") }}';
         var csrf = '{{ csrf_token() }}';
+        var $table = $('#putInHacTable');
 
+        function pihNotify(type, message) {
+            var $host = $('#put-in-hac-card-body');
+            var cls = type === 'success' ? 'alert-success' : 'alert-danger';
+            var icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill';
+            $host.find('.' + cls).remove();
+            $host.prepend('<div class="alert ' + cls + ' alert-dismissible fade show d-flex align-items-center rounded-1 shadow-sm" role="alert">' +
+                '<i class="bi ' + icon + ' me-2"></i><span class="flex-grow-1">' + message + '</span>' +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+            if (type === 'success') {
+                setTimeout(function() { $host.find('.alert-success').fadeOut(); }, 4000);
+            }
+        }
+
+        /* ---------- Selection ---------- */
         function updateSelectedCount() {
-            var checked = $('.put-in-hac-checkbox:checked');
-            var n = checked.length;
+            var n = $('.put-in-hac-checkbox:checked').length;
             $('#btnPutInHac').prop('disabled', n === 0);
             $('#selectedCountText').text(n + ' selected');
         }
 
         $(document).on('change', '.put-in-hac-checkbox', updateSelectedCount);
 
+        // A redraw (page change / search / sort) replaces the rows, so the
+        // previous page's ticks are gone — resync the counter.
+        $table.on('draw.dt', updateSelectedCount);
+
+        /* ---------- Column visibility (persisted per browser, per user) ---------- */
+        var pihColStorageKey = 'sargam.putInHac.hiddenCols.{{ auth()->id() ?? 'guest' }}';
+
+        function pihGetHiddenCols() {
+            try {
+                var raw = localStorage.getItem(pihColStorageKey);
+                var arr = raw ? JSON.parse(raw) : [];
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) {
+                return []; // private mode / storage disabled / corrupt value
+            }
+        }
+
+        function pihPersistHiddenCols(arr) {
+            try { localStorage.setItem(pihColStorageKey, JSON.stringify(arr)); } catch (e) {}
+        }
+
+        function setupPihColumns(dt) {
+            if (!dt) return;
+            var hidden = pihGetHiddenCols();
+
+            dt.columns().every(function() {
+                var idx = this.index();
+                // Column 0 is the selection checkbox — hiding it would strand the
+                // page's only action, so it is never offered.
+                this.visible(idx === 0 || hidden.indexOf(idx) === -1, false);
+            });
+            dt.columns.adjust();
+
+            var $grid = $('#pihColumnToggleGrid');
+            if (!$grid.length) return;
+            $grid.empty();
+
+            dt.columns().every(function() {
+                var idx = this.index();
+                if (idx === 0) return;
+                var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+                if (!title) return;
+
+                var inputId = 'pihcolvis_' + idx;
+                var $cell = $('<div class="col-12 col-sm-6"></div>');
+                var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-1 px-3 py-2 mb-0 w-100"></label>')
+                    .attr('for', inputId);
+                var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                    .attr('id', inputId)
+                    .prop('checked', hidden.indexOf(idx) === -1);
+
+                $cb.on('change', function() {
+                    var h = pihGetHiddenCols();
+                    var pos = h.indexOf(idx);
+                    if (this.checked) {
+                        if (pos !== -1) h.splice(pos, 1);
+                    } else {
+                        if (pos === -1) h.push(idx);
+                    }
+                    pihPersistHiddenCols(h);
+                    dt.column(idx).visible(this.checked, false);
+                    dt.columns.adjust();
+                });
+
+                $label.append($cb).append($('<span></span>').text(title));
+                $cell.append($label);
+                $grid.append($cell);
+            });
+        }
+
+        $table.on('init.dt', function() { setupPihColumns($(this).DataTable()); });
+        // Yajra may have finished initialising before this handler was bound.
+        if ($.fn.DataTable && $.fn.DataTable.isDataTable($table)) {
+            setupPihColumns($table.DataTable());
+        }
+
+        /* ---------- Put selected in HAC ---------- */
         $('#btnPutInHac').on('click', function() {
-            var checked = $('.put-in-hac-checkbox:checked');
-            var ids = checked.map(function() { return $(this).data('pk'); }).get();
+            var ids = $('.put-in-hac-checkbox:checked').map(function() { return $(this).data('pk'); }).get();
             if (ids.length === 0) return;
 
             var btn = $(this);
-            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status"></span> Processing...');
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status"></span>Processing…');
 
             var requestSucceeded = false;
             $.ajax({
                 url: putInHacUrl,
                 type: 'POST',
-                data: {
-                    _token: csrf,
-                    ids: ids
-                },
+                data: { _token: csrf, ids: ids },
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
                 success: function(res) {
                     if (res.success && res.message) {
                         requestSucceeded = true;
-                        $('#putInHacTable').DataTable().ajax.reload(null, false);
-                        var alertHtml = '<div class="alert alert-success alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert"><i class="bi bi-check-circle-fill me-2"></i><span class="flex-grow-1">' + res.message + '</span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
-                        $('#put-in-hac-card-body').find('.alert-success').remove();
-                        $('#put-in-hac-card-body').prepend(alertHtml);
-                        setTimeout(function() { $('#put-in-hac-card-body .alert-success').fadeOut(); }, 4000);
-                        btn.prop('disabled', true).html('<i class="bi bi-check2-square me-1"></i> Put Selected in HAC');
+                        $table.DataTable().ajax.reload(null, false);
+                        pihNotify('success', res.message);
                     }
                 },
                 error: function(xhr) {
-                    var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to put in HAC. Please try again.';
-                    var alertHtml = '<div class="alert alert-danger alert-dismissible fade show" role="alert">' + msg + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
-                    $('#put-in-hac-card-body').find('.alert-danger').remove();
-                    $('#put-in-hac-card-body').prepend(alertHtml);
+                    pihNotify('error', (xhr.responseJSON && xhr.responseJSON.message)
+                        ? xhr.responseJSON.message
+                        : 'Failed to put in HAC. Please try again.');
                 },
                 complete: function() {
-                    btn.html('<i class="bi bi-check2-square me-1"></i> Put Selected in HAC');
+                    btn.text('Put Selected in HAC');
                     if (requestSucceeded) {
                         btn.prop('disabled', true);
                         $('#selectedCountText').text('0 selected');
@@ -202,6 +231,8 @@
                 }
             });
         });
+
+        updateSelectedCount();
     });
     </script>
 @endpush
