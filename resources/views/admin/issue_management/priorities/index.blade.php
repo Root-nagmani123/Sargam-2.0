@@ -316,7 +316,8 @@ $(function () {
     var IP_EXPORT_COLUMN_KEYS = ['sno', 'priority', 'description', 'status', ''];
     var IP_EXPORT_COL_COUNT = IP_EXPORT_COLUMN_KEYS.filter(Boolean).length;
 
-    /* Keep every export link carrying exactly the columns still on screen. */
+    /* Keep every export link carrying exactly the columns still on screen, plus
+       the search term currently applied to it. */
     function ipUpdateExportCols() {
         var keys = [];
         dt.columns().every(function () {
@@ -324,11 +325,18 @@ $(function () {
             if (key && this.visible()) { keys.push(key); }
         });
 
+        // This grid searches client-side, so the term lives only in DataTables.
+        // Without carrying it the export returns every row and its header cannot
+        // name the filter that was applied.
+        var term = dt.search() || '';
+
         ['ipDownloadLink', 'ipExcelLink', 'ipPdfLink', 'ipPrintLink'].forEach(function (id) {
             var link = document.getElementById(id);
             if (!link) { return; }
             var base = link.href.split('?')[0];
             var params = new URLSearchParams(link.href.split('?')[1] || '');
+            params.delete('q');
+            if (term !== '') { params.set('q', term); }
             params.delete('cols');
             // Omit ?cols= while nothing is hidden — the server reads that as "all".
             if (keys.length !== IP_EXPORT_COL_COUNT) { params.set('cols', keys.join(',')); }
@@ -336,6 +344,9 @@ $(function () {
             link.href = base + (qs ? '?' + qs : '');
         });
     }
+
+    // Search-as-you-type has to re-stamp the links, not just redraw the grid.
+    dt.on('search.dt', ipUpdateExportCols);
 
     function getHiddenCols() {
         try {

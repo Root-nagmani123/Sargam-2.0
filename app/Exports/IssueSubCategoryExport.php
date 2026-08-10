@@ -43,7 +43,8 @@ class IssueSubCategoryExport implements
         /** @var array<string, array{heading:string, class:string, value:callable}> */
         private array $columns,
         private string $exportDate,
-        private string $search = ''
+        /** Plain-text "Search: foo  |  Category: Estate", or null when unfiltered. */
+        private ?string $filterLine = null
     ) {
     }
 
@@ -108,10 +109,12 @@ class IssueSubCategoryExport implements
                 $sheet->getRowDimension(2)->setRowHeight(22);
 
                 $sheet->mergeCells("A3:{$last}3");
-                $meta = 'Generated: ' . $this->exportDate;
-                if ($this->search !== '') {
-                    $meta = 'Search: ' . $this->search . '  |  ' . $meta;
-                }
+                // Applied filters first, then the stamp — same band the print and
+                // PDF headers carry, so the three cannot disagree.
+                $meta = implode('  |  ', array_filter([
+                    $this->filterLine,
+                    'Generated: ' . $this->exportDate,
+                ]));
                 $sheet->setCellValue('A3', $meta);
                 $sheet->getStyle('A3')->applyFromArray([
                     'font' => ['size' => 9, 'color' => ['rgb' => '555555']],

@@ -350,7 +350,8 @@ $(function () {
     var IC_EXPORT_COLUMN_KEYS = ['sno', 'category', 'description', 'sub_categories', 'status', ''];
     var IC_EXPORT_COL_COUNT = IC_EXPORT_COLUMN_KEYS.filter(Boolean).length;
 
-    /* Keep Download and Print carrying exactly the columns still on screen. */
+    /* Keep Download and Print carrying exactly the columns still on screen, plus
+       the search term currently applied to it. */
     function icUpdateExportCols() {
         var keys = [];
         dt.columns().every(function () {
@@ -358,11 +359,18 @@ $(function () {
             if (key && this.visible()) { keys.push(key); }
         });
 
+        // This grid searches client-side, so the term lives only in DataTables.
+        // Without carrying it the export returns every row and its header cannot
+        // name the filter that was applied.
+        var term = dt.search() || '';
+
         ['icDownloadLink', 'icExcelLink', 'icPdfLink', 'icPrintLink'].forEach(function (id) {
             var link = document.getElementById(id);
             if (!link) { return; }
             var base = link.href.split('?')[0];
             var params = new URLSearchParams(link.href.split('?')[1] || '');
+            params.delete('q');
+            if (term !== '') { params.set('q', term); }
             params.delete('cols');
             // Omit ?cols= entirely while nothing is hidden — the server reads
             // "no cols" as "every column".
@@ -371,6 +379,9 @@ $(function () {
             link.href = base + (qs ? '?' + qs : '');
         });
     }
+
+    // Search-as-you-type has to re-stamp the links, not just redraw the grid.
+    dt.on('search.dt', icUpdateExportCols);
 
     function getHiddenCols() {
         try {

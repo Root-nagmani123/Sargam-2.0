@@ -90,7 +90,9 @@
 
     <div class="report-title">MANAGE SUB-CATEGORIES</div>
     <div class="meta">
-        @if(filled($search))Search: {{ $search }} &nbsp;|&nbsp; @endif Generated: {{ $exportDate }}
+        {{-- $filterLine names every applied filter (Search, Category). DomPDF
+             renders <strong> but nothing else in it, so strip the rest. --}}
+        @if(filled($filterLine)){!! strip_tags($filterLine, '<strong>') !!} &nbsp;|&nbsp; @endif Generated: {{ $exportDate }}
     </div>
     <div class="total">Total Records: {{ number_format($rows->count()) }}</div>
 

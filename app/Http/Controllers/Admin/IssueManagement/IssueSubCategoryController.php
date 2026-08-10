@@ -12,6 +12,8 @@ use App\Models\{
     IssueLogSubCategoryMap
 };
 use App\Support\DataTableRedisCache;
+use App\Support\DataTableSearchHelper;
+use App\Support\ExportCsvHeader;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -104,9 +106,18 @@ class IssueSubCategoryController extends Controller
                 ->where('issue_sub_category_master.issue_category_master_pk', $categoryId))
             ->when($search !== '', function (Builder $query) use ($search) {
                 $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $search) . '%';
-                $query->where(function (Builder $inner) use ($like) {
+                $query->where(function (Builder $inner) use ($like, $search) {
                     $inner->where('issue_sub_category_master.issue_sub_category', 'like', $like)
                         ->orWhere('issue_category_master.issue_category', 'like', $like);
+
+                    // The grid searches in the browser, so it also matches the
+                    // rendered Status pill. The export runs this query instead —
+                    // match the pill here too, or a searched export comes back
+                    // empty while the screen shows rows.
+                    $statuses = DataTableSearchHelper::statusPillMatches($search);
+                    if ($statuses !== []) {
+                        $inner->orWhereIn('issue_sub_category_master.status', $statuses);
+                    }
                 });
             })
             ->orderBy($sortColumn, $sortDir)
@@ -259,6 +270,40 @@ class IssueSubCategoryController extends Controller
     }
 
     /**
+     * "Search: foo &nbsp;|&nbsp; Category: Estate" for the print/PDF header.
+     * $html=false returns the same thing as plain text, for the spreadsheet's
+     * header band.
+     *
+     * Same shape as IssueManagementController::exportFilterLine(): every filter
+     * the grid applied has to be named on the report, or the reader cannot tell
+     * a filtered list from the whole one.
+     */
+    private function exportFilterLine(string $search, ?int $categoryId, bool $html = true): ?string
+    {
+        $labels = [];
+
+        if ($search !== '') {
+            $labels['Search'] = $search;
+        }
+
+        if ($categoryId !== null) {
+            // Name it, don't print the pk — the report is read on paper.
+            $category = IssueCategoryMaster::find($categoryId);
+            $labels['Category'] = $category->issue_category ?? (string) $categoryId;
+        }
+
+        if ($labels === []) {
+            return null;
+        }
+
+        return collect($labels)
+            ->map(fn (string $value, string $label) => $html
+                ? '<strong>' . e($label) . ':</strong> ' . e($value)
+                : $label . ': ' . $value)
+            ->implode($html ? ' &nbsp;|&nbsp; ' : '  |  ');
+    }
+
+    /**
      * Download / print the full (filtered) sub-category list.
      *
      * Both formats share the same header + columns as the index grid.
@@ -284,14 +329,19 @@ class IssueSubCategoryController extends Controller
                 'columns' => $columns,
                 'header' => $header,
                 'rows' => $rows,
-                'search' => $search,
+                'filterLine' => $this->exportFilterLine($search, $categoryId),
                 'exportDate' => $exportDate,
             ]);
         }
 
         if ($format === 'excel') {
             return Excel::download(
-                new IssueSubCategoryExport($rows, $columns, $exportDate, $search),
+                new IssueSubCategoryExport(
+                    $rows,
+                    $columns,
+                    $exportDate,
+                    $this->exportFilterLine($search, $categoryId, false)
+                ),
                 'ManageSubCategories_' . $stamp . '.xlsx'
             );
         }
@@ -300,7 +350,7 @@ class IssueSubCategoryController extends Controller
             return Pdf::loadView('admin.issue_management.sub_categories.export_pdf', [
                 'columns' => $columns,
                 'rows' => $rows,
-                'search' => $search,
+                'filterLine' => $this->exportFilterLine($search, $categoryId),
                 'exportDate' => $exportDate,
             ])
                 ->setPaper('a4', 'portrait')
@@ -314,10 +364,22 @@ class IssueSubCategoryController extends Controller
 
         $filename = 'ManageSubCategories_' . $stamp . '.csv';
 
-        return response()->streamDownload(function () use ($columns, $header, $rows) {
+        // Same band the .xlsx and the print/PDF headers carry, so the CSV names
+        // the applied filters too.
+        $csvBand = ExportCsvHeader::rows(
+            'Manage Sub-Categories',
+            $this->exportFilterLine($search, $categoryId, false),
+            $exportDate,
+            $rows->count()
+        );
+
+        return response()->streamDownload(function () use ($columns, $header, $rows, $csvBand) {
             $handle = fopen('php://output', 'w');
             // BOM so Excel opens the UTF-8 file with the right encoding.
             fwrite($handle, "\xEF\xBB\xBF");
+            foreach ($csvBand as $bandRow) {
+                fputcsv($handle, $bandRow);
+            }
             fputcsv($handle, $header);
 
             foreach ($rows as $index => $row) {

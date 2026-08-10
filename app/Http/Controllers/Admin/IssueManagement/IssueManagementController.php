@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\IssueManagement;
 use App\Http\Controllers\Controller;
 use App\Exports\IssueManagementExport;
 use App\Support\DataTableRedisCache;
+use App\Support\ExportCsvHeader;
 use App\Models\{
     IssueLogManagement,
     IssueCategoryMaster,
@@ -570,12 +571,19 @@ class IssueManagementController extends Controller
      */
     public function indexExport(Request $request, string $format = 'csv')
     {
+        // "Raised By You" is the same grid narrowed to ?raised_by=self, so the
+        // title (and filename) is the only thing that says which tab a report
+        // came from — the columns are identical.
+        [$title, $stem] = $request->get('raised_by') === 'self'
+            ? ['Raised By You', 'RaisedByYou']
+            : ['All Requests', 'AllRequests'];
+
         return $this->runIssueExport(
             $request,
             $format,
             fn () => $this->issueManagementIndexFilteredQuery($request),
-            'All Requests',
-            'AllRequests'
+            $title,
+            $stem
         );
     }
 
@@ -588,8 +596,10 @@ class IssueManagementController extends Controller
             $request,
             $format,
             fn () => $this->issueManagementCentcomFilteredQuery($request),
-            'Centcom Assign',
-            'CentcomAssign'
+            // Named after the tab that reaches it ("Assign to you"), not the
+            // internal "Centcom Assign".
+            'Assign to You',
+            'AssignToYou'
         );
     }
 
@@ -661,10 +671,26 @@ class IssueManagementController extends Controller
                 ->download($stem . '_' . $stamp . '.pdf');
         }
 
-        return response()->streamDownload(function () use ($header, $lines) {
+        // Same band the .xlsx and the print/PDF headers carry, so the CSV names
+        // the scope and the applied filters too.
+        $csvBand = ExportCsvHeader::rows(
+            $title,
+            $this->exportFilterLine($request, false),
+            $exportDate,
+            $total,
+            $truncated
+                ? 'Note: only the first ' . number_format($limit) . ' of ' . number_format($total)
+                    . ' matching rows are included. Narrow the filters to export the rest.'
+                : null
+        );
+
+        return response()->streamDownload(function () use ($header, $lines, $csvBand) {
             $handle = fopen('php://output', 'w');
             // BOM so Excel opens the UTF-8 file with the right encoding.
             fwrite($handle, "\xEF\xBB\xBF");
+            foreach ($csvBand as $row) {
+                fputcsv($handle, $row);
+            }
             fputcsv($handle, $header);
             foreach ($lines as $line) {
                 fputcsv($handle, array_values($line));

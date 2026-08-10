@@ -279,7 +279,12 @@ $(function () {
         ccUpdateExportCols();
     });
 
-    dt.on('search.dt', syncResetButton);
+    // Search-as-you-type is a filter like any other: re-stamp the export links
+    // too, or a download ignores the term and its header cannot name it.
+    dt.on('search.dt', function () {
+        syncResetButton();
+        ccUpdateExportCols();
+    });
 
     /* ── Column visibility (DataTables column API) ────────────────────────
        Stored by LABEL, not index — an index points at a different column the

@@ -12,6 +12,7 @@ use App\Models\{
     EmployeeMaster,
 };
 use App\Support\DataTableRedisCache;
+use App\Support\ExportCsvHeader;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
@@ -159,6 +160,23 @@ class IssueEscalationMatrixController extends Controller
     private const INDEX_PER_PAGE = 10;
 
     /**
+     * A level cell as the grid and the reports render it: "Trevor Swanson - 1 Day".
+     *
+     * Empty string when the level is unset — callers add their own placeholder
+     * ('-' in the reports, an em dash on screen).
+     */
+    private function levelCellText($level): string
+    {
+        if (! $level) {
+            return '';
+        }
+
+        $days = (int) $level->days_notify;
+
+        return trim(($level->employee->name ?? 'N/A') . ' - ' . $days . ' ' . ($days === 1 ? 'Day' : 'Days'));
+    }
+
+    /**
      * The matrix is assembled in memory (one row per category), so search and
      * sort run over the built collection rather than as SQL.
      *
@@ -171,12 +189,16 @@ class IssueEscalationMatrixController extends Controller
 
         if ($search !== '') {
             $needle = mb_strtolower($search);
-            $matrix = array_values(array_filter($matrix, function ($row) use ($needle, $name) {
+            // Search the level cells as the grid renders them ("Name - 3 Days"),
+            // not just the employee name: the grid searches in the browser while
+            // the export runs through here, and a term like "Days" must not
+            // return rows on screen and nothing in the download.
+            $matrix = array_values(array_filter($matrix, function ($row) use ($needle) {
                 $haystack = mb_strtolower(implode(' ', [
                     $row['category']->issue_category ?? '',
-                    $name($row['level1']),
-                    $name($row['level2']),
-                    $name($row['level3']),
+                    $this->levelCellText($row['level1']),
+                    $this->levelCellText($row['level2']),
+                    $this->levelCellText($row['level3']),
                 ]));
 
                 return str_contains($haystack, $needle);
@@ -315,14 +337,8 @@ class IssueEscalationMatrixController extends Controller
         $exportDate = now()->format('d-m-Y h:i A');
         $stamp = now()->format('YmdHis');
 
-        $cell = function ($level) {
-            if (! $level) {
-                return '-';
-            }
-            $days = (int) $level->days_notify;
-
-            return trim(($level->employee->name ?? 'N/A') . ' - ' . $days . ' ' . ($days === 1 ? 'Day' : 'Days'));
-        };
+        // Same text the grid shows and the search matches on.
+        $cell = fn ($level) => $this->levelCellText($level) ?: '-';
 
         // Keyed by column slug so a hidden column drops cleanly from every format.
         $lines = collect();
@@ -371,10 +387,22 @@ class IssueEscalationMatrixController extends Controller
 
         $filename = 'EscalationMatrix_' . $stamp . '.csv';
 
-        return response()->streamDownload(function () use ($columns, $header, $lines) {
+        // Same band the .xlsx and the print/PDF headers carry, so the CSV names
+        // the applied filters too.
+        $csvBand = ExportCsvHeader::rows(
+            'Escalation Matrix',
+            $search !== '' ? 'Search: ' . $search : null,
+            $exportDate,
+            $lines->count()
+        );
+
+        return response()->streamDownload(function () use ($columns, $header, $lines, $csvBand) {
             $handle = fopen('php://output', 'w');
             // BOM so Excel opens the UTF-8 file with the right encoding.
             fwrite($handle, "\xEF\xBB\xBF");
+            foreach ($csvBand as $bandRow) {
+                fputcsv($handle, $bandRow);
+            }
             fputcsv($handle, $header);
             foreach ($lines as $line) {
                 fputcsv($handle, array_values(array_map(fn ($col) => $col['value']($line), $columns)));

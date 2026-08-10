@@ -8,6 +8,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\IssuePriorityMaster;
 use App\Support\DataTableRedisCache;
+use App\Support\DataTableSearchHelper;
+use App\Support\ExportCsvHeader;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -75,9 +77,18 @@ class IssuePriorityController extends Controller
         return IssuePriorityMaster::query()
             ->when($search !== '', function (Builder $query) use ($search) {
                 $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $search) . '%';
-                $query->where(function (Builder $inner) use ($like) {
+                $query->where(function (Builder $inner) use ($like, $search) {
                     $inner->where('priority', 'like', $like)
                         ->orWhere('description', 'like', $like);
+
+                    // The grid searches in the browser, so it also matches the
+                    // rendered Status pill. The export runs this query instead —
+                    // match the pill here too, or a searched export comes back
+                    // empty while the screen shows rows.
+                    $statuses = DataTableSearchHelper::statusPillMatches($search);
+                    if ($statuses !== []) {
+                        $inner->orWhereIn('status', $statuses);
+                    }
                 });
             })
             ->orderBy($sortColumn, $sortDir)
@@ -269,10 +280,22 @@ class IssuePriorityController extends Controller
 
         $filename = 'ManagePriorities_' . $stamp . '.csv';
 
-        return response()->streamDownload(function () use ($columns, $header, $rows) {
+        // Same band the .xlsx and the print/PDF headers carry, so the CSV names
+        // the applied filters too.
+        $csvBand = ExportCsvHeader::rows(
+            'Manage Priorities',
+            $search !== '' ? 'Search: ' . $search : null,
+            $exportDate,
+            $rows->count()
+        );
+
+        return response()->streamDownload(function () use ($columns, $header, $rows, $csvBand) {
             $handle = fopen('php://output', 'w');
             // BOM so Excel opens the UTF-8 file with the right encoding.
             fwrite($handle, "\xEF\xBB\xBF");
+            foreach ($csvBand as $bandRow) {
+                fputcsv($handle, $bandRow);
+            }
             fputcsv($handle, $header);
 
             foreach ($rows as $index => $row) {

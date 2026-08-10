@@ -16,7 +16,9 @@
     @include('admin.issue_management.partials.export_print_header', [
         'title'      => 'Manage Sub-Categories',
         'exportDate' => $exportDate,
-        'filterLine' => filled($search) ? '<strong>Search:</strong> ' . e($search) : null,
+        {{-- Built by the controller: names every filter the grid applied
+             (Search AND Category), not just the search term. --}}
+        'filterLine' => $filterLine,
         'total'      => count($rows),
     ])
 
