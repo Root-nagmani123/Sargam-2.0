@@ -159,14 +159,28 @@ class FcDescriptiveDataSelectionTest extends TestCase
     /** A non-derived field must name the physical columns it reads, or it cannot be resolved. */
     public function test_non_derived_fields_declare_source_and_columns(): void
     {
+        // Read from the resolver's own SOURCE_TABLES rather than a hardcoded list, so adding a
+        // source table stays a one-line change there.
+        $sourceAliases = array_keys(
+            (new \ReflectionClass(FcDescriptiveDataFieldResolver::class))->getConstant('SOURCE_TABLES')
+        );
+
         foreach (FcDescriptiveDataFieldResolver::definition() as $key => $def) {
             if (($def['type'] ?? '') === 'derived') {
                 $this->assertArrayHasKey('derived', $def, "{$key} is derived and must name its builder");
                 continue;
             }
 
+            // A repeating section is batch-fetched by FcDescriptiveDataChildLoader, not joined,
+            // so it names a child table + column instead of a source alias.
+            if (($def['type'] ?? '') === 'child') {
+                $this->assertNotEmpty($def['child']['table'] ?? null, "{$key} needs a child table");
+                $this->assertNotEmpty($def['child']['column'] ?? null, "{$key} needs a child column");
+                continue;
+            }
+
             $this->assertArrayHasKey('source', $def, "{$key} needs a source alias");
-            $this->assertContains($def['source'], ['s1', 's2'], "{$key} has an unknown source alias");
+            $this->assertContains($def['source'], $sourceAliases, "{$key} has an unknown source alias");
             $this->assertNotEmpty($def['columns'] ?? [], "{$key} needs at least one column");
         }
     }

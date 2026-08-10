@@ -34,10 +34,82 @@ class FcDescriptiveDataReportDataTable extends DataTable
             : [];
     }
 
+    /** @var array<string,array<string,mixed>>|null */
+    protected ?array $selected = null;
+
     /** @return array<string,array<string,mixed>> */
     public function fields(): array
     {
         return $this->fields;
+    }
+
+    /**
+     * The columns the browser is actually showing.
+     *
+     * The report offers ~100 columns and the Columns menu hides most of them in practice.
+     * Selecting a column the admin cannot see costs a lookup JOIN on the page query and, for
+     * a repeating section, a whole extra query — so the browser sends its visible set and the
+     * SELECT is built from that, exactly as the Excel/CSV/PDF exports already do.
+     *
+     * FILTERS still run against the full set: a column the admin filtered on and then hid must
+     * keep constraining the rows. Filter predicates name s1/s2/s3 columns, which scopedBase()
+     * joins regardless of what is selected.
+     *
+     * Absent parameter (first draw, or a client that does not send it) means "everything".
+     *
+     * The column being SORTED is always included, even when hidden. dataTable() registers an
+     * ORDER BY for every field naming its `lk_<key>` lookup alias, and that alias only exists
+     * if the column is selected — so sorting a column and then hiding it (the sort survives the
+     * redraw) produced "Unknown column 'lk_<key>.<label>' in 'order clause'". Selecting one
+     * extra column is cheaper than reproducing Yajra's order resolution here.
+     *
+     * @return array<string,array<string,mixed>>
+     */
+    protected function selectedFields(): array
+    {
+        if ($this->selected !== null) {
+            return $this->selected;
+        }
+
+        $cols = trim((string) request()->query('cols', ''));
+        if ($cols === '') {
+            return $this->selected = $this->fields;
+        }
+
+        $keys = array_filter(array_map('trim', explode(',', $cols)));
+
+        foreach ($this->orderedColumnKeys() as $ordered) {
+            $keys[] = $ordered;
+        }
+
+        return $this->selected = array_intersect_key($this->fields, array_flip($keys));
+    }
+
+    /**
+     * Field keys named by the request's ORDER BY, resolved through the DataTables
+     * `order[i][column]` → `columns[n][data|name]` indirection the client actually sends.
+     *
+     * @return list<string>
+     */
+    protected function orderedColumnKeys(): array
+    {
+        $request = request();
+        $columns = (array) $request->input('columns', []);
+        $out = [];
+
+        foreach ((array) $request->input('order', []) as $order) {
+            $index = $order['column'] ?? null;
+            if ($index === null || ! isset($columns[$index])) {
+                continue;
+            }
+
+            $key = (string) ($columns[$index]['data'] ?? $columns[$index]['name'] ?? '');
+            if ($key !== '' && isset($this->fields[$key])) {
+                $out[] = $key;
+            }
+        }
+
+        return $out;
     }
 
     public function query()
@@ -51,7 +123,7 @@ class FcDescriptiveDataReportDataTable extends DataTable
         }
 
         $service = app(FcDescriptiveDataQuery::class);
-        $query = $service->build($this->form, $this->fields);
+        $query = $service->build($this->form, $this->selectedFields());
         $service->applyFilters($query, $this->fields, request());
 
         return $query;
@@ -59,7 +131,26 @@ class FcDescriptiveDataReportDataTable extends DataTable
 
     public function dataTable($query)
     {
-        $dt = datatables()->query($query)->addIndexColumn();
+        // Own subclass rather than datatables()->query(): it hooks results() so the repeating
+        // sections are batch-loaded once per page (see FcChildHydratingQueryDataTable).
+        $dt = (new FcChildHydratingQueryDataTable($query))
+            ->fcHydrateChildren($this->selectedFields())
+            ->addIndexColumn();
+
+        if ($this->form) {
+            // Count without the lookup joins — they are LEFT JOINs on unique keys, so they
+            // cannot change the count, and Yajra would otherwise carry all ~30 of them into
+            // a query whose only output is a number.
+            $form = $this->form;
+            $fields = $this->fields;
+            $dt->fcCountQueryUsing(function () use ($form, $fields) {
+                $service = app(FcDescriptiveDataQuery::class);
+                $count = $service->scopedBase($form)->selectRaw('1 as dt_row_count');
+                $service->applyFilters($count, $fields, request());
+
+                return $count;
+            });
+        }
 
         $dt->editColumn('login_username', fn ($row) => '<code style="font-size:11px">'.e($row->login_username ?? '—').'</code>');
 
@@ -81,6 +172,11 @@ class FcDescriptiveDataReportDataTable extends DataTable
 
         // Yajra's own global search would emit invalid SQL against these aliases; the report's
         // search closure in FcDescriptiveDataQuery is already applied in query().
+        //
+        // DO NOT put predicates in this closure. FcChildHydratingQueryDataTable::prepareCountQuery()
+        // counts off a freshly built scopedBase() + applyFilters(), NOT off $this->query — so any
+        // filtering added here would be invisible to the count and recordsFiltered would silently
+        // report the unfiltered total. Filters belong in query(), where both paths see them.
         $dt->filter(function ($q) {
             // no-op: search is applied in query() via applyFilters()
         }, false);
@@ -88,7 +184,8 @@ class FcDescriptiveDataReportDataTable extends DataTable
         // Order hints: the aliases are expressions, so ORDER BY must name the real column.
         $service = app(FcDescriptiveDataQuery::class);
         foreach ($this->fields as $key => $field) {
-            if (in_array($field['type'], ['concat', 'address', 'file'], true)) {
+            // 'child' columns are not in the SQL at all — there is nothing to ORDER BY.
+            if (in_array($field['type'], ['concat', 'address', 'file', 'child'], true)) {
                 continue;
             }
 
@@ -169,7 +266,7 @@ class FcDescriptiveDataReportDataTable extends DataTable
 
         foreach ($this->fields as $key => $field) {
             $col = Column::make($key)->title($field['label']);
-            if (in_array($field['type'], ['concat', 'address', 'file'], true)) {
+            if (in_array($field['type'], ['concat', 'address', 'file', 'child'], true)) {
                 $col->orderable(false);
             }
             $col->searchable(false);

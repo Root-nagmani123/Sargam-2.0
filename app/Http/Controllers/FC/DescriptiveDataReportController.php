@@ -6,6 +6,7 @@ use App\DataTables\FC\FcDescriptiveDataReportDataTable;
 use App\Exports\FC\FcDescriptiveDataExport;
 use App\Http\Controllers\Controller;
 use App\Models\FC\FcForm;
+use App\Services\FC\FcDescriptiveDataChildLoader;
 use App\Services\FC\FcDescriptiveDataFieldResolver;
 use App\Services\FC\FcDescriptiveDataQuery;
 use App\Support\FC\FcUploadUrl;
@@ -38,6 +39,28 @@ class DescriptiveDataReportController extends Controller
      * instead — it streams and has no row limit at all.
      */
     private const XLSX_MAX_ROWS = 10000;
+
+    /**
+     * Rows held in memory at once on the CSV path.
+     *
+     * The repeating sections (Educational Details, Languages Known, ...) are loaded per batch
+     * rather than per row, so the cursor is drained in chunks this size — one extra query per
+     * child table per chunk, against one per row.
+     */
+    private const CSV_CHUNK_ROWS = 500;
+
+    /** Trainees read per batch when building the photo archive. */
+    private const PHOTO_CHUNK_ROWS = 500;
+
+    /**
+     * Ceiling on the photo archive, in bytes of source images.
+     *
+     * A passport photo is 100-500 KB, so a 600-trainee course lands around 150 MB. The cap is
+     * a backstop against an unfiltered request across a course whose uploads are unusually
+     * large, not an expected limit — it is checked as files are added, so the archive is
+     * closed and served rather than failing outright.
+     */
+    private const PHOTO_MAX_BYTES = 2147483648;   // 2 GB
 
     public function index(Request $request)
     {
@@ -90,6 +113,9 @@ class DescriptiveDataReportController extends Controller
             $out[] = [
                 'key' => $key,
                 'label' => $field['label'],
+                // The section this column belongs to. The Columns menu groups by it — at ~100
+                // columns a flat checkbox list is unusable.
+                'group' => $field['group'] ?? 'Other',
                 'type' => $field['type'],
                 'filter' => $field['filter'] ?? null,
                 // Expressions (concatenations, the assembled address, file paths) have no
@@ -97,7 +123,7 @@ class DescriptiveDataReportController extends Controller
                 // (Service, Rank) declare their own sortability.
                 'orderable' => $field['type'] === 'derived'
                     ? (bool) ($field['orderable'] ?? false)
-                    : ! in_array($field['type'], ['concat', 'address', 'file'], true),
+                    : ! in_array($field['type'], ['concat', 'address', 'file', 'child'], true),
             ];
         }
 
@@ -232,7 +258,12 @@ class DescriptiveDataReportController extends Controller
         $withUsername = $selection['username'];
 
         $service = app(FcDescriptiveDataQuery::class);
-        $query = $service->build($form, $all);
+        // SELECT only the columns actually written, but FILTER on the full set: a column the
+        // admin filtered on and then hid must still constrain the rows. Filter predicates name
+        // s1/s2/s3 columns directly, which are joined by scopedBase() regardless of what is
+        // selected, so narrowing the SELECT cannot break them — it just drops the lookup joins
+        // for columns nobody is going to read.
+        $query = $service->build($form, $fields);
         $service->applyFilters($query, $all, $request);
         $query->orderBy('s1.first_name');
 
@@ -255,38 +286,300 @@ class DescriptiveDataReportController extends Controller
             fputcsv($out, $headings);
 
             $serial = 0;
-            foreach ($query->cursor() as $row) {
-                $serial++;
-                $line = [$serial];
-                if ($withUsername) {
-                    $line[] = (string) ($row->login_username ?? '');
+
+            // The repeating sections need a batch of rows to load efficiently, so the cursor
+            // is drained in chunks. The chunk is the only thing held in memory, so this stays
+            // a streaming export with no row cap.
+            $loader = app(FcDescriptiveDataChildLoader::class);
+            $childrenNeeded = $loader->needed($fields);
+
+            $flushChunk = function (array $chunk) use (&$serial, $out, $fields, $withUsername, $loader, $childrenNeeded) {
+                if ($chunk === []) {
+                    return;
+                }
+                if ($childrenNeeded) {
+                    $loader->hydrate($chunk, $fields);
                 }
 
-                foreach ($fields as $key => $field) {
-                    $value = $row->{$key} ?? null;
-
-                    if ($field['type'] === 'file') {
-                        $line[] = FcUploadUrl::for($value);
-                    } elseif ($field['type'] === 'date') {
-                        $line[] = $this->formatDateValue($value);
-                    } else {
-                        $line[] = trim((string) $value);
+                foreach ($chunk as $row) {
+                    $serial++;
+                    $line = [$serial];
+                    if ($withUsername) {
+                        $line[] = (string) ($row->login_username ?? '');
                     }
+
+                    foreach ($fields as $key => $field) {
+                        $value = $row->{$key} ?? null;
+
+                        if ($field['type'] === 'file') {
+                            $line[] = FcUploadUrl::for($value);
+                        } elseif ($field['type'] === 'date') {
+                            $line[] = $this->formatDateValue($value);
+                        } else {
+                            $line[] = trim((string) $value);
+                        }
+                    }
+
+                    fputcsv($out, $line);
                 }
 
-                fputcsv($out, $line);
+                // Push the chunk out rather than letting PHP buffer the whole response.
+                flush();
+            };
 
-                // Push each row out rather than letting PHP buffer the whole response.
-                if ($serial % 500 === 0) {
-                    flush();
+            $chunk = [];
+            foreach ($query->cursor() as $row) {
+                $chunk[] = $row;
+                if (count($chunk) >= self::CSV_CHUNK_ROWS) {
+                    $flushChunk($chunk);
+                    $chunk = [];
                 }
             }
+            $flushChunk($chunk);
 
             fclose($out);
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
             'X-Accel-Buffering' => 'no',   // stop nginx buffering the whole file first
         ]);
+    }
+
+    /**
+     * Every trainee's photograph, as one ZIP named after the course.
+     *
+     * Each image is named <name>_<rank>_<exam year>, the same convention the joining-documents
+     * archive uses for its folders. Signatures are deliberately not included — this is the
+     * photo export.
+     *
+     * Optimised for the shape of the job rather than reusing the report query:
+     *  - SELECT is five columns (name parts, photo, rank, exam year), not the report's ~97.
+     *    Nothing else is written into the archive, so nothing else is read.
+     *  - the roster is walked in chunks, so a 600-trainee course never holds every row.
+     *  - ZipArchive::addFile() records a PATH; the images are read once, at close(), and are
+     *    never held in PHP memory.
+     *  - photos are STORED, not deflated. A JPEG/PNG is already compressed — deflating it
+     *    burns CPU across every file to save almost nothing.
+     */
+    public function exportPhotos(Request $request)
+    {
+        @set_time_limit(0);
+
+        $form = $this->resolveForm($request);
+        if (! $form) {
+            return back()->with('error', 'Please select a course first.');
+        }
+
+        $service = app(FcDescriptiveDataQuery::class);
+        $all = app(FcDescriptiveDataFieldResolver::class)->forForm($form);
+
+        // scopedBase() + the report's own filters, so the archive holds exactly the trainees
+        // the admin is looking at — the same contract as the Excel/CSV/PDF exports.
+        $query = $service->scopedBase($form);
+        $service->applyFilters($query, $all, $request);
+
+        $s1Col = fc_user_col('student_master_firsts');
+        $select = [
+            DB::raw("`s1`.`{$s1Col}` as `link_id`"),
+            DB::raw("NULLIF(TRIM(`s1`.`photo_path`), '') as `photo_path`"),
+            DB::raw($this->photoNameSql().' as `display_name`'),
+        ];
+
+        // rank / exam year live on the roster, which is only joined when the tracker keys on
+        // user_id (a legacy username-keyed course never gets the alias).
+        $hasFrm = fc_user_col($form->trackerStorageTable()) === 'user_id'
+            && fc_schema_has_table('fc_registration_master');
+        $select[] = ($hasFrm && fc_schema_has_column('fc_registration_master', 'rank'))
+            ? DB::raw("NULLIF(TRIM(`frm`.`rank`), '') as `reg_rank`")
+            : DB::raw('NULL as `reg_rank`');
+        $select[] = ($hasFrm && fc_schema_has_column('fc_registration_master', 'exam_year'))
+            ? DB::raw("NULLIF(TRIM(`frm`.`exam_year`), '') as `exam_year`")
+            : DB::raw('NULL as `exam_year`');
+
+        $query->select($select)->whereNotNull('s1.photo_path')->where('s1.photo_path', '!=', '');
+
+        $tmpPath = tempnam(sys_get_temp_dir(), 'fc_photos_');
+        $zip = new \ZipArchive();
+        if ($zip->open($tmpPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            @unlink($tmpPath);
+
+            return back()->with('error', 'Could not create the ZIP archive.');
+        }
+
+        $added = 0;
+        $bytes = 0;
+        $missing = 0;
+        $truncated = false;
+        // Two trainees can share a name; without this the second would silently replace the
+        // first in the archive.
+        $usedNames = [];
+
+        // chunkById, ordered by the UNIQUE s1.user_id — NOT chunk() ordered by first_name.
+        // chunk() paginates with LIMIT/OFFSET, so a non-unique sort key (first_name is neither
+        // unique nor indexed here — four trainees share a blank one) lets rows shift across a
+        // chunk boundary and be skipped or duplicated. That would silently drop photos from
+        // any course past the first chunk. chunkById seeks on the unique key instead, so it
+        // cannot skip, and it needs no filesort or growing OFFSET.
+        $query->chunkById(self::PHOTO_CHUNK_ROWS, function ($rows) use (
+            $zip, &$added, &$bytes, &$missing, &$truncated, &$usedNames
+        ) {
+            foreach ($rows as $row) {
+                if ($bytes >= self::PHOTO_MAX_BYTES) {
+                    $truncated = true;
+
+                    return false;   // stop chunking
+                }
+
+                $full = $this->resolvePhotoPath((string) $row->photo_path);
+                if ($full === null) {
+                    $missing++;
+                    continue;
+                }
+
+                $extension = strtolower((string) pathinfo((string) $row->photo_path, PATHINFO_EXTENSION));
+                $name = $this->photoEntryName($row, $extension, $usedNames);
+
+                $zip->addFile($full, $name);
+
+                // Stored, not deflated — see the method docblock.
+                if (method_exists($zip, 'setCompressionName')) {
+                    $zip->setCompressionName($name, \ZipArchive::CM_STORE);
+                }
+
+                $added++;
+                $bytes += (int) @filesize($full);
+            }
+
+            return true;
+        }, 's1.'.$s1Col, 'link_id');
+
+        $zip->close();
+
+        if ($added === 0) {
+            @unlink($tmpPath);
+
+            return back()->with(
+                'error',
+                $missing > 0
+                    ? 'No photo files could be found on disk for the selected trainees.'
+                    : 'No trainees with a photo match the current filters. Nothing to export.'
+            );
+        }
+
+        $filename = $this->slug($form->form_name).'_Photos_'.now()->format('Ymd_His').'.zip';
+
+        $response = response()->download($tmpPath, $filename, [
+            'Content-Type' => 'application/zip',
+        ])->deleteFileAfterSend(true);
+
+        // Flashed as well as sent as headers: a browser download shows no headers at all, so an
+        // admin would otherwise receive a short archive with nothing to indicate it. The flash
+        // surfaces on their next page view.
+        $notices = [];
+        if ($truncated) {
+            $notices[] = sprintf(
+                'the %s size limit was reached, so the archive is incomplete',
+                round(self::PHOTO_MAX_BYTES / 1073741824, 1).' GB'
+            );
+        }
+        if ($missing > 0) {
+            $notices[] = $missing.' photo file(s) could not be found on disk and were skipped';
+        }
+        if ($notices !== []) {
+            // 'error', not 'warning': the shared <x-session_message /> component renders only
+            // error / errors / success, and it is used across the whole application — adding a
+            // key there to serve one export is a shared-component change for a local need.
+            // An incomplete archive is worth the error styling anyway.
+            session()->flash('error', sprintf(
+                'Photo archive: %s photo(s) included — %s.',
+                number_format($added),
+                implode('; ', $notices)
+            ));
+        }
+
+        // Kept as headers too, for anything calling this programmatically.
+        $response->headers->set('X-Photo-Count', (string) $added);
+        if ($missing > 0) {
+            $response->headers->set('X-Photo-Missing', (string) $missing);
+        }
+        if ($truncated) {
+            $response->headers->set('X-Photo-Truncated', '1');
+        }
+
+        return $response;
+    }
+
+    /** full_name when the course stores one, else the three name parts. */
+    private function photoNameSql(): string
+    {
+        $parts = [];
+        if (fc_schema_has_column('student_master_firsts', 'full_name')) {
+            $parts[] = "NULLIF(TRIM(`s1`.`full_name`), '')";
+        }
+        $parts[] = "NULLIF(CONCAT_WS(' ', "
+            ."NULLIF(TRIM(`s1`.`first_name`), ''), "
+            ."NULLIF(TRIM(`s1`.`middle_name`), ''), "
+            ."NULLIF(TRIM(`s1`.`last_name`), '')), '')";
+
+        return 'COALESCE('.implode(', ', $parts).')';
+    }
+
+    /**
+     * <name>_<rank>_<exam year>.<ext>, with the blank parts dropped rather than left as stray
+     * underscores, and a numeric suffix when two trainees would collide.
+     *
+     * The name segment falls back to the trainee id when it reduces to nothing — a name
+     * written only in Devanagari strips away entirely, and "7_2023.jpg" identifies nobody.
+     * Collisions are tracked case-insensitively because Windows and macOS treat
+     * "Ravi_Kumar.jpg" and "ravi_kumar.jpg" as the same file when the archive is unpacked.
+     *
+     * @param  array<string,int>  $usedNames  by reference — the collision ledger
+     */
+    private function photoEntryName(object $row, string $extension, array &$usedNames): string
+    {
+        $name = $this->zipSafeName((string) ($row->display_name ?? ''));
+        if ($name === '') {
+            $name = 'trainee_'.($row->link_id ?? count($usedNames) + 1);
+        }
+
+        $stem = implode('_', array_filter(
+            [$name, $this->zipSafeName((string) ($row->reg_rank ?? '')), $this->zipSafeName((string) ($row->exam_year ?? ''))],
+            fn ($v) => $v !== ''
+        ));
+
+        $key = strtolower($stem);
+        if (isset($usedNames[$key])) {
+            $stem .= '_'.(++$usedNames[$key]);
+        } else {
+            $usedNames[$key] = 1;
+        }
+
+        return $stem.($extension !== '' ? '.'.$extension : '');
+    }
+
+    /**
+     * Absolute path of a stored upload, or null.
+     *
+     * Goes through the codebase's own resolver, which knows every directory an upload can
+     * live in, and is wrapped because it throws on a traversal-looking path rather than
+     * returning null. A photo that cannot be resolved is counted and skipped, never fatal.
+     */
+    private function resolvePhotoPath(string $stored): ?string
+    {
+        if ($stored === '') {
+            return null;
+        }
+
+        try {
+            $full = fc_resolve_storage_file_path($stored);
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        if ($full === null || ! is_file($full) || ! $this->isUnderUploadRoot($full)) {
+            return null;
+        }
+
+        return $full;
     }
 
     private function formatDateValue($value): string
@@ -307,12 +600,17 @@ class DescriptiveDataReportController extends Controller
      * Row count for the current filters. One COUNT, and only on the .xlsx path where the
      * answer decides whether the export can run at all.
      *
-     * @param  array<string,array<string,mixed>>  $fields
+     * Counts off scopedBase(), not build(): the lookup joins are LEFT JOINs on uniquely-indexed
+     * columns, so they cannot change the count — carrying all ~22 of them into a query whose
+     * only output is a number is pure cost. Same reasoning, and the same verification, as
+     * FcChildHydratingQueryDataTable::prepareCountQuery().
+     *
+     * @param  array<string,array<string,mixed>>  $fields  filtered on, not selected
      */
     private function countRows(FcForm $form, array $fields, Request $request): int
     {
         $service = app(FcDescriptiveDataQuery::class);
-        $query = $service->build($form, $fields);
+        $query = $service->scopedBase($form)->selectRaw('1');
         $service->applyFilters($query, $fields, $request);
 
         return (int) $query->count();
@@ -334,7 +632,8 @@ class DescriptiveDataReportController extends Controller
         $allFields = app(FcDescriptiveDataFieldResolver::class)->forForm($form);
         $fields = $this->visibleFields($allFields, $request);
         $service = app(FcDescriptiveDataQuery::class);
-        $query = $service->build($form, $allFields);
+        // Same as the CSV path: select the visible columns, filter on all of them.
+        $query = $service->build($form, $fields);
         $service->applyFilters($query, $allFields, $request);
 
         // G3: cursor(), not get() — the rows are streamed into the row array one at a time
@@ -348,6 +647,8 @@ class DescriptiveDataReportController extends Controller
             }
             $rows[] = $row;
         }
+
+        app(FcDescriptiveDataChildLoader::class)->hydrate($rows, $fields);
 
         if ($rows === []) {
             return back()->with('error', 'No students match the current filters. Nothing to export.');
@@ -548,6 +849,18 @@ class DescriptiveDataReportController extends Controller
             ->where('fc_forms.is_active', 1)
             ->orderBy('fc_forms.form_name')
             ->get(['fc_forms.id', 'fc_forms.form_name', 'cm.course_name']);
+    }
+
+    /**
+     * Filename-safe form of an archive entry name.
+     *
+     * Unlike slug(), this returns '' when nothing survives stripping — slug() substitutes the
+     * literal "course", which is right for a download filename and very wrong for a trainee's
+     * photo. The caller falls back to the trainee id instead.
+     */
+    private function zipSafeName(string $value): string
+    {
+        return trim((string) preg_replace('/[^A-Za-z0-9]+/', '_', $value), '_');
     }
 
     private function slug(?string $value): string
