@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Request For Estate - Sargam')
+@section('title', 'Request For Estate')
 
 @php
     $estateSelfHomeTab = request('scope') === 'self'
@@ -11,71 +11,94 @@
     }
 @endphp
 @section($estateSelfHomeTab ? 'content' : 'setup_content')
-<div class="container-fluid px-2 px-sm-3 px-md-4">
-   <x-breadcrum title="Request For Estate" />
-   <x-estate-workflow-stepper current="request-for-estate" />
+<div class="container-fluid rfe-page">
+    <x-breadcrum title="Request For Estate" :showBack="false">
+        <button type="button"
+            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-semibold text-nowrap shadow-sm"
+            id="btn-open-add-request-estate" title="Add Estate Request">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <span>Add Estate Request</span>
+        </button>
+    </x-breadcrum>
 
     <x-session_message />
 
-    <div class="card shadow-sm border-0 rounded-3">
-        <div class="card-body p-4 p-lg-5">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
-                <div class="flex-grow-1">
-                    <h1 class="h4 fw-bold text-dark mb-1">Request For Estate</h1>
-                    <p class="text-body-secondary small mb-0">This page displays all list of request details added in the system, and provides options to manage records such as add, edit, delete etc.</p>
-                </div>
-                <div class="flex-shrink-0 d-flex flex-wrap gap-2">
-                    <!-- <a href="{{ route('admin.estate.put-in-hac') }}" class="btn btn-outline-primary px-3" title="Put In HAC"><i class="bi bi-building-check me-1"></i> Put In HAC</a>
-                    <a href="{{ route('admin.estate.change-request-hac-approved') }}" class="btn btn-outline-primary px-3" title="HAC Approved"><i class="bi bi-check2-square me-1"></i> HAC Approved</a> -->
-                    <button type="button" class="btn btn-primary px-3" id="btn-open-add-request-estate" title="Add Estate Request"><i class="bi bi-plus-lg me-1"></i> Add Estate Request</button>
-                </div>
-            </div>
+    {{-- Exports sit above the card (docs/new-design-index-page.md §1). Both honour
+         the applied Request Status filter, the search box and the Columns choice. --}}
+    <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3">
+        <button type="button" class="btn rfe-export-btn border-0" id="rfeDownloadBtn">
+            <i class="bi bi-download" aria-hidden="true"></i>
+            <span>Download</span>
+        </button>
+        <button type="button" class="btn rfe-export-btn border-0" id="rfePrintBtn">
+            <i class="bi bi-printer" aria-hidden="true"></i>
+            <span>Print</span>
+        </button>
+    </div>
 
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
             <div id="request-for-estate-card-body">
-            @php
-                $showUserActionHelp = request('scope') === 'self' || ! (
-                    hasRole('Estate Admin') ||
-                    hasRole('Super Admin') ||
-                    hasRole('Super Admin')
-                );
-            @endphp
 
-            @if($showUserActionHelp)
-            <div class="alert alert-light border request-action-help shadow-sm mb-3" role="note">
-                <div class="fw-semibold text-dark mb-1">Action buttons</div>
-                <div class="small text-body-secondary d-flex flex-wrap gap-3">
-                    <span><i class="material-icons material-symbols-rounded align-middle text-primary">visibility</i> View request details</span>
-                    <span><i class="material-icons material-symbols-rounded align-middle text-success">add_home</i> Add possession</span>
-                    <span><i class="material-icons material-symbols-rounded align-middle text-success">check_circle</i> Possession already done</span>
-                    <span><i class="material-icons material-symbols-rounded align-middle text-warning">logout</i> Return house</span>
-                    <span><i class="material-icons material-symbols-rounded align-middle text-info">swap_horiz</i> Raise change request</span>
-                </div>
-            </div>
-            @endif
+                <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+                        <span class="programme-dt-filters-label">Filter</span>
 
-            <div class="row align-items-end mb-3">
-                <div class="col-12 col-md-4 col-lg-3">
-                    <label for="estateStatusFilter" class="form-label fw-semibold small mb-1">Status</label>
-                    <select id="estateStatusFilter" class="form-select form-select-sm">
-                        <option value="">All</option>
-                        <option value="0">Pending</option>
-                        <option value="1">Allotted</option>
-                        <option value="3">Returned</option>
-                    </select>
+                        <div class="programme-dt-filter-select">
+                            <select id="estateStatusFilter" class="form-select" aria-label="Filter by request status">
+                                <option value="">Request Status</option>
+                                <option value="0">Pending</option>
+                                <option value="1">Allotted</option>
+                                <option value="3">Returned</option>
+                            </select>
+                        </div>
+
+                        <button type="button" id="estateStatusClear" class="btn programme-dt-btn-reset">
+                            Remove Filter
+                        </button>
+                    </div>
+
+                    <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                        <button type="button" class="btn programme-dt-btn-columns" id="rfeBtnColumns"
+                            data-bs-toggle="modal" data-bs-target="#rfeColumnVisibilityModal"
+                            title="Show / hide columns">
+                            <span>Columns</span>
+                            <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                        </button>
+                        <div id="rfeDtSearch" class="programme-dt-search" data-dt-search-for="requestForEstateTable"></div>
+                    </div>
                 </div>
-                <div class="col-auto mt-2 mt-md-0">
-                    <button type="button" id="estateStatusClear" class="btn btn-outline-secondary btn-sm">
-                        Clear
-                    </button>
+
+                <div class="programme-dt-panel">
+                    <div class="table-responsive">
+                        {!! $dataTable->table(['aria-describedby' => 'request-for-estate-caption']) !!}
+                    </div>
+                    {{-- Left empty on purpose: datatable-global-ui.js fills this with the
+                         pagination and the "Showing [10] of N items" count. --}}
+                    <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                        data-dt-footer-for="requestForEstateTable"></div>
                 </div>
+
+                <div id="request-for-estate-caption" class="visually-hidden">Request For Estate list</div>
             </div>
-            <div class="table-responsive request-for-estate-table-wrap">
-                {!! $dataTable->table([
-                    'class' => 'table text-nowrap align-middle mb-0',
-                    'aria-describedby' => 'request-for-estate-caption'
-                ]) !!}
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="rfeColumnVisibilityModal" tabindex="-1" aria-labelledby="rfeColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="rfeColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div id="request-for-estate-caption" class="visually-hidden">Request For Estate list</div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="rfeColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -199,92 +222,11 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
 <link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
+<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
 <style>
     .select2-container--open { z-index: 1060; } /* sirf khula dropdown modal ke upar; closed widget normal flow me (modal ke peeche) */
     .select2-container--default .select2-selection--single { min-height: calc(1.5em + 0.75rem + 2px); display: flex; align-items: center; }
     .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.5; padding-left: 0.25rem; }
-</style>
-<style>
-    /* Responsive table: horizontal scroll */
-    .request-for-estate-table-wrap {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        width: 100%;
-    }
-    .request-for-estate-table-wrap table {
-        min-width: 992px;
-    }
-    /* DataTables controls: Bootstrap 5 form classes */
-    #requestForEstateTable_wrapper .dataTables_length label {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-    }
-    #requestForEstateTable_wrapper .dataTables_length select {
-        width: auto;
-        min-width: 4.5rem;
-        display: inline-block;
-        padding: 0.25rem 2rem 0.25rem 0.5rem;
-        font-size: 0.875rem;
-        border-radius: 0.375rem;
-        border: 1px solid var(--bs-border-color, #dee2e6);
-    }
-    #requestForEstateTable_wrapper .dataTables_filter label {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-    }
-    #requestForEstateTable_wrapper .dataTables_filter input {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
-        border: 1px solid var(--bs-border-color, #dee2e6);
-        border-radius: 0.375rem;
-        margin-left: 0.25rem;
-    }
-    /* Blue header row (Bootstrap 5 table-primary style) */
-    #requestForEstateTable_wrapper thead th {
-        background-color: var(--bs-primary);
-        color: #fff;
-        font-weight: 600;
-        border-color: var(--bs-primary);
-        padding: 0.75rem;
-        white-space: nowrap;
-    }
-    /* Pagination: Bootstrap 5 classes */
-    #requestForEstateTable_wrapper .dataTables_paginate {
-        margin-top: 0.5rem;
-    }
-    #requestForEstateTable_wrapper .dataTables_paginate .paginate_button {
-        padding: 0.25rem 0.5rem;
-        margin: 0 1px;
-        border-radius: 0.375rem;
-        border: 1px solid var(--bs-border-color);
-    }
-    #requestForEstateTable_wrapper .dataTables_paginate .paginate_button.current {
-        background: var(--bs-primary);
-        color: #fff !important;
-        border-color: var(--bs-primary);
-    }
-    #requestForEstateTable_wrapper .dataTables_info {
-        padding-top: 0.5rem;
-        font-size: 0.875rem;
-        color: var(--bs-body-secondary);
-    }
-    .request-action-help {
-        background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
-        border-color: #d8e7ff !important;
-    }
-    .request-action-help .material-icons {
-        font-size: 1rem;
-        vertical-align: text-bottom;
-    }
-    @media (max-width: 767.98px) {
-        #requestForEstateTable_wrapper .col-md-6,
-        #requestForEstateTable_wrapper .col-md-4,
-        #requestForEstateTable_wrapper .col-md-5 { max-width: 100%; }
-    }
 </style>
 @endpush
 
@@ -301,9 +243,11 @@
         var deleteRequestEstateUrl = '';
         var $requestForEstateTable = $('#requestForEstateTable');
 
-        var tsFilter = null, tsModalEmployee = null, tsModalStatus = null, tsModalEligibility = null;
+        var tsModalEmployee = null, tsModalStatus = null, tsModalEligibility = null;
         // NOTE: ye module pehle TomSelect use karta tha; ab Select2 (baaki app ke saath consistent).
         // ts* variables sirf state tracking ke liye hain (instance $(el).data('select2') se milta hai).
+        // The page-level Request Status filter deliberately stays a NATIVE <select>:
+        // .programme-dt-filter-select styles it directly (docs/new-design-index-page.md).
         function isSelect2(el) { return !!(el && $(el).data('select2')); }
         function getSelectVal(el) { var v = el ? $(el).val() : ''; return (v === null || v === undefined) ? '' : v; }
         function initTs(el, opts) {
@@ -318,11 +262,6 @@
             return el;
         }
 
-        if (typeof $.fn.select2 !== 'undefined') {
-            var filterEl = document.getElementById('estateStatusFilter');
-            if (filterEl) tsFilter = initTs(filterEl, { placeholder: 'All' });
-        }
-
         if ($requestForEstateTable.length && $.fn.DataTable && $requestForEstateTable.DataTable) {
             $requestForEstateTable.on('preXhr.dt', function(e, settings, data) {
                 var el = document.getElementById('estateStatusFilter');
@@ -333,12 +272,121 @@
                 if ($requestForEstateTable.DataTable) $requestForEstateTable.DataTable().ajax.reload(null, false);
             });
             $('#estateStatusClear').on('click', function() {
-                var el = document.getElementById('estateStatusFilter');
-                // Silent set: sirf widget update, koi extra change handler fire nahi.
-                if (el) $(el).val('').trigger('change.select2');
-                if ($requestForEstateTable.DataTable) $requestForEstateTable.DataTable().ajax.reload(null, false);
+                $('#estateStatusFilter').val('');
+                if (!$.fn.DataTable.isDataTable($requestForEstateTable)) return;
+                // "Remove Filter" clears the search box too — it resets the whole toolbar.
+                $requestForEstateTable.DataTable().search('').ajax.reload(null, false);
             });
         }
+
+        /* ---------- Column visibility (persisted per browser, per user) ---------- */
+        // Header index -> export column key. POSITIONAL: adding a table column means
+        // adding an entry here too. '' = a column that is never exported (Action).
+        var RFE_EXPORT_COLUMN_KEYS = ['sno', 'req_id', 'req_date', 'name_id', 'status', 'change_req_status', ''];
+        var rfeColStorageKey = 'sargam.requestForEstate.hiddenCols.{{ auth()->id() ?? 'guest' }}';
+
+        function rfeGetHiddenCols() {
+            try {
+                var raw = localStorage.getItem(rfeColStorageKey);
+                var arr = raw ? JSON.parse(raw) : [];
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) {
+                return []; // private mode / storage disabled / corrupt value
+            }
+        }
+
+        function rfePersistHiddenCols(arr) {
+            try { localStorage.setItem(rfeColStorageKey, JSON.stringify(arr)); } catch (e) {}
+        }
+
+        // Export keys for the columns still on screen — sent as ?cols= so Download
+        // and Print carry exactly the columns the table is showing.
+        function rfeVisibleExportCols() {
+            var hidden = rfeGetHiddenCols();
+            return RFE_EXPORT_COLUMN_KEYS.filter(function(key, idx) {
+                return key !== '' && hidden.indexOf(idx) === -1;
+            });
+        }
+
+        function setupRfeColumns(dt) {
+            if (!dt) return;
+            var hidden = rfeGetHiddenCols();
+
+            dt.columns().every(function() {
+                var idx = this.index();
+                this.visible(hidden.indexOf(idx) === -1, false);
+            });
+            dt.columns.adjust();
+
+            var $grid = $('#rfeColumnToggleGrid');
+            if (!$grid.length) return;
+            $grid.empty();
+
+            dt.columns().every(function() {
+                var idx = this.index();
+                var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+                if (!title) return;
+
+                var inputId = 'rfecolvis_' + idx;
+                var $cell = $('<div class="col-12 col-sm-6"></div>');
+                var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-1 px-3 py-2 mb-0 w-100"></label>')
+                    .attr('for', inputId);
+                var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                    .attr('id', inputId)
+                    .prop('checked', hidden.indexOf(idx) === -1);
+
+                $cb.on('change', function() {
+                    var h = rfeGetHiddenCols();
+                    var pos = h.indexOf(idx);
+                    if (this.checked) {
+                        if (pos !== -1) h.splice(pos, 1);
+                    } else {
+                        if (pos === -1) h.push(idx);
+                    }
+                    rfePersistHiddenCols(h);
+                    dt.column(idx).visible(this.checked, false);
+                    dt.columns.adjust();
+                });
+
+                $label.append($cb).append($('<span></span>').text(title));
+                $cell.append($label);
+                $grid.append($cell);
+            });
+        }
+
+        $requestForEstateTable.on('init.dt', function() {
+            setupRfeColumns($(this).DataTable());
+        });
+        // Yajra may have finished initialising before this handler was bound.
+        if ($.fn.DataTable && $.fn.DataTable.isDataTable($requestForEstateTable)) {
+            setupRfeColumns($requestForEstateTable.DataTable());
+        }
+
+        /* ---------- Download / Print (server-side, honour the applied filters) ---------- */
+        function rfeExportParams() {
+            var params = {};
+            var status = $('#estateStatusFilter').val();
+            if (status !== '' && status !== null && status !== undefined) {
+                params.status_filter = status;
+            }
+            if ($.fn.DataTable && $.fn.DataTable.isDataTable($requestForEstateTable)) {
+                var searchValue = $requestForEstateTable.DataTable().search();
+                if (searchValue) params.search = searchValue;
+            }
+            // ?scope=self must ride along or the export would widen the row scope.
+            var scope = new URLSearchParams(window.location.search).get('scope');
+            if (scope) params.scope = scope;
+            params.cols = rfeVisibleExportCols().join(',');
+            return params;
+        }
+
+        $('#rfeDownloadBtn').on('click', function() {
+            window.location.href = '{{ route('admin.estate.request-for-estate.export') }}?' + $.param(rfeExportParams());
+        });
+
+        $('#rfePrintBtn').on('click', function() {
+            window.open('{{ route('admin.estate.request-for-estate.print') }}?' + $.param(rfeExportParams()), '_blank');
+        });
         var addEditModalEl = document.getElementById('addEditRequestEstateModal');
         var addEditModal = addEditModalEl ? new bootstrap.Modal(addEditModalEl) : null;
         var deleteModalEl = document.getElementById('deleteRequestEstateModal');

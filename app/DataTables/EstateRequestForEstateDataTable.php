@@ -120,56 +120,47 @@ class EstateRequestForEstateDataTable extends DataTable
                     }
                 }
 
-                return $name ? ($id ? $name . ' / ' . $id : $name) : ($id ?: '—');
+                if ($name === '' && $id === '') {
+                    return '—';
+                }
+
+                // Name in ink, employee id as a muted suffix — "Darren Kelly - NNP00037".
+                $html = $name !== '' ? '<span class="rfe-name">' . e($name) . '</span>' : '';
+                if ($id !== '') {
+                    $html .= ($html !== '' ? ' ' : '') . '<span class="rfe-emp-id">' . ($html !== '' ? '- ' : '') . e($id) . '</span>';
+                }
+
+                return $html;
             })
             ->editColumn('doj_academic', function ($row) {
                 $d = $row->doj_academic;
                 return $d ? \Carbon\Carbon::parse($d)->format('d-m-Y') : '—';
             })
             ->editColumn('status', function ($row) {
-                // Prefer explicit Rejected flag from main status when status = 2.
-                $s = (int) ($row->status ?? 0);
-                if ($s === 2) {
-                    return '<span class="badge bg-danger">Rejected</span>';
-                }
+                // Label resolution (incl. the legacy "allotted but still status=0" rows)
+                // lives in statusLabel() so the exports render the same word.
+                $label = self::statusLabel($row);
+                $tone = [
+                    'Pending' => 'pending',
+                    'Allotted' => 'allotted',
+                    'Rejected' => 'rejected',
+                    'Returned' => 'returned',
+                ][$label] ?? 'neutral';
 
-                // Prefer actual possession flags from estate_possession_details to decide "Returned".
-                $hasActive = (int) ($row->has_active_possession ?? 0) === 1;
-                $hasReturned = (int) ($row->has_any_returned ?? 0) === 1;
-                if (! $hasActive && $hasReturned) {
-                    return '<span class="badge bg-info">Returned</span>';
-                }
-
-                // If system has a current allotment recorded but status is still Pending (0),
-                // treat it as Allotted in UI. This fixes legacy/migrated rows like Nishant Joshi,
-                // where possession exists (and house no. is set) but status was never updated.
-                $hasCurrentAllotment = trim((string) ($row->current_alot ?? '')) !== '';
-                if ($s === 0 && $hasCurrentAllotment) {
-                    $s = 1;
-                }
-                // 0 = Pending, 1 = Allotted, 2 = Rejected, 3 = Returned (explicit flag, if used)
-                $labels = [0 => 'Pending', 1 => 'Allotted', 2 => 'Rejected', 3 => 'Returned'];
-                $classes = [0 => 'warning', 1 => 'success', 2 => 'danger', 3 => 'info'];
-                $label = $labels[$s] ?? 'Unknown';
-                $class = $classes[$s] ?? 'secondary';
-                return '<span class="badge bg-' . $class . '">' . e($label) . '</span>';
+                return self::statusBadge($label, $tone);
             })
             ->editColumn('current_alot', fn($row) => $row->current_alot ?? '—')
             ->editColumn('change_req_status', function ($row) {
-                $s = $row->change_req_status !== null && $row->change_req_status !== '' ? (int) $row->change_req_status : null;
-                if ($s === null) {
-                    return '—';
+                // Plain text (not a badge) — the Status column already carries the
+                // page's only colour-coded pill, so this stays quiet next to it.
+                $label = self::changeRequestLabel($row->change_req_status);
+                if ($label === null) {
+                    return '<span class="rfe-muted">-</span>';
                 }
-                if ($s === 0) {
-                    return '<span class="badge bg-warning" title="Change request pending">Pending</span>';
-                }
-                if ($s === 1) {
-                    return '<span class="badge bg-success" title="Change request approved"><i class="material-icons material-symbols-rounded" style="font-size:1rem;vertical-align:middle">check_circle</i> Approved</span>';
-                }
-                if ($s === 2) {
-                    return '<span class="badge bg-danger" title="Change request disapproved"><i class="material-icons material-symbols-rounded" style="font-size:1rem;vertical-align:middle">cancel</i> Disapproved</span>';
-                }
-                return '—';
+
+                $tone = ['Pending' => 'pending', 'Approved' => 'approved', 'Disapproved' => 'disapproved'][$label];
+
+                return '<span class="rfe-change-status rfe-change-status--' . $tone . '">' . e($label) . '</span>';
             })
             ->editColumn('eligibility_type_pk', function ($row) {
                 $pk = (int) ($row->eligibility_type_pk ?? 0);
@@ -215,7 +206,7 @@ class EstateRequestForEstateDataTable extends DataTable
                     ? route('admin.estate.raise-change-request', ['id' => $row->pk])
                     : '';
                 $raiseChangeLink = $raiseChangeUrl !== ''
-                    ? '<a href="' . e($raiseChangeUrl) . '" class="text-info" title="Raise Change Request"><i class="material-icons material-symbols-rounded">swap_horiz</i></a>'
+                    ? self::actionLink('swap_horiz', 'Change Request', 'change', ['href' => $raiseChangeUrl, 'title' => 'Raise Change Request'])
                     : '';
                 // Lock row (no Edit/Delete) when request is effectively Allotted or Returned.
                 // Some legacy/self-service records may remain status=0 even after allotment,
@@ -228,8 +219,15 @@ class EstateRequestForEstateDataTable extends DataTable
                 $isAllottedEffective = $statusInt === 1 || $hasActive || $hasCurrentAllotment;
                 $isLocked = $isAllottedEffective || $isReturnedEffective;
 
-                $editLink = $isLocked ? '' : '<a href="javascript:void(0);" class="text-primary btn-edit-request-estate" title="Edit" ' . $dataAttrs . '><i class="material-icons material-symbols-rounded">edit</i></a>';
-                $deleteLink = $isLocked ? '' : '<a href="javascript:void(0);" class="text-primary btn-delete-request-estate" title="Delete" data-url="' . e($deleteUrl) . '"><i class="material-icons material-symbols-rounded">delete</i></a>';
+                // Locked rows keep the buttons in place but greyed out, so the action
+                // column never changes width from row to row.
+                $editLink = $isLocked
+                    ? self::actionLink('edit', 'Edit', 'edit', ['disabled' => true, 'title' => 'Editing is locked once the request is allotted or returned'])
+                    : self::actionLink('edit', 'Edit', 'edit', ['class' => 'btn-edit-request-estate', 'title' => 'Edit', 'attrs' => $dataAttrs]);
+
+                $deleteLink = $isLocked
+                    ? self::actionLink('delete', 'Delete', 'delete', ['disabled' => true, 'title' => 'Deleting is locked once the request is allotted or returned'])
+                    : self::actionLink('delete', 'Delete', 'delete', ['class' => 'btn-delete-request-estate', 'title' => 'Delete', 'attrs' => 'data-url="' . e($deleteUrl) . '"']);
 
                 // Common flags for possession / return / change actions
                 $addPossessionButton = '';
@@ -251,14 +249,16 @@ class EstateRequestForEstateDataTable extends DataTable
                 if ($canAllot && $canShowPossessionButtonForRole) {
                     // Always open generic Add Possession page; no preselected requester in URL.
                     $url = route('admin.estate.possession-details.create');
-                    $addPossessionButton = '<a href="' . e($url) . '" class="text-success" title="Add Possession">
-                        <i class="material-icons material-symbols-rounded">add_home</i>
-                    </a>';
+                    $addPossessionButton = self::actionLink('add_home', 'Possession', 'possession', [
+                        'href' => $url,
+                        'title' => 'Add Possession',
+                    ]);
                 } elseif (! $isEstateAuthority && $hasActive && ! $hasReturned) {
                     // For self-service users, show a non-clickable "Possession done" indicator once possession exists.
-                    $addPossessionButton = '<span class="text-success" title="Possession already created">
-                        <i class="material-icons material-symbols-rounded">check_circle</i>
-                    </span>';
+                    $addPossessionButton = self::actionLink('check_circle', 'Possession', 'possession', [
+                        'static' => true,
+                        'title' => 'Possession already created',
+                    ]);
                 }
 
                 // Self-service user options (Return House + Raise Change Request) after possession exists.
@@ -270,9 +270,10 @@ class EstateRequestForEstateDataTable extends DataTable
                     if ($hasActive && ! $hasReturned) {
                         // For user role, go directly to Return House page with request_id.
                         $returnUrl = route('admin.estate.return-house', ['request_id' => $row->pk]);
-                        $returnHouseButton = '<a href="' . e($returnUrl) . '" class="text-warning" title="Return House">
-                            <i class="material-icons material-symbols-rounded">logout</i>
-                        </a>';
+                        $returnHouseButton = self::actionLink('logout', 'Return', 'return', [
+                            'href' => $returnUrl,
+                            'title' => 'Return House',
+                        ]);
                     }
 
                     // User Raise Change Request:
@@ -281,49 +282,38 @@ class EstateRequestForEstateDataTable extends DataTable
                     $canSelfRaiseChangeRequest = ($hasActive || $hasCurrentAllotment) && ! $hasChangeStatus && ! $isReturnedEffective;
                     if ($canSelfRaiseChangeRequest) {
                         $selfCrUrl = route('admin.estate.raise-change-request', ['id' => $row->pk]);
-                        $selfChangeRequestButton = '<a href="' . e($selfCrUrl) . '" class="text-info" title="Raise Change Request">
-                            <i class="material-icons material-symbols-rounded">swap_horiz</i>
-                        </a>';
+                        $selfChangeRequestButton = self::actionLink('swap_horiz', 'Change Request', 'change', [
+                            'href' => $selfCrUrl,
+                            'title' => 'Raise Change Request',
+                        ]);
                     }
                 }
 
-                return '<div class="d-inline-flex align-items-center gap-1" role="group">
-                    <a href="' . e($detailsUrl) . '" class="text-primary" title="Request &amp; Change Details"><i class="material-icons material-symbols-rounded">visibility</i></a>
-                    ' . $raiseChangeLink . '
-                    ' . $editLink . '
-                    ' . $deleteLink . '
-                    ' . $addPossessionButton . '
-                    ' . $returnHouseButton . '
-                    ' . $selfChangeRequestButton . '
-                </div>';
+                $changeRequestButton = $raiseChangeLink !== '' ? $raiseChangeLink : $selfChangeRequestButton;
+                if ($changeRequestButton === '') {
+                    $changeRequestButton = self::actionLink('swap_horiz', 'Change Request', 'change', [
+                        'disabled' => true,
+                        'title' => 'A change request can only be raised on an allotted request that has none pending',
+                    ]);
+                }
+
+                $viewLink = self::actionLink('visibility', 'View', 'view', [
+                    'href' => $detailsUrl,
+                    'title' => 'Request & Change Details',
+                ]);
+
+                return '<div class="rfe-actions" role="group" aria-label="Row actions">'
+                    . $viewLink
+                    . $editLink
+                    . $changeRequestButton
+                    . $deleteLink
+                    . $addPossessionButton
+                    . $returnHouseButton
+                    . '</div>';
             })
-            ->rawColumns(['status', 'change_req_status', 'action'])
+            ->rawColumns(['name_id', 'status', 'change_req_status', 'action'])
             ->filter(function ($query) {
-                $searchValue = trim((string) request()->input('search.value', ''));
-                if ($searchValue === '') {
-                    return;
-                }
-                $searchLike = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $searchValue) . '%';
-                $query->where(function ($q) use ($searchValue, $searchLike) {
-                    $utf8Expr = static fn (string $column): string =>
-                        "CONVERT(COALESCE($column, '') USING utf8mb4) COLLATE utf8mb4_unicode_ci";
-
-                    $q->whereRaw($utf8Expr('estate_home_request_details.req_id') . ' LIKE ?', [$searchLike])
-                        ->orWhereRaw($utf8Expr('estate_home_request_details.emp_name') . ' LIKE ?', [$searchLike])
-                        ->orWhereRaw($utf8Expr('estate_home_request_details.employee_id') . ' LIKE ?', [$searchLike])
-                        ->orWhereRaw($utf8Expr('estate_home_request_details.current_alot') . ' LIKE ?', [$searchLike])
-                        ->orWhereRaw(
-                            'CONCAT(TRIM(' . $utf8Expr('estate_home_request_details.emp_name') . '), " / ", TRIM(' . $utf8Expr('estate_home_request_details.employee_id') . ')) LIKE ?',
-                            [$searchLike]
-                        );
-                    $statusMap = ['pending' => 0, 'allotted' => 1];
-                    $searchLower = strtolower($searchValue);
-                    if (isset($statusMap[$searchLower])) {
-                        $q->orWhere('estate_home_request_details.status', $statusMap[$searchLower]);
-                    } elseif (is_numeric($searchValue) && in_array((int) $searchValue, [0, 1], true)) {
-                        $q->orWhere('estate_home_request_details.status', (int) $searchValue);
-                    }
-                });
+                static::applySearch($query, (string) request()->input('search.value', ''));
             }, false)
             ->filterColumn('req_id', function ($query, $keyword) {
                 $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $keyword) . '%';
@@ -355,6 +345,20 @@ class EstateRequestForEstateDataTable extends DataTable
 
     public function query(EstateHomeRequestDetails $model): QueryBuilder
     {
+        return static::listingQuery($model);
+    }
+
+    /**
+     * The listing query — row scoping, the rejected-row exclusion and the status
+     * filter, all in one place.
+     *
+     * The Download / Print exports call this too, so what a user downloads is
+     * always exactly the rows they are allowed to see on screen.
+     */
+    public static function listingQuery(?EstateHomeRequestDetails $model = null): QueryBuilder
+    {
+        $model = $model ?: new EstateHomeRequestDetails();
+
         $query = $model->newQuery()
             ->select([
                 'estate_home_request_details.pk',
@@ -445,7 +449,10 @@ class EstateRequestForEstateDataTable extends DataTable
     {
         return $this->builder()
             ->setTableId('requestForEstateTable')
-            ->addTableClass('table table-bordered table-striped table-hover text-nowrap align-middle mb-0')
+            // programme-dt chrome (docs/new-design-index-page.md) — no `dom` and no
+            // `language` here on purpose: datatable-global-ui.js owns both, and a
+            // page-level override would win and break the "Showing N of M items" footer.
+            ->addTableClass('table table-hover align-middle mb-0 w-100 programme-dt-table')
             ->columns($this->getColumns())
             ->minifiedAjax('', null, [
                 'scope' => 'new URLSearchParams(window.location.search).get("scope") || ""',
@@ -453,46 +460,159 @@ class EstateRequestForEstateDataTable extends DataTable
             ->parameters([
                 'responsive' => false,
                 'autoWidth' => false,
-                'scrollX' => true,
                 'ordering' => true,
+                // Keep DataTables' native (server-side) ordering so a header click
+                // re-sorts the WHOLE dataset instead of just the loaded page.
+                'sargamServerOrder' => true,
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
                 // Default sort by Request Date (column index 2) descending.
                 'order' => [[2, 'desc']],
-                'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-                'language' => [
-                    'search' => 'Search within table:',
-                    'lengthMenu' => 'Show _MENU_ entries',
-                    'info' => 'Showing _START_ to _END_ of _TOTAL_ entries',
-                    'infoEmpty' => 'Showing 0 to 0 of 0 entries',
-                    'infoFiltered' => '(filtered from _MAX_ total entries)',
-                    'paginate' => [
-                        'first' => 'First',
-                        'last' => 'Last',
-                        'next' => 'Next',
-                        'previous' => 'Previous',
-                    ],
-                ],
-                'dom' => '<"row align-items-center mb-3"<"col-12 col-md-4"l><"col-12 col-md-8 request-for-estate-search-col"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>',
+                'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
             ]);
     }
 
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
-            Column::make('req_id')->title('REQUEST ID')->orderable(true)->searchable(true),
-            Column::make('req_date')->title('REQUEST DATE')->orderable(true)->searchable(false),
-            Column::computed('name_id')->title('NAME / ID')->orderable(true)->searchable(true),
-            Column::make('status')->title('STATUS OF REQUEST')->orderable(false)->searchable(false),
-            Column::make('change_req_status')->title('CHANGE REQ. STATUS')->orderable(false)->searchable(false)->addClass('text-center'),
-            Column::computed('action')->title('ACTION')->addClass('text-center')->orderable(false)->searchable(false)->width('100px'),
+            Column::computed('DT_RowIndex')->title('S. No.')->orderable(false)->searchable(false)->width('64px'),
+            Column::make('req_id')->title('Request ID')->orderable(true)->searchable(true),
+            Column::make('req_date')->title('Request Date')->orderable(true)->searchable(false),
+            Column::computed('name_id')->title('Name & ID')->addClass('rfe-col-name')->orderable(true)->searchable(true),
+            Column::make('status')->title('Status')->orderable(false)->searchable(false),
+            Column::make('change_req_status')->title('Change Request Status')->orderable(false)->searchable(false),
+            // Wide enough for the four standard actions (View / Edit / Change
+            // Request / Delete) to sit on one row — see .rfe-col-action.
+            Column::computed('action')->title('Action')->addClass('rfe-col-action')->orderable(false)->searchable(false)->width('190px'),
         ];
     }
 
     protected function filename(): string
     {
         return 'RequestForEstate_' . date('YmdHis');
+    }
+
+    /**
+     * The listing's free-text search, shared by the DataTable and the exports so a
+     * download of a searched list matches what the table showed.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $query
+     */
+    public static function applySearch($query, string $searchValue): void
+    {
+        $searchValue = trim($searchValue);
+        if ($searchValue === '') {
+            return;
+        }
+
+        $searchLike = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $searchValue) . '%';
+
+        $query->where(function ($q) use ($searchValue, $searchLike) {
+            $utf8Expr = static fn (string $column): string =>
+                "CONVERT(COALESCE($column, '') USING utf8mb4) COLLATE utf8mb4_unicode_ci";
+
+            $q->whereRaw($utf8Expr('estate_home_request_details.req_id') . ' LIKE ?', [$searchLike])
+                ->orWhereRaw($utf8Expr('estate_home_request_details.emp_name') . ' LIKE ?', [$searchLike])
+                ->orWhereRaw($utf8Expr('estate_home_request_details.employee_id') . ' LIKE ?', [$searchLike])
+                ->orWhereRaw($utf8Expr('estate_home_request_details.current_alot') . ' LIKE ?', [$searchLike])
+                ->orWhereRaw(
+                    'CONCAT(TRIM(' . $utf8Expr('estate_home_request_details.emp_name') . '), " / ", TRIM(' . $utf8Expr('estate_home_request_details.employee_id') . ')) LIKE ?',
+                    [$searchLike]
+                );
+
+            $statusMap = ['pending' => 0, 'allotted' => 1];
+            $searchLower = strtolower($searchValue);
+            if (isset($statusMap[$searchLower])) {
+                $q->orWhere('estate_home_request_details.status', $statusMap[$searchLower]);
+            } elseif (is_numeric($searchValue) && in_array((int) $searchValue, [0, 1], true)) {
+                $q->orWhere('estate_home_request_details.status', (int) $searchValue);
+            }
+        });
+    }
+
+    /**
+     * Plain-text status label for one row — the same precedence the on-screen
+     * badge uses (rejected → returned → legacy-allotted → stored status), so the
+     * exports and the table can't disagree.
+     */
+    public static function statusLabel($row): string
+    {
+        $s = (int) ($row->status ?? 0);
+        if ($s === 2) {
+            return 'Rejected';
+        }
+
+        $hasActive = (int) ($row->has_active_possession ?? 0) === 1;
+        $hasReturned = (int) ($row->has_any_returned ?? 0) === 1;
+        if (! $hasActive && $hasReturned) {
+            return 'Returned';
+        }
+
+        if ($s === 0 && trim((string) ($row->current_alot ?? '')) !== '') {
+            $s = 1;
+        }
+
+        return [0 => 'Pending', 1 => 'Allotted', 2 => 'Rejected', 3 => 'Returned'][$s] ?? 'Unknown';
+    }
+
+    /**
+     * Soft status pill (matching .programme-status-badge sizing, estate tones).
+     */
+    private static function statusBadge(string $label, string $tone): string
+    {
+        return '<span class="badge rounded-1 programme-status-badge rfe-status rfe-status--' . $tone . '">'
+            . e($label) . '</span>';
+    }
+
+    /**
+     * Shared label for the latest change-request status, so the listing, the print
+     * view and the Excel export can never disagree. null = no change request.
+     */
+    public static function changeRequestLabel($rawStatus): ?string
+    {
+        if ($rawStatus === null || $rawStatus === '') {
+            return null;
+        }
+
+        return match ((int) $rawStatus) {
+            0 => 'Pending',
+            1 => 'Approved',
+            2 => 'Disapproved',
+            default => null,
+        };
+    }
+
+    /**
+     * One row-action: a stacked material icon + caption.
+     *
+     * Unavailable actions render as a greyed, non-interactive span rather than
+     * disappearing, so the Action column keeps the same shape on every row.
+     *
+     * @param array{href?:string,class?:string,title?:string,attrs?:string,disabled?:bool,static?:bool} $options
+     */
+    private static function actionLink(string $icon, string $label, string $tone, array $options = []): string
+    {
+        $title = e($options['title'] ?? $label);
+        $isDisabled = ! empty($options['disabled']);
+        $isStatic = $isDisabled || ! empty($options['static']);
+
+        $classes = 'rfe-action rfe-action--' . $tone . ($isDisabled ? ' rfe-action--disabled' : '');
+        if (! empty($options['class'])) {
+            $classes .= ' ' . $options['class'];
+        }
+
+        $inner = '<i class="material-icons material-symbols-rounded" aria-hidden="true">' . $icon . '</i>'
+            . '<span class="rfe-action-label">' . e($label) . '</span>';
+
+        if ($isStatic) {
+            return '<span class="' . $classes . '" title="' . $title . '" aria-disabled="true">' . $inner . '</span>';
+        }
+
+        $href = $options['href'] ?? 'javascript:void(0);';
+        $extra = ! empty($options['attrs']) ? ' ' . $options['attrs'] : '';
+
+        return '<a href="' . e($href) . '" class="' . $classes . '" title="' . $title . '"'
+            . ' aria-label="' . $title . '"' . $extra . '>' . $inner . '</a>';
     }
 }

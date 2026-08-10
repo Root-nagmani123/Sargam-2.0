@@ -1,0 +1,220 @@
+/*
+ * Request For Estate — page-scoped styling.
+ *
+ * Everything here is namespaced under .rfe-page so it cannot leak into the other
+ * ~350 admin views. The toolbar / table / footer chrome itself comes from the
+ * shared programme-dt-* layer in custom.css (docs/new-design-index-page.md); this
+ * file only adds what that layer has no opinion on: the export buttons above the
+ * card, the status tones, and the stacked row-action buttons.
+ */
+
+/* ── Request Status filter ────────────────────────────────────────────────
+   custom.css only themes Choices.js inside .programme-dt-filter-select; this is
+   a native <select>, so give it the same 40px / 8px geometry by hand. */
+.rfe-page .programme-dt-filter-select .form-select {
+    min-height: var(--ds-control-h, 2.5rem);
+    padding: 0.5rem 2rem 0.5rem 0.875rem;
+    font-size: 0.9375rem;
+    color: #344054;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    box-shadow: none;
+    background-color: var(--ds-surface, #fff);
+}
+
+.rfe-page .programme-dt-filter-select .form-select:focus {
+    border-color: var(--ds-primary, #004a93);
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+}
+
+/* ── Download / Print, above the card ─────────────────────────────────────── */
+.rfe-page .rfe-export-btn {
+    height: var(--ds-control-h, 2.5rem);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-2, 0.5rem);
+    padding: 0 1.1rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--ds-primary, #004a93);
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: var(--ds-surface, #fff);
+    white-space: nowrap;
+}
+
+.rfe-page .rfe-export-btn:hover,
+.rfe-page .rfe-export-btn:focus-visible {
+    background: #f2f7fc;
+    border-color: var(--ds-primary, #004a93);
+    color: var(--ds-primary, #004a93);
+}
+
+.rfe-page .rfe-export-btn i {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.rfe-page .rfe-export-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* ── Name & ID cell ───────────────────────────────────────────────────────── */
+.rfe-page .rfe-name {
+    color: var(--ds-ink, #101828);
+    font-weight: 500;
+}
+
+.rfe-page .rfe-emp-id,
+.rfe-page .rfe-muted {
+    color: var(--ds-ink-muted, #667085);
+}
+
+/* Seven columns plus a labelled action cluster do not fit at 1rem cell padding
+   inside the ~960px content area, and a clipped Delete button is worse than
+   slightly tighter cells. */
+.rfe-page .programme-dt-table thead th,
+.rfe-page .programme-dt-table tbody td {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+}
+
+/* The admin theme force-uppercases every DataTables header
+   (styles.css: `table.dataTable thead th`), which .programme-dt-table does not
+   counter — so Yajra-backed pages shout while the Laravel-paginated ones (Subject
+   Master, …) render title case. This page follows the design's title case. */
+.rfe-page .programme-dt-table thead th {
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* The shared .programme-dt-table rule makes the 2nd column the "title" column;
+   here that is Request ID, and Name & ID is the one that should wrap. */
+.rfe-page .programme-dt-table tbody td:nth-child(2) {
+    white-space: nowrap;
+    max-width: none;
+}
+
+/* Name & ID is the widest column: most names fit on one line, long ones wrap
+   rather than squeezing to a 3-line sliver. */
+.rfe-page .programme-dt-table th.rfe-col-name,
+.rfe-page .programme-dt-table td.rfe-col-name {
+    min-width: 190px;
+    white-space: normal;
+    line-height: 1.45;
+}
+
+/* ── Status pill tones ────────────────────────────────────────────────────── */
+.rfe-page .rfe-status {
+    display: inline-block;
+}
+
+.rfe-page .rfe-status--allotted {
+    background: #ecfdf3;
+    color: #027a48;
+}
+
+.rfe-page .rfe-status--pending {
+    background: #fffaeb;
+    color: #b54708;
+}
+
+.rfe-page .rfe-status--returned {
+    background: #eff8ff;
+    color: #175cd3;
+}
+
+.rfe-page .rfe-status--rejected {
+    background: #fef3f2;
+    color: #b42318;
+}
+
+.rfe-page .rfe-status--neutral {
+    background: var(--ds-surface-2, #f2f4f7);
+    color: #475467;
+}
+
+/* ── Change Request Status (plain text, not a pill) ───────────────────────── */
+.rfe-page .rfe-change-status {
+    font-weight: 500;
+}
+
+.rfe-page .rfe-change-status--pending { color: #b54708; }
+.rfe-page .rfe-change-status--approved { color: #027a48; }
+.rfe-page .rfe-change-status--disapproved { color: #b42318; }
+
+/* ── Row actions: stacked icon + caption ──────────────────────────────────── */
+/* Sized so the four standard actions fit on one line; the extra Possession /
+   Return buttons some rows carry wrap to a second line rather than overflow. */
+.rfe-page .programme-dt-table th.rfe-col-action,
+.rfe-page .programme-dt-table td.rfe-col-action {
+    min-width: 190px;
+}
+
+.rfe-page .rfe-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.55rem 0.35rem;
+}
+
+.rfe-page .rfe-action {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+    width: 42px;
+    padding: 0;
+    text-align: center;
+    text-decoration: none;
+    line-height: 1.15;
+    background: none;
+    border: 0;
+}
+
+.rfe-page .rfe-action i {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.rfe-page .rfe-action-label {
+    font-size: 0.625rem;
+    font-weight: 500;
+    color: inherit;
+    /* Breaks at the space only — "Change Request" stacks as two whole words. */
+    hyphens: none;
+}
+
+.rfe-page a.rfe-action:hover .rfe-action-label,
+.rfe-page a.rfe-action:focus-visible .rfe-action-label {
+    text-decoration: underline;
+}
+
+.rfe-page .rfe-action--view,
+.rfe-page .rfe-action--edit { color: var(--ds-primary, #004a93); }
+
+.rfe-page .rfe-action--change { color: #f79009; }
+
+.rfe-page .rfe-action--delete { color: #d92d20; }
+
+.rfe-page .rfe-action--possession { color: #027a48; }
+
+.rfe-page .rfe-action--return { color: #b54708; }
+
+/* Unavailable actions stay in place, greyed out, so the column keeps its shape. */
+.rfe-page .rfe-action--disabled {
+    color: #d0d5dd;
+    cursor: not-allowed;
+    pointer-events: auto;
+}
+
+.rfe-page .rfe-action--disabled .rfe-action-label {
+    text-decoration: none;
+}
+
+@media (max-width: 991.98px) {
+    .rfe-page .rfe-actions {
+        gap: 0.6rem;
+    }
+}

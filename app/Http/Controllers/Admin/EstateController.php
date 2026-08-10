@@ -11,6 +11,7 @@ use App\DataTables\EstateRequestForEstateDataTable;
 use App\DataTables\EstateReturnHouseDataTable;
 use App\DataTables\EstateRequestPutInHacDataTable;
 use App\DataTables\EstateHacApprovedDataTable;
+use App\Exports\EstateRequestForEstateExport;
 use App\Http\Controllers\Controller;
 use App\Support\RedisBackedCache;
 use App\Models\EstateChangeHomeReqDetails;
@@ -37,6 +38,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
+use Maatwebsite\Excel\Facades\Excel;
 
 class EstateController extends Controller
 {
@@ -387,6 +389,72 @@ class EstateController extends Controller
             'eligibilityTypes' => $eligibilityTypes,
             'selfEmployeePk' => $selfEmployeePk,
         ]);
+    }
+
+    /**
+     * Rows + heading line for the Request For Estate downloads.
+     *
+     * Runs the DataTable's own listing query, so the export inherits the same
+     * row scoping (self-service users only see their own requests) and the same
+     * status filter / search that produced the on-screen list.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function requestForEstateExportPayload(Request $request): array
+    {
+        $rows = EstateRequestForEstateDataTable::listingQuery()
+            ->tap(fn ($query) => EstateRequestForEstateDataTable::applySearch(
+                $query,
+                (string) $request->input('search', '')
+            ))
+            ->get();
+
+        $statusFilter = $request->input('status_filter');
+        $statusLabel = match ($statusFilter === null || $statusFilter === '' ? null : (int) $statusFilter) {
+            0 => 'Pending',
+            1 => 'Allotted',
+            3 => 'Returned',
+            default => 'All',
+        };
+
+        $filters = ['Request Status: ' . $statusLabel];
+        if (trim((string) $request->input('search', '')) !== '') {
+            $filters[] = 'Search: "' . trim((string) $request->input('search')) . '"';
+        }
+
+        return [
+            'rows' => $rows,
+            'cols' => EstateRequestForEstateExport::resolveCols($request->input('cols')),
+            'filterLine' => implode('  |  ', $filters),
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /**
+     * Request For Estate — branded .xlsx of the currently filtered list.
+     */
+    public function exportRequestForEstate(Request $request)
+    {
+        $payload = $this->requestForEstateExportPayload($request);
+
+        return Excel::download(
+            new EstateRequestForEstateExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'request-for-estate-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /**
+     * Request For Estate — print-ready view of the currently filtered list.
+     * Same header and columns as the Excel download.
+     */
+    public function printRequestForEstate(Request $request)
+    {
+        return view('admin.estate.request_for_estate_print', $this->requestForEstateExportPayload($request));
     }
 
     /**

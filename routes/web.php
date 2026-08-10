@@ -1592,6 +1592,8 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     // Request For Estate (estate_home_request_details + possession)
     Route::get('request-for-estate', [EstateController::class, 'requestForEstate'])->name('request-for-estate');
     Route::get('request-for-estate/next-req-id', [EstateController::class, 'getNextRequestForEstateId'])->name('request-for-estate.next-req-id');
+    Route::get('request-for-estate/export', [EstateController::class, 'exportRequestForEstate'])->name('request-for-estate.export');
+    Route::get('request-for-estate/print', [EstateController::class, 'printRequestForEstate'])->name('request-for-estate.print');
     // Put In HAC workflow
     Route::get('put-in-hac', [EstateController::class, 'putInHac'])->name('put-in-hac');
     Route::post('put-in-hac', [EstateController::class, 'putInHacAction'])->name('put-in-hac.action');
