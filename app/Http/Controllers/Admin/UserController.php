@@ -67,9 +67,6 @@ use Carbon\Carbon;
 
 class UserController extends Controller
 {
-    /** Notices per page on the dashboard feed. */
-    private const NOTICE_FEED_PER_PAGE = 10;
-
     private const ADMIN_USERS_INDEX_LIST_EPOCH_KEY = 'admin_users_index_list_epoch';
 
     /**
@@ -457,103 +454,17 @@ class UserController extends Controller
             $activeTab = 'notifications';
         }
 
-        $data = $this->buildDashboardFeedData($request);
+        $data = $this->buildDashboardFeedData();
         $data['activeTab'] = $activeTab;
 
         return view('admin.dashboard.feed', $data);
     }
 
     /**
-     * Notices tab: role-scoped, filtered and paginated in SQL.
-     *
-     * Returns [paginator, filterOptions, appliedFilters].
-     */
-    protected function buildNoticeFeed(?Request $request): array
-    {
-        $filters = [
-            'year'     => trim((string) ($request?->query('notice_year') ?? '')),
-            'type'     => trim((string) ($request?->query('notice_type') ?? '')),
-            'dept'     => trim((string) ($request?->query('notice_dept') ?? '')),
-            'audience' => trim((string) ($request?->query('notice_audience') ?? '')),
-            'q'        => trim((string) ($request?->query('q') ?? '')),
-        ];
-
-        $base = notice_feed_query_by_role();
-
-        if (!$base) {
-            $empty = new \Illuminate\Pagination\LengthAwarePaginator([], 0, self::NOTICE_FEED_PER_PAGE, 1, [
-                'path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(),
-            ]);
-
-            return [$empty, ['years' => collect(), 'types' => collect(), 'depts' => collect(), 'audiences' => collect()], $filters];
-        }
-
-        // Dropdown options come from the UNFILTERED role-scoped set, so choosing a
-        // Type never empties the Year list (and a filtered-away option can still be
-        // un-chosen). Four small columns, distinct — not the full notice rows.
-        $optionRows = (clone $base)
-            ->reorder()
-            ->select([
-                'notices_notification.notice_type',
-                'notices_notification.target_audience',
-                'notice_author_dept.department_name as author_department',
-                'notices_notification.display_date',
-            ])
-            ->distinct()
-            ->get();
-
-        $filterOptions = [
-            'years' => $optionRows
-                ->map(fn ($r) => !empty($r->display_date) ? (int) date('Y', strtotime($r->display_date)) : null)
-                ->filter()->unique()->sortDesc()->values(),
-            'types'     => $optionRows->pluck('notice_type')->filter()->unique()->sort()->values(),
-            'depts'     => $optionRows->pluck('author_department')->filter()->unique()->sort()->values(),
-            'audiences' => $optionRows->pluck('target_audience')->filter()->unique()->sort()->values(),
-        ];
-
-        // Year as a datetime range, never YEAR(display_date) — a function on the
-        // column would make the index unusable (G8).
-        if ($filters['year'] !== '' && ctype_digit($filters['year'])) {
-            $base->where('notices_notification.display_date', '>=', $filters['year'] . '-01-01 00:00:00')
-                ->where('notices_notification.display_date', '<=', $filters['year'] . '-12-31 23:59:59');
-        }
-
-        if ($filters['type'] !== '') {
-            $base->where('notices_notification.notice_type', $filters['type']);
-        }
-
-        if ($filters['audience'] !== '') {
-            $base->where('notices_notification.target_audience', $filters['audience']);
-        }
-
-        if ($filters['dept'] !== '') {
-            $base->where('notice_author_dept.department_name', $filters['dept']);
-        }
-
-        if ($filters['q'] !== '') {
-            $like = '%' . $filters['q'] . '%';
-            $base->where(function ($w) use ($like) {
-                $w->where('notices_notification.notice_title', 'like', $like)
-                    ->orWhere('notices_notification.notice_type', 'like', $like)
-                    ->orWhere('notice_author_dept.department_name', 'like', $like)
-                    ->orWhereRaw("CONCAT_WS(' ', notice_author.first_name, notice_author.last_name) like ?", [$like]);
-            });
-        }
-
-        $notices = $base->paginate(self::NOTICE_FEED_PER_PAGE)->withQueryString();
-
-        return [$notices, $filterOptions, $filters];
-    }
-
-    /**
      * Shared data for dashboard feed page.
-     *
-     * $request is optional so the dashboard widget can call this without one;
-     * the notices tab reads its filters from it when present.
      */
-    protected function buildDashboardFeedData(?Request $request = null): array
+    protected function buildDashboardFeedData(): array
     {
-        $noticeRequest = $request;
         $user = Auth::user();
         $isAdminSummary = hasRole('Admin');
         $daysOld = $isAdminSummary ? 10 : null;
@@ -613,9 +524,26 @@ class UserController extends Controller
             $upcomingBirthdays = $upcomingBirthdays->merge($upcoming);
         }
 
-        // Notices are filtered and paginated in SQL (see buildNoticeFeed) rather
-        // than fetched whole and filtered in the browser.
-        [$notices, $noticeFilterOptions, $noticeFilters] = $this->buildNoticeFeed($noticeRequest);
+        $notices = get_notice_notification_by_role();
+
+        $noticeTabKeys = ['office-orders', 'work-allocation', 'notice-circular'];
+        $noticeTabLabels = [
+            'office-orders' => 'Office Orders',
+            'work-allocation' => 'Work Allocation',
+            'notice-circular' => 'Notice/ Circular/ Order',
+        ];
+        $noticeTabCounts = ['office-orders' => 0, 'work-allocation' => 0, 'notice-circular' => 0];
+        foreach ($notices as $noticeForTab) {
+            $tabKey = $this->resolveDashboardNoticeTabKey($noticeForTab->notice_type ?? '');
+            $noticeTabCounts[$tabKey]++;
+        }
+        $defaultNoticeTab = 'office-orders';
+        foreach ($noticeTabKeys as $tabKeyCandidate) {
+            if ($noticeTabCounts[$tabKeyCandidate] > 0) {
+                $defaultNoticeTab = $tabKeyCandidate;
+                break;
+            }
+        }
 
         $feedExpandedNotifications = collect();
         $feedExpandedWishes = collect();
@@ -648,8 +576,10 @@ class UserController extends Controller
             'upcomingBirthdays',
             'birthdayWishCounts',
             'notices',
-            'noticeFilterOptions',
-            'noticeFilters',
+            'noticeTabKeys',
+            'noticeTabLabels',
+            'noticeTabCounts',
+            'defaultNoticeTab',
             'feedExpandedNotifications',
             'feedExpandedWishes',
             'notificationBadgeCount'

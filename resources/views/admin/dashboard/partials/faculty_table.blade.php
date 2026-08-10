@@ -3,10 +3,7 @@
 
     Required data:
       $faculties    - collection of faculty rows
-      $tableId      - unique DOM id for the table (e.g. "guest_faculty").
-                      NOTE: $cssFile keys selectors off this id (#guest_faculty,
-                      #guest_faculty_wrapper) — rename both together or the table
-                      silently loses its styling.
+      $tableId      - unique DOM id for the table (e.g. "guess_faculty")
       $cssFile      - page-specific stylesheet path (asset())
       $cardClass    - card wrapper modifier class
       $pageTitle    - breadcrumb / heading title
@@ -15,7 +12,7 @@
       $badgeLabel   - faculty-type badge text
       $emptyMessage - message shown when there are no rows
 --}}
-<link rel="stylesheet" href="{{ asset($cssFile) }}?v={{ @filemtime(public_path($cssFile)) ?: time() }}">
+<link rel="stylesheet" href="{{ asset($cssFile) }}">
 
 @push('styles')
 <style>

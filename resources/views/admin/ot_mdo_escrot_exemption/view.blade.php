@@ -27,15 +27,17 @@
     };
 @endphp
 
-{{-- `otmdo` is the page-root scope for _styles.blade.php — every rule in it is
-     written as `.otmdo .otmdo-*`, so removing this class unstyles the page. --}}
 <div class="container-fluid otmdo px-2 py-2">
-    <x-breadcrum title="Session Moderator/Escort Duty" :showBack="true"></x-breadcrum>
 
     {{-- ===================== HEADER ===================== --}}
     <div class="card otmdo-card mb-3">
         <div class="card-body p-3 p-md-4">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                {{-- Title --}}
+                <div>
+                    <h4 class="otmdo-title mb-1">Session Moderator / Escort Duty</h4>
+                    <p class="mb-0 small text-muted">Your assigned moderator &amp; escort duties</p>
+                </div>
 
                 {{-- Right: OT identity (student view) + print --}}
                 <div class="d-flex align-items-start gap-3 otmdo-header-actions">
