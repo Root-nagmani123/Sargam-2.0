@@ -13,18 +13,16 @@ class EstateMeterReadingUnits
     /**
      * Opening reading a month's consumption is measured from.
      *
-     * Normally the saved current reading wins: re-saving a row is treated as taking a later reading,
-     * so only the increment is billed. In the "Edit from List Meter Reading" flow the saved value is
-     * the one being corrected away, so it is not a baseline — the previous period is.
+     * The saved current reading wins whenever there is one — that is the value the screen shows in the
+     * "Electric Meter Reading" column, so Unit stays equal to New Meter Reading minus that column. Only
+     * when nothing is saved yet does the previous period supply the opening reading.
      *
      * @param  int|null  $savedCurrentReading  curr_month_elec_red already stored on the row, null when unset
      * @param  int  $previousPeriodReading  last_month_elec_red, or the possession's opening reading
      */
-    public static function baseline(?int $savedCurrentReading, int $previousPeriodReading, bool $isEditCorrection): int
+    public static function baseline(?int $savedCurrentReading, int $previousPeriodReading): int
     {
-        return ($savedCurrentReading !== null && ! $isEditCorrection)
-            ? $savedCurrentReading
-            : $previousPeriodReading;
+        return $savedCurrentReading !== null ? $savedCurrentReading : $previousPeriodReading;
     }
 
     /**

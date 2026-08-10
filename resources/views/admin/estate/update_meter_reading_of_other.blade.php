@@ -185,9 +185,7 @@ $(document).ready(function() {
     const possessionPks = @json($possessionPks ?? '');
     const prefill = @json($prefill ?? null);
     // List Meter Reading ka Edit link is page ko reading_pk ke saath kholta hai — sirf usi flow me New Meter No. editable.
-    // Scope note: baseline relaxation is deliberately NOT applied on this screen — it is LBSNAA-only by request.
-    // Agar kabhi yahan bhi lagani ho to storeMeterReadingsOther() ka units baseline bhi saath me theek karna hoga,
-    // warna correction 0 units save karegi (wahi bug jo regular flow me tha).
+    // Scope note: input validation ki relaxation deliberately is screen par NAHI hai — wo LBSNAA-only hai (by request).
     const isListEditMode = !!(prefill && prefill.reading_pk);
     const newMeterNoLockAttr = isListEditMode ? '' : ' readonly';
     const newMeterNoLockClass = isListEditMode ? '' : ' bg-light';
