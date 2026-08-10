@@ -36,7 +36,7 @@
         </button>
     </div>
 
-    <div class="card overflow-hidden rounded-3">
+    <div class="card overflow-hidden rounded-1">
         <div class="card-body p-3 p-md-4">
             <div id="request-for-estate-card-body">
 
@@ -105,114 +105,116 @@
 </div>
 
 <!-- Add / Edit Request For Estate modal -->
-<div class="modal fade" id="addEditRequestEstateModal" tabindex="-1" aria-labelledby="addEditRequestEstateModalLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content rounded-3 shadow">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-semibold" id="addEditRequestEstateModalLabel">Add Estate Request</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body pt-2">
-                <div id="addEditRequestEstateFormErrors" class="alert alert-danger d-none" role="alert"><span id="addEditRequestEstateFormErrorsText"></span></div>
-                <form id="formAddEditRequestEstate" method="POST" action="{{ route('admin.estate.request-for-estate.store') }}">
-                    @csrf
+<div class="modal fade ds-modal" id="addEditRequestEstateModal" tabindex="-1" aria-labelledby="addEditRequestEstateModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <form id="formAddEditRequestEstate" method="POST" action="{{ route('admin.estate.request-for-estate.store') }}">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addEditRequestEstateModalLabel">Add Estate Request</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="addEditRequestEstateFormErrors" class="alert alert-danger d-none" role="alert"><span id="addEditRequestEstateFormErrorsText"></span></div>
+
                     <input type="hidden" name="id" id="request_estate_id" value="">
                     <input type="hidden" name="employee_pk" id="request_employee_pk" value="">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label for="modal_req_id" class="form-label">Request ID</label>
+                            <label for="modal_req_id" class="form-label">Request ID <span class="ds-req">*</span></label>
                             <input type="text" class="form-control" id="modal_req_id" name="req_id" maxlength="50" readonly>
                         </div>
                         <div class="col-md-6">
-                            <label for="modal_req_date" class="form-label">Request Date <span class="text-danger">*</span></label>
+                            <label for="modal_req_date" class="form-label">Request Date <span class="ds-req">*</span></label>
                             <input type="date" class="form-control" id="modal_req_date" name="req_date" required readonly>
                             <div class="text-danger small field-error" data-field="req_date" role="alert"></div>
                         </div>
-                        <div class="col-md-4 d-none" id="modal_status_wrap">
-                            <label for="modal_status" class="form-label">Status <span class="text-danger">*</span></label>
+                        <div class="col-md-6 d-none" id="modal_status_wrap">
+                            <label for="modal_status" class="form-label">Status <span class="ds-req">*</span></label>
                             <select class="form-select" id="modal_status" name="status">
                                 <option value="0">Pending</option>
                                 <option value="1">Allotted</option>
                                 <option value="2">Rejected</option>
                             </select>
                         </div>
-                        <div class="col-md-12">
-                            <label for="modal_employee_pk" class="form-label">Employee Name <span class="text-danger">*</span></label>
+                        <div class="col-md-6">
+                            <label for="modal_employee_pk" class="form-label">Employee Name <span class="ds-req">*</span></label>
                             <select class="form-select" id="modal_employee_pk">
-                                <option value="">— Select employee —</option>
+                                <option value="">Select Employee</option>
                             </select>
                             <input type="hidden" id="modal_emp_name" name="emp_name" value="">
                             <div class="text-danger small field-error mt-1" data-field="emp_name" role="alert"></div>
                         </div>
                         <div class="col-md-6">
-                            <label for="modal_employee_id" class="form-label">Employee ID <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="modal_employee_id" name="employee_id" required maxlength="50" readonly>
+                            <label for="modal_employee_id" class="form-label">Employee ID <span class="ds-req">*</span></label>
+                            <input type="text" class="form-control" id="modal_employee_id" name="employee_id" placeholder="Employee ID" required maxlength="50" readonly>
                             <div class="text-danger small field-error" data-field="employee_id" role="alert"></div>
                         </div>
                         <div class="col-md-6">
-                            <label for="modal_emp_designation" class="form-label">Designation <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="modal_emp_designation" name="emp_designation" required maxlength="50" readonly>
+                            <label for="modal_emp_designation" class="form-label">Designation <span class="ds-req">*</span></label>
+                            <input type="text" class="form-control" id="modal_emp_designation" name="emp_designation" placeholder="Designation" required maxlength="50" readonly>
                             <div class="text-danger small field-error" data-field="emp_designation" role="alert"></div>
                         </div>
                         <div class="col-md-6">
-                            <label for="modal_pay_scale" class="form-label">Pay Scale <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="modal_pay_scale" name="pay_scale" required maxlength="50" readonly>
+                            <label for="modal_pay_scale" class="form-label">Pay Scale <span class="ds-req">*</span></label>
+                            <input type="text" class="form-control" id="modal_pay_scale" name="pay_scale" placeholder="Pay Scale" required maxlength="50" readonly>
                             <div class="text-danger small field-error" data-field="pay_scale" role="alert"></div>
                         </div>
-                        <div class="col-md-4">
-                            <label for="modal_doj_pay_scale" class="form-label">DOJ (Pay Scale) <span class="text-danger">*</span></label>
+                        <div class="col-md-6">
+                            <label for="modal_doj_pay_scale" class="form-label">DOJ (Pay Scale) <span class="ds-req">*</span></label>
                             <input type="date" class="form-control" id="modal_doj_pay_scale" name="doj_pay_scale" required readonly>
                             <div class="text-danger small field-error" data-field="doj_pay_scale" role="alert"></div>
                         </div>
-                        <div class="col-md-4">
-                            <label for="modal_doj_academic" class="form-label">DOJ (Academy) <span class="text-danger">*</span></label>
+                        <div class="col-md-6">
+                            <label for="modal_doj_academic" class="form-label">DOJ (Academy) <span class="ds-req">*</span></label>
                             <input type="date" class="form-control" id="modal_doj_academic" name="doj_academic" required readonly>
                             <div class="text-danger small field-error" data-field="doj_academic" role="alert"></div>
                         </div>
-                        <div class="col-md-4">
-                            <label for="modal_doj_service" class="form-label">DOJ (Service) <span class="text-danger">*</span></label>
+                        <div class="col-md-6">
+                            <label for="modal_doj_service" class="form-label">DOJ (Service) <span class="ds-req">*</span></label>
                             <input type="date" class="form-control" id="modal_doj_service" name="doj_service" required readonly>
                             <div class="text-danger small field-error" data-field="doj_service" role="alert"></div>
                         </div>
-                        <div class="col-md-4">
-                            <label for="modal_eligibility_type_pk" class="form-label">Eligibility Type <span class="text-danger">*</span></label>
+                        <div class="col-md-6">
+                            <label for="modal_eligibility_type_pk" class="form-label">Eligibility Type <span class="ds-req">*</span></label>
                             <select class="form-select" id="modal_eligibility_type_pk" name="eligibility_type_pk" required>
-                                <option value="">— Select eligibility type —</option>
+                                <option value="">Select Type</option>
                                 @foreach($eligibilityTypes ?? [] as $pk => $name)
                                     <option value="{{ (string) $pk }}">{{ $name }}</option>
                                 @endforeach
                             </select>
                             <input type="hidden" id="modal_eligibility_type_pk_hidden" value="">
                             <div class="text-danger small field-error" data-field="eligibility_type_pk" role="alert"></div>
-                            
                         </div>
-                        <div class="col-md-12">
+                        <div class="col-12">
                             <label for="modal_remarks" class="form-label">Remarks</label>
-                            <textarea class="form-control" id="modal_remarks" name="remarks" rows="2" maxlength="500" placeholder="Optional remarks"></textarea>
+                            <textarea class="form-control" id="modal_remarks" name="remarks" rows="3" maxlength="500" placeholder="e.g. Lorem Ipsum dolor sit amet"></textarea>
                         </div>
                     </div>
-                    <div class="d-flex gap-2 mt-4">
-                        <button type="submit" class="btn btn-success" id="btnSubmitRequestEstate"><i class="bi bi-save me-2"></i>Save</button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle me-2"></i>Cancel</button>
-                    </div>
-                </form>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn ds-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn ds-btn-submit" id="btnSubmitRequestEstate">Add Estate Request</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
+@include('admin.estate._raise_change_request_modal')
+
 <!-- Delete confirmation modal -->
-<div class="modal fade" id="deleteRequestEstateModal" tabindex="-1" aria-labelledby="deleteRequestEstateModalLabel" aria-hidden="true">
+<div class="modal fade ds-modal ds-modal-confirm" id="deleteRequestEstateModal" tabindex="-1" aria-labelledby="deleteRequestEstateModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-3 shadow">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-semibold" id="deleteRequestEstateModalLabel">Confirm Delete</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-content">
+            <div class="modal-body">
+                <div class="ds-confirm-icon" aria-hidden="true">!</div>
+                <h5 class="ds-confirm-title" id="deleteRequestEstateModalLabel">Confirm Delete?</h5>
+                <p class="ds-confirm-text">Are you sure you want to delete this Estate Request? This action can't be undone.</p>
             </div>
-            <div class="modal-body pt-2">Are you sure you want to delete this estate request? This action cannot be undone.</div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteRequestEstateBtn">Delete</button>
+            <div class="modal-footer">
+                <button type="button" class="btn ds-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn ds-btn-danger" id="confirmDeleteRequestEstateBtn">Yes, Delete</button>
             </div>
         </div>
     </div>
@@ -396,8 +398,35 @@
             var statusEl = document.getElementById('modal_status');
             var eligEl = document.getElementById('modal_eligibility_type_pk');
             if (statusEl) tsModalStatus = initTs(statusEl, { placeholder: 'Pending' });
-            if (eligEl) tsModalEligibility = initTs(eligEl, { placeholder: '— Select eligibility type —' });
+            if (eligEl) tsModalEligibility = initTs(eligEl, { placeholder: 'Select Type' });
         }
+
+        /* ---------- Toast-style inline notice inside the card ---------- */
+        function rfeNotify(type, message) {
+            var $host = $('#request-for-estate-card-body');
+            var cls = type === 'success' ? 'alert-success' : 'alert-danger';
+            var icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill';
+            $host.find('.' + cls).remove();
+            $host.prepend('<div class="alert ' + cls + ' alert-dismissible fade show d-flex align-items-center rounded-1 shadow-sm" role="alert">' +
+                '<i class="bi ' + icon + ' me-2"></i><span class="flex-grow-1">' + message + '</span>' +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+            if (type === 'success') {
+                setTimeout(function() { $host.find('.alert-success').fadeOut(); }, 4000);
+            }
+        }
+
+        /* ---------- Change Request modal ----------
+           Markup + open/submit wiring live in _raise_change_request_modal; this
+           page only decides what to refresh once a request is raised. */
+        document.addEventListener('rfe:change-request-created', function(e) {
+            if ($.fn.DataTable.isDataTable($requestForEstateTable)) {
+                $requestForEstateTable.DataTable().ajax.reload(null, false);
+            }
+            rfeNotify('success', e.detail.message);
+        });
+        document.addEventListener('rfe:change-request-error', function(e) {
+            rfeNotify('error', e.detail.message);
+        });
 
         function loadRequestEstateEmployees(includePk, thenSelectPk, onDone) {
             var url = @json($requestForEstateEmployeesListUrl);
@@ -415,7 +444,7 @@
                     });
                 }
                 if (typeof $.fn.select2 !== 'undefined' && selEl) {
-                    tsModalEmployee = initTs(selEl, { placeholder: '— Select employee —' });
+                    tsModalEmployee = initTs(selEl, { placeholder: 'Select Employee' });
                     // Silent set: cascade/derived-fields change handler yahan fire na ho (caller onDone me manage karta hai).
                     if (thenSelectPk) $sel.val(String(thenSelectPk)).trigger('change.select2');
                 } else if (thenSelectPk) {
@@ -483,6 +512,7 @@
 
         $('#btn-open-add-request-estate').on('click', function() {
             $('#addEditRequestEstateModalLabel').text('Add Estate Request');
+            $('#btnSubmitRequestEstate').text('Add Estate Request');
             $('#request_estate_id').val('');
             $('#request_employee_pk').val('0');
             $('#formAddEditRequestEstate')[0].reset();
@@ -518,6 +548,7 @@
             var rowPk = $btn.data('id');
             var employeePk = $btn.data('employee_pk') || 0;
             $('#addEditRequestEstateModalLabel').text('Edit Estate Request');
+            $('#btnSubmitRequestEstate').text('Update Estate Request');
             $('#request_estate_id').val(rowPk || '');
             $('#request_employee_pk').val(employeePk);
             $('#modal_req_id').val($btn.data('req_id') || '');
@@ -590,10 +621,7 @@
                     if (res.success && res.message) {
                         var isNew = !$('#request_estate_id').val();
                         $('#requestForEstateTable').DataTable().ajax.reload(null, isNew);
-                        var alertHtml = '<div class="alert alert-success alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert"><i class="bi bi-check-circle-fill me-2"></i><span class="flex-grow-1">' + res.message + '</span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
-                        $('#request-for-estate-card-body').find('.alert-success').remove();
-                        $('#request-for-estate-card-body').prepend(alertHtml);
-                        setTimeout(function() { $('#request-for-estate-card-body .alert-success').fadeOut(); }, 4000);
+                        rfeNotify('success', res.message);
                     }
                 },
                 error: function(xhr) {
@@ -647,18 +675,12 @@
                     if (deleteModal) deleteModal.hide();
                     if (res.success) {
                         $('#requestForEstateTable').DataTable().ajax.reload(null, false);
-                        var alertHtml = '<div class="alert alert-success alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert"><i class="bi bi-check-circle-fill me-2"></i><span class="flex-grow-1">' + res.message + '</span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
-                        $('#request-for-estate-card-body').find('.alert-success').remove();
-                        $('#request-for-estate-card-body').prepend(alertHtml);
-                        setTimeout(function() { $('#request-for-estate-card-body .alert-success').fadeOut(); }, 4000);
+                        rfeNotify('success', res.message);
                     }
                 },
                 error: function(xhr) {
                     if (deleteModal) deleteModal.hide();
-                    var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to delete.';
-                    var alertHtml = '<div class="alert alert-danger alert-dismissible fade show" role="alert">' + msg + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
-                    $('#request-for-estate-card-body').find('.alert-danger').remove();
-                    $('#request-for-estate-card-body').prepend(alertHtml);
+                    rfeNotify('error', (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to delete.');
                 }
             });
             deleteRequestEstateUrl = '';

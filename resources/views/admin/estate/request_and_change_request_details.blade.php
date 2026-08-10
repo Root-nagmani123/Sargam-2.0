@@ -1,207 +1,212 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Request for House & Change Request Details - Sargam')
+@section('title', 'View Request - Sargam')
+
+@php
+    // HAC Person (and nothing else) lands here from the HAC Approved list and
+    // must not see / raise change requests.
+    $isHacPersonOnly = hasRole('HAC Person')
+        && ! hasRole('Estate Admin') && ! hasRole('Super Admin')
+        && ! hasRole('Training Induction Admin') && ! hasRole('Training MCTP Admin')
+        && ! hasRole('Training IST') && ! hasRole('Staff') && ! hasRole('Officer Trainee')
+        && ! hasRole('Doctor') && ! hasRole('Guest Faculty') && ! hasRole('Internal Faculty');
+
+    $backUrl = $isHacPersonOnly
+        ? route('admin.estate.change-request-hac-approved')
+        : route('admin.estate.request-for-estate');
+
+    $currentAlot = trim((string) ($requestForHouse->current_alot ?? ''));
+    $hasCurrentAlot = $currentAlot !== '' && $currentAlot !== '—';
+
+    // "Request for Change" is only offered while there is no change request
+    // pending on this house request — same rule the controller enforces.
+    $hasPendingChange = $changeRequestDetails->contains(fn ($c) => (int) ($c->change_ap_dis_status ?? 0) === 0);
+
+    // The controller fills missing values with an em dash; the design uses a
+    // plain hyphen, so normalise both (and empty) to one placeholder.
+    $show = fn ($value) => (blank($value) || trim((string) $value) === '—') ? '-' : $value;
+    $canRaiseChange = ! $isHacPersonOnly && $hasCurrentAlot && ! $hasPendingChange;
+@endphp
 
 @section('setup_content')
-<div class="container-fluid px-2 px-sm-3 px-md-4">
-    <x-breadcrum title="Request for House & Change Request Details" />
-    <x-estate-workflow-stepper current="request-for-estate" />
+<div class="container-fluid rfe-page rfe-view-page">
+    <x-breadcrum title="View Request" :showBack="true" />
+
     <x-session_message />
 
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
-        <h1 class="h4 fw-bold text-dark mb-0">Request for House & Change Request Details</h1>
-        @php
-            $isHacPersonOnly = hasRole('HAC Person') && !hasRole('Estate Admin') && !hasRole('Super Admin') && !hasRole('Training Induction Admin') && !hasRole('Training MCTP Admin') && !hasRole('Training IST') && !hasRole('Staff') && !hasRole('Officer Trainee') && !hasRole('Doctor') && !hasRole('Guest Faculty') && !hasRole('Internal Faculty');
-        @endphp
-        <a href="{{ $isHacPersonOnly ? route('admin.estate.change-request-hac-approved') : route('admin.estate.request-for-estate') }}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-left me-1"></i> {{ $isHacPersonOnly ? 'Back to HAC Approved' : 'Back to Request For Estate' }}
-        </a>
-    </div>
-
-    {{-- Section 1: Request for House (estate_home_request_details) --}}
-    <div class="card shadow-sm border-0 rounded-3 mb-4">
-        <div class="card-header bg-primary bg-opacity-10 border-0 py-3">
-            <h2 class="h5 fw-bold mb-0 text-body">
-                <i class="bi bi-house-door me-2"></i> Request for House
-            </h2>
-        </div>
-        <div class="card-body p-4">
-            <p class="text-body-secondary small mb-4">Original house request details.</p>
-            <div class="row g-3">
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Request ID</label>
-                    <p class="mb-0 fw-medium">{{ $requestForHouse->req_id }}</p>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Request Date</label>
-                    <p class="mb-0 fw-medium">{{ $requestForHouse->req_date }}</p>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Employee Name</label>
-                    <p class="mb-0 fw-medium">{{ $requestForHouse->emp_name }}</p>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Employee ID</label>
-                    <p class="mb-0 fw-medium">{{ $requestForHouse->employee_id }}</p>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Designation</label>
-                    <p class="mb-0 fw-medium">{{ $requestForHouse->emp_designation }}</p>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Pay Scale</label>
-                    <p class="mb-0 fw-medium">{{ $requestForHouse->pay_scale }}</p>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">DOJ (Pay Scale)</label>
-                    <p class="mb-0 fw-medium">{{ $requestForHouse->doj_pay_scale }}</p>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">DOJ (Academy)</label>
-                    <p class="mb-0 fw-medium">{{ $requestForHouse->doj_academic }}</p>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">DOJ (Service)</label>
-                    <p class="mb-0 fw-medium">{{ $requestForHouse->doj_service }}</p>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Current Allotment</label>
-                    <p class="mb-0 fw-medium">{{ $requestForHouse->current_alot }}</p>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Status of Request</label>
-                    <p class="mb-0 fw-medium">{{ $requestForHouse->status }}</p>
-                </div>
-                <!-- <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">App Status</label>
-                    <p class="mb-0 fw-medium">{{ $requestForHouse->app_status }}</p>
-                </div> -->
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">HAC Status</label>
-                    <p class="mb-0 fw-medium">{{ $requestForHouse->hac_status }}</p>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Forward Status</label>
-                    <p class="mb-0 fw-medium">{{ $requestForHouse->f_status }}</p>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Change Status</label>
-                    <p class="mb-0 fw-medium">{{ $requestForHouse->change_status }}</p>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Eligibility Type</label>
-                    <p class="mb-0 fw-medium">{{ $requestForHouse->eligibility_label }}</p>
-                </div>
-                <div class="col-12">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Remarks</label>
-                    <p class="mb-0 fw-medium">{{ $requestForHouse->remarks }}</p>
-                </div>
-                @if(!empty($houseDetails))
-                <div class="col-12">
-                    <hr class="my-4">
-                    <h3 class="h6 fw-bold text-dark mb-3">
-                        <i class="bi bi-building me-2"></i> House Details
-                    </h3>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Campus</label>
-                    <p class="mb-0 fw-medium">{{ $houseDetails->campus_name ?? '—' }}</p>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Block / Building</label>
-                    <p class="mb-0 fw-medium">{{ $houseDetails->block_name ?? '—' }}</p>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Unit Type</label>
-                    <p class="mb-0 fw-medium">{{ $houseDetails->unit_type ?? '—' }}</p>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Unit Sub Type</label>
-                    <p class="mb-0 fw-medium">{{ $houseDetails->unit_sub_type ?? '—' }}</p>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">House / Quarter No.</label>
-                    <p class="mb-0 fw-medium">{{ $houseDetails->house_no ?? '—' }}</p>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Allotment Date</label>
-                    <p class="mb-0 fw-medium">{{ $houseDetails->allotment_date ?? '—' }}</p>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Possession Date</label>
-                    <p class="mb-0 fw-medium">{{ $houseDetails->possession_date ?? '—' }}</p>
-                </div>
-                @endif
+    {{-- Identity banner: the one thing you need to know you're on the right record. --}}
+    <div class="rfe-view-banner mb-3">
+        <h2 class="rfe-view-banner-title">Request ID #{{ $requestForHouse->req_id }}</h2>
+        <div class="rfe-view-banner-meta">
+            <div>
+                <span class="rfe-view-label">Request Date</span>
+                <span class="rfe-view-value">{{ $requestForHouse->req_date }}</span>
+            </div>
+            <div>
+                <span class="rfe-view-label">Employee Name</span>
+                <span class="rfe-view-value">{{ $requestForHouse->emp_name }}</span>
             </div>
         </div>
     </div>
 
-    {{-- Section 2: Change Request Details — hidden for HAC Person only --}}
-    @php
-        $showChangeRequestCard = ! (hasRole('HAC Person') && ! hasRole('Estate Admin') && ! hasRole('Super Admin') && ! hasRole('Training Induction Admin') && ! hasRole('Training MCTP Admin') && ! hasRole('Training IST') && ! hasRole('Staff') && ! hasRole('Officer Trainee') && ! hasRole('Doctor') && ! hasRole('Guest Faculty') && ! hasRole('Internal Faculty'));
-    @endphp
-    @if($showChangeRequestCard)
-    <div class="card shadow-sm border-0 rounded-3">
-        <div class="card-header bg-info bg-opacity-10 border-0 py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
-            <h2 class="h5 fw-bold mb-0 text-body">
-                <i class="bi bi-arrow-left-right me-2"></i> Change Request Details
-            </h2>
-            @php $hasCurrentAlot = trim((string) ($requestForHouse->current_alot ?? '')) !== '' && (string) ($requestForHouse->current_alot ?? '') !== '—'; @endphp
-            @if($hasCurrentAlot)
-                <a href="{{ route('admin.estate.raise-change-request', ['id' => $requestForHouse->pk]) }}" class="btn btn-info btn-sm">
-                    <i class="bi bi-plus-circle me-1"></i> Raise Change Request
-                </a>
-            @endif
+    {{-- Request for House (estate_home_request_details) --}}
+    <div class="card rounded-1 mb-3">
+        <div class="card-body p-3 p-md-4">
+            <div class="rfe-view-grid">
+                @foreach ([
+                    'Request ID' => $requestForHouse->req_id,
+                    'Request Date' => $requestForHouse->req_date,
+                    'Employee Name' => $requestForHouse->emp_name,
+                    'Employee ID' => $requestForHouse->employee_id,
+                    'Designation' => $requestForHouse->emp_designation,
+                    'Pay Scale' => $requestForHouse->pay_scale,
+                    'DOJ (Pay Scale)' => $requestForHouse->doj_pay_scale,
+                    'DOJ (Academy)' => $requestForHouse->doj_academic,
+                    'DOJ (Service)' => $requestForHouse->doj_service,
+                    'Current Allotment' => $requestForHouse->current_alot,
+                    'Status of Request' => $requestForHouse->status,
+                    'HAC Status' => $requestForHouse->hac_status,
+                    'Forward Status' => $requestForHouse->f_status,
+                    'Change Status' => $requestForHouse->change_status,
+                    'Eligibility Type' => $requestForHouse->eligibility_label,
+                    'Remarks' => $requestForHouse->remarks,
+                ] as $label => $value)
+                    <div class="rfe-view-field">
+                        <span class="rfe-view-label">{{ $label }}</span>
+                        <span class="rfe-view-value">{{ $show($value) }}</span>
+                    </div>
+                @endforeach
+            </div>
         </div>
-        <div class="card-body p-4">
-            @if($changeRequestDetails->isEmpty())
-                <p class="text-body-secondary mb-0">No change request has been raised for this house request. Change request is applicable only when the employee already has a house allotted (<code>current alot</code> is set). Use <strong>Raise Change Request</strong> above when the employee has a current allotment. <strong>If you have already returned the house</strong>, you cannot raise a change request for this request.</p>
-            @else
-                <p class="text-body-secondary small mb-4">Change request(s) linked to this house request from.</p>
-                <div class="table-responsive">
-                    <table class="table table-bordered table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="fw-semibold small text-uppercase">Change Req. ID</th>
-                                <th class="fw-semibold small text-uppercase">Requested House</th>
-                                <th class="fw-semibold small text-uppercase">Change Req. Date</th>
-                                <th class="fw-semibold small text-uppercase">Campus</th>
-                                <th class="fw-semibold small text-uppercase">Block</th>
-                                <th class="fw-semibold small text-uppercase">Unit Type</th>
-                                <th class="fw-semibold small text-uppercase">Unit Sub Type</th>
-                                <th class="fw-semibold small text-uppercase">Status</th>
-                                <th class="fw-semibold small text-uppercase">Remarks</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($changeRequestDetails as $chg)
-                                <tr>
-                                    <td>{{ $chg->estate_change_req_ID }}</td>
-                                    <td>{{ $chg->change_house_no }}</td>
-                                    <td>{{ $chg->change_req_date }}</td>
-                                    <td>{{ $chg->campus_name }}</td>
-                                    <td>{{ $chg->block_name }}</td>
-                                    <td>{{ $chg->unit_type }}</td>
-                                    <td>{{ $chg->unit_sub_type }}</td>
-                                    <td>
-                                        @php
-                                            $statusClass = match($chg->change_ap_dis_status) {
-                                                1 => 'success',
-                                                2 => 'danger',
-                                                default => 'warning',
-                                            };
-                                        @endphp
-                                        <span class="badge bg-{{ $statusClass }}">{{ $chg->change_ap_dis_status_label }}</span>
-                                    </td>
-                                    <td class="small">{{ \Illuminate\Support\Str::limit($chg->remarks, 40) }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endif
+    </div>
+
+    {{-- Location Details — only once a possession exists. --}}
+    @if(!empty($houseDetails))
+    <div class="card rounded-1 mb-3">
+        <div class="card-body p-3 p-md-4">
+            <h3 class="rfe-view-section-title">Location Details</h3>
+            <div class="rfe-view-grid">
+                @foreach ([
+                    'Campus' => $houseDetails->campus_name,
+                    'Block / Building' => $houseDetails->block_name,
+                    'Unit Type' => $houseDetails->unit_type,
+                    'Unit Sub Type' => $houseDetails->unit_sub_type,
+                    'House / Quarter No' => $houseDetails->house_no,
+                    'Allotment Date' => $houseDetails->allotment_date,
+                    'Possession Date' => $houseDetails->possession_date,
+                ] as $label => $value)
+                    <div class="rfe-view-field">
+                        <span class="rfe-view-label">{{ $label }}</span>
+                        <span class="rfe-view-value">{{ $show($value) }}</span>
+                    </div>
+                @endforeach
+            </div>
         </div>
     </div>
     @endif
+
+    {{-- Change Request Details --}}
+    @unless($isHacPersonOnly)
+    <div class="card rounded-1">
+        <div class="card-body p-3 p-md-4">
+            <h3 class="rfe-view-section-title">Change Request Details</h3>
+
+            @if($changeRequestDetails->isEmpty())
+                <div class="rfe-view-empty">
+                    <p class="rfe-view-empty-text">
+                        @if($canRaiseChange)
+                            No data to show here, You haven't request for change yet.
+                        @elseif(! $hasCurrentAlot)
+                            No data to show here. A change request can only be raised once a house is allotted.
+                        @else
+                            No data to show here.
+                        @endif
+                    </p>
+                    @if($canRaiseChange)
+                        <a href="{{ route('admin.estate.raise-change-request', ['id' => $requestForHouse->pk]) }}"
+                            class="btn ds-btn-submit btn-raise-change-request" data-id="{{ $requestForHouse->pk }}">
+                            Request for Change
+                        </a>
+                    @endif
+                </div>
+            @else
+                <div class="programme-dt-panel mt-3">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 w-100 programme-dt-table">
+                            <thead>
+                                <tr>
+                                    <th>Change Req. ID</th>
+                                    <th>Requested House</th>
+                                    <th>Change Req. Date</th>
+                                    <th>Campus</th>
+                                    <th>Block</th>
+                                    <th>Unit Type</th>
+                                    <th>Unit Sub Type</th>
+                                    <th>Status</th>
+                                    <th>Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($changeRequestDetails as $chg)
+                                    <tr>
+                                        <td>{{ $chg->estate_change_req_ID }}</td>
+                                        <td>{{ $chg->change_house_no }}</td>
+                                        <td>{{ $chg->change_req_date }}</td>
+                                        <td>{{ $chg->campus_name }}</td>
+                                        <td>{{ $chg->block_name }}</td>
+                                        <td>{{ $chg->unit_type }}</td>
+                                        <td>{{ $chg->unit_sub_type }}</td>
+                                        <td>
+                                            @php
+                                                $tone = match ((int) $chg->change_ap_dis_status) {
+                                                    1 => 'allotted',
+                                                    2 => 'rejected',
+                                                    default => 'pending',
+                                                };
+                                            @endphp
+                                            <span class="badge rounded-1 programme-status-badge rfe-status rfe-status--{{ $tone }}">
+                                                {{ $chg->change_ap_dis_status_label }}
+                                            </span>
+                                        </td>
+                                        <td>{{ $show(\Illuminate\Support\Str::limit($chg->remarks, 40)) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                @if($canRaiseChange)
+                    <div class="d-flex justify-content-end mt-3">
+                        <a href="{{ route('admin.estate.raise-change-request', ['id' => $requestForHouse->pk]) }}"
+                            class="btn ds-btn-submit btn-raise-change-request" data-id="{{ $requestForHouse->pk }}">
+                            Request for Change
+                        </a>
+                    </div>
+                @endif
+            @endif
+        </div>
+    </div>
+
+    @include('admin.estate._raise_change_request_modal')
+    @endunless
 </div>
 @endsection
+
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
+@endpush
+
+@push('scripts')
+<script>
+$(function() {
+    // A raised change request changes this page's data, so reload it.
+    document.addEventListener('rfe:change-request-created', function() {
+        window.location.reload();
+    });
+    document.addEventListener('rfe:change-request-error', function(e) {
+        alert(e.detail.message);
+    });
+});
+</script>
+@endpush

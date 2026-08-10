@@ -218,3 +218,92 @@
         gap: 0.6rem;
     }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   View Request page (admin/estate/request-details/{id})
+   A read-only record: label above value, four to a row, grouped into cards.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Identity banner — the record you are looking at, called out above the detail. */
+.rfe-view-page .rfe-view-banner {
+    padding: var(--ds-space-3) var(--ds-space-4);
+    background: #eef2ff;
+    border: 1px solid #dbe3ff;
+    border-radius: var(--ds-radius-2, 8px);
+}
+
+.rfe-view-page .rfe-view-banner-title {
+    margin: 0 0 var(--ds-space-2);
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--ds-primary, #004a93);
+}
+
+.rfe-view-page .rfe-view-banner-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--ds-space-2) var(--ds-space-4);
+    max-width: 640px;
+}
+
+/* Field grid — four columns on desktop, collapsing with the viewport. */
+.rfe-view-page .rfe-view-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--ds-space-4) var(--ds-space-3);
+}
+
+@media (max-width: 1199.98px) {
+    .rfe-view-page .rfe-view-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 767.98px) {
+    .rfe-view-page .rfe-view-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 479.98px) {
+    .rfe-view-page .rfe-view-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.rfe-view-page .rfe-view-field,
+.rfe-view-page .rfe-view-banner-meta > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.rfe-view-page .rfe-view-label {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--ds-ink-muted, #667085);
+    line-height: 1.3;
+}
+
+.rfe-view-page .rfe-view-value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--ds-ink, #1f2937);
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.rfe-view-page .rfe-view-section-title {
+    margin: 0 0 var(--ds-space-4);
+    font-size: 1.0625rem;
+    font-weight: 700;
+    color: var(--ds-ink, #1f2937);
+}
+
+/* Empty state for a section with nothing recorded yet. */
+.rfe-view-page .rfe-view-empty {
+    padding: var(--ds-space-4) var(--ds-space-3) var(--ds-space-3);
+    text-align: center;
+    border-top: 1px solid var(--ds-line, #e5e7eb);
+}
+
+.rfe-view-page .rfe-view-empty-text {
+    margin-bottom: var(--ds-space-4);
+    font-size: 0.875rem;
+    color: var(--ds-ink-muted, #667085);
+}

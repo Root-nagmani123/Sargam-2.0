@@ -205,8 +205,15 @@ class EstateRequestForEstateDataTable extends DataTable
                 $raiseChangeUrl = $canRaiseChangeRequest
                     ? route('admin.estate.raise-change-request', ['id' => $row->pk])
                     : '';
+                // href stays the standalone page so ctrl-click / no-JS still works;
+                // the listing's JS intercepts the click and opens the modal instead.
                 $raiseChangeLink = $raiseChangeUrl !== ''
-                    ? self::actionLink('swap_horiz', 'Change Request', 'change', ['href' => $raiseChangeUrl, 'title' => 'Raise Change Request'])
+                    ? self::actionLink('swap_horiz', 'Change Request', 'change', [
+                        'href' => $raiseChangeUrl,
+                        'title' => 'Raise Change Request',
+                        'class' => 'btn-raise-change-request',
+                        'attrs' => 'data-id="' . (int) $row->pk . '"',
+                    ])
                     : '';
                 // Lock row (no Edit/Delete) when request is effectively Allotted or Returned.
                 // Some legacy/self-service records may remain status=0 even after allotment,
@@ -285,6 +292,8 @@ class EstateRequestForEstateDataTable extends DataTable
                         $selfChangeRequestButton = self::actionLink('swap_horiz', 'Change Request', 'change', [
                             'href' => $selfCrUrl,
                             'title' => 'Raise Change Request',
+                            'class' => 'btn-raise-change-request',
+                            'attrs' => 'data-id="' . (int) $row->pk . '"',
                         ]);
                     }
                 }

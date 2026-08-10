@@ -1777,15 +1777,53 @@ class EstateController extends Controller
      */
     public function raiseChangeRequest($id)
     {
-        $id = (int) $id;
+        $payload = $this->raiseChangeRequestPayload((int) $id);
+
+        if (isset($payload['error'])) {
+            return $payload['redirect']->with('error', $payload['error']);
+        }
+
+        return view('admin.estate.raise_change_request', $payload + ['inModal' => false]);
+    }
+
+    /**
+     * Change Request modal body for the Request For Estate listing.
+     * Renders the same partial (and the same payload) as the full page.
+     */
+    public function raiseChangeRequestModal($id)
+    {
+        $payload = $this->raiseChangeRequestPayload((int) $id);
+
+        if (isset($payload['error'])) {
+            return response()->json(['success' => false, 'message' => $payload['error']], 422);
+        }
+
+        return view('admin.estate._raise_change_request_form', $payload + ['inModal' => true]);
+    }
+
+    /**
+     * Shared data for the Raise Change Request form (page + modal).
+     *
+     * Returns either the view data, or ['error' => …, 'redirect' => …] when the
+     * request isn't eligible — so both entry points enforce the same rules.
+     *
+     * @return array<string, mixed>
+     */
+    private function raiseChangeRequestPayload(int $id): array
+    {
         $homeReq = DB::table('estate_home_request_details')->where('pk', $id)->first();
         if (! $homeReq) {
-            return redirect()->route('admin.estate.request-for-estate')->with('error', 'Request not found.');
+            return [
+                'error' => 'Request not found.',
+                'redirect' => redirect()->route('admin.estate.request-for-estate'),
+            ];
         }
         $currentAlot = trim((string) ($homeReq->current_alot ?? ''));
         if ($currentAlot === '') {
-            return redirect()->route('admin.estate.request-details', ['id' => $id])
-                ->with('error', 'Change request is only allowed when the employee already has a house allotted (Current Allotment must be set).');
+            return [
+                'error' => 'Change request is only allowed when the employee already has a house allotted (Current Allotment must be set).',
+                'redirect' => redirect()->route('admin.estate.request-details', ['id' => $id]),
+            ];
         }
 
         // Prevent multiple *pending* change requests for the same house request.
@@ -1796,8 +1834,10 @@ class EstateController extends Controller
             ->where('change_ap_dis_status', 0)
             ->exists();
         if ($hasPendingChange) {
-            return redirect()->route('admin.estate.request-details', ['id' => $id])
-                ->with('error', 'A change request is already pending for this house request. You cannot raise another one until it is decided.');
+            return [
+                'error' => 'A change request is already pending for this house request. You cannot raise another one until it is decided.',
+                'redirect' => redirect()->route('admin.estate.request-details', ['id' => $id]),
+            ];
         }
 
         $eligibilityMap = [61 => 'Type-I', 62 => 'Type-II', 63 => 'Type-III', 64 => 'Type-IV', 65 => 'Type-V', 66 => 'Type-VI', 69 => 'Type-IX', 70 => 'Type-X', 71 => 'Type-XI', 73 => 'Type-XIII'];
@@ -1831,7 +1871,7 @@ class EstateController extends Controller
         $buildings = DB::table('estate_block_master')->orderBy('block_name')->get(['pk', 'block_name']);
         $unitSubTypes = DB::table('estate_unit_sub_type_master')->orderBy('unit_sub_type')->get(['pk', 'unit_sub_type']);
 
-        return view('admin.estate.raise_change_request', [
+        return [
             'detail' => $detail,
             'estateCampuses' => $estateCampuses,
             'unitTypes' => $unitTypes,
@@ -1839,7 +1879,7 @@ class EstateController extends Controller
             'unitSubTypes' => $unitSubTypes,
             'houseOptions' => collect(),
             'formAction' => route('admin.estate.raise-change-request.store'),
-        ]);
+        ];
     }
 
     /**
@@ -1858,15 +1898,27 @@ class EstateController extends Controller
             'remarks' => 'nullable|string|max:500',
         ]);
 
+        // The modal on the listing posts over AJAX; the standalone page posts a
+        // normal form. Answer in whichever shape the caller asked for.
+        $wantsJson = $request->ajax() || $request->wantsJson();
+        $fail = function (string $message, int $homeReqPk) use ($wantsJson) {
+            if ($wantsJson) {
+                return response()->json(['success' => false, 'message' => $message], 422);
+            }
+
+            return $homeReqPk > 0
+                ? redirect()->route('admin.estate.request-details', ['id' => $homeReqPk])->with('error', $message)
+                : redirect()->route('admin.estate.request-for-estate')->with('error', $message);
+        };
+
         $homeReqPk = (int) $validated['estate_home_req_details_pk'];
         $homeReq = DB::table('estate_home_request_details')->where('pk', $homeReqPk)->first();
         if (! $homeReq) {
-            return redirect()->route('admin.estate.request-for-estate')->with('error', 'Request not found.');
+            return $fail('Request not found.', 0);
         }
         $currentAlot = trim((string) ($homeReq->current_alot ?? ''));
         if ($currentAlot === '') {
-            return redirect()->route('admin.estate.request-details', ['id' => $homeReqPk])
-                ->with('error', 'Change request is only allowed when the employee already has a house allotted.');
+            return $fail('Change request is only allowed when the employee already has a house allotted.', $homeReqPk);
         }
 
         // Prevent duplicate *pending* change requests for the same house request.
@@ -1875,8 +1927,7 @@ class EstateController extends Controller
             ->where('change_ap_dis_status', 0)
             ->exists();
         if ($hasPendingChange) {
-            return redirect()->route('admin.estate.request-details', ['id' => $homeReqPk])
-                ->with('error', 'A change request is already pending for this house request. You cannot raise another one until it is decided.');
+            return $fail('A change request is already pending for this house request. You cannot raise another one until it is decided.', $homeReqPk);
         }
 
         $changeReqId = $this->getNextChangeRequestId();
@@ -1902,9 +1953,19 @@ class EstateController extends Controller
         DB::table('estate_change_home_req_details')->insert($insertData);
         DB::table('estate_home_request_details')->where('pk', $homeReqPk)->update(['change_status' => 1]);
 
+        // The listing caches its rows — a raised change request changes the
+        // Change Request Status column, so invalidate it.
+        EstateRequestForEstateDataTable::bumpListingCacheEpoch();
+
+        $message = 'Change request raised successfully. It will appear in HAC Approved for approval.';
+
+        if ($wantsJson) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+
         return redirect()
             ->route('admin.estate.request-details', ['id' => $homeReqPk])
-            ->with('success', 'Change request raised successfully. It will appear in HAC Approved for approval.');
+            ->with('success', $message);
     }
 
     /**

@@ -1625,6 +1625,7 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     Route::get('change-request/details/{id?}', [EstateController::class, 'changeRequestDetails'])->name('change-request-details');
     Route::post('change-request/details/{id}', [EstateController::class, 'updateChangeRequestDetails'])->name('change-request-details.update');
     Route::get('change-request/details/modal/{id}', [EstateController::class, 'changeRequestDetailsModal'])->name('change-request-details.modal');
+    Route::get('raise-change-request/modal/{id}', [EstateController::class, 'raiseChangeRequestModal'])->name('raise-change-request.modal');
     Route::get('raise-change-request/{id}', [EstateController::class, 'raiseChangeRequest'])->name('raise-change-request');
     Route::post('raise-change-request', [EstateController::class, 'storeRaiseChangeRequest'])->name('raise-change-request.store');
     Route::get('request-for-house', [EstateController::class, 'requestForHouse'])->name('request-for-house');
