@@ -685,12 +685,8 @@ $(document).ready(function() {
         });
     }
 
-    function bindGmTableUi(table) {
-        setupGmColumns(table);
-    }
-
     $('#group-mapping-table').on('init.dt', function() {
-        bindGmTableUi($(this).DataTable());
+        setupGmColumns($(this).DataTable());
     });
 
     setTimeout(function() {
@@ -699,7 +695,7 @@ $(document).ready(function() {
         }
 
         var table = $('#group-mapping-table').DataTable();
-        bindGmTableUi(table);
+        setupGmColumns(table);
 
         setActiveFilterButton($('#filterGroupActive'));
 

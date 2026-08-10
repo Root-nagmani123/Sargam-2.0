@@ -262,6 +262,26 @@
         var $length = $wrapper.find('.dataTables_length').first();
         var $info = $wrapper.find('.dataTables_info').first();
 
+        // Two bail-outs, both BEFORE the $footer.empty() below. That empty() is
+        // destructive and irreversible: the nodes leave the document, and
+        // DataTables only ever updates its EXISTING feature nodes on redraw, so
+        // anything wiped here never comes back on its own.
+        //
+        // (1) Nothing in the wrapper to relocate — DataTables hasn't rendered its
+        //     controls yet. Return WITHOUT setting footerKey so the later pass
+        //     retries, instead of locking in a permanently empty footer.
+        if (!$paginate.length && !$length.length && !$info.length) {
+            return;
+        }
+
+        // (2) The footer already has content and we don't hold the pager, so
+        //     something else (a page-local enhancer that ran first) populated it
+        //     and owns those nodes. Rebuilding from what's left in the wrapper
+        //     could only lose controls — leave it alone.
+        if ($footer.children().length && !$paginate.length) {
+            return;
+        }
+
         var $pagCol = $('<div class="programme-dt-pagination"></div>');
         var $countCol = $('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>');
 
