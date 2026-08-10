@@ -52,6 +52,10 @@
     background: var(--bs-secondary-bg, #eef1f4);
     color: var(--ds-ink);
 }
+.sme-form .select2-container--default.sme-frozen-select2 .select2-selection--single {
+    background: var(--bs-secondary-bg, #eef1f4);
+    cursor: not-allowed;
+}
 .sme-form textarea.form-control {
     min-height: 88px;
     resize: vertical;
@@ -128,7 +132,7 @@
 
                     <div class="col-md-6">
                         <label class="form-label">Exemption Category</label>
-                        <select name="exemption_category_master_pk" class="form-select">
+                        <select name="exemption_category_master_pk" id="smeExemptionCategory" class="form-select">
                             <option value="">Select Category</option>
                             @foreach($categories as $cat)
                             <option value="{{ $cat->pk }}" {{ old('exemption_category_master_pk') == $cat->pk ? 'selected' : '' }}>
@@ -295,6 +299,28 @@ $(document).ready(function() {
     }
     $('#smeMedicalCase').on('change', applyPtTimesIfExempted);
     $('#courseDropdown').on('change', applyPtTimesIfExempted);
+
+    // Exemption Category = Cat-A (From PT) -> force Medical Case to "PT Exemption" and freeze it.
+    // Kept enabled (not `disabled`) so the value still posts to the server; the dropdown
+    // is just blocked from opening while frozen.
+    function applyMedicalCaseLockForCategory() {
+        var $category = $('#smeExemptionCategory');
+        var $medicalCase = $('#smeMedicalCase');
+        if (!$category.length || !$medicalCase.length) return;
+        var isCatAFromPt = $category.find('option:selected').text().trim() === 'Cat-A (From PT)';
+        $medicalCase.data('smeFrozen', isCatAFromPt);
+        $medicalCase.next('.select2-container').toggleClass('sme-frozen-select2', isCatAFromPt);
+        if (isCatAFromPt) {
+            $medicalCase.val('PT Exemption');
+            if ($medicalCase.hasClass('select2-hidden-accessible')) { $medicalCase.trigger('change.select2'); }
+            applyPtTimesIfExempted();
+        }
+    }
+    $('#smeExemptionCategory').on('change', applyMedicalCaseLockForCategory);
+    $(document).on('select2:opening', '#smeMedicalCase', function(e) {
+        if ($(this).data('smeFrozen')) { e.preventDefault(); }
+    });
+    applyMedicalCaseLockForCategory();
 
     // Days = inclusive span between arrival and departure dates.
     function recalcDays() {
