@@ -117,6 +117,8 @@
                 <input type="hidden" name="reading_block_id" id="reading_block_id" value="">
                 <input type="hidden" name="reading_unit_type_id" id="reading_unit_type_id" value="">
                 <input type="hidden" name="reading_unit_sub_type_id" id="reading_unit_sub_type_id" value="">
+                {{-- Set only when opened via Edit from List Meter Reading: that row is a correction, so baseline check is skipped. --}}
+                <input type="hidden" name="edit_reading_pk" id="edit_reading_pk" value="{{ $prefill['reading_pk'] ?? '' }}">
 
                 <div class="table-responsive mt-4">
                     <table class="table table-bordered table-hover align-middle" id="updateMeterReadingTable">
@@ -188,6 +190,8 @@ $(document).ready(function() {
     const blocksUrl = "{{ route('admin.estate.update-meter-reading.blocks') }}";
     const unitSubTypesUrl = "{{ route('admin.estate.update-meter-reading.unit-sub-types') }}";
     const prefill = @json($prefill ?? null);
+    // Edit from List Meter Reading opens this same page with reading_pk — us flow me baseline validation nahi lagti.
+    const isListEditMode = !!(prefill && prefill.reading_pk);
 
     // For this grid we avoid DataTables to keep typing smooth and prevent focus jumps.
     let dataTable = null;
@@ -527,6 +531,8 @@ $(document).ready(function() {
     }
 
     function isReadingBelowMinAllowed($inp, currReading) {
+        // Edit from List Meter Reading: purani galat reading theek karne ke liye khulta hai, isliye koi min baseline nahi.
+        if (isListEditMode) return false;
         if (currReading === null || isNaN(currReading)) return false;
         const minAllowed = getMinAllowedForReadingInput($inp);
         if (minAllowed === null || currReading >= minAllowed) return false;

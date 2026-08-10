@@ -6749,10 +6749,15 @@ class EstateController extends Controller
             'reading_block_id' => 'nullable|integer|exists:estate_block_master,pk',
             'reading_unit_type_id' => 'nullable|integer|exists:estate_unit_type_master,pk',
             'reading_unit_sub_type_id' => 'nullable|integer|exists:estate_unit_sub_type_master,pk',
+            'edit_reading_pk' => 'nullable|integer|exists:estate_month_reading_details,pk',
         ]);
 
         $validator->after(function ($v) use ($request) {
             $readings = (array) $request->input('readings', []);
+            // Set only when this page was opened via Edit from List Meter Reading: that row is a correction of an
+            // already-saved reading, so the min-baseline rule is skipped for it (other rows still validate).
+            $editReadingPkRaw = $request->input('edit_reading_pk');
+            $editReadingPk = (is_numeric($editReadingPkRaw) && (int) $editReadingPkRaw > 0) ? (int) $editReadingPkRaw : null;
             $selectedPks = [];
             foreach ($readings as $item) {
                 if (is_array($item) && isset($item['selected']) && (string) $item['selected'] === '1' && ! empty($item['pk'])) {
@@ -6822,6 +6827,10 @@ class EstateController extends Controller
                 }
 
                 $pk = isset($item['pk']) ? (int) $item['pk'] : 0;
+                // Edit flow from List Meter Reading: correcting a saved reading, so no baseline restriction on that row.
+                if ($editReadingPk !== null && $pk === $editReadingPk) {
+                    continue;
+                }
                 $row = $rows->get($pk);
                 if (! $row) {
                     continue;
