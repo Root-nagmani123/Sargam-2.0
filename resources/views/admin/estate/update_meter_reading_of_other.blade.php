@@ -118,11 +118,11 @@
                                 <th style="width:2.5rem;"><input type="checkbox" class="form-check-input" id="select_all" title="Select all"></th>
                                 <th>House No.</th>
                                 <th>Name</th>
-                                <th>Last month date</th>
-                                <th>Meter No.</th>
-                                <th>Last Month Electric Meter Reading</th>
+                                <th>Last Month Electric Reading Date</th>
+                                <th>Old Meter No.</th>
+                                <th>Electric Meter Reading</th>
                                 <th>New Meter No.</th>
-                                <th>Current Month Electric Meter Reading <span class="text-danger">*</span></th>
+                                <th>New Meter Reading <span class="text-danger">*</span></th>
                                 <th>Unit</th>
                             </tr>
                         </thead>
@@ -184,6 +184,11 @@ $(document).ready(function() {
     const allUnitTypes = @json($unitTypes ?? []);
     const possessionPks = @json($possessionPks ?? '');
     const prefill = @json($prefill ?? null);
+    // List Meter Reading ka Edit link is page ko reading_pk ke saath kholta hai — sirf usi flow me New Meter No. editable.
+    const isListEditMode = !!(prefill && prefill.reading_pk);
+    const newMeterNoLockAttr = isListEditMode ? '' : ' readonly';
+    const newMeterNoLockClass = isListEditMode ? '' : ' bg-light';
+    const newMeterNoPlaceholder = isListEditMode ? 'Enter new meter no.' : '';
 
     let dataTable = null;
     let lastInvalidReadingAlertAt = 0;
@@ -356,10 +361,10 @@ $(document).ready(function() {
                         '</td>' +
                         '<td class="other-dual-col other-dual-newmeter-col">' +
                             '<div class="other-dual-seg" data-slot="1">' +
-                            '<input type="text" class="form-control form-control-sm new-meter-no" name="readings['+i0+'][new_meter_no]" value="'+ escAttr(nm1) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m1.old_meter_no || '') +'">' +
+                            '<input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+i0+'][new_meter_no]" value="'+ escAttr(nm1) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m1.old_meter_no || '') +'"'+ newMeterNoLockAttr +'>' +
                             '</div>' +
                             '<div class="other-dual-seg" data-slot="2">' +
-                            '<input type="text" class="form-control form-control-sm new-meter-no" name="readings['+i1+'][new_meter_no]" value="'+ escAttr(nm2) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m2.old_meter_no || '') +'">' +
+                            '<input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+i1+'][new_meter_no]" value="'+ escAttr(nm2) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m2.old_meter_no || '') +'"'+ newMeterNoLockAttr +'>' +
                             '</div>' +
                         '</td>' +
                         '<td class="other-dual-col other-dual-reading-col">' +
@@ -404,7 +409,7 @@ $(document).ready(function() {
                     '<td class="text-nowrap">'+ escAttr(row.last_reading_date || 'N/A') +'</td>' +
                     '<td>'+ escAttr(oldDisp) +'</td>' +
                     '<td>'+ escAttr(lastElecDisp) +'</td>' +
-                    '<td><input type="text" class="form-control form-control-sm new-meter-no" name="readings['+idx+'][new_meter_no]" value="'+ escAttr(newMeterNoPrefill) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(oldMeterNoStr) +'"></td>' +
+                    '<td><input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+idx+'][new_meter_no]" value="'+ escAttr(newMeterNoPrefill) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(oldMeterNoStr) +'"'+ newMeterNoLockAttr +'></td>' +
                     '<td><input type="number" class="form-control form-control-sm curr-reading" name="readings['+idx+'][curr_month_elec_red]" value="" min="0" step="1" placeholder="Enter" inputmode="numeric" data-last-reading="'+ (lastReading !== null ? lastReading : '') +'" data-existing-curr="'+ existingCurrStored.replace(/"/g, '&quot;') +'">' +
                     '<input type="hidden" name="readings['+idx+'][pk]" value="'+ row.pk +'">' +
                     '<input type="hidden" name="readings['+idx+'][meter_slot]" value="'+ slot +'"></td>' +
