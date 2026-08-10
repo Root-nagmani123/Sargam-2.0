@@ -333,12 +333,12 @@ class StudentMedicalExemptionController extends Controller
         // (mirrors Course Master's active/archived split). The course filter
         // dropdown swaps between these two lists as the tab changes.
         $courses = CourseMaster::where('active_inactive', '1')
-            ->where('end_date', '>', now())
+            ->where('end_date', '>=', now()->toDateString())
             ->orderBy('course_name', 'asc')
             ->get();
 
         $archivedCourses = CourseMaster::where('active_inactive', '1')
-            ->where('end_date', '<', now())
+            ->where('end_date', '<', now()->toDateString())
             ->orderBy('course_name', 'asc')
             ->get();
 
@@ -363,7 +363,7 @@ class StudentMedicalExemptionController extends Controller
     // Every active (non-expired) course — the medical-exemption form is not
     // role-scoped by course (a doctor can raise an exemption for any current course).
     $courses = CourseMaster::where('active_inactive', '1')
-        ->where('end_date', '>', now())
+        ->where('end_date', '>=', now()->toDateString())
         ->orderBy('course_name')
         ->get();
 
@@ -461,7 +461,7 @@ class StudentMedicalExemptionController extends Controller
         if (!empty($data_course_id)) {
             $courses = $courses->whereIn('pk', $data_course_id);
         }
-        $courses = $courses->where('end_date', '>', now())
+        $courses = $courses->where('end_date', '>=', now()->toDateString())
             ->get();
 
         $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
@@ -712,7 +712,7 @@ class StudentMedicalExemptionController extends Controller
     {
         $record = StudentMedicalExemption::findOrFail(decrypt($id));
         $courses = CourseMaster::where('active_inactive', '1')
-            ->where('end_date', '>', now())
+            ->where('end_date', '>=', now()->toDateString())
             ->orderBy('course_name')
             ->get();
 

@@ -112,7 +112,7 @@
                 <div class="oath-line">
                     <span class="oath-line__lbl" style="min-width:60px;">Dated</span>
                     <input type="date" name="declaration_date" class="blank blank--sm"
-                           value="{{ $val('declaration_date') }}" data-mirror="date">
+                           value="{{ old('declaration_date', fc_document_date('iso')) }}" data-mirror="date" readonly>
                 </div>
 
                 <p class="oath-note">(Conscientious objectors of Oath-taking may make a solemn affirmation in the form indicated above).</p>
@@ -162,6 +162,8 @@
         </div>
 
         {{-- Signature upload (optional — same behaviour as every other doc form) --}}
+        {{-- Signature upload section — commented out per request (hidden on the fill form) --}}
+        {{--
         @if(! empty($template['signatures']))
             <div class="card fc-card border-0 shadow-sm mb-3">
                 <div class="card-header bg-white py-3">
@@ -193,6 +195,7 @@
                 </div>
             </div>
         @endif
+        --}}
 
         <div class="d-flex justify-content-between mb-5">
             <a href="{{ route('fc-reg.forms.step', [$form, $step]) }}" class="btn btn-outline-secondary">

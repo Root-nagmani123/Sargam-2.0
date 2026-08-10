@@ -206,6 +206,12 @@ class FcExemptionMasterController extends Controller
                 'e.Exemption_name',
                 'r.exemption_count'
             )
+            // Selected conditionally: naming it outright throws SQLSTATE[42S22] wherever
+            // 2026_08_02_000000_add_fc_prev_comp_doc_to_fc_registration_master has not run.
+            ->when(
+                fc_schema_has_column('fc_registration_master', 'fc_Prev_comp_doc'),
+                fn ($q) => $q->addSelect('r.fc_Prev_comp_doc')
+            )
             ->orderBy('r.created_date')
             ->whereIn('r.application_type', [1, 2]);  // Only show records with either registration or exemption
         // ->where('e.visible', 1);

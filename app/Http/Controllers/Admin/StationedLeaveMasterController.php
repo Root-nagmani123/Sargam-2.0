@@ -502,7 +502,7 @@ class StationedLeaveMasterController extends Controller
 
         $query = CourseMaster::query()
             ->where('active_inactive', 1)
-            ->where('end_date', '>', now())
+            ->where('end_date', '>=', now()->toDateString())
             ->orderBy('course_name');
 
         if ($courseIds !== null) {

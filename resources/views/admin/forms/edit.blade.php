@@ -81,25 +81,56 @@
                     </div>
                     <div class="col-xl-3 col-lg-6">
                         <label class="form-label small fw-semibold mb-1" for="fcEditConsolidationTable">Consolidation / Tracking Table</label>
-                        <select name="consolidation_table" id="fcEditConsolidationTable" class="form-select fc-form-settings__field rounded-2">
+                        <select name="consolidation_table" id="fcEditConsolidationTable" class="form-select fc-form-settings__field rounded-2" {{ config('fc.form_tracking_table_enabled') ? '' : 'disabled' }}>
                             <option value="">-- None (no step tracking) --</option>
                             @foreach($tables as $table)
                                 <option value="{{ $table }}" {{ $form->consolidation_table === $table ? 'selected' : '' }}>{{ $table }}</option>
                             @endforeach
                         </select>
-                        <small class="text-muted d-block mt-2 pt-2 border-top border-light-subtle">Existing table to track step completion. Leave blank if not needed.</small>
+                        <small class="text-muted d-block mt-2 pt-2 border-top border-light-subtle">
+                            @if(config('fc.form_tracking_table_enabled'))
+                                Existing table to track step completion. Leave blank if not needed.
+                            @else
+                                <i class="bi bi-lock-fill me-1"></i>Locked — repointing this makes every trainee's step progress read from a different table.
+                            @endif
+                        </small>
+                    </div>
+                    <div class="col-xl-3 col-lg-6">
+                        <label class="form-label small fw-semibold mb-1" for="formRequiresAllSteps">Registration Complete When</label>
+                        <div class="d-flex align-items-center gap-2 flex-wrap fc-form-settings__field rounded-2">
+                            <div class="form-check form-switch mb-0 flex-shrink-0">
+                                <input class="form-check-input" type="checkbox" name="registration_requires_all_steps" value="1"
+                                       id="formRequiresAllSteps" {{ $form->registration_requires_all_steps ? 'checked' : '' }}
+                                       {{ config('fc.form_completion_rule_enabled') ? '' : 'disabled' }}>
+                                <label class="form-check-label small fw-semibold" for="formRequiresAllSteps">All steps done</label>
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mt-2 pt-2 border-top border-light-subtle">
+                            Off (default): a trainee counts as registered after the first two steps.
+                            On: only after every step that applies to them — steps marked “not applicable” are excluded.
+                            Affects who appears in Migrate Students. Leave off for existing courses.
+                            @unless(config('fc.form_completion_rule_enabled'))
+                                <span class="d-block mt-1"><i class="bi bi-lock-fill me-1"></i>Locked.</span>
+                            @endunless
+                        </small>
                     </div>
                     <div class="col-xl-3 col-lg-6">
                         <label class="form-label small fw-semibold mb-1" for="formActive">Status</label>
                         <div class="d-flex align-items-center gap-2 flex-wrap fc-form-settings__field fc-form-settings__actions-cell rounded-2">
                             <div class="form-check form-switch mb-0 flex-shrink-0">
-                                <input class="form-check-input" type="checkbox" name="is_active" value="1" id="formActive" {{ $form->is_active ? 'checked' : '' }}>
+                                <input class="form-check-input" type="checkbox" name="is_active" value="1" id="formActive" {{ $form->is_active ? 'checked' : '' }}
+                                       {{ config('fc.form_activate_enabled') ? '' : 'disabled' }}>
                                 <label class="form-check-label small fw-semibold" for="formActive">Active</label>
                             </div>
                             <button type="submit" class="btn btn-primary btn-sm text-nowrap">
                                 <i class="bi bi-check-lg me-1"></i>Save changes
                             </button>
                         </div>
+                        @unless(config('fc.form_activate_enabled'))
+                            <small class="text-muted d-block mt-2 pt-2 border-top border-light-subtle">
+                                <i class="bi bi-lock-fill me-1"></i>Locked — switching this off removes the form from every trainee at once.
+                            </small>
+                        @endunless
                     </div>
                 </div>
 
@@ -118,9 +149,13 @@
     <div class="card border-0 shadow-sm mb-4" style="border-radius:10px;">
         <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
             <h6 class="mb-0 text-uppercase small fw-bold text-muted">Steps ({{ $form->steps->count() }})</h6>
-            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addStepModal">
-                <i class="bi bi-plus-circle me-1"></i>Add Step
-            </button>
+            @if(config('fc.form_step_add_enabled'))
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addStepModal">
+                    <i class="bi bi-plus-circle me-1"></i>Add Step
+                </button>
+            @else
+                <span class="small text-muted"><i class="bi bi-lock-fill me-1"></i>Adding steps is locked</span>
+            @endif
         </div>
         <div class="card-body p-0">
             @if($form->steps->isEmpty())
@@ -146,7 +181,12 @@
                                 <th>Target Table</th>
                                 <th>Tracker</th>
                                 <th>Active</th>
-                                <th style="width:280px;">Actions</th>
+                                <th style="width:280px;">
+                                    Actions
+                                    @unless(config('fc.form_step_actions_enabled'))
+                                        <i class="bi bi-lock-fill text-muted ms-1" title="Editing a step and its fields is locked"></i>
+                                    @endunless
+                                </th>
                             </tr>
                         </thead>
                         <tbody id="stepsList">
@@ -160,6 +200,7 @@
                                         'target_table' => $step->target_table,
                                         'completion_column' => $step->completion_column,
                                         'tracker_column' => $step->tracker_column,
+                                        'applicability_rule' => $step->applicability_rule,
                                         'description' => $step->description,
                                         'icon' => $step->icon ?: 'bi-file-text',
                                         'is_active' => (bool) $step->is_active,
@@ -184,27 +225,38 @@
                                         @endif
                                     </td>
                                     <td>
-                                        <button type="button"
-                                            class="btn btn-sm btn-outline-secondary py-0 px-2"
-                                            title="Edit step name, slug, tables, tracker…"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#editStepModal"
-                                            data-step-b64="{{ $stepEditB64 }}">
-                                            <i class="bi bi-gear me-1"></i>Step
-                                        </button>
-                                        <a href="{{ route('fc-reg.admin.form-builder.step', $step) }}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit fields for this step">
-                                            <i class="bi bi-pencil me-1"></i>Fields
-                                        </a>
-                                        <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveStep({{ $step->id }}, 'up')" title="Move Up">
-                                            <i class="bi bi-arrow-up"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveStep({{ $step->id }}, 'down')" title="Move Down">
-                                            <i class="bi bi-arrow-down"></i>
-                                        </button>
-                                        <form method="POST" action="{{ route('fc-reg.admin.forms.step.delete', $step) }}" class="d-inline" onsubmit="return confirm('Delete this step and all its fields?')">
-                                            @csrf @method('DELETE')
-                                            <button class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
-                                        </form>
+                                        @if(config('fc.form_step_actions_enabled'))
+                                            <button type="button"
+                                                class="btn btn-sm btn-outline-secondary py-0 px-2"
+                                                title="Edit step name, slug, tables, tracker…"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#editStepModal"
+                                                data-step-b64="{{ $stepEditB64 }}">
+                                                <i class="bi bi-gear me-1"></i>Step
+                                            </button>
+                                            <a href="{{ route('fc-reg.admin.form-builder.step', $step) }}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit fields for this step">
+                                                <i class="bi bi-pencil me-1"></i>Fields
+                                            </a>
+                                        @endif
+                                        @if(config('fc.form_step_reorder_enabled'))
+                                            <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveStep({{ $step->id }}, 'up')" title="Move Up">
+                                                <i class="bi bi-arrow-up"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveStep({{ $step->id }}, 'down')" title="Move Down">
+                                                <i class="bi bi-arrow-down"></i>
+                                            </button>
+                                        @endif
+                                        @if(config('fc.form_builder_delete_enabled'))
+                                            <form method="POST" action="{{ route('fc-reg.admin.forms.step.delete', $step) }}" class="d-inline" onsubmit="return confirm('Delete this step and all its fields?')">
+                                                @csrf @method('DELETE')
+                                                <button class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        @endif
+                                        @unless(config('fc.form_step_actions_enabled') || config('fc.form_step_reorder_enabled') || config('fc.form_builder_delete_enabled'))
+                                            {{-- Every control in this cell is locked. Say so: a blank Actions
+                                                 cell reads as a rendering fault, not a deliberate lock. --}}
+                                            <span class="text-muted small"><i class="bi bi-lock-fill me-1"></i>Locked</span>
+                                        @endunless
                                     </td>
                                 </tr>
                             @endforeach
@@ -293,6 +345,14 @@
                         <input type="text" name="tracker_column" class="form-control" placeholder="e.g. step1_done">
                         <small class="text-muted">Existing column in consolidation table to track completion</small>
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Applies To</label>
+                        <select name="applicability_rule" class="form-select">
+                            <option value="">Every trainee</option>
+                            <option value="ph_value_present">Only trainees with a PH value on the roster</option>
+                        </select>
+                        <small class="text-muted">A step that does not apply is shown disabled, is skipped in the flow, and is left out of that trainee's progress count</small>
+                    </div>
                     <div class="col-12">
                         <label class="form-label small fw-semibold">Description</label>
                         <textarea name="description" class="form-control" rows="2" placeholder="Brief description of what this step collects"></textarea>
@@ -334,16 +394,26 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label small fw-semibold">Step Slug <span class="text-danger">*</span></label>
-                        <input type="text" name="step_slug" id="editStepSlug" class="form-control" required pattern="[a-z0-9\-_]+" title="Lowercase letters, numbers, hyphens, underscores">
-                        <small class="text-muted">Must stay unique across all forms.</small>
+                        <input type="text" name="step_slug" id="editStepSlug" class="form-control" required pattern="[a-z0-9\-_]+" title="Lowercase letters, numbers, hyphens, underscores"
+                               {{ config('fc.form_step_structure_enabled') ? '' : 'disabled' }}>
+                        <small class="text-muted">
+                            @if(config('fc.form_step_structure_enabled'))
+                                Must stay unique across all forms.
+                            @else
+                                <i class="bi bi-lock-fill me-1"></i>Locked — changing it breaks bookmarked step URLs.
+                            @endif
+                        </small>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label small fw-semibold">Target Table <span class="text-danger">*</span></label>
-                        <select name="target_table" id="editStepTargetTable" class="form-select" required>
+                        <select name="target_table" id="editStepTargetTable" class="form-select" required {{ config('fc.form_step_structure_enabled') ? '' : 'disabled' }}>
                             @foreach($tables as $table)
                                 <option value="{{ $table }}">{{ $table }}</option>
                             @endforeach
                         </select>
+                        @unless(config('fc.form_step_structure_enabled'))
+                            <small class="text-muted"><i class="bi bi-lock-fill me-1"></i>Locked — repointing this orphans every answer already collected for the step.</small>
+                        @endunless
                     </div>
                     <div class="col-md-6">
                         @include('admin.forms.partials.fc-form-icon-picker', [
@@ -357,13 +427,34 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label small fw-semibold">Completion Column</label>
-                        <input type="text" name="completion_column" id="editStepCompletionCol" class="form-control" placeholder="e.g. step1_completed">
+                        <input type="text" name="completion_column" id="editStepCompletionCol" class="form-control" placeholder="e.g. step1_completed"
+                               {{ config('fc.form_step_tracker_enabled') ? '' : 'disabled' }}>
                         <small class="text-muted">Column in target table set when step is done</small>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label small fw-semibold">Tracker Column</label>
-                        <input type="text" name="tracker_column" id="editStepTrackerCol" class="form-control" placeholder="e.g. step1_done">
-                        <small class="text-muted">Column in consolidation table for completion</small>
+                        <input type="text" name="tracker_column" id="editStepTrackerCol" class="form-control" placeholder="e.g. step1_done"
+                               {{ config('fc.form_step_tracker_enabled') ? '' : 'disabled' }}>
+                        <small class="text-muted">
+                            @if(config('fc.form_step_tracker_enabled'))
+                                Column in consolidation table for completion
+                            @else
+                                <i class="bi bi-lock-fill me-1"></i>Locked — a name that does not exist yet is created with ALTER TABLE on the tracking table.
+                            @endif
+                        </small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Applies To</label>
+                        <select name="applicability_rule" id="editStepApplicability" class="form-select" {{ config('fc.form_step_applicability_enabled') ? '' : 'disabled' }}>
+                            <option value="">Every trainee</option>
+                            <option value="ph_value_present">Only trainees with a PH value on the roster</option>
+                        </select>
+                        <small class="text-muted">
+                            A step that does not apply is shown disabled, is skipped in the flow, and is left out of that trainee's progress count
+                            @unless(config('fc.form_step_applicability_enabled'))
+                                <span class="d-block mt-1"><i class="bi bi-lock-fill me-1"></i>Locked.</span>
+                            @endunless
+                        </small>
                     </div>
                     <div class="col-12">
                         <label class="form-label small fw-semibold">Description</label>
@@ -371,9 +462,13 @@
                     </div>
                     <div class="col-md-6">
                         <div class="form-check form-switch mt-1">
-                            <input class="form-check-input" type="checkbox" name="is_active" value="1" id="editStepActive">
+                            <input class="form-check-input" type="checkbox" name="is_active" value="1" id="editStepActive"
+                                   {{ config('fc.form_step_activate_enabled') ? '' : 'disabled' }}>
                             <label class="form-check-label small fw-semibold" for="editStepActive">Step active</label>
                         </div>
+                        @unless(config('fc.form_step_activate_enabled'))
+                            <small class="text-muted"><i class="bi bi-lock-fill me-1"></i>Locked — hiding a step changes every trainee's progress.</small>
+                        @endunless
                     </div>
                 </div>
             </div>
@@ -476,6 +571,7 @@ document.querySelector('#addStepModal [name="step_name"]').addEventListener('inp
         }
         document.getElementById('editStepCompletionCol').value = d.completion_column || '';
         document.getElementById('editStepTrackerCol').value = d.tracker_column || '';
+        document.getElementById('editStepApplicability').value = d.applicability_rule || '';
         document.getElementById('editStepDescription').value = d.description || '';
         document.getElementById('editStepActive').checked = !!d.is_active;
 

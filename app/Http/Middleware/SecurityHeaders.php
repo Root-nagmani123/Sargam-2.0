@@ -15,10 +15,16 @@ use Symfony\Component\HttpFoundation\Response;
  * X-Frame-Options missing, X-Content-Type-Options missing, improper/duplicate
  * Cache-Control, and Back-and-Refresh caching of authenticated pages.
  *
- * Note on CSP: the policy is intentionally permissive for scripts/styles
- * because the existing UI relies on inline JS/CSS and CDN assets. It still
- * enforces the high-value directives (frame-ancestors, object-src, base-uri).
- * Tighten default-src/script-src to 'self' only after auditing inline usage.
+ * Note on CSP: scripts are restricted to 'self' + the specific CDNs and the
+ * Google-Translate loaders the UI actually uses — the previous bare `https:`
+ * wildcard (which let ANY https origin serve executable script) has been
+ * removed. `'unsafe-inline'`/`'unsafe-eval'` are still allowed for scripts and
+ * styles because ~350 inline event handlers, ~374 inline <script> blocks and
+ * ~2,983 inline style="" attributes depend on them; dropping those needs a
+ * per-request nonce and a markup refactor tracked as a separate item. Non-script
+ * resource types stay permissive (https:) to avoid breaking the many image/font
+ * CDNs, and the high-value directives (frame-ancestors, object-src, base-uri)
+ * remain enforced.
  */
 class SecurityHeaders
 {
@@ -44,11 +50,32 @@ class SecurityHeaders
             $headers->set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
         }
 
-        // Content Security Policy — permissive default so the current inline-JS /
-        // CDN UI keeps working, with the security-critical directives enforced.
+        // Content Security Policy. script-src is an explicit allowlist (no bare
+        // `https:` wildcard, so a stray CDN or injected <script src> off any
+        // origin can't run); other resource types stay permissive so the inline
+        // styles / image + font CDNs the UI already uses keep working.
         if (! $headers->has('Content-Security-Policy')) {
+            $scriptHosts = [
+                "'self'", "'unsafe-inline'", "'unsafe-eval'", 'blob:',
+                'https://cdn.jsdelivr.net',
+                'https://cdn.datatables.net',
+                'https://code.jquery.com',
+                'https://cdnjs.cloudflare.com',
+                // Google Translate widget loads these at runtime (see google-translate.js).
+                'https://translate.google.com',
+                'https://translate.googleapis.com',
+                'https://www.gstatic.com',
+            ];
+
             $headers->set('Content-Security-Policy', implode('; ', [
-                "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'",
+                "default-src 'self' https: data: blob:",
+                'script-src ' . implode(' ', $scriptHosts),
+                // Inline style="" attributes (~2,983 of them) require 'unsafe-inline'.
+                "style-src 'self' 'unsafe-inline' https:",
+                "img-src 'self' data: blob: https:",
+                "font-src 'self' data: https:",
+                "connect-src 'self' https:",
+                "frame-src 'self' https:",
                 "frame-ancestors 'self'",
                 "base-uri 'self'",
                 "object-src 'none'",
@@ -63,13 +90,29 @@ class SecurityHeaders
 
         // Prevent caching of authenticated / dynamic HTML so sensitive pages are
         // not restored via Back / Forward / Refresh, and emit a single consistent
-        // Cache-Control. Limited to HTML responses so JSON APIs, file downloads
-        // and static assets are untouched; any explicit public/max-age caching a
-        // route sets is preserved.
+        // Cache-Control. Also covers generated file downloads (Excel/PDF exports
+        // sent as attachments): these are built per-request from the current
+        // filters, so a browser/proxy-cached copy re-serves a stale export (e.g.
+        // last month's Sale Voucher rows) even though the live HTML report is
+        // correct. JSON APIs and static assets are untouched; any explicit
+        // public/max-age caching a route sets is preserved.
         $contentType = (string) $headers->get('Content-Type');
+        $disposition = strtolower((string) $headers->get('Content-Disposition'));
+        $isAttachment = strpos($disposition, 'attachment') !== false;
+        $existing = strtolower((string) $headers->get('Cache-Control'));
+
         if (stripos($contentType, 'text/html') !== false) {
-            $existing = strtolower((string) $headers->get('Cache-Control'));
             if ($existing === '' || (strpos($existing, 'max-age') === false && strpos($existing, 'public') === false)) {
+                $headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+                $headers->set('Pragma', 'no-cache');
+            }
+        } elseif ($isAttachment) {
+            // Generated exports (BinaryFileResponse) default to "Cache-Control:
+            // public"; that lets the browser/proxy re-serve a stale download for
+            // the same URL. Force no-store unless the route deliberately opted
+            // into caching via an explicit max-age (bare "public" is only the
+            // framework default, not an intentional caching choice).
+            if (strpos($existing, 'max-age') === false) {
                 $headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
                 $headers->set('Pragma', 'no-cache');
             }

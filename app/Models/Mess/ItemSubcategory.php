@@ -139,6 +139,29 @@ class ItemSubcategory extends Model
         return $query->orderBy(static::displayNameColumnForQuery());
     }
 
+    /**
+     * Columns needed for dropdowns and report rows (avoids SELECT * on list loads).
+     *
+     * @return list<string>
+     */
+    public static function listSelectColumns(bool $withCategoryId = false, bool $withAlertQuantity = false): array
+    {
+        $columns = ['id', 'unit_measurement', 'standard_cost'];
+        if ($withCategoryId) {
+            $columns[] = 'category_id';
+        }
+        if ($withAlertQuantity && Schema::hasColumn('mess_item_subcategories', 'alert_quantity')) {
+            $columns[] = 'alert_quantity';
+        }
+        foreach (['item_name', 'name', 'subcategory_name', 'item_code', 'subcategory_code'] as $column) {
+            if (Schema::hasColumn('mess_item_subcategories', $column)) {
+                $columns[] = $column;
+            }
+        }
+
+        return array_values(array_unique($columns));
+    }
+
 
     public function getStatusLabelAttribute(): string
     {

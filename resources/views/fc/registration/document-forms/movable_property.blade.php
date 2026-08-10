@@ -112,7 +112,7 @@
 
             <div class="mp-footer row">
                 <div class="col-md-6">दिनांक / Dated:
-                    <input type="date" name="declaration_date" class="mp-blank" value="{{ $val('declaration_date') }}" style="min-width:150px;"></div>
+                    <input type="date" name="declaration_date" class="mp-blank" value="{{ old('declaration_date', fc_document_date('iso')) }}" style="min-width:150px;" readonly></div>
                 <div class="col-md-6 text-md-end">हस्ताक्षर / Signature: ______________________</div>
             </div>
 
@@ -122,7 +122,8 @@
             </div>
         </div>
 
-        {{-- Signature upload --}}
+        {{-- Signature upload section — commented out per request (hidden on the fill form) --}}
+        {{--
         @if(! empty($template['signatures']))
             <div class="card fc-card border-0 shadow-sm mb-3">
                 <div class="card-header bg-white py-3"><h6 class="mb-0 text-uppercase small fw-bold text-muted">Signatures / हस्ताक्षर</h6></div>
@@ -142,6 +143,7 @@
                 </div>
             </div>
         @endif
+        --}}
 
         <div class="d-flex justify-content-between mb-5">
             <a href="{{ route('fc-reg.forms.step', [$form, $step]) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Cancel</a>

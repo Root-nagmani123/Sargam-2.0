@@ -7,6 +7,7 @@ use App\Models\FC\{NewRegistrationBankDetailsMaster, StudentMaster};
 use App\Services\FC\DynamicFormService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Rules\SafeUploadedDocument;
 
 class BankDetailsController extends Controller
 {
@@ -76,7 +77,13 @@ class BankDetailsController extends Controller
             'account_no_confirm'  => 'required|same:account_no',
             'account_holder_name' => 'required|string|max:200|no_html',
             'account_type'        => 'required|in:Savings,Current',
-            'bank_passbook'       => 'nullable|file|mimes:jpeg,jpg,png,pdf|max:2048',
+            'bank_passbook'       => [
+                'nullable',
+                'file',
+                'mimes:jpeg,jpg,png,pdf',
+                'max:' . SafeUploadedDocument::maxKilobytes(2048),
+                new SafeUploadedDocument(['jpeg', 'jpg', 'png', 'pdf']),
+            ],
         ]);
 
         if ($request->hasFile('bank_passbook')) {

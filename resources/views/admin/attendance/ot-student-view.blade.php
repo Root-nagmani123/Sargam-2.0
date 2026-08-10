@@ -199,8 +199,8 @@
             </button>
             <ul class="download-menu" role="menu" aria-label="Download format">
                 <li>
-                    <button type="button" class="download-item" id="downloadCsv" role="menuitem">
-                        <i class="bi bi-filetype-csv"></i> CSV
+                    <button type="button" class="download-item" id="downloadExcel" role="menuitem">
+                        <i class="bi bi-filetype-xlsx"></i> Excel
                     </button>
                 </li>
                 <li>
@@ -631,6 +631,22 @@
             });
         });
 
+        // Report header context for the CSV / PDF exports — mirrors the admin
+        // "Attendance Report" header (institution, logos, applied filters).
+        var OT_ASSETS = {
+            logoLeft: @json(asset('admin_assets/images/logos/logo_new.png')),
+            logoRight: @json(file_exists(public_path('admin_assets/images/logos/constitution-75.png'))
+                ? asset('admin_assets/images/logos/constitution-75.png')
+                : asset('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
+            titleHindi: @json(asset('admin_assets/images/logos/lbsnaa-title-hi.png')),
+            institution: 'Lal Bahadur Shastri National Academy of Administration, Mussoorie',
+            course: @json($course->course_name ?? ''),
+            student: @json($student->display_name ?? ''),
+            otCode: @json($student->generated_OT_code ?? ''),
+            dateFilter: @json($filterDate ? \Illuminate\Support\Carbon::parse($filterDate)->format('d-m-Y') : ''),
+            statusFilter: @json($filterStatus ?? '')
+        };
+
         // ---- Download (CSV / PDF export of the full table, respecting hidden columns) ----
         function getExportMatrix() {
             var headCells = table.querySelectorAll('thead th');
@@ -667,48 +683,90 @@
             });
         }
 
-        function exportCsv() {
-            var m = getExportMatrix();
-            function cell(t) { return '"' + String(t).replace(/"/g, '""') + '"'; }
-            var lines = [m.headers.map(cell).join(',')];
-            m.body.forEach(function(r) { lines.push(r.map(cell).join(',')); });
-            triggerDownload(new Blob(["﻿" + lines.join('\n')], { type: 'text/csv;charset=utf-8;' }), 'attendance-details.csv');
-        }
-
         function exportPdf() {
             var m = getExportMatrix();
+
+            // Report header context, mirroring the admin Attendance Report export.
+            var metaParts = [];
+            if (OT_ASSETS.course)  metaParts.push('Course: ' + OT_ASSETS.course);
+            if (OT_ASSETS.student) metaParts.push('Student: ' + OT_ASSETS.student);
+            if (OT_ASSETS.otCode)  metaParts.push('OT Code: ' + OT_ASSETS.otCode);
+            var sessParts = [];
+            if (OT_ASSETS.dateFilter)   sessParts.push('Date: ' + OT_ASSETS.dateFilter);
+            if (OT_ASSETS.statusFilter) sessParts.push('Status: ' + OT_ASSETS.statusFilter);
+            var generatedLine = 'Generated on: ' + new Date().toLocaleString() + '   |   Total Records: ' + m.body.length;
+
             if (typeof pdfMake !== 'undefined' && pdfMake.createPdf) {
                 var bodyArr = [m.headers.map(function(h) { return { text: h, style: 'th' }; })];
                 m.body.forEach(function(r) { bodyArr.push(r.map(function(c) { return { text: c, style: 'td' }; })); });
+                var content = [
+                    { text: OT_ASSETS.institution, style: 'inst' },
+                    { text: 'Attendance Report', style: 'title' }
+                ];
+                if (metaParts.length) content.push({ text: 'Applied Filters: ' + metaParts.join('   |   '), style: 'meta' });
+                if (sessParts.length) content.push({ text: sessParts.join('   |   '), style: 'meta' });
+                content.push({ text: generatedLine, style: 'meta' });
+                content.push({ table: { headerRows: 1, widths: m.headers.map(function() { return 'auto'; }), body: bodyArr }, layout: 'lightHorizontalLines' });
                 pdfMake.createPdf({
                     pageOrientation: 'landscape', pageSize: 'A4', pageMargins: [20, 24, 20, 24],
-                    content: [
-                        { text: 'Attendance Details', style: 'title' },
-                        { table: { headerRows: 1, widths: m.headers.map(function() { return 'auto'; }), body: bodyArr }, layout: 'lightHorizontalLines' }
-                    ],
+                    content: content,
                     styles: {
-                        title: { fontSize: 15, bold: true, margin: [0, 0, 0, 10] },
-                        th: { bold: true, fontSize: 9, fillColor: '#f3f4f6', color: '#1f2937' },
+                        inst: { fontSize: 13, bold: true, color: '#102a43', alignment: 'center', margin: [0, 0, 0, 2] },
+                        title: { fontSize: 15, bold: true, color: '#004a93', alignment: 'center', margin: [0, 0, 0, 6] },
+                        meta: { fontSize: 8, color: '#666666', alignment: 'center', margin: [0, 0, 0, 2] },
+                        th: { bold: true, fontSize: 9, fillColor: '#004a93', color: '#ffffff' },
                         td: { fontSize: 8, color: '#374151' }
                     },
                     defaultStyle: { fontSize: 8 }
-                }).download('attendance-details.pdf');
+                }).download('attendance-report.pdf');
                 return;
             }
-            // Fallback when pdfMake is unavailable: print window (Save as PDF)
+
+            // Fallback when pdfMake is unavailable: print window (Save as PDF), with the
+            // same report header (logos, institution, title, filters) as the admin
+            // Attendance Report export.
             var w = window.open('', '_blank');
             if (!w) return;
             var th = m.headers.map(function(h) { return '<th>' + escapeHtml(h) + '</th>'; }).join('');
             var rows = m.body.map(function(r) {
                 return '<tr>' + r.map(function(c) { return '<td>' + escapeHtml(c) + '</td>'; }).join('') + '</tr>';
             }).join('');
+
+            var headerHtml =
+                '<table class="pdf-hdr"><tr>' +
+                    '<td class="logo">' + (OT_ASSETS.logoLeft ? '<img src="' + OT_ASSETS.logoLeft + '" alt="">' : '') + '</td>' +
+                    '<td class="center">' +
+                        (OT_ASSETS.titleHindi ? '<img class="inst-hi-img" src="' + OT_ASSETS.titleHindi + '" alt="">' : '') +
+                        '<div class="inst-en">' + escapeHtml(OT_ASSETS.institution) + '</div>' +
+                    '</td>' +
+                    '<td class="logo">' + (OT_ASSETS.logoRight ? '<img src="' + OT_ASSETS.logoRight + '" alt="">' : '') + '</td>' +
+                '</tr></table>' +
+                '<div class="report-title">Attendance Report</div>' +
+                '<div class="rpt-meta">' +
+                    (metaParts.length ? '<div>Applied Filters: ' + escapeHtml(metaParts.join('   |   ')) + '</div>' : '') +
+                    (sessParts.length ? '<div>' + escapeHtml(sessParts.join('   |   ')) + '</div>' : '') +
+                    '<div>' + escapeHtml(generatedLine) + '</div>' +
+                '</div>';
+
             w.document.write(
-                '<html><head><title>Attendance Details</title><style>' +
-                'body{font-family:Arial,sans-serif;padding:20px;}h2{margin:0 0 14px;}' +
-                'table{border-collapse:collapse;width:100%;font-size:11px;}' +
-                'th,td{border:1px solid #d0d5dd;padding:6px 8px;text-align:left;}th{background:#f3f4f6;}' +
-                '</style></head><body><h2>Attendance Details</h2><table><thead><tr>' + th + '</tr></thead><tbody>' + rows + '</tbody></table>' +
-                '<scr' + 'ipt>window.onload=function(){window.print();}</scr' + 'ipt></body></html>'
+                '<!DOCTYPE html><html><head><title>Attendance Report</title><style>' +
+                'body{font-family:Arial,sans-serif;margin:16px;color:#1f2937;}' +
+                '.pdf-hdr{width:100%;border-collapse:collapse;margin-bottom:4px;}' +
+                '.pdf-hdr td{vertical-align:middle;}.pdf-hdr .logo{width:90px;text-align:center;}' +
+                '.pdf-hdr .logo img{max-height:64px;max-width:84px;}.pdf-hdr .center{text-align:center;padding:0 8px;}' +
+                '.pdf-hdr .inst-hi-img{height:18px;width:auto;margin-bottom:2px;}' +
+                '.inst-en{font-size:16px;font-weight:bold;color:#102a43;line-height:1.25;}' +
+                '.report-title{text-align:center;font-size:20px;font-weight:bold;color:#004a93;margin:8px 0 6px;padding-bottom:8px;border-bottom:2px solid #004a93;}' +
+                '.rpt-meta{margin-bottom:12px;font-size:11px;color:#666;text-align:center;line-height:1.6;}' +
+                'table.data{border-collapse:collapse;width:100%;font-size:11px;margin-top:6px;}' +
+                'table.data th,table.data td{border:1px solid #8fa3bd;padding:6px 8px;text-align:left;}' +
+                'table.data thead th{background:#004a93;color:#fff;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+                'table.data tbody tr:nth-child(even){background:#eef2f8;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+                '@media print{@page{size:A4 landscape;margin:10mm;}body{margin:0;}}' +
+                '</style></head><body onload="window.focus();window.print();">' +
+                headerHtml +
+                '<table class="data"><thead><tr>' + th + '</tr></thead><tbody>' + rows + '</tbody></table>' +
+                '</body></html>'
             );
             w.document.close();
         }
@@ -718,9 +776,33 @@
             if (wrap) wrap.classList.remove('open');
         }
 
-        var csvBtn = document.getElementById('downloadCsv');
+        // Excel = real .xlsx from the server (LBSNAA header + logos), same as the
+        // admin export. Carries the page's current filters as query params.
+        @php
+            $otExcelExportUrl = route('attendance.OT.student_mark.export', [
+                'group_pk' => $group_pk,
+                'course_pk' => $course_pk,
+                'timetable_pk' => $timetable_pk,
+                'student_pk' => $student_pk,
+            ]);
+        @endphp
+        var EXCEL_EXPORT_URL = @json($otExcelExportUrl);
+        var excelBtn = document.getElementById('downloadExcel');
         var pdfBtn = document.getElementById('downloadPdf');
-        if (csvBtn) csvBtn.addEventListener('click', function() { exportCsv(); closeDownloadMenu(); });
+        if (excelBtn) excelBtn.addEventListener('click', function() {
+            var params = new URLSearchParams();
+            var d = document.getElementById('filter_date');
+            var s = document.getElementById('filter_status');
+            var a = document.getElementById('archive_mode_input');
+            var c = document.getElementById('filter_course');
+            if (d && d.value) params.set('filter_date', d.value);
+            if (s && s.value) params.set('filter_status', s.value);
+            if (a && a.value) params.set('archive_mode', a.value);
+            if (c && c.value) params.set('filter_course', c.value);
+            var qs = params.toString();
+            window.location.href = EXCEL_EXPORT_URL + (qs ? ('?' + qs) : '');
+            closeDownloadMenu();
+        });
         if (pdfBtn) pdfBtn.addEventListener('click', function() { exportPdf(); closeDownloadMenu(); });
     });
     </script>

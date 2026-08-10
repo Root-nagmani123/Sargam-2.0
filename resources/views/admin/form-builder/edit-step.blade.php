@@ -123,9 +123,29 @@
     <div class="card border-0 shadow-sm mb-4" style="border-radius:10px;">
         <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
             <h6 class="mb-0 text-uppercase small fw-bold text-muted" id="fcFieldsCountLabel">{{ $step->isDocumentsStep() ? 'Documents' : 'Fields' }} ({{ $step->fields->count() }})</h6>
-            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addFieldModal">
-                <i class="bi bi-plus-circle me-1"></i>{{ $step->isDocumentsStep() ? 'Add Document' : 'Add Field' }}
-            </button>
+            <div class="d-flex gap-2">
+                @php
+                    // Sections are the distinct section_heading strings on this step's fields —
+                    // there is no sections table, so this list IS the set of sections.
+                    $fcSections = $step->fields
+                        ->pluck('section_heading')
+                        ->map(fn ($s) => trim((string) $s))
+                        ->filter()
+                        ->unique()
+                        ->sort()
+                        ->values();
+                @endphp
+                @if($fcSections->isNotEmpty())
+                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                        data-bs-toggle="modal" data-bs-target="#renameSectionModal"
+                        title="Rename a section across all its fields at once">
+                        <i class="bi bi-pencil-square me-1"></i>Rename Section
+                    </button>
+                @endif
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addFieldModal">
+                    <i class="bi bi-plus-circle me-1"></i>{{ $step->isDocumentsStep() ? 'Add Document' : 'Add Field' }}
+                </button>
+            </div>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -208,10 +228,12 @@
                                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveDocMaster({{ $doc->id }}, 'down')" title="Move Down">
                                             <i class="bi bi-arrow-down"></i>
                                         </button>
-                                        <form method="POST" action="{{ route('fc-reg.admin.form-builder.doc-master.delete', $doc) }}" class="fc-fb-actions__form" onsubmit="return confirm('Delete this document?')">
-                                            @csrf @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
-                                        </form>
+                                        @if(config('fc.form_builder_delete_enabled'))
+                                            <form method="POST" action="{{ route('fc-reg.admin.form-builder.doc-master.delete', $doc) }}" class="fc-fb-actions__form" onsubmit="return confirm('Delete this document?')">
+                                                @csrf @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -329,10 +351,12 @@
                                             <button type="button" class="btn btn-sm btn-outline-primary py-0 px-1 btn-edit-group" data-group='@json($group)' title="Edit group">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
-                                            <form method="POST" action="{{ route('fc-reg.admin.form-builder.group.delete', $group) }}" class="fc-fb-actions__form" onsubmit="return confirm('Delete this group and all its fields?')">
-                                                @csrf @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
-                                            </form>
+                                            @if(config('fc.form_builder_delete_enabled'))
+                                                <form method="POST" action="{{ route('fc-reg.admin.form-builder.group.delete', $group) }}" class="fc-fb-actions__form" onsubmit="return confirm('Delete this group and all its fields?')">
+                                                    @csrf @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
+                                                </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>
@@ -350,6 +374,59 @@
     </div>
     @endif
 </div>
+
+{{-- ═══════════════════════════════════════════════════════════════════ --}}
+{{-- RENAME SECTION MODAL --}}
+{{-- Renames one section across every field of this step. Sections are the distinct
+     section_heading strings on the fields — editing them one by one is what this replaces. --}}
+{{-- ═══════════════════════════════════════════════════════════════════ --}}
+@if(!empty($fcSections) && $fcSections->isNotEmpty())
+<div class="modal fade" id="renameSectionModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{{ route('fc-reg.admin.form-builder.section.rename', $step) }}" class="modal-content">
+            @csrf
+            <div class="modal-header">
+                <h5 class="modal-title">Rename Section</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">
+                    Renames the heading on every field of this step that currently uses it.
+                    Field data, order and settings are not touched.
+                </p>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="renameSectionOld">Section to rename <span class="text-danger">*</span></label>
+                    <select name="old_section_heading" id="renameSectionOld" class="form-select" required>
+                        @foreach($fcSections as $sectionName)
+                            @php
+                                $sectionCount = $step->fields
+                                    ->filter(fn ($f) => trim((string) $f->section_heading) === $sectionName)
+                                    ->count();
+                            @endphp
+                            <option value="{{ $sectionName }}">{{ $sectionName }} — {{ $sectionCount }} field{{ $sectionCount === 1 ? '' : 's' }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label fw-semibold" for="renameSectionNew">New name <span class="text-danger">*</span></label>
+                    <input type="text" name="new_section_heading" id="renameSectionNew" class="form-control"
+                        maxlength="200" required placeholder="e.g. Contact Details">
+                    <div class="form-text">
+                        Typing the name of an existing section merges the two — use that to repair a
+                        section split by a typo.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Rename Section</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
 
 {{-- ═══════════════════════════════════════════════════════════════════ --}}
 {{-- ADD FIELD MODAL --}}
