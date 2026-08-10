@@ -23,10 +23,9 @@ use App\Models\{
 };
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Pagination\Paginator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\{DB, Auth, Storage, Schema, Log};
+use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -119,8 +118,8 @@ class IssueManagementController extends Controller
     /**
      * Category pks whose name matches the search term.
      *
-     * issue_category_master is a handful of rows, so this LIKE is free — and it
-     * replaces a correlated EXISTS against 65k unindexed issue rows.
+     * Resolved as its own cheap query so the issue search can use whereIn on an
+     * indexed FK instead of a correlated EXISTS over issue_log_management.
      *
      * @return array<int, int>
      */
@@ -133,10 +132,7 @@ class IssueManagementController extends Controller
     }
 
     /**
-     * Issue pks mapped to a sub-category whose name matches the search term.
-     *
-     * Two small indexed lookups instead of a nested whereHas: the master table
-     * is tiny, and the map table is keyed by sub-category.
+     * Issue pks mapped to any sub-category whose name matches the search term.
      *
      * @return array<int, int>
      */
@@ -202,7 +198,8 @@ class IssueManagementController extends Controller
                     $q->orWhere('description', 'like', "%{$term}%");
 
                     // Resolved up front rather than as whereHas(): a correlated
-                    // EXISTS over 65k unindexed rows measured ~45s per keystroke.
+                    // EXISTS over 65k rows with only a PRIMARY index measured 23s
+                    // per search here, which the grid issues on every keystroke.
                     if ($categoryIds !== []) {
                         $q->orWhereIn('issue_category_master_pk', $categoryIds);
                     }
@@ -257,448 +254,174 @@ class IssueManagementController extends Controller
     }
 
     /**
-     * Mirrors {@see Builder::paginate()} count + slice without hydrating rows (for cacheable snapshot).
+     * Display a listing of all issues.
      *
-     * @return array{total: int, ids: array<int, int>}
-     */
-    private function issueManagementIndexPageSnapshot(Request $request, int $page, ?int $perPage = null): array
-    {
-        $base = $this->issueManagementIndexFilteredQuery($request);
-        $perPage = $perPage ?: self::INDEX_PER_PAGE;
-        $total = (int) (clone $base)->toBase()->getCountForPagination();
-        $ids = [];
-        if ($total > 0) {
-            $ids = (clone $base)->forPage($page, $perPage)->pluck('pk')->values()->all();
-            $ids = array_map('intval', $ids);
-        }
-
-        return ['total' => $total, 'ids' => $ids];
-    }
-
-    /**
-     * All Requests grid — chrome only.
-     *
-     * Rows arrive over ajax from {@see indexData()}, so this renders no issues
-     * and runs no listing query; the filters below only need their options.
+     * The grid fetches its own rows from indexData() — server-side, because
+     * issue_log_management holds 65k+ rows. This action only supplies the filter
+     * dropdowns; it no longer builds a page of rows itself.
      */
     public function index(Request $request)
     {
         $categories = IssueCategoryMaster::active()->get();
         $priorities = IssuePriorityMaster::active()->ordered()->get();
 
-        // First-paint values for the toolbar; the grid takes over from here.
-        $search = trim((string) $request->get('search', ''));
-        $raisedBy = $request->get('raised_by') === 'self' ? 'self' : 'all';
-        $hasFilters = filled($search)
-            || $request->filled('category')
-            || $request->filled('priority')
-            || $request->filled('date_from')
-            || $request->filled('date_to')
-            || ($request->has('status') && $request->get('status') !== '');
-
-        return view('admin.issue_management.index', compact(
-            'categories',
-            'priorities',
-            'search',
-            'raisedBy',
-            'hasFilters'
-        ));
+        return view('admin.issue_management.index', compact('categories', 'priorities'));
     }
 
-    /**
-     * Canonical export columns, in order. Keys must match IM_EXPORT_COLUMN_KEYS
-     * in issue_management/index.blade.php — the grid's own columns, so Print,
-     * CSV, Excel and PDF all carry exactly what is ticked in the Columns modal.
-     *
-     * Action is deliberately absent: it holds links, not data.
-     */
-    private function exportColumnDefs(): array
-    {
-        return [
-            'id' => [
-                'heading' => 'ID No.',
-                'class' => 'col-id',
-                'value' => fn (IssueLogManagement $row) => (string) $row->pk,
-            ],
-            'date' => [
-                'heading' => 'Date & Time',
-                'class' => 'col-date',
-                'value' => fn (IssueLogManagement $row) => optional($row->created_date)->format('d-m-Y H:i') ?: '',
-            ],
-            'category' => [
-                'heading' => 'Category',
-                'class' => 'col-category',
-                'value' => fn (IssueLogManagement $row) => $row->category->issue_category ?? '',
-            ],
-            'description' => [
-                'heading' => 'Description',
-                'class' => 'col-desc',
-                'value' => fn (IssueLogManagement $row) => (string) $row->description,
-            ],
-            'complainant' => [
-                'heading' => 'Complainant',
-                'class' => 'col-complainant',
-                'value' => fn (IssueLogManagement $row) => $row->creator->name ?? '',
-            ],
-            'nodal' => [
-                'heading' => 'Nodal Employee',
-                'class' => 'col-nodal',
-                'value' => fn (IssueLogManagement $row) => $row->nodal_officer->name ?? '',
-            ],
-            'priority' => [
-                'heading' => 'Priority',
-                'class' => 'col-priority',
-                'value' => fn (IssueLogManagement $row) => $row->priority->priority ?? '',
-            ],
-            'status' => [
-                'heading' => 'Status',
-                'class' => 'col-status',
-                'value' => fn (IssueLogManagement $row) => (string) $row->status_label,
-            ],
-        ];
-    }
+    /** Columns the two issue grids declare, in order, for DataTables ordering. */
+    private const GRID_SORT_COLUMNS = [
+        'id' => 'pk',
+        'date' => 'created_date',
+        'status' => 'issue_status',
+    ];
 
     /**
-     * Intersect ?cols= against the canonical list so a hand-edited value cannot
-     * reorder the report or inject a column. Empty => every column.
-     */
-    private function resolveExportColumns(Request $request): array
-    {
-        $defs = $this->exportColumnDefs();
-        $wanted = array_filter(array_map('trim', explode(',', (string) $request->query('cols', ''))));
-
-        if ($wanted === []) {
-            return $defs;
-        }
-
-        $keys = array_values(array_intersect(array_keys($defs), $wanted));
-
-        return $keys === [] ? $defs : array_intersect_key($defs, array_flip($keys));
-    }
-
-    /**
-     * Fold a DataTables ajax request onto the plain query keys the shared filter
-     * builders understand, and work out which page it is asking for.
-     *
-     * @return array{page: int, perPage: int, start: int}
-     */
-    private function normaliseDataTablesRequest(Request $request): array
-    {
-        // DataTables posts search as search[value]; `search` is an array at this
-        // point, so it can never be cast to string directly.
-        $rawSearch = $request->input('search');
-        $searchTerm = is_array($rawSearch) ? ($rawSearch['value'] ?? '') : $rawSearch;
-        $request->merge(['search' => trim((string) $searchTerm)]);
-
-        // order[0] points at a column by index — resolve it back to the sort key
-        // through the columns[] the front end declared.
-        $orderColumn = $request->input('order.0.column');
-        if ($orderColumn !== null) {
-            $request->merge([
-                'sort' => (string) $request->input('columns.' . (int) $orderColumn . '.name', ''),
-                'dir' => strtolower((string) $request->input('order.0.dir', 'desc')) === 'asc' ? 'asc' : 'desc',
-            ]);
-        }
-
-        $length = (int) $request->input('length', self::INDEX_PER_PAGE);
-        $perPage = in_array($length, self::DATA_PER_PAGE_OPTIONS, true) ? $length : self::INDEX_PER_PAGE;
-        $start = max(0, (int) $request->input('start', 0));
-
-        return [
-            'page' => (int) floor($start / $perPage) + 1,
-            'perPage' => $perPage,
-            'start' => $start,
-        ];
-    }
-
-    /**
-     * One grid row as the browser needs it: every value already escaped, the
-     * status pill and the action links pre-rendered.
-     *
-     * The two grids differ only in the action column — All Requests offers
-     * View + Edit (to the raiser/logger), Centcom offers Update Status + View.
-     *
-     * @return array<string, string>
-     */
-    private function issueGridRow(IssueLogManagement $issue, $userId, string $variant = 'index'): array
-    {
-        $status = (int) $issue->issue_status;
-
-        $link = fn (string $url, string $class, string $icon, string $label) =>
-            '<a href="' . e($url) . '" class="ic-act ic-act--' . $class . '"'
-            . ' aria-label="' . e($label . ' issue ' . $issue->pk) . '">'
-            . '<span class="ic-act__icon"><i class="bi ' . $icon . '" aria-hidden="true"></i></span>'
-            . '<span class="ic-act__label">' . e($label) . '</span></a>';
-
-        $view = $link(route('admin.issue-management.show', $issue->pk), 'view', 'bi-eye', 'View');
-
-        if ($variant === 'centcom') {
-            // The real status form (with its permission rules) lives on the
-            // detail page; ?action=update-status opens it straight away.
-            $actions = $link(
-                route('admin.issue-management.show', ['id' => $issue->pk, 'action' => 'update-status']),
-                'edit', 'bi-pencil-square', 'Update Status'
-            ) . $view;
-            $group = 'ic-act-group ic-act-group--wide';
-        } else {
-            $actions = $view;
-            // Edit stays available to the raiser/logger while the issue is open —
-            // the old grid offered it and dropping it would lose the feature.
-            if (($issue->issue_logger == $userId || $issue->created_by == $userId) && $status !== 2) {
-                $actions .= $link(route('admin.issue-management.edit', $issue->pk), 'edit', 'bi-pencil-square', 'Edit');
-            }
-            $group = 'ic-act-group';
-        }
-
-        return [
-            'id' => e($issue->pk),
-            'date' => e(optional($issue->created_date)->format('d-m-Y H:i') ?: '—'),
-            'category' => e($issue->category->issue_category ?? '—'),
-            'description' => '<span class="ic-col-wrap">' . e($issue->description ?: '—') . '</span>',
-            'complainant' => e($issue->creator->name ?? '—'),
-            'nodal' => e($issue->nodal_officer->name ?? '—'),
-            'priority' => e($issue->priority->priority ?? '—'),
-            'status' => '<span class="ic-state ' . (self::STATUS_PILL_CLASS[$status] ?? 'ic-state--reported') . '">'
-                . e($issue->status_label) . '</span>',
-            'action' => '<div class="' . $group . '" role="group" aria-label="Row actions">' . $actions . '</div>',
-        ];
-    }
-
-    /**
-     * Rows for the All Requests grid (DataTables ajax).
-     *
-     * issue_log_management is 65k rows with no secondary indexes, so this page
-     * cannot hand the whole set to the browser — search, sort and paging all
-     * stay on the server and only one page of rows crosses the wire. Filtering
-     * therefore costs one small XHR instead of a full page reload.
+     * DataTables ajax feed for the All Requests grid.
      */
     public function indexData(Request $request)
     {
-        $paging = $this->normaliseDataTablesRequest($request);
-        $snapshot = $this->issueManagementIndexCachedSnapshot($request, $paging['page'], $paging['perPage']);
-
-        return $this->dataTablesResponse($request, $snapshot);
+        return $this->issueGridJson($request, fn () => $this->issueManagementIndexFilteredQuery($request), 'index');
     }
 
     /**
-     * Rows for the Centcom ("Assign to you") grid — same contract as indexData().
+     * DataTables ajax feed for the Centcom ("Assign to you") grid.
      */
     public function centcomData(Request $request)
     {
-        $paging = $this->normaliseDataTablesRequest($request);
-        $snapshot = $this->issueManagementCentcomCachedSnapshot($request, $paging['page'], $paging['perPage']);
-
-        return $this->dataTablesResponse($request, $snapshot, 'centcom');
+        return $this->issueGridJson($request, fn () => $this->issueManagementCentcomFilteredQuery($request), 'centcom');
     }
 
     /**
-     * @param  array{total: int, ids: array<int, int>}  $snapshot
+     * One page of issue rows in DataTables' server-side format.
+     *
+     * Both grids render the same seven columns off the same shared filter
+     * builders, so they share this feed. Server-side is not a preference here:
+     * issue_log_management holds 65k+ rows, and sending them all to the browser
+     * to be paged client-side is what made the whole set unreachable.
+     *
+     * $variant only decides cell formatting: the two grids showed the id, the
+     * date and the action buttons differently before this change, and that is
+     * preserved rather than homogenised.
+     *
+     * @param  \Closure(): Builder  $baseQuery
      */
-    private function dataTablesResponse(Request $request, array $snapshot, string $variant = 'index')
+    private function issueGridJson(Request $request, \Closure $baseQuery, string $variant = 'index')
     {
-        $userId = Auth::user()->user_id;
-        $data = $this->issueManagementHydrateCentcomRows($snapshot['ids'])
-            ->map(fn (IssueLogManagement $issue) => $this->issueGridRow($issue, $userId, $variant))
-            ->values();
+        $draw = (int) $request->input('draw', 1);
+        $start = max(0, (int) $request->input('start', 0));
+        $length = (int) $request->input('length', self::INDEX_PER_PAGE);
+        // -1 is DataTables' "All"; cap it so one click cannot pull 65k rows.
+        $length = ($length < 1 || $length > 200) ? 200 : $length;
+
+        // DataTables posts its own term as search[value]; fold it onto the plain
+        // `search` key the shared filter builders already understand.
+        $rawSearch = $request->input('search');
+        if (is_array($rawSearch)) {
+            $request->merge(['search' => trim((string) ($rawSearch['value'] ?? ''))]);
+        }
+
+        $base = $baseQuery();
+
+        // recordsTotal is the scope without the grid's search; the builders apply
+        // both at once, so report the filtered count for both. DataTables only
+        // uses recordsTotal for the "(filtered from N)" note.
+        $filtered = (int) (clone $base)->toBase()->getCountForPagination();
+
+        // Ordering: resolve columns[i][name] back to a real column. Anything not
+        // on issue_log_management itself is left unsorted — the table carries
+        // only a PRIMARY index, so ordering by a joined name is a table scan.
+        $orderColumn = $request->input('order.0.column');
+        if ($orderColumn !== null) {
+            $key = (string) $request->input('columns.' . (int) $orderColumn . '.name', '');
+            $dir = strtolower((string) $request->input('order.0.dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+            if (isset(self::GRID_SORT_COLUMNS[$key])) {
+                $base->reorder()->orderBy(self::GRID_SORT_COLUMNS[$key], $dir);
+                if ($key !== 'id') {
+                    $base->orderBy('pk', 'desc');   // stable tiebreaker
+                }
+            }
+        }
+
+        // Only what these seven columns render. The detail view's fuller eager-load
+        // list (statusHistory / building + hostel mappings) hits unindexed FKs and
+        // measured ~700ms for a handful of rows — never load it for a grid.
+        $rows = $base->with(['category', 'priority'])
+            ->offset($start)
+            ->limit($length)
+            ->get();
+
+        $userId = Auth::user()->user_id ?? null;
+
+        $isCentcom = $variant === 'centcom';
+
+        $data = $rows->map(function (IssueLogManagement $issue) use ($userId, $isCentcom) {
+            $priority = $issue->priority->priority ?? 'N/A';
+            $priorityClass = $priority === 'High' ? 'danger' : ($priority === 'Medium' ? 'warning' : 'info');
+
+            $status = (int) $issue->issue_status;
+            $statusClass = $status === 2 ? 'success' : ($status === 1 ? 'info' : ($status === 6 ? 'warning' : 'secondary'));
+
+            $showUrl = e(route('admin.issue-management.show', $issue->pk));
+
+            if ($isCentcom) {
+                // Centcom is a read/act queue: View only, as it was before.
+                $actions = '<a href="' . $showUrl . '" class="btn btn-sm btn-info" title="View Details">'
+                    . '<iconify-icon icon="solar:eye-bold"></iconify-icon></a>';
+                $statusBadge = '<span class="badge bg-' . $statusClass . '">'
+                    . e((string) $issue->status_label) . '</span>';
+            } else {
+                $canEdit = ($issue->issue_logger == $userId) || ($issue->created_by == $userId);
+                $actions = '<div class="d-flex justify-content-end gap-1">'
+                    . '<a href="' . $showUrl . '" class="text-primary" title="View">'
+                    . '<i class="material-icons material-symbols-rounded">visibility</i></a>'
+                    . ($canEdit
+                        ? '<a href="' . e(route('admin.issue-management.edit', $issue->pk)) . '" class="btn btn-action btn-warning" title="Edit">'
+                            . '<iconify-icon icon="solar:pen-bold"></iconify-icon></a>'
+                        : '')
+                    . '</div>';
+                $statusBadge = '<span class="badge rounded-1 bg-' . $statusClass . ' '
+                    . ($statusClass === 'warning' ? 'text-dark' : '') . '">'
+                    . e((string) $issue->status_label) . '</span>';
+            }
+
+            return [
+                'id' => $isCentcom ? (string) $issue->pk : '#' . $issue->pk,
+                // The column sorts server-side, so the display string can stay
+                // human-readable — no data-order needed.
+                'date' => optional($issue->created_date)->format($isCentcom ? 'd-m-Y H:i' : 'd M Y') ?: '-',
+                'category' => e($issue->category->issue_category ?? ($isCentcom ? 'N/A' : '-')),
+                'description' => e(Str::limit((string) $issue->description, $isCentcom ? 60 : 50)),
+                'priority' => '<span class="badge rounded-1 bg-' . $priorityClass . ' '
+                    . ($priorityClass === 'warning' ? 'text-dark' : '') . '">' . e($priority) . '</span>',
+                'status' => $statusBadge,
+                'action' => $actions,
+            ];
+        })->values();
 
         return response()->json([
-            'draw' => (int) $request->input('draw', 0),
-            'recordsTotal' => $snapshot['total'],
-            'recordsFiltered' => $snapshot['total'],
+            'draw' => $draw,
+            'recordsTotal' => $filtered,
+            'recordsFiltered' => $filtered,
             'data' => $data,
         ]);
     }
 
     /**
-     * Cached {total, ids} snapshot for one page of the index query.
-     *
-     * @return array{total: int, ids: array<int, int>}
+     * Export issues to Excel.
      */
-    private function issueManagementIndexCachedSnapshot(Request $request, int $page, int $perPage): array
+    public function exportExcel(Request $request)
     {
-        $isAdmin = hasRole('Admin') || hasRole('SuperAdmin');
-        $userId = Auth::user()->user_id;
-        $scopedIds = null;
-        if (! $isAdmin) {
-            $scopedIds = getEmployeeIdsForUser($userId);
-            if (empty($scopedIds)) {
-                $scopedIds = [$userId];
-            }
-            $scopedIds = array_map('strval', $scopedIds);
-            sort($scopedIds);
-        }
-
-        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_management_index:v3:' . md5(json_encode([
-            'epoch' => $epoch,
-            'is_admin' => $isAdmin,
-            'user_id' => $userId,
-            'scoped_ids' => $scopedIds,
-            'raised_by' => $request->get('raised_by'),
+        $filters = [
+            'search' => $request->get('search'),
             'status' => $request->get('status'),
-            'search' => trim((string) $request->get('search', '')),
             'category' => $request->get('category'),
             'priority' => $request->get('priority'),
             'date_from' => $request->get('date_from'),
             'date_to' => $request->get('date_to'),
-            'page' => $page,
-            'per_page' => $perPage,
-            'sort' => $this->centcomResolveSort($request),
-        ]));
-
-        $snapshot = DataTableRedisCache::remember(
-            $cacheKey,
-            [
-                'enabled' => 'ISSUE_MANAGEMENT_INDEX_CACHE_ENABLED',
-                'seconds' => 'ISSUE_MANAGEMENT_INDEX_CACHE_SECONDS',
-            ],
-            'IssueManagementController@index',
-            fn () => $this->issueManagementIndexPageSnapshot($request, $page, $perPage)
-        );
-
-        if (! is_array($snapshot) || ! array_key_exists('total', $snapshot) || ! array_key_exists('ids', $snapshot) || ! is_array($snapshot['ids'])) {
-            $snapshot = $this->issueManagementIndexPageSnapshot($request, $page, $perPage);
-        }
-
-        return [
-            'total' => (int) $snapshot['total'],
-            'ids' => array_map('intval', $snapshot['ids']),
+            'raised_by' => $request->get('raised_by'),
         ];
-    }
-
-    /**
-     * Download / print the All Requests queue (same scope + filters as the grid).
-     */
-    public function indexExport(Request $request, string $format = 'csv')
-    {
-        // "Raised By You" is the same grid narrowed to ?raised_by=self, so the
-        // title (and filename) is the only thing that says which tab a report
-        // came from — the columns are identical.
-        [$title, $stem] = $request->get('raised_by') === 'self'
-            ? ['Raised By You', 'RaisedByYou']
-            : ['All Requests', 'AllRequests'];
-
-        return $this->runIssueExport(
-            $request,
-            $format,
-            fn () => $this->issueManagementIndexFilteredQuery($request),
-            $title,
-            $stem
-        );
-    }
-
-    /**
-     * Download / print the Centcom queue (same scope + filters as the grid).
-     */
-    public function centcomExport(Request $request, string $format = 'csv')
-    {
-        return $this->runIssueExport(
-            $request,
-            $format,
-            fn () => $this->issueManagementCentcomFilteredQuery($request),
-            // Named after the tab that reaches it ("Assign to you"), not the
-            // internal "Centcom Assign".
-            'Assign to You',
-            'AssignToYou'
-        );
-    }
-
-    /**
-     * CSV / Excel / PDF / print for either issue grid.
-     *
-     * Both grids render the same eight columns, so both reports are driven by
-     * the one resolveExportColumns() list — hiding a column in the grid's
-     * Columns modal drops it from every format, and the four cannot drift.
-     *
-     * @param  \Closure(): Builder  $baseQuery
-     */
-    private function runIssueExport(Request $request, string $format, \Closure $baseQuery, string $title, string $stem)
-    {
-        $format = strtolower($format);
-        abort_unless(in_array($format, ['csv', 'excel', 'pdf', 'print'], true), 404);
-
-        $columns = $this->resolveExportColumns($request);
-        $header = array_values(array_map(fn ($col) => $col['heading'], $columns));
-        $exportDate = now()->format('d-m-Y h:i A');
-        $stamp = now()->format('YmdHis');
-        $limit = self::EXPORT_ROW_LIMITS[$format];
-
-        if ($format === 'excel') {
-            return Excel::download(
-                new IssueManagementExport($baseQuery, $columns, $exportDate, $limit, $title, $this->exportFilterLine($request, false)),
-                $stem . '_' . $stamp . '.xlsx'
-            );
-        }
-
-        // 65k rows will not survive hydration with four relations, and nobody
-        // reads that as a document. Cap per format, then say so in the header.
-        $base = $baseQuery();
-        $total = (int) (clone $base)->toBase()->getCountForPagination();
-        $rows = $base->with(['category', 'priority', 'creator', 'nodal_officer'])
-            ->limit($limit)
-            ->get();
-        $truncated = $total > $limit;
-
-        // Flat, column-keyed lines so a hidden column drops out of every format.
-        $lines = $rows->map(fn (IssueLogManagement $row) => collect($columns)
-            ->map(fn (array $col) => $col['value']($row))
-            ->all())->values();
-
-        $payload = [
-            'columns' => $columns,
-            'header' => $header,
-            'rows' => $lines,
-            'title' => $title,
-            'filterLine' => $this->exportFilterLine($request),
-            'exportDate' => $exportDate,
-            'total' => $total,
-            'truncated' => $truncated,
-            'limit' => $limit,
-        ];
-
-        if ($format === 'print') {
-            return view('admin.issue_management.export_print', $payload);
-        }
-
-        if ($format === 'pdf') {
-            return Pdf::loadView('admin.issue_management.export_pdf', $payload)
-                ->setPaper('a4', 'landscape')
-                ->setOptions([
-                    'defaultFont' => 'DejaVu Sans',
-                    'isHtml5ParserEnabled' => true,
-                    'isPhpEnabled' => true,
-                ])
-                ->download($stem . '_' . $stamp . '.pdf');
-        }
-
-        // Same band the .xlsx and the print/PDF headers carry, so the CSV names
-        // the scope and the applied filters too.
-        $csvBand = ExportCsvHeader::rows(
-            $title,
-            $this->exportFilterLine($request, false),
-            $exportDate,
-            $total,
-            $truncated
-                ? 'Note: only the first ' . number_format($limit) . ' of ' . number_format($total)
-                    . ' matching rows are included. Narrow the filters to export the rest.'
-                : null
-        );
-
-        return response()->streamDownload(function () use ($header, $lines, $csvBand) {
-            $handle = fopen('php://output', 'w');
-            // BOM so Excel opens the UTF-8 file with the right encoding.
-            fwrite($handle, "\xEF\xBB\xBF");
-            foreach ($csvBand as $row) {
-                fputcsv($handle, $row);
-            }
-            fputcsv($handle, $header);
-            foreach ($lines as $line) {
-                fputcsv($handle, array_values($line));
-            }
-            fclose($handle);
-        }, $stem . '_' . $stamp . '.csv', [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        $fileName = 'issues-export-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+        return Excel::download(new IssueManagementExport($filters), $fileName);
     }
 
     /**
@@ -834,8 +557,8 @@ class IssueManagementController extends Controller
                 }
                 $q->orWhere('description', 'like', "%{$term}%");
 
-                // Resolved up front rather than as whereHas(): a correlated
-                // EXISTS over 65k unindexed rows measured ~45s per keystroke.
+                // Same reason as the index grid: whereHas() here is a correlated
+                // EXISTS over 65k rows and costs tens of seconds per keystroke.
                 if ($categoryIds !== []) {
                     $q->orWhereIn('issue_category_master_pk', $categoryIds);
                 }
@@ -874,129 +597,18 @@ class IssueManagementController extends Controller
     }
 
     /**
-     * Hydrate Centcom rows with ONLY what that grid renders.
-     *
-     * Deliberately not the detail view's eager-load list, which also pulls
-     * subCategoryMappings / buildingMapping / hostelMapping / statusHistory /
-     * reproducibility. Those chains hit unindexed FK columns and measured
-     * ~700ms for a 4-row page here, versus ~30ms for the four relations the
-     * columns actually use. The All Requests grid loads through here too.
-     *
-     * @param  array<int, int>  $ids
-     * @return \Illuminate\Support\Collection<int, IssueLogManagement>
-     */
-    private function issueManagementHydrateCentcomRows(array $ids): \Illuminate\Support\Collection
-    {
-        $ids = array_values(array_filter(array_map('intval', $ids)));
-        if ($ids === []) {
-            return collect();
-        }
-
-        $byPk = IssueLogManagement::with(['category', 'priority', 'creator', 'nodal_officer'])
-            ->whereIn('pk', $ids)
-            ->get()
-            ->keyBy(fn (IssueLogManagement $m) => (int) $m->pk);
-
-        return collect($ids)
-            ->map(fn (int $id) => $byPk->get($id))
-            ->filter()
-            ->values();
-    }
-
-    /**
-     * @return array{total: int, ids: array<int, int>}
-     */
-    private function issueManagementCentcomPageSnapshot(Request $request, int $page, ?int $perPage = null): array
-    {
-        $base = $this->issueManagementCentcomFilteredQuery($request);
-        $perPage = $perPage ?: self::INDEX_PER_PAGE;
-        $total = (int) (clone $base)->toBase()->getCountForPagination();
-        $ids = [];
-        if ($total > 0) {
-            $ids = (clone $base)->forPage($page, $perPage)->pluck('pk')->values()->all();
-            $ids = array_map('intval', $ids);
-        }
-
-        return ['total' => $total, 'ids' => $ids];
-    }
-
-    /**
      * Cached {total, ids} snapshot for one page of the Centcom query.
      *
      * @return array{total: int, ids: array<int, int>}
      */
     private function issueManagementCentcomCachedSnapshot(Request $request, int $page, int $perPage): array
     {
-        $userId = Auth::user()->user_id;
-        $scopedIds = getEmployeeIdsForUser($userId);
-        if (empty($scopedIds)) {
-            $scopedIds = [$userId];
-        }
-        $scopedIds = array_map('strval', $scopedIds);
-        sort($scopedIds);
-
-        $epoch = DataTableRedisCache::readListEpoch(self::CENTCOM_LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_management_centcom:v2:' . md5(json_encode([
-            'epoch' => $epoch,
-            'user_id' => $userId,
-            'scoped_ids' => $scopedIds,
-            'status' => $request->get('status'),
-            'search' => trim((string) $request->get('search', '')),
-            'category' => $request->get('category'),
-            'priority' => $request->get('priority'),
-            'date_from' => $request->get('date_from'),
-            'date_to' => $request->get('date_to'),
-            'page' => $page,
-            'per_page' => $perPage,
-            'sort' => $this->centcomResolveSort($request),
-        ]));
-
-        $snapshot = DataTableRedisCache::remember(
-            $cacheKey,
-            [
-                'enabled' => 'ISSUE_MANAGEMENT_CENTCOM_CACHE_ENABLED',
-                'seconds' => 'ISSUE_MANAGEMENT_CENTCOM_CACHE_SECONDS',
-            ],
-            'IssueManagementController@centcom',
-            fn () => $this->issueManagementCentcomPageSnapshot($request, $page, $perPage)
-        );
-
-        if (! is_array($snapshot) || ! array_key_exists('total', $snapshot) || ! array_key_exists('ids', $snapshot) || ! is_array($snapshot['ids'])) {
-            $snapshot = $this->issueManagementCentcomPageSnapshot($request, $page, $perPage);
-        }
-
-        return [
-            'total' => (int) $snapshot['total'],
-            'ids' => array_map('intval', $snapshot['ids']),
-        ];
-    }
-
-    /**
-     * Centcom ("Assign to you") grid — chrome only.
-     *
-     * Rows arrive over ajax from {@see centcomData()}, so this renders no issues
-     * and runs no listing query; the filters below only need their options.
-     */
-    public function centcom(Request $request)
-    {
+        // Rows come from centcomData() — server-side, same reason as index():
+        // this scope can still run to thousands of issues for a busy assignee.
         $categories = IssueCategoryMaster::active()->get();
         $priorities = IssuePriorityMaster::active()->ordered()->get();
 
-        // First-paint values for the toolbar; the grid takes over from here.
-        $search = trim((string) $request->get('search', ''));
-        $hasFilters = filled($search)
-            || $request->filled('category')
-            || $request->filled('priority')
-            || $request->filled('date_from')
-            || $request->filled('date_to')
-            || ($request->has('status') && $request->get('status') !== '');
-
-        return view('admin.issue_management.centcom', compact(
-            'categories',
-            'priorities',
-            'search',
-            'hasFilters'
-        ));
+        return view('admin.issue_management.centcom', compact('categories', 'priorities'));
     }
 
     /**

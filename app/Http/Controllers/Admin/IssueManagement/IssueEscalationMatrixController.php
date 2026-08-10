@@ -18,6 +18,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\{DB, Auth};
+use Yajra\DataTables\Facades\DataTables;
 
 class IssueEscalationMatrixController extends Controller
 {
@@ -154,74 +155,12 @@ class IssueEscalationMatrixController extends Controller
     /**
      * Display escalation matrix - categories with 3-level hierarchy (employees + days).
      */
-    /** Page-size choices offered by the "Showing N of M items" footer select. */
-    private const PER_PAGE_OPTIONS = [10, 20, 50, 100, 200];
-
-    private const INDEX_PER_PAGE = 10;
-
     /**
-     * A level cell as the grid and the reports render it: "Trevor Swanson - 1 Day".
+     * The cached matrix: one row per active category with its three levels.
      *
-     * Empty string when the level is unset — callers add their own placeholder
-     * ('-' in the reports, an em dash on screen).
-     */
-    private function levelCellText($level): string
-    {
-        if (! $level) {
-            return '';
-        }
-
-        $days = (int) $level->days_notify;
-
-        return trim(($level->employee->name ?? 'N/A') . ' - ' . $days . ' ' . ($days === 1 ? 'Day' : 'Days'));
-    }
-
-    /**
-     * The matrix is assembled in memory (one row per category), so search and
-     * sort run over the built collection rather than as SQL.
-     *
-     * @param  array<int, array<string, mixed>>  $matrix
      * @return array<int, array<string, mixed>>
      */
-    private function filterAndSortMatrix(array $matrix, string $search, string $sortKey, string $sortDir): array
-    {
-        $name = fn ($level) => $level?->employee?->name ?? '';
-
-        if ($search !== '') {
-            $needle = mb_strtolower($search);
-            // Search the level cells as the grid renders them ("Name - 3 Days"),
-            // not just the employee name: the grid searches in the browser while
-            // the export runs through here, and a term like "Days" must not
-            // return rows on screen and nothing in the download.
-            $matrix = array_values(array_filter($matrix, function ($row) use ($needle) {
-                $haystack = mb_strtolower(implode(' ', [
-                    $row['category']->issue_category ?? '',
-                    $this->levelCellText($row['level1']),
-                    $this->levelCellText($row['level2']),
-                    $this->levelCellText($row['level3']),
-                ]));
-
-                return str_contains($haystack, $needle);
-            }));
-        }
-
-        $value = function (array $row) use ($sortKey, $name) {
-            return match ($sortKey) {
-                'level1' => mb_strtolower($name($row['level1'])),
-                'level2' => mb_strtolower($name($row['level2'])),
-                'level3' => mb_strtolower($name($row['level3'])),
-                default => mb_strtolower($row['category']->issue_category ?? ''),
-            };
-        };
-
-        usort($matrix, fn ($a, $b) => $sortDir === 'desc'
-            ? $value($b) <=> $value($a)
-            : $value($a) <=> $value($b));
-
-        return $matrix;
-    }
-
-    public function index(Request $request)
+    private function cachedMatrix(): array
     {
         $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
         $cacheKey = 'admin_issue_escalation_matrix:v1:' . md5(json_encode(['epoch' => $epoch]));
@@ -245,172 +184,60 @@ class IssueEscalationMatrixController extends Controller
             $cached = $this->matrixToCacheArray($built['matrix'], $built['categories']);
         }
 
-        $hydrated = $this->matrixFromCacheArray($cached);
-        $categories = $hydrated['categories'];
+        return $this->matrixFromCacheArray($cached)['matrix'];
+    }
+
+    /**
+     * Display the escalation matrix.
+     *
+     * Rows come from data() over ajax; this action only supplies what the Add/Edit
+     * modals need. Both are consumed by the _form partial, which reads $categories
+     * and $employees out of THIS scope — so neither can be dropped even though the
+     * index view itself no longer references them.
+     */
+    public function index()
+    {
+        $categories = IssueCategoryMaster::active()->orderBy('issue_category')->get();
         $employees = $this->getEmployeesForDropdown();
 
-        // Client-side DataTable: search, sort and paging happen in the browser,
-        // so the whole (small) matrix is handed over in one go.
-        $matrix = $this->filterAndSortMatrix($hydrated['matrix'], '', 'category', 'asc');
-
-        $perPageOptions = self::PER_PAGE_OPTIONS;
-
-        return view('admin.issue_management.escalation_matrix.index', compact('matrix', 'categories', 'employees'));
+        return view('admin.issue_management.escalation_matrix.index', compact('categories', 'employees'));
     }
 
     /**
-     * Download / print the escalation matrix (same filter + order as the grid).
-     */
-    /**
-     * Canonical export columns, in order. Keys must match EM_EXPORT_COLUMN_KEYS
-     * in escalation_matrix/index.blade.php.
+     * DataTables server-side feed for the Escalation Matrix grid.
      *
-     * Rows reaching these resolvers are the flat arrays built in export(), keyed
-     * by the same slugs — this grid has no single model per row.
+     * This grid is not a table — it is one row per category assembled in memory from
+     * issue_category_employee_map, so it rides Yajra's collection engine: the matrix
+     * is still built (and cached) server-side, but searching, ordering and paging
+     * happen there too and only the visible page crosses the wire.
      */
-    private function exportColumnDefs(): array
+    public function data(Request $request)
     {
-        return [
-            'sno' => [
-                'heading' => 'S. No.',
-                'class' => 'col-sno',
-                'value' => fn (array $row) => $row['sno'],
-            ],
-            'category' => [
-                'heading' => 'Complaint Category',
-                'class' => 'col-category',
-                'value' => fn (array $row) => $row['category'],
-            ],
-            'level1' => [
-                'heading' => 'Level 1 (Escalation Days)',
-                'class' => 'col-level',
-                'value' => fn (array $row) => $row['level1'],
-            ],
-            'level2' => [
-                'heading' => 'Level 2 (Escalation Days)',
-                'class' => 'col-level',
-                'value' => fn (array $row) => $row['level2'],
-            ],
-            'level3' => [
-                'heading' => 'Level 3 (Escalation Days)',
-                'class' => 'col-level',
-                'value' => fn (array $row) => $row['level3'],
-            ],
-        ];
-    }
+        $rows = collect($this->cachedMatrix())->map(function (array $row) {
+            $name = fn ($level) => $level?->employee?->name ?? '';
 
-    /**
-     * Intersect ?cols= against the canonical list so a hand-edited value cannot
-     * reorder the report or inject a column. Empty => every column.
-     */
-    private function resolveExportColumns(Request $request): array
-    {
-        $defs = $this->exportColumnDefs();
-        $wanted = array_filter(array_map('trim', explode(',', (string) $request->query('cols', ''))));
+            return [
+                'category' => '<strong>' . e((string) ($row['category']->issue_category ?? '')) . '</strong>',
+                'level1' => view('admin.issue_management.escalation_matrix._row_level', ['level' => $row['level1']])->render(),
+                'level2' => view('admin.issue_management.escalation_matrix._row_level', ['level' => $row['level2']])->render(),
+                'level3' => view('admin.issue_management.escalation_matrix._row_level', ['level' => $row['level3']])->render(),
+                'action' => view('admin.issue_management.escalation_matrix._row_actions', ['row' => $row])->render(),
+                /* Hidden, searchable-only column. The rendered cells carry markup, so
+                   searching them would match on class names; this holds just the text
+                   a user would actually type — category plus the three officers. */
+                'search_text' => trim(implode(' ', array_filter([
+                    (string) ($row['category']->issue_category ?? ''),
+                    $name($row['level1']),
+                    $name($row['level2']),
+                    $name($row['level3']),
+                ]))),
+            ];
+        });
 
-        if ($wanted === []) {
-            return $defs;
-        }
-
-        $keys = array_values(array_intersect(array_keys($defs), $wanted));
-
-        return $keys === [] ? $defs : array_intersect_key($defs, array_flip($keys));
-    }
-
-    public function export(Request $request, string $format = 'csv')
-    {
-        $format = strtolower($format);
-        abort_unless(in_array($format, ['csv', 'excel', 'pdf', 'print'], true), 404);
-
-        $built = $this->buildMatrixData();
-        $search = trim((string) $request->query('q', ''));
-        $sortKey = (string) $request->query('sort', 'category');
-        if (! in_array($sortKey, ['category', 'level1', 'level2', 'level3'], true)) {
-            $sortKey = 'category';
-        }
-        $sortDir = strtolower((string) $request->query('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
-
-        $rows = $this->filterAndSortMatrix($built['matrix'], $search, $sortKey, $sortDir);
-
-        $columns = $this->resolveExportColumns($request);
-        $header = array_values(array_map(fn ($col) => $col['heading'], $columns));
-        $exportDate = now()->format('d-m-Y h:i A');
-        $stamp = now()->format('YmdHis');
-
-        // Same text the grid shows and the search matches on.
-        $cell = fn ($level) => $this->levelCellText($level) ?: '-';
-
-        // Keyed by column slug so a hidden column drops cleanly from every format.
-        $lines = collect();
-        foreach ($rows as $i => $row) {
-            $lines->push([
-                'sno' => $i + 1,
-                'category' => $row['category']->issue_category ?? '',
-                'level1' => $cell($row['level1']),
-                'level2' => $cell($row['level2']),
-                'level3' => $cell($row['level3']),
-            ]);
-        }
-
-        if ($format === 'print') {
-            return view('admin.issue_management.escalation_matrix.export_print', [
-                'columns' => $columns,
-                'header' => $header,
-                'rows' => $lines,
-                'search' => $search,
-                'exportDate' => $exportDate,
-            ]);
-        }
-
-        if ($format === 'excel') {
-            return Excel::download(
-                new IssueEscalationMatrixExport($lines, $columns, $exportDate, $search),
-                'EscalationMatrix_' . $stamp . '.xlsx'
-            );
-        }
-
-        if ($format === 'pdf') {
-            return Pdf::loadView('admin.issue_management.escalation_matrix.export_pdf', [
-                'columns' => $columns,
-                'rows' => $lines,
-                'search' => $search,
-                'exportDate' => $exportDate,
-            ])
-                ->setPaper('a4', 'landscape')
-                ->setOptions([
-                    'defaultFont' => 'DejaVu Sans',
-                    'isHtml5ParserEnabled' => true,
-                    'isPhpEnabled' => true,
-                ])
-                ->download('EscalationMatrix_' . $stamp . '.pdf');
-        }
-
-        $filename = 'EscalationMatrix_' . $stamp . '.csv';
-
-        // Same band the .xlsx and the print/PDF headers carry, so the CSV names
-        // the applied filters too.
-        $csvBand = ExportCsvHeader::rows(
-            'Escalation Matrix',
-            $search !== '' ? 'Search: ' . $search : null,
-            $exportDate,
-            $lines->count()
-        );
-
-        return response()->streamDownload(function () use ($columns, $header, $lines, $csvBand) {
-            $handle = fopen('php://output', 'w');
-            // BOM so Excel opens the UTF-8 file with the right encoding.
-            fwrite($handle, "\xEF\xBB\xBF");
-            foreach ($csvBand as $bandRow) {
-                fputcsv($handle, $bandRow);
-            }
-            fputcsv($handle, $header);
-            foreach ($lines as $line) {
-                fputcsv($handle, array_values(array_map(fn ($col) => $col['value']($line), $columns)));
-            }
-            fclose($handle);
-        }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        return DataTables::of($rows)
+            ->addIndexColumn()
+            ->rawColumns(['category', 'level1', 'level2', 'level3', 'action'])
+            ->make(true);
     }
 
     /**

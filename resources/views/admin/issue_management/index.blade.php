@@ -66,64 +66,82 @@
                             <i class="bi bi-file-earmark-pdf me-2" aria-hidden="true"></i>PDF</a></li>
                 </ul>
             </div>
-            <a href="{{ route('admin.issue-management.export.list', array_merge(['format' => 'print'], $exportQuery)) }}"
-               id="imPrintLink"
-               target="_blank" rel="noopener" class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
-                <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
-            </a>
-        </div>
-    </div>
-
-    <div class="card overflow-hidden rounded-3">
-        <div class="card-body p-3 p-md-4">
-
-            {{-- Toolbar: filters left, columns + search right (§2).
-                 No <form>: every control just redraws the grid over ajax. --}}
-            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 ic-toolbar ic-toolbar--compact">
-                <div class="d-flex flex-wrap align-items-center gap-2" id="imFilters">
-                    <span class="programme-dt-filters-label">Filter</span>
-
-                    <div class="programme-dt-filter-select">
-                        <select name="status" class="form-select im-auto-filter" aria-label="Filter by status">
-                            <option value="">Status</option>
-                            <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Reported</option>
-                            <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>In Progress</option>
-                            <option value="2" {{ request('status') === '2' ? 'selected' : '' }}>Completed</option>
-                            <option value="3" {{ request('status') === '3' ? 'selected' : '' }}>Pending</option>
-                            <option value="6" {{ request('status') === '6' ? 'selected' : '' }}>Reopened</option>
-                        </select>
-                    </div>
-
-                    <div class="programme-dt-filter-select">
-                        <select name="category" class="form-select im-auto-filter" aria-label="Filter by category">
-                            <option value="">Category</option>
-                            @foreach($categories as $category)
-                                <option value="{{ $category->pk }}" {{ (string) request('category') === (string) $category->pk ? 'selected' : '' }}>
-                                    {{ $category->issue_category }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="programme-dt-filter-select">
-                        <select name="priority" class="form-select im-auto-filter" aria-label="Filter by priority">
-                            <option value="">Priority</option>
-                            @foreach($priorities as $p)
-                                <option value="{{ $p->pk }}" {{ (string) request('priority') === (string) $p->pk ? 'selected' : '' }}>
-                                    {{ $p->priority ?? 'N/A' }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="ic-filter-date">
-                        <input type="date" name="date_from" class="form-control im-auto-filter"
-                               value="{{ request('date_from') }}" aria-label="From date">
-                    </div>
-                    <span class="ic-filter-sep">–</span>
-                    <div class="ic-filter-date">
-                        <input type="date" name="date_to" class="form-control im-auto-filter"
-                               value="{{ request('date_to') }}" aria-label="To date">
+            <hr class="my-2">
+            <div class="card-body">
+                <!-- Filters -->
+                {{-- Apply still reloads the page so filters stay deep-linkable; the
+                     grid's ajax call reads these same inputs, so both agree. --}}
+                <form method="GET" action="{{ route('admin.issue-management.index') }}" class="filter-card p-3 mb-4" id="imFilters">
+                    <div class="row">
+                        <div class="col-12 col-md-6 col-lg-3 mb-2">
+                            <label class="form-label">Show</label>
+                            <select name="raised_by" class="form-select ">
+                                <option value="all" {{ request('raised_by', 'all') == 'all' ? 'selected' : '' }}>All issues (raised by me or others)</option>
+                                <option value="self" {{ request('raised_by') == 'self' ? 'selected' : '' }}>Raised by me only</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-3 mb-2">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select ">
+                                <option value="">All Status</option>
+                                <option value="0" {{ request('status') == '0' ? 'selected' : '' }}>Reported</option>
+                                <option value="1" {{ request('status') == '1' ? 'selected' : '' }}>In Progress</option>
+                                <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Completed</option>
+                                <option value="3" {{ request('status') == '3' ? 'selected' : '' }}>Pending</option>
+                                <option value="6" {{ request('status') == '6' ? 'selected' : '' }}>Reopened</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-3 mb-2">
+                            <label class="form-label">Category</label>
+                            <select name="category" class="form-select ">
+                                <option value="">All Categories</option>
+                                @foreach($categories as $category)
+                                    <option value="{{ $category->pk }}" {{ request('category') == $category->pk ? 'selected' : '' }}>
+                                        {{ $category->issue_category }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-3 mb-2">
+                            <label class="form-label">Priority</label>
+                            <select name="priority" class="form-select ">
+                                <option value="">All Priorities</option>
+                                @foreach($priorities as $priority)
+                                    <option value="{{ $priority->pk }}" {{ request('priority') == $priority->pk ? 'selected' : '' }}>
+                                        {{ $priority->priority }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-3 mb-2">
+                            <label class="form-label">Date From</label>
+                            <input type="date" name="date_from" class="form-control " value="{{ request('date_from') }}">
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-3 mb-2   ">
+                            <label class="form-label">Date To</label>
+                            <input type="date" name="date_to" class="form-control " value="{{ request('date_to') }}">
+                        </div>
+                        <div class="col-12 col-lg-4 d-flex align-items-end gap-2 flex-wrap mb-2">
+                            <button type="submit" class="btn btn-primary ">Apply</button>
+                            <a href="{{ route('admin.issue-management.index') }}" class="btn btn-outline-secondary " title="Clear filters">Clear Filters</a>
+                            @php
+                                $exportParams = array_filter([
+                                    'search' => request('search'),
+                                    'status' => request('status'),
+                                    'category' => request('category'),
+                                    'priority' => request('priority'),
+                                    'date_from' => request('date_from'),
+                                    'date_to' => request('date_to'),
+                                    'raised_by' => request('raised_by'),
+                                ]);
+                            @endphp
+                            <a href="{{ route('admin.issue-management.export.excel', $exportParams) }}" class="btn btn-success  d-flex align-items-center gap-1" title="Export to Excel">
+                                <span class="d-none d-md-inline">Excel</span>
+                            </a>
+                            <a href="{{ route('admin.issue-management.export.pdf', $exportParams) }}" class="btn btn-danger  d-flex align-items-center gap-1" title="Export to PDF">
+                                <span class="d-none d-md-inline">PDF</span>
+                            </a>
+                        </div>
                     </div>
 
                     <button type="button" id="imResetFilters"
@@ -167,6 +185,8 @@
                                 <th scope="col">Action</th>
                             </tr>
                         </thead>
+                        {{-- Rows come from indexData() over ajax (server-side paging),
+                             so this stays empty: DataTables fills it per draw. --}}
                         <tbody></tbody>
                     </table>
                 </div>
@@ -202,34 +222,35 @@
 
 @push('scripts')
 <script>
-$(function () {
-    'use strict';
-
-    /* ── DataTable (server-side) ──────────────────────────────────────────────
-       Search, sort, paging and the footer are DataTables'; the toolbar filters
-       ride along on the same ajax call, so nothing here reloads the page.
-       `sargamServerOrder` keeps ordering on the server — clicking a header
-       re-queries the whole 65k-row set instead of shuffling the visible page. ── */
-    var $table = $('#issueManagementTable');
+$(document).ready(function () {
+    const tableId = '#issueManagementTable';
+    if ($.fn.DataTable.isDataTable(tableId)) { return; }
 
     function filterValue(name) {
         return $('#imFilters [name="' + name + '"]').val() || '';
     }
 
-    var dt = $table.DataTable({
+    /* Server-side: issue_log_management holds 65k+ rows, so the browser fetches
+       one page at a time from indexData() instead of receiving the whole set.
+       The toolbar filters ride along on the same ajax call. */
+    $(tableId).DataTable({
         serverSide: true,
-        processing: true,
+        /* datatable-global-ui.js turns DataTables' native ordering OFF for
+           server-side tables unless this opt-in is present, and sorts only the
+           rows already loaded instead. We want ORDER BY over the whole set. */
         sargamServerOrder: true,
-        searching: true,
-        // 400ms after the last keystroke — search as you type, one query per pause.
-        searchDelay: 400,
+        processing: true,
+        pageLength: 10,
+        // No "All": the endpoint caps length, and 65k rows in one draw is not a page.
+        lengthMenu: [[10, 20, 50, 100], [10, 20, 50, 100]],
         order: [[1, 'desc']],
+        searchDelay: 400,
         // A deep link may carry ?search= — seed the box before the first query.
-        search: { search: @json($search) },
+        search: { search: @json(request('search', '')) },
         ajax: {
             url: '{{ route('admin.issue-management.data') }}',
             data: function (d) {
-                d.raised_by = '{{ $raisedBy === 'self' ? 'self' : '' }}';
+                d.raised_by = filterValue('raised_by');
                 d.status = filterValue('status');
                 d.category = filterValue('category');
                 d.priority = filterValue('priority');
@@ -237,171 +258,24 @@ $(function () {
                 d.date_to = filterValue('date_to');
             }
         },
+        /* name= is what the endpoint maps back to a sortable column; only the
+           three that exist on issue_log_management itself are orderable, because
+           the table carries no secondary indexes. */
         columns: [
             { data: 'id', name: 'id' },
             { data: 'date', name: 'date' },
             { data: 'category', name: 'category', orderable: false },
-            { data: 'description', name: 'description' },
-            { data: 'complainant', name: 'complainant', orderable: false },
-            { data: 'nodal', name: 'nodal', orderable: false },
+            { data: 'description', name: 'description', orderable: false },
             { data: 'priority', name: 'priority', orderable: false },
             { data: 'status', name: 'status' },
-            { data: 'action', name: 'action', orderable: false, className: 'action' }
+            { data: 'action', name: 'action', orderable: false, searchable: false, className: 'pe-4' }
         ],
         language: {
-            emptyTable: '<div class="ic-empty">' +
-                '<i class="bi bi-inbox d-block mb-2" aria-hidden="true"></i>' +
-                '<h6 class="fw-semibold mb-1">No Issues Found</h6>' +
-                '<p class="mb-0 small">Nothing here yet — log a new issue to get started.</p>' +
-                '</div>',
-            zeroRecords: '<div class="ic-empty">' +
-                '<i class="bi bi-search d-block mb-2" aria-hidden="true"></i>' +
-                '<h6 class="fw-semibold mb-1">No Issues Found</h6>' +
-                '<p class="mb-0 small">No issue matches the current filters.</p>' +
-                '</div>'
+            processing: 'Loading…',
+            zeroRecords: 'No issues match the current filters',
+            emptyTable: 'No issues yet — log a new issue to get started.'
         }
     });
-
-    /* ── Toolbar filters: redraw, never reload ────────────────────────────── */
-    function anyFilterSet() {
-        return ['status', 'category', 'priority', 'date_from', 'date_to']
-            .some(function (name) { return filterValue(name) !== ''; }) || dt.search() !== '';
-    }
-
-    function syncResetButton() {
-        $('#imResetFilters').toggleClass('d-none', !anyFilterSet());
-    }
-
-    $('.im-auto-filter').on('change', function () {
-        dt.page(0).draw();          // back to page 1: the old page may not exist now
-        syncResetButton();
-        imUpdateExportCols();
-    });
-
-    $('#imResetFilters').on('click', function () {
-        $('#imFilters .im-auto-filter').val('');
-        dt.search('').page(0).draw();
-        syncResetButton();
-        imUpdateExportCols();
-    });
-
-    // Search-as-you-type is a filter like any other: re-stamp the export links
-    // too, or a download ignores the term and its header cannot name it.
-    dt.on('search.dt', function () {
-        syncResetButton();
-        imUpdateExportCols();
-    });
-
-    /* ── Column visibility (DataTables column API) ────────────────────────
-       Stored by LABEL, not index — an index points at a different column the
-       moment one is added, silently hiding the wrong one. ── */
-    var COL_KEY = 'issueMgmtGrid:hiddenColumns:v2';
-
-    /* Header index -> export key (IssueManagementController::exportColumnDefs()).
-       Positional: '' marks a column that is not in the export (Action).
-       ⚠️ Adding a table column means adding an entry here too. */
-    var IM_EXPORT_COLUMN_KEYS = ['id', 'date', 'category', 'description', 'complainant', 'nodal', 'priority', 'status', ''];
-    var IM_EXPORT_COL_COUNT = IM_EXPORT_COLUMN_KEYS.filter(Boolean).length;
-
-    /* Every export link carries the columns still on screen AND the filters
-       currently applied, so a download matches what the user is looking at. */
-    function imUpdateExportCols() {
-        var keys = [];
-        dt.columns().every(function () {
-            var key = IM_EXPORT_COLUMN_KEYS[this.index()];
-            if (key && this.visible()) { keys.push(key); }
-        });
-
-        var filters = {
-            search: dt.search() || '',
-            status: filterValue('status'),
-            category: filterValue('category'),
-            priority: filterValue('priority'),
-            date_from: filterValue('date_from'),
-            date_to: filterValue('date_to')
-        };
-
-        ['imDownloadLink', 'imExcelLink', 'imPdfLink', 'imPrintLink'].forEach(function (id) {
-            var link = document.getElementById(id);
-            if (!link) { return; }
-            var base = link.href.split('?')[0];
-            var params = new URLSearchParams(link.href.split('?')[1] || '');
-
-            Object.keys(filters).forEach(function (key) {
-                params.delete(key);
-                if (filters[key] !== '') { params.set(key, filters[key]); }
-            });
-
-            params.delete('cols');
-            // Omit ?cols= while nothing is hidden — the server reads that as "all".
-            if (keys.length !== IM_EXPORT_COL_COUNT) { params.set('cols', keys.join(',')); }
-
-            var qs = params.toString();
-            link.href = base + (qs ? '?' + qs : '');
-        });
-    }
-
-    function getHiddenCols() {
-        try {
-            var parsed = JSON.parse(localStorage.getItem(COL_KEY) || '[]');
-            return Array.isArray(parsed) ? parsed : [];
-        } catch (e) { return []; }
-    }
-
-    function persistHiddenCols(cols) {
-        try { localStorage.setItem(COL_KEY, JSON.stringify(cols)); } catch (e) { /* noop */ }
-    }
-
-    function buildColumnToggles() {
-        var $grid = $('#issueMgmtColumnToggleGrid');
-        var hidden = getHiddenCols();
-
-        dt.columns().every(function () {
-            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
-            if (title) { this.visible(hidden.indexOf(title) === -1, false); }
-        });
-        dt.columns.adjust();
-
-        if (!$grid.length) { return; }
-        $grid.empty();
-
-        dt.columns().every(function () {
-            var index = this.index();
-            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
-            if (!title) { return; }
-
-            var inputId = 'imcolvis_' + index;
-            var $checkbox = $('<input type="checkbox" class="form-check-input m-0">')
-                .attr('id', inputId)
-                .prop('checked', hidden.indexOf(title) === -1);
-
-            $checkbox.on('change', function () {
-                var cols = getHiddenCols();
-                var pos = cols.indexOf(title);
-                if (this.checked) {
-                    if (pos !== -1) { cols.splice(pos, 1); }
-                } else if (pos === -1) {
-                    cols.push(title);
-                }
-                persistHiddenCols(cols);
-                dt.column(index).visible(this.checked, false);
-                dt.columns.adjust();
-                imUpdateExportCols();
-            });
-
-            $('<div class="col-12 col-sm-6 col-md-4"></div>').append(
-                $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
-                    .attr('for', inputId)
-                    .append($checkbox)
-                    .append($('<span></span>').text(title))
-            ).appendTo($grid);
-        });
-    }
-
-    buildColumnToggles();
-    // Stamp the restored column state onto the export links on first paint too.
-    imUpdateExportCols();
-    syncResetButton();
 });
 </script>
 @endpush
