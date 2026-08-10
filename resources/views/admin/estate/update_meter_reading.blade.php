@@ -605,7 +605,7 @@ $(document).ready(function() {
             const now = Date.now();
             if ((now - lastInvalidReadingAlertAt) > 800) {
                 lastInvalidReadingAlertAt = now;
-                alert('New Meter Reading cannot be less than the minimum allowed baseline for this row.');
+                alert('New Meter Reading cannot be less than the minimum allowed baseline for this row.\n\nIf the meter was replaced or the saved reading is wrong, open this row from List Meter Reading → Edit.');
             }
             return;
         }
@@ -706,7 +706,7 @@ $(document).ready(function() {
         const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
         if (isReadingBelowMinAllowed($inp, currReading)) {
             lastInvalidReadingAlertAt = Date.now();
-            alert('New Meter Reading cannot be less than the minimum allowed baseline for this row.');
+            alert('New Meter Reading cannot be less than the minimum allowed baseline for this row.\n\nIf the meter was replaced or the saved reading is wrong, open this row from List Meter Reading → Edit.');
         }
     });
 
