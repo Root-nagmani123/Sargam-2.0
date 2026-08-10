@@ -14,6 +14,7 @@ use App\DataTables\EstateHacApprovedDataTable;
 use App\Exports\EstateHacApprovedExport;
 use App\Exports\EstatePossessionDetailsExport;
 use App\Exports\EstateRequestForEstateExport;
+use App\Exports\EstateUpdateMeterNoExport;
 use App\Http\Controllers\Controller;
 use App\Support\RedisBackedCache;
 use App\Models\EstateChangeHomeReqDetails;
@@ -153,6 +154,7 @@ class EstateController extends Controller
 
         return [
             'name' => $r->emp_name ?? 'N/A',
+            'employee_id' => $r->employee_id ?? null,
             'employee_type' => $r->employee_type ?? '—',
             'unit_type' => $r->unit_type ?? '—',
             'unit_sub_type' => $r->unit_sub_type ?? '—',
@@ -6381,9 +6383,15 @@ class EstateController extends Controller
             ];
         }
 
-        return view('admin.estate.update_meter_reading', compact(
-            'campuses', 'unitTypes', 'billMonths', 'unitSubTypes', 'prefill'
-        ));
+        $payload = compact('campuses', 'unitTypes', 'billMonths', 'unitSubTypes', 'prefill');
+
+        // The Possession Details listing's Update Meter Reading modal asks for the
+        // body only (filter + readings grid).
+        if (request()->boolean('modal')) {
+            return view('admin.estate._update_meter_reading_form', $payload + ['inModal' => true]);
+        }
+
+        return view('admin.estate.update_meter_reading', $payload);
     }
 
     /**
@@ -7033,6 +7041,15 @@ class EstateController extends Controller
         });
 
         if ($validator->fails()) {
+            // The modal posts over AJAX and renders errors inline.
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validator->errors()->first(),
+                    'errors' => $validator->errors()->toArray(),
+                ], 422);
+            }
+
             return redirect()
                 ->back()
                 ->withInput()
@@ -7179,10 +7196,15 @@ class EstateController extends Controller
                     ->where('emrd.pk', $resolvePk)
                     ->value('epd.return_home_status');
                 if ($rh !== null && (int) $rh !== 0) {
+                    $returnedMsg = 'Meter reading cannot be updated for houses that have been returned.';
+                    if ($request->ajax() || $request->wantsJson()) {
+                        return response()->json(['success' => false, 'message' => $returnedMsg], 422);
+                    }
+
                     return redirect()
                         ->back()
                         ->withInput()
-                        ->with('error', 'Meter reading cannot be updated for houses that have been returned.');
+                        ->with('error', $returnedMsg);
                 }
             }
 
@@ -7532,9 +7554,15 @@ class EstateController extends Controller
             }
         }
 
+        $successMsg = 'Meter readings updated successfully.';
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => $successMsg]);
+        }
+
         return redirect()
             ->route('admin.estate.update-meter-no', $meterNoQuery)
-            ->with('success', 'Meter readings updated successfully.');
+            ->with('success', $successMsg);
     }
 
     /**
@@ -7544,7 +7572,99 @@ class EstateController extends Controller
     {
         $this->authorizeEstateMasterMeterAndReports();
 
-        return view('admin.estate.update_meter_no');
+        // Bill Year options come from the readings that actually exist.
+        $billYears = EstateMonthReadingDetails::query()
+            ->whereNotNull('bill_year')
+            ->distinct()
+            ->orderByDesc('bill_year')
+            ->pluck('bill_year')
+            ->map(fn ($y) => (string) $y)
+            ->filter()
+            ->values();
+
+        if ($billYears->isEmpty()) {
+            $billYears = collect([(string) now()->year]);
+        }
+
+        return view('admin.estate.update_meter_no', compact('billYears'));
+    }
+
+    /**
+     * Rows + heading line for the Update Meter Details downloads.
+     *
+     * Reuses getUpdateMeterNoList()'s own payload builder in "show all" mode, so
+     * the export inherits the same visibility rules, month filter and search
+     * that produced the on-screen list.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function updateMeterNoExportPayload(Request $request): array
+    {
+        // Same request shape the DataTable sends, but unpaginated and without `draw`
+        // so the builder returns every matching row.
+        $listRequest = Request::create(
+            route('admin.estate.update-meter-no.list'),
+            'GET',
+            array_filter([
+                'draw' => 1,
+                'start' => 0,
+                'length' => -1,
+                'bill_year' => $request->input('bill_year'),
+                'bill_month' => $request->input('bill_month'),
+                'search' => ['value' => (string) $request->input('search', '')],
+            ], fn ($v) => $v !== null && $v !== '')
+        );
+        $listRequest->setUserResolver($request->getUserResolver());
+
+        $payload = $this->getUpdateMeterNoList($listRequest)->getData(true);
+        $rows = collect($payload['data'] ?? [])->map(fn ($row) => (object) $row);
+
+        $monthNum = (int) $request->input('bill_month', 0);
+        $filters = [];
+        $filters[] = 'Bill Year: ' . ($request->input('bill_year') ?: 'All');
+        $filters[] = 'Bill Month: ' . ($monthNum >= 1 && $monthNum <= 12
+            ? date('F', mktime(0, 0, 0, $monthNum, 1))
+            : 'All');
+        if (trim((string) $request->input('search', '')) !== '') {
+            $filters[] = 'Search: "' . trim((string) $request->input('search')) . '"';
+        }
+
+        return [
+            'rows' => $rows,
+            'cols' => EstateUpdateMeterNoExport::resolveCols($request->input('cols')),
+            'filterLine' => implode('  |  ', $filters),
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /**
+     * Update Meter Details — branded .xlsx of the currently filtered list.
+     */
+    public function exportUpdateMeterNo(Request $request)
+    {
+        $this->authorizeEstateMasterMeterAndReports();
+        $payload = $this->updateMeterNoExportPayload($request);
+
+        return Excel::download(
+            new EstateUpdateMeterNoExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'update-meter-details-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /**
+     * Update Meter Details — print-ready view of the currently filtered list.
+     * Same header and columns as the Excel download.
+     */
+    public function printUpdateMeterNo(Request $request)
+    {
+        $this->authorizeEstateMasterMeterAndReports();
+
+        return view('admin.estate.update_meter_no_print', $this->updateMeterNoExportPayload($request));
     }
 
     /**
@@ -7714,6 +7834,7 @@ class EstateController extends Controller
             'emrd.last_month_elec_red2',
             'emrd.curr_month_elec_red2',
             'ehrd.emp_name',
+            'ehrd.employee_id',
             'etm.category_type_name as employee_type',
             'ut.unit_type',
             'ust.unit_sub_type',
@@ -7749,6 +7870,7 @@ class EstateController extends Controller
             'emro.last_month_elec_red2',
             'emro.curr_month_elec_red2',
             'eor.emp_name',
+            DB::raw('NULL as employee_id'),
             'eor.designation as employee_type',
             'out.unit_type',
             'oust.unit_sub_type',

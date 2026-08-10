@@ -547,3 +547,133 @@
 .pd-page .programme-dt-search {
     width: 240px;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Update Meter Details (admin/estate/update-meter-no)
+   Fifteen narrow meter columns — the widest table in the module.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.umn-page .programme-dt-table thead th,
+.umn-page .programme-dt-table tbody td {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.8125rem;
+}
+
+.umn-page .programme-dt-table tbody td {
+    white-space: nowrap;
+}
+
+/* Name & ID is the only column worth wrapping. */
+.umn-page .programme-dt-table tbody td:nth-child(2) {
+    min-width: 150px;
+    white-space: normal;
+    line-height: 1.4;
+}
+
+/* The meter columns share the header's two-line wrap so the table stays narrow. */
+.umn-page .programme-dt-table thead th {
+    white-space: normal;
+    min-width: 62px;
+}
+
+.umn-page .pd-search-toggle {
+    width: var(--ds-control-h, 2.5rem);
+    height: var(--ds-control-h, 2.5rem);
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: var(--ds-surface, #fff);
+    color: #475467;
+}
+
+.umn-page .pd-search-toggle:hover,
+.umn-page .pd-search-toggle[aria-expanded="true"] {
+    background: #f2f7fc;
+    border-color: var(--ds-primary, #004a93);
+    color: var(--ds-primary, #004a93);
+}
+
+.umn-page .programme-dt-search {
+    width: 240px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Update Meter Reading (filter + readings grid, page and modal)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.umr-form .umr-grid-wrap {
+    max-height: 46vh;
+    overflow: auto;
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-radius: var(--ds-radius-2, 8px);
+}
+
+/* The grid can be long; keep the header in view while entering readings. */
+.umr-form .umr-grid thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    white-space: normal;
+    min-width: 84px;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.umr-form .umr-grid td {
+    font-size: 0.8125rem;
+    padding: 0.5rem !important;
+}
+
+.umr-form .umr-grid .form-control {
+    min-height: 2rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8125rem;
+}
+
+.umr-form .umr-grid .new-meter-no,
+.umr-form .umr-grid .new-meter-reading {
+    min-width: 110px;
+}
+
+.umr-form .umr-grid .unit-cell {
+    font-weight: 600;
+    color: var(--ds-ink, #1f2937);
+}
+
+/* Stacked dual-meter rows keep their divider inside the new cell padding. */
+.umr-form .umr-grid .other-dual-seg[data-slot="1"] {
+    border-bottom: 1px solid var(--ds-line, #e5e7eb);
+}
+
+.umr-page .card,
+.ds-modal .umr-form .form-control,
+.ds-modal .umr-form .form-select {
+    /* fields inherit the .ds-modal control styling */
+}
+
+/* Select2 widgets inside the Update Meter Reading dialog: match .ds-modal controls. */
+.ds-modal .umr-form .select2-container--default .select2-selection--single {
+    min-height: var(--ds-control-h, 2.5rem);
+    display: flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #d0d5dd;
+    border-radius: var(--ds-radius-1, 4px);
+}
+
+.ds-modal .umr-form .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 1.5;
+    padding-left: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--ds-ink, #1f2937);
+}
+
+.ds-modal .umr-form .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 100%;
+}

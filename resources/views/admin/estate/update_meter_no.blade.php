@@ -1,130 +1,147 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Update Meter No. - Sargam')
+@section('title', 'Update Meter Details')
 
 @php
     $estateSelfHomeTab = request('scope') === 'self'
         && (isEstateAuthority());
-@endphp
-@section($estateSelfHomeTab ? 'content' : 'setup_content')
-@php
+
     $qYear = request('bill_year');
     $qMonth = request('bill_month');
     $filterDefaultYear = ($qYear !== null && $qYear !== '' && is_numeric($qYear)) ? (int) $qYear : now()->year;
-    $filterDefaultMonth = ($qMonth !== null && $qMonth !== '' && is_numeric($qMonth) && (int) $qMonth >= 1 && (int) $qMonth <= 12) ? (int) $qMonth : now()->month;
-@endphp
-<div class="container-fluid">
-    @if (session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-    @if (session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('admin.estate.request-for-others') }}">Estate Management</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Update Meter No.</li>
-        </ol>
-    </nav>
+    $filterDefaultMonth = ($qMonth !== null && $qMonth !== '' && is_numeric($qMonth) && (int) $qMonth >= 1 && (int) $qMonth <= 12)
+        ? (int) $qMonth
+        : now()->month;
 
-    <!-- Page Header -->
-    <div class="d-flex flex-column flex-md-row flex-md-nowrap justify-content-between align-items-start align-items-md-center gap-3 mb-4 no-print">
-        <h2 class="mb-0">Update Meter No.</h2>
-        <div class="d-flex flex-wrap gap-2 flex-shrink-0">
-            @php
-                $canUpdateReadingAndMeterNo = isEstateAuthority();
-            @endphp
-            @if($canUpdateReadingAndMeterNo)
-            <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2">
-                Update Reading & Meter No.
+    $canUpdateReadingAndMeterNo = isEstateAuthority();
+@endphp
+@section($estateSelfHomeTab ? 'content' : 'setup_content')
+<div class="container-fluid rfe-page umn-page">
+    <x-breadcrum title="Update Meter Details" :showBack="false">
+        @if($canUpdateReadingAndMeterNo)
+            <a href="{{ route('admin.estate.update-meter-reading') }}"
+                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-semibold text-nowrap shadow-sm">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                <span>Update Reading &amp; Meter Number</span>
             </a>
-            @endif
-            <div class="btn-group btn-group-sm" role="group">
-                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Show / hide columns">
-                    <i class="bi bi-columns-gap"></i>
-                    <span class="d-none d-md-inline ms-1">Show / hide columns</span>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end" id="updateMeterNoColumnToggleMenu"></ul>
-            </div>
-            <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2" id="btnUpdateMeterNoPrint" title="Print">
-                <i class="bi bi-printer"></i>
-                <span class="d-none d-md-inline">Print</span>
-            </button>
-        </div>
+        @endif
+    </x-breadcrum>
+
+    <x-session_message />
+
+    {{-- Exports sit above the card (docs/new-design-index-page.md §1). Both honour
+         the applied Bill Year / Bill Month, the search box and the Columns choice. --}}
+    <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3">
+        <button type="button" class="btn rfe-export-btn border-0" id="umnDownloadBtn">
+            <i class="bi bi-download" aria-hidden="true"></i>
+            <span>Download</span>
+        </button>
+        <button type="button" class="btn rfe-export-btn border-0" id="umnPrintBtn">
+            <i class="bi bi-printer" aria-hidden="true"></i>
+            <span>Print</span>
+        </button>
     </div>
 
-    <!-- Filters + Data Table Card -->
-    <div class="card shadow-sm">
-        <div class="card-body">
-            <!-- Simple filter row: require bill month & year before loading -->
-            <div class="row g-3 mb-3 no-print align-items-end">
-                <div class="col-sm-6 col-md-4 col-lg-3">
-                    <label for="filterBillYear" class="form-label mb-1">Bill Year<span class="text-danger">*</span></label>
-                    <input type="number" min="2000" max="2100" class="form-control form-control-sm" id="filterBillYear" placeholder="e.g. 2025" value="{{ $filterDefaultYear }}">
+    <div class="card overflow-hidden rounded-1">
+        <div class="card-body p-3 p-md-4">
+            <div id="updateMeterNoCardBody">
+
+                <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+                        <span class="programme-dt-filters-label">Filter</span>
+
+                        <div class="programme-dt-filter-select">
+                            <select id="filterBillYear" class="form-select" aria-label="Filter by bill year">
+                                <option value="">Bill Year</option>
+                                @foreach($billYears ?? [] as $year)
+                                    <option value="{{ $year }}" {{ (int) $year === $filterDefaultYear ? 'selected' : '' }}>{{ $year }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="programme-dt-filter-select">
+                            <select id="filterBillMonth" class="form-select" aria-label="Filter by bill month">
+                                <option value="">Bill Month</option>
+                                @foreach(range(1, 12) as $m)
+                                    <option value="{{ $m }}" {{ $m === $filterDefaultMonth ? 'selected' : '' }}>
+                                        {{ date('F', mktime(0, 0, 0, $m, 1)) }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <button type="button" id="umnClearFilter" class="btn programme-dt-btn-reset">
+                            Remove Filter
+                        </button>
+                    </div>
+
+                    <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                        <button type="button" class="btn programme-dt-btn-columns" id="umnBtnColumns"
+                            data-bs-toggle="modal" data-bs-target="#umnColumnVisibilityModal"
+                            title="Show / hide columns">
+                            <span>Columns</span>
+                            <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                        </button>
+                        {{-- Search is the toggle variant (docs/new-design-index-page.md §2):
+                             two filters plus a 300px search box do not fit this toolbar. --}}
+                        <button type="button" class="btn pd-search-toggle" id="umnSearchToggle"
+                            aria-expanded="false" aria-controls="umnDtSearch" title="Search">
+                            <i class="bi bi-search" aria-hidden="true"></i>
+                            <span class="visually-hidden">Search</span>
+                        </button>
+                        <div id="umnDtSearch" class="programme-dt-search d-none" data-dt-search-for="updateMeterNoTable"></div>
+                    </div>
                 </div>
-                <div class="col-sm-6 col-md-4 col-lg-3">
-                    <label for="filterBillMonth" class="form-label mb-1">Bill Month<span class="text-danger">*</span></label>
-                    <select id="filterBillMonth" class="form-select form-select-sm">
-                        <option value="">Select month</option>
-                        <option value="1" @if($filterDefaultMonth === 1) selected @endif>January</option>
-                        <option value="2" @if($filterDefaultMonth === 2) selected @endif>February</option>
-                        <option value="3" @if($filterDefaultMonth === 3) selected @endif>March</option>
-                        <option value="4" @if($filterDefaultMonth === 4) selected @endif>April</option>
-                        <option value="5" @if($filterDefaultMonth === 5) selected @endif>May</option>
-                        <option value="6" @if($filterDefaultMonth === 6) selected @endif>June</option>
-                        <option value="7" @if($filterDefaultMonth === 7) selected @endif>July</option>
-                        <option value="8" @if($filterDefaultMonth === 8) selected @endif>August</option>
-                        <option value="9" @if($filterDefaultMonth === 9) selected @endif>September</option>
-                        <option value="10" @if($filterDefaultMonth === 10) selected @endif>October</option>
-                        <option value="11" @if($filterDefaultMonth === 11) selected @endif>November</option>
-                        <option value="12" @if($filterDefaultMonth === 12) selected @endif>December</option>
-                    </select>
-                </div>
-                <div class="col-sm-12 col-md-4 col-lg-3 d-flex gap-2">
-                    <button type="button" id="btnUpdateMeterNoApplyFilter" class="btn btn-primary btn-sm flex-grow-1">
-                        Apply Filter
-                    </button>
-                    <button type="button" id="btnUpdateMeterNoClearFilter" class="btn btn-outline-secondary btn-sm flex-grow-1">
-                        Clear
-                    </button>
-                </div>
-                <div class="col-12">
-                    <div id="updateMeterNoFilterHint" class="small text-muted"></div>
+
+                <div class="programme-dt-panel">
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0 w-100 programme-dt-table" id="updateMeterNoTable">
+                            <thead>
+                                <tr>
+                                    <th>S. No.</th>
+                                    <th>Name &amp; ID</th>
+                                    <th>Employee Type</th>
+                                    <th>Unit Type</th>
+                                    <th>Unit Sub Type</th>
+                                    <th>Building Name</th>
+                                    <th>House Number</th>
+                                    <th>Old Meter 1 No.</th>
+                                    <th>New Meter 1 No.</th>
+                                    <th>Old Meter 2 No.</th>
+                                    <th>New Meter 2 No.</th>
+                                    <th>Old Meter 1 Reading</th>
+                                    <th>New Meter 1 Reading</th>
+                                    <th>Old Meter 2 Reading</th>
+                                    <th>New Meter 2 Reading</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    {{-- Left empty on purpose: datatable-global-ui.js fills this with the
+                         pagination and the "Showing [10] of N items" count. --}}
+                    <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                        data-dt-footer-for="updateMeterNoTable"></div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
 
-            <div class="update-meter-no-table-wrapper table-responsive">
-                <table class="table text-nowrap" id="updateMeterNoTable">
-                    <thead>
-                        <tr>
-                            <th>S.No.</th>
-                            <th>Name</th>
-                            <th>Employee Type</th>
-                            <th>Unit Type</th>
-                            <th>Unit Sub Type</th>
-                            <th>Building Name</th>
-                            <th>House No.</th>
-                            <th>Old Meter1 No.</th>
-                            <th>New Meter1 No.</th>
-                            <th>Old Meter2 No.</th>
-                            <th>New Meter2 No.</th>
-                            <th>Old Meter1 Reading</th>
-                            <th>New Meter1 Reading</th>
-                            <th>Old Meter2 Reading</th>
-                            <th>New Meter2 Reading</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="umnColumnVisibilityModal" tabindex="-1" aria-labelledby="umnColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="umnColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="umnColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -132,216 +149,209 @@
 @endsection
 
 @push('styles')
-<style>
-@media print {
-    @page { size: A4 landscape; margin: 8mm; }
-    .no-print { display: none !important; }
-    #updateMeterNoTable_wrapper .dataTables_length,
-    #updateMeterNoTable_wrapper .dataTables_filter,
-    #updateMeterNoTable_wrapper .dataTables_paginate { display: none !important; }
-    .update-meter-no-table-wrapper,
-    #updateMeterNoTable_wrapper .dataTables_scroll,
-    #updateMeterNoTable_wrapper .dataTables_scrollBody,
-    #updateMeterNoTable_wrapper .dataTables_scrollHead { overflow: visible !important; }
-    #updateMeterNoTable_wrapper .dataTables_scrollBody { height: auto !important; max-height: none !important; }
-    #updateMeterNoTable_wrapper .dataTables_scrollHead { display: none !important; }
-    #updateMeterNoTable_wrapper table, #updateMeterNoTable_wrapper table.dataTable { width: 100% !important; }
-    body { zoom: 0.78; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    #updateMeterNoTable_wrapper th, #updateMeterNoTable_wrapper td { white-space: normal !important; word-break: break-word; font-size: 11px; padding: 0.35rem 0.4rem !important; }
-    #updateMeterNoTable_wrapper thead { display: table-header-group; }
-}
-.update-meter-no-table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-</style>
+<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
 @endpush
 
 @push('scripts')
 <script>
-$(document).ready(function() {
-    var updateMeterNoFilters = {
+$(function() {
+    var $table = $('#updateMeterNoTable');
+
+    // The endpoint only returns rows when BOTH bill year and month are given.
+    var filters = {
         bill_year: ($('#filterBillYear').val() || '').trim(),
-        bill_month: ($('#filterBillMonth').val() || '').trim(),
+        bill_month: ($('#filterBillMonth').val() || '').trim()
     };
 
-    var table = $('#updateMeterNoTable').DataTable({
+    var table = $table.DataTable({
         processing: true,
         serverSide: true,
         deferLoading: 0,
         ajax: {
             url: "{{ route('admin.estate.update-meter-no.list') }}",
-            data: function (d) {
-                if (updateMeterNoFilters.bill_year && updateMeterNoFilters.bill_month) {
-                    d.bill_year = updateMeterNoFilters.bill_year;
-                    d.bill_month = updateMeterNoFilters.bill_month;
+            data: function(d) {
+                if (filters.bill_year && filters.bill_month) {
+                    d.bill_year = filters.bill_year;
+                    d.bill_month = filters.bill_month;
                 }
-            },
-        },
-        columns: [
-            { data: 'sn', title: 'S.No.' },
-            { data: 'name', title: 'Name' },
-            { data: 'employee_type', title: 'Employee Type' },
-            { data: 'unit_type', title: 'Unit Type' },
-            { data: 'unit_sub_type', title: 'Unit Sub Type' },
-            { data: 'building_name', title: 'Building Name' },
-            { data: 'house_no', title: 'House No.' },
-            { data: 'old_meter1_no', title: 'Old Meter1 No.', defaultContent: '—' },
-            { data: 'new_meter1_no', title: 'New Meter1 No.', defaultContent: '—' },
-            { data: 'old_meter2_no', title: 'Old Meter2 No.', defaultContent: '—' },
-            { data: 'new_meter2_no', title: 'New Meter2 No.', defaultContent: '—' },
-            { data: 'old_meter1_reading', title: 'Old Meter1 Reading', defaultContent: '—' },
-            { data: 'new_meter1_reading', title: 'New Meter1 Reading', defaultContent: '—' },
-            { data: 'old_meter2_reading', title: 'Old Meter2 Reading', defaultContent: '—' },
-            { data: 'new_meter2_reading', title: 'New Meter2 Reading', defaultContent: '—' }
-        ],
-        order: [[0, 'desc']],
-        pageLength: 10,
-        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-        language: {
-            search: "Search:",
-            lengthMenu: "Show _MENU_ entries",
-            info: "Showing _START_ to _END_ of _TOTAL_ entries",
-            infoEmpty: "Showing 0 to 0 of 0 entries",
-            infoFiltered: "(filtered from _MAX_ total entries)",
-            paginate: {
-                first: "First",
-                last: "Last",
-                next: "Next",
-                previous: "Previous"
             }
         },
+        columns: [
+            { data: 'sn' },
+            {
+                data: null,
+                render: function(row) {
+                    // "Name & ID": name in ink, employee id as a muted suffix.
+                    var name = (row.name && row.name !== 'N/A') ? row.name : '';
+                    var id = row.employee_id || '';
+                    if (!name && !id) return '<span class="rfe-muted">-</span>';
+                    var html = name ? '<span class="rfe-name">' + $('<i>').text(name).html() + '</span>' : '';
+                    if (id) {
+                        html += (html ? ' ' : '') + '<span class="rfe-emp-id">' + (html ? '- ' : '') + $('<i>').text(id).html() + '</span>';
+                    }
+                    return html;
+                }
+            },
+            { data: 'employee_type', defaultContent: '-' },
+            { data: 'unit_type', defaultContent: '-' },
+            { data: 'unit_sub_type', defaultContent: '-' },
+            { data: 'building_name', defaultContent: '-' },
+            { data: 'house_no', defaultContent: '-' },
+            { data: 'old_meter1_no', defaultContent: '-' },
+            { data: 'new_meter1_no', defaultContent: '-' },
+            { data: 'old_meter2_no', defaultContent: '-' },
+            { data: 'new_meter2_no', defaultContent: '-' },
+            { data: 'old_meter1_reading', defaultContent: '-' },
+            { data: 'new_meter1_reading', defaultContent: '-' },
+            { data: 'old_meter2_reading', defaultContent: '-' },
+            { data: 'new_meter2_reading', defaultContent: '-' }
+        ],
+        // The list endpoint fills blanks with an em dash; the design uses a plain
+        // hyphen. Normalise on the way in rather than changing the shared mapper,
+        // which the older screens still render.
+        columnDefs: [{
+            targets: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+            render: function(data) {
+                return (data === null || data === '' || data === '—') ? '-' : data;
+            }
+        }],
+        order: [[0, 'desc']],
         responsive: false,
-        autoWidth: true,
-        scrollX: true,
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+        autoWidth: false
+        // dom / language / pageLength come from datatable-global-ui.js.
     });
 
-    // On first load, if current month/year present, load that data by default
-    if (updateMeterNoFilters.bill_year && updateMeterNoFilters.bill_month) {
-        $('#updateMeterNoFilterHint').text(
-            'Showing records for Bill Year ' + updateMeterNoFilters.bill_year + ' and Bill Month ' + $('#filterBillMonth option:selected').text() + '.'
-        );
+    function reload() {
+        filters.bill_year = ($('#filterBillYear').val() || '').trim();
+        filters.bill_month = ($('#filterBillMonth').val() || '').trim();
+        // The ajax data callback only sends bill_year/bill_month when BOTH are
+        // set; with neither the endpoint returns every saved reading, which is
+        // exactly what "Remove Filter" should show. Always re-query — clear()
+        // would blank the rows but leave the previous count in the footer.
         table.ajax.reload();
-    } else {
-        $('#updateMeterNoFilterHint').text(
-            'Please select Bill Year and Bill Month, then click "Apply Filter" to load records.'
-        );
     }
 
-    $('#btnUpdateMeterNoApplyFilter').on('click', function() {
-        var year = ($('#filterBillYear').val() || '').trim();
-        var month = ($('#filterBillMonth').val() || '').trim();
+    $('#filterBillYear, #filterBillMonth').on('change', reload);
 
-        if (!year || !month) {
-            alert('Please select both Bill Year and Bill Month to load the list.');
-            return;
-        }
-
-        updateMeterNoFilters.bill_year = year;
-        updateMeterNoFilters.bill_month = month;
-
-        $('#updateMeterNoFilterHint').text(
-            'Showing records for Bill Year ' + year + ' and Bill Month ' + $('#filterBillMonth option:selected').text() + '.'
-        );
-
-        table.ajax.reload();
-    });
-
-    $('#btnUpdateMeterNoClearFilter').on('click', function() {
+    $('#umnClearFilter').on('click', function() {
         $('#filterBillYear').val('');
         $('#filterBillMonth').val('');
-        updateMeterNoFilters.bill_year = null;
-        updateMeterNoFilters.bill_month = null;
-        $('#updateMeterNoFilterHint').text(
-            'Please select Bill Year and Bill Month, then click "Apply Filter" to load records.'
-        );
-        table.clear().draw();
+        table.search('');
+        reload();
     });
 
-    function buildUpdateMeterNoColumnToggle() {
-        var menu = $('#updateMeterNoColumnToggleMenu');
-        menu.empty();
-        table.columns().every(function(i) {
-            var col = this;
-            var header = $(col.header()).text().trim();
-            if (!header) return;
-            var $li = $('<li><label class="dropdown-item d-flex align-items-center gap-2 cursor-pointer mb-0"><input type="checkbox" class="form-check-input column-toggle-update-meter-no" data-column="' + i + '"> ' + header + '</label></li>');
-            $li.find('input').prop('checked', col.visible());
-            menu.append($li);
+    if (filters.bill_year && filters.bill_month) {
+        table.ajax.reload();
+    }
+
+    /* ---------- Search toggle ---------- */
+    $('#umnSearchToggle').on('click', function() {
+        var $slot = $('#umnDtSearch');
+        var opening = $slot.hasClass('d-none');
+        $slot.toggleClass('d-none', !opening);
+        $(this).attr('aria-expanded', opening ? 'true' : 'false');
+        if (opening) {
+            $slot.find('input').trigger('focus');
+        } else if (table.search()) {
+            // Collapsing clears the query — a hidden active filter is a trap.
+            table.search('').draw();
+            $slot.find('input').val('');
+        }
+    });
+
+    /* ---------- Column visibility (persisted per browser, per user) ---------- */
+    // Header index -> export column key. POSITIONAL: adding a table column means
+    // adding an entry here too.
+    var UMN_EXPORT_COLUMN_KEYS = ['sno', 'name_id', 'employee_type', 'unit_type', 'unit_sub_type',
+        'building_name', 'house_no', 'old_meter1_no', 'new_meter1_no', 'old_meter2_no', 'new_meter2_no',
+        'old_meter1_reading', 'new_meter1_reading', 'old_meter2_reading', 'new_meter2_reading'];
+    var umnColStorageKey = 'sargam.updateMeterNo.hiddenCols.{{ auth()->id() ?? 'guest' }}';
+
+    function umnGetHiddenCols() {
+        try {
+            var raw = localStorage.getItem(umnColStorageKey);
+            var arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) {
+            return []; // private mode / storage disabled / corrupt value
+        }
+    }
+
+    function umnPersistHiddenCols(arr) {
+        try { localStorage.setItem(umnColStorageKey, JSON.stringify(arr)); } catch (e) {}
+    }
+
+    function umnVisibleExportCols() {
+        var hidden = umnGetHiddenCols();
+        return UMN_EXPORT_COLUMN_KEYS.filter(function(key, idx) {
+            return hidden.indexOf(idx) === -1;
         });
     }
-    $(document).on('change', '.column-toggle-update-meter-no', function() {
-        var colIdx = $(this).data('column');
-        table.column(colIdx).visible($(this).prop('checked'));
-    });
-    table.on('draw', function() { buildUpdateMeterNoColumnToggle(); });
-    buildUpdateMeterNoColumnToggle();
 
-    function buildUpdateMeterNoPrintableHtml() {
-        var visibleIndexes = [];
-        table.columns().every(function(i) {
-            var header = ($(this.header()).text() || '').trim();
-            if (!header) return;
-            if (this.visible()) visibleIndexes.push(i);
+    function setupUmnColumns() {
+        var hidden = umnGetHiddenCols();
+
+        table.columns().every(function() {
+            var idx = this.index();
+            this.visible(hidden.indexOf(idx) === -1, false);
         });
-        var html = '<table class="table table-bordered table-striped">';
-        html += '<thead><tr>';
-        visibleIndexes.forEach(function(colIdx) {
-            var h = ($(table.column(colIdx).header()).text() || '').trim();
-            html += '<th>' + h + '</th>';
-        });
-        html += '</tr></thead><tbody>';
-        table.rows({ search: 'applied' }).nodes().each(function(rowNode) {
-            var $row = $(rowNode);
-            if ($row.hasClass('child')) return;
-            html += '<tr>';
-            visibleIndexes.forEach(function(colIdx) {
-                var cellNode = table.cell(rowNode, colIdx).node();
-                var cellHtml = '';
-                if (cellNode) {
-                    var $cell = $(cellNode).clone();
-                    $cell.find('input, button, select, textarea').remove();
-                    $cell.find('a.btn, .btn').remove();
-                    cellHtml = ($cell.html() || '').trim();
+        table.columns.adjust();
+
+        var $grid = $('#umnColumnToggleGrid');
+        if (!$grid.length) return;
+        $grid.empty();
+
+        table.columns().every(function() {
+            var idx = this.index();
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (!title) return;
+
+            var inputId = 'umncolvis_' + idx;
+            var $cell = $('<div class="col-12 col-sm-6"></div>');
+            var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-1 px-3 py-2 mb-0 w-100"></label>')
+                .attr('for', inputId);
+            var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .prop('checked', hidden.indexOf(idx) === -1);
+
+            $cb.on('change', function() {
+                var h = umnGetHiddenCols();
+                var pos = h.indexOf(idx);
+                if (this.checked) {
+                    if (pos !== -1) h.splice(pos, 1);
+                } else {
+                    if (pos === -1) h.push(idx);
                 }
-                html += '<td>' + cellHtml + '</td>';
+                umnPersistHiddenCols(h);
+                table.column(idx).visible(this.checked, false);
+                table.columns.adjust();
             });
-            html += '</tr>';
+
+            $label.append($cb).append($('<span></span>').text(title));
+            $cell.append($label);
+            $grid.append($cell);
         });
-        html += '</tbody></table>';
-        return html;
     }
-    function openUpdateMeterNoPrintWindow(tableHtml) {
-        var title = 'Update Meter No.';
-        var win = window.open('', '_blank');
-        if (!win) { window.print(); return; }
-        win.document.open();
-        win.document.write(
-            '<!doctype html><html><head><meta charset="utf-8">' +
-            '<title>' + title + '</title>' +
-            '<style>@page{size:A4 landscape;margin:8mm;}body{font-family:Arial,sans-serif;font-size:11px;}h2{margin:0 0 8px 0;font-size:14px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #333;padding:4px 6px;}thead{display:table-header-group;}tr{page-break-inside:avoid;}</style></head><body><h2>' + title + '</h2>' + tableHtml + '</body></html>'
-        );
-        win.document.close();
-        setTimeout(function() { win.focus(); win.print(); win.close(); }, 250);
+
+    setupUmnColumns();
+
+    /* ---------- Download / Print ---------- */
+    function umnExportParams() {
+        var params = {};
+        if (filters.bill_year) params.bill_year = filters.bill_year;
+        if (filters.bill_month) params.bill_month = filters.bill_month;
+        var searchValue = table.search();
+        if (searchValue) params.search = searchValue;
+        params.cols = umnVisibleExportCols().join(',');
+        return params;
     }
-    $('#btnUpdateMeterNoPrint').on('click', function() {
-        if (!$.fn.DataTable.isDataTable('#updateMeterNoTable')) { window.print(); return; }
-        var originalLen = table.page.len();
-        var originalPage = table.page();
-        var restored = false;
-        var safeRestore = function() {
-            if (restored) return;
-            restored = true;
-            table.page.len(originalLen);
-            table.page(originalPage);
-            table.draw(false);
-        };
-        table.one('draw', function() {
-            setTimeout(function() {
-                var tableHtml = buildUpdateMeterNoPrintableHtml();
-                openUpdateMeterNoPrintWindow(tableHtml);
-                setTimeout(safeRestore, 800);
-            }, 250);
-        });
-        table.page.len(-1).draw();
+
+    $('#umnDownloadBtn').on('click', function() {
+        window.location.href = '{{ route('admin.estate.update-meter-no.export') }}?' + $.param(umnExportParams());
+    });
+
+    $('#umnPrintBtn').on('click', function() {
+        window.open('{{ route('admin.estate.update-meter-no.print') }}?' + $.param(umnExportParams()), '_blank');
     });
 });
 </script>

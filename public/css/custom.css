@@ -245,7 +245,8 @@ body.custom-loaded {
 #rfeColumnToggleGrid .colvis-item,
 #pihColumnToggleGrid .colvis-item,
 #hacColumnToggleGrid .colvis-item,
-#pdColumnToggleGrid .colvis-item {
+#pdColumnToggleGrid .colvis-item,
+#umnColumnToggleGrid .colvis-item {
     cursor: pointer;
     transition: border-color 0.15s ease, background-color 0.15s ease;
 }
@@ -260,7 +261,8 @@ body.custom-loaded {
 #rfeColumnToggleGrid .colvis-item:hover,
 #pihColumnToggleGrid .colvis-item:hover,
 #hacColumnToggleGrid .colvis-item:hover,
-#pdColumnToggleGrid .colvis-item:hover {
+#pdColumnToggleGrid .colvis-item:hover,
+#umnColumnToggleGrid .colvis-item:hover {
     border-color: #004a93 !important;
     background-color: rgba(0, 74, 147, 0.04);
 }
@@ -275,7 +277,8 @@ body.custom-loaded {
 #rfeColumnToggleGrid .colvis-item .form-check-input,
 #pihColumnToggleGrid .colvis-item .form-check-input,
 #hacColumnToggleGrid .colvis-item .form-check-input,
-#pdColumnToggleGrid .colvis-item .form-check-input {
+#pdColumnToggleGrid .colvis-item .form-check-input,
+#umnColumnToggleGrid .colvis-item .form-check-input {
     cursor: pointer;
     flex-shrink: 0;
 }

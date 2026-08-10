@@ -126,74 +126,22 @@
 </div>
 
 @if($canMutate)
-{{-- Update Meter Reading — the filter half of the Update Meter Reading page.
-     Submitting hands the chosen filters to that page, which prefills them and
-     loads the readings grid (where the actual readings are typed and saved). --}}
+{{-- Update Meter Reading. The body (filter + readings grid) is fetched from
+     admin.estate.update-meter-reading?modal=1 — the same partial the standalone
+     page renders, so the two can't drift. --}}
 <div class="modal fade ds-modal" id="updateMeterReadingModal" tabindex="-1" aria-labelledby="updateMeterReadingModalLabel"
     aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
         <div class="modal-content">
-            <form id="formUpdateMeterReading" method="GET" action="{{ route('admin.estate.update-meter-reading') }}">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="updateMeterReadingModalLabel">Update Meter Reading</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header">
+                <h5 class="modal-title" id="updateMeterReadingModalLabel">Update Meter Reading</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div id="updateMeterReadingModalContent">
+                <div class="modal-body text-center text-body-secondary py-5">
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading…
                 </div>
-                <div class="modal-body">
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label for="umr_bill_month" class="form-label">Meter Change Month <span class="ds-req">*</span></label>
-                            <input type="month" class="form-control" id="umr_bill_month" name="bill_month"
-                                max="{{ date('Y-m') }}" required>
-                            <div class="text-danger small field-error" data-field="bill_month" role="alert"></div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="umr_campus_id" class="form-label">Estate Name <span class="ds-req">*</span></label>
-                            <select class="form-select" id="umr_campus_id" name="campus_id" required>
-                                <option value="">Select Estate</option>
-                                @foreach($estateCampuses ?? [] as $campus)
-                                    <option value="{{ $campus->pk }}">{{ $campus->campus_name }}</option>
-                                @endforeach
-                            </select>
-                            <div class="text-danger small field-error" data-field="campus_id" role="alert"></div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="umr_unit_type_id" class="form-label">Unit Name <span class="ds-req">*</span></label>
-                            <select class="form-select" id="umr_unit_type_id" name="unit_type_id">
-                                <option value="">Select Unit</option>
-                                @foreach($estateUnitTypes ?? [] as $unitType)
-                                    <option value="{{ $unitType->pk }}">{{ $unitType->unit_type }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="umr_block_id" class="form-label">Building Name <span class="ds-req">*</span></label>
-                            <select class="form-select" id="umr_block_id" name="block_id">
-                                <option value="">Select Building</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="umr_unit_sub_type_id" class="form-label">Unit Sub-type <span class="ds-req">*</span></label>
-                            <select class="form-select" id="umr_unit_sub_type_id" name="unit_sub_type_id">
-                                <option value="">Select Sub-type</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="umr_meter_reading_date" class="form-label">Meter Reading Date <span class="ds-req">*</span></label>
-                            <input type="date" class="form-control" id="umr_meter_reading_date" name="meter_reading_date" required>
-                            <div class="text-danger small field-error" data-field="meter_reading_date" role="alert"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn ds-btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn ds-btn-submit" id="btnSubmitUpdateMeterReading">Update Meter Reading</button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
@@ -242,7 +190,16 @@
 @endsection
 
 @push('styles')
+{{-- The Update Meter Reading modal's filters are Select2 widgets; without these
+     the native select is hidden by the global .select2-hidden-accessible rule
+     and the widget renders as bare text. --}}
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
 <link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
+<style>
+    /* Keep an open Select2 list above the modal. */
+    .select2-container--open { z-index: 1060; }
+</style>
 @endpush
 
 @push('scripts')
@@ -286,48 +243,33 @@
         /* ---------- Update Meter Reading modal ---------- */
         var meterModalEl = document.getElementById('updateMeterReadingModal');
         var meterModal = meterModalEl ? new bootstrap.Modal(meterModalEl) : null;
-        var meterBlocksUrl = '{{ route('admin.estate.update-meter-reading.blocks') }}';
-        var meterUnitSubTypesUrl = '{{ route('admin.estate.update-meter-reading.unit-sub-types') }}';
-
-        function fillMeterSelect($sel, items, placeholder, labelKey) {
-            $sel.html('<option value="">' + placeholder + '</option>');
-            (items || []).forEach(function(item) {
-                $sel.append($('<option></option>').attr('value', item.pk).text(item[labelKey] || item.pk));
-            });
-        }
-
-        $('#umr_campus_id').on('change', function() {
-            fillMeterSelect($('#umr_block_id'), [], 'Select Building', 'block_name');
-            fillMeterSelect($('#umr_unit_sub_type_id'), [], 'Select Sub-type', 'unit_sub_type');
-            if (!this.value) return;
-            $.get(meterBlocksUrl, { campus_id: this.value }, function(res) {
-                if (res.status) fillMeterSelect($('#umr_block_id'), res.data, 'Select Building', 'block_name');
-            });
-        });
-
-        $('#umr_block_id').on('change', function() {
-            fillMeterSelect($('#umr_unit_sub_type_id'), [], 'Select Sub-type', 'unit_sub_type');
-            var campusId = $('#umr_campus_id').val();
-            if (!campusId || !this.value) return;
-            $.get(meterUnitSubTypesUrl, { campus_id: campusId, block_id: this.value }, function(res) {
-                if (res.status) fillMeterSelect($('#umr_unit_sub_type_id'), res.data, 'Select Sub-type', 'unit_sub_type');
-            });
-        });
+        var meterModalUrl = '{{ route('admin.estate.update-meter-reading') }}';
 
         $('#btnUpdateReading').on('click', function(e) {
             if (!isPlainClick(e) || !meterModal) return;
             e.preventDefault();
-            $('#formUpdateMeterReading')[0].reset();
-            fillMeterSelect($('#umr_block_id'), [], 'Select Building', 'block_name');
-            fillMeterSelect($('#umr_unit_sub_type_id'), [], 'Select Sub-type', 'unit_sub_type');
-            $('#formUpdateMeterReading').find('.field-error').empty();
+            $('#updateMeterReadingModalContent').html(
+                '<div class="modal-body text-center text-body-secondary py-5">' +
+                '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading…</div>');
             meterModal.show();
+
+            $.get(meterModalUrl, { modal: 1 })
+                .done(function(html) {
+                    // The partial ships its own cascade, grid and save wiring.
+                    $('#updateMeterReadingModalContent').html(html);
+                })
+                .fail(function(xhr) {
+                    meterModal.hide();
+                    pdNotify('error', (xhr.responseJSON && xhr.responseJSON.message)
+                        ? xhr.responseJSON.message
+                        : 'Unable to open the meter reading form.');
+                });
         });
 
-        // Plain GET navigation: the readings grid lives on the Update Meter Reading
-        // page, which prefills from these params and loads itself.
-        $('#formUpdateMeterReading').on('submit', function() {
-            $('#btnSubmitUpdateMeterReading').prop('disabled', true).text('Loading…');
+        document.addEventListener('umr:readings-saved', function(e) {
+            if (meterModal) meterModal.hide();
+            reloadTable();
+            pdNotify('success', e.detail.message);
         });
 
         /* ---------- Add / Edit Possession modal ---------- */

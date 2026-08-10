@@ -1689,6 +1689,8 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
 
     Route::get('update-meter-no', [EstateController::class, 'updateMeterNo'])->name('update-meter-no');
     Route::get('update-meter-no/list', [EstateController::class, 'getUpdateMeterNoList'])->name('update-meter-no.list');
+    Route::get('update-meter-no/export', [EstateController::class, 'exportUpdateMeterNo'])->name('update-meter-no.export');
+    Route::get('update-meter-no/print', [EstateController::class, 'printUpdateMeterNo'])->name('update-meter-no.print');
 
     // Generate Estate Bill / Estate Bill Summary (permanent/LBSNAA)
     // Generate Estate Bill / Estate Bill Summary (permanent/LBSNAA)
