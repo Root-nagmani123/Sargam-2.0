@@ -19,7 +19,9 @@
             <hr class="my-2">
             <div class="card-body">
                 <!-- Filters -->
-                <form method="GET" action="{{ route('admin.issue-management.index') }}" class="filter-card p-3 mb-4">
+                {{-- Apply still reloads the page so filters stay deep-linkable; the
+                     grid's ajax call reads these same inputs, so both agree. --}}
+                <form method="GET" action="{{ route('admin.issue-management.index') }}" class="filter-card p-3 mb-4" id="imFilters">
                     <div class="row">
                         <div class="col-12 col-md-6 col-lg-3 mb-2">
                             <label class="form-label">Show</label>
@@ -109,62 +111,9 @@
                                 <th class="text-end pe-4">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @forelse($issues as $issue)
-                            <tr>
-                                <td>#{{ $issue->pk }}</td>
-                                <td data-order="{{ $issue->created_date->format('Y-m-d H:i:s') }}">{{ $issue->created_date->format('d M Y') }}</td>
-                                <td>{{ $issue->category->issue_category ?? '-' }}</td>
-                                <td>{{ Str::limit($issue->description, 50) }}</td>
-                                <td>
-                                    @php
-                                        $p = $issue->priority->priority ?? 'N/A';
-                                        $priorityClass = $p == 'High' ? 'danger' : ($p == 'Medium' ? 'warning' : 'info');
-                                    @endphp
-                                    <span class="badge rounded-1 bg-{{ $priorityClass }} {{ $priorityClass == 'warning' ? 'text-dark' : '' }}">{{ $p }}</span>
-                                </td>
-                               
-                                <td>
-                                    @php
-                                        $s = (int) $issue->issue_status;
-                                        $statusClass = $s == 2 ? 'success' : ($s == 1 ? 'info' : ($s == 6 ? 'warning' : 'secondary'));
-                                    @endphp
-                                    <span class="badge rounded-1 bg-{{ $statusClass }} {{ $statusClass == 'warning' ? 'text-dark' : '' }}">{{ $issue->status_label }}</span>
-                                </td>
-                                <td class="pe-4">
-                                    <div class="d-flex justify-content-end gap-1">
-                                        <a href="{{ route('admin.issue-management.show', $issue->pk) }}" class="text-primary" title="View">
-                                            <i class="material-icons material-symbols-rounded">visibility</i>
-                                        </a>
-                                        @if($issue->issue_logger == Auth::user()->user_id || $issue->created_by == Auth::user()->user_id)
-                                        <a href="{{ route('admin.issue-management.edit', $issue->pk) }}" class="btn btn-action btn-warning " title="Edit">
-                                            <iconify-icon icon="solar:pen-bold"></iconify-icon>
-                                        </a>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                            @empty
-                            {{-- DataTables does not support colspan/rowspan in tbody (tn/18); use exactly 7 <td> to match <th> --}}
-                            <tr>
-                                <td class="border-0 align-middle text-muted small">—</td>
-                                <td class="border-0 align-middle text-muted small">—</td>
-                                <td class="border-0 align-middle text-muted small">—</td>
-                                <td class="border-0 text-center py-5 px-2">
-                                    <div class="rounded-circle bg-body-secondary bg-opacity-50 d-inline-flex p-4 mb-3">
-                                        <iconify-icon icon="solar:clipboard-list-bold-duotone" class="fs-1 text-body-secondary"></iconify-icon>
-                                    </div>
-                                    <h6 class="text-body-secondary mb-1">No issues</h6>
-                                    <p class="small text-body-secondary mb-0">Try adjusting your filters or log a new issue.</p>
-                                </td>
-                                <td class="border-0 align-middle text-muted small">—</td>
-                                <td class="border-0 align-middle text-muted small">—</td>
-                                <td class="border-0 align-middle text-end pe-4">
-                                    <a href="{{ route('admin.issue-management.create') }}" class="btn btn-primary mt-2">Log New Issue</a>
-                                </td>
-                            </tr>
-                            @endforelse
-                        </tbody>
+                        {{-- Rows come from indexData() over ajax (server-side paging),
+                             so this stays empty: DataTables fills it per draw. --}}
+                        <tbody></tbody>
                     </table>
                 </div>
             </div>
@@ -177,17 +126,58 @@
 <script>
 $(document).ready(function () {
     const tableId = '#issueManagementTable';
+    if ($.fn.DataTable.isDataTable(tableId)) { return; }
 
-    if (!$.fn.DataTable.isDataTable(tableId)) {
-        $(tableId).DataTable({
-            pageLength: 10,
-            lengthMenu: [[10, 20, 50, 100, -1], [10, 20, 50, 100, 'All']],
-            order: [[1, 'desc']],
-            columnDefs: [
-                { orderable: false, searchable: false, targets: 6 }
-            ]
-        });
+    function filterValue(name) {
+        return $('#imFilters [name="' + name + '"]').val() || '';
     }
+
+    /* Server-side: issue_log_management holds 65k+ rows, so the browser fetches
+       one page at a time from indexData() instead of receiving the whole set.
+       The toolbar filters ride along on the same ajax call. */
+    $(tableId).DataTable({
+        serverSide: true,
+        /* datatable-global-ui.js turns DataTables' native ordering OFF for
+           server-side tables unless this opt-in is present, and sorts only the
+           rows already loaded instead. We want ORDER BY over the whole set. */
+        sargamServerOrder: true,
+        processing: true,
+        pageLength: 10,
+        // No "All": the endpoint caps length, and 65k rows in one draw is not a page.
+        lengthMenu: [[10, 20, 50, 100], [10, 20, 50, 100]],
+        order: [[1, 'desc']],
+        searchDelay: 400,
+        // A deep link may carry ?search= — seed the box before the first query.
+        search: { search: @json(request('search', '')) },
+        ajax: {
+            url: '{{ route('admin.issue-management.data') }}',
+            data: function (d) {
+                d.raised_by = filterValue('raised_by');
+                d.status = filterValue('status');
+                d.category = filterValue('category');
+                d.priority = filterValue('priority');
+                d.date_from = filterValue('date_from');
+                d.date_to = filterValue('date_to');
+            }
+        },
+        /* name= is what the endpoint maps back to a sortable column; only the
+           three that exist on issue_log_management itself are orderable, because
+           the table carries no secondary indexes. */
+        columns: [
+            { data: 'id', name: 'id' },
+            { data: 'date', name: 'date' },
+            { data: 'category', name: 'category', orderable: false },
+            { data: 'description', name: 'description', orderable: false },
+            { data: 'priority', name: 'priority', orderable: false },
+            { data: 'status', name: 'status' },
+            { data: 'action', name: 'action', orderable: false, searchable: false, className: 'pe-4' }
+        ],
+        language: {
+            processing: 'Loading…',
+            zeroRecords: 'No issues match the current filters',
+            emptyTable: 'No issues yet — log a new issue to get started.'
+        }
+    });
 });
 </script>
 @endpush

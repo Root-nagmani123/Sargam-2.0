@@ -41,7 +41,8 @@
                 @endif
 
                 <div class="table-responsive">
-                    <table class="table">
+                    {{-- id is what the DataTable in @@section('scripts') binds to. --}}
+                    <table class="table" id="escalationMatrixTable">
                         <thead>
                             <tr>
                                 <th width="5%">#</th>
@@ -50,46 +51,15 @@
                                 <th width="25%">Level 2 (Employee / Days)</th>
                                 <th width="25%">Level 3 (Employee / Days)</th>
                                 <th width="10%">Actions</th>
+                                {{-- Hidden, search-only: holds the category + the three
+                                     officer names as plain text. DataTables needs a <th>
+                                     for every declared column, even invisible ones. --}}
+                                <th></th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @forelse($matrix as $index => $row)
-                            <tr>
-                                <td>{{ $index + 1 }}</td>
-                                <td><strong>{{ $row['category']->issue_category }}</strong></td>
-                                <td>
-                                    @if($row['level1'])
-                                        {{ $row['level1']->employee->name ?? 'N/A' }} <span class="badge bg-info">{{ $row['level1']->days_notify }} days</span>
-                                    @else
-                                        <span class="text-muted">—</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($row['level2'])
-                                        {{ $row['level2']->employee->name ?? 'N/A' }} <span class="badge bg-info">{{ $row['level2']->days_notify }} days</span>
-                                    @else
-                                        <span class="text-muted">—</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($row['level3'])
-                                        {{ $row['level3']->employee->name ?? 'N/A' }} <span class="badge bg-info">{{ $row['level3']->days_notify }} days</span>
-                                    @else
-                                        <span class="text-muted">—</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-warning" onclick="editMatrix({{ $row['category']->pk }}, {{ json_encode($row['category']->issue_category) }}, {{ $row['level1']?->employee_master_pk ?? 'null' }}, {{ $row['level1']?->days_notify ?? 0 }}, {{ $row['level2']?->employee_master_pk ?? 'null' }}, {{ $row['level2']?->days_notify ?? 0 }}, {{ $row['level3']?->employee_master_pk ?? 'null' }}, {{ $row['level3']?->days_notify ?? 0 }})">
-                                        <iconify-icon icon="solar:pen-bold"></iconify-icon> Edit
-                                    </button>
-                                </td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="6" class="text-center">No categories found. Add mapping to get started.</td>
-                            </tr>
-                            @endforelse
-                        </tbody>
+                        {{-- Rows come from IssueEscalationMatrixController::data() over
+                             ajax (server-side paging), so this stays empty. --}}
+                        <tbody></tbody>
                     </table>
                 </div>
             </div>
@@ -145,6 +115,61 @@
 
 @section('scripts')
 <script>
+/* Server-side DataTable — the matrix is assembled, searched, ordered and paged on
+   the server (see data()), so the browser only holds the page it is showing. */
+(function () {
+    'use strict';
+    document.addEventListener('DOMContentLoaded', function () {
+        var $ = window.jQuery;
+        if (!$ || !$.fn.DataTable) { return; }
+
+        var $table = $('#escalationMatrixTable');
+        if (!$table.length || $.fn.DataTable.isDataTable($table)) { return; }
+
+        $table.DataTable({
+            serverSide: true,
+            /* datatable-global-ui.js turns DataTables' native ordering OFF for
+               server-side tables unless this opt-in is present, and sorts only the
+               rows already loaded instead. We want ORDER BY over the whole set. */
+            sargamServerOrder: true,
+            processing: true,
+            ajax: { url: '{{ route('admin.issue-escalation-matrix.data') }}' },
+            order: [[1, 'asc']],                 // Complaint Category A→Z
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+            searchDelay: 400,
+            columns: [
+                { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                /* Orderable but not searchable: the cell is <strong>-wrapped, so a
+                   search would match the tag. search_text carries the category name. */
+                { data: 'category', name: 'category', searchable: false },
+                /* Same for the level cells — plain officer names live in search_text. */
+                { data: 'level1', name: 'level1', orderable: false, searchable: false },
+                { data: 'level2', name: 'level2', orderable: false, searchable: false },
+                { data: 'level3', name: 'level3', orderable: false, searchable: false },
+                { data: 'action', name: 'action', orderable: false, searchable: false },
+                { data: 'search_text', name: 'search_text', visible: false, searchable: true, orderable: false }
+            ],
+            language: {
+                processing: 'Loading…',
+                search: 'Search matrix:',
+                lengthMenu: 'Show _MENU_ entries',
+                info: 'Showing _START_ to _END_ of _TOTAL_ categories',
+                infoEmpty: 'No categories',
+                infoFiltered: '(filtered from _MAX_ total)',
+                zeroRecords: 'No matching category found',
+                emptyTable: 'No categories found. Add mapping to get started.',
+                paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+            },
+            drawCallback: function () {
+                if (typeof window.adjustAllDataTables === 'function') {
+                    try { window.adjustAllDataTables(); } catch (e) { /* noop */ }
+                }
+            }
+        });
+    });
+})();
+
 (function() {
     var escalationEmployees = @json($employees);
 

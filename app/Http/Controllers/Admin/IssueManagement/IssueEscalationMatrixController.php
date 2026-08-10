@@ -12,6 +12,7 @@ use App\Support\DataTableRedisCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\{DB, Auth};
+use Yajra\DataTables\Facades\DataTables;
 
 class IssueEscalationMatrixController extends Controller
 {
@@ -148,7 +149,12 @@ class IssueEscalationMatrixController extends Controller
     /**
      * Display escalation matrix - categories with 3-level hierarchy (employees + days).
      */
-    public function index()
+    /**
+     * The cached matrix: one row per active category with its three levels.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function cachedMatrix(): array
     {
         $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
         $cacheKey = 'admin_issue_escalation_matrix:v1:' . md5(json_encode(['epoch' => $epoch]));
@@ -172,12 +178,60 @@ class IssueEscalationMatrixController extends Controller
             $cached = $this->matrixToCacheArray($built['matrix'], $built['categories']);
         }
 
-        $hydrated = $this->matrixFromCacheArray($cached);
-        $matrix = $hydrated['matrix'];
-        $categories = $hydrated['categories'];
+        return $this->matrixFromCacheArray($cached)['matrix'];
+    }
+
+    /**
+     * Display the escalation matrix.
+     *
+     * Rows come from data() over ajax; this action only supplies what the Add/Edit
+     * modals need. Both are consumed by the _form partial, which reads $categories
+     * and $employees out of THIS scope — so neither can be dropped even though the
+     * index view itself no longer references them.
+     */
+    public function index()
+    {
+        $categories = IssueCategoryMaster::active()->orderBy('issue_category')->get();
         $employees = $this->getEmployeesForDropdown();
 
-        return view('admin.issue_management.escalation_matrix.index', compact('matrix', 'categories', 'employees'));
+        return view('admin.issue_management.escalation_matrix.index', compact('categories', 'employees'));
+    }
+
+    /**
+     * DataTables server-side feed for the Escalation Matrix grid.
+     *
+     * This grid is not a table — it is one row per category assembled in memory from
+     * issue_category_employee_map, so it rides Yajra's collection engine: the matrix
+     * is still built (and cached) server-side, but searching, ordering and paging
+     * happen there too and only the visible page crosses the wire.
+     */
+    public function data(Request $request)
+    {
+        $rows = collect($this->cachedMatrix())->map(function (array $row) {
+            $name = fn ($level) => $level?->employee?->name ?? '';
+
+            return [
+                'category' => '<strong>' . e((string) ($row['category']->issue_category ?? '')) . '</strong>',
+                'level1' => view('admin.issue_management.escalation_matrix._row_level', ['level' => $row['level1']])->render(),
+                'level2' => view('admin.issue_management.escalation_matrix._row_level', ['level' => $row['level2']])->render(),
+                'level3' => view('admin.issue_management.escalation_matrix._row_level', ['level' => $row['level3']])->render(),
+                'action' => view('admin.issue_management.escalation_matrix._row_actions', ['row' => $row])->render(),
+                /* Hidden, searchable-only column. The rendered cells carry markup, so
+                   searching them would match on class names; this holds just the text
+                   a user would actually type — category plus the three officers. */
+                'search_text' => trim(implode(' ', array_filter([
+                    (string) ($row['category']->issue_category ?? ''),
+                    $name($row['level1']),
+                    $name($row['level2']),
+                    $name($row['level3']),
+                ]))),
+            ];
+        });
+
+        return DataTables::of($rows)
+            ->addIndexColumn()
+            ->rawColumns(['category', 'level1', 'level2', 'level3', 'action'])
+            ->make(true);
     }
 
     /**

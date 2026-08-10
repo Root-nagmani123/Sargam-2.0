@@ -355,7 +355,9 @@
                 @endif
 
                 <div class="table-responsive rounded-3 border">
-                    <table class="table text-nowrap mb-0">
+                    {{-- id is what the DataTable in @@section('scripts') binds to; without
+                         it that init silently no-ops and the grid loses search/sort/paging. --}}
+                    <table class="table text-nowrap mb-0" id="categoriesTable">
                         <thead>
                             <tr>
                                 <th class="text-nowrap">#</th>
@@ -366,60 +368,15 @@
                                 <th class="text-nowrap">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @forelse($categories as $category)
-                            <tr>
-                                <td>{{ $categories->firstItem() + $loop->index }}</td>
-                                <td>{{ $category->issue_category }}</td>
-                                <td>{{ Str::limit($category->description ?? 'No description', 50) }}</td>
-                                <td>{{ $category->subCategories->count() }}</td>
-                                <td>
-                                    <div class="form-check form-switch d-inline-flex justify-content-center">
-                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                            data-table="issue_category_master" data-column="status" data-id="{{ $category->pk }}" 
-                                            {{ $category->status == 1 ? 'checked' : '' }}>
-                                    </div>
-                                <td>
-                                    <div class="btn-action-group justify-content-center">
-                                        <a href="javascript:void(0)" class="text-primary" onclick="editCategory({{ $category->pk }}, '{{ addslashes($category->issue_category) }}', '{{ addslashes($category->description) }}', {{ $category->status }})" title="Edit Category">
-                                            <i class="material-icons material-symbols-rounded">edit</i>
-                                        </a>
-                                        <form action="{{ route('admin.issue-categories.destroy', $category->pk) }}" 
-                                              method="POST" class="d-inline" 
-                                              onsubmit="return confirm('Are you sure you want to delete this category?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <a class="text-primary" title="Delete Category">
-                                                <i class="material-icons material-symbols-rounded">delete</i>
-                                            </a>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="6" class="empty-state">
-                                    <div class="empty-state-icon">
-                                        <iconify-icon icon="solar:folder-off-bold-duotone"></iconify-icon>
-                                    </div>
-                                    <h5 class="fw-semibold mb-2">No Categories Found</h5>
-                                    <p class="text-muted mb-3">Get started by creating your first complaint category.</p>
-                                    <button type="button" class="btn btn-primary btn-modern" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
-                                        <iconify-icon icon="solar:add-circle-bold"></iconify-icon>
-                                        Add Your First Category
-                                    </button>
-                                </td>
-                            </tr>
-                            @endforelse
-                        </tbody>
+                        {{-- Rows come from IssueCategoryController::data() over ajax
+                             (server-side paging), so this stays empty. --}}
+                        <tbody></tbody>
                     </table>
                 </div>
 
-                @if($categories->hasPages())
-                <div class="d-flex justify-content-center mt-4">
-                    {{ $categories->links() }}
-                </div>
-                @endif
+                {{-- No server pager: the controller sends every row and the
+                     DataTable pages them in the browser, so its search and sort
+                     cover the whole set instead of one server page. --}}
             </div>
         </div>
     </div>
@@ -574,30 +531,46 @@
 
 @section('scripts')
 <script>
+/* Server-side DataTable — search, sort and paging all run in SQL via data(),
+   so the browser only ever holds the page it is showing. */
 (function() {
     'use strict';
     document.addEventListener('DOMContentLoaded', function() {
         var $ = window.jQuery;
         if (!$ || !$.fn.DataTable) return;
         var $table = $('#categoriesTable');
-        if (!$table.length) return;
-        var hasDataRows = $table.find('tbody tr').filter(function() { return $(this).find('td[colspan]').length === 0; }).length > 0;
-        if (!hasDataRows) return;
-        if ($.fn.DataTable.isDataTable($table)) return;
-        $table.DataTable({
-            order: [[1, 'asc']],
+        if (!$table.length || $.fn.DataTable.isDataTable($table)) return;
+
+        var dt = $table.DataTable({
+            serverSide: true,
+            /* datatable-global-ui.js turns DataTables' native ordering OFF for
+               server-side tables unless this opt-in is present, and sorts only the
+               rows already loaded instead. We want ORDER BY over the whole set. */
+            sargamServerOrder: true,
+            processing: true,
+            ajax: { url: '{{ route('admin.issue-categories.data') }}' },
+            order: [[1, 'asc']],                 // Category A→Z
             pageLength: 10,
-            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-            columnDefs: [
-                { orderable: false, targets: [0, 4, 5] }
+            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+            searchDelay: 400,
+            columns: [
+                // DT_RowIndex is numbered by the server for the returned page.
+                { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                { data: 'category_name', name: 'category_name' },
+                { data: 'description', name: 'description' },
+                { data: 'sub_categories', name: 'sub_categories', searchable: false },
+                { data: 'status', name: 'status', searchable: false },
+                { data: 'action', name: 'action', orderable: false, searchable: false }
             ],
             language: {
+                processing: 'Loading…',
                 search: 'Search categories:',
                 lengthMenu: 'Show _MENU_ entries',
                 info: 'Showing _START_ to _END_ of _TOTAL_ categories',
                 infoEmpty: 'No categories',
                 infoFiltered: '(filtered from _MAX_ total)',
                 zeroRecords: 'No matching categories found',
+                emptyTable: 'No Categories Found — get started by creating your first complaint category.',
                 paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
             },
             drawCallback: function() {
@@ -605,6 +578,14 @@
                     try { window.adjustAllDataTables(); } catch (e) {}
                 }
             }
+        });
+
+        /* A status toggle changes a value the server rendered into this row, so
+           re-draw the current page instead of leaving the cell stale. */
+        $(document).ajaxSuccess(function (event, xhr, settings) {
+            var url = (settings && settings.url) ? settings.url : '';
+            if (url.indexOf('toggle-status') === -1 && url.indexOf('toggleStatus') === -1) return;
+            setTimeout(function () { dt.ajax.reload(null, false); }, 250);
         });
     });
 })();

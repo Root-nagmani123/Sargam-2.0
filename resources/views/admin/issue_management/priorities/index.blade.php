@@ -40,7 +40,8 @@
                 @endif
 
                 <div class="table-responsive datatables">
-                    <table class="table">
+                    {{-- id is what the DataTable in @@section('scripts') binds to. --}}
+                    <table class="table" id="issuePrioritiesTable">
                         <thead>
                             <tr>
                                 <th width="5%">ID</th>
@@ -50,47 +51,14 @@
                                 <th width="20%">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @forelse($priorities as $priority)
-                            <tr>
-                                <td>{{ $priority->pk }}</td>
-                                <td>{{ $priority->priority }}</td>
-                                <td>{{ $priority->description ?? '-' }}</td>
-                                <td>
-                                    @if($priority->status == 1)
-                                        <span class="badge bg-success">Active</span>
-                                    @else
-                                        <span class="badge bg-danger">Inactive</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-warning"
-                                            onclick="editPriority({{ $priority->pk }}, {{ json_encode($priority->priority) }}, {{ json_encode($priority->description ?? '') }}, {{ $priority->status }})">
-                                        <iconify-icon icon="solar:pen-bold"></iconify-icon> Edit
-                                    </button>
-                                    <form action="{{ route('admin.issue-priorities.destroy', $priority->pk) }}"
-                                          method="POST" class="d-inline"
-                                          onsubmit="return confirm('Are you sure you want to delete this priority?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger">
-                                            <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon> Delete
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="5" class="text-center">No priorities found.</td>
-                            </tr>
-                            @endforelse
-                        </tbody>
+                        {{-- Rows come from IssuePriorityController::data() over ajax
+                             (server-side paging), so this stays empty. --}}
+                        <tbody></tbody>
                     </table>
                 </div>
 
-                <div class="mt-3">
-                    {{ $priorities->links() }}
-                </div>
+                {{-- No Blade pager: the DataTable pages this grid from the server,
+                     one draw at a time. --}}
             </div>
         </div>
     </div>
@@ -173,6 +141,58 @@
 
 @section('scripts')
 <script>
+/* Server-side DataTable — search, sort and paging all run in SQL via data(),
+   so the browser only ever holds the page it is showing. */
+(function () {
+    'use strict';
+    document.addEventListener('DOMContentLoaded', function () {
+        var $ = window.jQuery;
+        if (!$ || !$.fn.DataTable) { return; }
+
+        var $table = $('#issuePrioritiesTable');
+        if (!$table.length || $.fn.DataTable.isDataTable($table)) { return; }
+
+        $table.DataTable({
+            serverSide: true,
+            /* datatable-global-ui.js turns DataTables' native ordering OFF for
+               server-side tables unless this opt-in is present, and sorts only the
+               rows already loaded instead. We want ORDER BY over the whole set. */
+            sargamServerOrder: true,
+            processing: true,
+            ajax: { url: '{{ route('admin.issue-priorities.data') }}' },
+            order: [[1, 'asc']],                 // Priority Name A→Z
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+            searchDelay: 400,
+            /* name= is what the endpoint maps back to a real column for search
+               and ORDER BY; data= is the key in each JSON row. */
+            columns: [
+                { data: 'id', name: 'id' },
+                { data: 'priority_name', name: 'priority_name' },
+                { data: 'description', name: 'description' },
+                { data: 'status', name: 'status' },
+                { data: 'action', name: 'action', orderable: false, searchable: false }
+            ],
+            language: {
+                processing: 'Loading…',
+                search: 'Search priorities:',
+                lengthMenu: 'Show _MENU_ entries',
+                info: 'Showing _START_ to _END_ of _TOTAL_ priorities',
+                infoEmpty: 'No priorities',
+                infoFiltered: '(filtered from _MAX_ total)',
+                zeroRecords: 'No matching priorities found',
+                emptyTable: 'No priorities found.',
+                paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+            },
+            drawCallback: function () {
+                if (typeof window.adjustAllDataTables === 'function') {
+                    try { window.adjustAllDataTables(); } catch (e) { /* noop */ }
+                }
+            }
+        });
+    });
+})();
+
 function editPriority(id, name, description, status) {
     document.getElementById('edit_priority').value = name || '';
     document.getElementById('edit_description').value = description || '';

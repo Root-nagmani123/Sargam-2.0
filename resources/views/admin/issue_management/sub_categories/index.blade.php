@@ -27,7 +27,8 @@
 
                     <!-- Table Section -->
                     <div class="table-responsive">
-                        <table class="table align-middle mb-0 text-nowrap">
+                        {{-- id is what the DataTable in @@section('scripts') binds to. --}}
+                        <table class="table align-middle mb-0 text-nowrap" id="issueSubCategoriesTable">
                             <thead>
                                 <tr>
                                     <th class="text-center">#</th>
@@ -37,72 +38,14 @@
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                @forelse($subCategories as $index => $subCategory)
-                                <tr data-category-id="{{ $subCategory->issue_category_master_pk ?? '' }}" data-subcategory-name="{{ $subCategory->issue_sub_category }}">
-                                    <td class="text-center fw-semibold text-muted">{{ $loop->iteration }}</td>
-                                    <td>
-                                        {{ $subCategory->category->issue_category ?? '-' }}
-                                    </td>
-                                    <td>
-                                        <span class="fw-medium">{{ $subCategory->issue_sub_category }}</span>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="d-flex align-items-center justify-content-center gap-2">
-                                            <div class="form-check form-switch mb-0">
-                                                <input class="form-check-input status-toggle-subcategory" 
-                                                       type="checkbox" 
-                                                       role="switch"
-                                                       data-id="{{ $subCategory->pk }}"
-                                                       data-url="{{ route('admin.issue-sub-categories.update', $subCategory->pk) }}"
-                                                       {{ $subCategory->status == 1 ? 'checked' : '' }}>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex justify-content-center gap-2">
-                                            <a href="javascript:void(0)" class="text-primary" 
-                                                    onclick="editSubCategory({{ $subCategory->pk }}, {{ $subCategory->issue_category_master_pk ?? 'null' }}, {{ json_encode($subCategory->issue_sub_category) }}, {{ $subCategory->status }})"
-                                                    title="Edit Sub-Category">
-                                                <i class="material-icons material-symbols-rounded" style="font-size: 18px;">edit</i>
-                                            </a>
-                                            <form action="{{ route('admin.issue-sub-categories.destroy', $subCategory->pk) }}" 
-                                                  method="POST" 
-                                                  class="d-inline" 
-                                                  onsubmit="return confirm('Are you sure you want to delete this sub-category?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <a href="javascript:void(0)" class="text-primary"
-                                                        title="Delete Sub-Category">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size: 18px;">delete</i>
-                                                </a>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                                    @empty
-                                    <tr>
-                                        <td colspan="5" class="text-center py-5">
-                                            <div class="empty-state">
-                                                <div class="empty-state-icon">
-                                                    <iconify-icon icon="solar:folder-off-bold-duotone"></iconify-icon>
-                                                </div>
-                                                <h6 class="text-muted mb-2">No Sub-Categories Found</h6>
-                                                <p class="text-muted small mb-0">Start by adding your first complaint sub-category.</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
+                            {{-- Rows come from IssueSubCategoryController::data() over
+                                 ajax (server-side paging), so this stays empty. --}}
+                            <tbody></tbody>
                         </table>
                     </div>
 
-                    <!-- Pagination -->
-                    @if($subCategories->hasPages())
-                    <div class="mt-4 d-flex justify-content-center">
-                        {{ $subCategories->links() }}
-                    </div>
-                    @endif
+                    {{-- No Blade pager: the DataTable pages this grid from the server,
+                         one draw at a time. --}}
                 </div>
             </div>
         </div>
@@ -239,6 +182,71 @@
 
 @section('scripts')
 <script>
+/* Server-side DataTable — search, sort and paging all run in SQL via data(),
+   so the browser only ever holds the page it is showing. The category filter
+   rides along on the same ajax call. */
+(function () {
+    'use strict';
+    document.addEventListener('DOMContentLoaded', function () {
+        var $ = window.jQuery;
+        if (!$ || !$.fn.DataTable) { return; }
+
+        var $table = $('#issueSubCategoriesTable');
+        if (!$table.length || $.fn.DataTable.isDataTable($table)) { return; }
+
+        var dt = $table.DataTable({
+            serverSide: true,
+            /* datatable-global-ui.js turns DataTables' native ordering OFF for
+               server-side tables unless this opt-in is present, and sorts only the
+               rows already loaded instead. We want ORDER BY over the whole set. */
+            sargamServerOrder: true,
+            processing: true,
+            ajax: {
+                url: '{{ route('admin.issue-sub-categories.data') }}',
+                data: function (d) {
+                    /* Prefer a live dropdown if one is present, otherwise fall back to
+                       the value this page was loaded with — otherwise a ?category_id=
+                       deep link would silently stop filtering once rows moved to ajax. */
+                    var $filter = $('#category_filter');
+                    d.category_id = $filter.length
+                        ? ($filter.val() || '')
+                        : @json(request('category_id', ''));
+                }
+            },
+            order: [[1, 'asc']],                 // Category A→Z
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+            searchDelay: 400,
+            columns: [
+                { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'text-center fw-semibold text-muted' },
+                { data: 'category', name: 'category' },
+                { data: 'sub_category', name: 'sub_category' },
+                { data: 'status', name: 'status', searchable: false, className: 'text-center' },
+                { data: 'action', name: 'action', orderable: false, searchable: false }
+            ],
+            language: {
+                processing: 'Loading…',
+                search: 'Search sub-categories:',
+                lengthMenu: 'Show _MENU_ entries',
+                info: 'Showing _START_ to _END_ of _TOTAL_ sub-categories',
+                infoEmpty: 'No sub-categories',
+                infoFiltered: '(filtered from _MAX_ total)',
+                zeroRecords: 'No matching sub-categories found',
+                emptyTable: 'No Sub-Categories Found — start by adding your first complaint sub-category.',
+                paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+            },
+            drawCallback: function () {
+                if (typeof window.adjustAllDataTables === 'function') {
+                    try { window.adjustAllDataTables(); } catch (e) { /* noop */ }
+                }
+            }
+        });
+
+        // Expose it so the status-toggle handler can redraw after a successful PUT.
+        window.issueSubCategoriesDt = dt;
+    });
+})();
+
 function editSubCategory(id, categoryId, name, status) {
     document.getElementById('edit_issue_category_fk').value = categoryId != null ? String(categoryId) : '';
     document.getElementById('edit_issue_sub_category').value = name;
@@ -266,8 +274,10 @@ $(document).ready(function() {
         }
     });
     
-    // Status toggle functionality
-    $('.status-toggle-subcategory').on('change', function() {
+    // Status toggle functionality — delegated from document, because the rows are
+    // injected by the server-side DataTable on every draw and a direct binding
+    // would only ever attach to the first page.
+    $(document).on('change', '.status-toggle-subcategory', function() {
         const checkbox = $(this);
         const id = checkbox.data('id');
         const url = checkbox.data('url');
@@ -313,7 +323,15 @@ $(document).ready(function() {
                     data: formData,
                     success: function(response) {
                         checkbox.prop('disabled', false);
-                        
+
+                        /* The row was rendered by the server, so redraw the current page
+                           rather than patching cells here — keeps the grid authoritative.
+                           (The old badge-patching below is a no-op now: this column
+                           renders a switch, not a badge.) */
+                        if (window.issueSubCategoriesDt) {
+                            window.issueSubCategoriesDt.ajax.reload(null, false);
+                        }
+
                         // Update badge
                         const badge = checkbox.closest('td').find('.badge');
                         if (isChecked) {
@@ -321,7 +339,7 @@ $(document).ready(function() {
                         } else {
                             badge.removeClass('bg-success').addClass('bg-secondary').text('INACTIVE');
                         }
-                        
+
                         // Show success message
                         $('#status-msg').html(`
                             <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">

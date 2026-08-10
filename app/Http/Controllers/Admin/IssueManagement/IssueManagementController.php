@@ -22,10 +22,9 @@ use App\Models\{
 };
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Pagination\Paginator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\{DB, Auth, Storage, Schema, Log};
+use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -48,19 +47,41 @@ class IssueManagementController extends Controller
     }
 
     /**
-     * @return array<int, string>
+     * Category pks whose name matches the search term.
+     *
+     * Resolved as its own cheap query so the issue search can use whereIn on an
+     * indexed FK instead of a correlated EXISTS over issue_log_management.
+     *
+     * @return array<int, int>
      */
-    private function issueManagementIndexEagerLoads(): array
+    private function searchMatchedCategoryIds(string $term): array
     {
-        return [
-            'category',
-            'priority',
-            'reproducibility',
-            'subCategoryMappings.subCategory',
-            'buildingMapping.building',
-            'hostelMapping.hostelBuilding',
-            'statusHistory',
-        ];
+        return IssueCategoryMaster::where('issue_category', 'like', "%{$term}%")
+            ->pluck('pk')
+            ->map(fn ($pk) => (int) $pk)
+            ->all();
+    }
+
+    /**
+     * Issue pks mapped to any sub-category whose name matches the search term.
+     *
+     * @return array<int, int>
+     */
+    private function searchMatchedSubCategoryLogIds(string $term): array
+    {
+        $subCategoryIds = IssueSubCategoryMaster::where('issue_sub_category', 'like', "%{$term}%")
+            ->pluck('pk')
+            ->all();
+
+        if ($subCategoryIds === []) {
+            return [];
+        }
+
+        return IssueLogSubCategoryMap::whereIn('issue_sub_category_master_pk', $subCategoryIds)
+            ->distinct()
+            ->pluck('issue_log_management_pk')
+            ->map(fn ($pk) => (int) $pk)
+            ->all();
     }
 
     /**
@@ -98,17 +119,24 @@ class IssueManagementController extends Controller
             // Search (ID, description, category name, sub-category)
             if ($request->filled('search')) {
                 $term = trim($request->search);
-                $builder->where(function ($q) use ($term) {
+                $categoryIds = $this->searchMatchedCategoryIds($term);
+                $subCategoryLogIds = $this->searchMatchedSubCategoryLogIds($term);
+
+                $builder->where(function ($q) use ($term, $categoryIds, $subCategoryLogIds) {
                     if (is_numeric($term)) {
                         $q->orWhere('pk', $term);
                     }
-                    $q->orWhere('description', 'like', "%{$term}%")
-                        ->orWhereHas('category', function ($cq) use ($term) {
-                            $cq->where('issue_category', 'like', "%{$term}%");
-                        })
-                        ->orWhereHas('subCategoryMappings.subCategory', function ($sq) use ($term) {
-                            $sq->where('issue_sub_category', 'like', "%{$term}%");
-                        });
+                    $q->orWhere('description', 'like', "%{$term}%");
+
+                    // Resolved up front rather than as whereHas(): a correlated
+                    // EXISTS over 65k rows with only a PRIMARY index measured 23s
+                    // per search here, which the grid issues on every keystroke.
+                    if ($categoryIds !== []) {
+                        $q->orWhereIn('issue_category_master_pk', $categoryIds);
+                    }
+                    if ($subCategoryLogIds !== []) {
+                        $q->orWhereIn('pk', $subCategoryLogIds);
+                    }
                 });
             }
 
@@ -150,112 +178,156 @@ class IssueManagementController extends Controller
     }
 
     /**
-     * Mirrors {@see Builder::paginate()} count + slice without hydrating rows (for cacheable snapshot).
-     *
-     * @return array{total: int, ids: array<int, int>}
-     */
-    private function issueManagementIndexPageSnapshot(Request $request, int $page): array
-    {
-        $base = $this->issueManagementIndexFilteredQuery($request);
-        $perPage = self::INDEX_PER_PAGE;
-        $total = (int) (clone $base)->toBase()->getCountForPagination();
-        $ids = [];
-        if ($total > 0) {
-            $ids = (clone $base)->forPage($page, $perPage)->pluck('pk')->values()->all();
-            $ids = array_map('intval', $ids);
-        }
-
-        return ['total' => $total, 'ids' => $ids];
-    }
-
-    /**
-     * @param  array<int, int>  $ids
-     * @return \Illuminate\Support\Collection<int, IssueLogManagement>
-     */
-    private function issueManagementHydrateIndexRows(array $ids): \Illuminate\Support\Collection
-    {
-        $ids = array_values(array_filter(array_map('intval', $ids)));
-        if ($ids === []) {
-            return collect();
-        }
-        $byPk = IssueLogManagement::with($this->issueManagementIndexEagerLoads())
-            ->whereIn('pk', $ids)
-            ->get()
-            ->keyBy(fn (IssueLogManagement $m) => (int) $m->pk);
-
-        return collect($ids)
-            ->map(fn (int $id) => $byPk->get($id))
-            ->filter()
-            ->values();
-    }
-
-    /**
      * Display a listing of all issues.
+     *
+     * The grid fetches its own rows from indexData() — server-side, because
+     * issue_log_management holds 65k+ rows. This action only supplies the filter
+     * dropdowns; it no longer builds a page of rows itself.
      */
     public function index(Request $request)
     {
-        $isAdmin = hasRole('Admin') || hasRole('SuperAdmin');
-        $userId = Auth::user()->user_id;
-        $scopedIds = null;
-        if (! $isAdmin) {
-            $scopedIds = getEmployeeIdsForUser($userId);
-            if (empty($scopedIds)) {
-                $scopedIds = [$userId];
-            }
-            $scopedIds = array_map('strval', $scopedIds);
-            sort($scopedIds);
-        }
-
-        $page = Paginator::resolveCurrentPage('page');
-        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_management_index:v2:' . md5(json_encode([
-            'epoch' => $epoch,
-            'is_admin' => $isAdmin,
-            'user_id' => $userId,
-            'scoped_ids' => $scopedIds,
-            'raised_by' => $request->get('raised_by'),
-            'status' => $request->get('status'),
-            'search' => trim((string) $request->get('search', '')),
-            'category' => $request->get('category'),
-            'priority' => $request->get('priority'),
-            'date_from' => $request->get('date_from'),
-            'date_to' => $request->get('date_to'),
-            'page' => $page,
-        ]));
-
-        $snapshot = DataTableRedisCache::remember(
-            $cacheKey,
-            [
-                'enabled' => 'ISSUE_MANAGEMENT_INDEX_CACHE_ENABLED',
-                'seconds' => 'ISSUE_MANAGEMENT_INDEX_CACHE_SECONDS',
-            ],
-            'IssueManagementController@index',
-            fn () => $this->issueManagementIndexPageSnapshot($request, $page)
-        );
-
-        if (! is_array($snapshot) || ! array_key_exists('total', $snapshot) || ! array_key_exists('ids', $snapshot) || ! is_array($snapshot['ids'])) {
-            $snapshot = $this->issueManagementIndexPageSnapshot($request, $page);
-        }
-
-        $total = (int) $snapshot['total'];
-        $ids = array_map('intval', $snapshot['ids']);
-        $items = $this->issueManagementHydrateIndexRows($ids);
-
-        $issues = new LengthAwarePaginator(
-            $items,
-            $total,
-            self::INDEX_PER_PAGE,
-            $page,
-            [
-                'path' => Paginator::resolveCurrentPath(),
-                'pageName' => 'page',
-            ]
-        );
-
         $categories = IssueCategoryMaster::active()->get();
         $priorities = IssuePriorityMaster::active()->ordered()->get();
 
-        return view('admin.issue_management.index', compact('issues', 'categories', 'priorities'));
+        return view('admin.issue_management.index', compact('categories', 'priorities'));
+    }
+
+    /** Columns the two issue grids declare, in order, for DataTables ordering. */
+    private const GRID_SORT_COLUMNS = [
+        'id' => 'pk',
+        'date' => 'created_date',
+        'status' => 'issue_status',
+    ];
+
+    /**
+     * DataTables ajax feed for the All Requests grid.
+     */
+    public function indexData(Request $request)
+    {
+        return $this->issueGridJson($request, fn () => $this->issueManagementIndexFilteredQuery($request), 'index');
+    }
+
+    /**
+     * DataTables ajax feed for the Centcom ("Assign to you") grid.
+     */
+    public function centcomData(Request $request)
+    {
+        return $this->issueGridJson($request, fn () => $this->issueManagementCentcomFilteredQuery($request), 'centcom');
+    }
+
+    /**
+     * One page of issue rows in DataTables' server-side format.
+     *
+     * Both grids render the same seven columns off the same shared filter
+     * builders, so they share this feed. Server-side is not a preference here:
+     * issue_log_management holds 65k+ rows, and sending them all to the browser
+     * to be paged client-side is what made the whole set unreachable.
+     *
+     * $variant only decides cell formatting: the two grids showed the id, the
+     * date and the action buttons differently before this change, and that is
+     * preserved rather than homogenised.
+     *
+     * @param  \Closure(): Builder  $baseQuery
+     */
+    private function issueGridJson(Request $request, \Closure $baseQuery, string $variant = 'index')
+    {
+        $draw = (int) $request->input('draw', 1);
+        $start = max(0, (int) $request->input('start', 0));
+        $length = (int) $request->input('length', self::INDEX_PER_PAGE);
+        // -1 is DataTables' "All"; cap it so one click cannot pull 65k rows.
+        $length = ($length < 1 || $length > 200) ? 200 : $length;
+
+        // DataTables posts its own term as search[value]; fold it onto the plain
+        // `search` key the shared filter builders already understand.
+        $rawSearch = $request->input('search');
+        if (is_array($rawSearch)) {
+            $request->merge(['search' => trim((string) ($rawSearch['value'] ?? ''))]);
+        }
+
+        $base = $baseQuery();
+
+        // recordsTotal is the scope without the grid's search; the builders apply
+        // both at once, so report the filtered count for both. DataTables only
+        // uses recordsTotal for the "(filtered from N)" note.
+        $filtered = (int) (clone $base)->toBase()->getCountForPagination();
+
+        // Ordering: resolve columns[i][name] back to a real column. Anything not
+        // on issue_log_management itself is left unsorted — the table carries
+        // only a PRIMARY index, so ordering by a joined name is a table scan.
+        $orderColumn = $request->input('order.0.column');
+        if ($orderColumn !== null) {
+            $key = (string) $request->input('columns.' . (int) $orderColumn . '.name', '');
+            $dir = strtolower((string) $request->input('order.0.dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+            if (isset(self::GRID_SORT_COLUMNS[$key])) {
+                $base->reorder()->orderBy(self::GRID_SORT_COLUMNS[$key], $dir);
+                if ($key !== 'id') {
+                    $base->orderBy('pk', 'desc');   // stable tiebreaker
+                }
+            }
+        }
+
+        // Only what these seven columns render. The detail view's fuller eager-load
+        // list (statusHistory / building + hostel mappings) hits unindexed FKs and
+        // measured ~700ms for a handful of rows — never load it for a grid.
+        $rows = $base->with(['category', 'priority'])
+            ->offset($start)
+            ->limit($length)
+            ->get();
+
+        $userId = Auth::user()->user_id ?? null;
+
+        $isCentcom = $variant === 'centcom';
+
+        $data = $rows->map(function (IssueLogManagement $issue) use ($userId, $isCentcom) {
+            $priority = $issue->priority->priority ?? 'N/A';
+            $priorityClass = $priority === 'High' ? 'danger' : ($priority === 'Medium' ? 'warning' : 'info');
+
+            $status = (int) $issue->issue_status;
+            $statusClass = $status === 2 ? 'success' : ($status === 1 ? 'info' : ($status === 6 ? 'warning' : 'secondary'));
+
+            $showUrl = e(route('admin.issue-management.show', $issue->pk));
+
+            if ($isCentcom) {
+                // Centcom is a read/act queue: View only, as it was before.
+                $actions = '<a href="' . $showUrl . '" class="btn btn-sm btn-info" title="View Details">'
+                    . '<iconify-icon icon="solar:eye-bold"></iconify-icon></a>';
+                $statusBadge = '<span class="badge bg-' . $statusClass . '">'
+                    . e((string) $issue->status_label) . '</span>';
+            } else {
+                $canEdit = ($issue->issue_logger == $userId) || ($issue->created_by == $userId);
+                $actions = '<div class="d-flex justify-content-end gap-1">'
+                    . '<a href="' . $showUrl . '" class="text-primary" title="View">'
+                    . '<i class="material-icons material-symbols-rounded">visibility</i></a>'
+                    . ($canEdit
+                        ? '<a href="' . e(route('admin.issue-management.edit', $issue->pk)) . '" class="btn btn-action btn-warning" title="Edit">'
+                            . '<iconify-icon icon="solar:pen-bold"></iconify-icon></a>'
+                        : '')
+                    . '</div>';
+                $statusBadge = '<span class="badge rounded-1 bg-' . $statusClass . ' '
+                    . ($statusClass === 'warning' ? 'text-dark' : '') . '">'
+                    . e((string) $issue->status_label) . '</span>';
+            }
+
+            return [
+                'id' => $isCentcom ? (string) $issue->pk : '#' . $issue->pk,
+                // The column sorts server-side, so the display string can stay
+                // human-readable — no data-order needed.
+                'date' => optional($issue->created_date)->format($isCentcom ? 'd-m-Y H:i' : 'd M Y') ?: '-',
+                'category' => e($issue->category->issue_category ?? ($isCentcom ? 'N/A' : '-')),
+                'description' => e(Str::limit((string) $issue->description, $isCentcom ? 60 : 50)),
+                'priority' => '<span class="badge rounded-1 bg-' . $priorityClass . ' '
+                    . ($priorityClass === 'warning' ? 'text-dark' : '') . '">' . e($priority) . '</span>',
+                'status' => $statusBadge,
+                'action' => $actions,
+            ];
+        })->values();
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $filtered,
+            'recordsFiltered' => $filtered,
+            'data' => $data,
+        ]);
     }
 
     /**
@@ -368,13 +440,23 @@ class IssueManagementController extends Controller
         // Search (ID, description, category name, sub-category)
         if ($request->filled('search')) {
             $term = trim($request->search);
-            $query->where(function ($q) use ($term) {
+            $categoryIds = $this->searchMatchedCategoryIds($term);
+            $subCategoryLogIds = $this->searchMatchedSubCategoryLogIds($term);
+
+            $query->where(function ($q) use ($term, $categoryIds, $subCategoryLogIds) {
                 if (is_numeric($term)) {
                     $q->orWhere('pk', $term);
                 }
-                $q->orWhere('description', 'like', "%{$term}%")
-                    ->orWhereHas('category', fn ($cq) => $cq->where('issue_category', 'like', "%{$term}%"))
-                    ->orWhereHas('subCategoryMappings.subCategory', fn ($sq) => $sq->where('issue_sub_category', 'like', "%{$term}%"));
+                $q->orWhere('description', 'like', "%{$term}%");
+
+                // Same reason as the index grid: whereHas() here is a correlated
+                // EXISTS over 65k rows and costs tens of seconds per keystroke.
+                if ($categoryIds !== []) {
+                    $q->orWhereIn('issue_category_master_pk', $categoryIds);
+                }
+                if ($subCategoryLogIds !== []) {
+                    $q->orWhereIn('pk', $subCategoryLogIds);
+                }
             });
         }
 
@@ -407,83 +489,16 @@ class IssueManagementController extends Controller
     }
 
     /**
-     * @return array{total: int, ids: array<int, int>}
-     */
-    private function issueManagementCentcomPageSnapshot(Request $request, int $page): array
-    {
-        $base = $this->issueManagementCentcomFilteredQuery($request);
-        $perPage = self::INDEX_PER_PAGE;
-        $total = (int) (clone $base)->toBase()->getCountForPagination();
-        $ids = [];
-        if ($total > 0) {
-            $ids = (clone $base)->forPage($page, $perPage)->pluck('pk')->values()->all();
-            $ids = array_map('intval', $ids);
-        }
-
-        return ['total' => $total, 'ids' => $ids];
-    }
-
-    /**
      * Display issues reported on behalf (CENTCOM).
      */
     public function centcom(Request $request)
     {
-        $userId = Auth::user()->user_id;
-        $scopedIds = getEmployeeIdsForUser($userId);
-        if (empty($scopedIds)) {
-            $scopedIds = [$userId];
-        }
-        $scopedIds = array_map('strval', $scopedIds);
-        sort($scopedIds);
-
-        $page = Paginator::resolveCurrentPage('page');
-        $epoch = DataTableRedisCache::readListEpoch(self::CENTCOM_LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_management_centcom:v1:' . md5(json_encode([
-            'epoch' => $epoch,
-            'user_id' => $userId,
-            'scoped_ids' => $scopedIds,
-            'status' => $request->get('status'),
-            'search' => trim((string) $request->get('search', '')),
-            'category' => $request->get('category'),
-            'priority' => $request->get('priority'),
-            'date_from' => $request->get('date_from'),
-            'date_to' => $request->get('date_to'),
-            'page' => $page,
-        ]));
-
-        $snapshot = DataTableRedisCache::remember(
-            $cacheKey,
-            [
-                'enabled' => 'ISSUE_MANAGEMENT_CENTCOM_CACHE_ENABLED',
-                'seconds' => 'ISSUE_MANAGEMENT_CENTCOM_CACHE_SECONDS',
-            ],
-            'IssueManagementController@centcom',
-            fn () => $this->issueManagementCentcomPageSnapshot($request, $page)
-        );
-
-        if (! is_array($snapshot) || ! array_key_exists('total', $snapshot) || ! array_key_exists('ids', $snapshot) || ! is_array($snapshot['ids'])) {
-            $snapshot = $this->issueManagementCentcomPageSnapshot($request, $page);
-        }
-
-        $total = (int) $snapshot['total'];
-        $ids = array_map('intval', $snapshot['ids']);
-        $items = $this->issueManagementHydrateIndexRows($ids);
-
-        $issues = new LengthAwarePaginator(
-            $items,
-            $total,
-            self::INDEX_PER_PAGE,
-            $page,
-            [
-                'path' => Paginator::resolveCurrentPath(),
-                'pageName' => 'page',
-            ]
-        );
-
+        // Rows come from centcomData() — server-side, same reason as index():
+        // this scope can still run to thousands of issues for a busy assignee.
         $categories = IssueCategoryMaster::active()->get();
         $priorities = IssuePriorityMaster::active()->ordered()->get();
 
-        return view('admin.issue_management.centcom', compact('issues', 'categories', 'priorities'));
+        return view('admin.issue_management.centcom', compact('categories', 'priorities'));
     }
 
     /**

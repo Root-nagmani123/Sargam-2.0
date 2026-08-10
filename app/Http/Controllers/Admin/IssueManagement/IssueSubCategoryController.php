@@ -11,15 +11,12 @@ use App\Models\{
 use App\Support\DataTableRedisCache;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
+use Yajra\DataTables\Facades\DataTables;
 
 class IssueSubCategoryController extends Controller
 {
     private const LISTING_CACHE_EPOCH_KEY = 'admin_issue_sub_categories_index_list_epoch';
-
-    private const INDEX_PER_PAGE = 20;
 
     public static function bumpIndexListCacheEpoch(): void
     {
@@ -38,89 +35,91 @@ class IssueSubCategoryController extends Controller
     }
 
     /**
-     * @return array{total: int, ids: array<int, int>}
-     */
-    private function indexPageSnapshot(Request $request, int $page): array
-    {
-        $base = $this->indexFilteredQuery($request);
-        $perPage = self::INDEX_PER_PAGE;
-        $total = (int) (clone $base)->toBase()->getCountForPagination();
-        $ids = [];
-        if ($total > 0) {
-            $ids = (clone $base)->forPage($page, $perPage)->pluck('pk')->values()->all();
-            $ids = array_map('intval', $ids);
-        }
-
-        return ['total' => $total, 'ids' => $ids];
-    }
-
-    /**
-     * @param  array<int, int>  $ids
-     * @return \Illuminate\Support\Collection<int, IssueSubCategoryMaster>
-     */
-    private function hydrateSubCategoriesByOrderedPks(array $ids): \Illuminate\Support\Collection
-    {
-        $ids = array_values(array_filter(array_map('intval', $ids)));
-        if ($ids === []) {
-            return collect();
-        }
-        $byPk = IssueSubCategoryMaster::with('category')
-            ->whereIn('pk', $ids)
-            ->get()
-            ->keyBy(fn (IssueSubCategoryMaster $m) => (int) $m->pk);
-
-        return collect($ids)
-            ->map(fn (int $id) => $byPk->get($id))
-            ->filter()
-            ->values();
-    }
-
-    /**
      * Display a listing of issue sub-categories.
+     *
+     * Rows come from data() over ajax (server-side paging); this action only supplies
+     * the category filter dropdown and the modals.
      */
     public function index(Request $request)
     {
-        $page = Paginator::resolveCurrentPage('page');
-        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_sub_categories_index:v1:' . md5(json_encode([
-            'epoch' => $epoch,
-            'category_id' => $request->filled('category_id') ? (string) $request->category_id : null,
-            'page' => $page,
-        ]));
-
-        $snapshot = DataTableRedisCache::remember(
-            $cacheKey,
-            [
-                'enabled' => 'ISSUE_SUB_CATEGORY_INDEX_CACHE_ENABLED',
-                'seconds' => 'ISSUE_SUB_CATEGORY_INDEX_CACHE_SECONDS',
-            ],
-            'IssueSubCategoryController@index',
-            fn () => $this->indexPageSnapshot($request, $page)
-        );
-
-        if (! is_array($snapshot) || ! array_key_exists('total', $snapshot) || ! array_key_exists('ids', $snapshot) || ! is_array($snapshot['ids'])) {
-            $snapshot = $this->indexPageSnapshot($request, $page);
-        }
-
-        $total = (int) $snapshot['total'];
-        $ids = array_map('intval', $snapshot['ids']);
-        $items = $this->hydrateSubCategoriesByOrderedPks($ids);
-
-        $subCategories = new LengthAwarePaginator(
-            $items,
-            $total,
-            self::INDEX_PER_PAGE,
-            $page,
-            [
-                'path' => Paginator::resolveCurrentPath(),
-                'pageName' => 'page',
-            ]
-        );
-        $subCategories->withQueryString();
-
         $categories = IssueCategoryMaster::active()->orderBy('issue_category')->get();
 
-        return view('admin.issue_management.sub_categories.index', compact('subCategories', 'categories'));
+        return view('admin.issue_management.sub_categories.index', compact('categories'));
+    }
+
+    /**
+     * DataTables server-side feed for the Manage Sub-Categories grid.
+     *
+     * The grid shows and sorts by the PARENT category name, so the join is not
+     * optional — ordering through the relation alone cannot be expressed in SQL.
+     */
+    public function data(Request $request)
+    {
+        $query = IssueSubCategoryMaster::query()
+            ->leftJoin(
+                'issue_category_master',
+                'issue_category_master.pk',
+                '=',
+                'issue_sub_category_master.issue_category_master_pk'
+            )
+            // Only the columns the grid renders (G1).
+            ->select([
+                'issue_sub_category_master.pk',
+                'issue_sub_category_master.issue_category_master_pk',
+                'issue_sub_category_master.issue_sub_category',
+                'issue_sub_category_master.status',
+            ])
+            ->selectRaw('issue_category_master.issue_category as category_name')
+            ->when(
+                $request->filled('category_id'),
+                fn ($q) => $q->where(
+                    'issue_sub_category_master.issue_category_master_pk',
+                    (int) $request->category_id
+                )
+            )
+            ;
+
+        /* Only order here when DataTables sent none. An ORDER BY baked into the
+           query is applied FIRST and silently outranks the one Yajra appends, so
+           the user's column sort would never take effect. */
+        if (! $request->filled('order')) {
+            $query->orderBy('issue_sub_category_master.pk', 'desc');
+        }
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->addColumn('category', fn ($row) => (string) ($row->category_name ?: '-'))
+            ->addColumn(
+                'sub_category',
+                fn ($row) => '<span class="fw-medium">' . e((string) $row->issue_sub_category) . '</span>'
+            )
+            ->addColumn('status', fn ($row) => view(
+                'admin.issue_management.sub_categories._row_status',
+                ['subCategory' => $row]
+            )->render())
+            ->addColumn('action', fn ($row) => view(
+                'admin.issue_management.sub_categories._row_actions',
+                ['subCategory' => $row]
+            )->render())
+            /* The status toggle reads these off the <tr> to rebuild its PUT payload,
+               so they have to survive the move to ajax rows. */
+            ->setRowAttr([
+                'data-category-id' => fn ($row) => $row->issue_category_master_pk ?? '',
+                'data-subcategory-name' => fn ($row) => $row->issue_sub_category,
+            ])
+            ->filterColumn(
+                'category',
+                fn ($q, $keyword) => $q->where('issue_category_master.issue_category', 'like', "%{$keyword}%")
+            )
+            ->filterColumn(
+                'sub_category',
+                fn ($q, $keyword) => $q->where('issue_sub_category_master.issue_sub_category', 'like', "%{$keyword}%")
+            )
+            ->orderColumn('category', 'issue_category_master.issue_category $1')
+            ->orderColumn('sub_category', 'issue_sub_category_master.issue_sub_category $1')
+            ->orderColumn('status', 'issue_sub_category_master.status $1')
+            ->rawColumns(['sub_category', 'status', 'action'])
+            ->make(true);
     }
 
     /**

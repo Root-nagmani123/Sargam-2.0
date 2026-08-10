@@ -10,15 +10,12 @@ use App\Models\{
 use App\Support\DataTableRedisCache;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
+use Yajra\DataTables\Facades\DataTables;
 
 class IssueCategoryController extends Controller
 {
     private const LISTING_CACHE_EPOCH_KEY = 'admin_issue_categories_index_list_epoch';
-
-    private const INDEX_PER_PAGE = 20;
 
     public static function bumpIndexListCacheEpoch(): void
     {
@@ -35,85 +32,60 @@ class IssueCategoryController extends Controller
     }
 
     /**
-     * @return array{total: int, ids: array<int, int>}
-     */
-    private function indexPageSnapshot(int $page): array
-    {
-        $base = $this->indexFilteredQuery();
-        $total = (int) (clone $base)->toBase()->getCountForPagination();
-        $ids = [];
-        if ($total > 0) {
-            $ids = (clone $base)->forPage($page, self::INDEX_PER_PAGE)->pluck('pk')->values()->all();
-            $ids = array_map('intval', $ids);
-        }
-
-        return ['total' => $total, 'ids' => $ids];
-    }
-
-    /**
-     * @param  array<int, int>  $ids
-     * @return \Illuminate\Support\Collection<int, IssueCategoryMaster>
-     */
-    private function hydrateCategoriesByOrderedPks(array $ids): \Illuminate\Support\Collection
-    {
-        $ids = array_values(array_filter(array_map('intval', $ids)));
-        if ($ids === []) {
-            return collect();
-        }
-        $byPk = IssueCategoryMaster::with('subCategories')
-            ->whereIn('pk', $ids)
-            ->get()
-            ->keyBy(fn (IssueCategoryMaster $m) => (int) $m->pk);
-
-        return collect($ids)
-            ->map(fn (int $id) => $byPk->get($id))
-            ->filter()
-            ->values();
-    }
-
-    /**
      * Display a listing of issue categories.
+     *
+     * Rows come from data() over ajax (server-side paging), so this action only
+     * renders the shell.
      */
     public function index()
     {
-        $page = Paginator::resolveCurrentPage('page');
-        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_categories_index:v1:' . md5(json_encode([
-            'epoch' => $epoch,
-            'page' => $page,
-        ]));
+        return view('admin.issue_management.categories.index');
+    }
 
-        $snapshot = DataTableRedisCache::remember(
-            $cacheKey,
-            [
-                'enabled' => 'ISSUE_CATEGORY_INDEX_CACHE_ENABLED',
-                'seconds' => 'ISSUE_CATEGORY_INDEX_CACHE_SECONDS',
-            ],
-            'IssueCategoryController@index',
-            fn () => $this->indexPageSnapshot($page)
-        );
+    /**
+     * DataTables server-side feed for the Manage Categories grid.
+     *
+     * withCount() rather than loading each category's children: the grid only shows
+     * the number, and the subselect is what makes that column sortable in SQL.
+     */
+    public function data(Request $request)
+    {
+        // Only the columns the grid renders (G1) — this payload goes to the browser.
+        $query = IssueCategoryMaster::query()
+            ->select(['pk', 'issue_category', 'description', 'status'])
+            ->withCount('subCategories');
 
-        if (! is_array($snapshot) || ! array_key_exists('total', $snapshot) || ! array_key_exists('ids', $snapshot) || ! is_array($snapshot['ids'])) {
-            $snapshot = $this->indexPageSnapshot($page);
+        /* Only order here when DataTables sent none. An ORDER BY baked into the
+           query is applied FIRST and silently outranks the one Yajra appends, so
+           the user's column sort would never take effect. */
+        if (! $request->filled('order')) {
+            $query->orderBy('issue_category')->orderBy('pk');   // pk: name is not unique
         }
 
-        $total = (int) $snapshot['total'];
-        $ids = array_map('intval', $snapshot['ids']);
-        $items = $this->hydrateCategoriesByOrderedPks($ids);
-
-        $categories = new LengthAwarePaginator(
-            $items,
-            $total,
-            self::INDEX_PER_PAGE,
-            $page,
-            [
-                'path' => Paginator::resolveCurrentPath(),
-                'pageName' => 'page',
-            ]
-        );
-        $categories->withQueryString();
-
-        return view('admin.issue_management.categories.index', compact('categories'));
+        return DataTables::of($query)
+            // Serial follows the page the server returned; no client renumbering.
+            ->addIndexColumn()
+            ->addColumn('category_name', fn (IssueCategoryMaster $row) => (string) $row->issue_category)
+            ->addColumn('description', fn (IssueCategoryMaster $row) => \Illuminate\Support\Str::limit(
+                (string) ($row->description ?: 'No description'), 50
+            ))
+            ->addColumn('sub_categories', fn (IssueCategoryMaster $row) => (string) (int) $row->sub_categories_count)
+            ->addColumn('status', fn (IssueCategoryMaster $row) => view(
+                'admin.issue_management.categories._row_status',
+                ['category' => $row]
+            )->render())
+            ->addColumn('action', fn (IssueCategoryMaster $row) => view(
+                'admin.issue_management.categories._row_actions',
+                ['category' => $row]
+            )->render())
+            ->filterColumn('category_name', fn ($q, $keyword) => $q->where('issue_category', 'like', "%{$keyword}%"))
+            ->filterColumn('description', fn ($q, $keyword) => $q->where('description', 'like', "%{$keyword}%"))
+            ->orderColumn('category_name', 'issue_category $1')
+            ->orderColumn('description', 'description $1')
+            ->orderColumn('sub_categories', 'sub_categories_count $1')
+            ->orderColumn('status', 'status $1')
+            ->rawColumns(['status', 'action'])
+            ->make(true);
     }
 
     /**

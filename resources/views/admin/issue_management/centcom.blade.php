@@ -31,7 +31,9 @@
                 <hr>
                 <div class="card-body">
                     <!-- Filters -->
-                    <form method="GET" action="{{ route('admin.issue-management.centcom') }}" class="mb-4 p-3 rounded border bg-light">
+                    {{-- Apply still reloads the page so filters stay deep-linkable; the grid's
+                         ajax call reads these same inputs, so both agree. --}}
+                    <form method="GET" action="{{ route('admin.issue-management.centcom') }}" class="mb-4 p-3 rounded border bg-light" id="ccFilters">
                         <div class="d-flex align-items-center gap-2 mb-3">
                             <iconify-icon icon="solar:filter-bold-duotone" class="text-primary"></iconify-icon>
                             <span class="fw-semibold small">Filters</span>
@@ -91,7 +93,7 @@
 
                     <!-- Issues Table -->
                     <div class="table-responsive datatables">
-                        <table class="table">
+                        <table class="table" id="centcomIssuesTable">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -102,43 +104,76 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                @forelse($issues as $issue)
-                                <tr>
-                                    <td>{{ $issue->pk }}</td>
-                                    <td>{{ $issue->created_date->format('d-m-Y H:i') }}</td>
-                                    <td>{{ $issue->category->issue_category ?? 'N/A' }}</td>
-                                    <td>{{ Str::limit($issue->description, 60) }}</td>
-                                    
-                            
-                                    <td>
-                                        <span class="badge bg-{{ $issue->issue_status == 2 ? 'success' : ($issue->issue_status == 1 ? 'info' : ($issue->issue_status == 6 ? 'warning' : 'secondary')) }}">
-                                            {{ $issue->status_label }}
-                                        </span>
-                                    </td>
-                                  
-                                    <td>
-                                        <a href="{{ route('admin.issue-management.show', $issue->pk) }}" class="btn btn-sm btn-info" title="View Details">
-                                            <iconify-icon icon="solar:eye-bold"></iconify-icon>
-                                        </a>
-                                    </td>
-                                </tr>
-                                @empty
-                                <tr>
-                                    <td colspan="8" class="text-center">No complaints assigned to you</td>
-                                </tr>
-                                @endforelse
-                            </tbody>
+                            {{-- Rows come from centcomData() over ajax (server-side
+                                 paging), so this stays empty. --}}
+                            <tbody></tbody>
                         </table>
                     </div>
 
-                    <!-- Pagination -->
-                    <div class="mt-3">
-                        {{ $issues->appends(request()->query())->links() }}
-                    </div>
+                    {{-- No server pager: the DataTable pages this grid from the
+                         server one draw at a time. --}}
                 </div>
             </div>
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+$(document).ready(function () {
+    const tableId = '#centcomIssuesTable';
+    if ($.fn.DataTable.isDataTable(tableId)) { return; }
+
+    function filterValue(name) {
+        return $('#ccFilters [name="' + name + '"]').val() || '';
+    }
+
+    /* Server-side: this scope can still run to thousands of issues for a busy
+       assignee, so the browser fetches one page at a time from centcomData().
+       The toolbar filters ride along on the same ajax call. */
+    $(tableId).DataTable({
+        serverSide: true,
+        /* datatable-global-ui.js turns DataTables' native ordering OFF for
+           server-side tables unless this opt-in is present, and sorts only the
+           rows already loaded instead. We want ORDER BY over the whole set. */
+        sargamServerOrder: true,
+        processing: true,
+        pageLength: 10,
+        lengthMenu: [[10, 20, 50, 100], [10, 20, 50, 100]],
+        order: [[1, 'desc']],
+        searchDelay: 400,
+        // The filter card's own Search box reloads the page; seed the grid from it.
+        search: { search: @json(request('search', '')) },
+        ajax: {
+            url: '{{ route('admin.issue-management.centcom.data') }}',
+            data: function (d) {
+                // NB: never set d.search here — DataTables sends search[value]
+                // as an object and a string would clobber it.
+                d.status = filterValue('status');
+                d.category = filterValue('category');
+                d.priority = filterValue('priority');
+                d.date_from = filterValue('date_from');
+                d.date_to = filterValue('date_to');
+            }
+        },
+        /* name= is what the endpoint maps back to a sortable column; only the
+           columns that exist on issue_log_management itself are orderable,
+           because the table carries no secondary indexes. */
+        columns: [
+            { data: 'id', name: 'id' },
+            { data: 'date', name: 'date' },
+            { data: 'category', name: 'category', orderable: false },
+            { data: 'description', name: 'description', orderable: false },
+            { data: 'status', name: 'status' },
+            { data: 'action', name: 'action', orderable: false, searchable: false }
+        ],
+        language: {
+            processing: 'Loading…',
+            zeroRecords: 'No complaints match the current filters',
+            emptyTable: 'No complaints assigned to you'
+        }
+    });
+});
+</script>
 @endsection
