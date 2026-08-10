@@ -1479,56 +1479,14 @@ function get_profile_pic()
         return $profile_pic;
     }
 }
-if (!function_exists('notice_feed_base_query')) {
-    /**
-     * Base notice query with the author name and department resolved.
-     * Columns are table-qualified because user_credentials / department_master
-     * carry their own active_inactive + pk columns.
-     */
-    function notice_feed_base_query()
-    {
-        return DB::table('notices_notification')
-            ->leftJoin('user_credentials as notice_author', 'notice_author.pk', '=', 'notices_notification.created_by')
-            ->leftJoin('employee_master as notice_author_emp', 'notice_author_emp.pk', '=', 'notice_author.user_id')
-            ->leftJoin('department_master as notice_author_dept', 'notice_author_dept.pk', '=', 'notice_author_emp.department_master_pk')
-            ->select(
-                'notices_notification.pk',
-                'notices_notification.notice_title',
-                'notices_notification.notice_type',
-                'notices_notification.description',
-                'notices_notification.target_audience',
-                'notices_notification.course_master_pk',
-                'notices_notification.document',
-                'notices_notification.display_date',
-                'notices_notification.expiry_date',
-                'notices_notification.created_at',
-                'notices_notification.created_by',
-                DB::raw("NULLIF(TRIM(CONCAT_WS(' ', notice_author.first_name, notice_author.last_name)), '') as author_name"),
-                'notice_author_dept.department_name as author_department'
-            )
-            ->where('notices_notification.active_inactive', 1)
-            ->where('notices_notification.expiry_date', '>=', date('Y-m-d'))
-            ->orderBy('notices_notification.display_date', 'desc');
-    }
-}
-if (!function_exists('notice_feed_query_by_role')) {
-    /**
-     * Role-scoped notice feed as an UNEXECUTED query builder.
-     *
-     * Returning the builder (rather than a Collection) is what lets callers add
-     * filters and ->paginate() in SQL instead of pulling every live notice into
-     * memory and filtering in PHP.
-     *
-     * Each role resolves to ONE statement — the previous version ran a second
-     * query per role and merged the two collections, which cannot be paginated.
-     *
-     * @return \Illuminate\Database\Query\Builder|null  null when unauthenticated
-     */
-    function notice_feed_query_by_role()
+if (!function_exists('get_notice_notification_by_role')) {
+    function get_notice_notification_by_role()
     {
         $user = Auth::user();
+
+        // Return empty collection if user is not authenticated
         if (!$user) {
-            return null;
+            return collect([]);
         }
 
         $sessionRoles = Session::get('user_roles', []);
@@ -1539,56 +1497,45 @@ if (!function_exists('notice_feed_query_by_role')) {
         $isStaffFaculty = !empty(array_intersect($roleStaffFaculty, $sessionRoles));
         $isStudent      = !empty(array_intersect($roleStudent, $sessionRoles));
 
-        $query = notice_feed_base_query();
 
-        // Staff/Faculty: everyone's "All" notices plus their own audience.
+        $commonNotices = DB::table('notices_notification')
+            ->where('target_audience', 'All')
+            ->where('active_inactive', 1)
+            ->where('expiry_date', '>=', date('Y-m-d'))
+            ->orderBy('display_date', 'desc')
+            ->get();
+
+        // 🔥 Staff/Faculty Notices
         if ($isStaffFaculty) {
-            return $query->where(function ($w) {
-                $w->where('notices_notification.target_audience', 'All')
-                    ->orWhere('notices_notification.target_audience', 'like', '%Staff/Faculty%');
-            });
+
+            $data = DB::table('notices_notification')
+                ->where('target_audience', 'like', '%Staff/Faculty%')
+                ->where('active_inactive', 1)
+                ->where('expiry_date', '>=', date('Y-m-d'))
+                ->orderBy('display_date', 'desc')
+                ->get();
+
+
+            return $commonNotices->merge($data);
         }
 
-        // Student-OT: "All" notices plus Office-trainee notices for the courses
-        // they are enrolled in. The course ids are resolved in their own small
-        // query rather than joined in: the old inner join on
-        // student_master_course__map emitted the same notice once per mapping
-        // row (duplicate cards), and a joined query cannot be counted for
-        // pagination without a distinct().
+        // 🔥 Student OT Notices
         if ($isStudent) {
-            $courseIds = DB::table('student_master_course__map')
-                ->where('student_master_pk', $user->user_id)
-                ->distinct()
-                ->pluck('course_master_pk');
+            $roleNotices =  DB::table('notices_notification')
+                ->join('student_master_course__map as smcm', 'notices_notification.course_master_pk', '=', 'smcm.course_master_pk')
+                ->where('target_audience', 'like', '%Office trainee%')
+                ->where('notices_notification.active_inactive', 1)
+                ->where('smcm.student_master_pk', $user->user_id)
+                ->where('expiry_date', '>=', date('Y-m-d'))
+                ->orderBy('display_date', 'desc')
+                ->get();
 
-            return $query->where(function ($w) use ($courseIds) {
-                $w->where('notices_notification.target_audience', 'All');
 
-                if ($courseIds->isNotEmpty()) {
-                    $w->orWhere(function ($o) use ($courseIds) {
-                        $o->where('notices_notification.target_audience', 'like', '%Office trainee%')
-                            ->whereIn('notices_notification.course_master_pk', $courseIds);
-                    });
-                }
-            });
+            return $commonNotices->merge($roleNotices);
         }
 
-        // Roles not matching → only "All"
-        return $query->where('notices_notification.target_audience', 'All');
-    }
-}
-if (!function_exists('get_notice_notification_by_role')) {
-    /**
-     * Every live notice for the current user, as a Collection.
-     *
-     * Unbounded by design — only use it where the caller needs the whole set.
-     * For listing screens prefer notice_feed_query_by_role() with ->paginate().
-     */
-    function get_notice_notification_by_role()
-    {
-        $query = notice_feed_query_by_role();
-
-        return $query ? $query->get() : collect([]);
+        // Roles not matching → return only "All"
+        return $commonNotices;
     }
 }
 
