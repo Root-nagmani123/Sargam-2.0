@@ -125,6 +125,9 @@
                             placeholder="Select the time"
                             value="{{ $cutoffValue }}"
                             readonly>
+                        <small class="text-danger d-none" id="ptStartTimeMissingMsg">
+                            PT start time is not set for this course. Please add the PT time in Course Master first.
+                        </small>
                     </div>
                     <div class="col-12 col-md-3">
                         <label for="pt_end_time_display" class="form-label fw-semibold">PT End Time</label>
@@ -201,8 +204,15 @@ $(function () {
 
     function setPtTimesFromCourse() {
         const selected = $('#course_master_pk option:selected');
-        $('#apply_cutoff_time').val(selected.data('ptStartTime') || '');
+        const ptStartTime = selected.data('ptStartTime') || '';
+        $('#apply_cutoff_time').val(ptStartTime);
         $('#pt_end_time_display').val(selected.data('ptEndTime') || '');
+        togglePtStartTimeMissing(selected.val() && !ptStartTime);
+    }
+
+    function togglePtStartTimeMissing(isMissing) {
+        $('#ptStartTimeMissingMsg').toggleClass('d-none', !isMissing);
+        $('button[type="submit"]').prop('disabled', !!isMissing);
     }
 
     $('#course_master_pk').on('change', function () {
@@ -212,6 +222,10 @@ $(function () {
 
     if ($('#course_master_pk').val() && !$('#effective_from').val()) {
         setEffectiveFromCourseStart();
+    }
+
+    if ($('#course_master_pk').val()) {
+        togglePtStartTimeMissing(!$('#apply_cutoff_time').val());
     }
 });
 </script>

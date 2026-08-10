@@ -101,7 +101,7 @@ class StationedLeaveMasterController extends Controller
         $validated = $request->validate([
             'course_master_pk' => 'required|exists:course_master,pk',
             'effective_from' => 'required|date',
-            'apply_cutoff_time' => 'required|date_format:H:i',
+            'apply_cutoff_time' => 'nullable|date_format:H:i',
             'is_faculty_approval_required' => 'nullable|in:1',
             'faculty_rows' => 'nullable|array',
             'faculty_rows.*.faculty_master_pk' => 'required|exists:faculty_master,pk',
@@ -158,7 +158,7 @@ class StationedLeaveMasterController extends Controller
             if ($config) {
                 $config->update([
                     'is_faculty_approval_required' => $approvalRequired,
-                    'apply_cutoff_time' => $validated['apply_cutoff_time'],
+                    'apply_cutoff_time' => $validated['apply_cutoff_time'] ?? null,
                     'active_inactive' => 1,
                     'modified_date' => $now,
                 ]);
@@ -166,7 +166,7 @@ class StationedLeaveMasterController extends Controller
                 $config = StationedLeaveMaster::create([
                     'course_master_pk' => $validated['course_master_pk'],
                     'effective_from' => $validated['effective_from'],
-                    'apply_cutoff_time' => $validated['apply_cutoff_time'],
+                    'apply_cutoff_time' => $validated['apply_cutoff_time'] ?? null,
                     'is_faculty_approval_required' => $approvalRequired,
                     'active_inactive' => 1,
                     'created_by' => $user->pk ?? null,

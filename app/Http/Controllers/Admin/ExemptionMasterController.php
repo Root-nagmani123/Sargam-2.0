@@ -97,6 +97,13 @@ class ExemptionMasterController extends Controller
 
         $this->assertCourseAllowed((int) $validated['course_master_pk']);
 
+        $course = CourseMaster::find($validated['course_master_pk']);
+        if (blank($course?->pt_start_time)) {
+            return back()->withInput()->withErrors([
+                'course_master_pk' => 'PT start time is not set for this course. Please add the PT time in Course Master first.',
+            ]);
+        }
+
         if ($this->courseHasConflictingExemption(
             (int) $validated['course_master_pk'],
             $validated['effective_from']

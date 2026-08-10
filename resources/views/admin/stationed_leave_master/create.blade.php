@@ -240,8 +240,8 @@
                             @if($isEditing ?? false) readonly @endif>
                     </div>
                     <div class="col-12 col-md-3">
-                        <label for="apply_cutoff_time" class="leave-grid-label d-block">PT Start Time <span class="text-danger">*</span></label>
-                        <input type="time" id="apply_cutoff_time" name="apply_cutoff_time" class="form-control" required
+                        <label for="apply_cutoff_time" class="leave-grid-label d-block">PT Start Time</label>
+                        <input type="time" id="apply_cutoff_time" name="apply_cutoff_time" class="form-control"
                             placeholder="Select the time"
                             value="{{ $cutoffValue }}">
                     </div>
