@@ -394,6 +394,8 @@ $(document).ready(function() {
                     const m2 = row.m2;
                     const base1 = (m1.baseline_min_reading !== undefined && m1.baseline_min_reading !== null && m1.baseline_min_reading !== '') ? String(m1.baseline_min_reading) : '';
                     const base2 = (m2.baseline_min_reading !== undefined && m2.baseline_min_reading !== null && m2.baseline_min_reading !== '') ? String(m2.baseline_min_reading) : '';
+                    const unitBase1 = (m1.unit_baseline_reading !== undefined && m1.unit_baseline_reading !== null && m1.unit_baseline_reading !== '') ? String(m1.unit_baseline_reading) : '';
+                    const unitBase2 = (m2.unit_baseline_reading !== undefined && m2.unit_baseline_reading !== null && m2.unit_baseline_reading !== '') ? String(m2.unit_baseline_reading) : '';
                     const nm1 = String(m1.new_meter_no || '').trim() || String(m1.old_meter_no || '');
                     const nm2 = String(m2.new_meter_no || '').trim() || String(m2.old_meter_no || '');
                     const elec1 = (m1.electric_meter_reading != null && m1.electric_meter_reading !== '') ? m1.electric_meter_reading : 'N/A';
@@ -430,12 +432,12 @@ $(document).ready(function() {
                         '</td>' +
                         '<td class="other-dual-col other-dual-reading-col">' +
                             '<div class="other-dual-seg" data-slot="1">' +
-                            '<input type="number" class="form-control form-control-sm new-meter-reading" name="readings['+i0+'][curr_month_elec_red]" value="" min="0" step="1" placeholder="Enter" inputmode="numeric" data-last-reading="'+ escAttr(base1) +'" data-existing-curr="">' +
+                            '<input type="number" class="form-control form-control-sm new-meter-reading" name="readings['+i0+'][curr_month_elec_red]" value="" min="0" step="1" placeholder="Enter" inputmode="numeric" data-last-reading="'+ escAttr(base1) +'" data-unit-baseline="'+ escAttr(unitBase1) +'" data-existing-curr="">' +
                             '<input type="hidden" name="readings['+i0+'][pk]" value="'+ row.pk +'">' +
                             '<input type="hidden" name="readings['+i0+'][meter_slot]" value="1">' +
                             '</div>' +
                             '<div class="other-dual-seg" data-slot="2">' +
-                            '<input type="number" class="form-control form-control-sm new-meter-reading" name="readings['+i1+'][curr_month_elec_red]" value="" min="0" step="1" placeholder="Enter" inputmode="numeric" data-last-reading="'+ escAttr(base2) +'" data-existing-curr="">' +
+                            '<input type="number" class="form-control form-control-sm new-meter-reading" name="readings['+i1+'][curr_month_elec_red]" value="" min="0" step="1" placeholder="Enter" inputmode="numeric" data-last-reading="'+ escAttr(base2) +'" data-unit-baseline="'+ escAttr(unitBase2) +'" data-existing-curr="">' +
                             '<input type="hidden" name="readings['+i1+'][pk]" value="'+ row.pk +'">' +
                             '<input type="hidden" name="readings['+i1+'][meter_slot]" value="2">' +
                             '</div>' +
@@ -455,6 +457,7 @@ $(document).ready(function() {
                 var newMeterNo = apiNewMeterNo !== '' ? apiNewMeterNo : (oldMeterNoStr !== '' && oldMeterNoStr !== 'N/A' ? oldMeterNoStr : '');
                 var newMeterReading = '';
                 var baselineMin = (row.baseline_min_reading !== undefined && row.baseline_min_reading !== null && row.baseline_min_reading !== '') ? String(row.baseline_min_reading) : '';
+                var unitBaseline = (row.unit_baseline_reading !== undefined && row.unit_baseline_reading !== null && row.unit_baseline_reading !== '') ? String(row.unit_baseline_reading) : '';
                 const meterSlot = row.meter_slot || 1;
                 const rowKey = row.pk + '_' + meterSlot;
                 window.meterReadingRowData[rowKey] = {
@@ -464,7 +467,7 @@ $(document).ready(function() {
                     curr_month_elec_red: '',
                     original_curr_month_elec_red: ''
                 };
-                const tr = '<tr data-last-reading="'+ baselineMin.replace(/"/g, '&quot;') +'" data-existing-curr="" data-pk="'+ row.pk +'" data-meter-slot="'+ meterSlot +'">' +
+                const tr = '<tr data-last-reading="'+ baselineMin.replace(/"/g, '&quot;') +'" data-unit-baseline="'+ unitBaseline.replace(/"/g, '&quot;') +'" data-existing-curr="" data-pk="'+ row.pk +'" data-meter-slot="'+ meterSlot +'">' +
                     '<td><input type="checkbox" class="form-check-input row-check row-check-master" name="readings['+idx+'][selected]" value="1"></td>' +
                     '<td>'+ escAttr(row.house_no || 'N/A') +'</td>' +
                     '<td>'+ escAttr(row.name || 'N/A') +'</td>' +
@@ -512,6 +515,20 @@ $(document).ready(function() {
             lastVal = $row.data('last-reading');
         }
         return (lastVal !== '' && lastVal !== undefined && !isNaN(parseFloat(lastVal))) ? parseFloat(lastVal) : null;
+    }
+
+    /** Units baseline (previous period opening reading); falls back to the min baseline when not supplied. */
+    function getUnitBaselineForReadingInput($inp) {
+        const $row = $inp.closest('tr');
+        let base = $inp.data('unit-baseline');
+        if (base === undefined || base === '') {
+            base = $row.data('unit-baseline');
+        }
+        if (base !== '' && base !== undefined && !isNaN(parseFloat(base))) {
+            return parseFloat(base);
+        }
+
+        return getMinAllowedForReadingInput($inp);
     }
 
     function getNewMeterInputForReading($inp) {
@@ -648,7 +665,12 @@ $(document).ready(function() {
 
     function refreshUnitForReadingInput($inp) {
         const $row = $inp.closest('tr');
-        const minBaseline = getMinAllowedForReadingInput($inp);
+        // Edit flow: saved reading ko theek kar rahe hain, isliye units pichhle period se naapo — server bhi
+        // wahi karta hai (storeMeterReadings: $isEditCorrection). Purane cached payload me field na ho to
+        // normal baseline par gir jao.
+        const minBaseline = isListEditMode
+            ? getUnitBaselineForReadingInput($inp)
+            : getMinAllowedForReadingInput($inp);
 
         const currVal = $inp.val();
         const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
