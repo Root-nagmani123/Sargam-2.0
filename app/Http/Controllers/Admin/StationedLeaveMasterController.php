@@ -342,11 +342,15 @@ class StationedLeaveMasterController extends Controller
             ->addColumn('course_name', fn ($row) => $row->course->course_name ?? 'N/A')
             ->addColumn('effective_from_display', fn ($row) => $row->effective_from?->format('d-m-Y') ?? 'N/A')
             ->addColumn('apply_cutoff_time_display', function ($row) {
-                if (blank($row->apply_cutoff_time)) {
+                // Always reflect the course's current PT start time (Course Master is the
+                // source of truth), not the stale value snapshotted when this row was saved.
+                $cutoffTime = $row->course->pt_start_time ?? $row->apply_cutoff_time;
+
+                if (blank($cutoffTime)) {
                     return 'N/A';
                 }
 
-                return \Carbon\Carbon::parse($row->apply_cutoff_time)->format('h:i A');
+                return \Carbon\Carbon::parse($cutoffTime)->format('h:i A');
             })
             ->addColumn('approval_required_display', fn ($row) => (int) $row->is_faculty_approval_required === 1 ? 'Yes' : 'No')
             ->addColumn('faculty_count_display', fn ($row) => (int) ($row->approvers_count ?? 0))
@@ -399,11 +403,13 @@ class StationedLeaveMasterController extends Controller
 
             $serial = 1;
             foreach ($rows as $row) {
+                $cutoffTime = $row->course->pt_start_time ?? $row->apply_cutoff_time;
+
                 fputcsv($out, [
                     $serial++,
                     $row->course->course_name ?? 'N/A',
                     $row->effective_from?->format('d-m-Y') ?? 'N/A',
-                    blank($row->apply_cutoff_time) ? 'N/A' : \Carbon\Carbon::parse($row->apply_cutoff_time)->format('h:i A'),
+                    blank($cutoffTime) ? 'N/A' : \Carbon\Carbon::parse($cutoffTime)->format('h:i A'),
                     (int) $row->is_faculty_approval_required === 1 ? 'Yes' : 'No',
                     (int) ($row->approvers_count ?? 0),
                     (int) $row->active_inactive === 1 ? 'Active' : 'Inactive',
