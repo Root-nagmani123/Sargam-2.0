@@ -117,6 +117,8 @@
                 <input type="hidden" name="reading_block_id" id="reading_block_id" value="">
                 <input type="hidden" name="reading_unit_type_id" id="reading_unit_type_id" value="">
                 <input type="hidden" name="reading_unit_sub_type_id" id="reading_unit_sub_type_id" value="">
+                {{-- Set only when opened via Edit from List Meter Reading: that row is a correction, so baseline check is skipped. --}}
+                <input type="hidden" name="edit_reading_pk" id="edit_reading_pk" value="{{ $prefill['reading_pk'] ?? '' }}">
 
                 <div class="table-responsive mt-4">
                     <table class="table table-bordered table-hover align-middle" id="updateMeterReadingTable">
@@ -188,6 +190,12 @@ $(document).ready(function() {
     const blocksUrl = "{{ route('admin.estate.update-meter-reading.blocks') }}";
     const unitSubTypesUrl = "{{ route('admin.estate.update-meter-reading.unit-sub-types') }}";
     const prefill = @json($prefill ?? null);
+    // Edit from List Meter Reading opens this same page with reading_pk — us flow me baseline validation nahi lagti.
+    const isListEditMode = !!(prefill && prefill.reading_pk);
+    // New Meter No. sirf usi Edit flow me editable hai; is page ko seedha kholne par field freeze rehti hai.
+    const newMeterNoLockAttr = isListEditMode ? '' : ' readonly';
+    const newMeterNoLockClass = isListEditMode ? '' : ' bg-light';
+    const newMeterNoPlaceholder = isListEditMode ? 'Enter new meter no.' : '';
 
     // For this grid we avoid DataTables to keep typing smooth and prevent focus jumps.
     let dataTable = null;
@@ -414,10 +422,10 @@ $(document).ready(function() {
                         '</td>' +
                         '<td class="other-dual-col other-dual-newmeter-col">' +
                             '<div class="other-dual-seg" data-slot="1">' +
-                            '<input type="text" class="form-control form-control-sm new-meter-no" name="readings['+i0+'][new_meter_no]" value="'+ escAttr(nm1) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m1.old_meter_no || '') +'">' +
+                            '<input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+i0+'][new_meter_no]" value="'+ escAttr(nm1) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m1.old_meter_no || '') +'"'+ newMeterNoLockAttr +'>' +
                             '</div>' +
                             '<div class="other-dual-seg" data-slot="2">' +
-                            '<input type="text" class="form-control form-control-sm new-meter-no" name="readings['+i1+'][new_meter_no]" value="'+ escAttr(nm2) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m2.old_meter_no || '') +'">' +
+                            '<input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+i1+'][new_meter_no]" value="'+ escAttr(nm2) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m2.old_meter_no || '') +'"'+ newMeterNoLockAttr +'>' +
                             '</div>' +
                         '</td>' +
                         '<td class="other-dual-col other-dual-reading-col">' +
@@ -463,7 +471,7 @@ $(document).ready(function() {
                     '<td class="text-nowrap">'+ escAttr(row.last_reading_date || 'N/A') +'</td>' +
                     '<td>'+ escAttr(row.old_meter_no || 'N/A') +'</td>' +
                     '<td>'+ escAttr(row.electric_meter_reading ?? 'N/A') +'</td>' +
-                    '<td><input type="text" class="form-control form-control-sm new-meter-no" name="readings['+idx+'][new_meter_no]" value="'+ escAttr(newMeterNo) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(oldMeterNoStr) +'"></td>' +
+                    '<td><input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+idx+'][new_meter_no]" value="'+ escAttr(newMeterNo) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(oldMeterNoStr) +'"'+ newMeterNoLockAttr +'></td>' +
                     '<td><input type="number" class="form-control form-control-sm new-meter-reading" name="readings['+idx+'][curr_month_elec_red]" value="'+ escAttr(newMeterReading) +'" min="0" placeholder="Enter" step="1" inputmode="numeric">' +
                     '<input type="hidden" name="readings['+idx+'][pk]" value="'+row.pk+'">' +
                     '<input type="hidden" name="readings['+idx+'][meter_slot]" value="'+ meterSlot +'"></td>' +
@@ -527,6 +535,8 @@ $(document).ready(function() {
     }
 
     function isReadingBelowMinAllowed($inp, currReading) {
+        // Edit from List Meter Reading: purani galat reading theek karne ke liye khulta hai, isliye koi min baseline nahi.
+        if (isListEditMode) return false;
         if (currReading === null || isNaN(currReading)) return false;
         const minAllowed = getMinAllowedForReadingInput($inp);
         if (minAllowed === null || currReading >= minAllowed) return false;
