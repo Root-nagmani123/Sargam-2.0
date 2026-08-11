@@ -170,6 +170,15 @@ class FacultyDataTable extends DataTable
                     // shared programme-dt chrome, which public/js/datatable-global-ui.js
                     // relocates into the #facultyDtSearch / #facultyDtFooter slots
                     // declared in admin/faculty/index.blade.php.
+                    //
+                    // Deliberately NOT `sargamServerOrder => true`. Every visible column
+                    // here is an addColumn() closure computed in PHP (full_name,
+                    // faculty_code, faculty_email, mobile_number, last_update,
+                    // created_by, status, action) — none of them exist in the result set
+                    // for SQL to ORDER BY, which is why they are all orderable(false).
+                    // Opting into server ordering would ask the database to sort by
+                    // columns it cannot see. The global script instead gives the loaded
+                    // page a client-side header sort, same as hostel_floor/hostel_building.
                     ->parameters([
                         'order' => [],
                         'ordering' => true,
