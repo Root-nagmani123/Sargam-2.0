@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\DataTables\DuplicateIdCardDataTable;
 use App\Http\Controllers\Controller;
 use App\Support\DataTableRedisCache;
 use App\Models\DepartmentMaster;
@@ -28,39 +29,25 @@ class DuplicateIDCardRequestController extends Controller
         DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'DuplicateIDCardRequestController@index');
     }
 
-    public function index(Request $request)
+    public function index(Request $request, DuplicateIdCardDataTable $dataTable)
     {
         $user = Auth::user();
-        $employeePk = $user->user_id;
-        if (!$employeePk) {
+        if (! ($user->user_id ?? null)) {
             abort(403);
         }
 
-        $search = trim((string) $request->get('search', ''));
+        return $dataTable->render('admin.duplicate_idcard.index');
+    }
 
-        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_duplicate_idcard_index:v1:' . md5(json_encode([
-            'epoch' => $epoch,
-            'user_id' => $employeePk,
-            'search' => $search,
-        ]));
-
-        $items = DataTableRedisCache::remember(
-            $cacheKey,
-            [
-                'enabled' => 'DUPLICATE_IDCARD_INDEX_CACHE_ENABLED',
-                'seconds' => 'DUPLICATE_IDCARD_INDEX_CACHE_SECONDS',
-            ],
-            'DuplicateIDCardRequestController@index',
-            fn () => $this->buildDuplicateIdcardIndexItems($employeePk, $search)
-        );
-        if (! $items instanceof Collection) {
-            $items = collect($items);
-        }
-
-        $requests = $items;
-
-        return view('admin.duplicate_idcard.index', compact('requests'));
+    /**
+     * Public entry point for {@see \App\DataTables\DuplicateIdCardDataTable::query()} — reuses the
+     * exact same merge/status/edit-permission logic as the pre-DataTable controller implementation.
+     *
+     * @return Collection<int, object>
+     */
+    public static function buildDuplicateIdcardIndexItemsStatic(mixed $employeePk, string $search): Collection
+    {
+        return (new static())->buildDuplicateIdcardIndexItems($employeePk, $search);
     }
 
     /**

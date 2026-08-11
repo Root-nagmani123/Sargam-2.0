@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\Log;
 use App\Models\PathPage;
 use App\Models\PathPageFaq;
 use App\Models\ExemptionCategory;
+use App\DataTables\FcExemptionCategoryDataTable;
 use App\Models\FoundationCourseStatus;
 use App\Models\User;
 use Illuminate\Support\Facades\Validator;
@@ -1042,18 +1043,13 @@ class FrontPageController extends Controller
 
 
 
-    public function exemptionIndex()
+    public function exemptionIndex(FcExemptionCategoryDataTable $dataTable)
     {
-
-        $headings = ExemptionCategory::with(['creator', 'updater'])
-            ->where('is_notice', 0)
-            ->paginate(10);
-
         $notice = ExemptionCategory::with(['creator', 'updater'])
             ->where('is_notice', true)
             ->first();
 
-        return view('admin.forms.exemption_category', compact('headings', 'notice'));
+        return $dataTable->render('admin.forms.exemption_category', compact('notice'));
     }
 
 

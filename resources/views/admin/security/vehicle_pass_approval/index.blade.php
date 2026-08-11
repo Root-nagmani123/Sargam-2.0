@@ -120,37 +120,19 @@
             <div class="tab-content">
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'new' ? 'show active' : '' }}" id="veh-new-panel" role="tabpanel"
                      style="{{ ($activeTab ?? 'new') === 'new' ? 'display:block;' : 'display:none;' }}">
-                    @include('admin.security.vehicle_pass_approval._vehicle_pass_table', ['applications' => $newApplications, 'tableId' => 'vehNewTable'])
-                    @include('components.mess-master-datatables', ['tableId' => 'vehNewTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 6, 'orderDir' => 'desc', 'actionColumnIndex' => 7, 'infoLabel' => 'requests'])
+                    @include('admin.security.vehicle_pass_approval._vehicle_pass_table_shell', ['tableId' => 'vehNewTable'])
                 </div>
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'for_approval' ? 'show active' : '' }}" id="veh-for-panel" role="tabpanel"
                      style="{{ ($activeTab ?? 'new') === 'for_approval' ? 'display:block;' : 'display:none;' }}">
-                    @include('admin.security.vehicle_pass_approval._vehicle_pass_table', ['applications' => $processedApplications, 'tableId' => 'vehForApprovalTable'])
-                    @include('components.mess-master-datatables', ['tableId' => 'vehForApprovalTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 6, 'orderDir' => 'desc', 'actionColumnIndex' => 7, 'infoLabel' => 'requests'])
+                    @include('admin.security.vehicle_pass_approval._vehicle_pass_table_shell', ['tableId' => 'vehForApprovalTable'])
                 </div>
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'issued' ? 'show active' : '' }}" id="veh-issued-panel" role="tabpanel"
                      style="{{ ($activeTab ?? 'new') === 'issued' ? 'display:block;' : 'display:none;' }}">
-                    @if($issuedApplications->count() === 0)
-                        <div class="text-center text-muted py-5">
-                            <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">verified</i>
-                            <p class="mt-2 mb-0">No approved passes in this tab.</p>
-                        </div>
-                    @else
-                        @include('admin.security.vehicle_pass_approval._vehicle_pass_table', ['applications' => $issuedApplications, 'tableId' => 'vehIssuedTable'])
-                        @include('components.mess-master-datatables', ['tableId' => 'vehIssuedTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 6, 'orderDir' => 'desc', 'actionColumnIndex' => 7, 'infoLabel' => 'requests'])
-                    @endif
+                    @include('admin.security.vehicle_pass_approval._vehicle_pass_table_shell', ['tableId' => 'vehIssuedTable'])
                 </div>
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'rejected' ? 'show active' : '' }}" id="veh-rejected-panel" role="tabpanel"
                      style="{{ ($activeTab ?? 'new') === 'rejected' ? 'display:block;' : 'display:none;' }}">
-                    @if($rejectedApplications->count() === 0)
-                        <div class="text-center text-muted py-5">
-                            <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">cancel</i>
-                            <p class="mt-2 mb-0">No rejected records found.</p>
-                        </div>
-                    @else
-                        @include('admin.security.vehicle_pass_approval._vehicle_pass_table', ['applications' => $rejectedApplications, 'tableId' => 'vehRejectedTable'])
-                        @include('components.mess-master-datatables', ['tableId' => 'vehRejectedTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 6, 'orderDir' => 'desc', 'actionColumnIndex' => 7, 'infoLabel' => 'requests'])
-                    @endif
+                    @include('admin.security.vehicle_pass_approval._vehicle_pass_table_shell', ['tableId' => 'vehRejectedTable'])
                 </div>
             </div>
         </div>
@@ -341,8 +323,70 @@
                 url.searchParams.set('tab', tabKey);
                 window.history.replaceState({}, '', url.toString());
             } catch (e) {}
+            ensureTabDataTableInitialized(tabKey);
         });
     });
+
+    // --- Server-side DataTables: one per tab, lazy-initialized on first display ---
+    var vehicleDatatableUrl = '{{ route('admin.security.vehicle_pass_approval.datatable') }}';
+    var vehicleTabTableIds = {
+        new: 'vehNewTable',
+        for_approval: 'vehForApprovalTable',
+        issued: 'vehIssuedTable',
+        rejected: 'vehRejectedTable',
+    };
+    var vehicleTabDataTables = {};
+
+    var vehicleTableColumns = [
+        { data: 'employee_name', name: 'employee_name', orderable: false, searchable: false },
+        { data: 'vehicle_number', name: 'vehicle_number', orderable: false, searchable: false },
+        { data: 'vehicle_type', name: 'vehicle_type', orderable: false, searchable: false },
+        { data: 'status', name: 'status', orderable: false, searchable: false },
+        { data: 'vehicle_pass_no', name: 'vehicle_pass_no', orderable: false, searchable: false },
+        { data: 'employee_id', name: 'employee_id', orderable: false, searchable: false },
+        { data: 'created_date', name: 'created_date', orderable: false, searchable: false },
+        { data: 'actions', name: 'actions', orderable: false, searchable: false }
+    ];
+
+    function ensureTabDataTableInitialized(tabKey) {
+        if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) return;
+        var $ = window.jQuery;
+        if (vehicleTabDataTables[tabKey]) {
+            vehicleTabDataTables[tabKey].columns.adjust();
+            return;
+        }
+        var tableId = vehicleTabTableIds[tabKey];
+        var $table = $('#' + tableId);
+        if (!$table.length) return;
+
+        vehicleTabDataTables[tabKey] = $table.DataTable({
+            processing: true,
+            serverSide: true,
+            searching: false,
+            ordering: false,
+            pageLength: 10,
+            ajax: {
+                url: vehicleDatatableUrl,
+                type: 'GET',
+                data: function (d) {
+                    d.tab_key = tabKey;
+                    d.wheeler = $('#wheeler').val() || 'tw';
+                    d.search = $('#search').val() || '';
+                    d.date_from = $('#date_from').val() || '';
+                    d.date_to = $('#date_to').val() || '';
+                }
+            },
+            columns: vehicleTableColumns,
+            language: {
+                zeroRecords: 'No requests in this category.',
+                processing: 'Loading...'
+            },
+            dom: '<"row align-items-center mb-2"<"col-12 col-md-4"l>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>'
+        });
+    }
+
+    // Initialize the tab that's active on first page load.
+    ensureTabDataTableInitialized('{{ $activeTab ?? 'new' }}');
 })();
 </script>
 @endpush

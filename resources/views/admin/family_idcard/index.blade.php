@@ -153,44 +153,9 @@
                                     <th class="family-idcard-actions-col">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @forelse($activeRequests as $index => $req)
-                                <tr>
-                                    <td class="fw-medium">{{ $index + 1 }}</td>
-                                    <td>{{ $req->created_at ? (\Carbon\Carbon::parse($req->created_at)->format('d-m-Y')) : '--' }}</td>
-                                    <td>{{ $req->employee_id ?? '--' }}</td>
-                                    <td>{{ $req->employee_name ?? '--' }}</td>
-                                    <td>{{ $req->designation ?? '--' }}</td>
-                                    <td>{{ $req->section ?? '--' }}</td>
-                                    <td><a href="{{ route('admin.family_idcard.members', $req->first_id) }}" class="text-primary fw-medium">{{ $req->member_count }}</a></td>
-                                    <td>{{ $req->card_type ?? 'Family Card' }}</td>
-                                    <td class="family-idcard-actions-col">
-                                        <div class="d-flex gap-2">
-                                            <a href="{{ route('admin.family_idcard.members', $req->first_id) }}" class="btn  btn-outline-primary bg-transparent border-0 text-primary p-0" title="View members"><i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i></a>
-                                            @if($req->can_delete ?? true)
-                                                <a href="{{ route('admin.family_idcard.edit', $req->first_id) }}" class="btn  btn-outline-primary bg-transparent border-0 text-primary p-0" title="Edit"><i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i></a>
-                                                <form action="{{ route('admin.family_idcard.destroy', $req->first_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to archive this request?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-outline-danger bg-transparent border-0 text-primary p-0" title="Archive"><i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i></button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="9" class="text-center py-5 text-body-secondary">
-                                        <i class="material-icons material-symbols-rounded d-block mb-2" style="font-size:48px; opacity:0.4;">inbox</i>
-                                        <p class="mb-1">No family ID card requests found.</p>
-                                        <a href="{{ route('admin.family_idcard.create') }}" class="btn btn-primary  mt-2">Add Request</a>
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
-                @include('components.mess-master-datatables', ['tableId' => 'familyIdcardActiveTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 0, 'actionColumnIndex' => 8, 'infoLabel' => 'requests'])
             </div>
 
             <!-- Archive Tab -->
@@ -210,38 +175,9 @@
                                 <th class="family-idcard-actions-col">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @forelse($archivedRequests as $index => $req)
-                                <tr>
-                                    <td class="fw-medium">{{ $index + 1 }}</td>
-                                    <td>{{ $req->created_at ? (\Carbon\Carbon::parse($req->created_at)->format('d-m-Y')) : '--' }}</td>
-                                    <td>{{ $req->employee_id ?? '--' }}</td>
-                                    <td>{{ $req->employee_name ?? '--' }}</td>
-                                    <td>{{ $req->designation ?? '--' }}</td>
-                                    <td>{{ $req->section ?? '--' }}</td>
-                                    <td><a href="{{ route('admin.family_idcard.members', $req->first_id) }}" class="text-primary fw-medium">{{ $req->member_count }}</a></td>
-                                    <td>{{ $req->card_type ?? 'Family Card' }}</td>
-                                    <td class="family-idcard-actions-col">
-                                        <div class="d-flex gap-2">
-                                            <a href="{{ route('admin.family_idcard.members', $req->first_id) }}" class="btn  btn-outline-primary bg-transparent border-0 text-primary p-0" title="View members"><i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i></a>
-                                            @if(($req->id_status ?? 1) === 3)
-                                            <form action="{{ route('admin.family_idcard.restore', $req->first_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Restore this request?');">
-                                                @csrf
-                                                <button type="submit" class="btn  btn-outline-success bg-transparent border-0 text-primary p-0" title="Restore"><i class="material-icons material-symbols-rounded" style="font-size:18px;">restore</i></button>
-                                            </form>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="9" class="text-center py-5 text-body-secondary">No archived requests.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
-                @include('components.mess-master-datatables', ['tableId' => 'familyIdcardArchiveTable', 'searchPlaceholder' => 'Search archived requests...', 'orderColumn' => 0, 'actionColumnIndex' => 8, 'infoLabel' => 'requests'])
             </div>
         </div>
     </div>
@@ -382,6 +318,102 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('filterForm').submit();
         });
     }
+
+    // --- Server-side DataTables: Active + Archive tables ---
+    // The filter form GET-submits the whole page (search / card_type / per_page), so the
+    // current page URL already carries those params; forward them into each table's ajax call.
+    (function () {
+        if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) return;
+        var $ = window.jQuery;
+
+        var urlParams = new URLSearchParams(window.location.search);
+        var searchFilter = urlParams.get('search') || '';
+        var cardTypeFilter = urlParams.get('card_type') || '';
+        var perPage = parseInt(urlParams.get('per_page'), 10) || 10;
+
+        var activeUrl = '{{ route('admin.family_idcard.datatable_active') }}';
+        var archiveUrl = '{{ route('admin.family_idcard.datatable_archive') }}';
+
+        var commonColumns = [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'request_date_fmt', name: 'request_date_fmt', orderable: false, searchable: false },
+            { data: 'employee_id', name: 'employee_id', orderable: false, searchable: false },
+            { data: 'employee_name', name: 'employee_name', orderable: false, searchable: false },
+            { data: 'designation', name: 'designation', orderable: false, searchable: false },
+            { data: 'section', name: 'section', orderable: false, searchable: false },
+            { data: 'member_count_link', name: 'member_count_link', orderable: false, searchable: false },
+            { data: 'card_type_fmt', name: 'card_type_fmt', orderable: false, searchable: false },
+            { data: 'actions', name: 'actions', orderable: false, searchable: false }
+        ];
+
+        var $activeTable = $('#familyIdcardActiveTable');
+        var activeDt = $activeTable.length ? $activeTable.DataTable({
+            processing: true,
+            serverSide: true,
+            searching: false,
+            ordering: false,
+            pageLength: perPage,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+            ajax: {
+                url: activeUrl,
+                type: 'GET',
+                data: function (d) {
+                    d.search_filter = searchFilter;
+                    d.card_type = cardTypeFilter;
+                }
+            },
+            columns: commonColumns,
+            language: {
+                lengthMenu: 'Show _MENU_ entries',
+                info: 'Showing _START_ to _END_ of _TOTAL_ requests',
+                infoEmpty: 'No requests found',
+                zeroRecords: 'No family ID card requests found.',
+                paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+            },
+            dom: '<"row align-items-center mb-2"<"col-12 col-md-4"l>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>'
+        }) : null;
+
+        var $archiveTable = $('#familyIdcardArchiveTable');
+        var archiveDt = $archiveTable.length ? $archiveTable.DataTable({
+            processing: true,
+            serverSide: true,
+            searching: false,
+            ordering: false,
+            pageLength: perPage,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+            ajax: {
+                url: archiveUrl,
+                type: 'GET',
+                data: function (d) {
+                    d.search_filter = searchFilter;
+                    d.card_type = cardTypeFilter;
+                }
+            },
+            columns: commonColumns,
+            language: {
+                lengthMenu: 'Show _MENU_ entries',
+                info: 'Showing _START_ to _END_ of _TOTAL_ requests',
+                infoEmpty: 'No archived requests.',
+                zeroRecords: 'No archived requests.',
+                paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+            },
+            dom: '<"row align-items-center mb-2"<"col-12 col-md-4"l>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>'
+        }) : null;
+
+        // Re-adjust column widths when switching tabs (table was hidden during its own init).
+        var archiveTabBtn = document.getElementById('archive-tab');
+        var activeTabBtnEl = document.getElementById('active-tab');
+        if (archiveTabBtn && archiveDt) {
+            archiveTabBtn.addEventListener('shown.bs.tab', function () {
+                archiveDt.columns.adjust();
+            });
+        }
+        if (activeTabBtnEl && activeDt) {
+            activeTabBtnEl.addEventListener('shown.bs.tab', function () {
+                activeDt.columns.adjust();
+            });
+        }
+    })();
 
     // Before print: set print header and mark which tab to show so only that tab prints
     window.addEventListener('beforeprint', function() {

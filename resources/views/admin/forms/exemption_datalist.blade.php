@@ -71,7 +71,7 @@
 
                     </form>
                     <div class="table-responsive">
-                        <table class="table text-nowrap w-100">
+                        <table class="table text-nowrap w-100" id="exemptionDatalistTable">
                                 <thead>
                                     <tr>
                                         <th>S.No</th>
@@ -157,3 +157,44 @@
     </div>
 
 @endsection
+
+@push('scripts')
+<script>
+$(function () {
+    $('#exemptionDatalistTable').DataTable({
+        processing: true,
+        serverSide: true,
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+        order: [],
+        ajax: {
+            url: "{{ route('exemptions.datalist') }}",
+            data: function (d) {
+                d.exemption_category = @json(request('exemption_category'));
+                d.application_type = @json(request('application_type'));
+            }
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'user_name', name: 'user_name', orderable: false, searchable: false },
+            { data: 'contact_no', name: 'r.contact_no' },
+            { data: 'web_auth', name: 'r.web_auth' },
+            { data: 'exemption_category', name: 'exemption_category', orderable: false, searchable: false },
+            { data: 'medical_document', name: 'medical_document', orderable: false, searchable: false },
+            { data: 'type', name: 'type', orderable: false, searchable: false },
+            { data: 'exemption_count', name: 'r.exemption_count' },
+            { data: 'created_date', name: 'r.created_date' }
+        ],
+        language: {
+            search: 'Search:',
+            lengthMenu: 'Show _MENU_ entries',
+            info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+            infoEmpty: 'No entries found',
+            infoFiltered: '(filtered from _MAX_ total)',
+            zeroRecords: 'No data found.',
+            paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+        }
+    });
+});
+</script>
+@endpush

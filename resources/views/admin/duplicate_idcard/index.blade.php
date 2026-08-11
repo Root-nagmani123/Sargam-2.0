@@ -49,99 +49,15 @@
             </div>
 
             <div class="table-responsive">
-                <table class="table text-nowrap align-middle" id="duplicateIdcardTable">
-                    <thead>
-                        <tr>
-                            <th>S. No.</th>
-                            <th>Employee Name</th>
-                            <th>Designation</th>
-                            <th>Department</th>
-                            <th>ID Card No</th>
-                            <th>Date Of Birth</th>
-                            <th>Blood Group</th>
-                            <th>Contact No.</th>
-                            <th>Reason</th>
-                            <th>Employee Type</th>
-                            <th>Employee Photo</th>
-                            <th>Document (If Any)</th>
-                            <th>Valid From</th>
-                            <th>Valid To</th>
-                            <th>Status</th>
-                            <th>Request Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($requests as $idx => $r)
-                            <tr>
-                                <td>{{ $idx + 1 }}</td>
-                                <td>{{ $r->employee_name }}</td>
-                                <td>{{ $r->designation }}</td>
-                                <td>{{ $r->department }}</td>
-                                <td>{{ $r->id_card_no }}</td>
-                                <td>{{ $r->employee_dob ? \Carbon\Carbon::parse($r->employee_dob)->format('d-m-Y') : '--' }}</td>
-                                <td>{{ $r->blood_group }}</td>
-                                <td>{{ $r->mobile_no }}</td>
-                                <td>{{ $r->card_reason }}</td>
-                                <td>{{ $r->employee_type }}</td>
-                                <td>
-                                    @php
-                                        $p = $r->photo_path;
-                                        if ($p && strpos($p,'/') === false) { $p = 'idcard/photos/'.$p; }
-                                        $photoExists = $p && \Storage::disk('public')->exists($p);
-                                         @endphp
-                                     @if($photoExists)
-                                        <a href="{{ asset('storage/'.$p) }}" target="_blank">Download</a>
-                                    @else
-                                        --
-                                    @endif
-                                </td>
-                                <td>
-                                    @php
-                                        $d = $r->doc_path;
-                                        if ($d && strpos($d,'/') === false) { $d = 'idcard/dup_docs/'.$d; }
-                                        $docExists = $d && \Storage::disk('public')->exists($d);
-                                    @endphp
-                                    @if($docExists)
-                                        <a href="{{ asset('storage/'.$d) }}" target="_blank">Download</a>
-                                    @else
-                                        --
-                                    @endif
-                                </td>
-                                <td>{{ $r->valid_from ? \Carbon\Carbon::parse($r->valid_from)->format('d-m-Y') : '--' }}</td>
-                                <td>{{ $r->valid_to ? \Carbon\Carbon::parse($r->valid_to)->format('d-m-Y') : '--' }}</td>
-                                <td>{{ $r->status_label }}</td>
-                                <td>{{ $r->request_date ? \Carbon\Carbon::parse($r->request_date)->format('d-m-Y') : '--' }}</td>
-                                <td>
-                                    @if(!empty($r->user_may_edit))
-                                        <div class="d-flex align-items-center gap-2">
-                                            <a href="{{ route('admin.duplicate_idcard.edit', $r->id) }}" class="btn btn-outline-primary bg-transparent border-0 text-primary p-0" title="Edit">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:16px;">edit</i>
-                                            </a>
-                                            <form action="{{ route('admin.duplicate_idcard.destroy', $r->id) }}" method="POST" class="d-inline"
-                                                  onsubmit="return confirm('Delete this duplicate ID card request? This cannot be undone.');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-outline-danger bg-transparent border-0 text-danger p-0" title="Delete">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:16px;">delete</i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    @else
-                                        <span class="text-muted small">—</span>
-                                    @endif
-                                </td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="17" class="text-center text-muted py-4">No requests found.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                {!! $dataTable->table(['class' => 'table text-nowrap align-middle', 'id' => 'duplicateIdcardTable']) !!}
             </div>
 
         </div>
     </div>
 </div>
-@include('components.mess-master-datatables', ['tableId' => 'duplicateIdcardTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 0, 'actionColumnIndex' => 16, 'infoLabel' => 'requests'])
 @endsection
+
+@push('scripts')
+{!! $dataTable->scripts() !!}
+@endpush
 

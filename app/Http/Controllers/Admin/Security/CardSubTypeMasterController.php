@@ -7,19 +7,71 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
+use Yajra\DataTables\Facades\DataTables;
 
 class CardSubTypeMasterController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $subTypes = DB::table('sec_id_cardno_config_map as m')
-            ->join('sec_id_cardno_master as t', 't.pk', '=', 'm.sec_id_cardno_master')
-            ->select('m.*', 't.sec_card_name')
-            ->orderBy('t.sec_card_name')
-            ->orderBy('m.config_name')
-            ->get();
+        if ($request->ajax()) {
+            $query = DB::table('sec_id_cardno_config_map as m')
+                ->join('sec_id_cardno_master as t', 't.pk', '=', 'm.sec_id_cardno_master')
+                ->select('m.*', 't.sec_card_name')
+                ->orderBy('t.sec_card_name')
+                ->orderBy('m.config_name');
 
-        return view('admin.security.idcard_master.sub_type.index', compact('subTypes'));
+            return DataTables::of($query)
+                ->addIndexColumn()
+                ->addColumn('card_name_label', function ($st) {
+                    if ($st->card_name === 'p') {
+                        return '<span class="badge bg-primary">Permanent</span>';
+                    }
+                    if ($st->card_name === 'c') {
+                        return '<span class="badge bg-info">Contractual</span>';
+                    }
+
+                    return '<span class="badge bg-secondary">' . e($st->card_name) . '</span>';
+                })
+                ->addColumn('status', function ($st) {
+                    $isActive = (int) ($st->active_inactive ?? 1) === 1;
+
+                    return '<div class="form-check form-switch d-inline-block">'
+                        . '<input class="form-check-input status-toggle" type="checkbox" role="switch"'
+                        . ' data-table="sec_id_cardno_config_map" data-column="active_inactive" data-id="' . $st->pk . '" data-id_column="pk"'
+                        . ($isActive ? ' checked' : '') . '>'
+                        . '</div>';
+                })
+                ->addColumn('actions', function ($st) {
+                    $editUrl = route('admin.security.idcard_sub_type.edit', encrypt($st->pk));
+                    $isActive = (int) ($st->active_inactive ?? 1) === 1;
+
+                    $html = '<div class="d-flex gap-2 align-items-center">'
+                        . '<a href="' . e($editUrl) . '" class="text-success openEditSubType" title="Edit">'
+                        . '<i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i></a>';
+
+                    if ($isActive) {
+                        $html .= '<button type="button" class="btn btn-link p-0 text-secondary" disabled aria-disabled="true"'
+                            . ' title="Cannot delete while active. Set status to inactive first.">'
+                            . '<i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i></button>';
+                    } else {
+                        $deleteUrl = route('admin.security.idcard_sub_type.delete', encrypt($st->pk));
+                        $token = csrf_token();
+                        $html .= '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Delete this Sub Type mapping?\');">'
+                            . '<input type="hidden" name="_token" value="' . e($token) . '">'
+                            . '<input type="hidden" name="_method" value="DELETE">'
+                            . '<button type="submit" class="btn btn-link p-0 text-danger" title="Delete">'
+                            . '<i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i></button>'
+                            . '</form>';
+                    }
+
+                    return $html . '</div>';
+                })
+                ->rawColumns(['card_name_label', 'status', 'actions'])
+                ->setRowAttr(['data-pk' => fn ($st) => $st->pk])
+                ->make(true);
+        }
+
+        return view('admin.security.idcard_master.sub_type.index');
     }
 
     public function create(Request $request)

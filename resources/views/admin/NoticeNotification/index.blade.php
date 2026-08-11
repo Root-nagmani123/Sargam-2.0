@@ -73,12 +73,12 @@
 
         <div class="card-body">
             <div class="bg-light rounded-3 p-3 mb-4">
-                <form method="GET" action="{{ route('admin.notice.index') }}">
+                <form method="GET" action="{{ route('admin.notice.index') }}" id="noticeFilterForm"
+                    onsubmit="return false;">
                     <div class="row g-3 align-items-end">
                         <div class="col-12 col-sm-6 col-md">
                             <label class="form-label fw-semibold mb-1">Notice Type</label>
-                            <select name="notice_type" class="form-select form-select-sm js-choice"
-                                onchange="this.form.submit()">
+                            <select name="notice_type" id="filterNoticeType" class="form-select form-select-sm js-choice">
                                 <option value="">All</option>
                                 @foreach($types as $type)
                                 <option value="{{ $type }}" {{ request('notice_type') == $type ? 'selected' : '' }}>
@@ -90,8 +90,7 @@
 
                         <div class="col-12 col-sm-6 col-md">
                             <label class="form-label fw-semibold mb-1">Course</label>
-                            <select name="course_id" class="form-select form-select-sm js-choice"
-                                onchange="this.form.submit()">
+                            <select name="course_id" id="filterCourseId" class="form-select form-select-sm js-choice">
                                 <option value="">All</option>
                                 @foreach($courses as $c)
                                 <option value="{{ $c->id }}" {{ request('course_id') == $c->pk ? 'selected' : '' }}>
@@ -103,8 +102,7 @@
 
                         <div class="col-12 col-sm-6 col-md">
                             <label class="form-label fw-semibold mb-1">Status</label>
-                            <select name="status" class="form-select form-select-sm js-choice"
-                                onchange="this.form.submit()">
+                            <select name="status" id="filterStatus" class="form-select form-select-sm js-choice">
                                 <option value="">All</option>
                                 <option value="1" {{ request('status') == "1" ? 'selected' : '' }}>Active</option>
                                 <option value="0" {{ request('status') == "0" ? 'selected' : '' }}>Inactive</option>
@@ -114,9 +112,9 @@
                         <div class="col-12 col-sm-6 col-md">
                             <label class="form-label fw-semibold mb-1">Search</label>
                             <div class="input-group input-group-sm">
-                                <input type="text" name="search" class="form-control"
+                                <input type="text" name="search" id="filterSearch" class="form-control"
                                     value="{{ request('search') }}" placeholder="Title, type, course, creator...">
-                                <button type="submit" class="btn btn-primary" aria-label="Search">
+                                <button type="submit" id="filterSearchBtn" class="btn btn-primary" aria-label="Search">
                                     <i class="material-icons material-symbols-rounded fs-6 lh-1"
                                         aria-hidden="true">search</i>
                                 </button>
@@ -167,7 +165,7 @@
             </div>
 
             <div class="table-responsive">
-                <table class="table table-hover align-middle text-nowrap mb-0">
+                <table id="noticeNotificationTable" class="table dataTable table-hover align-middle text-nowrap mb-0">
                     <thead class="table-light">
                         <tr>
                             <th scope="col" style="width: 60px;">S.N.</th>
@@ -184,90 +182,8 @@
                     </thead>
 
                     <tbody>
-                        @foreach($notices as $index => $n)
-                        @php $encId = Crypt::encrypt($n->pk); @endphp
-
-                        <tr>
-                            <td class="fw-semibold">{{ $index + $notices->firstItem() }}</td>
-                            <td class="fw-semibold col-title notice-title-cell">
-                                <span class="notice-title-text js-custom-title-tooltip"
-                                    data-full-title="{{ $n->notice_title }}">
-                                    {{ $n->notice_title }}
-                                </span>
-                            </td>
-                            <td class="col-type">
-                                <span class="badge rounded-1 bg-info-subtle text-info text-capitalize">
-                                    {{ $n->notice_type }}
-                                </span>
-                            </td>
-                            <td class="col-course">{{ $n->course->course_name ?? 'N/A' }}</td>
-                            <td class="col-created_by">{{ $n->user->first_name }} {{ $n->user->last_name }}</td>
-                            <td class="col-created_date">{{ \Carbon\Carbon::parse($n->created_date)->format('d-m-Y') }}
-                            </td>
-                            <td class="col-display_date">{{ \Carbon\Carbon::parse($n->display_date)->format('d-m-Y') }}
-                            </td>
-                            <td class="col-expiry_date">{{ \Carbon\Carbon::parse($n->expiry_date)->format('d-m-Y') }}
-                            </td>
-
-                            <td class="text-center col-status">
-                                <span
-                                    class="badge rounded-1 js-notice-status-badge bg-{{ $n->active_inactive == 1 ? 'success-subtle text-success' : 'danger-subtle text-danger' }}"
-                                    data-id="{{ $n->pk }}">
-                                    {{ $n->active_inactive == 1 ? 'Active' : 'Inactive' }}
-                                </span>
-                            </td>
-                            <td class="text-center d-flex justify-content-center">
-                                <div class="d-inline-flex align-items-center gap-1">
-                                    <a href="{{ route('admin.notice.edit', $encId) }}"
-                                        class="btn btn-sm btn-outline-primary btn-transparent border-0 p-0" title="Edit"
-                                        aria-label="Edit Notice">
-                                        <span class="material-symbols-rounded fs-5">edit</span>
-                                    </a>
-                                    <div
-                                        class="form-check form-switch d-inline-flex align-items-center justify-content-center">
-                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                            data-table="notices_notification" data-column="active_inactive"
-                                            data-id="{{ $n->pk }}" {{ $n->active_inactive == 1 ? 'checked' : '' }}>
-                                    </div>
-                                    <div class="js-notice-delete-actions" data-id="{{ $n->pk }}">
-                                        <form id="deleteForm{{ $encId }}"
-                                            action="{{ route('admin.notice.destroy', $encId) }}" method="POST"
-                                            class="d-inline js-notice-delete-enabled {{ $n->active_inactive == 0 ? '' : 'd-none' }}">
-                                            @csrf
-                                            @method('DELETE')
-
-                                            <button type="button"
-                                                class="btn btn-sm btn-outline-danger btn-transparent border-0 p-0"
-                                                title="Delete" aria-label="Delete Notice"
-                                                onclick="deleteConfirm('{{ $encId }}')">
-                                                <span class="material-symbols-rounded fs-5">delete</span>
-                                            </button>
-                                        </form>
-
-                                        <button
-                                            class="btn btn-sm btn-outline-secondary btn-transparent border-0 p-0 js-notice-delete-disabled {{ $n->active_inactive == 1 ? '' : 'd-none' }}"
-                                            disabled title="Delete Disabled">
-                                            <span class="material-symbols-rounded fs-5">block</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                        @endforeach
                     </tbody>
                 </table>
-            </div>
-
-            <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
-                <div class="text-muted small">
-                    Showing {{ $notices->firstItem() ?? 0 }}
-                    to {{ $notices->lastItem() }}
-                    of {{ $notices->total() }} items
-                </div>
-
-                <div>
-                    {{ $notices->links('vendor.pagination.custom') }}
-                </div>
             </div>
         </div>
     </div>
@@ -298,25 +214,39 @@ function autoHideAlert(alertEl) {
     }, 1000);
 }
 
+var NOTICE_COL_TOGGLE_STORAGE_KEY = 'noticeNotificationHiddenCols';
+
+function applyNoticeColumn(col, visible) {
+    document.querySelectorAll('.col-' + col).forEach(function(cell) {
+        cell.classList.toggle('d-none', !visible);
+    });
+}
+
+function applyStoredColumnVisibility() {
+    var hidden = [];
+    try {
+        hidden = JSON.parse(localStorage.getItem(NOTICE_COL_TOGGLE_STORAGE_KEY)) || [];
+    } catch (e) {
+        hidden = [];
+    }
+
+    hidden.forEach(function(col) {
+        applyNoticeColumn(col, false);
+    });
+}
+
 function initColumnToggle() {
     var toggles = document.querySelectorAll('.js-col-toggle');
     if (!toggles.length) {
         return;
     }
 
-    var storageKey = 'noticeNotificationHiddenCols';
     var hidden = [];
 
     try {
-        hidden = JSON.parse(localStorage.getItem(storageKey)) || [];
+        hidden = JSON.parse(localStorage.getItem(NOTICE_COL_TOGGLE_STORAGE_KEY)) || [];
     } catch (e) {
         hidden = [];
-    }
-
-    function applyColumn(col, visible) {
-        document.querySelectorAll('.col-' + col).forEach(function(cell) {
-            cell.classList.toggle('d-none', !visible);
-        });
     }
 
     function persist() {
@@ -327,7 +257,7 @@ function initColumnToggle() {
             }
         });
         try {
-            localStorage.setItem(storageKey, JSON.stringify(hiddenCols));
+            localStorage.setItem(NOTICE_COL_TOGGLE_STORAGE_KEY, JSON.stringify(hiddenCols));
         } catch (e) {}
     }
 
@@ -336,13 +266,73 @@ function initColumnToggle() {
 
         if (hidden.indexOf(col) !== -1) {
             cb.checked = false;
-            applyColumn(col, false);
+            applyNoticeColumn(col, false);
         }
 
         cb.addEventListener('change', function() {
-            applyColumn(col, cb.checked);
+            applyNoticeColumn(col, cb.checked);
             persist();
         });
+    });
+}
+
+function initNoticeDataTable() {
+    if (!window.jQuery || !jQuery.fn.DataTable) {
+        return;
+    }
+
+    var $table = jQuery('#noticeNotificationTable');
+    if (!$table.length || jQuery.fn.DataTable.isDataTable($table)) {
+        return;
+    }
+
+    var dataTable = $table.DataTable({
+        processing: true,
+        serverSide: true,
+        searching: false,
+        ordering: false,
+        pageLength: 10,
+        lengthChange: false,
+        ajax: {
+            url: "{{ route('admin.notice.index') }}",
+            type: 'GET',
+            data: function(d) {
+                d.notice_type = jQuery('#filterNoticeType').val() || '';
+                d.course_id = jQuery('#filterCourseId').val() || '';
+                d.status = jQuery('#filterStatus').val() || '';
+                d.search = jQuery('#filterSearch').val() || '';
+            }
+        },
+        columns: [
+            { data: 'sn', name: 'sn', orderable: false, searchable: false, className: 'fw-semibold' },
+            { data: 'notice_title', name: 'notice_title', orderable: false, searchable: false, className: 'fw-semibold col-title notice-title-cell' },
+            { data: 'notice_type', name: 'notice_type', orderable: false, searchable: false, className: 'col-type' },
+            { data: 'course_name', name: 'course_name', orderable: false, searchable: false, className: 'col-course' },
+            { data: 'created_by', name: 'created_by', orderable: false, searchable: false, className: 'col-created_by' },
+            { data: 'created_date', name: 'created_date', orderable: false, searchable: false, className: 'col-created_date' },
+            { data: 'display_date', name: 'display_date', orderable: false, searchable: false, className: 'col-display_date' },
+            { data: 'expiry_date', name: 'expiry_date', orderable: false, searchable: false, className: 'col-expiry_date' },
+            { data: 'status', name: 'status', orderable: false, searchable: false, className: 'text-center col-status' },
+            { data: 'action', name: 'action', orderable: false, searchable: false, className: 'text-center d-flex justify-content-center' }
+        ],
+        language: {
+            zeroRecords: 'No notices found.',
+            processing: 'Loading...'
+        },
+        dom: 'rt<"d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2"ip>',
+        drawCallback: function() {
+            initCustomNoticeTitleTooltip();
+            applyStoredColumnVisibility();
+        }
+    });
+
+    jQuery('#filterNoticeType, #filterCourseId, #filterStatus').on('change', function() {
+        dataTable.ajax.reload();
+    });
+
+    jQuery('#noticeFilterForm').on('submit', function(e) {
+        e.preventDefault();
+        dataTable.ajax.reload();
     });
 }
 
@@ -351,6 +341,7 @@ function initNoticeIndexPage() {
 
     initColumnToggle();
     initCustomNoticeTitleTooltip();
+    initNoticeDataTable();
 
     var statusMsgBox = document.getElementById('status-msg');
     if (statusMsgBox && statusMsgBox.dataset.observingAutoHide !== 'true') {

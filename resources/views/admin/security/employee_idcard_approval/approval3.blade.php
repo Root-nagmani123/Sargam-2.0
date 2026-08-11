@@ -107,34 +107,16 @@
 
             <div class="tab-content">
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'new' ? 'show active' : '' }}" id="new-request-panel3" role="tabpanel" aria-labelledby="new-request-tab3" style="{{ ($activeTab ?? 'new') === 'new' ? 'display:block;' : 'display:none;' }}">
-                    @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $newRequests, 'approvalStage' => 3, 'tableId' => 'id3NewTable'])
-                    @include('components.mess-master-datatables', ['tableId' => 'id3NewTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 9, 'orderDir' => 'desc', 'actionColumnIndex' => 8, 'infoLabel' => 'requests'])
+                    @include('admin.security.employee_idcard_approval._approval_table_shell', ['tableId' => 'id3NewTable'])
                 </div>
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'for_approval' ? 'show active' : '' }}" id="for-approval-panel3" role="tabpanel" aria-labelledby="for-approval-tab3" style="{{ ($activeTab ?? 'new') === 'for_approval' ? 'display:block;' : 'display:none;' }}">
-                    @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $forApprovalRequests, 'approvalStage' => 3, 'tableId' => 'id3ForApprovalTable'])
-                    @include('components.mess-master-datatables', ['tableId' => 'id3ForApprovalTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 9, 'orderDir' => 'desc', 'actionColumnIndex' => 8, 'infoLabel' => 'requests'])
+                    @include('admin.security.employee_idcard_approval._approval_table_shell', ['tableId' => 'id3ForApprovalTable'])
                 </div>
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'issued' ? 'show active' : '' }}" id="issued-panel3" role="tabpanel" aria-labelledby="issued-tab3" style="{{ ($activeTab ?? 'new') === 'issued' ? 'display:block;' : 'display:none;' }}">
-                    @if($issuedRequests->count() === 0)
-                        <div class="text-center text-muted py-5">
-                            <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">verified</i>
-                            <p class="mt-2 mb-0">No issued records found.</p>
-                        </div>
-                    @else
-                        @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $issuedRequests, 'approvalStage' => 3, 'tableId' => 'id3IssuedTable'])
-                        @include('components.mess-master-datatables', ['tableId' => 'id3IssuedTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 9, 'orderDir' => 'desc', 'actionColumnIndex' => 8, 'infoLabel' => 'requests'])
-                    @endif
+                    @include('admin.security.employee_idcard_approval._approval_table_shell', ['tableId' => 'id3IssuedTable'])
                 </div>
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'rejected' ? 'show active' : '' }}" id="rejected-panel3" role="tabpanel" aria-labelledby="rejected-tab3" style="{{ ($activeTab ?? 'new') === 'rejected' ? 'display:block;' : 'display:none;' }}">
-                    @if($rejectedRequests->count() === 0)
-                        <div class="text-center text-muted py-5">
-                            <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">cancel</i>
-                            <p class="mt-2 mb-0">No rejected records found.</p>
-                        </div>
-                    @else
-                        @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $rejectedRequests, 'approvalStage' => 3, 'tableId' => 'id3RejectedTable'])
-                        @include('components.mess-master-datatables', ['tableId' => 'id3RejectedTable', 'searchPlaceholder' => 'Search requests...', 'orderColumn' => 9, 'orderDir' => 'desc', 'actionColumnIndex' => 8, 'infoLabel' => 'requests'])
-                    @endif
+                    @include('admin.security.employee_idcard_approval._approval_table_shell', ['tableId' => 'id3RejectedTable'])
                 </div>
             </div>
         </div>
@@ -194,13 +176,16 @@
 
 @push('scripts')
 <script>
-document.querySelectorAll('.reject-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        document.getElementById('rejectModalEmployeeName').textContent = 'Rejecting: ' + (this.dataset.name || '');
-        document.getElementById('rejectForm').action = this.dataset.url || '#';
-        document.getElementById('rejection_reason').value = '';
-        new bootstrap.Modal(document.getElementById('rejectModal')).show();
-    });
+// Reject button opens the modal. Delegated on document since rows are rendered by the DataTable ajax call.
+document.addEventListener('click', function (event) {
+    var btn = event.target.closest('.reject-btn');
+    if (!btn) {
+        return;
+    }
+    document.getElementById('rejectModalEmployeeName').textContent = 'Rejecting: ' + (btn.dataset.name || '');
+    document.getElementById('rejectForm').action = btn.dataset.url || '#';
+    document.getElementById('rejection_reason').value = '';
+    new bootstrap.Modal(document.getElementById('rejectModal')).show();
 });
 
 document.getElementById('per_page').addEventListener('change', function() {
@@ -269,8 +254,79 @@ document.querySelectorAll('#approval3Tabs .nav-link').forEach(function(btn) {
             url.searchParams.set('tab', tabKey);
             window.history.replaceState({}, '', url.toString());
         } catch (e) {}
+        ensureApproval3TabDataTableInitialized(tabKey);
     });
 });
+
+// --- Server-side DataTables: one per tab, lazy-initialized on first display ---
+(function () {
+    if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) return;
+    var $ = window.jQuery;
+
+    var urlParams = new URLSearchParams(window.location.search);
+    var searchFilter = urlParams.get('search') || '';
+    var dateFromFilter = urlParams.get('date_from') || '';
+    var dateToFilter = urlParams.get('date_to') || '';
+
+    var approval3DatatableUrl = '{{ route('admin.security.employee_idcard_approval.approval3_datatable') }}';
+    var approval3TabTableIds = {
+        new: 'id3NewTable',
+        for_approval: 'id3ForApprovalTable',
+        issued: 'id3IssuedTable',
+        rejected: 'id3RejectedTable',
+    };
+    var approval3TabDataTables = {};
+
+    var approval3TableColumns = [
+        { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+        { data: 'name', name: 'name', orderable: false, searchable: false },
+        { data: 'designation', name: 'designation', orderable: false, searchable: false },
+        { data: 'id_card_number', name: 'id_card_number', orderable: false, searchable: false },
+        { data: 'card_type', name: 'card_type', orderable: false, searchable: false },
+        { data: 'request_type_badge', name: 'request_type_badge', orderable: false, searchable: false },
+        { data: 'photo', name: 'photo', orderable: false, searchable: false },
+        { data: 'contact_no', name: 'contact_no', orderable: false, searchable: false },
+        { data: 'actions', name: 'actions', orderable: false, searchable: false },
+        { data: 'request_date_fmt', name: 'request_date_fmt', orderable: false, searchable: false },
+        { data: 'requested_section', name: 'requested_section', orderable: false, searchable: false }
+    ];
+
+    window.ensureApproval3TabDataTableInitialized = function (tabKey) {
+        if (approval3TabDataTables[tabKey]) {
+            approval3TabDataTables[tabKey].columns.adjust();
+            return;
+        }
+        var tableId = approval3TabTableIds[tabKey];
+        var $table = $('#' + tableId);
+        if (!$table.length) return;
+
+        approval3TabDataTables[tabKey] = $table.DataTable({
+            processing: true,
+            serverSide: true,
+            searching: false,
+            ordering: false,
+            pageLength: 10,
+            ajax: {
+                url: approval3DatatableUrl,
+                type: 'GET',
+                data: function (d) {
+                    d.tab_key = tabKey;
+                    d.search = searchFilter;
+                    d.date_from = dateFromFilter;
+                    d.date_to = dateToFilter;
+                }
+            },
+            columns: approval3TableColumns,
+            language: {
+                zeroRecords: 'No requests found for Approval III.',
+                processing: 'Loading...'
+            },
+            dom: '<"row align-items-center mb-2"<"col-12 col-md-4"l>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>'
+        });
+    };
+
+    ensureApproval3TabDataTableInitialized('{{ $activeTab ?? 'new' }}');
+})();
 </script>
 @endpush
 @endsection

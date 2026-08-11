@@ -718,6 +718,7 @@ Route::middleware(['auth'])->group(function () {
     // Vehicle Pass Approval Routes
     Route::prefix('security/vehicle-pass-approval')->name('admin.security.vehicle_pass_approval.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassApprovalController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/datatable', 'datatable')->name('datatable');
         Route::get('/all', 'allApplications')->name('all');
         Route::get('/show/{id}', 'show')->name('show');
         Route::post('/approve/{id}', 'approve')->name('approve');
@@ -728,7 +729,9 @@ Route::middleware(['auth'])->group(function () {
 Route::prefix('security/employee-idcard-approval')->name('admin.security.employee_idcard_approval.')->controller(\App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController::class)->group(function () {
     Route::get('/approval1', 'approval1')->name('approval1');
     Route::get('/approval2', 'approval2')->name('approval2');
+    Route::get('/approval2/datatable', 'approval2Datatable')->name('approval2_datatable');
     Route::get('/approval3', 'approval3')->name('approval3');
+    Route::get('/approval3/datatable', 'approval3Datatable')->name('approval3_datatable');
     Route::get('/all', 'all')->name('all');
     Route::get('/show/{id}', 'show')->name('show');
     Route::get('/export', 'export')->name('export');
@@ -765,6 +768,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     // Family ID Card Approval Routes
     Route::prefix('security/family-idcard-approval')->name('admin.security.family_idcard_approval.')->controller(\App\Http\Controllers\Admin\Security\FamilyIDCardApprovalController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/datatable', 'datatable')->name('datatable');
         Route::get('/all', 'all')->name('all');
         Route::get('/show/{id}', 'show')->name('show');
         Route::post('/approve/{id}', 'approve')->name('approve');
@@ -820,6 +824,8 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     // Family ID Card Request Routes (admin/family-idcard)
     Route::prefix('admin/family-idcard')->name('admin.family_idcard.')->controller(FamilyIDCardRequestController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/datatable-active', 'datatableActive')->name('datatable_active');
+        Route::get('/datatable-archive', 'datatableArchive')->name('datatable_archive');
         Route::get('/create', 'create')->name('create');
         Route::get('/lookup-employee-by-id', 'lookupEmployeeByIdForCreate')->name('lookup.employee_by_id');
         Route::post('/store', 'store')->name('store');

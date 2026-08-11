@@ -31,46 +31,12 @@
                             <th style="width:110px;">Status</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($vehicleTypes as $index => $vt)
-                            <tr data-pk="{{ $vt->pk }}">
-                                <td>{{ $index + 1 }}</td>
-                                <td>{{ $vt->vehicle_type }}</td>
-                                <td>{{ $vt->description ?? '--' }}</td>
-                                <td>
-                                    <div class="d-flex gap-2">
-                                        <a href="{{ route('admin.security.vehicle_type.edit', encrypt($vt->pk)) }}" class="text-success" title="Edit">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i>
-                                        </a>
-                                        <form action="{{ route('admin.security.vehicle_type.delete', encrypt($vt->pk)) }}" method="POST" onsubmit="return confirm('Delete this Vehicle Type?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-link p-0 text-danger" title="Delete">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="form-check form-switch d-inline-block">
-                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                            data-url="{{ route('admin.security.vehicle_type.toggle.status', encrypt($vt->pk)) }}"
-                                            {{ $vt->active_inactive == 1 ? 'checked' : '' }}>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5" class="text-center text-muted">No Vehicle Types found.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
     </div>
 </div>
-@include('components.mess-master-datatables', ['tableId' => 'vehicleTypeTable', 'searchPlaceholder' => 'Search vehicle types...', 'orderColumn' => 0, 'actionColumnIndex' => [3, 4], 'infoLabel' => 'vehicle types'])
 
 <!-- Modal for Create/Edit -->
 <div class="modal fade" id="vehicleTypeModal" tabindex="-1">
@@ -94,14 +60,34 @@ $(document).ready(function() {
         });
     });
 
-    // Status toggle
-    $('.status-toggle').on('change', function() {
+    var vehicleTypeTable = $('#vehicleTypeTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: '{{ route('admin.security.vehicle_type.index') }}',
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'vehicle_type', name: 'vehicle_type' },
+            { data: 'description', name: 'description', orderable: false, searchable: false },
+            { data: 'actions', name: 'actions', orderable: false, searchable: false },
+            { data: 'status', name: 'status', orderable: false, searchable: false }
+        ],
+        order: [[0, 'desc']],
+        language: {
+            search: 'Search vehicle types:',
+            zeroRecords: 'No Vehicle Types found.',
+            emptyTable: 'No Vehicle Types found.'
+        }
+    });
+
+    // Status toggle (delegated: rows are loaded via AJAX)
+    $('#vehicleTypeTable').on('change', '.status-toggle', function() {
         const url = $(this).data('url');
         $.post(url, {
             _token: '{{ csrf_token() }}'
         }).done(function(response) {
             if(response.success) {
                 toastr.success('Status updated successfully');
+                vehicleTypeTable.ajax.reload(null, false);
             }
         });
     });

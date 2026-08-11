@@ -13,6 +13,7 @@ use App\Exports\ExemptionDataExport;
 use App\Services\FC\FcRosterApplicationGuardService;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf; // For PDF generation
+use Yajra\DataTables\Facades\DataTables;
 
 class FcExemptionMasterController extends Controller
 {
@@ -179,6 +180,32 @@ class FcExemptionMasterController extends Controller
         $filter = $request->get('exemption_category'); // Could be short name or empty
         $typeFilter = $request->get('application_type'); // 1 = Registration, 2 = Exemption
 
+        if ($request->ajax()) {
+            return DataTables::of($this->exemptionListQuery($filter, $typeFilter))
+                ->addIndexColumn()
+                ->addColumn('user_name', function ($row) {
+                    return trim(($row->first_name ?? '') . ' ' . ($row->middle_name ?? '') . ' ' . ($row->last_name ?? '')) ?: 'N/A';
+                })
+                ->addColumn('exemption_category', function ($row) {
+                    return $row->application_type == 2 ? ($row->Exemption_name ?? 'N/A') : 'N/A';
+                })
+                ->addColumn('medical_document', function ($row) {
+                    if ($row->application_type != 2) {
+                        return 'N/A';
+                    }
+
+                    return $row->medical_exemption_doc
+                        ? '<a href="' . asset('storage/' . $row->medical_exemption_doc) . '" target="_blank" class="btn btn-sm btn-info">View</a>'
+                        : 'No Document';
+                })
+                ->addColumn('type', function ($row) {
+                    return $row->application_type == 1 ? 'Registration' : ($row->application_type == 2 ? 'Exemption' : 'N/A');
+                })
+                ->editColumn('exemption_count', fn ($row) => $row->exemption_count ?: 0)
+                ->editColumn('created_date', fn ($row) => \Carbon\Carbon::parse($row->created_date)->format('d-m-Y'))
+                ->rawColumns(['medical_document'])
+                ->make(true);
+        }
 
         // Fetch unique exemption short names for the dropdown
         $categories = DB::table('fc_exemption_master')
@@ -189,6 +216,11 @@ class FcExemptionMasterController extends Controller
             ->orderBy('Exemption_name')
             ->get();
 
+        return view('admin.forms.exemption_datalist', compact('categories', 'filter', 'typeFilter'));
+    }
+
+    private function exemptionListQuery($filter, $typeFilter)
+    {
         // Base query
         $query = DB::table('fc_registration_master as r')
             ->leftJoin('fc_exemption_master as e', 'r.fc_exemption_master_pk', '=', 'e.Pk')
@@ -203,7 +235,6 @@ class FcExemptionMasterController extends Controller
                 'r.last_name',
                 'e.Exemption_name',
                 'r.application_type',
-                'e.Exemption_name',
                 'r.exemption_count'
             )
             // Selected conditionally: naming it outright throws SQLSTATE[42S22] wherever
@@ -214,8 +245,6 @@ class FcExemptionMasterController extends Controller
             )
             ->orderBy('r.created_date')
             ->whereIn('r.application_type', [1, 2]);  // Only show records with either registration or exemption
-        // ->where('e.visible', 1);
-        // ->where('r.fc_exemption_master_pk', '!=', 0);
 
         // Apply filter only if a category is selected
         if (!empty($filter)) {
@@ -232,13 +261,7 @@ class FcExemptionMasterController extends Controller
             }
         }
 
-        if (!empty($typeFilter)) {
-            $query->where('r.application_type', intval($typeFilter));
-        }
-
-        $submissions = $query->get();
-
-        return view('admin.forms.exemption_datalist', compact('submissions', 'categories', 'filter', 'typeFilter'));
+        return $query;
     }
 
 

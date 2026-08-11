@@ -44,62 +44,7 @@
             </div>
             @endif
             <div class="table-responsive">
-                <table class="table text-nowrap w-100">
-                    <thead>
-                        <tr>
-                            <th>S.No</th>
-                            <th>Exemption Name</th>
-                            <th>Description</th>
-                            <th>Created Date</th>
-                            <th>Created By</th>
-                            <th>Modified By</th>
-                            <th>Action</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($headings as $index => $item)
-                        <tr>
-                            <td>{{ $headings->firstItem() + $index }}</td>
-                            <td>{{ $item->Exemption_name }}</td>
-                            <td>{{ $item->description }}</td>
-                            <td>{{ \Carbon\Carbon::parse($item->created_at)->format('Y-m-d') }}</td>
-                            <td>{{ $item->creator->name ?? 'N/A' }}</td>
-                            <td>{{ $item->updater->name ?? 'N/A' }}</td>
-
-                            <td>
-                                <a href="{{ route('exemptionEdit', $item->pk) }}" class="btn btn-sm btn-info">Edit</a>
-                            </td>
-                            <td>
-                                <div class='form-check form-switch d-inline-block'>
-                                    <input class='form-check-input status-toggle' type='checkbox' role='switch'
-                                        data-table='fc_exemption_master' data-column='visible' data-id='{{ $item->pk }}'
-                                        {{ $item->visible == 1 ? 'checked' : '' }}>
-                                </div>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="8" class="text-center">No exemptions found.</td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-
-                <!-- Pagination -->
-                <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
-
-                    <div class="text-muted small mb-2">
-                        Showing {{ $headings->firstItem() }}
-                        to {{ $headings->lastItem() }}
-                        of {{ $headings->total() }} items
-                    </div>
-
-                    <div>
-                        {{ $headings->links('vendor.pagination.custom') }}
-                    </div>
-
-                </div>
+                {!! $dataTable->table(['class' => 'table text-nowrap w-100']) !!}
             </div>
         </div>
     </div>
@@ -122,6 +67,7 @@
 @endsection
 
 @push('scripts')
+{!! $dataTable->scripts() !!}
 <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
 <script>
 $(document).ready(function() {
