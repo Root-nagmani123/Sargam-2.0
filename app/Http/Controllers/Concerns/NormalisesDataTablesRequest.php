@@ -46,9 +46,18 @@ trait NormalisesDataTablesRequest
             $merge['dir'] = strtolower((string) $request->input('order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
         }
 
-        // On a GET the input source IS the query bag, so the controllers'
-        // existing $request->query('q') resolvers see these.
-        $request->merge($merge);
+        // Write into the QUERY bag specifically, not via merge().
+        //
+        // merge() targets getInputSource(), which returns the JSON bag whenever
+        // the caller sets Content-Type: application/json — and the resolvers on
+        // the other side read $request->query('q') / $request->get('q'), both of
+        // which consult the query bag. With merge() alone a JSON-content-typed
+        // request therefore keeps its raw `search` array: search and sort are
+        // silently dropped, and `trim((string) $request->get('search'))`
+        // downstream fatals with "Array to string conversion".
+        // DataTables' own ajax is form-encoded so this never bit in the browser,
+        // but any other client hitting these endpoints would 500.
+        $request->query->add($merge);
 
         $length = (int) $request->input('length', $defaultPerPage);
         $perPage = in_array($length, $perPageOptions, true) ? $length : $defaultPerPage;

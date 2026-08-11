@@ -386,15 +386,22 @@ class IssueManagementController extends Controller
     {
         // DataTables posts search as search[value]; `search` is an array at this
         // point, so it can never be cast to string directly.
+        // query->add(), not merge(): merge() targets getInputSource(), which is
+        // the JSON bag when the caller sets Content-Type: application/json, while
+        // every reader below goes through $request->get() — i.e. the query bag.
+        // With merge() alone such a request keeps its raw `search` ARRAY and the
+        // cache-key builder's trim((string) $request->get('search')) fatals with
+        // "Array to string conversion". Same reasoning as the shared
+        // NormalisesDataTablesRequest trait.
         $rawSearch = $request->input('search');
         $searchTerm = is_array($rawSearch) ? ($rawSearch['value'] ?? '') : $rawSearch;
-        $request->merge(['search' => trim((string) $searchTerm)]);
+        $request->query->add(['search' => trim((string) $searchTerm)]);
 
         // order[0] points at a column by index — resolve it back to the sort key
         // through the columns[] the front end declared.
         $orderColumn = $request->input('order.0.column');
         if ($orderColumn !== null) {
-            $request->merge([
+            $request->query->add([
                 'sort' => (string) $request->input('columns.' . (int) $orderColumn . '.name', ''),
                 'dir' => strtolower((string) $request->input('order.0.dir', 'desc')) === 'asc' ? 'asc' : 'desc',
             ]);
