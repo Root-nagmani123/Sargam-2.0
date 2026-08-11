@@ -1438,6 +1438,16 @@ function employee_designation_search()
     });
     return $designation;
 }
+if (!function_exists('build_student_photo_url')) {
+    function build_student_photo_url(?string $photoPath): string
+    {
+        if ($photoPath == null) {
+            return 'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+        }
+
+        return asset('storage/form-uploads/photo/' . $photoPath);
+    }
+}
 function get_profile_pic()
 {
     $user = Auth::user();
@@ -1456,11 +1466,7 @@ function get_profile_pic()
                 ->where('pk', $user->user_id)
                 ->value('photo_path');
 
-            if ($data == null) {
-                return 'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
-            } else {
-                return asset('storage/form-uploads/photo/' . $data);
-            }
+            return build_student_photo_url($data);
         });
 
         return $profile_pic;
