@@ -12,17 +12,26 @@ use App\Support\DataTableSearchHelper;
 use App\Support\ExportCsvHeader;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
-use Yajra\DataTables\Facades\DataTables;
 
 class IssuePriorityController extends Controller
 {
     private const LISTING_CACHE_EPOCH_KEY = 'admin_issue_priorities_index_list_epoch';
 
-    /**
-     * Kept because sibling controllers call it on mutation. The listing itself no
-     * longer reads this epoch — the grid is server-side and queries per draw.
-     */
+    private const INDEX_PER_PAGE = 10;
+
+    /** Page-size choices offered by the "Showing N of M items" footer select. */
+    private const PER_PAGE_OPTIONS = [10, 20, 50, 100, 200];
+
+    /** Sortable grid headers → the column ordered by. */
+    private const SORTABLE_COLUMNS = [
+        'priority' => 'priority',
+        'description' => 'description',
+        'status' => 'status',
+    ];
+
     public static function bumpIndexListCacheEpoch(): void
     {
         DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'IssuePriorityController@index');
@@ -89,57 +98,72 @@ class IssuePriorityController extends Controller
     }
 
     /**
-     * Display a listing of issue priorities.
-     *
-     * Rows come from data() over ajax (server-side paging), so this action only
-     * renders the shell — no rows, no pk snapshot, no cache read.
+     * @return array{total: int, ids: array<int, int>}
      */
-    public function index()
+    private function indexPageSnapshot(int $page, int $perPage, string $search, string $sortKey, string $sortDir): array
     {
-        return view('admin.issue_management.priorities.index');
+        $base = $this->indexFilteredQuery($search, $sortKey, $sortDir);
+        $total = (int) (clone $base)->toBase()->getCountForPagination();
+        $ids = [];
+        if ($total > 0) {
+            $ids = (clone $base)->forPage($page, $perPage)->pluck('pk')->values()->all();
+            $ids = array_map('intval', $ids);
+        }
+
+        return ['total' => $total, 'ids' => $ids];
     }
 
     /**
-     * DataTables server-side feed for the Manage Priorities grid.
-     *
-     * Search and ordering run in SQL over the whole table; the browser only ever
-     * receives the page it is showing.
+     * @param  array<int, int>  $ids
+     * @return \Illuminate\Support\Collection<int, IssuePriorityMaster>
      */
-    public function data(Request $request)
+    private function hydratePrioritiesByOrderedPks(array $ids): \Illuminate\Support\Collection
     {
-        // Only the columns the grid renders (G1) — this payload goes to the browser.
-        $query = $this->indexFilteredQuery()
-            ->select(['pk', 'priority', 'description', 'status'])
-            ->reorder();   // drop the default sort; see below
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        if ($ids === []) {
+            return collect();
+        }
+        // issue_logs_count drives the Delete guard — destroy() refuses a priority
+        // that is referenced by any issue log.
+        $byPk = IssuePriorityMaster::query()
+            ->withCount('issueLogs')
+            ->whereIn('pk', $ids)
+            ->get()
+            ->keyBy(fn (IssuePriorityMaster $m) => (int) $m->pk);
 
-        /* Only order here when DataTables sent none. An ORDER BY left on the query
-           is applied FIRST and silently outranks the one Yajra appends, so the
-           user's column sort would never take effect. */
-        if (! $request->filled('order')) {
-            $query->orderBy('priority');
+        return collect($ids)
+            ->map(fn (int $id) => $byPk->get($id))
+            ->filter()
+            ->values();
+    }
+
+    /**
+     * Display a listing of issue priorities.
+     */
+    public function index(Request $request)
+    {
+        // Client-side DataTable: search, sort and paging happen in the browser,
+        // so the whole (tiny) set is served at once.
+        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
+        $cacheKey = 'admin_issue_priorities_index:v2:' . md5(json_encode(['epoch' => $epoch]));
+
+        $ids = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'ISSUE_PRIORITY_INDEX_CACHE_ENABLED',
+                'seconds' => 'ISSUE_PRIORITY_INDEX_CACHE_SECONDS',
+            ],
+            'IssuePriorityController@index',
+            fn () => $this->indexAllPks()
+        );
+
+        if (! is_array($ids)) {
+            $ids = $this->indexAllPks();
         }
 
-        return DataTables::of($query)
-            ->addColumn('id', fn (IssuePriorityMaster $row) => (string) $row->pk)
-            ->addColumn('priority_name', fn (IssuePriorityMaster $row) => (string) $row->priority)
-            ->addColumn('description', fn (IssuePriorityMaster $row) => (string) ($row->description ?: '-'))
-            ->addColumn('status', fn (IssuePriorityMaster $row) => (int) $row->status === 1
-                ? '<span class="badge bg-success">Active</span>'
-                : '<span class="badge bg-danger">Inactive</span>')
-            ->addColumn('action', fn (IssuePriorityMaster $row) => view(
-                'admin.issue_management.priorities._row_actions',
-                ['priority' => $row]
-            )->render())
-            // Searching/ordering happen on the real columns, not the rendered ones.
-            ->filterColumn('id', fn ($q, $keyword) => $q->where('pk', 'like', "%{$keyword}%"))
-            ->filterColumn('priority_name', fn ($q, $keyword) => $q->where('priority', 'like', "%{$keyword}%"))
-            ->filterColumn('description', fn ($q, $keyword) => $q->where('description', 'like', "%{$keyword}%"))
-            ->orderColumn('id', 'pk $1')
-            ->orderColumn('priority_name', 'priority $1')
-            ->orderColumn('description', 'description $1')
-            ->orderColumn('status', 'status $1')
-            ->rawColumns(['status', 'action'])
-            ->make(true);
+        $priorities = $this->hydratePrioritiesByOrderedPks($ids);
+
+        return view('admin.issue_management.priorities.index', compact('priorities'));
     }
 
     /**

@@ -92,25 +92,53 @@
 
             <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    {{-- id is what the DataTable in @@section('scripts') binds to. --}}
-                    <table class="table" id="escalationMatrixTable">
+                    {{-- No data-sargam-dt-ui opt-out: DataTables paginates this grid now. --}}
+                    <table id="escalationMatrixTable"
+                           class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                         <thead>
                             <tr>
-                                <th width="5%">#</th>
-                                <th width="20%">Complaint Category</th>
-                                <th width="25%">Level 1 (Employee / Days)</th>
-                                <th width="25%">Level 2 (Employee / Days)</th>
-                                <th width="25%">Level 3 (Employee / Days)</th>
-                                <th width="10%">Actions</th>
-                                {{-- Hidden, search-only: holds the category + the three
-                                     officer names as plain text. DataTables needs a <th>
-                                     for every declared column, even invisible ones. --}}
-                                <th></th>
+                                <th scope="col">S. No.</th>
+                                <th scope="col">Complaint Category</th>
+                                @foreach([1, 2, 3] as $n)
+                                    <th scope="col">Level {{ $n }} (Escalation Days)</th>
+                                @endforeach
+                                <th scope="col">Action</th>
                             </tr>
                         </thead>
-                        {{-- Rows come from IssueEscalationMatrixController::data() over
-                             ajax (server-side paging), so this stays empty. --}}
-                        <tbody></tbody>
+                        <tbody>
+                            @foreach($matrix as $row)
+                                <tr>
+                                    {{-- Renumbered on every draw (see the JS). --}}
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $row['category']->issue_category }}</td>
+                                    <td>{!! $levelCell($row['level1'], 1) !!}</td>
+                                    <td>{!! $levelCell($row['level2'], 2) !!}</td>
+                                    <td>{!! $levelCell($row['level3'], 3) !!}</td>
+                                    <td>
+                                        <div class="ic-act-group" role="group" aria-label="Row actions">
+                                            {{-- There is no detail route for a mapping, so View opens a
+                                                 read-only modal built from the row's own data. --}}
+                                            <button type="button" class="ic-act ic-act--view em-view-btn"
+                                                    aria-label="View escalation mapping for {{ $row['category']->issue_category }}"
+                                                    data-category="{{ $row['category']->issue_category }}"
+                                                    data-category-id="{{ $row['category']->pk }}"
+                                                    data-l1-name="{{ $row['level1']->employee->name ?? '' }}"
+                                                    data-l1-days="{{ $row['level1']->days_notify ?? '' }}"
+                                                    data-l1-emp="{{ $row['level1']->employee_master_pk ?? '' }}"
+                                                    data-l2-name="{{ $row['level2']->employee->name ?? '' }}"
+                                                    data-l2-days="{{ $row['level2']->days_notify ?? '' }}"
+                                                    data-l2-emp="{{ $row['level2']->employee_master_pk ?? '' }}"
+                                                    data-l3-name="{{ $row['level3']->employee->name ?? '' }}"
+                                                    data-l3-days="{{ $row['level3']->days_notify ?? '' }}"
+                                                    data-l3-emp="{{ $row['level3']->employee_master_pk ?? '' }}">
+                                                <span class="ic-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span>
+                                                <span class="ic-act__label">View</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
                     </table>
                 </div>
 
@@ -228,61 +256,6 @@
 
 @section('scripts')
 <script>
-/* Server-side DataTable — the matrix is assembled, searched, ordered and paged on
-   the server (see data()), so the browser only holds the page it is showing. */
-(function () {
-    'use strict';
-    document.addEventListener('DOMContentLoaded', function () {
-        var $ = window.jQuery;
-        if (!$ || !$.fn.DataTable) { return; }
-
-        var $table = $('#escalationMatrixTable');
-        if (!$table.length || $.fn.DataTable.isDataTable($table)) { return; }
-
-        $table.DataTable({
-            serverSide: true,
-            /* datatable-global-ui.js turns DataTables' native ordering OFF for
-               server-side tables unless this opt-in is present, and sorts only the
-               rows already loaded instead. We want ORDER BY over the whole set. */
-            sargamServerOrder: true,
-            processing: true,
-            ajax: { url: '{{ route('admin.issue-escalation-matrix.data') }}' },
-            order: [[1, 'asc']],                 // Complaint Category A→Z
-            pageLength: 10,
-            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-            searchDelay: 400,
-            columns: [
-                { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
-                /* Orderable but not searchable: the cell is <strong>-wrapped, so a
-                   search would match the tag. search_text carries the category name. */
-                { data: 'category', name: 'category', searchable: false },
-                /* Same for the level cells — plain officer names live in search_text. */
-                { data: 'level1', name: 'level1', orderable: false, searchable: false },
-                { data: 'level2', name: 'level2', orderable: false, searchable: false },
-                { data: 'level3', name: 'level3', orderable: false, searchable: false },
-                { data: 'action', name: 'action', orderable: false, searchable: false },
-                { data: 'search_text', name: 'search_text', visible: false, searchable: true, orderable: false }
-            ],
-            language: {
-                processing: 'Loading…',
-                search: 'Search matrix:',
-                lengthMenu: 'Show _MENU_ entries',
-                info: 'Showing _START_ to _END_ of _TOTAL_ categories',
-                infoEmpty: 'No categories',
-                infoFiltered: '(filtered from _MAX_ total)',
-                zeroRecords: 'No matching category found',
-                emptyTable: 'No categories found. Add mapping to get started.',
-                paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
-            },
-            drawCallback: function () {
-                if (typeof window.adjustAllDataTables === 'function') {
-                    try { window.adjustAllDataTables(); } catch (e) { /* noop */ }
-                }
-            }
-        });
-    });
-})();
-
 (function() {
     // Single copy for the whole page — editMatrix() used to embed a second one.
     var escalationEmployees = @json($employees);

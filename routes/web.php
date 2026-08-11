@@ -1469,10 +1469,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::post('issue-management', [IssueManagementController::class, 'store'])->name('issue-management.store');
 
     // AJAX Routes (must come BEFORE parameterized routes like {id})
-    // DataTables server-side feeds for the two issue grids — `data` would be
-    // swallowed by issue-management/{id} if these sat any lower.
-    Route::get('issue-management/data', [IssueManagementController::class, 'indexData'])->name('issue-management.data');
-    Route::get('issue-management/centcom/data', [IssueManagementController::class, 'centcomData'])->name('issue-management.centcom.data');
     Route::get('issue-management/sub-categories/{categoryId}', [IssueManagementController::class, 'getSubCategories'])->name('issue-management.sub-categories');
     Route::get('issue-management/nodal-employees/{categoryId}', [IssueManagementController::class, 'getNodalEmployees'])->name('issue-management.nodal-employees');
     Route::get('issue-management/buildings', [IssueManagementController::class, 'getBuildings'])->name('issue-management.buildings');
@@ -1491,27 +1487,26 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
 
     // Category Management
     Route::get('issue-categories', [IssueCategoryController::class, 'index'])->name('issue-categories.index');
-    // DataTables server-side feed for the grid above.
-    Route::get('issue-categories/data', [IssueCategoryController::class, 'data'])->name('issue-categories.data');
+    Route::get('issue-categories/export/{format?}', [IssueCategoryController::class, 'export'])->name('issue-categories.export');
     Route::post('issue-categories', [IssueCategoryController::class, 'store'])->name('issue-categories.store');
     Route::put('issue-categories/{id}', [IssueCategoryController::class, 'update'])->name('issue-categories.update');
     Route::delete('issue-categories/{id}', [IssueCategoryController::class, 'destroy'])->name('issue-categories.destroy');    // Sub-Category Management
     Route::get('issue-sub-categories', [IssueSubCategoryController::class, 'index'])->name('issue-sub-categories.index');
-    Route::get('issue-sub-categories/data', [IssueSubCategoryController::class, 'data'])->name('issue-sub-categories.data');
+    Route::get('issue-sub-categories/export/{format?}', [IssueSubCategoryController::class, 'export'])->name('issue-sub-categories.export');
     Route::post('issue-sub-categories', [IssueSubCategoryController::class, 'store'])->name('issue-sub-categories.store');
     Route::put('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'update'])->name('issue-sub-categories.update');
     Route::delete('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'destroy'])->name('issue-sub-categories.destroy');
 
     // Priority Management
     Route::get('issue-priorities', [IssuePriorityController::class, 'index'])->name('issue-priorities.index');
-    Route::get('issue-priorities/data', [IssuePriorityController::class, 'data'])->name('issue-priorities.data');
+    Route::get('issue-priorities/export/{format?}', [IssuePriorityController::class, 'export'])->name('issue-priorities.export');
     Route::post('issue-priorities', [IssuePriorityController::class, 'store'])->name('issue-priorities.store');
     Route::put('issue-priorities/{id}', [IssuePriorityController::class, 'update'])->name('issue-priorities.update');
     Route::delete('issue-priorities/{id}', [IssuePriorityController::class, 'destroy'])->name('issue-priorities.destroy');
 
     // Escalation Matrix (3-level hierarchy)
     Route::get('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'index'])->name('issue-escalation-matrix.index');
-    Route::get('issue-escalation-matrix/data', [IssueEscalationMatrixController::class, 'data'])->name('issue-escalation-matrix.data');
+    Route::get('issue-escalation-matrix/export/{format?}', [IssueEscalationMatrixController::class, 'export'])->name('issue-escalation-matrix.export');
     Route::post('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'store'])->name('issue-escalation-matrix.store');
     Route::put('issue-escalation-matrix/{categoryId}', [IssueEscalationMatrixController::class, 'update'])->name('issue-escalation-matrix.update');
 });

@@ -61,9 +61,7 @@
             {{-- Toolbar: category filter left, columns + search right (§2) --}}
             <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 ic-toolbar">
                 <form method="GET" action="{{ route('admin.issue-sub-categories.index') }}"
-                      class="d-flex flex-wrap align-items-center gap-3" id="iscFilterForm">
-
-
+                      class="d-flex flex-wrap align-items-center gap-3" id="iscFilterForm">
 
                     <span class="programme-dt-filters-label">Filters</span>
                     <div class="programme-dt-filter-select">
@@ -97,28 +95,84 @@
                 </div>
             </div>
 
-                    <!-- Table Section -->
-                    <div class="table-responsive">
-                        {{-- id is what the DataTable in @@section('scripts') binds to. --}}
-                        <table class="table align-middle mb-0 text-nowrap" id="issueSubCategoriesTable">
-                            <thead>
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    {{-- No data-sargam-dt-ui opt-out: DataTables paginates this grid now. --}}
+                    <table id="issueSubCategoriesTable"
+                           class="table table-hover align-middle mb-0 w-100 programme-dt-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">S. No.</th>
+                                <th scope="col">Category</th>
+                                <th scope="col">Sub-Categories Name</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($subCategories as $subCategory)
+                                @php $isActive = (int) $subCategory->status === 1; @endphp
                                 <tr>
-                                    <th class="text-center">#</th>
-                                    <th>Category</th>
-                                    <th>Sub-Category Name</th>
-                                    <th class="text-center">Status</th>
-                                    <th class="text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            {{-- Rows come from IssueSubCategoryController::data() over
-                                 ajax (server-side paging), so this stays empty. --}}
-                            <tbody></tbody>
-                        </table>
-                    </div>
+                                    {{-- Renumbered on every draw (see the JS). --}}
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $subCategory->category->issue_category ?? '—' }}</td>
+                                    <td>{{ $subCategory->issue_sub_category }}</td>
+                                    <td data-order="{{ (int) $subCategory->status }}">
+                                        <span class="status-pill badge rounded-1 {{ $isActive ? 'bg-success-subtle' : 'bg-danger-subtle' }}">
+                                            {{ $isActive ? 'Active' : 'Inactive' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="ic-act-group" role="group" aria-label="Row actions">
+                                            <button type="button" class="ic-act ic-act--edit isc-edit-btn" aria-label="Edit sub-category"
+                                                    data-id="{{ $subCategory->pk }}"
+                                                    data-category="{{ $subCategory->issue_category_master_pk }}"
+                                                    data-name="{{ $subCategory->issue_sub_category }}"
+                                                    data-status="{{ (int) $subCategory->status }}">
+                                                <span class="ic-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
+                                                <span class="ic-act__label">Edit</span>
+                                            </button>
 
-                    {{-- No Blade pager: the DataTable pages this grid from the server,
-                         one draw at a time. --}}
+                                            {{-- No .form-check/.form-switch wrapper — see the shared stylesheet. --}}
+                                            <label class="ic-act ic-act--toggle">
+                                                <span class="ic-act__icon">
+                                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                           data-table="issue_sub_category_master" data-column="status"
+                                                           data-id="{{ $subCategory->pk }}" {{ $isActive ? 'checked' : '' }}>
+                                                </span>
+                                                <span class="ic-act__label">{{ $isActive ? 'Activate' : 'Deactivate' }}</span>
+                                            </label>
+
+                                            @if($isActive)
+                                                {{-- destroy() refuses to delete an active sub-category — mirror that guard. --}}
+                                                <span class="ic-act ic-act--del is-disabled" aria-disabled="true"
+                                                      title="Deactivate this sub-category before deleting it">
+                                                    <span class="ic-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
+                                                    <span class="ic-act__label">Delete</span>
+                                                </span>
+                                            @else
+                                                <form action="{{ route('admin.issue-sub-categories.destroy', $subCategory->pk) }}"
+                                                      method="POST" class="ic-delete-form">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="ic-act ic-act--del" aria-label="Delete sub-category"
+                                                            data-name="{{ $subCategory->issue_sub_category }}">
+                                                        <span class="ic-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
+                                                        <span class="ic-act__label">Delete</span>
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
+
+                {{-- Footer variant A — DataTables paginates; the global UI fills this in. --}}
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3"
+                     data-dt-footer-for="issueSubCategoriesTable"></div>
             </div>
 
         </div>
@@ -232,119 +286,182 @@
 
 @push('scripts')
 <script>
-/* Server-side DataTable — search, sort and paging all run in SQL via data(),
-   so the browser only ever holds the page it is showing. The category filter
-   rides along on the same ajax call. */
-(function () {
+$(function () {
     'use strict';
-    document.addEventListener('DOMContentLoaded', function () {
-        var $ = window.jQuery;
-        if (!$ || !$.fn.DataTable) { return; }
 
-        var $table = $('#issueSubCategoriesTable');
-        if (!$table.length || $.fn.DataTable.isDataTable($table)) { return; }
-
-        var dt = $table.DataTable({
-            serverSide: true,
-            /* datatable-global-ui.js turns DataTables' native ordering OFF for
-               server-side tables unless this opt-in is present, and sorts only the
-               rows already loaded instead. We want ORDER BY over the whole set. */
-            sargamServerOrder: true,
-            processing: true,
-            ajax: {
-                url: '{{ route('admin.issue-sub-categories.data') }}',
-                data: function (d) {
-                    /* Prefer a live dropdown if one is present, otherwise fall back to
-                       the value this page was loaded with — otherwise a ?category_id=
-                       deep link would silently stop filtering once rows moved to ajax. */
-                    var $filter = $('#category_filter');
-                    d.category_id = $filter.length
-                        ? ($filter.val() || '')
-                        : @json(request('category_id', ''));
-                }
-            },
-            order: [[1, 'asc']],                 // Category A→Z
-            pageLength: 10,
-            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-            searchDelay: 400,
-            columns: [
-                { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'text-center fw-semibold text-muted' },
-                { data: 'category', name: 'category' },
-                { data: 'sub_category', name: 'sub_category' },
-                { data: 'status', name: 'status', searchable: false, className: 'text-center' },
-                { data: 'action', name: 'action', orderable: false, searchable: false }
-            ],
-            language: {
-                processing: 'Loading…',
-                search: 'Search sub-categories:',
-                lengthMenu: 'Show _MENU_ entries',
-                info: 'Showing _START_ to _END_ of _TOTAL_ sub-categories',
-                infoEmpty: 'No sub-categories',
-                infoFiltered: '(filtered from _MAX_ total)',
-                zeroRecords: 'No matching sub-categories found',
-                emptyTable: 'No Sub-Categories Found — start by adding your first complaint sub-category.',
-                paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
-            },
-            drawCallback: function () {
-                if (typeof window.adjustAllDataTables === 'function') {
-                    try { window.adjustAllDataTables(); } catch (e) { /* noop */ }
-                }
-            }
-        });
-
-        // Expose it so the status-toggle handler can redraw after a successful PUT.
-        window.issueSubCategoriesDt = dt;
+    /* ── Toolbar: category filter submits on change ──────────────────────── */
+    $('#iscCategoryFilter').on('change', function () {
+        $('#iscFilterForm').trigger('submit');
     });
-})();
 
-function editSubCategory(id, categoryId, name, status) {
-    document.getElementById('edit_issue_category_fk').value = categoryId != null ? String(categoryId) : '';
-    document.getElementById('edit_issue_sub_category').value = name;
-    document.getElementById('edit_status').value = status;
+    /* ── DataTable ───────────────────────────────────────────────────────────
+       Search, sort, paging and the footer are DataTables' now;
+       datatable-global-ui.js supplies the defaults and moves the filter/pager
+       into the toolbar and footer slots. ── */
+    var $table = $('#issueSubCategoriesTable');
 
-    const form = document.getElementById('editSubCategoryForm');
-    form.action = "{{ url('admin/issue-sub-categories') }}/" + id;
-
-    const modal = new bootstrap.Modal(document.getElementById('editSubCategoryModal'));
-    modal.show();
-}
-
-// Status Toggle Functionality
-$(document).ready(function() {
-    // Auto-filter functionality - automatically filter when category is selected
-    $('#category_filter').on('change', function() {
-        const selectedValue = $(this).val();
-        if (selectedValue !== null && selectedValue !== undefined) {
-            // Show loading indicator
-            const form = $('#categoryFilterForm');
-            form.find('select').prop('disabled', true);
-            
-            // Submit the form automatically
-            form.submit();
+    var dt = $table.DataTable({
+        order: [[1, 'asc']],
+        columnDefs: [
+            { targets: 0, orderable: false, searchable: false, className: 'text-center' },
+            { targets: -1, orderable: false, searchable: false }
+        ],
+        language: {
+            emptyTable: '<div class="ic-empty">' +
+                '<i class="bi bi-diagram-3 d-block mb-2" aria-hidden="true"></i>' +
+                '<h6 class="fw-semibold mb-1">No Sub-Categories Found</h6>' +
+                '<p class="mb-0 small">Get started by creating your first sub-category.</p>' +
+                '</div>',
+            zeroRecords: '<div class="ic-empty">' +
+                '<i class="bi bi-search d-block mb-2" aria-hidden="true"></i>' +
+                '<h6 class="fw-semibold mb-1">No Sub-Categories Found</h6>' +
+                '<p class="mb-0 small">No sub-category matches your search.</p>' +
+                '</div>'
         }
     });
-    
-    // Status toggle functionality — delegated from document, because the rows are
-    // injected by the server-side DataTable on every draw and a direct binding
-    // would only ever attach to the first page.
-    $(document).on('change', '.status-toggle-subcategory', function() {
-        const checkbox = $(this);
-        const id = checkbox.data('id');
-        const url = checkbox.data('url');
-        const isChecked = checkbox.is(':checked');
-        const status = isChecked ? 1 : 0;
-        const actionText = isChecked ? 'activate' : 'deactivate';
-        const originalState = !isChecked;
-        
-        // Disable checkbox during request
-        checkbox.prop('disabled', true);
-        
-        // Get current values from the row
-        const row = checkbox.closest('tr');
-        const categoryId = row.data('category-id') || '';
-        const subCategoryName = row.data('subcategory-name') || row.find('td:eq(2)').text().trim();
-        
-        // Show confirmation dialog
+
+    // S. No. follows what is on screen, not the original row order.
+    function renumberSerial() {
+        var start = dt.page.info().start;
+        dt.column(0, { search: 'applied', order: 'applied', page: 'current' })
+          .nodes()
+          .each(function (cell, i) { cell.innerHTML = start + i + 1; });
+    }
+    dt.on('draw.dt', renumberSerial);
+    renumberSerial();
+
+    /* ── Column visibility (DataTables column API) ────────────────────────
+       Stored by LABEL, not index — an index points at a different column the
+       moment one is added, silently hiding the wrong one. ── */
+    var COL_KEY = 'issueSubCatGrid:hiddenColumns:v2';
+
+    /* Header index -> export key (IssueSubCategoryController::exportColumnDefs()).
+       Positional: '' marks a column that is not in the export (Action).
+       ⚠️ Adding a table column means adding an entry here too. */
+    var ISC_EXPORT_COLUMN_KEYS = ['sno', 'category', 'sub_category', 'status', ''];
+    var ISC_EXPORT_COL_COUNT = ISC_EXPORT_COLUMN_KEYS.filter(Boolean).length;
+
+    /* Keep every export link carrying exactly the columns still on screen, plus
+       the search term currently applied to it. (?category_id= is already on the
+       href — it survives a page load, so Blade stamps it.) */
+    function iscUpdateExportCols() {
+        var keys = [];
+        dt.columns().every(function () {
+            var key = ISC_EXPORT_COLUMN_KEYS[this.index()];
+            if (key && this.visible()) { keys.push(key); }
+        });
+
+        // This grid searches client-side, so the term lives only in DataTables.
+        // Without carrying it the export returns every row and its header cannot
+        // name the filter that was applied.
+        var term = dt.search() || '';
+
+        ['iscDownloadLink', 'iscExcelLink', 'iscPdfLink', 'iscPrintLink'].forEach(function (id) {
+            var link = document.getElementById(id);
+            if (!link) { return; }
+            var base = link.href.split('?')[0];
+            var params = new URLSearchParams(link.href.split('?')[1] || '');
+            params.delete('q');
+            if (term !== '') { params.set('q', term); }
+            params.delete('cols');
+            // Omit ?cols= while nothing is hidden — the server reads that as "all".
+            if (keys.length !== ISC_EXPORT_COL_COUNT) { params.set('cols', keys.join(',')); }
+            var qs = params.toString();
+            link.href = base + (qs ? '?' + qs : '');
+        });
+    }
+
+    // Search-as-you-type has to re-stamp the links, not just redraw the grid.
+    dt.on('search.dt', iscUpdateExportCols);
+
+    function getHiddenCols() {
+        try {
+            var parsed = JSON.parse(localStorage.getItem(COL_KEY) || '[]');
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) { return []; }
+    }
+
+    function persistHiddenCols(cols) {
+        try { localStorage.setItem(COL_KEY, JSON.stringify(cols)); } catch (e) { /* noop */ }
+    }
+
+    function buildColumnToggles() {
+        var $grid = $('#issueSubCatColumnToggleGrid');
+        var hidden = getHiddenCols();
+
+        dt.columns().every(function () {
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (title) { this.visible(hidden.indexOf(title) === -1, false); }
+        });
+        dt.columns.adjust();
+
+        if (!$grid.length) { return; }
+        $grid.empty();
+
+        dt.columns().every(function () {
+            var index = this.index();
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (!title) { return; }
+
+            var inputId = 'isccolvis_' + index;
+            var $checkbox = $('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .prop('checked', hidden.indexOf(title) === -1);
+
+            $checkbox.on('change', function () {
+                var cols = getHiddenCols();
+                var pos = cols.indexOf(title);
+                if (this.checked) {
+                    if (pos !== -1) { cols.splice(pos, 1); }
+                } else if (pos === -1) {
+                    cols.push(title);
+                }
+                persistHiddenCols(cols);
+                dt.column(index).visible(this.checked, false);
+                dt.columns.adjust();
+                renumberSerial();
+                iscUpdateExportCols();
+            });
+
+            $('<div class="col-12 col-sm-6 col-md-4"></div>').append(
+                $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                    .attr('for', inputId)
+                    .append($checkbox)
+                    .append($('<span></span>').text(title))
+            ).appendTo($grid);
+        });
+    }
+
+    buildColumnToggles();
+    // Stamp the restored column state onto the export links on first paint too.
+    iscUpdateExportCols();
+
+
+    /* ── Status toggle: repaint the row (badge + caption + delete guard) ──
+       custom.js does the AJAX; the badge and the switch live in different
+       columns, so reload rather than hand-mirroring them. ── */
+    $(document).ajaxSuccess(function (event, xhr, settings) {
+        var url = (settings && settings.url) ? settings.url : '';
+        if (url.indexOf('toggle-status') === -1 && url.indexOf('toggleStatus') === -1) { return; }
+        setTimeout(function () { window.location.reload(); }, 600);
+    });
+
+    /* ── Delete: confirm before submitting ───────────────────────────────── */
+    $(document).on('submit', '.ic-delete-form', function (e) {
+        var form = this;
+        if ($(form).data('confirmed')) { return; }
+        e.preventDefault();
+
+        var name = $(form).find('.ic-act--del').data('name') || 'this sub-category';
+
+        if (typeof Swal === 'undefined' || typeof Swal.fire !== 'function') {
+            if (window.confirm('Delete "' + name + '"? This cannot be undone.')) {
+                $(form).data('confirmed', true);
+                form.submit();
+            }
+            return;
+        }
+
         Swal.fire({
             title: 'Are you sure?',
             text: 'Delete "' + name + '"? This cannot be undone.',
@@ -356,87 +473,8 @@ $(document).ready(function() {
             reverseButtons: true
         }).then(function (result) {
             if (result.isConfirmed) {
-                // Prepare data for PUT request
-                const formData = {
-                    _token: $('meta[name="csrf-token"]').attr('content'),
-                    _method: 'PUT',
-                    status: status,
-                    issue_category_master_pk: categoryId || $('#edit_issue_category_fk').val() || '',
-                    issue_sub_category: subCategoryName || $('#edit_issue_sub_category').val() || ''
-                };
-                
-                // Submit via AJAX
-                $.ajax({
-                    url: url,
-                    type: 'POST',
-                    data: formData,
-                    success: function(response) {
-                        checkbox.prop('disabled', false);
-
-                        /* The row was rendered by the server, so redraw the current page
-                           rather than patching cells here — keeps the grid authoritative.
-                           (The old badge-patching below is a no-op now: this column
-                           renders a switch, not a badge.) */
-                        if (window.issueSubCategoriesDt) {
-                            window.issueSubCategoriesDt.ajax.reload(null, false);
-                        }
-
-                        // Update badge
-                        const badge = checkbox.closest('td').find('.badge');
-                        if (isChecked) {
-                            badge.removeClass('bg-secondary').addClass('bg-success').text('ACTIVE');
-                        } else {
-                            badge.removeClass('bg-success').addClass('bg-secondary').text('INACTIVE');
-                        }
-
-                        // Show success message
-                        $('#status-msg').html(`
-                            <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-                                <i class="material-icons material-symbols-rounded me-2">check_circle</i>
-                                ${response.message || 'Status updated successfully'}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        `);
-                        
-                        // Auto-hide message after 3 seconds
-                        setTimeout(function() {
-                            $('#status-msg').fadeOut();
-                        }, 3000);
-                        
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Success!',
-                            text: 'Status updated successfully',
-                            timer: 1500,
-                            showConfirmButton: false
-                        });
-                    },
-                    error: function(xhr) {
-                        checkbox.prop('disabled', false);
-                        // Revert checkbox
-                        checkbox.prop('checked', originalState);
-                        
-                        // Update badge back
-                        const badge = checkbox.closest('td').find('.badge');
-                        if (originalState) {
-                            badge.removeClass('bg-secondary').addClass('bg-success').text('ACTIVE');
-                        } else {
-                            badge.removeClass('bg-success').addClass('bg-secondary').text('INACTIVE');
-                        }
-                        
-                        const errorMessage = xhr.responseJSON?.message || 'Error updating status';
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error!',
-                            text: errorMessage,
-                            confirmButtonColor: '#dc3545'
-                        });
-                    }
-                });
-            } else {
-                // User cancelled - revert checkbox
-                checkbox.prop('checked', originalState);
-                checkbox.prop('disabled', false);
+                $(form).data('confirmed', true);
+                form.submit();
             }
         });
     });

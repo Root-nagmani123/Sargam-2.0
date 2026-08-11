@@ -73,23 +73,13 @@
                          reloading the page on Enter. --}}
                     <div id="ipDtSearch" class="programme-dt-search" data-dt-search-for="issuePrioritiesTable"></div>
                 </div>
-                <hr>
-                @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        {{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                @endif
-                @if(session('error'))
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        {{ session('error') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                @endif
+            </div>
 
-                <div class="table-responsive datatables">
-                    {{-- id is what the DataTable in @@section('scripts') binds to. --}}
-                    <table class="table" id="issuePrioritiesTable">
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    {{-- No data-sargam-dt-ui opt-out: DataTables paginates this grid now. --}}
+                    <table id="issuePrioritiesTable"
+                           class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                         <thead>
                             <tr>
                                 <th scope="col">S. No.</th>
@@ -99,14 +89,79 @@
                                 <th scope="col">Action</th>
                             </tr>
                         </thead>
-                        {{-- Rows come from IssuePriorityController::data() over ajax
-                             (server-side paging), so this stays empty. --}}
-                        <tbody></tbody>
+                        <tbody>
+                            @foreach($priorities as $priority)
+                                @php
+                                    $isActive = (int) $priority->status === 1;
+                                    // destroy() refuses a priority that any issue log references.
+                                    $inUse = (int) ($priority->issue_logs_count ?? 0) > 0;
+                                @endphp
+                                <tr>
+                                    {{-- Renumbered on every draw (see the JS). --}}
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $priority->priority }}</td>
+                                    <td class="ic-col-wrap">{{ $priority->description ?: '—' }}</td>
+                                    <td data-order="{{ (int) $priority->status }}">
+                                        <span class="status-pill badge rounded-1 {{ $isActive ? 'bg-success-subtle' : 'bg-danger-subtle' }}">
+                                            {{ $isActive ? 'Active' : 'Inactive' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {{-- Edit · status switch · Delete — the canonical stack (§3b).
+                                             Status is still editable from the Edit modal too. --}}
+                                        <div class="ic-act-group" role="group" aria-label="Row actions">
+                                            <button type="button" class="ic-act ic-act--edit ip-edit-btn" aria-label="Edit priority"
+                                                    data-id="{{ $priority->pk }}"
+                                                    data-name="{{ $priority->priority }}"
+                                                    data-description="{{ $priority->description }}"
+                                                    data-status="{{ (int) $priority->status }}">
+                                                <span class="ic-act__icon"><i class="bi bi-pencil-square" aria-hidden="true"></i></span>
+                                                <span class="ic-act__label">Edit</span>
+                                            </button>
+
+                                            {{-- No .form-check/.form-switch wrapper: custom.css:107 pulls the
+                                                 input -2.375rem left inside one, which breaks the
+                                                 switch-above-caption layout. custom.js binds .status-toggle
+                                                 globally, so there is no toggle JS to write here.
+                                                 The caption names the ACTION, not the state (§3b). --}}
+                                            <label class="ic-act ic-act--toggle">
+                                                <span class="ic-act__icon">
+                                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                           data-table="issue_priority_master" data-column="status"
+                                                           data-id="{{ $priority->pk }}" {{ $isActive ? 'checked' : '' }}>
+                                                </span>
+                                                <span class="ic-act__label">{{ $isActive ? 'Activate' : 'Deactivate' }}</span>
+                                            </label>
+
+                                            @if($inUse)
+                                                <span class="ic-act ic-act--del is-disabled" aria-disabled="true"
+                                                      title="In use by {{ $priority->issue_logs_count }} issue(s) — cannot be deleted">
+                                                    <span class="ic-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
+                                                    <span class="ic-act__label">Delete</span>
+                                                </span>
+                                            @else
+                                                <form action="{{ route('admin.issue-priorities.destroy', $priority->pk) }}"
+                                                      method="POST" class="ic-delete-form">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="ic-act ic-act--del" aria-label="Delete priority"
+                                                            data-name="{{ $priority->priority }}">
+                                                        <span class="ic-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
+                                                        <span class="ic-act__label">Delete</span>
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
                     </table>
                 </div>
 
-                {{-- No Blade pager: the DataTable pages this grid from the server,
-                     one draw at a time. --}}
+                {{-- Footer variant A — DataTables paginates; the global UI fills this in. --}}
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3"
+                     data-dt-footer-for="issuePrioritiesTable"></div>
             </div>
 
         </div>
@@ -211,68 +266,199 @@
 
 @push('scripts')
 <script>
-/* Server-side DataTable — search, sort and paging all run in SQL via data(),
-   so the browser only ever holds the page it is showing. */
-(function () {
+$(function () {
     'use strict';
-    document.addEventListener('DOMContentLoaded', function () {
-        var $ = window.jQuery;
-        if (!$ || !$.fn.DataTable) { return; }
 
-        var $table = $('#issuePrioritiesTable');
-        if (!$table.length || $.fn.DataTable.isDataTable($table)) { return; }
+    /* ── DataTable ───────────────────────────────────────────────────────────
+       Search, sort, paging and the footer are DataTables' now;
+       datatable-global-ui.js supplies the defaults and moves the filter/pager
+       into the toolbar and footer slots. ── */
+    var $table = $('#issuePrioritiesTable');
 
-        $table.DataTable({
-            serverSide: true,
-            /* datatable-global-ui.js turns DataTables' native ordering OFF for
-               server-side tables unless this opt-in is present, and sorts only the
-               rows already loaded instead. We want ORDER BY over the whole set. */
-            sargamServerOrder: true,
-            processing: true,
-            ajax: { url: '{{ route('admin.issue-priorities.data') }}' },
-            order: [[1, 'asc']],                 // Priority Name A→Z
-            pageLength: 10,
-            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-            searchDelay: 400,
-            /* name= is what the endpoint maps back to a real column for search
-               and ORDER BY; data= is the key in each JSON row. */
-            columns: [
-                { data: 'id', name: 'id' },
-                { data: 'priority_name', name: 'priority_name' },
-                { data: 'description', name: 'description' },
-                { data: 'status', name: 'status' },
-                { data: 'action', name: 'action', orderable: false, searchable: false }
-            ],
-            language: {
-                processing: 'Loading…',
-                search: 'Search priorities:',
-                lengthMenu: 'Show _MENU_ entries',
-                info: 'Showing _START_ to _END_ of _TOTAL_ priorities',
-                infoEmpty: 'No priorities',
-                infoFiltered: '(filtered from _MAX_ total)',
-                zeroRecords: 'No matching priorities found',
-                emptyTable: 'No priorities found.',
-                paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
-            },
-            drawCallback: function () {
-                if (typeof window.adjustAllDataTables === 'function') {
-                    try { window.adjustAllDataTables(); } catch (e) { /* noop */ }
+    var dt = $table.DataTable({
+        order: [[1, 'asc']],
+        columnDefs: [
+            { targets: 0, orderable: false, searchable: false, className: 'text-center' },
+            { targets: -1, orderable: false, searchable: false }
+        ],
+        language: {
+            emptyTable: '<div class="ic-empty">' +
+                '<i class="bi bi-flag d-block mb-2" aria-hidden="true"></i>' +
+                '<h6 class="fw-semibold mb-1">No Priorities Found</h6>' +
+                '<p class="mb-0 small">Get started by adding your first priority.</p>' +
+                '</div>',
+            zeroRecords: '<div class="ic-empty">' +
+                '<i class="bi bi-search d-block mb-2" aria-hidden="true"></i>' +
+                '<h6 class="fw-semibold mb-1">No Priorities Found</h6>' +
+                '<p class="mb-0 small">No priority matches your search.</p>' +
+                '</div>'
+        }
+    });
+
+    // S. No. follows what is on screen, not the original row order.
+    function renumberSerial() {
+        var start = dt.page.info().start;
+        dt.column(0, { search: 'applied', order: 'applied', page: 'current' })
+          .nodes()
+          .each(function (cell, i) { cell.innerHTML = start + i + 1; });
+    }
+    dt.on('draw.dt', renumberSerial);
+    renumberSerial();
+
+    /* ── Column visibility (DataTables column API) ────────────────────────
+       Stored by LABEL, not index — an index points at a different column the
+       moment one is added, silently hiding the wrong one. ── */
+    var COL_KEY = 'issuePriorityGrid:hiddenColumns:v2';
+
+    /* Header index -> export key (IssuePriorityController::exportColumnDefs()).
+       Positional: '' marks a column that is not in the export (Action).
+       ⚠️ Adding a table column means adding an entry here too. */
+    var IP_EXPORT_COLUMN_KEYS = ['sno', 'priority', 'description', 'status', ''];
+    var IP_EXPORT_COL_COUNT = IP_EXPORT_COLUMN_KEYS.filter(Boolean).length;
+
+    /* Keep every export link carrying exactly the columns still on screen, plus
+       the search term currently applied to it. */
+    function ipUpdateExportCols() {
+        var keys = [];
+        dt.columns().every(function () {
+            var key = IP_EXPORT_COLUMN_KEYS[this.index()];
+            if (key && this.visible()) { keys.push(key); }
+        });
+
+        // This grid searches client-side, so the term lives only in DataTables.
+        // Without carrying it the export returns every row and its header cannot
+        // name the filter that was applied.
+        var term = dt.search() || '';
+
+        ['ipDownloadLink', 'ipExcelLink', 'ipPdfLink', 'ipPrintLink'].forEach(function (id) {
+            var link = document.getElementById(id);
+            if (!link) { return; }
+            var base = link.href.split('?')[0];
+            var params = new URLSearchParams(link.href.split('?')[1] || '');
+            params.delete('q');
+            if (term !== '') { params.set('q', term); }
+            params.delete('cols');
+            // Omit ?cols= while nothing is hidden — the server reads that as "all".
+            if (keys.length !== IP_EXPORT_COL_COUNT) { params.set('cols', keys.join(',')); }
+            var qs = params.toString();
+            link.href = base + (qs ? '?' + qs : '');
+        });
+    }
+
+    // Search-as-you-type has to re-stamp the links, not just redraw the grid.
+    dt.on('search.dt', ipUpdateExportCols);
+
+    function getHiddenCols() {
+        try {
+            var parsed = JSON.parse(localStorage.getItem(COL_KEY) || '[]');
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) { return []; }
+    }
+
+    function persistHiddenCols(cols) {
+        try { localStorage.setItem(COL_KEY, JSON.stringify(cols)); } catch (e) { /* noop */ }
+    }
+
+    function buildColumnToggles() {
+        var $grid = $('#issuePriorityColumnToggleGrid');
+        var hidden = getHiddenCols();
+
+        dt.columns().every(function () {
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (title) { this.visible(hidden.indexOf(title) === -1, false); }
+        });
+        dt.columns.adjust();
+
+        if (!$grid.length) { return; }
+        $grid.empty();
+
+        dt.columns().every(function () {
+            var index = this.index();
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (!title) { return; }
+
+            var inputId = 'ipcolvis_' + index;
+            var $checkbox = $('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .prop('checked', hidden.indexOf(title) === -1);
+
+            $checkbox.on('change', function () {
+                var cols = getHiddenCols();
+                var pos = cols.indexOf(title);
+                if (this.checked) {
+                    if (pos !== -1) { cols.splice(pos, 1); }
+                } else if (pos === -1) {
+                    cols.push(title);
                 }
+                persistHiddenCols(cols);
+                dt.column(index).visible(this.checked, false);
+                dt.columns.adjust();
+                renumberSerial();
+                ipUpdateExportCols();
+            });
+
+            $('<div class="col-12 col-sm-6 col-md-4"></div>').append(
+                $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                    .attr('for', inputId)
+                    .append($checkbox)
+                    .append($('<span></span>').text(title))
+            ).appendTo($grid);
+        });
+    }
+
+    buildColumnToggles();
+    // Stamp the restored column state onto the export links on first paint too.
+    ipUpdateExportCols();
+
+
+    /* ── Delete: confirm before submitting ───────────────────────────────── */
+    $(document).on('submit', '.ic-delete-form', function (e) {
+        var form = this;
+        if ($(form).data('confirmed')) { return; }
+        e.preventDefault();
+
+        var name = $(form).find('.ic-act--del').data('name') || 'this priority';
+
+        if (typeof Swal === 'undefined' || typeof Swal.fire !== 'function') {
+            if (window.confirm('Delete "' + name + '"? This cannot be undone.')) {
+                $(form).data('confirmed', true);
+                form.submit();
+            }
+            return;
+        }
+
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'Delete "' + name + '"? This cannot be undone.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#d92d20',
+            reverseButtons: true
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                $(form).data('confirmed', true);
+                form.submit();
             }
         });
     });
-})();
 
-function editPriority(id, name, description, status) {
-    document.getElementById('edit_priority').value = name || '';
-    document.getElementById('edit_description').value = description || '';
-    document.getElementById('edit_status').value = status;
-    
-    const form = document.getElementById('editPriorityForm');
-    form.action = "{{ url('admin/issue-priorities') }}/" + id;
-    
-    const modal = new bootstrap.Modal(document.getElementById('editPriorityModal'));
-    modal.show();
-}
+    /* ── Edit modal ──────────────────────────────────────────────────────── */
+    $(document).on('click', '.ip-edit-btn', function () {
+        var $btn = $(this);
+        $('#edit_ip_priority').val($btn.data('name'));
+        $('#edit_ip_description').val($btn.data('description') || '');
+        $('#edit_ip_status').val(String($btn.data('status')) === '1' ? '1' : '0');
+        $('#editPriorityForm').attr('action', "{{ url('admin/issue-priorities') }}/" + $btn.data('id'));
+
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('editPriorityModal')).show();
+    });
+
+    /* ── Add modal: reset on close so a stale entry can't leak back in ───── */
+    document.getElementById('addPriorityModal').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('addPriorityForm').reset();
+    });
+});
 </script>
 @endpush

@@ -81,26 +81,14 @@
                     <div id="icDtSearch" class="programme-dt-search" data-dt-search-for="issueCategoriesTable"></div>
                 </div>
             </div>
-            <div class="card-body p-4">
-                @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm" role="alert">
-                        <iconify-icon icon="solar:check-circle-bold" style="font-size: 1.25rem;"></iconify-icon>
-                        <div class="flex-grow-1">{{ session('success') }}</div>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                @endif
-                @if(session('error'))
-                    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm" role="alert">
-                        <iconify-icon icon="solar:danger-triangle-bold" style="font-size: 1.25rem;"></iconify-icon>
-                        <div class="flex-grow-1">{{ session('error') }}</div>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                @endif
 
-                <div class="table-responsive rounded-3 border">
-                    {{-- id is what the DataTable in @@section('scripts') binds to; without
-                         it that init silently no-ops and the grid loses search/sort/paging. --}}
-                    <table class="table text-nowrap mb-0" id="categoriesTable">
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    {{-- No data-sargam-dt-ui opt-out: DataTables paginates this grid now,
+                         so the global enhancer supplies the search slot and footer.
+                         Sorting is DataTables' too — hence plain <th> text. --}}
+                    <table id="issueCategoriesTable"
+                           class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                         <thead>
                             <tr>
                                 <th scope="col">S. No.</th>
@@ -111,15 +99,79 @@
                                 <th scope="col">Action</th>
                             </tr>
                         </thead>
-                        {{-- Rows come from IssueCategoryController::data() over ajax
-                             (server-side paging), so this stays empty. --}}
-                        <tbody></tbody>
+                        <tbody>
+                            @foreach($categories as $category)
+                                @php $isActive = (int) $category->status === 1; @endphp
+                                <tr>
+                                    {{-- Renumbered on every draw (see the JS) so the serial follows
+                                         the sorted/filtered order rather than the original rows. --}}
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $category->issue_category }}</td>
+                                    <td>{{ $category->description ?: '—' }}</td>
+                                    <td>{{ $category->sub_categories_count }}</td>
+                                    <td data-order="{{ (int) $category->status }}">
+                                        <span class="status-pill badge {{ $isActive ? 'bg-success-subtle' : 'bg-danger-subtle' }}">
+                                            {{ $isActive ? 'Active' : 'Inactive' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {{-- Every action is the same stack: a fixed-height icon strip over a
+                                             caption, in an equal-width column — so the icons keep an even rhythm
+                                             no matter how wide the captions are. --}}
+                                        <div class="ic-act-group" role="group" aria-label="Row actions">
+                                            <button type="button" class="ic-act ic-act--edit ic-edit-btn" aria-label="Edit category"
+                                                    data-id="{{ $category->pk }}"
+                                                    data-name="{{ $category->issue_category }}"
+                                                    data-description="{{ $category->description }}"
+                                                    data-status="{{ (int) $category->status }}">
+                                                <span class="ic-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
+                                                <span class="ic-act__label">Edit</span>
+                                            </button>
+
+                                            {{-- NB: no .form-check/.form-switch wrapper. Those pull the input left by
+                                                 -2.375rem (custom.css:106) for the switch-beside-label layout, which
+                                                 would knock it off-centre here. The .status-toggle skin is keyed on
+                                                 the input itself, so it still applies. --}}
+                                            <label class="ic-act ic-act--toggle">
+                                                <span class="ic-act__icon">
+                                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                           data-table="issue_category_master" data-column="status"
+                                                           data-id="{{ $category->pk }}" {{ $isActive ? 'checked' : '' }}>
+                                                </span>
+                                                <span class="ic-act__label">{{ $isActive ? 'Activate' : 'Deactivate' }}</span>
+                                            </label>
+
+                                            @if($isActive)
+                                                {{-- destroy() refuses to delete an active category — mirror that guard here. --}}
+                                                <span class="ic-act ic-act--del is-disabled" aria-disabled="true"
+                                                      title="Deactivate this category before deleting it">
+                                                    <span class="ic-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
+                                                    <span class="ic-act__label">Delete</span>
+                                                </span>
+                                            @else
+                                                <form action="{{ route('admin.issue-categories.destroy', $category->pk) }}"
+                                                      method="POST" class="ic-delete-form">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="ic-act ic-act--del" aria-label="Delete category"
+                                                            data-name="{{ $category->issue_category }}">
+                                                        <span class="ic-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
+                                                        <span class="ic-act__label">Delete</span>
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
                     </table>
                 </div>
 
-                {{-- No server pager: the controller sends every row and the
-                     DataTable pages them in the browser, so its search and sort
-                     cover the whole set instead of one server page. --}}
+                {{-- Footer variant A — DataTables paginates, datatable-global-ui.js fills
+                     this in with the pager and "Showing [10] of N items" (§4). --}}
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3"
+                     data-dt-footer-for="issueCategoriesTable"></div>
             </div>
 
         </div>
@@ -244,135 +296,208 @@
 
 @push('scripts')
 <script>
-/* Server-side DataTable — search, sort and paging all run in SQL via data(),
-   so the browser only ever holds the page it is showing. */
-(function() {
+$(function () {
     'use strict';
-    document.addEventListener('DOMContentLoaded', function() {
-        var $ = window.jQuery;
-        if (!$ || !$.fn.DataTable) return;
-        var $table = $('#categoriesTable');
-        if (!$table.length || $.fn.DataTable.isDataTable($table)) return;
 
-        var dt = $table.DataTable({
-            serverSide: true,
-            /* datatable-global-ui.js turns DataTables' native ordering OFF for
-               server-side tables unless this opt-in is present, and sorts only the
-               rows already loaded instead. We want ORDER BY over the whole set. */
-            sargamServerOrder: true,
-            processing: true,
-            ajax: { url: '{{ route('admin.issue-categories.data') }}' },
-            order: [[1, 'asc']],                 // Category A→Z
-            pageLength: 10,
-            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-            searchDelay: 400,
-            columns: [
-                // DT_RowIndex is numbered by the server for the returned page.
-                { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
-                { data: 'category_name', name: 'category_name' },
-                { data: 'description', name: 'description' },
-                { data: 'sub_categories', name: 'sub_categories', searchable: false },
-                { data: 'status', name: 'status', searchable: false },
-                { data: 'action', name: 'action', orderable: false, searchable: false }
-            ],
-            language: {
-                processing: 'Loading…',
-                search: 'Search categories:',
-                lengthMenu: 'Show _MENU_ entries',
-                info: 'Showing _START_ to _END_ of _TOTAL_ categories',
-                infoEmpty: 'No categories',
-                infoFiltered: '(filtered from _MAX_ total)',
-                zeroRecords: 'No matching categories found',
-                emptyTable: 'No Categories Found — get started by creating your first complaint category.',
-                paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
-            },
-            drawCallback: function() {
-                if (typeof window.adjustAllDataTables === 'function') {
-                    try { window.adjustAllDataTables(); } catch (e) {}
+    /* ── DataTable ───────────────────────────────────────────────────────────
+       Search, sort, paging and the "Showing N of M items" footer are all
+       DataTables' now; datatable-global-ui.js supplies the page defaults and
+       moves the filter/pager into the toolbar and footer slots. No `dom` or
+       colVis options here — the global script owns that. ── */
+    var $table = $('#issueCategoriesTable');
+
+    var dt = $table.DataTable({
+        order: [[1, 'asc']],                       // Category A→Z, matching the old default
+        columnDefs: [
+            { targets: 0, orderable: false, searchable: false, className: 'text-center' },
+            { targets: -1, orderable: false, searchable: false }   // Action
+        ],
+        language: {
+            emptyTable: '<div class="ic-empty">' +
+                '<i class="bi bi-folder-x d-block mb-2" aria-hidden="true"></i>' +
+                '<h6 class="fw-semibold mb-1">No Categories Found</h6>' +
+                '<p class="mb-0 small">Get started by creating your first complaint category.</p>' +
+                '</div>',
+            zeroRecords: '<div class="ic-empty">' +
+                '<i class="bi bi-search d-block mb-2" aria-hidden="true"></i>' +
+                '<h6 class="fw-semibold mb-1">No Categories Found</h6>' +
+                '<p class="mb-0 small">No category matches your search.</p>' +
+                '</div>'
+        }
+    });
+
+    // S. No. follows what is on screen, not the original row order.
+    function renumberSerial() {
+        var start = dt.page.info().start;
+        dt.column(0, { search: 'applied', order: 'applied', page: 'current' })
+          .nodes()
+          .each(function (cell, i) { cell.innerHTML = start + i + 1; });
+    }
+    dt.on('draw.dt', renumberSerial);
+    renumberSerial();
+
+    /* ── Column visibility (DataTables column API) ────────────────────────
+       Hidden columns are stored by LABEL, not index: an index would point at a
+       different column the moment one is added, silently hiding the wrong one.
+       An unknown label is simply ignored, so a renamed column comes back
+       visible — the safe direction to fail in. ── */
+    var COL_KEY = 'issueCatGrid:hiddenColumns:v2';
+
+    /* Header index -> the export key the server understands
+       (IssueCategoryController::exportColumnDefs()). Positional: '' marks a
+       column that is not in the export at all — here, Action.
+       ⚠️ Adding a column to the table means adding an entry here too. */
+    var IC_EXPORT_COLUMN_KEYS = ['sno', 'category', 'description', 'sub_categories', 'status', ''];
+    var IC_EXPORT_COL_COUNT = IC_EXPORT_COLUMN_KEYS.filter(Boolean).length;
+
+    /* Keep Download and Print carrying exactly the columns still on screen, plus
+       the search term currently applied to it. */
+    function icUpdateExportCols() {
+        var keys = [];
+        dt.columns().every(function () {
+            var key = IC_EXPORT_COLUMN_KEYS[this.index()];
+            if (key && this.visible()) { keys.push(key); }
+        });
+
+        // This grid searches client-side, so the term lives only in DataTables.
+        // Without carrying it the export returns every row and its header cannot
+        // name the filter that was applied.
+        var term = dt.search() || '';
+
+        ['icDownloadLink', 'icExcelLink', 'icPdfLink', 'icPrintLink'].forEach(function (id) {
+            var link = document.getElementById(id);
+            if (!link) { return; }
+            var base = link.href.split('?')[0];
+            var params = new URLSearchParams(link.href.split('?')[1] || '');
+            params.delete('q');
+            if (term !== '') { params.set('q', term); }
+            params.delete('cols');
+            // Omit ?cols= entirely while nothing is hidden — the server reads
+            // "no cols" as "every column".
+            if (keys.length !== IC_EXPORT_COL_COUNT) { params.set('cols', keys.join(',')); }
+            var qs = params.toString();
+            link.href = base + (qs ? '?' + qs : '');
+        });
+    }
+
+    // Search-as-you-type has to re-stamp the links, not just redraw the grid.
+    dt.on('search.dt', icUpdateExportCols);
+
+    function getHiddenCols() {
+        try {
+            var parsed = JSON.parse(localStorage.getItem(COL_KEY) || '[]');
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) { return []; }
+    }
+
+    function persistHiddenCols(cols) {
+        try { localStorage.setItem(COL_KEY, JSON.stringify(cols)); } catch (e) { /* noop */ }
+    }
+
+    function buildColumnToggles() {
+        var $grid = $('#issueCatColumnToggleGrid');
+        var hidden = getHiddenCols();
+
+        dt.columns().every(function () {
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (title) { this.visible(hidden.indexOf(title) === -1, false); }
+        });
+        dt.columns.adjust();
+
+        if (!$grid.length) { return; }
+        $grid.empty();
+
+        dt.columns().every(function () {
+            var index = this.index();
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (!title) { return; }
+
+            var inputId = 'iccolvis_' + index;
+            var $checkbox = $('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .prop('checked', hidden.indexOf(title) === -1);
+
+            $checkbox.on('change', function () {
+                var cols = getHiddenCols();
+                var pos = cols.indexOf(title);
+                if (this.checked) {
+                    if (pos !== -1) { cols.splice(pos, 1); }
+                } else if (pos === -1) {
+                    cols.push(title);
                 }
+                persistHiddenCols(cols);
+                dt.column(index).visible(this.checked, false);
+                dt.columns.adjust();
+                renumberSerial();
+                icUpdateExportCols();
+            });
+
+            $('<div class="col-12 col-sm-6 col-md-4"></div>').append(
+                $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                    .attr('for', inputId)
+                    .append($checkbox)
+                    .append($('<span></span>').text(title))
+            ).appendTo($grid);
+        });
+    }
+
+    buildColumnToggles();
+    // Stamp the saved column state onto the export links on first paint too —
+    // otherwise a preference restored from localStorage wouldn't reach the server
+    // until the user opened the modal and toggled something.
+    icUpdateExportCols();
+
+    /* ── Status toggle: repaint the row (badge + caption + delete guard) ──
+       custom.js does the AJAX; the badge and the switch live in different
+       columns, so reload rather than hand-mirroring them. ── */
+    $(document).ajaxSuccess(function (event, xhr, settings) {
+        var url = (settings && settings.url) ? settings.url : '';
+        if (url.indexOf('toggle-status') === -1 && url.indexOf('toggleStatus') === -1) { return; }
+        setTimeout(function () { window.location.reload(); }, 600);
+    });
+
+    /* ── Delete: confirm before submitting ───────────────────────────────── */
+    $(document).on('submit', '.ic-delete-form', function (e) {
+        var form = this;
+        if ($(form).data('confirmed')) { return; }
+        e.preventDefault();
+
+        var name = $(form).find('.ic-act--del').data('name') || 'this category';
+
+        if (typeof Swal === 'undefined' || typeof Swal.fire !== 'function') {
+            if (window.confirm('Delete "' + name + '"? This cannot be undone.')) {
+                $(form).data('confirmed', true);
+                form.submit();
+            }
+            return;
+        }
+
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'Delete "' + name + '"? This cannot be undone.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#d92d20',
+            reverseButtons: true
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                $(form).data('confirmed', true);
+                form.submit();
             }
         });
-
-        /* A status toggle changes a value the server rendered into this row, so
-           re-draw the current page instead of leaving the cell stale. */
-        $(document).ajaxSuccess(function (event, xhr, settings) {
-            var url = (settings && settings.url) ? settings.url : '';
-            if (url.indexOf('toggle-status') === -1 && url.indexOf('toggleStatus') === -1) return;
-            setTimeout(function () { dt.ajax.reload(null, false); }, 250);
-        });
     });
-})();
 
-function editCategory(id, name, description, status) {
-    document.getElementById('edit_issue_category').value = name;
-    document.getElementById('edit_description').value = description || '';
-    document.getElementById('edit_status').value = status;
-    
-    const form = document.getElementById('editCategoryForm');
-    form.action = "{{ url('admin/issue-categories') }}/" + id;
-    
-    const modal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
-    modal.show();
-}
+    /* ── Edit modal ──────────────────────────────────────────────────────── */
+    $(document).on('click', '.ic-edit-btn', function () {
+        var $btn = $(this);
+        $('#edit_issue_category').val($btn.data('name'));
+        $('#edit_description').val($btn.data('description') || '');
+        $('#edit_status').val(String($btn.data('status')) === '1' ? '1' : '0');
+        $('#editCategoryForm').attr('action', "{{ url('admin/issue-categories') }}/" + $btn.data('id'));
 
-// Dynamic Field Management
-let fieldIndex = 1;
-
-// Add new field group
-$(document).on('click', '.add-field-btn', function() {
-    const container = $('#categoryFieldsContainer');
-    const firstGroup = container.find('.category-field-group').first();
-    const newGroup = firstGroup.clone();
-    
-    // Update index
-    newGroup.attr('data-index', fieldIndex);
-    
-    // Update field names
-    newGroup.find('.complaint-field').attr('name', `categories[${fieldIndex}][issue_category]`).val('');
-    newGroup.find('.description-field').attr('name', `categories[${fieldIndex}][description]`).val('');
-    
-    // Show remove button and separator
-    newGroup.find('.remove-field-btn').show();
-    newGroup.find('hr').show();
-    
-    // Hide add button in previous group
-    $(this).closest('.category-field-group').find('.add-field-btn').hide();
-    
-    // Append new group
-    container.append(newGroup);
-    
-    fieldIndex++;
-    
-    // Scroll to new field
-    $('html, body').animate({
-        scrollTop: newGroup.offset().top - 100
-    }, 300);
-});
-
-// Remove field group
-$(document).on('click', '.remove-field-btn', function() {
-    const group = $(this).closest('.category-field-group');
-    const container = $('#categoryFieldsContainer');
-    const totalGroups = container.find('.category-field-group').length;
-    
-    // Don't remove if only one group
-    if (totalGroups <= 1) {
-        return;
-    }
-    
-    // Show add button in previous group
-    const prevGroup = group.prev('.category-field-group');
-    if (prevGroup.length) {
-        prevGroup.find('.add-field-btn').show();
-        prevGroup.find('hr').hide();
-    }
-    
-    // Remove current group
-    group.fadeOut(300, function() {
-        $(this).remove();
-        
-        // Re-index remaining fields
-        reindexFields();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('editCategoryModal')).show();
     });
 
     /* ── Add modal: repeatable Complaint / Description cards ─────────────── */
