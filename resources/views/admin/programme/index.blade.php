@@ -63,7 +63,7 @@
                         <span>Columns</span>
                         <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
-                    <div id="programmeDtSearch" class="programme-dt-search"></div>
+                    <div id="programmeDtSearch" class="programme-dt-search" data-dt-search-for="coursemaster-table"></div>
                 </div>
             </div>
 
@@ -71,7 +71,8 @@
                 <div class="table-responsive">
                     {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
                 </div>
-                <div id="programmeDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"></div>
+                <div id="programmeDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                    data-dt-footer-for="coursemaster-table"></div>
             </div>
 
         </div>
@@ -425,81 +426,11 @@
             initCourseFilterChoices();
         }
 
-        function enhanceProgrammeDtControls() {
-            var $wrapper = $('#coursemaster-table_wrapper');
-            if (!$wrapper.length) {
-                return;
-            }
-
-            var $searchSlot = $('#programmeDtSearch');
-            var $footer = $('#programmeDtFooter');
-
-            /* ── Search → toolbar right ── */
-            if (!$searchSlot.find('.dataTables_filter').length) {
-                var $filter = $wrapper.find('.dataTables_filter').first();
-                if ($filter.length) {
-                    $filter.find('input')
-                        .addClass('form-control shadow-none')
-                        .attr('placeholder', 'Search')
-                        .attr('aria-label', 'Search courses');
-                    $filter.find('label').contents().filter(function() {
-                        return this.nodeType === 3;
-                    }).remove();
-                    $searchSlot.append($filter);
-                }
-            }
-
-            /* ── Footer: pagination + count (once) ── */
-            if ($footer.data('dtReady')) {
-                updateProgrammeDtCount();
-                return;
-            }
-
-            var $paginate = $wrapper.find('.dataTables_paginate').first();
-            var $length = $wrapper.find('.dataTables_length').first();
-            var $info = $wrapper.find('.dataTables_info').first();
-
-            if (!$footer.length) {
-                return;
-            }
-
-            var $pagCol = $('<div class="programme-dt-pagination"></div>');
-            var $countCol = $('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>');
-
-            if ($paginate.length) {
-                $paginate.find('.pagination').addClass('mb-0');
-                $pagCol.append($paginate);
-            }
-
-            if ($length.length) {
-                var $select = $length.find('select').addClass('form-select form-select-sm').detach();
-                $length.find('label')
-                    .empty()
-                    .append(document.createTextNode('Showing '))
-                    .append($select)
-                    .append(document.createTextNode(' '));
-                $countCol.append($length);
-            }
-
-            if ($info.length) {
-                $info.addClass('mb-0');
-                $countCol.append($info);
-            }
-
-            $footer.append($pagCol).append($countCol);
-            $footer.data('dtReady', true);
-        }
-
-        function updateProgrammeDtCount() {
-            if (!table) {
-                return;
-            }
-            var info = table.page.info();
-            var $info = $('#programmeDtFooter .dataTables_info');
-            if ($info.length && info.recordsDisplay !== undefined) {
-                $info.text('of ' + info.recordsDisplay.toLocaleString() + ' items');
-            }
-        }
+        /* Search box, pagination and the "Showing N of M items" count are relocated
+           into #programmeDtSearch / #programmeDtFooter by the global enhancer
+           (public/js/datatable-global-ui.js) via the data-dt-search-for /
+           data-dt-footer-for hooks on those slots. Do NOT rebuild them here — a
+           second enhancer duplicates the global one and can race it. */
 
         // Wait for Yajra DataTable init (avoid re-init / duplicate header)
         setTimeout(function() {
@@ -508,8 +439,6 @@
             }
             table = $('#coursemaster-table').DataTable();
             initCourseFilterChoices();
-            enhanceProgrammeDtControls();
-            updateProgrammeDtCount();
             setupProgrammeColumns(table);
 
             // Initialize dropdowns after table loads
@@ -615,22 +544,10 @@
                 }
             });
 
-            var $wrapper = $('#coursemaster-table_wrapper');
-
             // Reinitialize dropdowns after table draw
             $('#coursemaster-table').on('draw.dt', function() {
                 initializeDropdowns();
-                if ($wrapper.find('.dataTables_paginate').length && !$('#programmeDtFooter .dataTables_paginate').length) {
-                    $('#programmeDtFooter').empty().data('dtReady', false);
-                    enhanceProgrammeDtControls();
-                }
-                updateProgrammeDtCount();
             });
-
-            setTimeout(function() {
-                enhanceProgrammeDtControls();
-                updateProgrammeDtCount();
-            }, 300);
 
             // Handle dropdown toggle with event delegation
             $(document).on('click', '[data-bs-toggle="dropdown"]', function(e) {

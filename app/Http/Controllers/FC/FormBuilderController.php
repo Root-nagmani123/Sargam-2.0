@@ -39,6 +39,11 @@ class FormBuilderController extends Controller
 
         if ($formId > 0) {
             GenericFormController::bumpFormStructureEpoch($formId);
+
+            // The Descriptive Data report resolves its columns (and its filter dropdowns)
+            // from this same form definition and caches both. Without this, a field added
+            // here stays invisible on that report until the cache TTL expires.
+            \App\Services\FC\FcDescriptiveDataFieldResolver::forgetForm($formId);
         }
     }
 

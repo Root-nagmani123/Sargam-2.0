@@ -26,7 +26,7 @@ class BlockFcFormBuilderDelete
             return $next($request);
         }
 
-        $message = 'Deleting is disabled on this environment while the Foundation Course intake is live. Set the item to inactive instead.';
+        $message = 'Deleting is disabled on this environment. Set the item to inactive instead.';
 
         if ($request->expectsJson()) {
             return response()->json(['success' => false, 'message' => $message], 403);

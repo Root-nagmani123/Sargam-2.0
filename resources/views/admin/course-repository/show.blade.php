@@ -656,7 +656,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>
                                 </div>
 
-                                <!-- Row 1: Course Name & Major Subject Name -->
+                                <!-- Row 1: Course Name & Session Date -->
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6 choices-bs-scope cr-course-choices">
                                         <label for="course_name" class="form-label">
@@ -678,6 +678,27 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </small>
                                     </div>
                                     <div class="col-md-6">
+                                        <label for="session_date" class="form-label">
+                                            Session Date <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="date" class="form-select" id="session_date" name="session_date"
+                                            required>
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select a course first, then the session date
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- Shown when the chosen course + date has no timetable session -->
+                                <div id="noSessionInfo" class="alert alert-info d-none py-2 px-3 mb-3" role="status">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    No session found for the selected date. Please choose another date, or fill the
+                                    details manually.
+                                </div>
+
+                                <!-- Row 2: Major Subject Name & Topic Name -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
                                         <label for="subject_name" class="form-label">
                                             Major Subject Name <span class="text-danger">*</span>
                                         </label>
@@ -685,13 +706,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <option value="" selected>Select</option>
                                         </select>
                                         <small class="text-muted d-flex align-items-center mt-1">
-                                            <i class="bi bi-info-circle me-1"></i> Select Major Subject Name
+                                            <i class="bi bi-info-circle me-1"></i> Auto-filled from the selected date
                                         </small>
                                     </div>
-                                </div>
-
-                                <!-- Row 2: Topic Name & Session Date -->
-                                <div class="row g-3 mb-3">
                                     <div class="col-md-6">
                                         <label for="timetable_name" class="form-label">
                                             Topic Name <span class="text-danger">*</span>
@@ -700,17 +717,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <option value="" selected>Select</option>
                                         </select>
                                         <small class="text-muted d-flex align-items-center mt-1">
-                                            <i class="bi bi-info-circle me-1"></i> Select Topic Name
-                                        </small>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="session_date" class="form-label">
-                                            Session Date <span class="text-danger">*</span>
-                                        </label>
-                                        <input type="date" class="form-select" id="session_date" name="session_date"
-                                            placeholder="ABCD12345" required>
-                                        <small class="text-muted d-flex align-items-center mt-1">
-                                            <i class="bi bi-info-circle me-1"></i> Select Session Date
+                                            <i class="bi bi-info-circle me-1"></i> Auto-filled from the selected date
                                         </small>
                                     </div>
                                 </div>
@@ -748,9 +755,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6">
                                         <label for="sector_master" class="form-label">
-                                            Sector <span class="text-danger">*</span>
+                                            Sector
                                         </label>
-                                        <select class="form-select" id="sector_master" name="sector_master" required>
+                                        <select class="form-select" id="sector_master" name="sector_master">
                                             <option value="" selected>Select</option>
                                             @foreach(($sectors ?? []) as $sector)
                                             <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
@@ -759,10 +766,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>
                                     <div class="col-md-6">
                                         <label for="ministry_master" class="form-label">
-                                            Ministry <span class="text-danger">*</span>
+                                            Ministry
                                         </label>
-                                        <select class="form-select" id="ministry_master" name="ministry_master"
-                                            required>
+                                        <select class="form-select" id="ministry_master" name="ministry_master">
                                             <option value="" selected>Select</option>
                                             @foreach(($ministries ?? []) as $ministry)
                                             <option value="{{ $ministry->pk }}"
@@ -936,7 +942,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6">
                                         <label for="sector_master_other" class="form-label">
-                                            Sector <span class="text-danger">*</span>
+                                            Sector
                                         </label>
                                         <select class="form-select" id="sector_master_other" name="sector_master_other">
                                             <option value="" selected>Select</option>
@@ -947,7 +953,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>
                                     <div class="col-md-6">
                                         <label for="ministry_master_other" class="form-label">
-                                            Ministry <span class="text-danger">*</span>
+                                            Ministry
                                         </label>
                                         <select class="form-select" id="ministry_master_other"
                                             name="ministry_master_other">
@@ -1031,7 +1037,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6">
                                         <label for="sector_master_institutional" class="form-label">
-                                            Sector <span class="text-danger">*</span>
+                                            Sector
                                         </label>
                                         <select class="form-select" id="sector_master_institutional"
                                             name="sector_master_institutional">
@@ -1042,8 +1048,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </select>
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="ministry_master_institutional" class="form-label">Ministry <span
-                                                class="text-danger">*</span></label>
+                                        <label for="ministry_master_institutional" class="form-label">Ministry</label>
                                         <select class="form-select" id="ministry_master_institutional"
                                             name="ministry_master_institutional">
                                             <option value="" selected>Select</option>
@@ -1338,8 +1343,6 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             var author_name = formData.get('author_name');
             var keywordsEl = document.getElementById('keywords_course');
             var keywords = keywordsEl ? keywordsEl.value.trim() : '';
-            var sector = formData.get('sector_master');
-            var ministry = formData.get('ministry_master');
             var req = [];
             if (!course_name) req.push('Course Name');
             if (!subject_name) req.push('Major Subject Name');
@@ -1347,8 +1350,6 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             if (!session_date) req.push('Session Date');
             if (!author_name) req.push('Author Name');
             if (!keywords) req.push('Keywords');
-            if (!sector) req.push('Sector');
-            if (!ministry) req.push('Ministry');
             if (req.length > 0) {
                 showUploadError('Please fill required fields: ' + req.join(', '));
                 return;
@@ -1361,8 +1362,6 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             var author_name_other = formData.get('author_name_other');
             var keywordsOtherEl = document.getElementById('keywords_other');
             var keywords_other = keywordsOtherEl ? keywordsOtherEl.value.trim() : '';
-            var sector_other = formData.get('sector_master_other');
-            var ministry_other = formData.get('ministry_master_other');
             var req = [];
             if (!course_name_other) req.push('Course Name');
             if (!major_subject_other) req.push('Major Subject Name');
@@ -1370,8 +1369,6 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             if (!session_date_other) req.push('Session Date');
             if (!author_name_other) req.push('Author Name');
             if (!keywords_other) req.push('Keywords');
-            if (!sector_other) req.push('Sector');
-            if (!ministry_other) req.push('Ministry');
             if (req.length > 0) {
                 showUploadError('Please fill required fields: ' + req.join(', '));
                 return;
@@ -1753,27 +1750,33 @@ window.crDocEdit = (function() {
         return selectWhenReady(selectId, value, label, timeoutMs);
     }
 
-    // Pre-fill the Course-category section (cascading dropdowns).
+    // Pre-fill the Course-category section. Order mirrors the new cascade:
+    // course -> session date -> subject -> topic -> author, each level waiting for
+    // the async-loaded option from the level above before selecting the saved value.
     function prefillCourse(d) {
         var courseSel = setSelectValue('course_name', d.course_master_pk, d.course_name);
         syncCourseChoiceForEdit(d.course_master_pk, d.course_name); // keep Choices UI in sync
         // Same reasoning as selectFast: when the saved course doesn't match a local
-        // record, loading subjects for it is pointless AND dangerous — that fetch
+        // record, loading sessions for it is pointless AND dangerous — that fetch
         // resolves during the wait(450) below and would wipe the subject/topic values
-        // we're about to fast-fill from saved data.
-        if (d.course_resolved !== false) fireChange(courseSel); // -> loads subjects
+        // we fast-fill from saved data. So skip firing the date change in that case
+        // and let selectFast inject the subject/topic options directly.
+        if (d.course_resolved !== false) fireChange(courseSel); // resets dependent fields
+        // Session Date is a native date input: set it, then (when the course
+        // resolved) fire change to fetch the matching sessions.
+        setVal('session_date', d.session_date);
+        if (d.course_resolved !== false && d.session_date) fireChange($id('session_date')); // -> loads sessions
         return Promise.resolve()
             .then(function() {
                 return selectFast('subject_name', d.subject_pk, d.subject_name, d.subject_resolved);
-            }) // -> loads topics
+            }) // -> loads/narrows topics
             .then(function() {
                 return selectFast('timetable_name', d.topic_pk, d.topic_name, d.topic_resolved);
-            }) // -> loads session/author
+            }) // -> fills author from the selected row
             .then(function() {
                 return wait(450);
-            }) // let session/author auto-fill settle, then override with saved values
+            }) // let the subject/topic/author auto-fill settle, then override with saved values
             .then(function() {
-                setVal('session_date', d.session_date);
                 setSelectValue('author_name', d.author_name, d.author_label);
                 var sectorSel = setSelectValue('sector_master', d.sector_master_pk, d.sector_name);
                 fireChange(sectorSel); // -> loads ministries
@@ -1783,7 +1786,7 @@ window.crDocEdit = (function() {
                 // keywords + video LAST — cascade change handlers overwrite keywords
                 setVal('keywords_course', d.keyword);
                 setVal('video_link_course', d.videolink);
-                setVal('session_date', d.session_date);
+                setVal('session_date', d.session_date); // reaffirm in case a reset cleared it
             });
     }
 
@@ -2565,168 +2568,209 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ===== CASCADING DROPDOWNS AJAX =====
+    // New flow: Course -> Session Date -> (Major Subject / Topic / Author).
+    // Picking a course loads that course's available session dates. Picking a
+    // date fetches every timetable row for that course + date; then for each of
+    // Major Subject / Topic / Author, a single distinct match is auto-filled and
+    // multiple matches become a dropdown to choose from. Selecting an upper
+    // field (subject, then topic) narrows the ones below it.
+    let courseSessionRows = [];
+
+    // Rebuild the Author <select> from a list of {value, label}; optionally
+    // auto-select it when the list holds exactly one entry. Author options come
+    // only from the selected session's faculty — there is no "all faculty"
+    // fallback, so a date with no session data leaves Author empty.
+    function fillAuthorSelect(list, selectWhenSingle) {
+        const authorSelect = document.getElementById('author_name');
+        if (!authorSelect) return;
+        authorSelect.innerHTML = '<option value="">Select</option>';
+        (list || []).forEach(function (a) {
+            const opt = document.createElement('option');
+            opt.value = a.value;
+            opt.textContent = a.label || a.value;
+            authorSelect.appendChild(opt);
+        });
+        if (selectWhenSingle && list && list.length === 1) {
+            authorSelect.value = String(list[0].value);
+        }
+    }
 
     // Helper functions to reset dropdowns
     function resetSubjectDropdown() {
         const subjectSelect = document.getElementById('subject_name');
-        subjectSelect.innerHTML = '<option value="">Select</option>';
+        if (subjectSelect) subjectSelect.innerHTML = '<option value="">Select</option>';
     }
 
     function resetTopicDropdown() {
         const topicSelect = document.getElementById('timetable_name');
-        topicSelect.innerHTML = '<option value="">Select</option>';
+        if (topicSelect) topicSelect.innerHTML = '<option value="">Select</option>';
     }
 
+    // Session Date is a native date input; the user picks any date and the rows
+    // for that course + date are then fetched.
     function resetSessionDateInput() {
         const sessionDate = document.getElementById('session_date');
-        if (sessionDate) {
-            sessionDate.value = '';
+        if (sessionDate) sessionDate.value = '';
+    }
+
+    // Reset Author to an empty "Select" — it only carries the current session's
+    // faculty, so with no session selected there is nothing to pick.
+    function resetAuthorDropdown() {
+        const authorSelect = document.getElementById('author_name');
+        if (authorSelect) authorSelect.innerHTML = '<option value="">Select</option>';
+    }
+
+    // Populate Major Subject from the fetched session rows: fill when there is a
+    // single distinct subject, offer a dropdown when there are several. When
+    // single, it auto-advances to topics (and topics may in turn auto-fill).
+    function applySubjectsFromRows(rows) {
+        const subjectSelect = document.getElementById('subject_name');
+        resetSubjectDropdown();
+        resetTopicDropdown();
+        resetAuthorDropdown();
+        if (!subjectSelect || !Array.isArray(rows) || rows.length === 0) return;
+
+        const seen = {};
+        const subjects = [];
+        rows.forEach(function(r) {
+            const key = String(r.subject_master_pk);
+            if (r.subject_master_pk && !seen[key]) {
+                seen[key] = true;
+                subjects.push({ pk: r.subject_master_pk, name: r.subject_name || '' });
+            }
+        });
+
+        subjects.forEach(function(s) {
+            const opt = document.createElement('option');
+            opt.value = s.pk;
+            opt.textContent = s.name;
+            subjectSelect.appendChild(opt);
+        });
+
+        if (subjects.length === 1) {
+            subjectSelect.value = String(subjects[0].pk);
+            applyTopicsFromRows(subjects[0].pk);
         }
     }
 
-    function resetAuthorDropdown() {
-        const authorSelect = document.getElementById('author_name');
-        authorSelect.value = '';
+    // Populate Topic for the chosen subject: fill when a single row matches,
+    // dropdown when several. When single, it auto-fills the Author.
+    function applyTopicsFromRows(subjectPk) {
+        const topicSelect = document.getElementById('timetable_name');
+        resetTopicDropdown();
+        resetAuthorDropdown();
+        if (!topicSelect || subjectPk === undefined || subjectPk === null || subjectPk === '') return;
+
+        const rows = courseSessionRows.filter(function(r) {
+            return String(r.subject_master_pk) === String(subjectPk);
+        });
+
+        rows.forEach(function(r) {
+            const opt = document.createElement('option');
+            opt.value = r.pk;
+            opt.textContent = r.subject_topic || '';
+            topicSelect.appendChild(opt);
+        });
+
+        if (rows.length === 1) {
+            topicSelect.value = String(rows[0].pk);
+            applyAuthorFromRow(rows[0]);
+        }
     }
 
-    // Course change - load subjects via AJAX
+    // Author comes from the chosen row's faculty. A row can list several
+    // co-faculty (faculty_master is a JSON array server-side, returned here as
+    // authors: [{pk, name}]). One faculty -> auto-fill; several -> a dropdown of
+    // just those; none -> leave Author empty (no session faculty to offer).
+    function applyAuthorFromRow(row) {
+        const authors = (row && Array.isArray(row.authors)) ? row.authors : [];
+        if (authors.length > 0) {
+            fillAuthorSelect(authors.map(function (a) {
+                return { value: a.pk, label: a.name };
+            }), true);
+        } else {
+            resetAuthorDropdown();
+        }
+    }
+
+    // Toggle the "no session for this date" info message.
+    function showNoSessionInfo(show) {
+        const el = document.getElementById('noSessionInfo');
+        if (el) el.classList.toggle('d-none', !show);
+    }
+
+    // Course change - reset the date + dependent fields (user picks a date next)
     if (courseSelect) {
         courseSelect.addEventListener('change', function() {
-            const coursePk = this.value;
-            const subjectSelect = document.getElementById('subject_name');
-
-            resetTopicDropdown();
             resetSessionDateInput();
+            resetSubjectDropdown();
+            resetTopicDropdown();
             resetAuthorDropdown();
+            courseSessionRows = [];
+            showNoSessionInfo(false);
             updateKeywords(); // Update keywords when course changes
+        });
+    }
 
-            if (!coursePk) {
-                resetSubjectDropdown();
-                return;
-            }
+    // Session Date change - fetch matching timetable rows for course + date
+    const sessionDateField = document.getElementById('session_date');
+    if (sessionDateField) {
+        sessionDateField.addEventListener('change', function() {
+            const sessionDate = this.value;
+            const coursePk = document.getElementById('course_name').value;
 
-            // Fetch subjects for selected course
-            fetch(`/course-repository/subjects/${coursePk}`)
+            resetSubjectDropdown();
+            resetTopicDropdown();
+            resetAuthorDropdown();
+            courseSessionRows = [];
+            showNoSessionInfo(false);
+            updateKeywords(); // Update keywords when session date changes
+
+            if (!coursePk || !sessionDate) return;
+
+            fetch(`/course-repository/sessions-by-course-date?course_pk=${coursePk}&session_date=${encodeURIComponent(sessionDate)}`)
                 .then(response => response.json())
                 .then(data => {
-                    subjectSelect.innerHTML = '<option value="">Select</option>';
-                    // Handle response - data.data because API returns {success: true, data: [...]}
-                    const subjects = data.data || data || [];
-                    if (Array.isArray(subjects) && subjects.length > 0) {
-                        subjects.forEach(subject => {
-                            const option = document.createElement('option');
-                            option.value = subject.pk;
-                            option.textContent = subject.subject_name;
-                            subjectSelect.appendChild(option);
-                        });
-                    }
+                    courseSessionRows = data.data || data || [];
+                    applySubjectsFromRows(courseSessionRows);
+                    // No timetable session on this date -> tell the user.
+                    showNoSessionInfo(courseSessionRows.length === 0);
+                    updateKeywords();
                 })
                 .catch(error => {
-                    console.error('Error fetching subjects:', error);
-                    resetSubjectDropdown();
+                    console.error('Error fetching sessions:', error);
+                    courseSessionRows = [];
+                    showNoSessionInfo(false);
                 });
         });
     }
 
-    // Subject change - load topics via AJAX
+    // Subject change - narrow topics (only actionable when a date matched several subjects)
     const subjectSelect = document.getElementById('subject_name');
     if (subjectSelect) {
         subjectSelect.addEventListener('change', function() {
             const subjectPk = this.value;
-            const coursePk = document.getElementById('course_name').value;
-            const topicSelect = document.getElementById('timetable_name');
-
-            resetSessionDateInput();
+            resetTopicDropdown();
             resetAuthorDropdown();
             updateKeywords(); // Update keywords when subject changes
-
-            if (!subjectPk) {
-                resetTopicDropdown();
-                return;
-            }
-
-            // Fetch topics for selected subject with course parameter
-            fetch(`/course-repository/topics/${subjectPk}?course_master_pk=${coursePk}`)
-                .then(response => response.json())
-                .then(data => {
-                    topicSelect.innerHTML = '<option value="">Select</option>';
-                    // Handle response - data.data because API returns {success: true, data: [...]}
-                    const topics = data.data || data || [];
-                    if (Array.isArray(topics) && topics.length > 0) {
-                        topics.forEach(topic => {
-                            const option = document.createElement('option');
-                            option.value = topic.pk;
-                            option.textContent = topic.subject_topic || topic
-                                .course_repo_topic || topic.course_repo_sub_topic;
-                            topicSelect.appendChild(option);
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching topics:', error);
-                    resetTopicDropdown();
-                });
+            if (!subjectPk) return;
+            applyTopicsFromRows(subjectPk);
         });
     }
 
-    // Topic change - load session dates and faculty via AJAX
+    // Topic change - fill author from the selected row
     const topicSelect = document.getElementById('timetable_name');
     if (topicSelect) {
         topicSelect.addEventListener('change', function() {
             const topicPk = this.value;
-            const sessionDateInput = document.getElementById('session_date');
-            const authorSelect = document.getElementById('author_name');
-
+            resetAuthorDropdown();
             updateKeywords(); // Update keywords when topic changes
-
-            if (!topicPk) {
-                resetSessionDateInput();
-                resetAuthorDropdown();
-                return;
-            }
-
-            // Fetch session dates for selected topic
-            fetch(`/course-repository/session-dates?topic_pk=${topicPk}`)
-                .then(response => response.json())
-                .then(data => {
-                    const dates = data.data || data || [];
-                    if (Array.isArray(dates) && dates.length > 0) {
-                        // Set first session date automatically
-                        if (sessionDateInput && dates[0].session_date) {
-                            sessionDateInput.value = dates[0].session_date;
-                        }
-                    }
-                })
-                .catch(error => console.error('Error fetching session dates:', error));
-
-            // Fetch authors/faculty for selected topic
-            fetch(`/course-repository/authors-by-topic?topic_pk=${topicPk}`)
-                .then(response => response.json())
-                .then(data => {
-                    authorSelect.innerHTML = '<option value="">Select</option>';
-                    const authors = data.data || data || [];
-                    if (Array.isArray(authors) && authors.length > 0) {
-                        authors.forEach(author => {
-                            const option = document.createElement('option');
-                            option.value = author.pk;
-                            option.textContent = author.full_name || author.author_name;
-                            authorSelect.appendChild(option);
-                        });
-                        // Auto-select first author if only one exists
-                        if (authors.length === 1) {
-                            authorSelect.value = authors[0].pk;
-                        }
-                    }
-                })
-                .catch(error => console.error('Error fetching authors:', error));
-        });
-    }
-
-    // Session Date change - update keywords
-    const sessionDateInput = document.getElementById('session_date');
-    if (sessionDateInput) {
-        sessionDateInput.addEventListener('change', function() {
-            updateKeywords(); // Update keywords when session date changes
+            if (!topicPk) return;
+            const row = courseSessionRows.filter(function(r) {
+                return String(r.pk) === String(topicPk);
+            })[0];
+            applyAuthorFromRow(row);
+            updateKeywords();
         });
     }
 
@@ -3415,7 +3459,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     timetableSelect.innerHTML = '<option value="">-- Select Topic --</option>';
                 }
                 if (sessionSelect) {
-                    sessionSelect.innerHTML = '<option value="">-- Select Session Date --</option>';
+                    sessionSelect.value = ''; // native date input
                 }
                 updateKeywords();
             } else {
@@ -3487,6 +3531,7 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadModalElement.addEventListener('show.bs.modal', function(ev) {
             if (ev.relatedTarget && window.crDocEdit) {
                 window.crDocEdit.reset();
+                showNoSessionInfo(false); // clear any stale "no session" notice on fresh open
                 const f = document.getElementById('uploadForm');
                 if (f) {
                     try {

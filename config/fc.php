@@ -124,6 +124,81 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Form-builder non-delete actions (one flag per action, all default OFF)
+    |--------------------------------------------------------------------------
+    |
+    | Deleting is not the only way to break a live intake from
+    | fc-reg/admin/forms/{form}/edit. Re-pointing a step at a different target
+    | table orphans every answer already collected; changing a tracker column
+    | makes every trainee read as incomplete; reordering steps changes the
+    | sequence AND the "earlier steps must be done first" gating; switching the
+    | form inactive removes it from every trainee at once. None of those prompt
+    | for confirmation and none of them are reversible by undo.
+    |
+    | Each action therefore gets its OWN flag, so an admin can be handed exactly
+    | the one change an intake needs without opening the rest. Same enforcement
+    | as the delete flag: the control is hidden/disabled in the UI AND the value
+    | is refused server-side, so a stale tab or a hand-crafted POST cannot get
+    | through either.
+    |
+    | Locked FIELDS are not rejected with a validation error — the value already
+    | in the database is substituted before validation, so the save succeeds and
+    | the locked field simply does not move. This keeps the always-safe fields on
+    | the same form (form name, description, icon, step name) editable during a
+    | live intake.
+    |
+    | ALL DEFAULT FALSE. Turn on only what is needed, e.g.
+    |
+    |     FC_FORM_STEP_ADD_ENABLED=true
+    |
+    | Re-run `php artisan config:cache` if config is cached on the server.
+    |
+    */
+
+    // ── Form Settings card ────────────────────────────────────────────────
+    // is_active — turning this off hides the whole form from every trainee.
+    'form_activate_enabled'         => (bool) env('FC_FORM_ACTIVATE_ENABLED', false),
+    // consolidation_table — where step-completion flags are read from / written to.
+    'form_tracking_table_enabled'   => (bool) env('FC_FORM_TRACKING_TABLE_ENABLED', false),
+    // registration_requires_all_steps — changes who counts as registered, and so
+    // who appears in Migrate Students.
+    'form_completion_rule_enabled'  => (bool) env('FC_FORM_COMPLETION_RULE_ENABLED', false),
+
+    // ── Steps ─────────────────────────────────────────────────────────────
+    // Add Step. Also performs live DDL when a tracker column is named — see below.
+    'form_step_add_enabled'         => (bool) env('FC_FORM_STEP_ADD_ENABLED', false),
+    // Up / Down arrows. Fires immediately with no confirm dialog.
+    'form_step_reorder_enabled'     => (bool) env('FC_FORM_STEP_REORDER_ENABLED', false),
+    // step_slug (bookmarked URLs) and target_table (where answers are stored).
+    'form_step_structure_enabled'   => (bool) env('FC_FORM_STEP_STRUCTURE_ENABLED', false),
+    // completion_column / tracker_column. Naming a column that does not exist runs
+    // ALTER TABLE ... ADD COLUMN against the live consolidation table
+    // (FormManagementController::ensureTrackerColumn), so a typo is permanent.
+    'form_step_tracker_enabled'     => (bool) env('FC_FORM_STEP_TRACKER_ENABLED', false),
+    // applicability_rule — silently adds/removes trainees from a step.
+    'form_step_applicability_enabled' => (bool) env('FC_FORM_STEP_APPLICABILITY_ENABLED', false),
+    // per-step is_active — hides one step from every trainee mid-intake.
+    'form_step_activate_enabled'    => (bool) env('FC_FORM_STEP_ACTIVATE_ENABLED', false),
+    // The whole Actions column on the STEPS table — the "Step" (edit step settings) and
+    // "Fields" (open the field editor) buttons. The individual field locks above already stop
+    // a locked VALUE from moving, but the two screens behind these buttons are still where a
+    // live intake gets restructured: the field editor can add, rename, retype and reorder the
+    // questions trainees are answering right now, and none of that is covered by a per-field
+    // lock on the step row. This flag removes the entry points entirely.
+    //
+    // The FIELD EDITOR is enforced on the endpoint as well as the button, so a bookmarked
+    // /form-builder/steps/{id} URL is refused too — hiding a link is not access control.
+    //
+    // The "Step" button is hidden but its endpoint stays open on purpose: every field in that
+    // modal already has its own per-field lock above, and refusing the endpoint outright would
+    // take the always-safe step NAME down with it.
+    //
+    // Reordering, deleting and every per-field lock keep their own flags; this one is only
+    // about reaching the two editors.
+    'form_step_actions_enabled'     => (bool) env('FC_FORM_STEP_ACTIONS_ENABLED', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Joining letter shown on the trainee's form dashboard (per intake)
     |--------------------------------------------------------------------------
     |
@@ -146,5 +221,28 @@ return [
     'joining_letters' => [
         // 'fc_template' => '',   // example: no letter on the reusable template
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Registration-PDF rendering engine
+    |--------------------------------------------------------------------------
+    |
+    | Which engine renders the Descriptive Roll / Descriptive Data PDFs:
+    |
+    |   mpdf   (default) ships with the application and is pinned by composer.lock, so a
+    |          server with no headless Chrome produces the SAME document as a developer's
+    |          laptop. It also shapes Devanagari correctly.
+    |   chrome headless Chrome when a binary is found, falling back to Dompdf when not.
+    |   dompdf forces the Dompdf path.
+    |
+    | This lives in config/ rather than being read straight from env() in the controller
+    | BECAUSE of `php artisan config:cache`: env() outside a config file returns its default
+    | once the config is cached, so an FC_REGISTRATION_PDF_ENGINE override in .env was
+    | silently ignored on a config-cached deployment — the operator believed they had rolled
+    | back to Chrome and had not. Reading it through config() makes the override work in both
+    | states, and the env() call here is evaluated at config-build time where it is valid.
+    |
+    */
+    'pdf_engine' => env('FC_REGISTRATION_PDF_ENGINE', 'mpdf'),
 
 ];
