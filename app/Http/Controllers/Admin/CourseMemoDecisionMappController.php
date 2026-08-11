@@ -19,11 +19,11 @@ class CourseMemoDecisionMappController extends Controller
         if (!empty($data_course_id)) {
             $CourseMaster = CourseMaster::whereIn('pk', $data_course_id)
                 ->where('active_inactive', '1')
-                ->where('end_date', '>', now())
+                ->where('end_date', '>=', now()->toDateString())
                 ->get();
         } else {
             $CourseMaster = CourseMaster::where('active_inactive', '1')
-                ->where('end_date', '>', now())
+                ->where('end_date', '>=', now()->toDateString())
                 ->get();
         }
         $MemoTypeMaster = MemoTypeMaster::where('active_inactive', 1)
@@ -47,9 +47,13 @@ class CourseMemoDecisionMappController extends Controller
                 $query->whereIn('course_master_pk', $data_course_id);
             }
 
-            // Course filter (works within the currently selected tab)
+            // Course and Memo Conclusion filters
             if ($request->filled('course_filter')) {
-                $query->where('course_master_pk', $request->input('course_filter'));
+                $query->where('course_master_pk', $request->course_filter);
+            }
+
+            if ($request->filled('memo_conclusion_filter')) {
+                $query->where('memo_conclusion_master_pk', $request->memo_conclusion_filter);
             }
 
             return DataTables::of($query)
@@ -204,11 +208,11 @@ class CourseMemoDecisionMappController extends Controller
         if (!empty($data_course_id)) {
             $CourseMaster = CourseMaster::whereIn('pk', $data_course_id)
                 ->where('active_inactive', '1')
-                ->where('end_date', '>', now())
+                ->where('end_date', '>=', now()->toDateString())
                 ->get();
         } else {
             $CourseMaster = CourseMaster::where('active_inactive', '1')
-                ->where('end_date', '>', now())
+                ->where('end_date', '>=', now()->toDateString())
                 ->get();
         }
         $MemoTypeMaster = MemoTypeMaster::where('active_inactive', 1)
@@ -268,11 +272,11 @@ class CourseMemoDecisionMappController extends Controller
         if (!empty($data_course_id)) {
             $CourseMaster = CourseMaster::whereIn('pk', $data_course_id)
                 ->where('active_inactive', '1')
-                ->where('end_date', '>', now())
+                ->where('end_date', '>=', now()->toDateString())
                 ->get();
         } else {
             $CourseMaster = CourseMaster::where('active_inactive', '1')
-                ->where('end_date', '>', now())
+                ->where('end_date', '>=', now()->toDateString())
                 ->get();
         }
         $MemoTypeMaster = MemoTypeMaster::all();

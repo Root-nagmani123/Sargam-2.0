@@ -160,7 +160,7 @@ class SessionFeedbackReportController extends Controller
             ->whereIn('pk', $ids)
             ->where(function ($q) {
                 $q->where('active_inactive', 0)
-                    ->orWhereDate('end_date', '<', now());
+                    ->orWhere('end_date', '<', now()->toDateString());
             })
             ->orderByDesc('end_date')
             ->value('pk');

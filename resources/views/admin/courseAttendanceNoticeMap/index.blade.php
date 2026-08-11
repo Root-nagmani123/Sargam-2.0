@@ -1,6 +1,7 @@
 @extends('admin.layouts.master')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
 
 
 @section('title', 'Memo Management')
@@ -250,11 +251,6 @@
     <!-- start Zero Configuration -->
     <div class="card shadow-sm border-0 overflow-hidden">
         <div class="card-body p-3 p-md-4">
-            @php
-                $today = \Carbon\Carbon::today()->toDateString();
-                $isToday = $fromDateFilter === $today && $toDateFilter === $today;
-                $hasRange = ($fromDateFilter || $toDateFilter) && !$isToday;
-            @endphp
             <form method="GET" action="{{ route('memo.notice.management.index') }}" id="filterForm">
                 <div class="mnm-filter-bar mb-3">
                     <span class="mnm-filter-label">Filters</span>
@@ -278,14 +274,16 @@
                         <option value="0" {{ $statusFilter == '0' ? 'selected' : '' }}>Close</option>
                     </select>
 
-                    <select class="form-select" id="mnmTimePeriod" aria-label="Time Period">
-                        <option value="today" {{ $isToday ? 'selected' : '' }}>Today</option>
-                        <option value="week">This Week</option>
-                        <option value="month">This Month</option>
-                        <option value="custom" {{ $hasRange ? 'selected' : '' }}>Custom Range</option>
-                    </select>
-                    <input type="date" class="form-control mnm-date {{ $hasRange ? '' : 'd-none' }}" id="from_date" name="from_date" value="{{ $fromDateFilter }}" style="max-width:160px;">
-                    <input type="date" class="form-control mnm-date {{ $hasRange ? '' : 'd-none' }}" id="to_date" name="to_date" value="{{ $toDateFilter }}" style="max-width:160px;">
+                    {{-- Time Period (date-range picker) — mirrors the attendance page.
+                         The visible field is display-only; the backend still reads the
+                         hidden from_date / to_date the picker writes. --}}
+                    <div class="mnm-daterange-wrap">
+                        <i class="bi bi-calendar3 mnm-daterange-icon" aria-hidden="true"></i>
+                        <input type="text" id="mnmTimePeriod" class="form-control mnm-daterange-input"
+                            placeholder="Time Period" autocomplete="off" readonly aria-label="Filter by date range">
+                    </div>
+                    <input type="hidden" id="from_date" name="from_date" value="{{ $fromDateFilter }}">
+                    <input type="hidden" id="to_date" name="to_date" value="{{ $toDateFilter }}">
 
                     <a href="{{ route('memo.notice.management.index') }}" class="mnm-reset">Reset Filters</a>
 
@@ -698,7 +696,8 @@ $(document).ready(function() {
 @push('scripts')
 <script>
 $(document).ready(function() {
-    const memoChoicesIds = ['program_name', 'type', 'status', 'mnmTimePeriod', 'memo_type_master_pk', 'venue'];
+    // mnmTimePeriod is a daterangepicker text field, not a Choices select.
+    const memoChoicesIds = ['program_name', 'type', 'status', 'memo_type_master_pk', 'venue'];
     const memoChoicesMap = new Map();
 
     function createChoicesInstance(el) {
@@ -1147,41 +1146,50 @@ $(function () {
         if ($.fn.DataTable.isDataTable('#mnmTable')) {
             $('#mnmTable').DataTable().ajax.reload();
         }
-    }
-    window.reloadMnmTable = reloadMnmTable;
+    };
+    window.reinitMnmTable();
+});
+</script>
+@endpush
 
-    function currentMnmFilterParams() {
-        return new URLSearchParams({
-            program_name: $('#program_name').val() || '',
-            type: $('#type').val() || '',
-            status: $('#status').val() || '',
-            from_date: $('#from_date').val() || '',
-            to_date: $('#to_date').val() || '',
-            search: $('#search').val() || ''
-        }).toString();
-    }
-
-    // The Download link is a static server-rendered href from page load — without
-    // this, it would keep pointing at whatever filters were active on that initial
-    // load (e.g. today-only) even after live-filtering, silently exporting the
-    // wrong/empty dataset.
-    function updateMnmDownloadLink(params) {
-        var downloadLink = document.getElementById('mnmDownloadLink');
-        if (!downloadLink) { return; }
-        downloadLink.href = "{{ route('memo.notice.management.export_csv') }}" + (params ? '?' + params : '');
-    }
-    window.updateMnmDownloadLink = function () { updateMnmDownloadLink(currentMnmFilterParams()); };
-
-    function applyMnmFilters() {
-        var params = currentMnmFilterParams();
-        updateMnmDownloadLink(params);
-        // Keep the URL in sync so a page refresh preserves the active filters
-        // (DataTables' own ajax uses the URL captured at page load, not this one —
-        // this is purely for bookmarking/refresh).
+@push('scripts')
+{{-- daterangepicker (+ its moment dependency) powers the Time Period field. --}}
+<script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<script>
+$(function () {
+    // ── AJAX filter/search: swap only the table container, no full page reload ──
+    function applyMnmFiltersAjax() {
+        var form = document.getElementById('filterForm');
+        var listContainer = document.getElementById('mnmListContainer');
+        if (!form || !listContainer) { $('#filterForm').get(0).submit(); return; }
+        var params = new URLSearchParams(new FormData(form)).toString();
         var url = "{{ route('memo.notice.management.index') }}" + (params ? '?' + params : '');
-        window.history.replaceState({}, '', url);
-        reloadMnmTable();
+        listContainer.style.opacity = '0.5';
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.text(); })
+            .then(function (html) {
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                var newList = doc.querySelector('#mnmListContainer');
+                if (newList) { listContainer.innerHTML = newList.innerHTML; }
+                window.history.replaceState({}, '', url);
+
+                // The Download link is a static server-rendered href from page load —
+                // without this, it would keep pointing at whatever filters were active
+                // on that initial load (e.g. today-only) even after AJAX-applying
+                // different filters, silently exporting the wrong/empty dataset.
+                var downloadLink = document.getElementById('mnmDownloadLink');
+                if (downloadLink) {
+                    downloadLink.href = "{{ route('memo.notice.management.export_csv') }}" + (params ? '?' + params : '');
+                }
+            })
+            .catch(function () { alert('Failed to apply filters'); })
+            .finally(function () {
+                listContainer.style.opacity = '1';
+                if (typeof window.reinitMnmTable === 'function') { window.reinitMnmTable(); }
+            });
     }
+    window.applyMnmFiltersAjax = applyMnmFiltersAjax;
 
     // Any native form submit (e.g. Enter key) → reload instead of full page reload.
     $('#filterForm').on('submit', function (e) {
@@ -1189,27 +1197,53 @@ $(function () {
         applyMnmFilters();
     });
 
-    // ── Time Period presets → from/to dates, then reload ──
-    function mnmFmt(d) { return d.toISOString().split('T')[0]; }
-    $('#mnmTimePeriod').on('change', function () {
-        var v = $(this).val();
-        var today = new Date();
-        if (v === 'custom') {
-            $('#from_date, #to_date').removeClass('d-none');
-            return; // wait for the user to pick dates (their own change reloads)
-        }
-        var from = '', to = mnmFmt(today);
-        if (v === 'today') {
-            from = mnmFmt(today);
-        } else if (v === 'week') {
-            var ws = new Date(today); ws.setDate(today.getDate() - today.getDay()); from = mnmFmt(ws);
-        } else if (v === 'month') {
-            from = mnmFmt(new Date(today.getFullYear(), today.getMonth(), 1));
-        }
-        $('#from_date').val(from);
-        $('#to_date').val(to);
-        applyMnmFilters();
-    });
+    // ── Time Period date-range picker → hidden from_date / to_date, then filter ──
+    (function initMnmTimePeriod() {
+        var $period = $('#mnmTimePeriod');
+        if (!$period.length || typeof $period.daterangepicker !== 'function') { return; }
+
+        function fmtDisplay(m) { return m.format('DD-MM-YYYY'); }
+        function paintInput(s, e) { $period.val(fmtDisplay(s) + ' – ' + fmtDisplay(e)); }
+
+        // Seed from the server-side range. The controller defaults both to today
+        // when unfiltered, so a bare load shows "today – today", same as before.
+        var fromVal = $('#from_date').val();
+        var toVal = $('#to_date').val();
+        var startM = fromVal ? moment(fromVal, 'YYYY-MM-DD') : moment();
+        var endM = toVal ? moment(toVal, 'YYYY-MM-DD') : moment();
+
+        $period.daterangepicker({
+            autoUpdateInput: false,
+            opens: 'right',
+            startDate: startM,
+            endDate: endM,
+            locale: {
+                format: 'DD-MM-YYYY',
+                separator: ' – ',
+                cancelLabel: 'Clear',
+                applyLabel: 'Apply',
+            },
+        });
+
+        // Only paint when a range is actually set, so an empty (all-time) filter
+        // keeps its "Time Period" placeholder instead of showing a phantom range.
+        if (fromVal && toVal) { paintInput(startM, endM); }
+
+        $period.on('apply.daterangepicker', function (ev, picker) {
+            paintInput(picker.startDate, picker.endDate);
+            $('#from_date').val(picker.startDate.format('YYYY-MM-DD'));
+            $('#to_date').val(picker.endDate.format('YYYY-MM-DD'));
+            applyMnmFiltersAjax();
+        });
+
+        // Clear → drop the date filter (all time), then re-run.
+        $period.on('cancel.daterangepicker', function () {
+            $period.val('');
+            $('#from_date').val('');
+            $('#to_date').val('');
+            applyMnmFiltersAjax();
+        });
+    })();
 
     // ── Search: toggle, search-as-you-type (debounced), Enter, clear ──
     $('#mnmSearchToggle').on('click', function () {

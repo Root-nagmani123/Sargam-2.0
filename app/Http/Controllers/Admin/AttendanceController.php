@@ -6,12 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\CourseMaster;
 use Illuminate\Http\Request;
 use App\Models\{CalendarEvent, GroupTypeMasterCourseMasterMap, CourseGroupTimetableMapping, StudentCourseGroupMap, ClassSessionMaster, VenueMaster, FacultyMaster, CourseStudentAttendance, Timetable, StudentMaster, MDOEscotDutyMap, StudentMedicalExemption, StudentMasterCourseMap, CourseCordinatorMaster};
+use App\Services\Attendance\OtExemptionResolver;
 use Yajra\DataTables\DataTables;
 use Carbon\Carbon;
 use App\DataTables\StudentAttendanceListDataTable;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\AttendanceDataExport;
+use App\Exports\AttendanceListExport;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class AttendanceController extends Controller
@@ -245,46 +249,18 @@ class AttendanceController extends Controller
                     $q->whereDate('END_DATE', '<=', $toDate);
                 }
 
-                if ($request->attendance_type === 'manual') {
-                    $q->where('session_type', 2)
-                        ->where('class_session', $request->session_value);
-                } elseif ($request->attendance_type === 'normal') {
-                    $q->where('session_type', 1)
-                        ->where('class_session', $request->session_value);
-                } elseif ($request->attendance_type === 'full_day') {
-                    $q->where('full_day', 1);
-                }
+                $this->applyTimetableFilters($q, $request);
             });
 
-            // Filter for Internal Faculty: Show only courses where faculty is CC or ACC
-            if (hasRole('Internal Faculty')) {
-                $userId = auth()->user()->user_id;
-                $facultyPk = FacultyMaster::where('employee_master_pk', $userId)->value('pk');
-                
-                if ($facultyPk) {
-                    // Get course IDs where faculty is CC or ACC
-                    $coordinatorCourseIds = CourseCordinatorMaster::where(function($q) use ($facultyPk) {
-                        $q->where('Coordinator_name', $facultyPk)
-                          ->orWhere('Assistant_Coordinator_name', $facultyPk);
-                    })
-                    ->pluck('courses_master_pk')
-                    ->unique()
-                    ->toArray();
-                    
-                    if (!empty($coordinatorCourseIds)) {
-                        $query->whereIn('Programme_pk', $coordinatorCourseIds);
-                    } else {
-                        // If no courses found, return empty result
-                        $query->whereRaw('1 = 0');
-                    }
-                } else {
-                    // If faculty PK not found, return empty result
-                    $query->whereRaw('1 = 0');
-                }
-            }
+            $this->applyInternalFacultyCourseScope($query);
 
             if (!empty($request->programme)) {
                 $query->where('Programme_pk', $request->programme);
+            }
+
+            // Group lives on the mapping, not the timetable, so it filters here.
+            if (filled($request->input('group_pk'))) {
+                $query->where('group_pk', $request->input('group_pk'));
             }
 
             // Send Direct Notice: collapse the per-session rows to one row per
@@ -396,42 +372,40 @@ class AttendanceController extends Controller
                         ->where('active_inactive', 1)
                         ->count();
                 })
+                ->addColumn('status', function ($row) {
+                    // Marked once every student in the group+course has a saved row (status != 0).
+                    return $this->isAttendanceMarked($row)
+                        ? '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle rounded-1 px-3 py-1 fw-medium">Marked</span>'
+                        : '<span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle rounded-1 px-3 py-1 fw-medium">Not Marked</span>';
+                })
                 ->addColumn('actions', function ($row) use ($currentPath) {
-                    // Mark Attendance button turns green only when all students are saved (status != 0)
-                    static $markedCache = [];
-                    $cacheKey = ($row->group_pk ?? '') . '|' . ($row->Programme_pk ?? '') . '|' . ($row->timetable_pk ?? '');
-
-                    if (!array_key_exists($cacheKey, $markedCache)) {
-                        // Mark as "saved" only when ALL students in this group+course
-                        // have a saved attendance row (status != 0) for this timetable.
-                        $expectedCount = StudentCourseGroupMap::where(
-                            'group_type_master_course_master_map_pk',
-                            $row->group_pk
-                        )->count();
-
-                        $markedCount = CourseStudentAttendance::where([
-                            'course_master_pk' => $row->Programme_pk,
-                            'group_type_master_course_master_map_pk' => $row->group_pk,
-                            'timetable_pk' => $row->timetable_pk,
-                        ])->where('status', '!=', 0)->count();
-
-                        $markedCache[$cacheKey] = $expectedCount > 0 && $markedCount === $expectedCount;
-                    }
-
-                    $isMarked = (bool) ($markedCache[$cacheKey] ?? false);
+                    // Admin action = stacked pencil "Edit/Mark Attendance" link; label
+                    // reads "Edit" once every student in the group+course has a saved
+                    // row (status != 0), otherwise "Mark".
+                    $isMarked = $this->isAttendanceMarked($row);
                     $markBtnClass = $isMarked ? 'btn btn-success btn-sm' : 'btn btn-primary btn-sm';
-                    $markBtnLabel = $isMarked ? 'Attendance Marked' : 'Mark Attendance';
+                    $markTitle = $isMarked ? 'Attendance Marked' : 'Mark Attendance';
+                    $markLabel = $isMarked ? 'Edit Attendance' : 'Mark Attendance';
 
         // if ($currentPath === 'user_attendance') {
              if (hasRole('Student-OT')) {
             // Student-OT User Page - Show only their own attendance
             $studentPk = auth()->user()->user_id;
-            return '<a href="' . route('attendance.OT.student_mark.student', [
+            $params = [
                 'group_pk' => $row->group_pk,
                 'course_pk' => $row->Programme_pk,
                 'timetable_pk' => $row->timetable_pk,
-                'student_pk' => $studentPk
-            ]) . '" class="btn btn-primary btn-sm 1">Show My Attendance</a>';
+                'student_pk' => $studentPk,
+            ];
+            // Open the detail page scoped to THIS row's session date, so it shows
+            // that date's attendance instead of defaulting to today (which is why
+            // it was landing on "No attendance records found").
+            $sessionDate = optional($row->timetable)->START_DATE;
+            if ($sessionDate) {
+                $params['filter_date'] = date('Y-m-d', strtotime($sessionDate));
+            }
+            return '<a href="' . route('attendance.OT.student_mark.student', $params)
+                . '" class="btn btn-primary btn-sm 1">Show My Attendance</a>';
         } elseif (hasRole('Guest Faculty') || hasRole('Internal Faculty')) {
             // Faculty User Page
             return '<a href="' . route('attendance.student_mark', [
@@ -450,21 +424,21 @@ class AttendanceController extends Controller
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
-        ]) . '" class="' . $markBtnClass . '">' . $markBtnLabel . '</a>';
+        ]) . '" class="btn btn-link btn-sm text-primary text-decoration-none d-inline-flex flex-column align-items-center lh-1 p-1" title="' . $markTitle . '" aria-label="' . $markTitle . '"><i class="bi bi-pencil-square" style="font-size:1.35rem;" aria-hidden="true"></i><span class="small mt-1 text-center lh-sm">' . $markLabel . '</span></a>';
         }
         else{
             return '<a href="' . route('attendance.mark', [
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
-        ]) . '" class="' . $markBtnClass . '">' . $markBtnLabel . '</a>';
+        ]) . '" class="btn btn-link btn-sm text-primary text-decoration-none d-inline-flex flex-column align-items-center lh-1 p-1" title="' . $markTitle . '" aria-label="' . $markTitle . '"><i class="bi bi-pencil-square" style="font-size:1.35rem;" aria-hidden="true"></i><span class="small mt-1 text-center lh-sm">' . $markLabel . '</span></a>';
         }
 
         // Admin Page
        
     })
 
-    ->rawColumns(['actions', 'programme_name'])
+    ->rawColumns(['actions', 'programme_name', 'status'])
     ->make(true);
 
             // return view('admin.attendance.partial.attendance', compact('attendanceData'));
@@ -477,6 +451,312 @@ class AttendanceController extends Controller
             ], 500);
 
         }
+    }
+
+    /**
+     * Shared base query for the attendance list — applies the same date range,
+     * attendance-type/session, role (Internal Faculty) and course filters used
+     * by both the DataTable list and the CSV export, so the two never drift.
+     */
+    /**
+     * Narrow a timetable query by the Attendance Type filter.
+     *
+     * An empty type is "All Types" and narrows nothing — that is what the grid
+     * loads with, so the default view is every session in the selected period.
+     * Manual / Normal narrow to their session_type, and only pin a specific
+     * class_session once one has actually been picked: pinning an empty
+     * session_value matched no rows and silently emptied the grid.
+     */
+    private function applyAttendanceTypeFilter($q, Request $request): void
+    {
+        $type = $request->input('attendance_type');
+
+        if ($type === 'manual' || $type === 'normal') {
+            $q->where('session_type', $type === 'manual' ? 2 : 1);
+
+            if (filled($request->input('session_value'))) {
+                $q->where('class_session', $request->input('session_value'));
+            }
+        } elseif ($type === 'full_day') {
+            $q->where('full_day', 1);
+        }
+    }
+
+    /**
+     * Internal Faculty only ever see courses they coordinate (CC or ACC). Applied
+     * to the grid, the export and the filter-option lists from one place, so the
+     * panel can never offer a group or faculty from a course they can't open.
+     */
+    private function applyInternalFacultyCourseScope($query): void
+    {
+        if (!hasRole('Internal Faculty')) {
+            return;
+        }
+
+        $facultyPk = FacultyMaster::where('employee_master_pk', auth()->user()->user_id)->value('pk');
+
+        if (!$facultyPk) {
+            $query->whereRaw('1 = 0');
+            return;
+        }
+
+        $coordinatorCourseIds = CourseCordinatorMaster::where(function ($q) use ($facultyPk) {
+            $q->where('Coordinator_name', $facultyPk)
+              ->orWhere('Assistant_Coordinator_name', $facultyPk);
+        })
+        ->pluck('courses_master_pk')
+        ->unique()
+        ->toArray();
+
+        if (empty($coordinatorCourseIds)) {
+            $query->whereRaw('1 = 0');
+            return;
+        }
+
+        $query->whereIn('Programme_pk', $coordinatorCourseIds);
+    }
+
+    /**
+     * Option lists for the "More filters" panel (Topic / Venue / Faculty / Group),
+     * cascaded to the selected course so every option matches real sessions.
+     *
+     * Deliberately NOT narrowed by the Time Period: the grid loads showing only
+     * today, and lists built from one day's sessions would come up empty.
+     */
+    public function attendanceFilterOptions(Request $request)
+    {
+        try {
+            $programme = $request->input('programme');
+
+            $mappings = CourseGroupTimetableMapping::query();
+            $this->applyInternalFacultyCourseScope($mappings);
+
+            if (filled($programme)) {
+                $mappings->where('Programme_pk', $programme);
+            }
+
+            $scoped = $mappings->get(['group_pk', 'timetable_pk']);
+
+            $groups = GroupTypeMasterCourseMasterMap::whereIn('pk', $scoped->pluck('group_pk')->unique()->filter())
+                ->orderBy('group_name')
+                ->get(['pk', 'group_name'])
+                ->map(fn ($g) => ['value' => (string) $g->pk, 'label' => $g->group_name ?: 'NO GROUP'])
+                ->values();
+
+            $timetables = CalendarEvent::whereIn('pk', $scoped->pluck('timetable_pk')->unique()->filter())
+                ->get(['pk', 'subject_topic', 'venue_id', 'faculty_master', 'internal_faculty']);
+
+            // Topic is free text: the raw value filters, a tidied one-line version
+            // labels. Blank topics can't be offered — there'd be nothing to show.
+            $topics = $timetables->pluck('subject_topic')
+                ->filter(fn ($t) => $t !== null && trim(strip_tags((string) $t)) !== '')
+                ->unique()
+                ->map(fn ($t) => [
+                    'value' => (string) $t,
+                    'label' => Str::limit(trim(preg_replace('/\s+/u', ' ', strip_tags((string) $t))), 80),
+                ])
+                ->sortBy('label', SORT_NATURAL | SORT_FLAG_CASE)
+                ->values();
+
+            $venues = VenueMaster::whereIn('venue_id', $timetables->pluck('venue_id')->unique()->filter())
+                ->orderBy('venue_name')
+                ->get(['venue_id', 'venue_name'])
+                ->map(fn ($v) => ['value' => (string) $v->venue_id, 'label' => $v->venue_name])
+                ->values();
+
+            $facultyPks = $timetables->flatMap(fn ($t) => array_merge(
+                $this->parseFacultyIds($t->faculty_master),
+                $this->parseFacultyIds($t->internal_faculty)
+            ))->unique()->filter()->values();
+
+            $faculty = FacultyMaster::whereIn('pk', $facultyPks)
+                ->whereNotNull('full_name')
+                ->where('full_name', '!=', '')
+                ->orderBy('full_name')
+                ->get(['pk', 'full_name'])
+                ->map(fn ($f) => ['value' => (string) $f->pk, 'label' => $f->full_name])
+                ->values();
+
+            return response()->json([
+                'status' => 'success',
+                'topics' => $topics,
+                'venues' => $venues,
+                'faculty' => $faculty,
+                'groups' => $groups,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error building attendance filter options: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Every filter that lives on the timetable row: attendance type/session plus
+     * the Topic / Venue / Faculty narrowing from the "More filters" panel. Each
+     * is skipped when empty, so an untouched panel changes nothing.
+     *
+     * Call this inside the whereHas('timetable', ...) closure. The Group filter
+     * is NOT here — group_pk is on the mapping, so it applies to the outer query.
+     */
+    private function applyTimetableFilters($q, Request $request): void
+    {
+        $this->applyAttendanceTypeFilter($q, $request);
+
+        if (filled($request->input('venue_id'))) {
+            $q->where('venue_id', $request->input('venue_id'));
+        }
+
+        // Topic is free text on the timetable, so the dropdown's value is the
+        // stored topic itself and matches exactly.
+        if (filled($request->input('topic'))) {
+            $q->where('subject_topic', $request->input('topic'));
+        }
+
+        $facultyPk = (int) $request->input('faculty_pk');
+        if ($facultyPk > 0) {
+            // Faculty ids are stored as JSON lists, so match with a digit-boundary
+            // regex — a plain LIKE '%4%' would also match 84, 14, 40...
+            $pattern = '(^|[^0-9])' . $facultyPk . '([^0-9]|$)';
+            $q->where(function ($fq) use ($pattern) {
+                $fq->where('faculty_master', 'REGEXP', $pattern)
+                   ->orWhere('internal_faculty', 'REGEXP', $pattern);
+            });
+        }
+    }
+
+    private function buildAttendanceQuery(Request $request)
+    {
+        $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : null;
+        $toDate = $request->to_date ? date('Y-m-d', strtotime($request->to_date)) : null;
+
+        // Join course_master so short/full names are always on the row (eager loads alone are unreliable here).
+        $query = CourseGroupTimetableMapping::query()
+            ->leftJoin('course_master', 'course_master.pk', '=', 'course_group_timetable_mapping.Programme_pk')
+            ->select(
+                'course_group_timetable_mapping.*',
+                'course_master.couse_short_name as attendance_course_short_name',
+                'course_master.course_name as attendance_course_full_name'
+            )
+            ->with([
+                'group',
+                'timetable',
+                'timetable.classSession:pk,shift_name,start_time,end_time',
+                'timetable.venue:venue_id,venue_name',
+            ]);
+
+        $query->whereHas('timetable', function ($q) use ($fromDate, $toDate, $request) {
+
+            if ($fromDate) {
+                $q->whereDate('START_DATE', '>=', $fromDate);
+            }
+            if ($toDate) {
+                $q->whereDate('END_DATE', '<=', $toDate);
+            }
+
+            $this->applyTimetableFilters($q, $request);
+        });
+
+        $this->applyInternalFacultyCourseScope($query);
+
+        if (!empty($request->programme)) {
+            $query->where('Programme_pk', $request->programme);
+        }
+
+        // Group lives on the mapping, not the timetable, so it filters here.
+        if (filled($request->input('group_pk'))) {
+            $query->where('group_pk', $request->input('group_pk'));
+        }
+
+        return $query;
+    }
+
+    /**
+     * Download the currently-filtered attendance list as a CSV (Maatwebsite
+     * Excel, same export-class pattern the Mess reports use).
+     */
+    public function exportAttendanceList(Request $request)
+    {
+        try {
+            $query = $this->buildAttendanceQuery($request);
+
+            $rows = [];
+            $serial = 1;
+
+            foreach ($query->get() as $row) {
+                $timetable = $row->timetable;
+
+                // Topic (plain text)
+                $topic = optional($timetable)->subject_topic;
+                $topic = ($topic === null || $topic === '')
+                    ? 'N/A'
+                    : trim(preg_replace('/\s+/u', ' ', strip_tags((string) $topic)));
+
+                // Date range (START_DATE to END_DATE)
+                $startDate = optional($timetable)->START_DATE;
+                $endDate   = optional($timetable)->END_DATE;
+                $start = $startDate ? format_date($startDate, 'd/m/Y') : '';
+                $end   = $endDate ? format_date($endDate, 'd/m/Y') : '';
+                $date = ($start && $end) ? $start . ' to ' . $end : $start . $end;
+
+                $courseName = trim((string) ($row->attendance_course_full_name
+                    ?? $row->attendance_course_short_name ?? ''));
+
+                $rows[] = [
+                    $serial++,
+                    $topic,
+                    $date,
+                    optional($timetable)->class_session ?? '',
+                    optional($timetable)->venue->venue_name ?? 'N/A',
+                    $row->group->group_name ?? 'NO GROUP',
+                    $courseName !== '' ? $courseName : 'N/A',
+                    $this->resolveTimetableFacultyNames($timetable),
+                    $this->isAttendanceMarked($row) ? 'Marked' : 'Pending',
+                ];
+            }
+
+            $filename = 'Attendance_List_' . date('YmdHis') . '.csv';
+
+            return Excel::download(
+                new AttendanceListExport($rows),
+                $filename,
+                \Maatwebsite\Excel\Excel::CSV
+            );
+        } catch (\Exception $e) {
+            Log::error('Error exporting attendance list: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'An error occurred while exporting the attendance list: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * True only when ALL students in this group+course have a saved attendance
+     * row (status != 0) for the given session. Cached per-request so the Status
+     * and Action columns share a single count query per row.
+     */
+    private function isAttendanceMarked($row): bool
+    {
+        static $markedCache = [];
+        $cacheKey = ($row->group_pk ?? '') . '|' . ($row->Programme_pk ?? '') . '|' . ($row->timetable_pk ?? '');
+
+        if (!array_key_exists($cacheKey, $markedCache)) {
+            $expectedCount = StudentCourseGroupMap::where(
+                'group_type_master_course_master_map_pk',
+                $row->group_pk
+            )->count();
+
+            $markedCount = CourseStudentAttendance::where([
+                'course_master_pk' => $row->Programme_pk,
+                'group_type_master_course_master_map_pk' => $row->group_pk,
+                'timetable_pk' => $row->timetable_pk,
+            ])->where('status', '!=', 0)->count();
+
+            $markedCache[$cacheKey] = $expectedCount > 0 && $markedCount === $expectedCount;
+        }
+
+        return (bool) ($markedCache[$cacheKey] ?? false);
     }
 
     function markAttendanceView($group_pk, $course_pk, $timetable_pk)
@@ -516,6 +796,7 @@ $currentPath = $segments[1] ?? null;
                 'courseGroup' => $courseGroup,
                 'currentPath' => $currentPath,
                 'allMarked' => $allMarked,
+                'facultyName' => $this->resolveTimetableFacultyNames($courseGroup?->timetable),
             ]);
         } catch (\Exception $e) {
             Log::error('Error fetching attendance data: ' . $e->getMessage());
@@ -523,9 +804,10 @@ $currentPath = $segments[1] ?? null;
         }
     }
 
-    public function export($group_pk, $course_pk, $timetable_pk)
+    public function export(Request $request, $group_pk, $course_pk, $timetable_pk)
     {
         try {
+            $format = strtolower((string) $request->get('format')) === 'pdf' ? 'pdf' : 'excel';
             $courseGroup = CourseGroupTimetableMapping::with([
                 'course:pk,course_name',
                 'timetable',
@@ -561,8 +843,11 @@ $currentPath = $segments[1] ?? null;
 
             // Prepare export data
             $courseName = optional($courseGroup->course)->course_name ?? 'N/A';
-            $topicName = optional($courseGroup->timetable)->subject_topic ?? 'N/A';
-            $facultyName = optional($courseGroup->timetable)->faculty->full_name ?? 'N/A';
+            $topicRaw = optional($courseGroup->timetable)->subject_topic;
+            $topicName = $topicRaw ? trim(preg_replace('/\s+/u', ' ', strip_tags((string) $topicRaw))) : '';
+            $topicName = $topicName !== '' ? $topicName : 'N/A';
+            // Same resolver the page uses, so every mapped faculty reaches the header.
+            $facultyName = $this->resolveTimetableFacultyNames($courseGroup->timetable);
             $topicDate = !empty(optional($courseGroup->timetable)->START_DATE) 
                 ? Carbon::parse($courseGroup->timetable->START_DATE)->format('d-m-Y') 
                 : 'N/A';
@@ -573,13 +858,35 @@ $currentPath = $segments[1] ?? null;
             $timetableDate = $timetable ? $timetable->START_DATE : null;
             $timetableClassSession = $timetable ? $timetable->class_session : null;
 
-            // Generate filename
-            $filename = 'Attendance_' . str_replace(' ', '_', $courseName) . '_' . date('YmdHis') . '.xlsx';
+            // Generate filename. Strip anything a Content-Disposition filename can't
+            // carry — a course name with "/" (or the "N/A" fallback) otherwise throws.
+            $safeCourse = trim(preg_replace('/[^A-Za-z0-9\-_]+/', '_', (string) $courseName), '_');
+            $filename = 'Attendance_' . ($safeCourse !== '' ? $safeCourse : 'Report') . '_' . date('YmdHis');
 
-            return Excel::download(
-                new AttendanceDataExport($students, $courseName, $topicName, $facultyName, $topicDate, $sessionTime, $course_pk, $group_pk, $timetable_pk, $timetableDate, $timetableClassSession),
-                $filename
-            );
+            $export = new AttendanceDataExport($students, $courseName, $topicName, $facultyName, $topicDate, $sessionTime, $course_pk, $group_pk, $timetable_pk, $timetableDate, $timetableClassSession);
+
+            if ($format === 'pdf') {
+                @ini_set('memory_limit', '256M');
+                @set_time_limit(120);
+
+                // array() also primes the row count used by the header block.
+                $rows = $export->array();
+
+                $pdf = Pdf::loadView('admin.attendance.export_pdf', array_merge([
+                    'headings'    => $export->headings(),
+                    'rows'        => $rows,
+                    'reportTitle' => 'Attendance Report',
+                    'filterLine'  => $export->filterLine(),
+                    'sessionLine' => $export->sessionLine(),
+                    'printedOn'   => now()->format('d-m-Y H:i'),
+                ], $this->pdfHeaderAssets()))
+                    ->setPaper('a4', 'landscape')
+                    ->setOptions(['defaultFont' => 'DejaVu Sans', 'isRemoteEnabled' => true, 'isPhpEnabled' => true, 'dpi' => 96]);
+
+                return $pdf->download($filename . '.pdf');
+            }
+
+            return Excel::download($export, $filename . '.xlsx');
         } catch (\Exception $e) {
             Log::error('Error exporting attendance data: ' . $e->getMessage());
             return redirect()->back()->with('error', 'An error occurred while exporting attendance data: ' . $e->getMessage());
@@ -593,40 +900,78 @@ $currentPath = $segments[1] ?? null;
             $validated = $request->validate([
                 'student' => 'required|array',
                 'student.*' => 'required|in:0,1,2,3,4,5,6,7', // values from radio buttons
+                'other_exemption' => 'nullable|array',
+                'other_exemption_comments' => 'nullable|array',
+                'other_exemption_comments.*' => 'nullable|string|max:2000',
             ]);
 
             $group_pk = $request->group_pk; // if you have session reference
             $course_pk = $request->course_pk;
+            $otherFlags = (array) $request->input('other_exemption', []);
+            $otherComments = (array) $request->input('other_exemption_comments', []);
+
+            // An OT on MDO / Escort-Moderator / Other duty, or carrying a medical
+            // exemption for this session, is always Present and cannot be changed.
+            // Enforced here, not just on the page: the mark-attendance screen only
+            // reverts the radio, which a crafted POST would walk straight past.
+            $exemptions = new OtExemptionResolver((int) $course_pk, (int) $request->timetable_pk);
 
             if ($request->student) {
+                // Pre-validate ALL rows before any DB write so no partial batch is committed.
+                // If any row fails (e.g. Other Exemption missing reason) we return early
+                // with zero records written — consistent state is guaranteed.
                 foreach ($request->student as $studentPk => $attendanceStatus) {
-                    // Validate the attendance status
-                    if (!in_array($attendanceStatus, [0, 1, 2, 3, 4, 5, 6, 7])) {
-                        return redirect()->back()->with('error', 'Invalid attendance status for student ID: ' . $studentPk);
+                    if (!$exemptions->isExempt((int) $studentPk) && !empty($otherFlags[$studentPk])) {
+                        $comment = isset($otherComments[$studentPk]) ? trim((string) $otherComments[$studentPk]) : '';
+                        if ($comment === '') {
+                            $message = 'Please enter the Other Exemption reason before saving.';
+                            if ($request->ajax() || $request->expectsJson()) {
+                                return response()->json(['status' => 'error', 'message' => $message], 422);
+                            }
+                            return redirect()->back()->with('error', $message);
+                        }
                     }
-
-                    // Create or update the attendance record
-                    CourseStudentAttendance::updateOrCreate(
-                        [
-                            'Student_master_pk' => $studentPk,
-                            'course_master_pk' => $course_pk,
-                            'group_type_master_course_master_map_pk' => $group_pk,
-                            'timetable_pk' => $request->timetable_pk,
-                        ],
-                        [
-                            'status' => $attendanceStatus,
-                        ]
-                    );
-
                 }
+
+                // All rows passed validation — write atomically so a mid-loop failure
+                // rolls back every row in this batch, not just the remaining ones.
+                DB::transaction(function () use ($request, $group_pk, $course_pk, $exemptions, $otherFlags, $otherComments) {
+                    foreach ($request->student as $studentPk => $attendanceStatus) {
+                        // Reason column is cleared unless this OT is an Other Exemption.
+                        $otherComment = null;
+
+                        if ($exemptions->isExempt((int) $studentPk)) {
+                            // '1' as a STRING, not 1. status is ENUM('0','1',...) and MySQL
+                            // reads an integer as a 1-based index into the member list, so
+                            // int 1 silently stores '0' — Not Marked.
+                            $attendanceStatus = '1'; // Present
+                        } elseif (!empty($otherFlags[$studentPk])) {
+                            // Reason already validated in the pre-validation pass above.
+                            $otherComment     = trim((string) ($otherComments[$studentPk] ?? ''));
+                            $attendanceStatus = '3'; // Absent
+                        }
+
+                        CourseStudentAttendance::updateOrCreate(
+                            [
+                                'Student_master_pk'                      => $studentPk,
+                                'course_master_pk'                       => $course_pk,
+                                'group_type_master_course_master_map_pk' => $group_pk,
+                                'timetable_pk'                           => $request->timetable_pk,
+                            ],
+                            [
+                                'status'                   => $attendanceStatus,
+                                'other_exemption_comments' => $otherComment,
+                            ]
+                        );
+                    }
+                });
             }
             return redirect()->route('attendance.index')->with('success', 'Attendance saved successfully.');
-        } catch (\Exception $exception) {
+        } catch (\Throwable $exception) {
             Log::error('Error saving attendance: ' . $exception->getMessage());
             return redirect()->back()->with('error', 'An error occurred while saving attendance: ' . $exception->getMessage());
         }
     }
-###old code naseer###
     //   public function OTmarkAttendanceView(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk){
     //     // Check if this is a DataTables AJAX request
     //     if ($request->ajax() || $request->has('draw')) {
@@ -820,6 +1165,12 @@ $currentPath = $segments[1] ?? null;
                             break;
                         case 3:
                             $record['attendance_status'] = 'Absent';
+                            // Other Exemption is stored as Absent + a typed reason;
+                            // surface it in the Exemption / Comment columns.
+                            if (trim((string) ($attendance->other_exemption_comments ?? '')) !== '') {
+                                $record['exemption_type'] = 'Other Exemption';
+                                $record['exemption_comment'] = $attendance->other_exemption_comments;
+                            }
                             break;
                         case 4:
                             $record['attendance_status'] = 'Present';
@@ -996,6 +1347,277 @@ $currentPath = $segments[1] ?? null;
         }
     }
 
+    /**
+     * Build the OT student's per-session attendance rows for the given filters.
+     * Mirrors the data assembled in {@see OTmarkAttendanceView()} so the Excel
+     * export shows exactly what the page shows.
+     *
+     * @return array{student: mixed, course: mixed, attendanceRecords: array, filterDate: ?string, filterStatus: ?string}
+     */
+    private function buildOtStudentAttendanceData(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk): array
+    {
+        $student = StudentMaster::where('pk', $student_pk)->firstOrFail();
+        $course = CourseMaster::where('pk', $course_pk)->firstOrFail();
+
+        $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : date('Y-m-d');
+        $filterCourse = $request->input('filter_course');
+        $filterStatus = $request->input('filter_status');
+        $archiveMode = $request->input('archive_mode', 'active');
+
+        $query = CourseGroupTimetableMapping::with([
+            'course:pk,course_name,end_date',
+            'group:pk,group_name',
+            'timetable',
+            'timetable.classSession:pk,shift_name,start_time,end_time',
+            'timetable.venue:venue_id,venue_name',
+            'timetable.faculty:pk,full_name',
+        ]);
+
+        if ($archiveMode === 'archive' && $filterCourse) {
+            $query->where('Programme_pk', $filterCourse);
+            $studentGroupMap = StudentCourseGroupMap::with('groupTypeMasterCourseMasterMap')
+                ->where('student_master_pk', $student_pk)
+                ->whereHas('groupTypeMasterCourseMasterMap', function ($q) use ($filterCourse) {
+                    $q->where('course_name', $filterCourse);
+                })
+                ->first();
+
+            if ($studentGroupMap && $studentGroupMap->groupTypeMasterCourseMasterMap) {
+                $query->where('group_pk', $studentGroupMap->groupTypeMasterCourseMasterMap->pk);
+            }
+        } else {
+            $query->where('group_pk', $group_pk)->where('Programme_pk', $course_pk);
+        }
+
+        $query->whereHas('timetable', function ($q) use ($archiveMode) {
+            $q->where('active_inactive', $archiveMode === 'archive' ? 0 : 1);
+        });
+
+        if ($filterDate) {
+            $query->whereHas('timetable', function ($q) use ($filterDate) {
+                // G8: full-day range keeps the index on START_DATE usable.
+                $q->whereBetween('START_DATE', [$filterDate . ' 00:00:00', $filterDate . ' 23:59:59']);
+            });
+        }
+
+        $courseGroups = $query->orderBy('timetable_pk', 'desc')->get();
+
+        $attendanceRecords = [];
+        $mdoDutyTypes = MDOEscotDutyMap::getMdoDutyTypes();
+
+        // --- F-278-02: Batch-load all supporting data before the loop to eliminate N+1 queries ---
+        $timetablePks = $courseGroups->pluck('timetable_pk')->filter()->unique()->values()->all();
+
+        $timetableDates = $courseGroups->pluck('timetable')->filter()
+            ->pluck('START_DATE')->filter()
+            ->map(fn($d) => substr($d, 0, 10))
+            ->unique()->values()->all();
+
+        $batchCoursePks = $courseGroups->pluck('Programme_pk')->filter()
+            ->push($course_pk)->unique()->values()->all();
+
+        // 1. All attendance records for the visible timetables (1 query instead of N)
+        $attendanceMap = empty($timetablePks)
+            ? collect()
+            : CourseStudentAttendance::where('Student_master_pk', $student_pk)
+                ->whereIn('timetable_pk', $timetablePks)
+                ->get()
+                ->keyBy('timetable_pk');
+
+        // 2. Active medical exemptions for the student (1 query; date-range checked in PHP)
+        $medicalExemptions = StudentMedicalExemption::where('student_master_pk', $student_pk)
+            ->where('active_inactive', 1)
+            ->whereIn('course_master_pk', $batchCoursePks)
+            ->get();
+
+        // 3. MDO/escort/other duty entries for the visible session dates (1 query instead of N×3)
+        $allDutyTypeIds = array_values(array_filter($mdoDutyTypes));
+        $mdoDutyMap = collect();
+        if (!empty($allDutyTypeIds) && !empty($timetableDates)) {
+            $mdoDutyMap = MDOEscotDutyMap::where('selected_student_list', $student_pk)
+                ->whereIn('course_master_pk', $batchCoursePks)
+                ->whereIn('mdo_duty_type_master_pk', $allDutyTypeIds)
+                ->where(function ($q) use ($timetableDates) {
+                    // G8: full-day ranges so the index on mdo_date is not defeated.
+                    foreach ($timetableDates as $d) {
+                        $q->orWhereBetween('mdo_date', [$d . ' 00:00:00', $d . ' 23:59:59']);
+                    }
+                })
+                ->get()
+                ->groupBy(fn($r) => $r->mdo_duty_type_master_pk . '|' . $r->course_master_pk . '|' . substr($r->mdo_date, 0, 10));
+        }
+
+        // In-memory helpers — zero DB queries inside the loop.
+        $findMedical = function (?string $date, $cPk) use ($medicalExemptions): ?object {
+            if ($date === null) {
+                return null;
+            }
+            $d = substr($date, 0, 10);
+            return $medicalExemptions->first(
+                fn($e) => (string) $e->course_master_pk === (string) $cPk
+                    && $e->from_date <= $d
+                    && ($e->to_date === null || $e->to_date >= $d)
+            ) ?: null;
+        };
+
+        $findDuty = function (?string $dutyKey, ?string $date, $cPk) use ($mdoDutyMap, $mdoDutyTypes): ?object {
+            if ($date === null || empty($mdoDutyTypes[$dutyKey])) {
+                return null;
+            }
+            $key = $mdoDutyTypes[$dutyKey] . '|' . $cPk . '|' . substr($date, 0, 10);
+            $group = $mdoDutyMap->get($key);
+            return $group ? $group->first() : null;
+        };
+        // -----------------------------------------------------------------------------------------
+
+        foreach ($courseGroups as $courseGroup) {
+            $timetableDate = optional($courseGroup->timetable)->START_DATE;
+            $timetablePk = $courseGroup->timetable_pk;
+            $currentCoursePk = $courseGroup->Programme_pk ?? $course_pk;
+            $currentGroupPk = $courseGroup->group_pk ?? $group_pk;
+
+            $attendance = $attendanceMap->get($timetablePk);
+
+            $record = [
+                'date' => $timetableDate ? format_date($timetableDate, 'd/m/Y') : 'N/A',
+                'session_time' => optional($courseGroup->timetable)->class_session ?? 'N/A',
+                'venue' => optional($courseGroup->timetable)->venue->venue_name ?? 'N/A',
+                'group' => optional($courseGroup->group)->group_name ?? 'N/A',
+                'topic' => optional($courseGroup->timetable)->subject_topic ?? 'N/A',
+                'faculty' => $this->resolveTimetableFacultyNames($courseGroup->timetable),
+                'attendance_status' => 'Not Marked',
+                'duty_type' => null,
+                'exemption_type' => null,
+                'exemption_document' => null,
+                'exemption_comment' => null,
+            ];
+
+            if ($courseGroup->timetable && $courseGroup->timetable->classSession) {
+                $record['session_time'] = optional($courseGroup->timetable->classSession)->start_time . ' - ' . optional($courseGroup->timetable->classSession)->end_time;
+            }
+
+            if ($attendance) {
+                switch ((int) $attendance->status) {
+                    case 1:
+                        $record['attendance_status'] = 'Present';
+                        break;
+                    case 2:
+                        $record['attendance_status'] = 'Late';
+                        break;
+                    case 3:
+                        $record['attendance_status'] = 'Absent';
+                        if (trim((string) ($attendance->other_exemption_comments ?? '')) !== '') {
+                            $record['exemption_type'] = 'Other Exemption';
+                            $record['exemption_comment'] = $attendance->other_exemption_comments;
+                        }
+                        break;
+                    case 4:
+                        $record['attendance_status'] = 'Present';
+                        $record['duty_type'] = 'MDO';
+                        break;
+                    case 5:
+                        $record['attendance_status'] = 'Present';
+                        $record['duty_type'] = 'Escort';
+                        break;
+                    case 6:
+                        $record['attendance_status'] = 'Present';
+                        $record['exemption_type'] = 'Medical';
+                        $medicalExemption = $findMedical($timetableDate, $currentCoursePk);
+                        if ($medicalExemption) {
+                            $record['exemption_document'] = $medicalExemption->Doc_upload;
+                            $record['exemption_comment'] = $medicalExemption->Description;
+                        }
+                        break;
+                    case 7:
+                        $record['attendance_status'] = 'Present';
+                        $record['exemption_type'] = 'Other';
+                        $otherExemption = $findDuty('other', $timetableDate, $currentCoursePk);
+                        if ($otherExemption) {
+                            $record['exemption_comment'] = $otherExemption->Remark ?? null;
+                        }
+                        break;
+                }
+            } elseif ($timetableDate) {
+                $medicalExemption = $findMedical($timetableDate, $currentCoursePk);
+
+                if ($medicalExemption) {
+                    $record['attendance_status'] = 'Present';
+                    $record['exemption_type'] = 'Medical';
+                    $record['exemption_document'] = $medicalExemption->Doc_upload;
+                    $record['exemption_comment'] = $medicalExemption->Description;
+                } else {
+                    $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
+
+                    $mdoDuty = $findDuty('mdo', $timetableDate, $currentCoursePk);
+                    if ($mdoDuty && $this->checkTimeOverlap($timetableClassSession, $mdoDuty->Time_from, $mdoDuty->Time_to)) {
+                        $record['attendance_status'] = 'Present';
+                        $record['duty_type'] = 'MDO';
+                    }
+
+                    if (!$record['duty_type']) {
+                        $escortDuty = $findDuty('escort', $timetableDate, $currentCoursePk);
+                        if ($escortDuty && $this->checkTimeOverlap($timetableClassSession, $escortDuty->Time_from, $escortDuty->Time_to)) {
+                            $record['attendance_status'] = 'Present';
+                            $record['duty_type'] = 'Escort';
+                        }
+                    }
+
+                    if (!$record['duty_type']) {
+                        $otherDuty = $findDuty('other', $timetableDate, $currentCoursePk);
+                        if ($otherDuty && $this->checkTimeOverlap($timetableClassSession, $otherDuty->Time_from, $otherDuty->Time_to)) {
+                            $record['attendance_status'] = 'Present';
+                            $record['exemption_type'] = 'Other';
+                            $record['exemption_comment'] = $otherDuty->Remark ?? null;
+                        }
+                    }
+                }
+            }
+
+            $attendanceRecords[] = $record;
+        }
+
+        if ($filterStatus) {
+            $attendanceRecords = array_values(array_filter($attendanceRecords, function ($record) use ($filterStatus) {
+                return $record['attendance_status'] === $filterStatus;
+            }));
+        }
+
+        return compact('student', 'course', 'attendanceRecords', 'filterDate', 'filterStatus');
+    }
+
+    /**
+     * Download the OT student's attendance as a styled .xlsx (real Excel, with the
+     * LBSNAA header + logos), mirroring the admin Attendance Report export.
+     */
+    public function exportOtStudentAttendanceExcel(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk)
+    {
+        // F-278-01: Prevent IDOR — a Student-OT may only download their own attendance.
+        // Admin/staff users (no Student-OT role) are allowed to export any student's data.
+        if (hasRole('Student-OT') && (string) auth()->user()->user_id !== (string) $student_pk) {
+            abort(403);
+        }
+
+        try {
+            $data = $this->buildOtStudentAttendanceData($request, $group_pk, $course_pk, $timetable_pk, $student_pk);
+
+            $safeCode = trim(preg_replace('/[^A-Za-z0-9\-_]+/', '_', (string) ($data['student']->generated_OT_code ?? 'OT')), '_');
+            $filename = 'Attendance_' . ($safeCode !== '' ? $safeCode : 'OT') . '_' . date('YmdHis') . '.xlsx';
+
+            $export = new \App\Exports\OtStudentAttendanceExport(
+                $data['attendanceRecords'],
+                $data['student'],
+                $data['course'],
+                $data['filterDate'] ?? null,
+                $data['filterStatus'] ?? null
+            );
+
+            return Excel::download($export, $filename);
+        } catch (\Exception $e) {
+            Log::error('Error exporting OT student attendance: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'An error occurred while exporting attendance: ' . $e->getMessage());
+        }
+    }
+
         private function getOTAttendanceData(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk) {
             // Get filter parameters from request - Default to today's date if not provided
             $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : Carbon::today()->format('Y-m-d');
@@ -1145,6 +1767,12 @@ $currentPath = $segments[1] ?? null;
                             break;
                         case 3:
                             $record['attendance_status'] = 'Absent';
+                            // Other Exemption is stored as Absent + a typed reason;
+                            // surface it in the Exemption / Comment columns.
+                            if (trim((string) ($attendance->other_exemption_comments ?? '')) !== '') {
+                                $record['exemption_type'] = 'Other Exemption';
+                                $record['exemption_comment'] = $attendance->other_exemption_comments;
+                            }
                             break;
                         case 4:
                             $record['attendance_status'] = 'Present';
@@ -1511,12 +2139,76 @@ $currentPath = $segments[1] ?? null;
         // Hover/title: always full course name (or fallback to display)
         $title = $full !== '' ? $full : $display;
 
-        return '<span class="attendance-course-cell text-body" data-tooltip="' . e($title) . '">' . e($display) . '</span>';
+        return '<span class="attendance-course-cell text-primary fw-medium" data-tooltip="' . e($title) . '">' . e($display) . '</span>';
     }
 
     /**
      * timetable.faculty_master / internal_faculty are often JSON arrays of faculty PKs — not a single FK.
      */
+    /**
+     * Faculty ids as stored on a timetable row: normally a JSON list — ["84"]
+     * or [84] — but occasionally a bare id. Returns [] for anything unparseable.
+     */
+    private function parseFacultyIds($raw): array
+    {
+        if ($raw === null || $raw === '') {
+            return [];
+        }
+
+        $decoded = is_array($raw) ? $raw : json_decode((string) $raw, true);
+
+        if (!is_array($decoded)) {
+            return is_numeric($raw) ? [(int) $raw] : [];
+        }
+
+        $ids = [];
+        foreach ($decoded as $id) {
+            if ($id !== null && $id !== '' && is_numeric($id)) {
+                $ids[] = (int) $id;
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Branded LBSNAA header images as embedded data-URIs for the PDF view
+     * (mirrors the Medical Exemption Report export header).
+     *
+     * @return array{logoLeft:?string,logoRight:?string,titleHindi:?string}
+     */
+    private function pdfHeaderAssets(): array
+    {
+        $toDataUri = static function (string $path): ?string {
+            if (! is_file($path) || ! is_readable($path)) {
+                return null;
+            }
+            $raw = @file_get_contents($path);
+            if ($raw === false) {
+                return null;
+            }
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = match ($ext) {
+                'svg' => 'image/svg+xml',
+                'jpg', 'jpeg' => 'image/jpeg',
+                default => 'image/png',
+            };
+
+            return 'data:' . $mime . ';base64,' . base64_encode($raw);
+        };
+
+        $rightLogo = public_path('admin_assets/images/logos/constitution-75.png');
+        if (! is_file($rightLogo)) {
+            $rightLogo = public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png');
+        }
+
+        return [
+            'logoLeft'   => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
+            'logoRight'  => $toDataUri($rightLogo),
+            'titleHindi' => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
+        ];
+    }
+
     private function resolveTimetableFacultyNames(?CalendarEvent $timetable): string
     {
         if (!$timetable) {
@@ -1527,28 +2219,7 @@ $currentPath = $segments[1] ?? null;
 
         $ids = [];
         foreach (['faculty_master', 'internal_faculty'] as $column) {
-            $raw = $timetable->{$column} ?? null;
-            if ($raw === null || $raw === '') {
-                continue;
-            }
-            if (is_array($raw)) {
-                $decoded = $raw;
-            } else {
-                $decoded = json_decode((string) $raw, true);
-            }
-
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                foreach ($decoded as $id) {
-                    if ($id === null || $id === '') {
-                        continue;
-                    }
-                    if (is_numeric($id)) {
-                        $ids[] = (int) $id;
-                    }
-                }
-            } elseif (is_numeric($raw)) {
-                $ids[] = (int) $raw;
-            }
+            $ids = array_merge($ids, $this->parseFacultyIds($timetable->{$column} ?? null));
         }
 
         $ids = array_values(array_unique(array_filter($ids)));

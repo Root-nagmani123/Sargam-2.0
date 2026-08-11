@@ -7,16 +7,66 @@
 @endpush
 
 @section('setup_content')
-<div class="container-fluid cmdm-master-page">
-    <x-breadcrum title="Course Memo Decision Mapping" :showBack="false">
-        <button type="button"
-            id="showConclusionAlert"
-            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-2 fw-semibold shadow-sm"
-            aria-controls="conclusionModal">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            <span>Add New Mapping</span>
-        </button>
-    </x-breadcrum>
+<div class="container-fluid">
+    <x-breadcrum title="Course Memo Decision Mapping" />
+    <div class="datatables">
+        <div class="card" >
+            <div class="card-body">
+                <div class="table-responsive">
+                    <div class="row">
+                        <div class="col-6">
+                            <h4>Course Memo Decision Mapping</h4>
+                        </div>
+                        <div class="col-6">
+                            <div class="float-end gap-2">
+                                <!-- <a href="{{ route('course.memo.decision.create') }}" class="btn btn-primary">+Add New
+                                    Mapping</a> -->
+                                <button type="button" id="showConclusionAlert" class="btn btn-primary">
+                                    +Add New Mapping
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row g-3 align-items-end mb-3">
+                       
+                        <div class="col-md-4">
+                            <label class="form-label">Course</label>
+                            <select id="courseFilter" class="form-select">
+                                <option value="">-- All Courses --</option>
+                                @foreach($CourseMaster as $course)
+                                <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Memo Conclusion</label>
+                            <select id="memoConclusionFilter" class="form-select">
+                                <option value="">-- All Memo Conclusions --</option>
+                                @foreach($MemoConclusionMaster as $memo)
+                                <option value="{{ $memo->pk }}">{{ $memo->discussion_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" id="resetMemoFilters" class="btn btn-outline-secondary">
+                                Reset Filters
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <table class="table w-100" id="memoDecisionTable">
+                            <thead style="background-color: #af2910;">
+                                <tr>
+                                    <th>S.No.</th>
+                                    <th>Course Name</th>
+                                    <th>Memo Decision</th>
+                                    <th>Memo Conclusion</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                        </table>
 
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
         <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white" role="group" aria-label="Filter mappings by status">
@@ -271,10 +321,17 @@
         });
 
         if (!$.fn.DataTable.isDataTable(tableSelector)) {
-            $(tableSelector).DataTable({
+            const memoDecisionTable = $(tableSelector).DataTable({
                 processing: true,
                 serverSide: true,
-                ajax: "{{ route('course.memo.decision.index') }}",
+                ajax: {
+                    url: "{{ route('course.memo.decision.index') }}",
+                    data: function(d) {
+                        d.course_filter = $('#courseFilter').val();
+                        d.memo_conclusion_filter = $('#memoConclusionFilter').val();
+                    }
+                },
+                order: [[0, 'desc']],
                 columns: [{
                         data: 'DT_RowIndex',
                         name: 'DT_RowIndex',
@@ -309,6 +366,18 @@
                 order: [
                     [1, 'asc']
                 ]
+            });
+
+            // Reload table when filters change
+            $('#courseFilter, #memoConclusionFilter').on('change', function() {
+                memoDecisionTable.ajax.reload();
+            });
+
+            // Reset filters
+            $('#resetMemoFilters').on('click', function() {
+                $('#courseFilter').val('');
+                $('#memoConclusionFilter').val('');
+                memoDecisionTable.ajax.reload();
             });
         }
 

@@ -118,8 +118,47 @@ class OTNoticeMemoService
     }
 
     /**
+     * Get discipline memos for a student — the source of truth used by the
+     * Discipline Memo module (/memo/discipline): the `discipline_memo_status`
+     * table (MemoDiscipline), scoped to active disciplines exactly like that
+     * module's listing (whereHas discipline active_inactive = 1). Keyed on
+     * student_master.pk (discipline_memo_status.student_master_pk).
+     *
+     * Returned columns line up with the dashboard student-detail memo table
+     * (course_name / session_date / topic / conclusion_type / status / response)
+     * so the list "Total Memo" count and the detail view stay in sync with
+     * the discipline module.
+     *
+     * @param int $studentMasterPk  student_master.pk
+     * @return \Illuminate\Support\Collection
+     */
+    public function getDisciplineMemos($studentMasterPk)
+    {
+        return DB::table('discipline_memo_status as dms')
+            ->where('dms.student_master_pk', $studentMasterPk)
+            ->join('discipline_master as dm', 'dms.discipline_master_pk', '=', 'dm.pk')
+            ->where('dm.active_inactive', 1)
+            ->leftJoin('course_master as cm', 'dms.course_master_pk', '=', 'cm.pk')
+            ->leftJoin('memo_conclusion_master as mcm', 'dms.conclusion_type_pk', '=', 'mcm.pk')
+            ->orderByDesc('dms.pk')
+            ->get([
+                'dms.pk as id',
+                'dms.pk',
+                'dms.course_master_pk',
+                'dms.date as session_date',
+                'dms.status',
+                'dms.remarks as response',
+                'dms.conclusion_remark',
+                'cm.course_name',
+                'dm.discipline_name as topic',
+                'mcm.discussion_name as conclusion_type',
+                DB::raw("'Memo' as type")
+            ]);
+    }
+
+    /**
      * Get all notices and memos for a student
-     * 
+     *
      * @param int $studentMasterPk
      * @return array
      */

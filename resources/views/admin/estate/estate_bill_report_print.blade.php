@@ -399,7 +399,7 @@
                     <tbody>
                         <tr>
                             <td>{{ $bill->meter_one ?? '—' }}</td>
-                            <td class="text-right">{{ $bill->last_month_elec_red ?? '—' }}</td>
+                            <td class="text-right">{{ !empty($bill->meter_one_is_new) ? '—' : ($bill->last_month_elec_red ?? '—') }}</td>
                             <td class="text-right">{{ $bill->curr_month_elec_red ?? '—' }}</td>
                             <td class="text-right">{{ $bill->meter_one_consume_unit ?? '—' }}</td>
                             <td class="amount">₹ {{ number_format((float)($bill->meter_one_elec_charge ?? 0), 2) }}</td>
@@ -412,7 +412,7 @@
                         @if($hasSecondMeter)
                         <tr>
                             <td>{{ $bill->meter_two ?? '—' }}</td>
-                            <td class="text-right">{{ $bill->last_month_elec_red2 ?? '—' }}</td>
+                            <td class="text-right">{{ !empty($bill->meter_two_is_new) ? '—' : ($bill->last_month_elec_red2 ?? '—') }}</td>
                             <td class="text-right">{{ $bill->curr_month_elec_red2 ?? '—' }}</td>
                             <td class="text-right">{{ $bill->meter_two_consume_unit ?? '—' }}</td>
                             <td class="amount">₹ {{ number_format((float)($bill->meter_two_elec_charge ?? 0), 2) }}</td>

@@ -3,104 +3,16 @@
 @section('title', 'Attendance')
 
 @push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
 @endpush
 
 @section('setup_content')
 <style>
-.form-label {
-    font-size: 0.92rem;
-    color: #333;
-    /* High contrast */
-}
-
-.form-control,
-.form-select {
-    min-height: 40px;
-    border-radius: 6px;
-}
-
-.attendance-page .card {
-    border: 0;
-    border-radius: 0.9rem;
-}
-
-.attendance-page .attendance-main-card {
-    box-shadow: 0 0.4rem 1.4rem rgba(15, 23, 42, 0.08);
-    overflow: hidden;
-}
-
-.attendance-page .attendance-topbar {
-    background: linear-gradient(135deg, #f8fbff 0%, #f1f7ff 100%);
-    border-bottom: 1px solid var(--bs-border-color);
-}
-
-.attendance-page .attendance-topbar .page-title {
-    color: #003366;
-    letter-spacing: 0.2px;
-}
-
-.attendance-page .attendance-filter-shell {
-    border: 1px solid var(--bs-border-color);
-    background-color: var(--bs-light);
-}
-
-.attendance-page .table-attendance thead th {
-    text-transform: uppercase;
-    font-size: 0.74rem;
-    letter-spacing: 0.04em;
-    white-space: nowrap;
-    color: var(--bs-secondary-color);
-}
-
-.form-control:focus,
-.form-select:focus {
-    outline: 3px solid #0059b3 !important;
-    /* Visible focus outline for accessibility */
-    outline-offset: 2px;
-}
-
-.btn-primary {
-    background-color: #004a93;
-    border-color: #004a93;
-}
-
-.btn-primary:focus {
-    outline: 3px solid #003366;
-    outline-offset: 2px;
-}
-
-h4 {
-    color: #003366;
-    letter-spacing: 0.3px;
-}
-
-hr {
-    border-top: 1px solid #dce1e7;
-}
-
 /* Choices + Bootstrap: form-select adds BS chevron; Choices adds its own — drop BS background only. */
 .attendance-choices-bootstrap .choices__inner.form-select {
-    background-color: var(--bs-body-bg);
-    border: var(--bs-border-width) solid var(--bs-border-color);
-    min-height: calc(1.5em + 0.75rem + var(--bs-border-width) * 2);
-    padding-top: 0.375rem;
-    padding-bottom: 0.375rem;
     background-image: none !important;
-    padding-inline-end: 2.25rem;
-}
-
-.attendance-choices-bootstrap .choices.is-focused .choices__inner.form-select,
-.attendance-choices-bootstrap .choices.is-open .choices__inner.form-select {
-    border-color: var(--bs-focus-border-color);
-    outline: 0;
-    box-shadow: 0 0 0 0.25rem rgba(var(--bs-focus-ring-rgb), 0.25);
-}
-
-/* Panel border; scrolling is on the inner .choices__list (library default). */
-.attendance-choices-bootstrap .choices__list--dropdown.dropdown-menu,
-.attendance-choices-bootstrap .choices__list[aria-expanded].dropdown-menu {
-    border: var(--bs-border-width) solid var(--bs-border-color);
 }
 
 .attendance-choices-bootstrap .choices__list--dropdown.dropdown-menu .choices__list,
@@ -108,73 +20,7 @@ hr {
     max-height: 280px;
 }
 
-/* Smaller screens: hide closed-state caret; taller list + touch scroll + thin scrollbar (no arrow buttons). */
-@media (max-width: 767.98px) {
-
-    .attendance-choices-bootstrap .choices[data-type*="select-one"]::after,
-    .attendance-choices-bootstrap .choices[data-type*="select-one"]::before {
-        display: none !important;
-    }
-
-    .attendance-choices-bootstrap .choices__inner.form-select {
-        padding-inline-end: 0.75rem;
-    }
-
-    .attendance-choices-bootstrap .choices__list--dropdown.dropdown-menu .choices__list,
-    .attendance-choices-bootstrap .choices__list[aria-expanded].dropdown-menu .choices__list {
-        max-height: min(50vh, 20rem) !important;
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior-y: contain;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(33, 37, 41, 0.35) transparent;
-    }
-
-    .attendance-choices-bootstrap .choices__list--dropdown.dropdown-menu .choices__list::-webkit-scrollbar,
-    .attendance-choices-bootstrap .choices__list[aria-expanded].dropdown-menu .choices__list::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .attendance-choices-bootstrap .choices__list--dropdown.dropdown-menu .choices__list::-webkit-scrollbar-button,
-    .attendance-choices-bootstrap .choices__list[aria-expanded].dropdown-menu .choices__list::-webkit-scrollbar-button {
-        display: none;
-        height: 0;
-        width: 0;
-    }
-
-    .attendance-choices-bootstrap .choices__list--dropdown.dropdown-menu .choices__list::-webkit-scrollbar-thumb,
-    .attendance-choices-bootstrap .choices__list[aria-expanded].dropdown-menu .choices__list::-webkit-scrollbar-thumb {
-        background-color: rgba(33, 37, 41, 0.35);
-        border-radius: 999px;
-    }
-
-    /* Attendance DataTable: scroll vertically (and horizontally); avoid Responsive “+ / chevron” row controls. */
-
-    #attendanceTableDiv::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-    }
-
-    #attendanceTableDiv::-webkit-scrollbar-button {
-        display: none;
-        width: 0;
-        height: 0;
-    }
-
-    #attendanceTableDiv::-webkit-scrollbar-thumb {
-        background-color: rgba(33, 37, 41, 0.35);
-        border-radius: 999px;
-    }
-
-    #attendanceTableDiv thead th {
-        position: sticky;
-        top: 0;
-        z-index: 2;
-        background-color: var(--bs-body-bg);
-        box-shadow: inset 0 -1px 0 var(--bs-border-color);
-    }
-}
-
-/* Course column: short label, full name via native tooltip */
+/* Course column: short label, full name via custom tooltip */
 #attendanceTable .attendance-course-cell {
     cursor: help;
     text-decoration: underline dotted;
@@ -211,6 +57,170 @@ hr {
     word-break: break-word;
     white-space: normal;
 }
+
+/* Edit-attendance action = stacked pencil icon + label (blue link) */
+.attendance-page td .btn-link.text-primary {
+    --bs-btn-color: #004a93;
+    --bs-btn-hover-color: #003c78;
+    min-width: 88px;
+}
+
+.attendance-page td .btn-link.text-primary:hover .small {
+    text-decoration: underline;
+}
+
+/* Download CSV button (right of the Active/Archived tabs) */
+.attendance-page .attendance-download-btn {
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 1.1rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: #004a93;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.attendance-page .attendance-download-btn:hover {
+    background: #f2f7fc;
+    border-color: #004a93;
+    color: #004a93;
+}
+
+.attendance-page .attendance-download-btn i {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+/* ── "+N Filters" popover — same pattern as the Student List toolbar ── */
+.attendance-page .attendance-more-filters {
+    color: #004a93;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.attendance-page .attendance-more-filters:hover { text-decoration: underline; }
+.attendance-page .attendance-more-filters.dropdown-toggle::after { display: none; }
+
+.attendance-page .attendance-more-menu {
+    min-width: 320px;
+}
+
+.attendance-page .attendance-more-menu-header {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #101828;
+    padding-bottom: 0.65rem;
+    margin-bottom: 0.85rem;
+    border-bottom: 1px solid #eef2f6;
+}
+
+/* Each filter inside the popover = a floating-label box. */
+.attendance-page .attendance-more-menu .attendance-filter-item {
+    display: block;
+    position: relative;
+    margin-bottom: 0.75rem;
+}
+
+.attendance-page .attendance-more-menu .attendance-filter-item:last-child { margin-bottom: 0; }
+
+.attendance-page .attendance-more-menu .attendance-filter-label-text {
+    display: block;
+    position: absolute;
+    top: 6px;
+    left: 0.875rem;
+    z-index: 2;
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: #667085;
+    margin: 0;
+    pointer-events: none;
+}
+
+/* Student List uses plain selects here; these are Choices, so the generated
+   .choices__inner is what has to carry the floating-label geometry. */
+.attendance-page .attendance-more-menu .choices { width: 100%; margin-bottom: 0; }
+
+.attendance-page .attendance-more-menu .choices__inner.form-select {
+    min-height: 52px;
+    border-radius: 10px;
+    padding: 1.35rem 2.25rem 0.35rem 0.875rem;
+    color: #101828;
+}
+
+/* A long topic must ellipsis inside the box, never widen the popover. */
+.attendance-page .attendance-more-menu .choices__list--single {
+    padding: 0;
+}
+
+.attendance-page .attendance-more-menu .choices__list--single .choices__item {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The search box Choices injects sits inside the popover's own dropdown. */
+.attendance-page .attendance-more-menu .choices__list--dropdown {
+    z-index: 1056;
+}
+
+/* Time Period date-range input */
+.attendance-page .attendance-daterange-wrap {
+    position: relative;
+    width: 215px;
+}
+
+.attendance-page .attendance-daterange-input {
+    width: 215px;
+    min-height: 40px;
+    padding: 0.5rem 0.875rem 0.5rem 2.25rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    color: #344054;
+    cursor: pointer;
+    background: #fff;
+}
+
+.attendance-page .attendance-daterange-input::placeholder {
+    color: #667085;
+}
+
+.attendance-page .attendance-daterange-input:focus {
+    border-color: #004a93;
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+    outline: 0;
+}
+
+.attendance-page .attendance-daterange-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #667085;
+    font-size: 1rem;
+    pointer-events: none;
+}
+
+/* Smaller screens: sticky header while scrolling the table body horizontally. */
+@media (max-width: 767.98px) {
+    #attendanceTableDiv thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    .attendance-page .attendance-daterange-wrap,
+    .attendance-page .attendance-daterange-input {
+        width: 100%;
+    }
+}
 </style>
 
 
@@ -218,7 +228,7 @@ hr {
     <x-breadcrum title="Attendance" />
 
     {{-- Active / Archived courses (same split as Course Master) --}}
-    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
         <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs attendance-status-tabs bg-white mb-0" role="group" aria-label="Filter courses by status">
             <li class="nav-item" role="presentation">
                 <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill active"
@@ -229,146 +239,168 @@ hr {
                     id="attFilterArchive" data-att-status="archive" aria-pressed="false">Archived</button>
             </li>
         </ul>
+        <button type="button" id="attendanceDownload" class="btn attendance-download-btn border-0">
+            <i class="bi bi-download" aria-hidden="true"></i>
+            <span>Download</span>
+        </button>
     </div>
 
     <div class="card attendance-main-card">
-        <div class="attendance-topbar px-4 py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
-            <h4 class="fw-bold page-title mb-0">Attendance</h4>
-            <span class="badge rounded-1 text-bg-primary-subtle text-primary-emphasis px-3 py-2 fw-semibold">Filter and manage records</span>
-        </div>
         <div class="card-body p-4">
 
-            <!-- Title -->
-            <!-- Filter Rows -->
-            <div class="attendance-filter-shell rounded-4 p-3 p-lg-4 mb-4">
-                <div class="row g-3 attendance-choices-bootstrap">
+            {{-- Filter toolbar (programme-dt design system) --}}
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar attendance-choices-bootstrap">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="programme-dt-filters-label">Filters</span>
 
-                <!-- Course -->
-                <div class="col-md-3">
-                    <label for="programme" class="form-label fw-semibold">Course Name</label>
-                    <select name="course_master_pk" id="programme" class="form-select shadow-sm js-attendance-choice" required>
-                        <option value="">Select Course</option>
-                        @foreach($courseMasters as $course)
-                        @php
-                            $courseFullName = trim((string) ($course['course_name'] ?? ''));
-                            $courseShortName = trim((string) ($course['couse_short_name'] ?? $course['course_short_name'] ?? ''));
-                            $courseLabel = $courseShortName !== '' ? $courseShortName : $courseFullName;
-                        @endphp
-                        <option value="{{ $course['pk'] }}"
-                            title="{{ $courseFullName !== '' ? $courseFullName : $courseLabel }}"
-                            {{ count($courseMasters) === 1 ? 'selected' : '' }}>
-                            {{ $courseLabel }}
-                        </option>
-                        @endforeach
-
-                    </select>
-                </div>
-
-                <!-- From Date -->
-                <div class="col-md-3">
-                    <label for="from_date" class="form-label fw-semibold">From Date</label>
-                    <input type="date" class="form-control shadow-sm" id="from_date" name="from_date"
-                        placeholder="From Date" value="{{ date('Y-m-d') }}">
-                </div>
-
-                <!-- To Date -->
-                <div class="col-md-3">
-                    <label for="to_date" class="form-label fw-semibold">To Date</label>
-                    <input type="date" class="form-control shadow-sm" id="to_date" name="to_date" placeholder="To Date" value="{{ date('Y-m-d') }}">
-                </div>
-
-                <!-- Attendance Type -->
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold">Attendance Type</label>
-                    <div class="d-flex flex-wrap gap-3">
-
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="attendance_type" id="full_day"
-                                value="full_day" checked>
-                            <label class="form-check-label" for="full_day">Full Day</label>
-                        </div>
-
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="attendance_type" id="manual"
-                                value="manual">
-                            <label class="form-check-label" for="manual">Manual</label>
-                        </div>
-
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="attendance_type" id="normal"
-                                value="normal">
-                            <label class="form-check-label" for="normal">Normal</label>
-                        </div>
-
+                    {{-- Course --}}
+                    <div class="programme-dt-filter-select">
+                        <select name="course_master_pk" id="programme" class="form-select js-attendance-choice" required>
+                            <option value="">Course Name</option>
+                            @foreach($courseMasters as $course)
+                            @php
+                                $courseFullName = trim((string) ($course['course_name'] ?? ''));
+                                $courseShortName = trim((string) ($course['couse_short_name'] ?? $course['course_short_name'] ?? ''));
+                                $courseLabel = $courseShortName !== '' ? $courseShortName : $courseFullName;
+                            @endphp
+                            <option value="{{ $course['pk'] }}"
+                                title="{{ $courseFullName !== '' ? $courseFullName : $courseLabel }}"
+                                {{ count($courseMasters) === 1 ? 'selected' : '' }}>
+                                {{ $courseLabel }}
+                            </option>
+                            @endforeach
+                        </select>
                     </div>
+
+                    {{-- Attendance Type --}}
+                    <div class="programme-dt-filter-select">
+                        <select id="attendance_type" class="form-select js-attendance-choice" aria-label="Attendance Type">
+                            <option value="" selected>All Types</option>
+                            <option value="full_day">Full Day</option>
+                            <option value="manual">Manual</option>
+                            <option value="normal">Normal</option>
+                        </select>
+                    </div>
+
+                    {{-- Time Period (date-range picker) --}}
+                    <div class="attendance-daterange-wrap">
+                        <i class="bi bi-calendar3 attendance-daterange-icon" aria-hidden="true"></i>
+                        <input type="text" id="time_period" class="form-control attendance-daterange-input"
+                            placeholder="Time Period" autocomplete="off" readonly aria-label="Filter by date range">
+                    </div>
+
+                    {{-- Normal Session (conditional) --}}
+                    <div class="programme-dt-filter-select" id="normal_session_container" style="display:none;">
+                        <select name="session" id="session" class="form-select js-attendance-choice" aria-label="Normal Session">
+                            <option value="">Select Session</option>
+                            @foreach($sessions as $session)
+                            <option value="{{ $session['pk'] }}">{{ $session['shift_name'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Manual Session (conditional) --}}
+                    <div class="programme-dt-filter-select" id="manual_session_container" style="display:none;">
+                        <select name="manual_session" id="manual_session" class="form-select js-attendance-choice" aria-label="Manual Session">
+                            <option value="">Select Session</option>
+                            @foreach($maunalSessions as $maunalSession)
+                            <option value="{{ $maunalSession['class_session'] }}">
+                                {{ $maunalSession['class_session'] }}
+                            </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- "+N Filters" popover (Topic / Venue / Faculty / Group). Options are
+                         loaded per selected course — see attendanceLoadFilterOptions().
+                         auto-close="outside" keeps it open while a Choices list is used. --}}
+                    <div class="dropdown" id="attendanceMoreFiltersWrap">
+                        <a href="javascript:void(0)" class="attendance-more-filters dropdown-toggle"
+                            id="attendanceMoreFilters" data-bs-toggle="dropdown"
+                            data-bs-auto-close="outside" aria-expanded="false">+4 Filters</a>
+                        <div class="dropdown-menu attendance-more-menu p-3 shadow-sm border rounded-3"
+                            aria-labelledby="attendanceMoreFilters">
+                            <div class="attendance-more-menu-header">Filters</div>
+                            <div class="attendance-filter-item">
+                                <span class="attendance-filter-label-text">Topic</span>
+                                <select id="filter_topic" class="form-select js-attendance-choice" aria-label="Filter by topic">
+                                    <option value="">All Topics</option>
+                                </select>
+                            </div>
+                            <div class="attendance-filter-item">
+                                <span class="attendance-filter-label-text">Venue</span>
+                                <select id="filter_venue" class="form-select js-attendance-choice" aria-label="Filter by venue">
+                                    <option value="">All Venues</option>
+                                </select>
+                            </div>
+                            <div class="attendance-filter-item">
+                                <span class="attendance-filter-label-text">Faculty</span>
+                                <select id="filter_faculty" class="form-select js-attendance-choice" aria-label="Filter by faculty">
+                                    <option value="">All Faculty</option>
+                                </select>
+                            </div>
+                            <div class="attendance-filter-item">
+                                <span class="attendance-filter-label-text">Group</span>
+                                <select id="filter_group" class="form-select js-attendance-choice" aria-label="Filter by group">
+                                    <option value="">All Groups</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn programme-dt-btn-reset" id="resetAttendance">
+                        Reset Filters
+                    </button>
                 </div>
 
-                <!-- Normal Session -->
-                <div class="col-md-3" id="normal_session_container" style="display:none;">
-                    <label for="session" class="form-label fw-semibold">Normal Session</label>
-                    <select name="session" id="session" class="form-select shadow-sm js-attendance-choice">
-                        <option value="">Select Session</option>
-                        @foreach($sessions as $session)
-                        <option value="{{ $session['pk'] }}">{{ $session['shift_name'] }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <!-- Manual Session -->
-                <div class="col-md-3" id="manual_session_container" style="display:none;">
-                    <label for="manual_session" class="form-label fw-semibold">Manual Session</label>
-                    <select name="manual_session" id="manual_session" class="form-select shadow-sm js-attendance-choice">
-                        <option value="">Select Session</option>
-                        @foreach($maunalSessions as $maunalSession)
-                        <option value="{{ $maunalSession['class_session'] }}">
-                            {{ $maunalSession['class_session'] }}
-                        </option>
-                        @endforeach
-                    </select>
-                </div>
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="btnAttendanceColumns"
+                        data-bs-toggle="modal" data-bs-target="#attendanceColumnVisibilityModal"
+                        title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div id="attendanceDtSearch" class="programme-dt-search" data-dt-search-for="attendanceTable"></div>
                 </div>
             </div>
 
-            <!-- Reset Button -->
-            <div class="text-end mb-3 mb-lg-4">
-                <button class="btn btn-outline-secondary px-4 py-2 shadow-sm d-inline-flex align-items-center rounded-pill"
-                    id="resetAttendance" type="button">
-                    <span class="material-symbols-rounded me-2 fs-6">refresh</span>
-                    Reset
-                </button>
-            </div>
+            {{-- Hidden date range driven by the Time Period filter (backend still reads from_date / to_date).
+                 Seeded server-side with today so the on-load auto-search has a range to send. --}}
+            <input type="hidden" id="from_date" name="from_date" value="{{ date('Y-m-d') }}">
+            <input type="hidden" id="to_date" name="to_date" value="{{ date('Y-m-d') }}">
 
             <div id="attendanceTableCard">
                 <div class="programme-dt-panel">
                 <div id="attendanceTableDiv" class="table-responsive">
-                    <table id="attendanceTable" class="table align-middle table-attendance w-100 mb-0">
-                        <thead class="table-light">
+                    <table id="attendanceTable" class="table table-hover align-middle mb-0 w-100 programme-dt-table">
+                        <thead>
                             <tr>
-                                <th class="col">#</th>
-                                <th class="col">Topic</th>
-                                <th class="col">Date</th>
-                                <th class="col">Session</th>
-                                <th class="col">Venue</th>
-                                <th class="col">Group</th>
-                                <th class="col">Course Name</th>
-                                <th class="col">Faculty</th>
-                                <th class="col">Action</th>
+                                <th>S. No.</th>
+                                <th>Topic</th>
+                                <th>Date</th>
+                                <th>Session</th>
+                                <th>Venue</th>
+                                <th>Group</th>
+                                <th>Course Name</th>
+                                <th>Faculty</th>
+                                <th>Status</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             @if(hasRole('Super Admin') || hasRole('Training Induction Admin'))
                             <tr id="defaultMessageRow">
-                                <td colspan="9" class="text-center py-5">
+                                <td colspan="10" class="text-center py-5">
                                     <div class="text-muted small">
                                         <p class="mb-1 fs-6 fw-semibold text-secondary">Apply filters to mark attendance.</p>
-                                        <p class="mb-0">Choose course, dates, and attendance type to load sessions.</p>
+                                        <p class="mb-0">Choose course, time period, and attendance type to load sessions.</p>
                                     </div>
                                 </td>
                             </tr>
                             @endif
                             @if(hasRole('Internal Faculty'))
                             <tr id="defaultMessageRow">
-                                <td colspan="9" class="text-center py-5">
+                                <td colspan="10" class="text-center py-5">
                                     <div class="text-muted small">
                                         <p class="mb-1 fs-6 fw-semibold text-secondary">Apply filters to view attendance.</p>
                                         <p class="mb-0">Select the required details to display attendance records.</p>
@@ -383,197 +415,359 @@ hr {
             </div>
         </div>
 
-            <div id="attendanceCustomTooltip" role="tooltip" aria-hidden="true"></div>
-        @endsection
+<div id="attendanceCustomTooltip" role="tooltip" aria-hidden="true"></div>
 
-        @section('scripts')
-        <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+{{-- Column Visibility Modal --}}
+<div class="modal fade" id="attendanceColumnVisibilityModal" tabindex="-1" aria-labelledby="attendanceColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="attendanceColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="attendanceColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
 
-        {{-- Active / Archived course tabs: swap the Course dropdown between the
-             running and the ended course sets. --}}
-        <script>
-        $(function () {
-            var activeCourses = @json($courseMasters ?? []);
-            var archivedCourses = @json($archivedCourseMasters ?? []);
-            var el = document.getElementById('programme');
-            var pills = document.querySelectorAll('.attendance-status-tabs [data-att-status]');
-            if (!el || !pills.length) return;
+@section('scripts')
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 
-            function courseLabel(c) {
-                var full = (c.course_name || '').toString().trim();
-                var short = (c.couse_short_name || c.course_short_name || '').toString().trim();
-                return short !== '' ? short : full;
+{{-- Active / Archived course tabs: swap the Course dropdown between the
+     running and the ended course sets. --}}
+<script>
+$(function () {
+    var activeCourses = @json($courseMasters ?? []);
+    var archivedCourses = @json($archivedCourseMasters ?? []);
+    var el = document.getElementById('programme');
+    var pills = document.querySelectorAll('.attendance-status-tabs [data-att-status]');
+    if (!el || !pills.length) return;
+
+    function courseLabel(c) {
+        var full = (c.course_name || '').toString().trim();
+        var short = (c.couse_short_name || c.course_short_name || '').toString().trim();
+        return short !== '' ? short : full;
+    }
+    function buildChoices(list) {
+        var out = [{ value: '', label: 'Course Name', selected: true }];
+        (list || []).forEach(function (c) {
+            out.push({ value: String(c.pk), label: courseLabel(c) });
+        });
+        return out;
+    }
+    function applyList(list) {
+        var inst = el._choicesInstance;
+        if (inst && typeof inst.setChoices === 'function') {
+            inst.clearStore();
+            inst.setChoices(buildChoices(list), 'value', 'label', true);
+            inst.setChoiceByValue('');
+        } else {
+            // Native <select> fallback (Choices not initialised).
+            el.innerHTML = buildChoices(list).map(function (c) {
+                return '<option value="' + c.value + '">' + c.label + '</option>';
+            }).join('');
+            el.value = '';
+        }
+        // Reset to placeholder — no course selected, so no search runs yet.
+        $(el).trigger('change');
+    }
+
+    pills.forEach(function (pill) {
+        pill.addEventListener('click', function () {
+            if (this.classList.contains('active')) return;
+            pills.forEach(function (p) {
+                p.classList.remove('active');
+                p.setAttribute('aria-pressed', 'false');
+                p.removeAttribute('aria-current');
+            });
+            this.classList.add('active');
+            this.setAttribute('aria-pressed', 'true');
+            this.setAttribute('aria-current', 'true');
+            applyList(this.dataset.attStatus === 'archive' ? archivedCourses : activeCourses);
+        });
+    });
+});
+</script>
+
+{{-- Choices init for all filter selects --}}
+<script>
+$(document).ready(function() {
+    if (typeof Choices !== 'undefined') {
+        var attendanceChoiceOpts = {
+            searchEnabled: true,
+            shouldSort: false,
+            itemSelectText: '',
+            allowHTML: false,
+            classNames: {
+                containerOuter: ['choices', 'w-100'],
+                containerInner: ['choices__inner', 'form-select'],
+                input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
+                inputCloned: ['choices__input--cloned'],
+                list: ['choices__list'],
+                listItems: ['choices__list--multiple'],
+                listSingle: ['choices__list--single'],
+                listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
+                item: ['choices__item', 'dropdown-item', 'rounded-0'],
+                itemSelectable: ['choices__item--selectable'],
+                itemDisabled: ['choices__item--disabled', 'disabled'],
+                itemChoice: ['choices__item--choice'],
+                description: ['choices__description', 'small', 'text-muted'],
+                placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
+                group: ['choices__group'],
+                groupHeading: ['choices__heading', 'dropdown-header', 'text-uppercase', 'small'],
+                button: ['choices__button'],
+                activeState: ['is-active'],
+                focusState: ['is-focused'],
+                openState: ['is-open'],
+                disabledState: ['is-disabled'],
+                highlightedState: ['is-highlighted', 'active'],
+                flippedState: ['is-flipped'],
+                loadingState: ['is-loading'],
+                invalidState: ['is-invalid'],
+                notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2'],
+                addChoice: ['choices__item--selectable', 'add-choice'],
+                noResults: ['has-no-results'],
+                noChoices: ['has-no-choices'],
             }
-            function buildChoices(list) {
-                var out = [{ value: '', label: 'Select Course', selected: true }];
-                (list || []).forEach(function (c) {
-                    out.push({ value: String(c.pk), label: courseLabel(c) });
-                });
-                return out;
+        };
+        document.querySelectorAll('.js-attendance-choice').forEach(function(el) {
+            if (el.dataset.choicesInitialized === 'true') {
+                return;
             }
-            function applyList(list) {
-                var inst = el._choicesInstance;
-                if (inst && typeof inst.setChoices === 'function') {
-                    inst.clearStore();
-                    inst.setChoices(buildChoices(list), 'value', 'label', true);
-                    inst.setChoiceByValue('');
+            // Short lists don't need a search box.
+            var opts = attendanceChoiceOpts;
+            if (el.id === 'attendance_type') {
+                opts = $.extend({}, attendanceChoiceOpts, { searchEnabled: false });
+            }
+            el._choicesInstance = new Choices(el, opts);
+            el.dataset.choicesInitialized = 'true';
+        });
+    }
+
+    // Auto-trigger search on page load if dates are set (Time Period defaults to Today)
+    let fromDate = $('#from_date').val();
+    let toDate = $('#to_date').val();
+    if (fromDate && toDate) {
+        setTimeout(function() {
+            performAttendanceSearch();
+        }, 100);
+    }
+});
+</script>
+
+{{-- Time Period date-range picker → hidden from_date / to_date, then re-run the search --}}
+<script>
+$(function () {
+    var $period = $('#time_period');
+    if (!$period.length || typeof $period.daterangepicker !== 'function') {
+        return;
+    }
+
+    function fmtDisplay(m) { return m.format('DD-MM-YYYY'); }
+
+    // Reflect the current hidden range in the input text (no search).
+    function paintInput(startM, endM) {
+        $period.val(fmtDisplay(startM) + ' – ' + fmtDisplay(endM));
+    }
+
+    // Default = today (preserves the page's auto-search-on-load behaviour).
+    var startToday = moment();
+    $('#from_date').val(startToday.format('YYYY-MM-DD'));
+    $('#to_date').val(startToday.format('YYYY-MM-DD'));
+    paintInput(startToday, startToday);
+
+    $period.daterangepicker({
+        autoUpdateInput: false,
+        opens: 'right',
+        startDate: startToday,
+        endDate: startToday,
+        locale: {
+            format: 'DD-MM-YYYY',
+            separator: ' – ',
+            cancelLabel: 'Clear',
+            applyLabel: 'Apply',
+        },
+    });
+
+    $period.on('apply.daterangepicker', function (ev, picker) {
+        paintInput(picker.startDate, picker.endDate);
+        $('#from_date').val(picker.startDate.format('YYYY-MM-DD'));
+        $('#to_date').val(picker.endDate.format('YYYY-MM-DD'));
+        if (typeof performAttendanceSearch === 'function') {
+            performAttendanceSearch();
+        }
+    });
+
+    // Clear → no date filter (all time), then re-run the search.
+    $period.on('cancel.daterangepicker', function () {
+        $period.val('');
+        $('#from_date').val('');
+        $('#to_date').val('');
+        if (typeof performAttendanceSearch === 'function') {
+            performAttendanceSearch();
+        }
+    });
+
+    // The Reset button (custom.js) reseeds from/to to today and runs its own
+    // single search — here we only sync the picker's display + selection.
+    $(document).on('attendance:reset-daterange', function () {
+        var t = moment();
+        paintInput(t, t);
+        $period.data('daterangepicker').setStartDate(t);
+        $period.data('daterangepicker').setEndDate(t);
+    });
+
+    // Download the currently-filtered list as CSV. Reuses the grid's own filter
+    // payload (custom.js) rather than rebuilding it — a second copy is exactly
+    // how the Attendance Type / Session filters silently stopped applying.
+    $('#attendanceDownload').on('click', function () {
+        if (typeof attendanceFilterParams !== 'function') {
+            return;
+        }
+        window.location.href = "{{ route('attendance.export_list') }}" + '?' + $.param(attendanceFilterParams());
+    });
+});
+</script>
+
+{{-- Column show / hide (rebuilt each time the server-side table is (re)created) --}}
+<script>
+$(function () {
+    var storageKey = 'attendanceGrid:hiddenColumns:v1';
+
+    function getHidden() {
+        try {
+            var raw = localStorage.getItem(storageKey);
+            var arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) { return []; }
+    }
+    function persist(arr) {
+        try { localStorage.setItem(storageKey, JSON.stringify(arr)); } catch (e) {}
+    }
+
+    function setupAttendanceColumns(dt) {
+        if (!dt) return;
+        var hidden = getHidden();
+
+        dt.columns().every(function () {
+            this.visible(hidden.indexOf(this.index()) === -1, false);
+        });
+        dt.columns.adjust();
+
+        var $grid = $('#attendanceColumnToggleGrid');
+        if (!$grid.length) return;
+        $grid.empty();
+
+        dt.columns().every(function () {
+            var idx = this.index();
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (!title) return;
+
+            var inputId = 'attcolvis_' + idx;
+            var $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
+            var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                .attr('for', inputId);
+            var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .prop('checked', hidden.indexOf(idx) === -1);
+
+            $cb.on('change', function () {
+                var h = getHidden();
+                var pos = h.indexOf(idx);
+                if (this.checked) {
+                    if (pos !== -1) h.splice(pos, 1);
                 } else {
-                    // Native <select> fallback (Choices not initialised).
-                    el.innerHTML = buildChoices(list).map(function (c) {
-                        return '<option value="' + c.value + '">' + c.label + '</option>';
-                    }).join('');
-                    el.value = '';
+                    if (pos === -1) h.push(idx);
                 }
-                // Reset to placeholder — no course selected, so no search runs yet.
-                $(el).trigger('change');
-            }
-
-            pills.forEach(function (pill) {
-                pill.addEventListener('click', function () {
-                    if (this.classList.contains('active')) return;
-                    pills.forEach(function (p) {
-                        p.classList.remove('active');
-                        p.setAttribute('aria-pressed', 'false');
-                        p.removeAttribute('aria-current');
-                    });
-                    this.classList.add('active');
-                    this.setAttribute('aria-pressed', 'true');
-                    this.setAttribute('aria-current', 'true');
-                    applyList(this.dataset.attStatus === 'archive' ? archivedCourses : activeCourses);
-                });
+                persist(h);
+                dt.column(idx).visible(this.checked, false);
+                dt.columns.adjust();
             });
+
+            $label.append($cb).append($('<span></span>').text(title));
+            $cell.append($label);
+            $grid.append($cell);
         });
-        </script>
-        <script>
-        $(document).ready(function() {
-            if (typeof Choices !== 'undefined') {
-                var attendanceChoiceOpts = {
-                    searchEnabled: true,
-                    shouldSort: false,
-                    itemSelectText: '',
-                    allowHTML: false,
-                    classNames: {
-                        containerOuter: ['choices', 'w-100'],
-                        containerInner: ['choices__inner', 'form-select', 'shadow-sm'],
-                        input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
-                        inputCloned: ['choices__input--cloned'],
-                        list: ['choices__list'],
-                        listItems: ['choices__list--multiple'],
-                        listSingle: ['choices__list--single'],
-                        listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
-                        item: ['choices__item', 'dropdown-item', 'rounded-0'],
-                        itemSelectable: ['choices__item--selectable'],
-                        itemDisabled: ['choices__item--disabled', 'disabled'],
-                        itemChoice: ['choices__item--choice'],
-                        description: ['choices__description', 'small', 'text-muted'],
-                        placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
-                        group: ['choices__group'],
-                        groupHeading: ['choices__heading', 'dropdown-header', 'text-uppercase', 'small'],
-                        button: ['choices__button'],
-                        activeState: ['is-active'],
-                        focusState: ['is-focused'],
-                        openState: ['is-open'],
-                        disabledState: ['is-disabled'],
-                        highlightedState: ['is-highlighted', 'active'],
-                        flippedState: ['is-flipped'],
-                        loadingState: ['is-loading'],
-                        invalidState: ['is-invalid'],
-                        notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2'],
-                        addChoice: ['choices__item--selectable', 'add-choice'],
-                        noResults: ['has-no-results'],
-                        noChoices: ['has-no-choices'],
-                    }
-                };
-                document.querySelectorAll('.js-attendance-choice').forEach(function(el) {
-                    if (el.dataset.choicesInitialized === 'true') {
-                        return;
-                    }
-                    el._choicesInstance = new Choices(el, attendanceChoiceOpts);
-                    el.dataset.choicesInitialized = 'true';
-                });
-            }
+    }
 
-            // Set today's date if not already set
-            let today = new Date().toISOString().split('T')[0];
-            if (!$('#from_date').val()) {
-                $('#from_date').val(today);
-            }
-            if (!$('#to_date').val()) {
-                $('#to_date').val(today);
-            }
-            
-            // Auto-trigger search on page load if dates are set
-            let fromDate = $('#from_date').val();
-            let toDate = $('#to_date').val();
-            if (fromDate && toDate) {
-                // Small delay to ensure all elements are initialized
-                setTimeout(function() {
-                    performAttendanceSearch();
-                }, 100);
-            }
+    $(document).on('init.dt', function (e, settings) {
+        if (settings.nTable && settings.nTable.id === 'attendanceTable') {
+            setupAttendanceColumns(new $.fn.dataTable.Api(settings));
+        }
+    });
+});
+</script>
+
+{{-- Course full-name tooltip --}}
+<script>
+(function () {
+    const tooltip = document.getElementById('attendanceCustomTooltip');
+    if (!tooltip) return;
+
+    let rafId = null;
+    let visible = false;
+
+    function placeTooltip(x, y) {
+        const offset = 14;
+        let left = x + offset;
+        let top = y + offset;
+
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+
+        const rect = tooltip.getBoundingClientRect();
+        if (rect.right > window.innerWidth - 8) {
+            left = x - rect.width - offset;
+            tooltip.style.left = left + 'px';
+        }
+        if (rect.bottom > window.innerHeight - 8) {
+            top = y - rect.height - offset;
+            tooltip.style.top = top + 'px';
+        }
+    }
+
+    $(document).on('mouseenter', '.attendance-course-cell', function (e) {
+        const content = this.getAttribute('data-tooltip');
+        if (!content) return;
+
+        tooltip.textContent = content;
+        tooltip.style.display = 'block';
+        tooltip.setAttribute('aria-hidden', 'false');
+        visible = true;
+        placeTooltip(e.clientX, e.clientY);
+    });
+
+    $(document).on('mousemove', '.attendance-course-cell', function (e) {
+        if (!visible) return;
+        if (rafId) return;
+
+        rafId = requestAnimationFrame(function () {
+            rafId = null;
+            placeTooltip(e.clientX, e.clientY);
         });
-        </script>
+    });
 
-        <script>
-        (function () {
-            const tooltip = document.getElementById('attendanceCustomTooltip');
-            if (!tooltip) return;
+    $(document).on('mouseleave', '.attendance-course-cell', function () {
+        tooltip.style.display = 'none';
+        tooltip.setAttribute('aria-hidden', 'true');
+        visible = false;
+    });
 
-            let rafId = null;
-            let visible = false;
-
-            function placeTooltip(x, y) {
-                const offset = 14;
-                let left = x + offset;
-                let top = y + offset;
-
-                tooltip.style.left = left + 'px';
-                tooltip.style.top = top + 'px';
-
-                const rect = tooltip.getBoundingClientRect();
-                if (rect.right > window.innerWidth - 8) {
-                    left = x - rect.width - offset;
-                    tooltip.style.left = left + 'px';
-                }
-                if (rect.bottom > window.innerHeight - 8) {
-                    top = y - rect.height - offset;
-                    tooltip.style.top = top + 'px';
-                }
-            }
-
-            $(document).on('mouseenter', '.attendance-course-cell', function (e) {
-                const content = this.getAttribute('data-tooltip');
-                if (!content) return;
-
-                tooltip.textContent = content;
-                tooltip.style.display = 'block';
-                tooltip.setAttribute('aria-hidden', 'false');
-                visible = true;
-                placeTooltip(e.clientX, e.clientY);
-            });
-
-            $(document).on('mousemove', '.attendance-course-cell', function (e) {
-                if (!visible) return;
-                if (rafId) return;
-
-                rafId = requestAnimationFrame(function () {
-                    rafId = null;
-                    placeTooltip(e.clientX, e.clientY);
-                });
-            });
-
-            $(document).on('mouseleave', '.attendance-course-cell', function () {
-                tooltip.style.display = 'none';
-                tooltip.setAttribute('aria-hidden', 'true');
-                visible = false;
-            });
-
-            $(window).on('scroll', function () {
-                if (!visible) return;
-                tooltip.style.display = 'none';
-                tooltip.setAttribute('aria-hidden', 'true');
-                visible = false;
-            });
-        })();
-        </script>
-        @endsection
+    $(window).on('scroll', function () {
+        if (!visible) return;
+        tooltip.style.display = 'none';
+        tooltip.setAttribute('aria-hidden', 'true');
+        visible = false;
+    });
+})();
+</script>
+@endsection

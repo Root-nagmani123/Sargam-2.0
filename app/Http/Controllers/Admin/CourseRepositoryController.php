@@ -33,8 +33,6 @@ class CourseRepositoryController extends Controller
             $parentRepository = null;
             $ancestors = [];
             $documents_count_array = [];
-            $perPage = (int) $request->input('per_page', 15);
-            $perPage = in_array($perPage, [10, 15, 25, 50, 100]) ? $perPage : 15;
 
             if ($parentPk) {
                 // Show children of specific parent
@@ -42,8 +40,7 @@ class CourseRepositoryController extends Controller
                 $repositories = $parentRepository->children()
                     ->with(['children', 'documents'])
                     ->orderBy('created_date', 'desc')
-                    ->paginate($perPage)
-                    ->withQueryString();
+                    ->get();
                    
             
                                 $documents_count_array = [];
@@ -75,8 +72,7 @@ class CourseRepositoryController extends Controller
                     })
                     ->with(['children', 'documents'])
                     ->orderBy('created_date', 'desc')
-                    ->paginate($perPage)
-                    ->withQueryString();
+                    ->get();
                     $documents_count_array = [];
 
                     foreach ($repositories as $child) {
@@ -97,7 +93,6 @@ class CourseRepositoryController extends Controller
                 'parentPk' => $parentPk,
                 'ancestors' => $ancestors,
                 'documents_count_array' => $documents_count_array,
-                'perPage' => $perPage,
             ]);
         } catch (Exception $e) {
             Log::error('Error in course repository index: ' . $e->getMessage());
@@ -161,6 +156,11 @@ class CourseRepositoryController extends Controller
                     return;
                 }
                 $keywordParts = array_map('trim', explode(',', (string) $detail->keyword));
+                // course_master_pk itself is sometimes a meaningless numeric id from the
+                // source system rather than a name — prefer the keyword's batch segment
+                // (index 0) when present, same as the other fields below, before falling
+                // back to that raw id.
+                $doc->fallback_course = $detail->course?->course_name ?: ($keywordParts[0] ?? null) ?: $detail->course_master_pk;
                 $doc->fallback_subject = $detail->subject?->subject_name ?: ($keywordParts[1] ?? null) ?: $detail->subject_pk;
                 $doc->fallback_topic = $detail->topic?->subject_topic ?: ($keywordParts[2] ?? null) ?: $detail->topic_pk;
                 $doc->fallback_author = $detail->author?->full_name ?: ($keywordParts[4] ?? null) ?: $detail->author_name;
@@ -180,8 +180,17 @@ class CourseRepositoryController extends Controller
                 'ancestors' => $ancestors,
                 'documents_count_array' => $documents_count_array,
                 // Data for dynamic dropdowns
-                'activeCourses' => CourseMaster::where('active_inactive', 1)->get(),
-                'archivedCourses' => CourseMaster::where('active_inactive', 0)->get(),
+                // Active = still running, i.e. enabled AND not yet ended — the same
+                // definition the rest of the app uses (CourseAttendanceNoticeMapController,
+                // MemoDisciplineController). Archived is deliberately "everything else"
+                // rather than active_inactive=0, so every course lands in exactly one
+                // bucket and none becomes unreachable.
+                //
+                // This used to split on active_inactive alone, which is an enabled/disabled
+                // flag, not a lifecycle one: nearly every course is enabled, so "Active"
+                // listed 141 of 143 courses — i.e. the filter appeared to do nothing.
+                'activeCourses' => CourseMaster::activeRunning()->orderBy('pk')->get(),
+                'archivedCourses' => CourseMaster::archived()->orderBy('pk')->get(),
                 'subjects' => SubjectMaster::where('active_inactive', 1)->get(),
                 'topics' => CourseRepositorySubtopic::all(),
                 'authors' => FacultyMaster::select('pk','full_name')->get(),
@@ -483,7 +492,7 @@ class CourseRepositoryController extends Controller
                 foreach ($files as $index => $file) {
                     if ($file && $file->isValid()) {
                         // Generate unique filename
-                        $fileName = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
+                        $fileName = $this->buildDocumentFileName($file);
                         
                         // Store file in hierarchical folder structure under admin root
                         $storageFolder = trim($folderPath, '/');
@@ -577,30 +586,71 @@ class CourseRepositoryController extends Controller
             $typeMap = ['CO' => 'Course', 'OT' => 'Other', 'IN' => 'Institutional'];
             $category = $detail ? ($typeMap[$detail->type] ?? 'Course') : 'Course';
 
+            // Legacy imported rows store subject/topic/author foreign keys from the
+            // source system rather than local master pks, so the relations above
+            // resolve to null. The keyword column was populated at import time as
+            // "batch,subject,topic,date,author" — fall back to it when the relation
+            // doesn't resolve, same as the documents list (show()/userShow()) already
+            // does. Without this the edit modal showed blank Subject/Topic/Author
+            // fields for those rows even though the list displayed them correctly.
+            $keywordParts = $detail ? array_map('trim', explode(',', (string) $detail->keyword)) : [];
+
+            $courseResolved = $detail ? (bool) $detail->course : false;
+
+            $subjectResolved = $detail ? (bool) $detail->subject : false;
+            $subjectName = $detail
+                ? (optional($detail->subject)->subject_name ?: ($keywordParts[1] ?? null))
+                : null;
+
+            $topicResolved = $detail ? (bool) $detail->topic : false;
+            $topicName = $detail
+                ? ((optional($detail->topic)->subject_topic ?? optional($detail->topic)->course_repo_topic)
+                    ?: ($keywordParts[2] ?? null))
+                : null;
+
+            $authorResolved = $detail ? (bool) $detail->author : false;
+            $authorLabel = $detail
+                ? (optional($detail->author)->full_name ?: ($keywordParts[4] ?? null))
+                : null;
+            // Value the <select> uses: prefer the real faculty pk, else fall back to the
+            // keyword-derived name itself so the front-end has something non-empty to
+            // inject as an option (the raw author_name column is null on these rows).
+            $authorValue = $detail ? ($detail->author_name ?: $authorLabel) : null;
+
+            $ministryResolved = $detail ? (bool) $detail->ministry : false;
+
             return response()->json([
                 'success' => true,
                 'data' => [
                     'pk' => $document->pk,
                     'file_title' => $document->file_title,
                     'upload_document' => $document->upload_document,
+                    // Inline URL (storage symlink, served inline — not the forced-download
+                    // route) so the edit modal can show an image thumbnail. Null when the
+                    // path is unresolved; the front-end falls back to a file-type icon.
+                    'file_url' => $document->public_file_url,
                     'category' => $category,
                     'detail' => $detail ? [
                         'course_master_pk' => $detail->course_master_pk,
                         'course_name' => optional($detail->course)->course_name,
+                        'course_resolved' => $courseResolved,
                         'subject_pk' => $detail->subject_pk,
-                        'subject_name' => optional($detail->subject)->subject_name,
+                        'subject_name' => $subjectName,
+                        'subject_resolved' => $subjectResolved,
                         'topic_pk' => $detail->topic_pk,
-                        'topic_name' => optional($detail->topic)->subject_topic
-                            ?? optional($detail->topic)->course_repo_topic,
+                        'topic_name' => $topicName,
+                        'topic_resolved' => $topicResolved,
                         'session_date' => $detail->session_date
                             ? $detail->session_date->format('Y-m-d')
                             : null,
-                        'author_name' => $detail->author_name,
-                        'author_label' => optional($detail->author)->full_name,
+                        'author_name' => $authorValue,
+                        'author_label' => $authorLabel,
+                        'author_resolved' => $authorResolved,
                         'sector_master_pk' => $detail->sector_master_pk,
                         'sector_name' => optional($detail->sector)->sector_name,
                         'ministry_master_pk' => $detail->ministry_master_pk,
                         'ministry_name' => optional($detail->ministry)->ministry_name,
+                        'ministry_resolved' => $ministryResolved,
                         'keyword' => $detail->keyword,
                         'videolink' => $detail->videolink,
                     ] : null,
@@ -651,7 +701,7 @@ class CourseRepositoryController extends Controller
                         ? trim($this->buildFolderPath($parent), '/')
                         : 'course_repository';
 
-                    $fileName = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
+                    $fileName = $this->buildDocumentFileName($file);
                     $filePath = $file->storeAs($storageFolder, $fileName, 'public');
 
                     // Remove the old physical file if we can resolve it
@@ -678,8 +728,15 @@ class CourseRepositoryController extends Controller
                 $detail->topic_pk = $validated['timetable_name'] ?? $detail->topic_pk;
                 $detail->session_date = $validated['session_date'] ?? $detail->session_date;
                 $detail->author_name = $validated['author_name'] ?? $detail->author_name;
-                $detail->sector_master_pk = $validated['sector_master'] ?? $detail->sector_master_pk;
-                $detail->ministry_master_pk = $validated['ministry_master'] ?? $detail->ministry_master_pk;
+                // Sector/Ministry are optional and clearable: when the field is submitted
+                // (even as null via ConvertEmptyStringsToNull) honour it so the value can be
+                // un-set; only fall back to the existing value when the key is absent entirely.
+                $detail->sector_master_pk = array_key_exists('sector_master', $validated)
+                    ? $validated['sector_master']
+                    : $detail->sector_master_pk;
+                $detail->ministry_master_pk = array_key_exists('ministry_master', $validated)
+                    ? $validated['ministry_master']
+                    : $detail->ministry_master_pk;
                 $detail->keyword = $validated['keywords'] ?? $detail->keyword;
                 $detail->videolink = $validated['video_link'] ?? $detail->videolink;
                 if ($category && isset($typeMap[$category])) {
@@ -741,6 +798,20 @@ class CourseRepositoryController extends Controller
             Log::error('Error downloading document: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Download failed: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Storage filename: original name kept up front (so it's recognizable in the
+     * documents list / file explorer), timestamp suffix only for uniqueness.
+     */
+    private function buildDocumentFileName($file): string
+    {
+        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $safeName = trim(preg_replace('/[^A-Za-z0-9_\-]+/', '_', $originalName), '_');
+        $safeName = $safeName !== '' ? $safeName : 'file';
+        $extension = $file->getClientOriginalExtension();
+
+        return $safeName . '_' . time() . ($extension ? '.' . $extension : '');
     }
 
     /**
@@ -1104,6 +1175,120 @@ class CourseRepositoryController extends Controller
     }
 
     /**
+     * Get every timetable session for a course on a given date (AJAX endpoint).
+     * Each row carries the subject, topic and faculty; the front-end fills those
+     * fields when a single row matches and offers dropdowns when several do.
+     * GET /course-repository/sessions-by-course-date?course_pk=X&session_date=Y-m-d
+     */
+    public function getSessionsByCourseDate(Request $request)
+    {
+        try {
+            $coursePk = $request->query('course_pk');
+            $sessionDate = $request->query('session_date');
+
+            if (!$coursePk || !$sessionDate) {
+                return response()->json(['success' => false, 'data' => []], 422);
+            }
+
+            // F-278-03: Validate date format before using in a DB query.
+            $parsedDate = \DateTime::createFromFormat('Y-m-d', (string) $sessionDate);
+            if (!$parsedDate || $parsedDate->format('Y-m-d') !== (string) $sessionDate) {
+                return response()->json(['success' => false, 'data' => []], 422);
+            }
+
+            // NOTE: timetable.faculty_master is NOT a plain fk — it stores a JSON
+            // array of faculty pks, e.g. ["84"] or ["110","22"] (a session can have
+            // several co-faculty). So it can't be joined directly; we parse it below
+            // and resolve names in one lookup.
+            $rows = Timetable::leftJoin('subject_master', 'timetable.subject_master_pk', '=', 'subject_master.pk')
+                ->where('timetable.course_master_pk', $coursePk)
+                ->whereBetween('timetable.START_DATE', [$sessionDate . ' 00:00:00', $sessionDate . ' 23:59:59'])
+                ->select(
+                    'timetable.pk',
+                    'timetable.subject_master_pk',
+                    'subject_master.subject_name',
+                    'timetable.subject_topic',
+                    'timetable.faculty_master'
+                )
+                ->get();
+
+            // Collect every referenced faculty pk across all rows, resolve their
+            // names in a single query, then attach an authors: [{pk, name}] list.
+            $rowFaculty = [];
+            $facultyIds = [];
+            foreach ($rows as $i => $row) {
+                $ids = $this->parseFacultyIds($row->faculty_master);
+                $rowFaculty[$i] = $ids;
+                foreach ($ids as $id) {
+                    $facultyIds[$id] = true;
+                }
+            }
+
+            $names = [];
+            if (!empty($facultyIds)) {
+                $names = FacultyMaster::whereIn('pk', array_keys($facultyIds))
+                    ->pluck('full_name', 'pk')
+                    ->toArray();
+            }
+
+            $data = [];
+            foreach ($rows as $i => $row) {
+                $authors = [];
+                foreach ($rowFaculty[$i] as $id) {
+                    $authors[] = [
+                        'pk' => $id,
+                        'name' => $names[$id] ?? ('Faculty #' . $id),
+                    ];
+                }
+                $data[] = [
+                    'pk' => $row->pk,
+                    'subject_master_pk' => $row->subject_master_pk,
+                    'subject_name' => $row->subject_name,
+                    'subject_topic' => $row->subject_topic,
+                    'authors' => $authors,
+                ];
+            }
+
+            return response()->json(['success' => true, 'data' => $data]);
+        } catch (Exception $e) {
+            Log::error('Error in getSessionsByCourseDate: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => 'Failed to load sessions'], 500);
+        }
+    }
+
+    /**
+     * Parse timetable.faculty_master into a list of faculty pks.
+     * The column holds a JSON array of pks (["84"], ["110","22"]); this also
+     * tolerates a bare "84" or a comma-separated "84,90" as a fallback.
+     */
+    private function parseFacultyIds($raw)
+    {
+        if ($raw === null || $raw === '') {
+            return [];
+        }
+
+        $ids = [];
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $v) {
+                $v = trim((string) $v);
+                if ($v !== '') {
+                    $ids[] = $v;
+                }
+            }
+        } else {
+            foreach (explode(',', (string) $raw) as $v) {
+                $v = trim($v, " \t\n\r\0\x0B[]\"'");
+                if ($v !== '') {
+                    $ids[] = $v;
+                }
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
      * Build folder hierarchy path from parent repository
      * Example: "course_repository/Central Course Repository of LBSNAA/Foundation Course/FC-89/Class Materials"
      */
@@ -1187,7 +1372,7 @@ class CourseRepositoryController extends Controller
                 $this->getUserFilterViewData($request),
                 [
                     'repositories' => $repositories,
-                    'documentCounts' => $this->bulkTotalDocumentCounts($repositories),
+                    'documentCounts' => $this->bulkOwnDocumentCounts($repositories),
                 ]
             ));
         } catch (Exception $e) {
@@ -1387,9 +1572,18 @@ class CourseRepositoryController extends Controller
             }
 
             $pdfRelativePath = $this->resolveDocumentRelativePath($pdfDocument);
+            // asset(), not Storage::disk('public')->url(): the disk's url is built from
+            // APP_URL, so it always pointed at http://localhost/storage/... no matter
+            // which host/port/subfolder the app was actually served from — the iframe
+            // then loaded nothing. asset() follows the current request's base, and is
+            // what CourseRepositoryDocument::public_file_url already uses.
+            // When the path resolves to nothing the file is not on the public disk at
+            // all, so public_file_url would only give the iframe a URL that 404s —
+            // i.e. a blank viewer with no explanation. Pass null instead and let the
+            // view show its "PDF document not available" state.
             $pdfViewUrl = $pdfRelativePath
-                ? Storage::disk('public')->url($pdfRelativePath)
-                : $pdfDocument->public_file_url;
+                ? asset('storage/' . $pdfRelativePath)
+                : null;
 
             return view('admin.course-repository.user.document-view', [
                 'document' => $document,
@@ -1452,12 +1646,12 @@ class CourseRepositoryController extends Controller
                 $documents_count_array[$child->pk] = $documents_count;
             }
           
-            // Apply filters if provided
-            $date      = $request->query('date');
-            $coursePk  = $request->query('course');
-            $subjectPk = $request->query('subject');
-            $week      = $request->query('week');
-            $facultyPk = $request->query('faculty');
+            // Apply filters if provided. Use the SAME filter set + application logic as
+            // the rest of the user views (getFilters + applyUserDetailFilters) so every
+            // control the filter card offers actually filters here — this inline block
+            // previously handled only course/subject/week/date/faculty and silently
+            // ignored sector, ministry and search.
+            $filters = $this->getFilters($request);
 
             // Query CourseRepositoryDocument so the view can access $doc->upload_document,
             // $doc->file_title, $doc->detail->course, $doc->public_file_url, etc.
@@ -1470,23 +1664,12 @@ class CourseRepositoryController extends Controller
                 })
                 ->with(['detail.course', 'detail.subject', 'detail.topic', 'detail.author']);
 
-            if ($date || $coursePk || $subjectPk || $week || $facultyPk) {
-                $documentsQuery->whereHas('detail', function ($detailQuery) use ($date, $coursePk, $subjectPk, $week, $facultyPk) {
-                    if ($coursePk) {
-                        $detailQuery->where('course_master_pk', $coursePk);
-                    }
-                    if ($subjectPk) {
-                        $detailQuery->where('subject_pk', $subjectPk);
-                    }
-                    if ($date) {
-                        $detailQuery->whereDate('session_date', $date);
-                    }
-                    if ($week) {
-                        $detailQuery->whereRaw('WEEK(session_date, 3) = ?', [$week]);
-                    }
-                    if ($facultyPk) {
-                        $detailQuery->where('author_name', $facultyPk);
-                    }
+            // Only constrain by detail when a filter is actually set — an unconditional
+            // whereHas('detail') would drop documents linked directly to the master
+            // (which have no detail row).
+            if ($this->hasActiveUserFilters($filters)) {
+                $documentsQuery->whereHas('detail', function ($detailQuery) use ($filters) {
+                    $this->applyUserDetailFilters($detailQuery, $filters);
                 });
             }
 
@@ -1510,6 +1693,10 @@ class CourseRepositoryController extends Controller
                 $detail = $doc->detail;
                 if ($detail) {
                     $keywordParts = array_map('trim', explode(',', (string) $detail->keyword));
+                    // course_master_pk itself is sometimes a meaningless numeric id from
+                    // the source system rather than a name — prefer the keyword's batch
+                    // segment (index 0) when present, same as the fields below.
+                    $doc->fallback_course = $detail->course?->course_name ?: ($keywordParts[0] ?? null);
                     $doc->fallback_subject = $detail->subject?->subject_name ?: ($keywordParts[1] ?? null);
                     $doc->fallback_topic = $detail->topic?->subject_topic ?: ($keywordParts[2] ?? null);
                     $doc->fallback_author = $detail->author?->full_name ?: ($keywordParts[4] ?? null);
@@ -1531,7 +1718,7 @@ class CourseRepositoryController extends Controller
                     'documents' => $documents,
                     'ancestors' => $ancestors,
                     'documents_count_array' => $documents_count_array,
-                    'documentCounts' => $this->bulkTotalDocumentCounts($repository->children),
+                    'documentCounts' => $this->bulkOwnDocumentCounts($repository->children),
                 ]
             ));
         } catch (Exception $e) {
@@ -1549,52 +1736,59 @@ class CourseRepositoryController extends Controller
      * per-node queries that CourseRepositoryMaster::getTotalDocumentCount() runs,
      * which is too slow when called once per row across a large repository tree.
      */
-    private function bulkTotalDocumentCounts($repositories): array
+    /**
+     * Own (direct) document count per repository — the documents attached to the
+     * node itself, either directly (course_repository_master_pk) or via a detail
+     * whose course_repository_master_pk is the node. This is the SAME set the inner
+     * "Documents (N)" page lists (CourseRepositoryMaster::getDocumentCount()), NOT a
+     * recursive subtree total.
+     *
+     * The card/list used to show the recursive total, so a category's "N Attachments"
+     * counted every document in its sub-categories too — even though the card already
+     * shows a separate "N Sub-categories" and those documents are reached by opening
+     * the sub-category. Opening the category then revealed only its own documents, so
+     * the two numbers disagreed. Counting own documents here makes the card match what
+     * the inner page shows.
+     *
+     * Deduped: a document attached BOTH directly and via a detail of the same node is
+     * counted once (a plain direct + via-detail sum double-counts it).
+     *
+     * @param  iterable  $repositories
+     * @return array<int,int>  keyed by repository pk
+     */
+    private function bulkOwnDocumentCounts($repositories): array
     {
-        $nodes = CourseRepositoryMaster::where('del_folder_status', 1)
-            ->select('pk', 'parent_type')
-            ->get();
-
-        $childrenMap = [];
-        foreach ($nodes as $node) {
-            if ($node->parent_type) {
-                $childrenMap[$node->parent_type][] = $node->pk;
-            }
+        $pks = collect($repositories)->pluck('pk')->filter()->values();
+        if ($pks->isEmpty()) {
+            return [];
         }
 
         $directCounts = CourseRepositoryDocument::where('del_type', 1)
-            ->whereNotNull('course_repository_master_pk')
-            ->selectRaw('course_repository_master_pk, count(*) as cnt')
+            ->whereIn('course_repository_master_pk', $pks)
+            ->selectRaw('course_repository_master_pk as pk, count(*) as cnt')
             ->groupBy('course_repository_master_pk')
-            ->pluck('cnt', 'course_repository_master_pk');
+            ->pluck('cnt', 'pk');
 
+        // Via-detail documents, EXCLUDING any already counted as direct on the same
+        // node, so a document attached both ways isn't counted twice.
         $viaDetailCounts = CourseRepositoryDocument::query()
-            ->join('course_repository_details', 'course_repository_details.pk', '=', 'course_repository_documents.course_repository_details_pk')
+            ->join('course_repository_details as dt', 'dt.pk', '=', 'course_repository_documents.course_repository_details_pk')
             ->where('course_repository_documents.del_type', 1)
-            ->selectRaw('course_repository_details.course_repository_master_pk as master_pk, count(*) as cnt')
-            ->groupBy('course_repository_details.course_repository_master_pk')
-            ->pluck('cnt', 'master_pk');
+            ->whereIn('dt.course_repository_master_pk', $pks)
+            ->where(function ($q) {
+                $q->whereNull('course_repository_documents.course_repository_master_pk')
+                    ->orWhereColumn('course_repository_documents.course_repository_master_pk', '!=', 'dt.course_repository_master_pk');
+            })
+            ->selectRaw('dt.course_repository_master_pk as pk, count(*) as cnt')
+            ->groupBy('dt.course_repository_master_pk')
+            ->pluck('cnt', 'pk');
 
-        $ownCounts = [];
-        foreach ($nodes as $node) {
-            $ownCounts[$node->pk] = ($directCounts[$node->pk] ?? 0) + ($viaDetailCounts[$node->pk] ?? 0);
+        $out = [];
+        foreach ($pks as $pk) {
+            $out[$pk] = (int) ($directCounts[$pk] ?? 0) + (int) ($viaDetailCounts[$pk] ?? 0);
         }
 
-        $totals = [];
-        foreach ($repositories as $repository) {
-            $total = 0;
-            $queue = [$repository->pk];
-            while ($queue) {
-                $pk = array_shift($queue);
-                $total += $ownCounts[$pk] ?? 0;
-                foreach ($childrenMap[$pk] ?? [] as $childPk) {
-                    $queue[] = $childPk;
-                }
-            }
-            $totals[$repository->pk] = $total;
-        }
-
-        return $totals;
+        return $out;
     }
 
     private function getFilters(Request $request)
@@ -1665,6 +1859,10 @@ class CourseRepositoryController extends Controller
         }
         if (!empty($filters['date'])) {
             $detailQuery->whereDate('session_date', $filters['date']);
+        }
+        if (!empty($filters['week'])) {
+            // ISO week (mode 3) so it matches the "Week N" the picker offers.
+            $detailQuery->whereRaw('WEEK(session_date, 3) = ?', [$filters['week']]);
         }
         if (!empty($filters['faculty'])) {
             $detailQuery->where('author_name', $filters['faculty']);

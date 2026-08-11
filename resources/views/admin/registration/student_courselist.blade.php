@@ -313,7 +313,7 @@
             </div>
             <div class="ds-card-body">
                 <div class="table-responsive">
-                    <table class="table align-middle text-nowrap mb-0" id="studentsTable" style="width: 100%;">
+                    <table class="table align-middle text-nowrap mb-0 dt-legacy-layout" id="studentsTable" data-sargam-dt-ui="false" style="width: 100%;">
                         <thead>
                             <tr>
                                 <th>S.No</th>
@@ -551,6 +551,11 @@
                     autoWidth: false,
                     lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
                     pageLength: 10,
+                    // Per-page selector on top (with search beside it); record info
+                    // bottom-left and pagination bottom-RIGHT.
+                    dom: "<'row mb-2 g-2 align-items-center'<'col-sm-12 col-md-6 d-flex align-items-center gap-2'l><'col-sm-12 col-md-6'f>>" +
+                        "<'row'<'col-sm-12'tr>>" +
+                        "<'row mt-2 align-items-center'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7 d-flex justify-content-end'p>>",
                     language: {
                         processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading…</span></div>',
                         emptyTable: 'No records available for the selected course.',

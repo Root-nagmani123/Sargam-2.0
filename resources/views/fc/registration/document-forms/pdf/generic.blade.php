@@ -13,22 +13,23 @@
 <head>
 <meta charset="utf-8">
 <style>
-    body { font-family: 'DejaVu Sans', sans-serif; font-size: 11px; color: #000; }
-    .form-header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
-    .form-title { font-size: 15px; font-weight: bold; }
-    .form-subtitle { font-size: 10px; color: #444; margin-top: 3px; }
-    .hindi-title { font-size: 13px; font-weight: bold; margin-top: 6px; }
-    .section-header { background-color: #f0f0f0; border: 1px solid #999; padding: 5px 8px; margin: 14px 0 8px; font-weight: bold; font-size: 12px; }
+    @page { margin: 11mm 18mm 11mm 18mm; }
+    body { font-family: 'DejaVu Sans', sans-serif; font-size: 11pt; color: #000; line-height: 1.35; }
+    .form-header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 7pt; margin-bottom: 11pt; }
+    .form-title { font-size: 15pt; font-weight: bold; }
+    .form-subtitle { font-size: 10pt; color: #444; margin-top: 3pt; }
+    .hindi-title { font-size: 13pt; font-weight: bold; margin-top: 6pt; }
+    .section-header { background-color: #f0f0f0; border: 1px solid #999; padding: 5pt 8pt; margin: 10pt 0 6pt; font-weight: bold; font-size: 12pt; }
     table.kv { width: 100%; border-collapse: collapse; }
-    table.kv td { padding: 4px 4px; font-size: 11px; vertical-align: top; }
+    table.kv td { padding: 3pt 4pt; font-size: 11pt; vertical-align: top; }
     table.kv td.lbl { font-weight: bold; width: 32%; }
     table.kv td.val { border-bottom: 1px solid #ccc; }
-    table.grid { width: 100%; border-collapse: collapse; margin-top: 6px; }
-    table.grid th, table.grid td { border: 1px solid #999; padding: 5px; font-size: 10px; vertical-align: top; }
+    table.grid { width: 100%; border-collapse: collapse; margin-top: 6pt; }
+    table.grid th, table.grid td { border: 1px solid #999; padding: 5pt; font-size: 10pt; vertical-align: top; }
     table.grid th { background-color: #e8e8e8; text-align: center; }
-    .declaration { border: 1px solid #999; padding: 8px; margin: 16px 0; background-color: #fafafa; font-size: 10px; line-height: 1.5; }
-    .sign-table { width: 100%; margin-top: 35px; }
-    .sign-table td { text-align: center; font-size: 10px; padding-top: 6px; border-top: 1px solid #333; }
+    .declaration { border: 1px solid #999; padding: 7pt; margin: 10pt 0; background-color: #fafafa; font-size: 10pt; line-height: 1.5; }
+    .sign-table { width: 100%; margin-top: 9pt; }
+    .sign-table td { text-align: center; font-size: 10pt; padding-top: 6pt; border-top: 1px solid #333; }
 </style>
 </head>
 <body>
@@ -39,13 +40,13 @@
     </div>
 
     @if(! empty($template['intro']))
-        <div style="font-size:10px; margin-bottom:10px; line-height:1.5;">{!! $template['intro'] !!}</div>
+        <div style="font-size:10pt; margin-bottom:10pt; line-height:1.5;">{!! $template['intro'] !!}</div>
     @endif
 
     {{-- Header sections as label/value rows --}}
     @foreach($template['sections'] ?? [] as $section)
         <div class="section-header">{!! $section['heading'] !!}</div>
-        @if(! empty($section['intro']))<div style="font-size:9px; color:#444; margin:4px 0; line-height:1.5;">{!! $section['intro'] !!}</div>@endif
+        @if(! empty($section['intro']))<div style="font-size:9pt; color:#444; margin:4pt 0; line-height:1.5;">{!! $section['intro'] !!}</div>@endif
         <table class="kv">
             @foreach($section['fields'] as $f)
                 <tr>
@@ -59,7 +60,7 @@
     {{-- Repeatable tables --}}
     @foreach($template['tables'] ?? [] as $tbl)
         <div class="section-header">{!! $tbl['heading'] !!}</div>
-        @if(! empty($tbl['intro']))<div style="font-size:9px; color:#444; margin:4px 0; line-height:1.5;">{!! $tbl['intro'] !!}</div>@endif
+        @if(! empty($tbl['intro']))<div style="font-size:9pt; color:#444; margin:4pt 0; line-height:1.5;">{!! $tbl['intro'] !!}</div>@endif
         @php $rows = $data['_tables'][$tbl['key']] ?? []; @endphp
         <table class="grid">
             <thead>
@@ -105,13 +106,13 @@
         <table class="sign-table">
             <tr>
                 @foreach($template['signatures'] as $i => $sig)
-                    <td style="width:{{ floor(100 / count($template['signatures'])) }}%; vertical-align:bottom; border-top:none; padding:0 6px;">
-                        <div style="height:48px; text-align:center;">
+                    <td style="width:{{ floor(100 / count($template['signatures'])) }}%; vertical-align:bottom; border-top:none; padding:0 6pt;">
+                        <div style="height:48pt; text-align:center;">
                             @if(! empty($data['_signature_src'][$i]))
-                                <img src="{{ $data['_signature_src'][$i] }}" style="max-height:46px; max-width:90%;">
+                                <img src="{{ $data['_signature_src'][$i] }}" style="max-height:46pt; max-width:90%;">
                             @endif
                         </div>
-                        <div style="border-top:1px solid #333; padding-top:4px; text-align:center; font-size:10px;">{!! $sig !!}</div>
+                        <div style="border-top:1px solid #333; padding-top:4pt; text-align:center; font-size:10pt;">{!! $sig !!}</div>
                     </td>
                 @endforeach
             </tr>
@@ -120,9 +121,9 @@
 
     {{-- Footnotes / instructions --}}
     @if(! empty($template['notes']))
-        <div style="font-size:9px; color:#333; margin-top:16px; line-height:1.5;">
+        <div style="font-size:9pt; color:#333; margin-top:16pt; line-height:1.5;">
             <strong>Notes:</strong>
-            <ol style="margin:4px 0 0; padding-left:16px;">@foreach($template['notes'] as $n)<li>{!! $n !!}</li>@endforeach</ol>
+            <ol style="margin:4pt 0 0; padding-left:16pt;">@foreach($template['notes'] as $n)<li>{!! $n !!}</li>@endforeach</ol>
         </div>
     @endif
 </body>
