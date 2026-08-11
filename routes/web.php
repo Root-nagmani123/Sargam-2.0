@@ -580,12 +580,10 @@ Route::middleware(['auth'])->group(function () {
 
     // City route
 
-    // section route
-    Route::prefix('section')->name('section.')->group(function () {
-        Route::get('/', function () {
-            return view('admin.section.index');
-        })->name('index');
-    });
+    // The `section.index` route was removed: its closure rendered
+    // view('admin.section.index'), which has never existed, so GET /section
+    // returned a hard 500. Nothing referenced it — no Blade, no controller, and
+    // no row in the `menus` table that drives the RBAC sidebar.
 
     // Group Mapping Routes
     Route::prefix('group-mapping')->name('group.mapping.')->controller(GroupMappingController::class)->group(function () {
