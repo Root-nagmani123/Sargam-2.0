@@ -21,21 +21,7 @@
                                 <th scope="col">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @foreach($incoming_courses as $course)
-                            <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td>{{ $course->course_name }}</td>
-                                <td>{{ $course->couse_short_name ?? '—' }}</td>
-                                <td>{{ $course->start_year ? \Carbon\Carbon::parse($course->start_year)->format('d M Y') : '—' }}</td>
-                                <td>{{ $course->end_date ? \Carbon\Carbon::parse($course->end_date)->format('d M Y') : '—' }}</td>
-                                <td>
-                                    <a href="{{ route('programme.show', encrypt($course->pk)) }}"
-                                        class="btn btn-sm btn-primary" target="_blank">View Details</a>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
             </div>
@@ -52,11 +38,28 @@ $(document).ready(function () {
         return;
     }
 
+    // Server-side: search, sort and paging are resolved in SQL.
     $table.DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{{ route('admin.dashboard.incoming_course') }}",
+            type: 'GET'
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'course_name', name: 'course_name' },
+            { data: 'couse_short_name', name: 'couse_short_name' },
+            { data: 'start_year', name: 'start_year', searchable: false },
+            { data: 'end_date', name: 'end_date', searchable: false },
+            { data: 'action', name: 'action', orderable: false, searchable: false }
+        ],
         responsive: false,
         autoWidth: false,
         order: [[3, 'asc']],
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
         language: {
+            processing: 'Loading data…',
             emptyTable: 'No upcoming courses found.'
         }
     });

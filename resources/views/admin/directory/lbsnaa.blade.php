@@ -53,32 +53,7 @@
                             <th>Photo</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @foreach($employees as $index => $employee)
-                            @php
-                                $name = trim(($employee->first_name ?? '') . ' ' . ($employee->middle_name ?? '') . ' ' . ($employee->last_name ?? ''));
-                                $email = $employee->officalemail ?: $employee->email;
-                            @endphp
-                            <tr>
-                                <td>{{ $index + 1 }}</td>
-                                <td>{{ $name ?: '-' }}</td>
-                                <td>{{ $employee->designation_name ?: '-' }}</td>
-                                <td>{{ $employee->department_name ?: '-' }}</td>
-                                <td>{{ $employee->current_address ?: '-' }}</td>
-                                <td>{{ $employee->office_extension_no ?: '-' }}</td>
-                                <td>{{ $employee->mobile ?: '-' }}</td>
-                                <td>{{ $employee->residence_no ?: '-' }}</td>
-                                <td>{{ $email ?: '-' }}</td>
-                                <td>
-                                    @if(!empty($employee->profile_picture))
-                                        <img src="{{ asset('storage/' . $employee->profile_picture) }}" alt="photo" class="directory-photo" loading="lazy" decoding="async">
-                                    @else
-                                        <img src="{{ asset('images/dummypic.jpeg') }}" alt="photo" class="directory-photo" loading="lazy" decoding="async">
-                                    @endif
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
@@ -418,14 +393,35 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
+    // Server-side: search, sort and paging are resolved in SQL.
     var table = $('#lbsnaaDirectoryTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{{ route('admin.directory.lbsnaa') }}",
+            type: 'GET'
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'name', name: 'name' },
+            { data: 'designation_name', name: 'd.designation_name' },
+            { data: 'department_name', name: 'dept.department_name' },
+            { data: 'current_address', name: 'employee_master.current_address' },
+            { data: 'office_extension_no', name: 'employee_master.office_extension_no' },
+            { data: 'mobile', name: 'employee_master.mobile' },
+            { data: 'residence_no', name: 'employee_master.residence_no' },
+            { data: 'email_address', name: 'email_address' },
+            { data: 'photo', name: 'photo', orderable: false, searchable: false }
+        ],
         responsive: false,
         scrollX: true,
         scrollCollapse: true,
         pageLength: 10,
-        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
         order: [[1, 'asc']], // Sort by Name
         language: {
+            processing: "Loading data…",
+            emptyTable: "No records found.",
             search: "Search:",
             lengthMenu: "Show _MENU_ entries",
             info: "Showing _START_ to _END_ of _TOTAL_ entries",
@@ -438,19 +434,7 @@ $(document).ready(function() {
                 previous: "Previous"
             }
         },
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip',
-        columnDefs: [
-            {
-                targets: 0, // S.No. column
-                orderable: true,
-                searchable: false
-            },
-            {
-                targets: 9, // Photo column
-                orderable: false,
-                searchable: false
-            }
-        ]
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip'
     });
 
     // Quick search functionality

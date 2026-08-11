@@ -3472,11 +3472,63 @@ function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
      * Full-page version of the notice list (replaces the in-page modal). Opened
      * directly from the "Notice" action on the Send Direct Notice table.
      */
-    public function noticeListPage($group_pk, $course_pk, $timetable_pk)
+    public function noticeListPage(Request $request, $group_pk, $course_pk, $timetable_pk)
     {
         $data = $this->resolveNoticeListData($group_pk, $course_pk, $timetable_pk);
 
+        // Grid is server-side: rows (and the "select all" id list) are served per request.
+        if ($request->ajax()) {
+            return $this->noticeListDatatable($data);
+        }
+
         return view('admin.courseAttendanceNoticeMap.notice_list', $data);
+    }
+
+    /**
+     * Server-side rows for the Notice List grid. Search, sort and paging run over the
+     * resolved student list; the markup mirrors what the Blade table rendered.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    protected function noticeListDatatable(array $data)
+    {
+        $students = collect($data['students'] ?? []);
+        $courseGroup = $data['courseGroup'] ?? null;
+        $sessionRange = trim((string) optional(optional($courseGroup)->timetable)->class_session);
+        $sessionRange = $sessionRange !== '' ? $sessionRange : '—';
+
+        // Attendance status → coloured suffix appended to the OT name.
+        $statusMeta = [
+            1 => ['label' => 'Present', 'class' => 'nl-status--present'],
+            2 => ['label' => 'Late', 'class' => 'nl-status--late'],
+            3 => ['label' => 'Absent', 'class' => 'nl-status--absent'],
+        ];
+
+        return \Yajra\DataTables\Facades\DataTables::of($students)
+            ->addIndexColumn()
+            ->addColumn('select', function ($row) {
+                return '<input type="checkbox" class="form-check-input notice-row-check" name="selected_student_list[]"'
+                    .' value="'.e($row->Student_master_pk).'" aria-label="Select OT">'
+                    .'<input type="hidden" class="notice-row-att" name="attendance_pk_'.e($row->Student_master_pk).'" value="'.e($row->pk).'">';
+            })
+            ->addColumn('ot_name', function ($row) use ($statusMeta) {
+                $html = e($row->display_name ?? 'N/A');
+                $st = $statusMeta[$row->status] ?? null;
+                if ($st) {
+                    $html .= ' <span class="nl-status '.$st['class'].'">('.$st['label'].')</span>';
+                }
+
+                return $html;
+            })
+            ->addColumn('ot_code', fn ($row) => e($row->generated_OT_code ?? 'N/A'))
+            ->addColumn('attendance', fn () => e($sessionRange))
+            ->addColumn('action', function ($row) {
+                return '<a href="#" class="nl-row-notice js-row-notice" data-student="'.e($row->Student_master_pk).'"'
+                    .' data-attendance="'.e($row->pk).'" title="Send Notice">'
+                    .'<i class="material-icons material-icons-rounded">send</i><span>Notice</span></a>';
+            })
+            ->rawColumns(['select', 'ot_name', 'action'])
+            ->make(true);
     }
 
     /**

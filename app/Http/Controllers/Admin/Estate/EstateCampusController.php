@@ -5,13 +5,35 @@ namespace App\Http\Controllers\Admin\Estate;
 use App\Http\Controllers\Controller;
 use App\Models\EstateCampus;
 use Illuminate\Http\Request;
+use Yajra\DataTables\Facades\DataTables;
 
 class EstateCampusController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $items = EstateCampus::orderBy('campus_name')->get();
-        return view('admin.estate.define_campus.index', compact('items'));
+        if ($request->ajax()) {
+            return $this->datatable();
+        }
+
+        return view('admin.estate.define_campus.index');
+    }
+
+    /**
+     * Server-side feed for the listing grid (search/sort/paginate happen in SQL).
+     */
+    protected function datatable()
+    {
+        $query = EstateCampus::query()->select(['pk', 'campus_name', 'description']);
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->editColumn('description', fn ($row) => $row->description ?: '--')
+            ->addColumn('action', function ($row) {
+                return '<a href="'.route('admin.estate.define-campus.edit', $row->pk).'" class="text-primary" title="Edit">'
+                    .'<i class="material-icons material-symbols-rounded">edit</i></a>';
+            })
+            ->rawColumns(['action'])
+            ->make(true);
     }
 
     public function create()

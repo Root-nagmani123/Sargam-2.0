@@ -49,11 +49,7 @@
                             <th>Last Meter Reading</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr id="initialInfoRow">
-                            <td colspan="7" class="text-center text-muted">Select Bill Month and click Show to load pending meter readings.</td>
-                        </tr>
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
@@ -64,156 +60,122 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    var dataTableInstance = null;
     var tableSelector = '#pendingMeterReadingTable';
+    var dataUrl = '{{ route("admin.estate.reports.pending-meter-reading.data") }}';
+    var colLabels = ['S.No.', 'Employee Type', 'Name', 'Designation', 'House No.', 'Meter Reading Date', 'Last Meter Reading'];
 
-    function destroyDataTable() {
-        if ($.fn.DataTable.isDataTable(tableSelector)) {
-            $(tableSelector).DataTable().destroy();
-        }
-        dataTableInstance = null;
-        $(tableSelector + ' tbody').empty();
+    function escapeHtml(str) {
+        if (str == null || str === '') return '';
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
     }
 
+    // Filters are sent with every server-side request (the Show button just reloads the table).
+    function currentFilters() {
+        var billMonth = $('#bill_month').val() || '';
+        var parts = billMonth.split('-');
+
+        return {
+            bill_month: billMonth,
+            bill_year: parts.length >= 1 ? parts[0] : '',
+            employee_type: $('#employee_type_filter').val() || 'all'
+        };
+    }
+
+    var dataTableInstance = $(tableSelector).DataTable({
+        processing: true,
+        serverSide: true,
+        deferLoading: 0, // wait for the user to press Show before hitting the server
+        ajax: {
+            url: dataUrl,
+            type: 'GET',
+            data: function(d) {
+                return $.extend({}, d, currentFilters());
+            }
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'employee_type', name: 'employee_type', defaultContent: 'N/A' },
+            { data: 'name', name: 'name', defaultContent: 'N/A' },
+            { data: 'designation', name: 'designation', defaultContent: 'N/A' },
+            { data: 'house_no', name: 'house_no', defaultContent: 'N/A' },
+            { data: 'meter_reading_date', name: 'meter_reading_date', defaultContent: '-' },
+            { data: 'last_meter_reading', name: 'last_meter_reading', defaultContent: 'N/A' }
+        ],
+        order: [],
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+        searching: true,
+        language: {
+            processing: 'Loading data…',
+            emptyTable: 'Select Bill Month and click Show to load pending meter readings.',
+            zeroRecords: 'No pending meter readings for the selected month.',
+            search: 'Search:',
+            lengthMenu: 'Show _MENU_ entries',
+            info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+            infoEmpty: 'Showing 0 to 0 of 0 entries',
+            infoFiltered: '(filtered from _MAX_ total entries)',
+            paginate: {
+                first: 'First',
+                last: 'Last',
+                next: 'Next',
+                previous: 'Previous'
+            }
+        },
+        responsive: true,
+        autoWidth: false,
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        initComplete: function() {
+            // Toolbar: right-align filter, add Show/Hide columns + Print
+            var $wrapper = $(tableSelector).closest('.dataTables_wrapper');
+            var $filter = $wrapper.find('.dataTables_filter');
+            $filter.addClass('d-flex align-items-center justify-content-end flex-wrap gap-2');
+
+            var $colDropdown = $('<div class="dropdown d-inline-block" data-bs-auto-close="outside">' +
+                '<button class="btn btn-outline-secondary btn-sm rounded-1 dropdown-toggle" type="button" id="pendingMeterColDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Show/Hide columns"><i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle">view_column</i> Columns</button>' +
+                '<ul class="dropdown-menu dropdown-menu-end py-2" aria-labelledby="pendingMeterColDropdown" id="pendingMeterColMenu"></ul></div>');
+            var $colMenu = $colDropdown.find('#pendingMeterColMenu');
+            colLabels.forEach(function(label, idx) {
+                var $li = $('<li>' +
+                    '<div class="dropdown-item px-3 py-1">' +
+                        '<div class="form-check d-flex align-items-center mb-0">' +
+                            '<input type="checkbox" class="form-check-input me-2 column-toggle" data-column="' + idx + '" checked>' +
+                            '<label class="form-check-label cursor-pointer">' + label + '</label>' +
+                        '</div>' +
+                    '</div>' +
+                '</li>');
+                $li.find('input.column-toggle').on('change', function(e) {
+                    e.stopPropagation();
+                    dataTableInstance.column($(this).data('column')).visible(this.checked);
+                });
+                $li.find('label.form-check-label').on('click', function(e) {
+                    e.preventDefault();
+                    var $checkbox = $(this).closest('.form-check').find('input.column-toggle');
+                    $checkbox.prop('checked', !$checkbox.prop('checked')).trigger('change');
+                });
+                $colMenu.append($li);
+            });
+            $colDropdown.find('.dropdown-item').on('click', function(e) { e.stopPropagation(); });
+
+            var $printBtn = $('<button type="button" class="btn btn-outline-secondary btn-sm rounded-1 d-inline-flex align-items-center" id="btnPrintPendingMeter" title="Print"><i class="material-icons material-symbols-rounded" style="font-size:18px">print</i></button>');
+            $filter.append($colDropdown).append($printBtn);
+        },
+        drawCallback: function(settings) {
+            // Surface server messages (e.g. "No meter reading entries found for selected month/year.")
+            var message = settings.json && settings.json.message;
+            if (message && settings.json.recordsTotal === 0) {
+                $(tableSelector + ' tbody .dataTables_empty').text(message);
+            }
+        }
+    });
+
     function loadPendingMeterReading() {
-        var billMonth = $('#bill_month').val();
-        if (!billMonth) {
+        if (!$('#bill_month').val()) {
             alert('Please select Bill Month.');
             return;
         }
-
-        var parts = billMonth.split('-');
-        var billYear = parts.length >= 1 ? parts[0] : '';
-        var employeeType = $('#employee_type_filter').val() || 'all';
-        destroyDataTable();
-        $(tableSelector + ' tbody').html('<tr><td colspan="7" class="text-center">Loading...</td></tr>');
-
-        $.ajax({
-            url: '{{ route("admin.estate.reports.pending-meter-reading.data") }}',
-            type: 'GET',
-            data: { bill_month: billMonth, bill_year: billYear, employee_type: employeeType },
-            dataType: 'json',
-            success: function(res) {
-                var tbody = $(tableSelector + ' tbody');
-                tbody.empty();
-
-                if (res.status && res.data && res.data.length > 0) {
-                    $.each(res.data, function(i, row) {
-                        tbody.append(
-                            '<tr>' +
-                                '<td>' + (row.sno || (i + 1)) + '</td>' +
-                                '<td>' + (row.employee_type || 'N/A') + '</td>' +
-                                '<td>' + (row.name || 'N/A') + '</td>' +
-                                '<td>' + (row.designation || 'N/A') + '</td>' +
-                                '<td>' + (row.house_no || 'N/A') + '</td>' +
-                                '<td>' + (row.meter_reading_date || '-') + '</td>' +
-                                '<td>' + (row.last_meter_reading || 'N/A') + '</td>' +
-                            '</tr>'
-                        );
-                    });
-
-                    dataTableInstance = $(tableSelector).DataTable({
-                        order: [[0, 'asc']],
-                        pageLength: 10,
-                        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-                        searching: true,
-                        language: {
-                            search: 'Search:',
-                            lengthMenu: 'Show _MENU_ entries',
-                            info: 'Showing _START_ to _END_ of _TOTAL_ entries',
-                            infoEmpty: 'Showing 0 to 0 of 0 entries',
-                            infoFiltered: '(filtered from _MAX_ total entries)',
-                            paginate: {
-                                first: 'First',
-                                last: 'Last',
-                                next: 'Next',
-                                previous: 'Previous'
-                            }
-                        },
-                        responsive: true,
-                        autoWidth: false,
-                        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
-                    });
-
-                    // Toolbar: right-align filter, add Show/Hide columns + Print
-                    var $wrapper = $(tableSelector).closest('.dataTables_wrapper');
-                    var $filter = $wrapper.find('.dataTables_filter');
-                    $filter.addClass('d-flex align-items-center justify-content-end flex-wrap gap-2');
-
-                    var colLabels = ['S.No.', 'Employee Type', 'Name', 'Designation', 'House No.', 'Meter Reading Date', 'Last Meter Reading'];
-                    var $colDropdown = $('<div class="dropdown d-inline-block" data-bs-auto-close="outside">' +
-                        '<button class="btn btn-outline-secondary btn-sm rounded-1 dropdown-toggle" type="button" id="pendingMeterColDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Show/Hide columns"><i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle">view_column</i> Columns</button>' +
-                        '<ul class="dropdown-menu dropdown-menu-end py-2" aria-labelledby="pendingMeterColDropdown" id="pendingMeterColMenu"></ul></div>');
-                    var $colMenu = $colDropdown.find('#pendingMeterColMenu');
-                    colLabels.forEach(function(label, idx) {
-                        var $li = $('<li>' +
-                            '<div class="dropdown-item px-3 py-1">' +
-                                '<div class="form-check d-flex align-items-center mb-0">' +
-                                    '<input type="checkbox" class="form-check-input me-2 column-toggle" data-column="' + idx + '" checked>' +
-                                    '<label class="form-check-label cursor-pointer">' + label + '</label>' +
-                                '</div>' +
-                            '</div>' +
-                        '</li>');
-                        $li.find('input.column-toggle').on('change', function(e) {
-                            e.stopPropagation();
-                            dataTableInstance.column($(this).data('column')).visible(this.checked);
-                        });
-                        $li.find('label.form-check-label').on('click', function(e) {
-                            e.preventDefault();
-                            var $checkbox = $(this).closest('.form-check').find('input.column-toggle');
-                            $checkbox.prop('checked', !$checkbox.prop('checked')).trigger('change');
-                        });
-                        $colMenu.append($li);
-                    });
-                    $colDropdown.find('.dropdown-item').on('click', function(e) { e.stopPropagation(); });
-
-                    var $printBtn = $('<button type="button" class="btn btn-outline-secondary btn-sm rounded-1 d-inline-flex align-items-center" id="btnPrintPendingMeter" title="Print"><i class="material-icons material-symbols-rounded" style="font-size:18px">print</i></button>');
-                    $filter.append($colDropdown).append($printBtn);
-
-                    $('#btnPrintPendingMeter').on('click', function() {
-                        var dt = $(tableSelector).DataTable();
-                        var visibleIndexes = [];
-                        dt.columns().every(function(i) {
-                            if (this.visible()) visibleIndexes.push(i);
-                        });
-                        if (visibleIndexes.length === 0) {
-                            alert('At least one column must be visible to print.');
-                            return;
-                        }
-                        var tableHtml = '<table class="table align-middle mb-0" style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr>';
-                        visibleIndexes.forEach(function(colIdx) {
-                            var h = ($(dt.column(colIdx).header()).text() || '').trim();
-                            tableHtml += '<th style="border:1px solid #ddd;padding:8px;background:#f5f5f5;">' + h + '</th>';
-                        });
-                        tableHtml += '</tr></thead><tbody>';
-                        dt.rows({ search: 'applied' }).nodes().each(function(rowNode) {
-                            var $row = $(rowNode);
-                            if ($row.find('td').length === 0) return;
-                            tableHtml += '<tr>';
-                            visibleIndexes.forEach(function(colIdx) {
-                                var cellNode = dt.cell(rowNode, colIdx).node();
-                                var cellHtml = (cellNode && cellNode.innerHTML) ? $(cellNode).text().trim() : '';
-                                tableHtml += '<td style="border:1px solid #ddd;padding:8px;">' + (cellHtml || '') + '</td>';
-                            });
-                            tableHtml += '</tr>';
-                        });
-                        tableHtml += '</tbody></table>';
-                        var win = window.open('', '_blank', 'width=1000,height=700');
-                        if (!win) { alert('Please allow popups to print.'); return; }
-                        win.document.write('<!doctype html><html><head><title>Pending Meter Reading</title><style>body{font-family:Arial,sans-serif;padding:16px;} table{width:100%;border-collapse:collapse;font-size:12px;} th,td{border:1px solid #ddd;padding:8px;} th{background:#f5f5f5;}</style></head><body><h2>Pending Meter Reading</h2>' + tableHtml + '</body></html>');
-                        win.document.close();
-                        win.onafterprint = function() { win.close(); };
-                        setTimeout(function() { win.focus(); win.print(); }, 250);
-                    });
-                } else {
-                    tbody.append('<tr id="noDataRow"><td colspan="7" class="text-center text-muted">' + (res.message || 'No pending meter readings for the selected month.') + '</td></tr>');
-                }
-            },
-            error: function(xhr) {
-                var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to load data.';
-                $(tableSelector + ' tbody').empty().append('<tr><td colspan="7" class="text-center text-danger">' + msg + '</td></tr>');
-            }
-        });
+        dataTableInstance.ajax.reload();
     }
 
     $('#showPendingBtn').on('click', function() {
@@ -225,6 +187,59 @@ $(document).ready(function() {
             e.preventDefault();
             loadPendingMeterReading();
         }
+    });
+
+    // Print: pull every row for the current filters/search instead of just the visible page.
+    $(document).on('click', '#btnPrintPendingMeter', function() {
+        var $btn = $(this);
+        var visibleIndexes = [];
+        dataTableInstance.columns().every(function(i) {
+            if (this.visible()) visibleIndexes.push(i);
+        });
+        if (visibleIndexes.length === 0) {
+            alert('At least one column must be visible to print.');
+            return;
+        }
+
+        var keys = ['DT_RowIndex', 'employee_type', 'name', 'designation', 'house_no', 'meter_reading_date', 'last_meter_reading'];
+        var params = $.extend({}, dataTableInstance.ajax.params(), { start: 0, length: -1 });
+        $btn.prop('disabled', true);
+
+        $.ajax({
+            url: dataUrl,
+            type: 'GET',
+            data: params,
+            dataType: 'json',
+            success: function(res) {
+                var rows = (res && res.data) || [];
+                var tableHtml = '<table class="table align-middle mb-0" style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr>';
+                visibleIndexes.forEach(function(colIdx) {
+                    tableHtml += '<th style="border:1px solid #ddd;padding:8px;background:#f5f5f5;">' + escapeHtml(colLabels[colIdx]) + '</th>';
+                });
+                tableHtml += '</tr></thead><tbody>';
+                rows.forEach(function(row) {
+                    tableHtml += '<tr>';
+                    visibleIndexes.forEach(function(colIdx) {
+                        tableHtml += '<td style="border:1px solid #ddd;padding:8px;">' + escapeHtml(row[keys[colIdx]]) + '</td>';
+                    });
+                    tableHtml += '</tr>';
+                });
+                tableHtml += '</tbody></table>';
+
+                var win = window.open('', '_blank', 'width=1000,height=700');
+                if (!win) { alert('Please allow popups to print.'); return; }
+                win.document.write('<!doctype html><html><head><title>Pending Meter Reading</title><style>body{font-family:Arial,sans-serif;padding:16px;} table{width:100%;border-collapse:collapse;font-size:12px;} th,td{border:1px solid #ddd;padding:8px;} th{background:#f5f5f5;}</style></head><body><h2>Pending Meter Reading</h2>' + tableHtml + '</body></html>');
+                win.document.close();
+                win.onafterprint = function() { win.close(); };
+                setTimeout(function() { win.focus(); win.print(); }, 250);
+            },
+            error: function() {
+                alert('Failed to load data for printing.');
+            },
+            complete: function() {
+                $btn.prop('disabled', false);
+            }
+        });
     });
 });
 </script>

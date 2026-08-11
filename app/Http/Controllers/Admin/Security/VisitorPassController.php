@@ -13,13 +13,117 @@ use Illuminate\Support\Facades\DB;
 
 class VisitorPassController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $visitorPasses = SecVisitorCardGenerated::with(['employee', 'visitorNames', 'createdBy'])
-            ->orderBy('created_date', 'desc')
-            ->get();
+        // Grid is server-side (components.mess-master-datatables): rows are fetched per page.
+        if ($request->ajax() && $request->has('draw')) {
+            return $this->visitorPassDatatable($request);
+        }
 
-        return view('admin.security.visitor_pass.index', compact('visitorPasses'));
+        return view('admin.security.visitor_pass.index');
+    }
+
+    /**
+     * Server-side rows for the visitor pass grid: search, sort and paging run in SQL.
+     * Each row is a positional array of cell HTML, matching the grid's column order.
+     */
+    protected function visitorPassDatatable(Request $request)
+    {
+        $base = SecVisitorCardGenerated::with(['employee', 'visitorNames', 'createdBy']);
+
+        $draw = (int) $request->input('draw', 0);
+        $start = max((int) $request->input('start', 0), 0);
+        $length = (int) $request->input('length', 10);
+        if ($length < 1 || $length > 100) {
+            $length = 10;
+        }
+
+        $recordsTotal = (clone $base)->count();
+
+        $search = trim((string) $request->input('search.value', ''));
+        if ($search !== '') {
+            $like = '%'.$search.'%';
+            $base->where(function ($q) use ($like) {
+                $q->where('pass_number', 'like', $like)
+                    ->orWhere('company', 'like', $like)
+                    ->orWhere('purpose', 'like', $like)
+                    ->orWhereHas('visitorNames', fn ($v) => $v->where('visitor_name', 'like', $like))
+                    ->orWhereHas('employee', function ($e) use ($like) {
+                        $e->where('first_name', 'like', $like)->orWhere('last_name', 'like', $like);
+                    });
+            });
+        }
+
+        $recordsFiltered = (clone $base)->count();
+
+        $orderColumn = (int) $request->input('order.0.column', 0);
+        $orderDir = strtolower((string) $request->input('order.0.dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $sortable = [
+            0 => 'pass_number',
+            2 => 'company',
+            3 => 'purpose',
+            5 => 'in_time',
+            6 => 'out_time',
+        ];
+
+        $paged = clone $base;
+        if (isset($sortable[$orderColumn])) {
+            $paged->orderBy($sortable[$orderColumn], $orderDir);
+        } else {
+            $paged->orderBy('created_date', 'desc');
+        }
+
+        if ($length !== -1) {
+            $paged->skip($start)->take($length);
+        }
+
+        $data = $paged->get()->map(function (SecVisitorCardGenerated $pass) {
+            $names = $pass->visitorNames;
+            if ($names->count() > 0) {
+                $visitorCell = $names->take(2)->pluck('visitor_name')->map(fn ($n) => e($n))->implode(', ');
+                if ($names->count() > 2) {
+                    $visitorCell .= ' <small class="text-muted">(+'.($names->count() - 2).' more)</small>';
+                }
+            } else {
+                $visitorCell = '--';
+            }
+
+            $actions = '<div class="d-flex gap-2">'
+                .'<a href="'.route('admin.security.visitor_pass.show', encrypt($pass->pk)).'" class="text-info" title="View">'
+                .'<i class="material-icons material-symbols-rounded" style="font-size:22px;">visibility</i></a>';
+
+            if (! $pass->out_time) {
+                $actions .= '<form action="'.route('admin.security.visitor_pass.checkout', encrypt($pass->pk)).'" method="POST" onsubmit="return confirm(\'Mark visitor as checked out?\')">'
+                    .csrf_field()
+                    .'<button type="submit" class="btn btn-link p-0 text-warning" title="Check Out">'
+                    .'<i class="material-icons material-symbols-rounded" style="font-size:22px;">logout</i></button></form>'
+                    .'<a href="'.route('admin.security.visitor_pass.edit', encrypt($pass->pk)).'" class="text-success" title="Edit">'
+                    .'<i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i></a>';
+            }
+
+            $actions .= '<form action="'.route('admin.security.visitor_pass.delete', encrypt($pass->pk)).'" method="POST" onsubmit="return confirm(\'Delete this visitor pass?\')">'
+                .csrf_field().method_field('DELETE')
+                .'<button type="submit" class="btn btn-link p-0 text-danger" title="Delete">'
+                .'<i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i></button></form></div>';
+
+            return [
+                e($pass->pass_number),
+                $visitorCell,
+                e($pass->company ?? '--'),
+                e(\Str::limit($pass->purpose, 30)),
+                e($pass->employee ? $pass->employee->first_name.' '.$pass->employee->last_name : '--'),
+                $pass->in_time ? e($pass->in_time->format('d-m-Y H:i')) : '--',
+                $pass->out_time ? e($pass->out_time->format('d-m-Y H:i')) : '<span class="badge bg-success">Active</span>',
+                $actions,
+            ];
+        })->all();
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+        ]);
     }
 
     public function create()

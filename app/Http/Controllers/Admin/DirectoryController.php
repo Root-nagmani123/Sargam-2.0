@@ -12,9 +12,22 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DirectoryController extends Controller
 {
+    /**
+     * Page-level search box value. Returns '' for DataTables ajax calls, where
+     * `search` arrives as an array and is applied by the datatable engine instead.
+     */
+    private function filterSearchTerm(Request $request): string
+    {
+        $search = $request->input('search', '');
+
+        return is_array($search) ? '' : trim((string) $search);
+    }
+
     public function lbsnaa(Request $request)
     {
-        $search = trim((string) $request->input('search', ''));
+        // DataTables sends `search` as an array (search[value]); that is handled by the
+        // datatable engine, so only the page's own text filter is read here.
+        $search = $this->filterSearchTerm($request);
         $sort = (string) $request->input('sort', 'name_asc');
         $perPage = (int) $request->input('per_page', 10);
         if (!in_array($perPage, [25, 50, 100], true)) {
@@ -70,9 +83,55 @@ class DirectoryController extends Controller
             return $this->streamEmployeesExport($employeesQuery->cursor(), $export);
         }
 
-        $employees = $employeesQuery->get();
+        if ($request->ajax()) {
+            return $this->lbsnaaDatatable($employeesQuery);
+        }
 
-        return view('admin.directory.lbsnaa', compact('employees'));
+        return view('admin.directory.lbsnaa');
+    }
+
+    /**
+     * Server-side feed for the LBSNAA directory grid (search/sort/paging happen in SQL).
+     */
+    protected function lbsnaaDatatable($query)
+    {
+        return \Yajra\DataTables\Facades\DataTables::of($query)
+            ->addIndexColumn()
+            ->addColumn('name', function ($row) {
+                $name = trim(($row->first_name ?? '').' '.($row->middle_name ?? '').' '.($row->last_name ?? ''));
+
+                return e($name ?: '-');
+            })
+            ->addColumn('email_address', fn ($row) => e(($row->officalemail ?: $row->email) ?: '-'))
+            ->editColumn('designation_name', fn ($row) => e($row->designation_name ?: '-'))
+            ->editColumn('department_name', fn ($row) => e($row->department_name ?: '-'))
+            ->editColumn('current_address', fn ($row) => e($row->current_address ?: '-'))
+            ->editColumn('office_extension_no', fn ($row) => e($row->office_extension_no ?: '-'))
+            ->editColumn('mobile', fn ($row) => e($row->mobile ?: '-'))
+            ->editColumn('residence_no', fn ($row) => e($row->residence_no ?: '-'))
+            ->addColumn('photo', function ($row) {
+                $src = ! empty($row->profile_picture)
+                    ? asset('storage/'.$row->profile_picture)
+                    : asset('images/dummypic.jpeg');
+
+                return '<img src="'.e($src).'" alt="photo" class="directory-photo" loading="lazy" decoding="async">';
+            })
+            ->filterColumn('name', function ($query, $keyword) {
+                $query->where(function ($q) use ($keyword) {
+                    $q->where('employee_master.first_name', 'like', "%{$keyword}%")
+                        ->orWhere('employee_master.middle_name', 'like', "%{$keyword}%")
+                        ->orWhere('employee_master.last_name', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('email_address', function ($query, $keyword) {
+                $query->where(function ($q) use ($keyword) {
+                    $q->where('employee_master.email', 'like', "%{$keyword}%")
+                        ->orWhere('employee_master.officalemail', 'like', "%{$keyword}%");
+                });
+            })
+            ->orderColumn('name', 'employee_master.first_name $1')
+            ->rawColumns(['photo'])
+            ->make(true);
     }
 
     public function ot(Request $request)
@@ -85,7 +144,9 @@ class DirectoryController extends Controller
             ->get(['pk', 'course_name', 'couse_short_name']);
 
         $selectedCourseId = (int) $request->input('course_id', 0);
-        $search = trim((string) $request->input('search', ''));
+        // DataTables sends `search` as an array (search[value]); that is handled by the
+        // datatable engine, so only the page's own text filter is read here.
+        $search = $this->filterSearchTerm($request);
         $sort = (string) $request->input('sort', 'name_asc');
         $perPage = (int) $request->input('per_page', 10);
         if (!in_array($perPage, [25, 50, 100], true)) {
@@ -139,12 +200,39 @@ class DirectoryController extends Controller
                 return $this->streamOtExport($studentsQuery->cursor(), $export);
             }
 
-            $students = $studentsQuery
-                ->paginate($perPage)
-                ->withQueryString();
+            if ($request->ajax()) {
+                return $this->otDatatable($studentsQuery);
+            }
+        } elseif ($request->ajax()) {
+            return \Yajra\DataTables\Facades\DataTables::of(collect([]))->make(true);
         }
 
-        return view('admin.directory.ot', compact('students', 'activeCourses', 'selectedCourseId', 'search', 'sort', 'perPage'));
+        return view('admin.directory.ot', compact('activeCourses', 'selectedCourseId', 'search', 'sort', 'perPage'));
+    }
+
+    /**
+     * Server-side feed for the OT directory grid (search/sort/paging happen in SQL).
+     */
+    protected function otDatatable($query)
+    {
+        return \Yajra\DataTables\Facades\DataTables::of($query)
+            ->addIndexColumn()
+            ->editColumn('display_name', fn ($row) => e($row->display_name ?: '-'))
+            ->editColumn('generated_OT_code', fn ($row) => e($row->generated_OT_code ?: '-'))
+            ->editColumn('email', fn ($row) => e($row->email ?: '-'))
+            ->editColumn('course_name', fn ($row) => e($row->course_name ?: '-'))
+            ->editColumn('cadre_name', fn ($row) => e($row->cadre_name ?: '-'))
+            ->addColumn('room_no', fn () => '-')
+            ->addColumn('room_extension_no', fn () => '-')
+            ->addColumn('photo', function ($row) {
+                $src = ! empty($row->photo_path)
+                    ? asset('storage/'.$row->photo_path)
+                    : asset('images/dummypic.jpeg');
+
+                return '<img src="'.e($src).'" alt="photo" class="directory-photo" loading="lazy" decoding="async">';
+            })
+            ->rawColumns(['photo'])
+            ->make(true);
     }
 
     private function streamEmployeesExport(iterable $rows, string $export): StreamedResponse

@@ -124,6 +124,16 @@
             const enableOrdering = parseBool($table.attr('data-ordering'), true);
             const enableInfo = parseBool($table.attr('data-info'), true);
             const order = parseOrder($table.attr('data-order'), [[0, 'asc']]);
+            // Opt-in server-side processing: data-server-side="true" + data-ajax-url + data-columns='[{"data":"name"},...]'
+            const serverSide = parseBool($table.attr('data-server-side'), false);
+            const ajaxUrl = $table.attr('data-ajax-url') || '';
+            let serverColumns = null;
+            try {
+              const rawColumns = $table.attr('data-columns');
+              if (rawColumns) serverColumns = JSON.parse(rawColumns);
+            } catch (e) {
+              console.warn('Invalid data-columns JSON on', this, e);
+            }
             const rawLengthStyle = ($table.attr('data-length-style') || 'pill').toLowerCase();
             const allowedLengthStyles = ['pill', 'underline', 'minimal', 'boxed'];
             const lengthStyle = allowedLengthStyles.includes(rawLengthStyle) ? rawLengthStyle : 'pill';
@@ -181,6 +191,15 @@
               ];
             } else {
               tableOptions.sargamDtUi = true;
+            }
+
+            if (serverSide && ajaxUrl && Array.isArray(serverColumns) && serverColumns.length) {
+              tableOptions.processing = true;
+              tableOptions.serverSide = true;
+              tableOptions.ajax = { url: ajaxUrl, type: 'GET' };
+              tableOptions.columns = serverColumns;
+              // Client-side "All" is not meaningful for a server-side grid.
+              tableOptions.lengthMenu = [[10, 25, 50, 100], [10, 25, 50, 100]];
             }
 
             $table.DataTable(tableOptions);

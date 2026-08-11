@@ -2154,7 +2154,90 @@ class EstateController extends Controller
      * Request For House - List of house requests (Bootstrap 5 layout).
      * Self-service (HAC Person / Staff etc.): only their own change requests. Estate/Admin: full list.
      */
-    public function requestForHouse()
+    public function requestForHouse(Request $request)
+    {
+        if ($request->ajax()) {
+            return $this->requestForHouseDatatable();
+        }
+
+        return view('admin.estate.request_for_house');
+    }
+
+    /**
+     * Server-side feed for {@see requestForHouse()} — same query/scoping, search+sort+paging done in SQL.
+     */
+    protected function requestForHouseDatatable()
+    {
+        $query = $this->requestForHouseQuery();
+
+        // Row formatting is identical for every column, so map once per row and reuse.
+        $mapped = [];
+        $map = function ($row) use (&$mapped) {
+            $key = (string) $row->pk;
+            if (! array_key_exists($key, $mapped)) {
+                $mapped[$key] = $this->mapRequestForHouseRow($row);
+            }
+
+            return $mapped[$key];
+        };
+
+        return \Yajra\DataTables\Facades\DataTables::of($query)
+            ->addIndexColumn()
+            ->addColumn('request_id', fn ($row) => e($map($row)->request_id))
+            ->addColumn('request_date', fn ($row) => e($map($row)->request_date))
+            ->addColumn('name', fn ($row) => e($map($row)->name).' ('.e($map($row)->emp_id).')')
+            ->addColumn('doj_academy', fn ($row) => e($map($row)->doj_academy))
+            ->addColumn('status', fn ($row) => e($map($row)->status))
+            ->addColumn('alloted_house', fn ($row) => e($map($row)->alloted_house))
+            ->addColumn('eligibility_type', fn ($row) => e($map($row)->eligibility_type))
+            ->addColumn('possession_from', fn ($row) => e($map($row)->possession_from))
+            ->addColumn('possession_to', fn ($row) => e($map($row)->possession_to))
+            ->addColumn('action', fn ($row) => $this->requestForHouseActionHtml($map($row)))
+            ->rawColumns(['action'])
+            ->make(true);
+    }
+
+    /**
+     * Action cell for the Request For House grid — mirrors the previous Blade markup
+     * (authority sees Approve/Disapprove, requester sees Change / status text).
+     */
+    private function requestForHouseActionHtml($row): string
+    {
+        $isAuthority = isEstateAuthority();
+        $changeStatus = (int) ($row->change_status ?? 0); // 0=pending, 1=approved, 2=disapproved
+
+        if ($isAuthority) {
+            if ($changeStatus === 0) {
+                return '<button type="button" class="btn btn-sm btn-success btn-approve-change-request me-1" data-id="'.e($row->pk).'">Approve</button>'
+                    .'<button type="button" class="btn btn-sm btn-danger btn-disapprove-change-request" data-id="'.e($row->pk).'" data-request-id="'.e($row->request_id).'">Disapprove</button>';
+            }
+            if ($changeStatus === 1) {
+                return '<span class="badge bg-success">Approved</span>';
+            }
+            if ($changeStatus === 2) {
+                return '<span class="badge bg-danger">Disapproved</span>';
+            }
+
+            return '';
+        }
+
+        if ($changeStatus === 0) {
+            return '<button type="button" class="btn btn-sm btn-outline-primary btn-change-request" data-request-id="'.e($row->pk).'">Change</button>';
+        }
+        if ($changeStatus === 1) {
+            return '<span class="text-success small d-block mt-1">(Your request has been approved)</span>';
+        }
+        if ($changeStatus === 2) {
+            return '<span class="text-danger small d-block mt-1">(Your request has been disapproved)</span>';
+        }
+
+        return '';
+    }
+
+    /**
+     * Base query for the Request For House list (self-service users see only their own requests).
+     */
+    protected function requestForHouseQuery()
     {
         $latestPossessionSub = DB::table('estate_possession_details as ep')
             ->select('ep.estate_home_request_details', DB::raw('MAX(ep.pk) as latest_possession_pk'))
@@ -2194,59 +2277,62 @@ class EstateController extends Controller
             }
         }
 
-        $requests = $query->get()
-            ->map(function ($row) {
-                $status = (int) ($row->change_ap_dis_status ?? 0);
-                $statusLabel = match ($status) {
-                    1 => 'Approved',
-                    2 => 'Disapproved',
-                    default => 'Pending',
-                };
+        return $query;
+    }
 
-                $eligibilityLabel = match ((int) ($row->eligibility_type_pk ?? 0)) {
-                    61 => 'Type-I',
-                    62 => 'Type-II',
-                    63 => 'Type-III',
-                    64 => 'Type-IV',
-                    65 => 'Type-V',
-                    66 => 'Type-VI',
-                    69 => 'Type-IX',
-                    70 => 'Type-X',
-                    71 => 'Type-XI',
-                    73 => 'Type-XIII',
-                    default => '—',
-                };
+    /**
+     * Shape one Request For House row for display (status/eligibility labels, formatted dates).
+     */
+    private function mapRequestForHouseRow($row)
+    {
+        $status = (int) ($row->change_ap_dis_status ?? 0);
+        $statusLabel = match ($status) {
+            1 => 'Approved',
+            2 => 'Disapproved',
+            default => 'Pending',
+        };
 
-                $allottedHouse = $status === 1
-                    ? ($row->change_house_no ?: ($row->current_alot ?: '—'))
-                    : ($row->current_alot ?: ($row->change_house_no ?: '—'));
+        $eligibilityLabel = match ((int) ($row->eligibility_type_pk ?? 0)) {
+            61 => 'Type-I',
+            62 => 'Type-II',
+            63 => 'Type-III',
+            64 => 'Type-IV',
+            65 => 'Type-V',
+            66 => 'Type-VI',
+            69 => 'Type-IX',
+            70 => 'Type-X',
+            71 => 'Type-XI',
+            73 => 'Type-XIII',
+            default => '—',
+        };
 
-                // Possession To: if latest possession row is marked as returned (return_home_status = 1),
-                // use its current_meter_reading_date as the "to" date; otherwise keep as em dash.
-                $possessionTo = '—';
-                if (isset($row->return_home_status) && (int) $row->return_home_status === 1 && ! empty($row->current_meter_reading_date)) {
-                    $possessionTo = \Carbon\Carbon::parse($row->current_meter_reading_date)->format('d-m-Y');
-                }
+        $allottedHouse = $status === 1
+            ? ($row->change_house_no ?: ($row->current_alot ?: '—'))
+            : ($row->current_alot ?: ($row->change_house_no ?: '—'));
 
-                return (object) [
-                    'pk' => $row->pk,
-                    'request_id' => $row->estate_change_req_ID ?: ('Chg-Req-' . $row->pk),
-                    'request_date' => $row->change_req_date ? \Carbon\Carbon::parse($row->change_req_date)->format('d-m-Y') : '—',
-                    'request_date_sort' => $row->change_req_date ? \Carbon\Carbon::parse($row->change_req_date)->format('Y-m-d') : '',
-                    'change_status' => $status,
-                    'name' => $row->emp_name ?: '—',
-                    'emp_id' => $row->employee_id ?: '—',
-                    'doj_academy' => $row->doj_academic ? \Carbon\Carbon::parse($row->doj_academic)->format('d-m-Y') : '—',
-                    'status' => $statusLabel,
-                    'alloted_house' => $allottedHouse,
-                    'eligibility_type' => $eligibilityLabel,
-                    'possession_from' => $row->possession_date ? \Carbon\Carbon::parse($row->possession_date)->format('d-m-Y') : '—',
-                    'possession_to' => $possessionTo,
-                    'change_approved' => $status === 1,
-                ];
-            });
+        // Possession To: if latest possession row is marked as returned (return_home_status = 1),
+        // use its current_meter_reading_date as the "to" date; otherwise keep as em dash.
+        $possessionTo = '—';
+        if (isset($row->return_home_status) && (int) $row->return_home_status === 1 && ! empty($row->current_meter_reading_date)) {
+            $possessionTo = \Carbon\Carbon::parse($row->current_meter_reading_date)->format('d-m-Y');
+        }
 
-        return view('admin.estate.request_for_house', ['requests' => $requests]);
+        return (object) [
+            'pk' => $row->pk,
+            'request_id' => $row->estate_change_req_ID ?: ('Chg-Req-' . $row->pk),
+            'request_date' => $row->change_req_date ? \Carbon\Carbon::parse($row->change_req_date)->format('d-m-Y') : '—',
+            'request_date_sort' => $row->change_req_date ? \Carbon\Carbon::parse($row->change_req_date)->format('Y-m-d') : '',
+            'change_status' => $status,
+            'name' => $row->emp_name ?: '—',
+            'emp_id' => $row->employee_id ?: '—',
+            'doj_academy' => $row->doj_academic ? \Carbon\Carbon::parse($row->doj_academic)->format('d-m-Y') : '—',
+            'status' => $statusLabel,
+            'alloted_house' => $allottedHouse,
+            'eligibility_type' => $eligibilityLabel,
+            'possession_from' => $row->possession_date ? \Carbon\Carbon::parse($row->possession_date)->format('d-m-Y') : '—',
+            'possession_to' => $possessionTo,
+            'change_approved' => $status === 1,
+        ];
     }
 
     /**
@@ -11858,18 +11944,18 @@ class EstateController extends Controller
     {
         $billMonth = $request->get('bill_month');
         if (! $billMonth || ! is_string($billMonth)) {
-            return response()->json(['status' => true, 'data' => [], 'message' => 'Please select Bill Month.']);
+            return $this->estateReportDatatableResponse($request, [], 'Please select Bill Month.');
         }
         $parts = explode('-', trim($billMonth));
         $billYearStr = (count($parts) >= 1 && is_numeric($parts[0])) ? (string) ((int) $parts[0]) : (string) date('Y');
         $monthNum = (count($parts) >= 2 && is_numeric($parts[1])) ? (int) $parts[1] : (int) date('n');
         if ($monthNum < 1 || $monthNum > 12) {
-            return response()->json(['status' => true, 'data' => [], 'message' => 'Invalid bill month.']);
+            return $this->estateReportDatatableResponse($request, [], 'Invalid bill month.');
         }
         $selectedMonthStart = \Carbon\Carbon::createFromDate((int) $billYearStr, $monthNum, 1)->startOfMonth();
         $currentMonthStart = \Carbon\Carbon::now()->startOfMonth();
         if ($selectedMonthStart->gt($currentMonthStart)) {
-            return response()->json(['status' => true, 'data' => [], 'message' => 'Future bill month is not allowed.']);
+            return $this->estateReportDatatableResponse($request, [], 'Future bill month is not allowed.');
         }
         $billMonthStr = date('F', mktime(0, 0, 0, $monthNum, 1));
 
@@ -11884,7 +11970,7 @@ class EstateController extends Controller
             return $this->computeGenerateEstateBillForOtherDataRows($billMonthStr, $billYearStr, $hasReturnHomeStatusCol);
         });
 
-        return response()->json(['status' => true, 'data' => $data]);
+        return $this->estateReportDatatableResponse($request, $data);
     }
 
     /**
@@ -11966,7 +12052,7 @@ class EstateController extends Controller
         $billYear = $request->get('bill_year');
 
         if (!$billMonth || !$billYear) {
-            return response()->json(['status' => true, 'data' => [], 'message' => 'Please select bill month and year.']);
+            return $this->estateReportDatatableResponse($request, [], 'Please select bill month and year.');
         }
 
         // Parse Y-m format (e.g. 2025-12) – DB stores bill_month as full month name, bill_year as 4-digit string (estate_module_tables SQL).
@@ -11975,17 +12061,13 @@ class EstateController extends Controller
         $month = (count($parts) >= 2 && is_numeric($parts[1])) ? (int) $parts[1] : 0;
         $billYearStr = (string) $year;
         if ($month < 1 || $month > 12) {
-            return response()->json(['status' => true, 'data' => [], 'message' => 'Invalid bill month.']);
+            return $this->estateReportDatatableResponse($request, [], 'Invalid bill month.');
         }
 
         $selectedMonthStart = \Carbon\Carbon::createFromDate($year, $month, 1)->startOfMonth();
         $currentMonthStart = \Carbon\Carbon::now()->startOfMonth();
         if ($selectedMonthStart->gt($currentMonthStart)) {
-            return response()->json([
-                'status' => true,
-                'data' => [],
-                'message' => 'Future bill month is not allowed.'
-            ]);
+            return $this->estateReportDatatableResponse($request, [], 'Future bill month is not allowed.');
         }
 
         $employeeTypeFilter = strtolower(trim((string) $request->get('employee_type', 'all')));
@@ -12007,11 +12089,7 @@ class EstateController extends Controller
                 ->where('bill_year', $billYearStr)
                 ->exists();
         if (! $hasReadingsRegular && ! $hasReadingsOther) {
-            return response()->json([
-                'status' => true,
-                'data' => [],
-                'message' => 'No meter reading entries found for selected month/year.'
-            ]);
+            return $this->estateReportDatatableResponse($request, [], 'No meter reading entries found for selected month/year.');
         }
 
         $hasEhrdRemarks = Schema::hasColumn('estate_home_request_details', 'remarks');
@@ -12075,7 +12153,7 @@ class EstateController extends Controller
             );
         });
 
-        return response()->json(['status' => true, 'data' => $rows]);
+        return $this->estateReportDatatableResponse($request, $rows);
     }
 
     /**
@@ -12686,7 +12764,32 @@ class EstateController extends Controller
             return $this->computeHouseStatusReportPayload();
         });
 
-        return response()->json($payload);
+        return $this->estateReportDatatableResponse($request, $payload['data'] ?? []);
+    }
+
+    /**
+     * Serve a pre-computed estate report row set.
+     * DataTables requests (they carry `draw`) get a server-side response — searching, sorting
+     * and paging are applied here instead of in the browser; anything else keeps the legacy
+     * {status, data, message} JSON so existing callers are unaffected.
+     *
+     * @param  array<int, array<string, mixed>>  $rows
+     */
+    private function estateReportDatatableResponse(Request $request, array $rows, ?string $message = null)
+    {
+        if (! $request->has('draw')) {
+            $payload = ['status' => true, 'data' => $rows];
+            if ($message !== null) {
+                $payload['message'] = $message;
+            }
+
+            return response()->json($payload);
+        }
+
+        return \Yajra\DataTables\Facades\DataTables::of(collect($rows))
+            ->addIndexColumn()
+            ->with('message', $message)
+            ->make(true);
     }
 
     /**

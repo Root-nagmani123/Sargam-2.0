@@ -26,35 +26,142 @@ class PeerEvaluationController extends Controller
     /**
      * Display main management panel with Course → Event → Group hierarchy
      */
-    public function index()
+    public function index(Request $request)
     {
+        // Grids on this page are server-side; each one asks for its own slice.
+        if ($request->ajax()) {
+            return match ($request->query('grid')) {
+                'columns' => $this->columnsDatatable(),
+                'reflection' => $this->reflectionFieldsDatatable(),
+                default => $this->groupsDatatable(),
+            };
+        }
+
         // Get courses with their events and group counts
        /*  $courses = PeerCourse::with(['events' => function ($query) {
             $query->active()->withCount('groups');
         }])->active()->withCount(['events', 'groups'])->get(); */
-		
+
 		$courses = PeerCourse::with(['events' => function ($query) {
 		$query->active()->withCount('groups');
 		}])
 		->active()
 		->withCount(['events', 'groups'])
-		->paginate(5); 
+		->paginate(5);
 
         // Get events with their course and group counts
         $events = PeerEvent::active()->withCount('groups')->get();
 
-        // Get groups with member count using proper Eloquent
-        $groups = PeerGroup::with(['course', 'event'])
+        return view('admin.forms.peer_evaluation.admin', compact('courses', 'events'));
+    }
+
+    /**
+     * Server-side feed for the Groups List grid.
+     */
+    protected function groupsDatatable()
+    {
+        $query = PeerGroup::with(['course', 'event'])
             ->withCount('members')
-            ->where('is_active', 1)
-            ->get();
+            ->where('is_active', 1);
 
-        $columns = PeerColumn::with(['course', 'event'])->get();
+        return \Yajra\DataTables\Facades\DataTables::eloquent($query)
+            ->addColumn('course_name', fn ($group) => '<span class="badge bg-info text-dark fw-semibold px-2 py-1">'
+                .e($group->course->course_name ?? 'N/A').'</span>')
+            ->addColumn('event_name', fn ($group) => '<span class="badge bg-secondary fw-semibold px-2 py-1">'
+                .e($group->event->event_name ?? 'N/A').'</span>')
+            ->editColumn('group_name', fn ($group) => e($group->group_name))
+            ->addColumn('max_marks_control', function ($group) {
+                return '<div class="d-flex align-items-center">'
+                    .'<label for="maxMarks'.e($group->id).'" class="visually-hidden">Max Marks</label>'
+                    .'<input type="number" id="maxMarks'.e($group->id).'" class="form-control max-marks-input"'
+                    .' data-id="'.e($group->id).'" value="'.e($group->max_marks ?? 10).'"'
+                    .' step="0.01" min="1" max="100" style="width: 90px;" aria-label="Enter Max Marks">'
+                    .'<button class="btn btn-sm btn-outline-primary update-marks ms-2" data-id="'.e($group->id).'"'
+                    .' title="Save Marks" aria-label="Save Max Marks"><i class="fas fa-save"></i></button></div>';
+            })
+            ->addColumn('status', function ($group) {
+                return '<div class="d-flex justify-content-center align-items-center gap-2">'
+                    .'<div class="form-check form-switch m-0">'
+                    .'<input type="checkbox" role="switch" class="form-check-input toggle-form"'
+                    .' id="toggleForm'.e($group->id).'" data-id="'.e($group->id).'"'
+                    .($group->is_form_active ? ' checked' : '').' aria-label="Toggle Form Status"></div>'
+                    .'<span class="badge '.($group->is_form_active ? 'bg-success' : 'bg-danger').'">'
+                    .($group->is_form_active ? 'Active' : 'Inactive').'</span></div>';
+            })
+            ->addColumn('members', fn ($group) => '<span class="badge bg-dark text-white fw-semibold px-2 py-1">'
+                .(int) $group->members_count.' Members</span>')
+            ->addColumn('action', function ($group) {
+                return '<div class="btn-group btn-group-sm" role="group" aria-label="Group Actions">'
+                    .'<a href="'.route('admin.peer.group.members', $group->id).'" class="btn btn-outline-info" title="View Members" aria-label="View Members"><i class="fas fa-users"></i></a>'
+                    .'<a href="'.route('admin.peer.group.import', $group->id).'" class="btn btn-outline-warning" title="Import Users" aria-label="Import Users"><i class="fas fa-upload"></i></a>'
+                    .'<a href="'.route('admin.peer.group.submissions', $group->id).'" class="btn btn-outline-primary" title="View Submissions" aria-label="View Submissions"><i class="fas fa-eye"></i></a>'
+                    .'<button class="btn btn-outline-danger delete-group" data-id="'.e($group->id).'" title="Delete Group" aria-label="Delete Group"><i class="fas fa-trash-alt"></i></button></div>';
+            })
+            ->filterColumn('course_name', fn ($q, $keyword) => $q->whereHas('course', fn ($c) => $c->where('course_name', 'like', "%{$keyword}%")))
+            ->filterColumn('event_name', fn ($q, $keyword) => $q->whereHas('event', fn ($c) => $c->where('event_name', 'like', "%{$keyword}%")))
+            ->rawColumns(['course_name', 'event_name', 'max_marks_control', 'status', 'members', 'action'])
+            ->make(true);
+    }
 
-        // Get reflection fields with their course and event
-        $reflectionFields = PeerReflectionField::with(['course', 'event'])->get();
+    /**
+     * Server-side feed for the Evaluation Columns grid.
+     */
+    protected function columnsDatatable()
+    {
+        $query = PeerColumn::with(['course', 'event']);
 
-        return view('admin.forms.peer_evaluation.admin', compact('courses', 'groups', 'columns', 'reflectionFields', 'events'));
+        return \Yajra\DataTables\Facades\DataTables::eloquent($query)
+            ->addColumn('name', fn ($column) => '<span class="badge '.($column->is_visible ? 'bg-success' : 'bg-secondary').' me-1">'
+                .e($column->column_name).'</span>')
+            ->addColumn('course_name', fn ($column) => '<small class="text-muted">'
+                .($column->course ? e($column->course->course_name) : '—').'</small>')
+            ->addColumn('event_name', fn ($column) => '<small class="text-muted">'
+                .($column->event ? e($column->event->event_name) : '—').'</small>')
+            ->addColumn('visible', function ($column) {
+                return '<div class="form-check form-switch d-inline-block">'
+                    .'<input type="checkbox" class="form-check-input toggle-column" data-id="'.e($column->id).'"'
+                    .' id="toggleColumn'.e($column->id).'"'.($column->is_visible ? ' checked' : '')
+                    .' title="Toggle Visibility"></div>';
+            })
+            ->addColumn('action', function ($column) {
+                return '<button class="btn btn-sm btn-danger delete-column" data-id="'.e($column->id).'" title="Delete"'
+                    .($column->is_visible == 1 ? ' disabled' : '').'>'
+                    .'<iconify-icon icon="solar:trash-bin-minimalistic-bold" class="fs-7"></iconify-icon></button>';
+            })
+            ->filterColumn('name', fn ($q, $keyword) => $q->where('column_name', 'like', "%{$keyword}%"))
+            ->orderColumn('name', 'column_name $1')
+            ->rawColumns(['name', 'course_name', 'event_name', 'visible', 'action'])
+            ->make(true);
+    }
+
+    /**
+     * Server-side feed for the Reflection Fields grid.
+     */
+    protected function reflectionFieldsDatatable()
+    {
+        $query = PeerReflectionField::with(['course', 'event']);
+
+        return \Yajra\DataTables\Facades\DataTables::eloquent($query)
+            ->addColumn('label', fn ($field) => '<span class="badge badge-modern '.($field->is_active ? 'bg-success' : 'bg-secondary').'">'
+                .e($field->field_label).'</span>')
+            ->addColumn('course_label', fn ($field) => '<small class="text-muted">'
+                .($field->course_name ? e($field->course_name) : 'Global').'</small>')
+            ->addColumn('event_label', fn ($field) => '<small class="text-muted">'
+                .($field->event_name ? e($field->event_name) : 'Global').'</small>')
+            ->addColumn('active', function ($field) {
+                return '<div class="form-check form-switch d-inline-block">'
+                    .'<input type="checkbox" class="form-check-input toggle-reflection" data-id="'.e($field->id).'"'
+                    .' id="toggleReflection'.e($field->id).'"'.($field->is_active ? ' checked' : '')
+                    .' title="Toggle Active"></div>';
+            })
+            ->addColumn('action', function ($field) {
+                return '<button class="btn btn-sm btn-outline-danger delete-reflection" data-id="'.e($field->id).'" title="Delete"'
+                    .($field->is_active == 1 ? ' disabled' : '').'><i class="fas fa-trash-alt"></i></button>';
+            })
+            ->filterColumn('label', fn ($q, $keyword) => $q->where('field_label', 'like', "%{$keyword}%"))
+            ->orderColumn('label', 'field_label $1')
+            ->rawColumns(['label', 'course_label', 'event_label', 'active', 'action'])
+            ->make(true);
     }
 
     // ==================== COURSE MANAGEMENT METHODS ====================
@@ -916,7 +1023,7 @@ if ($groupId && hasRole('Student-OT')) {
     //     ));
     // }
 
-    public function viewSubmissions($groupId)
+    public function viewSubmissions(Request $request, $groupId)
     {
       //  dd('ddd');
         $groups = DB::table('peer_groups')
@@ -1020,17 +1127,92 @@ if ($groupId && hasRole('Student-OT')) {
            
 
         $selectedGroupId = $groupId;
-     
+
+        $groupName = optional($groups->where('id', $selectedGroupId)->first())->group_name;
+        $rows = $this->buildSubmissionRows($members, $scores, $columns, $reflectionFields, $reflectionResponses, $groupName);
+
+        // Grid is server-side: searching, sorting and paging run over the built rows here.
+        if ($request->ajax()) {
+            return \Yajra\DataTables\Facades\DataTables::of(collect($rows))
+                ->addIndexColumn()
+                ->rawColumns(array_keys($rows[0] ?? []))
+                ->make(true);
+        }
+
         return view('admin.forms.peer_evaluation.view_submissions', compact(
             'groups',
             'members',
             'columns',
-            'scores',
             'selectedGroupId',
             'reflectionFields',
-            'reflectionResponses',
             'currentGroup' // Pass the current group to access course/event info in view
         ));
+    }
+
+    /**
+     * One row per member × evaluator, matching the columns rendered by the submissions grid.
+     * Keys: member/group/user/evaluator plus col_<columnId> and ref_<fieldId>.
+     *
+     * @return array<int, array<string, string>>
+     */
+    private function buildSubmissionRows($members, $scores, $columns, $reflectionFields, $reflectionResponses, ?string $groupName): array
+    {
+        $rows = [];
+
+        foreach ($members as $member) {
+            // All unique evaluators for this member
+            $evaluators = $scores->where('member_id', $member->id)->pluck('evaluator_id')->unique();
+
+            foreach ($evaluators as $evaluatorId) {
+                $evaluatorScore = $scores->where('member_id', $member->id)->where('evaluator_id', $evaluatorId)->first();
+                $evaluatorFullName = trim(($evaluatorScore->evaluator_first_name ?? '').' '.($evaluatorScore->evaluator_last_name ?? ''));
+                $evaluatorDisplayName = $evaluatorFullName ?: 'User '.$evaluatorId;
+
+                $memberCell = '<strong>'.e($member->first_name).'</strong>';
+                if ($member->ot_code) {
+                    $memberCell .= '<br><small class="text-muted">- '.e($member->ot_code).'</small>';
+                }
+
+                $userFullName = trim(($member->user_full_name ?? '').' '.($member->user_last_name ?? ''));
+                $userCell = e($userFullName ?: $member->first_name);
+                if ($member->user_id) {
+                    $userCell .= '<br><small class="text-muted">(ID: '.e($member->user_id).')</small>';
+                }
+
+                $row = [
+                    'member_name' => $memberCell,
+                    'group_name' => '<span class="badge bg-primary">'.e($groupName).'</span>',
+                    'user_full_name' => $userCell,
+                    'evaluator_name' => e($evaluatorDisplayName).'<br><small class="text-muted">(ID: '.e($evaluatorId).')</small>',
+                ];
+
+                foreach ($columns as $column) {
+                    $score = $scores
+                        ->where('member_id', $member->id)
+                        ->where('column_id', $column->id)
+                        ->where('evaluator_id', $evaluatorId)
+                        ->first();
+
+                    $row['col_'.$column->id] = e($score->score ?? '-');
+                }
+
+                foreach ($reflectionFields as $field) {
+                    // Match reflection responses using evaluator_id
+                    $response = $reflectionResponses->get($evaluatorId.'-'.$field->id);
+                    $responseName = trim(($response->evaluator_first_name ?? '').' '.($response->evaluator_last_name ?? ''));
+                    $responseName = $responseName ?: 'User '.$evaluatorId;
+
+                    $row['ref_'.$field->id] = $response && $response->description
+                        ? '<div class="reflection-response"><p class="mb-0 small">'.e($response->description).'</p>'
+                            .'<small class="text-muted">By: '.e($responseName).'</small></div>'
+                        : '<span class="text-muted">-</span>';
+                }
+
+                $rows[] = $row;
+            }
+        }
+
+        return $rows;
     }
 
     /**

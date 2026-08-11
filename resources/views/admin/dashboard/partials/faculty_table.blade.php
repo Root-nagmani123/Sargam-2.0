@@ -2,7 +2,7 @@
     Shared Guest / In-House faculty listing table.
 
     Required data:
-      $faculties    - collection of faculty rows
+      $ajaxUrl      - server-side DataTables endpoint (same route as the page)
       $tableId      - unique DOM id for the table (e.g. "guess_faculty")
       $cssFile      - page-specific stylesheet path (asset())
       $cardClass    - card wrapper modifier class
@@ -167,92 +167,8 @@
                                 @endif
                             </tr>
                         </thead>
-                        <tbody>
-                            @forelse($faculties as $index => $faculty)
-                            <tr>
-                                <td class="text-body-secondary fw-medium">{{ $index + 1 }}</td>
-                                <td>
-                                    <span class="badge rounded-1 {{ $badgeClass }} bg-success-subtle text-success border border-success-subtle">{{ $badgeLabel }}</span>
-                                </td>
-                                <td>
-                                    <span class="faculty-name">{{ $faculty->full_name }}</span>
-                                </td>
-                                <td>
-                                    @if($faculty->email_id ?? null)
-                                        <a href="mailto:{{ $faculty->email_id }}" class="email-link">
-                                            <span class="material-symbols-rounded align-text-bottom me-1" style="font-size: 1rem;">mail</span>
-                                            {{ $faculty->email_id }}
-                                        </a>
-                                    @else
-                                        <span class="text-muted small">N/A</span>
-                                    @endif
-                                </td>
-                                <td class="fw-medium">{{ $faculty->mobile_no ?? 'N/A' }}</td>
-                                <td>
-                                    @if($faculty->faculty_sector == 1)
-                                        <span class="badge rounded-1 badge-sector-gov border border-primary-subtle">Government</span>
-                                    @elseif($faculty->faculty_sector == 2)
-                                        <span class="badge rounded-1 badge-sector-private border border-warning-subtle">Private</span>
-                                    @else
-                                        <span class="badge rounded-1 badge-sector-other border border-secondary-subtle">Other</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <span class="session-count-badge d-inline-flex align-items-center gap-1">
-                                        <span class="material-symbols-rounded align-text-bottom" style="font-size: 1rem;">event</span>
-                                        {{ $faculty->session_count ?? 0 }}
-                                    </span>
-                                </td>
-                                <td>
-                                    @php
-                                        $avgContent = data_get($faculty, 'feedback_summary.avg_content', 0);
-                                        $avgPresentation = data_get($faculty, 'feedback_summary.avg_presentation', 0);
-                                        $totalFeedback = (int) data_get($faculty, 'feedback_summary.total_feedback', 0);
-                                        $getScoreClass = function($score) {
-                                            if ($score >= 80) return 'excellent';
-                                            if ($score >= 60) return 'good';
-                                            if ($score >= 40) return 'average';
-                                            return 'poor';
-                                        };
-                                    @endphp
-                                    @if($totalFeedback > 0)
-                                        <div class="feedback-average">
-                                            <div class="feedback-score">
-                                                <span class="feedback-label">Content:</span>
-                                                <span class="feedback-value {{ $getScoreClass($avgContent) }}">
-                                                    {{ number_format($avgContent, 1) }}%
-                                                </span>
-                                            </div>
-                                            <div class="feedback-score">
-                                                <span class="feedback-label">Presentation:</span>
-                                                <span class="feedback-value {{ $getScoreClass($avgPresentation) }}">
-                                                    {{ number_format($avgPresentation, 1) }}%
-                                                </span>
-                                            </div>
-                                        </div>
-                                    @else
-                                        <span class="text-muted small">No feedback yet</span>
-                                    @endif
-                                </td>
-                                @if(hasRole('Admin'))
-                                <td class="dt-no-export">
-                                    <a href="{{ route('feedback.average', ['faculty_name' => $faculty->full_name]) }}"
-                                       class="btn btn-view-feedback btn-sm">
-                                        <span class="material-symbols-rounded">visibility</span>
-                                        View Feedback
-                                    </a>
-                                </td>
-                                @endif
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="9" class="no-data text-center py-5 text-body-secondary fst-italic">
-                                    <span class="material-symbols-rounded fs-1 d-block mb-2 opacity-50">person_off</span>
-                                    {{ $emptyMessage }}
-                                </td>
-                            </tr>
-                            @endforelse
-                        </tbody>
+                        {{-- Rows are rendered by the server-side DataTable (see script below). --}}
+                        <tbody></tbody>
                     </table>
                 </div>
             </div>
@@ -275,13 +191,36 @@ $(document).ready(function() {
     var brandLine3  = 'Mussoorie, Uttarakhand';
 
     var table = $('#' + tableId).DataTable({
-        order: [[0, 'asc']], // Sort by S. No. by default
+        // Server-side: search, sort and paging are resolved in SQL.
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: @json($ajaxUrl),
+            type: 'GET'
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'text-body-secondary fw-medium' },
+            { data: 'faculty_type', name: 'faculty_type', orderable: false, searchable: false },
+            { data: 'full_name', name: 'full_name' },
+            { data: 'email_id', name: 'email_id' },
+            { data: 'mobile_no', name: 'mobile_no', className: 'fw-medium' },
+            { data: 'faculty_sector_label', name: 'faculty_sector', searchable: false },
+            { data: 'session_count', name: 'session_count', orderable: false, searchable: false },
+            { data: 'feedback_average', name: 'feedback_average', orderable: false, searchable: false }
+            @if(hasRole('Admin'))
+            , { data: 'action', name: 'action', orderable: false, searchable: false, className: 'dt-no-export' }
+            @endif
+        ],
+        order: [],
         pageLength: 10,
-        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
         // Persist column visibility (and search/sort/page) across navigation & refresh.
         stateSave: true,
         stateDuration: 60 * 60 * 24 * 30, // 30 days (localStorage)
         language: {
+            emptyTable: @json($emptyMessage),
+            zeroRecords: @json($emptyMessage),
+            processing: "Loading data…",
             search: "Search:",
             lengthMenu: "Show _MENU_ entries",
             info: "Showing _START_ to _END_ of _TOTAL_ entries",
@@ -383,6 +322,29 @@ $(document).ready(function() {
             return api.column(idx).visible() && !$(api.column(idx).header()).hasClass('dt-no-export');
         }
 
+        // Server-side paging means only the current page is in the DOM. Before running an
+        // export/print, pull every row for the current search (length = -1), run the action,
+        // then restore the previous page length.
+        function withAllRows(buttonName) {
+            var base = $.fn.dataTable.ext.buttons[buttonName].action;
+
+            return function (e, dt, node, config) {
+                var self = this;
+                var pageLen = dt.page.len();
+
+                if (pageLen === -1) {
+                    base.call(self, e, dt, node, config);
+                    return;
+                }
+
+                dt.one('draw', function () {
+                    base.call(self, e, dt, node, config);
+                    dt.page.len(pageLen).draw(false);
+                });
+                dt.page.len(-1).draw(false);
+            };
+        }
+
         // Shared options: column filtering + text cleaning for every format.
         // DataTables passes body as (data, row, column, node) and header as (data, column).
         var sharedExportOptions = {
@@ -437,7 +399,7 @@ $(document).ready(function() {
 
         function customizePrint(win) {
             var doc = win.document;
-            var recordCount = api.rows({ search: 'applied' }).count();
+            var recordCount = api.page.info().recordsDisplay;
             var printedOn = new Date().toLocaleString();
 
             var style = doc.createElement('style');
@@ -527,9 +489,9 @@ $(document).ready(function() {
                         className: 'btn btn-sm dtb-btn dtb-export',
                         autoClose: true,
                         buttons: [
-                            { extend: 'excelHtml5', text: '<i class="bi bi-file-earmark-excel me-2"></i>Excel (.xlsx)', title: exportTitle, exportOptions: sharedExportOptions },
-                            { extend: 'csvHtml5',   text: '<i class="bi bi-filetype-csv me-2"></i>CSV (.csv)',   title: exportTitle, exportOptions: sharedExportOptions },
-                            { extend: 'pdfHtml5',   text: '<i class="bi bi-file-earmark-pdf me-2"></i>PDF (.pdf)',   title: exportTitle + ' Report', orientation: 'landscape', pageSize: 'A4', exportOptions: sharedExportOptions, customize: customizePdf }
+                            { extend: 'excelHtml5', text: '<i class="bi bi-file-earmark-excel me-2"></i>Excel (.xlsx)', title: exportTitle, exportOptions: sharedExportOptions, action: withAllRows('excelHtml5') },
+                            { extend: 'csvHtml5',   text: '<i class="bi bi-filetype-csv me-2"></i>CSV (.csv)',   title: exportTitle, exportOptions: sharedExportOptions, action: withAllRows('csvHtml5') },
+                            { extend: 'pdfHtml5',   text: '<i class="bi bi-file-earmark-pdf me-2"></i>PDF (.pdf)',   title: exportTitle + ' Report', orientation: 'landscape', pageSize: 'A4', exportOptions: sharedExportOptions, customize: customizePdf, action: withAllRows('pdfHtml5') }
                         ]
                     },
                     {
@@ -538,7 +500,8 @@ $(document).ready(function() {
                         className: 'btn btn-sm dtb-btn dtb-print',
                         title: '',
                         exportOptions: sharedExportOptions,
-                        customize: customizePrint
+                        customize: customizePrint,
+                        action: withAllRows('print')
                     }
                 ]
             });

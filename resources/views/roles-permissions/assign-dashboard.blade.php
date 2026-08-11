@@ -167,47 +167,8 @@
                             <th class="text-center">Action</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @foreach($allCards as $index => $card)
-                        <tr data-id="{{ $card->id }}">
-                            <td class="text-muted small">{{ $index + 1 }}</td>
-                            <td><span class="fw-medium">{{ $card->label }}</span></td>
-                            <td class="text-center">
-                                <span class="dc-icon-sm stat-icon-wrapper {{ $card->color_class }} d-inline-flex align-items-center justify-content-center">
-                                    <i class="material-symbols-rounded">{{ $card->icon }}</i>
-                                </span>
-                            </td>
-                            <td><span class="badge bg-primary">{{ $card->sort_order }}</span></td>
-                            <td>{{ $card->created_at ? $card->created_at->format('d-m-Y') : '-' }}</td>
-                            <td class="text-center">
-                                <div class="form-check form-switch d-inline-block">
-                                    <input class="form-check-input card-toggle" type="checkbox"
-                                        data-id="{{ $card->id }}"
-                                        {{ in_array($card->id, $assignedCardIds) ? 'checked' : '' }}>
-                                    <label class="form-check-label"></label>
-                                </div>
-                            </td>
-                            <td class="text-center">
-                                <div class="d-inline-flex align-items-center gap-1" role="group">
-                                    <button class="btn btn-sm border-0 bg-transparent text-primary edit-card-btn d-inline-flex align-items-center justify-content-center"
-                                        data-id="{{ $card->id }}"
-                                        data-label="{{ $card->label }}"
-                                        data-icon="{{ $card->icon }}"
-                                        data-color="{{ $card->color_class }}"
-                                        data-sort="{{ $card->sort_order }}"
-                                        title="Edit">
-                                        <i class="material-symbols-rounded" style="font-size:18px;">edit</i>
-                                    </button>
-                                    <button class="btn btn-sm border-0 bg-transparent text-danger delete-card-btn d-inline-flex align-items-center justify-content-center{{ in_array($card->id, $assignedCardIds) ? ' d-none' : '' }}"
-                                        data-id="{{ $card->id }}"
-                                        title="Delete">
-                                        <i class="material-symbols-rounded" style="font-size:18px;">delete</i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
+                    {{-- Rows come from the server-side DataTable (see script below). --}}
+                    <tbody></tbody>
                 </table>
 
             </div>
@@ -517,35 +478,37 @@ $(document).on('click', '.edit-card-btn', function() {
     $('#editCardModal').modal('show');
 });
 
-// ─── DataTable ───────────────────────────────────────────────────────────────
-$.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
-    if (settings.nTable.id !== 'dashboardCardTable') return true;
-    var status = $('#statusFilter').val();
-    if (!status) return true;
-    var row = settings.aoData[dataIndex].nTr;
-    var isChecked = $(row).find('.card-toggle').is(':checked');
-    return (status === 'enabled' && isChecked) || (status === 'disabled' && !isChecked);
-});
-
+// ─── DataTable (server-side) ──────────────────────────────────────────────────
 var cardTable = null;
 
 $(document).ready(function() {
+    // Search, sort, paging and the Status filter are all resolved on the server.
     cardTable = $('#dashboardCardTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{{ route('roles.dashboard', $role->id) }}",
+            type: 'GET',
+            data: function(d) {
+                d.status_filter = $('#statusFilter').val() || '';
+                return d;
+            }
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'text-muted small', width: '50px' },
+            { data: 'name', name: 'name' },
+            { data: 'icon_cell', name: 'icon_cell', orderable: false, searchable: false, className: 'text-center', width: '70px' },
+            { data: 'order', name: 'sort_order', searchable: false, width: '80px' },
+            { data: 'created', name: 'created_at', searchable: false, width: '110px' },
+            { data: 'enable', name: 'enable', orderable: false, searchable: false, className: 'text-center', width: '90px' },
+            { data: 'action', name: 'action', orderable: false, searchable: false, className: 'text-center', width: '100px' }
+        ],
         responsive: false,
         autoWidth: false,
         scrollX: true,
         pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
         order: [],
-        columnDefs: [
-            { orderable: false, targets: [2, 5, 6] },
-            { searchable: false, targets: [0, 2, 3, 4, 5, 6] },
-            { width: '50px',  targets: [0] },
-            { width: '70px',  targets: [2] },
-            { width: '80px',  targets: [3] },
-            { width: '110px', targets: [4] },
-            { width: '90px',  targets: [5] },
-            { width: '100px', targets: [6] },
-        ],
         dom: "<'row'<'col-12'tr>>" +
              "<'row mt-3 align-items-center dt-bottom-bar'<'col-md-6 dt-bottom-paginate'p><'col-md-6 dt-bottom-info d-flex align-items-center justify-content-md-end gap-2'il>>",
         language: {
@@ -559,7 +522,7 @@ $(document).ready(function() {
     });
 
     $('#cardSearch').on('input', function() { cardTable.search($(this).val()).draw(); });
-    $('#statusFilter').on('change', function() { cardTable.draw(); });
+    $('#statusFilter').on('change', function() { cardTable.ajax.reload(); });
     $('#clearFilters').on('click', function() {
         $('#cardSearch').val('');
         $('#statusFilter').val('');
@@ -629,19 +592,8 @@ $('#addCardForm').on('submit', function(e) {
             if (response.success) {
                 toastr.success(response.message);
                 $('#addCardModal').modal('hide');
-                var card = response.card;
-                var totalRows = cardTable.rows().count();
-                var newRow =
-                    '<tr data-id="'+card.id+'">' +
-                    '<td class="text-muted small">'+(totalRows+1)+'</td>' +
-                    '<td><span class="fw-medium">'+card.label+'</span></td>' +
-                    '<td class="text-center"><span class="dc-icon-sm stat-icon-wrapper '+card.color_class+' d-inline-flex align-items-center justify-content-center"><i class="material-symbols-rounded">'+card.icon+'</i></span></td>' +
-                    '<td><span class="badge bg-primary">'+card.sort_order+'</span></td>' +
-                    '<td>'+formatDate(card.created_at)+'</td>' +
-                    '<td class="text-center"><div class="form-check form-switch d-inline-block"><input class="form-check-input card-toggle" type="checkbox" data-id="'+card.id+'"><label class="form-check-label"></label></div></td>' +
-                    '<td class="text-center"><div class="d-inline-flex align-items-center gap-1"><button class="btn btn-sm border-0 bg-transparent text-primary edit-card-btn d-inline-flex align-items-center justify-content-center" data-id="'+card.id+'" data-label="'+card.label+'" data-icon="'+card.icon+'" data-color="'+card.color_class+'" data-sort="'+card.sort_order+'" title="Edit"><i class="material-symbols-rounded" style="font-size:18px;">edit</i></button><button class="btn btn-sm border-0 bg-transparent text-danger delete-card-btn d-inline-flex align-items-center justify-content-center" data-id="'+card.id+'" title="Delete"><i class="material-symbols-rounded" style="font-size:18px;">delete</i></button></div></td>' +
-                    '</tr>';
-                cardTable.row.add($(newRow)).draw(false);
+                // Rows come from the server, so pull the fresh page instead of splicing DOM.
+                cardTable.ajax.reload(null, false);
                 $('#addCardForm')[0].reset();
             } else {
                 toastr.error(response.message);
@@ -686,12 +638,8 @@ $('#editCardForm').on('submit', function(e) {
             if (response.success) {
                 toastr.success(response.message);
                 $('#editCardModal').modal('hide');
-                var card = response.card;
-                var $row = $('tr[data-id="'+card.id+'"]');
-                $row.find('td:eq(1)').html('<span class="fw-medium">'+card.label+'</span>');
-                $row.find('td:eq(2)').html('<span class="dc-icon-sm stat-icon-wrapper '+card.color_class+' d-inline-flex align-items-center justify-content-center"><i class="material-symbols-rounded">'+card.icon+'</i></span>');
-                $row.find('td:eq(3)').html('<span class="badge bg-primary">'+card.sort_order+'</span>');
-                $row.find('.edit-card-btn').data('label', card.label).data('icon', card.icon).data('color', card.color_class).data('sort', card.sort_order);
+                // Rows come from the server, so re-fetch the current page.
+                cardTable.ajax.reload(null, false);
             } else {
                 toastr.error(response.message);
             }
@@ -723,7 +671,7 @@ $(document).on('click', '.delete-card-btn', function() {
         success: function(response) {
             if (response.success) {
                 toastr.success(response.message);
-                cardTable.row($('tr[data-id="'+id+'"]')).remove().draw(false);
+                cardTable.ajax.reload(null, false);
                 updateEnabledCount();
             } else {
                 toastr.error(response.message);

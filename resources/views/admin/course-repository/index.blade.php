@@ -21,8 +21,8 @@
 
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
-            @if ($repositories->isEmpty())
-            <div class="text-center py-5 px-3 cr-admin-empty">
+            {{-- Shown by the grid's drawCallback when the server returns no categories at all. --}}
+            <div class="text-center py-5 px-3 cr-admin-empty d-none" id="crEmptyState">
                 <div
                     class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 cr-admin-empty-icon">
                     <i class="bi bi-folder2-open display-6 text-secondary" aria-hidden="true"></i>
@@ -34,8 +34,7 @@
                     <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Create Category
                 </a>
             </div>
-            @else
-            <div
+            <div id="crGridWrapper"><div
                 class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4 programme-dt-toolbar">
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
                     <button type="button" class="btn programme-dt-btn-columns" id="btnCrColumns"
@@ -60,85 +59,15 @@
                                 <th>Action</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @foreach($repositories as $key => $repo)
-
-                            @php
-                            $subCount = $repo->children->count();
-                            $docCount = $repo->getDocumentCount();
-                            @endphp
-
-                            <tr>
-                                <td>{{ $key + 1 }}</td>
-
-                                <td>
-                                    <div class="d-flex align-items-center gap-3">
-
-                                        @if(filled($repo->category_image) &&
-                                        \Storage::disk('public')->exists($repo->category_image))
-                                        <img src="{{ asset('storage/' . $repo->category_image) }}"
-                                            class="rounded-circle object-fit-cover flex-shrink-0" width="40"
-                                            height="40" alt="">
-                                        @else
-                                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center flex-shrink-0"
-                                            style="width:40px;height:40px;">
-                                            <i class="bi bi-image text-muted"></i>
-                                        </div>
-                                        @endif
-
-                                        <a href="{{ route('course-repository.show', $repo->pk) }}"
-                                            class="cr-link-category">
-                                            {{ $repo->course_repository_name }}
-                                        </a>
-
-                                    </div>
-                                </td>
-
-                                <td>
-                                    <a href="{{ route('course-repository.show', $repo->pk) }}"
-                                        class="cr-link-subcategory {{ $subCount == 0 ? 'cr-link-muted' : '' }}">
-                                        {{ $subCount }} Sub-Category
-                                    </a>
-                                </td>
-
-                                <td>
-                                    <a href="{{ route('course-repository.show', $repo->pk) }}"
-                                        class="cr-link-documents {{ $docCount == 0 ? 'cr-link-muted' : '' }}">
-                                        See {{ str_pad($docCount, 2, '0', STR_PAD_LEFT) }} Attachment
-                                    </a>
-                                </td>
-
-                                <td>
-                                    <div class="d-inline-flex align-items-center gap-2">
-
-                                        <button type="button" class="programme-action-btn edit-repo"
-                                            data-pk="{{ $repo->pk }}"
-                                            data-name="{{ $repo->course_repository_name }}"
-                                            data-details="{{ $repo->course_repository_details }}"
-                                            data-image="{{ $repo->category_image }}" title="Edit"
-                                            aria-label="Edit category">
-                                            <i class="bi bi-pencil" aria-hidden="true"></i>
-                                        </button>
-
-                                        <button type="button"
-                                            class="programme-action-btn programme-action-btn--danger delete-repo"
-                                            data-pk="{{ $repo->pk }}" title="Delete" aria-label="Delete category">
-                                            <i class="bi bi-trash" aria-hidden="true"></i>
-                                        </button>
-
-                                    </div>
-                                </td>
-                            </tr>
-
-                            @endforeach
-                        </tbody>
+                        {{-- Rows come from the server-side DataTable (see script below). --}}
+                        <tbody></tbody>
                     </table>
                 </div>
                 <div id="crDtFooter"
                     class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
                     data-dt-footer-for="crCategoriesTable"></div>
             </div>
-            @endif
+            </div>
         </div>
     </div>
 </div>
@@ -391,34 +320,38 @@ $(function() {
         // It attaches its own row-level click handling and reflows columns, which
         // caused table links to need a double-click (first click was absorbed).
         // The `.table-responsive` wrapper already handles horizontal overflow.
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{{ route('course-repository.index') }}{{ request()->query('parent_pk') ? '?parent_pk='.request()->query('parent_pk') : '' }}",
+            type: 'GET'
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'category', name: 'category' },
+            { data: 'sub_category', name: 'sub_category', orderable: false, searchable: false },
+            { data: 'attachment', name: 'attachment', orderable: false, searchable: false },
+            { data: 'action', name: 'action', orderable: false, searchable: false }
+        ],
         autoWidth: false,
         pageLength: 10,
         lengthMenu: [
-            [10, 25, 50, 100, -1],
-            [10, 25, 50, 100, 'All']
+            [10, 25, 50, 100],
+            [10, 25, 50, 100]
         ],
         order: [],
-        columnDefs: [{
-                targets: 0,
-                orderable: false,
-                searchable: false
-            },
-            {
-                targets: -1,
-                orderable: false,
-                searchable: false
-            }
-        ]
-    });
-
-    // Server order is preserved, so S. No. must follow the visible page.
-    crTable.on('draw.dt', function() {
-        var start = crTable.page.info().start;
-        crTable.column(0, {
-            page: 'current'
-        }).nodes().each(function(cell, i) {
-            cell.innerHTML = start + i + 1;
-        });
+        language: {
+            processing: 'Loading data…',
+            emptyTable: 'No categories yet.',
+            zeroRecords: 'No matching categories.'
+        },
+        drawCallback: function(settings) {
+            // Empty state replaces the grid only when there is genuinely no data
+            // (not when a search simply returns nothing).
+            var noRecords = settings.json && settings.json.recordsTotal === 0;
+            $('#crEmptyState').toggleClass('d-none', !noRecords);
+            $('#crGridWrapper').toggleClass('d-none', !!noRecords);
+        }
     });
 
     /* ── Column show / hide ── */

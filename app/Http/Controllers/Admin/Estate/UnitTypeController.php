@@ -5,13 +5,34 @@ namespace App\Http\Controllers\Admin\Estate;
 use App\Http\Controllers\Controller;
 use App\Models\UnitType;
 use Illuminate\Http\Request;
+use Yajra\DataTables\Facades\DataTables;
 
 class UnitTypeController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $items = UnitType::orderBy('unit_type')->paginate(request('per_page', 10));
-        return view('admin.estate.define_unit_type.index', compact('items'));
+        if ($request->ajax()) {
+            return $this->datatable();
+        }
+
+        return view('admin.estate.define_unit_type.index');
+    }
+
+    /**
+     * Server-side feed for the listing grid (search/sort/paginate happen in SQL).
+     */
+    protected function datatable()
+    {
+        $query = UnitType::query()->select(['pk', 'unit_type']);
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->addColumn('action', function ($row) {
+                return '<a href="'.route('admin.estate.define-unit-type.edit', $row->pk).'" class="text-primary" title="Edit">'
+                    .'<i class="material-icons material-symbols-rounded">edit</i></a>';
+            })
+            ->rawColumns(['action'])
+            ->make(true);
     }
 
     public function create()

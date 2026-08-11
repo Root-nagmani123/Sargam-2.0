@@ -173,82 +173,7 @@
                 <th scope="col" class="text-center">Actions</th>
             </tr>
         </thead>
-        <tbody>
-            @foreach ($groups as $group)
-                <tr>
-                    <td>
-                        <span class="badge bg-info text-dark fw-semibold px-2 py-1">
-                            {{ $group->course->course_name ?? 'N/A' }}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="badge bg-secondary fw-semibold px-2 py-1">
-                            {{ $group->event->event_name ?? 'N/A' }}
-                        </span>
-                    </td>
-                    <td class="fw-medium text-dark">{{ $group->group_name }}</td>
-
-                    <td>
-                        <div class="d-flex align-items-center">
-                            <label for="maxMarks{{ $group->id }}" class="visually-hidden">Max Marks</label>
-                            <input type="number" id="maxMarks{{ $group->id }}"
-                                class="form-control  max-marks-input"
-                                data-id="{{ $group->id }}" value="{{ $group->max_marks ?? 10 }}"
-                                step="0.01" min="1" max="100" style="width: 90px;"
-                                aria-label="Enter Max Marks">
-                            <button class="btn btn-sm btn-outline-primary update-marks ms-2"
-                                data-id="{{ $group->id }}" title="Save Marks" aria-label="Save Max Marks">
-                                <i class="fas fa-save"></i>
-                            </button>
-                        </div>
-                    </td>
-
-                    <td class="text-center">
-                        <div class="d-flex justify-content-center align-items-center gap-2">
-                            <div class="form-check form-switch m-0">
-                                <input type="checkbox" role="switch" 
-                                    class="form-check-input toggle-form"
-                                    id="toggleForm{{ $group->id }}"
-                                    data-id="{{ $group->id }}"
-                                    {{ $group->is_form_active ? 'checked' : '' }}
-                                    aria-label="Toggle Form Status">
-                            </div>
-                            <span class="badge {{ $group->is_form_active ? 'bg-success' : 'bg-danger' }}">
-                                {{ $group->is_form_active ? 'Active' : 'Inactive' }}
-                            </span>
-                        </div>
-                    </td>
-
-                    <td class="text-center">
-                        <span class="badge bg-dark text-white fw-semibold px-2 py-1">
-                            {{ $group->members_count }} Members
-                        </span>
-                    </td>
-
-                    <td class="text-center">
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Group Actions">
-                            <a href="{{ route('admin.peer.group.members', $group->id) }}"
-                                class="btn btn-outline-info" title="View Members" aria-label="View Members">
-                                <i class="fas fa-users"></i>
-                            </a>
-                            <a href="{{ route('admin.peer.group.import', $group->id) }}"
-                                class="btn btn-outline-warning" title="Import Users" aria-label="Import Users">
-                                <i class="fas fa-upload"></i>
-                            </a>
-                            <a href="{{ route('admin.peer.group.submissions', $group->id) }}"
-                                class="btn btn-outline-primary" title="View Submissions" aria-label="View Submissions">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            <button class="btn btn-outline-danger delete-group"
-                                data-id="{{ $group->id }}"
-                                 title="Delete Group" aria-label="Delete Group">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            @endforeach
-        </tbody>
+        <tbody></tbody>
     </table>
 </div>
 
@@ -297,52 +222,7 @@
                     <th scope="col" class="text-center">Actions</th>
                 </tr>
             </thead>
-            <tbody>
-                @foreach ($columns as $column)
-                    <tr>
-                        <td>
-                            <span
-                                class="badge {{ $column->is_visible ? 'bg-success' : 'bg-secondary' }} me-1">
-                                {{ $column->column_name }}
-                            </span>
-                        </td>
-                        <td>
-                            @if ($column->course)
-                                <small class="text-muted">{{ $column->course->course_name }}</small>
-                            @else
-                                <small class="text-muted">—</small>
-                            @endif
-                        </td>
-                        <td>
-                            @if ($column->event)
-                                <small class="text-muted">{{ $column->event->event_name }}</small>
-                            @else
-                                <small class="text-muted">—</small>
-                            @endif
-                        </td>
-                        <td class="text-center">
-    <div class="form-check form-switch d-inline-block">
-        <input type="checkbox" 
-            class="form-check-input toggle-column"
-            data-id="{{ $column->id }}"
-            id="toggleColumn{{ $column->id }}"
-            {{ $column->is_visible ? 'checked' : '' }}
-            title="Toggle Visibility">
-    </div>
-</td>
-
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-danger delete-column"
-                                data-id="{{ $column->id }}" title="Delete"
-                                {{ $column->is_visible == 1 ? 'disabled' : '' }}
-                                >
-                                <iconify-icon icon="solar:trash-bin-minimalistic-bold" class="fs-7">
-                                                     </iconify-icon>
-                            </button>
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
+            <tbody></tbody>
         </table>
     </div>
 </div>
@@ -393,50 +273,7 @@
                                 <th scope="col" class="text-center"><i class="fas fa-cog me-1"></i>Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @foreach ($reflectionFields as $field)
-                                <tr>
-                                    <td>
-                                        <span class="badge badge-modern {{ $field->is_active ? 'bg-success' : 'bg-secondary' }}">
-                                            {{ $field->field_label }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        @if ($field->course_name)
-                                            <small class="text-muted">{{ $field->course_name }}</small>
-                                        @else
-                                            <small class="text-muted">Global</small>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if ($field->event_name)
-                                            <small class="text-muted">{{ $field->event_name }}</small>
-                                        @else
-                                            <small class="text-muted">Global</small>
-                                        @endif
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="form-check form-switch d-inline-block">
-                                            <input type="checkbox"
-                                                class="form-check-input toggle-reflection"
-                                                data-id="{{ $field->id }}"
-                                                id="toggleReflection{{ $field->id }}"
-                                                {{ $field->is_active ? 'checked' : '' }}
-                                                title="Toggle Active">
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        <button class="btn btn-sm btn-outline-danger delete-reflection"
-                                            data-id="{{ $field->id }}"
-                                            title="Delete"
-                                            {{ $field->is_active == 1 ? 'disabled' : '' }}>
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
             </div>
@@ -794,7 +631,7 @@ $('#coursesAccordion').prepend(html);
 
 
                 // Update Max Marks
-                $('.update-marks').click(function() {
+                $(document).on('click', '.update-marks', function() {
                     const groupId = $(this).data('id');
                     const input = $(`.max-marks-input[data-id="${groupId}"]`);
                     const maxMarks = input.val();
@@ -821,7 +658,7 @@ $('#coursesAccordion').prepend(html);
                 });
 
                 // Toggle Form Status
-                $('.toggle-form').change(function() {
+                $(document).on('change', '.toggle-form', function() {
                     const checkbox = $(this);
                     const id = checkbox.data('id');
                     const isChecked = checkbox.is(':checked') ? 1 : 0;
@@ -866,7 +703,7 @@ $('#coursesAccordion').prepend(html);
                 });
 
                 // Delete Group
-                $('.delete-group').click(function() {
+                $(document).on('click', '.delete-group', function() {
                     if (confirm('Are you sure you want to delete this group?')) {
                         const button = $(this);
                         const id = button.data('id');
@@ -893,7 +730,7 @@ $('#coursesAccordion').prepend(html);
                 });
 
                 // Toggle Column Visibility
-                $('.toggle-column').change(function() {
+                $(document).on('change', '.toggle-column', function() {
                     const checkbox = $(this);
                     const id = checkbox.data('id');
 
@@ -913,7 +750,7 @@ $('#coursesAccordion').prepend(html);
                 });
 
                 // Delete Column
-                $('.delete-column').click(function() {
+                $(document).on('click', '.delete-column', function() {
                     if (confirm('Are you sure you want to delete this column?')) {
                         const id = $(this).data('id');
                         $.post('/admin/peer/column/delete/' + id, {
@@ -984,7 +821,7 @@ $('#coursesAccordion').prepend(html);
 
 
                 // Toggle Reflection Field
-                $('.toggle-reflection').change(function() {
+                $(document).on('change', '.toggle-reflection', function() {
                     const checkbox = $(this);
                     const id = checkbox.data('id');
 
@@ -1009,7 +846,7 @@ $('#coursesAccordion').prepend(html);
                 });
 
                 // Delete Reflection Field
-                $('.delete-reflection').click(function() {
+                $(document).on('click', '.delete-reflection', function() {
                     if (confirm('Are you sure you want to delete this reflection field?')) {
                         const button = $(this);
                         const id = button.data('id');
@@ -1019,7 +856,7 @@ $('#coursesAccordion').prepend(html);
                         }, function(response) {
                             if (response.success) {
                                // location.reload();
-                                $('#datatable-columns').DataTable().ajax.reload(null, false);
+                                $('#datatable-reflection-fields').DataTable().ajax.reload(null, false);
                             } else {
                                 alert('Error: ' + response.message);
                             }
@@ -1190,13 +1027,30 @@ $(document).on('click', '.delete-course-btn', function (e) {
 <script>
 $(document).ready(function() {
 	 setTimeout(() => {
+  // All three grids are server-side: search, sort and paging are resolved in SQL.
+  var peerGridUrl = "{{ route('admin.peer.index') }}";
+
   var table = $('#datatable-courses').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: { url: peerGridUrl + '?grid=groups', type: 'GET' },
+        columns: [
+            { data: 'course_name', name: 'course_name', orderable: false },
+            { data: 'event_name', name: 'event_name', orderable: false },
+            { data: 'group_name', name: 'group_name' },
+            { data: 'max_marks_control', name: 'max_marks', searchable: false },
+            { data: 'status', name: 'is_form_active', searchable: false, className: 'text-center' },
+            { data: 'members', name: 'members_count', orderable: false, searchable: false, className: 'text-center' },
+            { data: 'action', name: 'action', orderable: false, searchable: false, className: 'text-center' }
+        ],
         paging: true,
         searching: true,
         ordering: true,
-        lengthMenu: [5, 10, 25, 50],
+        lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]],
         pageLength: 10,
+        order: [],
         language: {
+            processing: "Loading data…",
             search: "Search:",
             lengthMenu: "Show _MENU_ entries",
             info: "Showing _START_ to _END_ of _TOTAL_ entries",
@@ -1204,25 +1058,42 @@ $(document).ready(function() {
         }
     });
    var table2 = $('#datatable-groups').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: { url: peerGridUrl + '?grid=columns', type: 'GET' },
+        columns: [
+            { data: 'name', name: 'name' },
+            { data: 'course_name', name: 'course_name', orderable: false, searchable: false },
+            { data: 'event_name', name: 'event_name', orderable: false, searchable: false },
+            { data: 'visible', name: 'is_visible', searchable: false, className: 'text-center' },
+            { data: 'action', name: 'action', orderable: false, searchable: false, className: 'text-center' }
+        ],
         paging: true,
         searching: true,
         ordering: true,
-        lengthMenu: [5, 10, 25, 50],
-        pageLength: 10
-    });
-    var table3 = $('#datatable-columns').DataTable({
-        paging: true,
-        searching: true,
-        ordering: true,
-        lengthMenu: [5, 10, 25, 50],
-        pageLength: 10
+        lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]],
+        pageLength: 10,
+        order: [],
+        language: { processing: "Loading data…" }
     });
     var table4 = $('#datatable-reflection-fields').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: { url: peerGridUrl + '?grid=reflection', type: 'GET' },
+        columns: [
+            { data: 'label', name: 'label' },
+            { data: 'course_label', name: 'course_label', orderable: false, searchable: false },
+            { data: 'event_label', name: 'event_label', orderable: false, searchable: false },
+            { data: 'active', name: 'is_active', searchable: false, className: 'text-center' },
+            { data: 'action', name: 'action', orderable: false, searchable: false, className: 'text-center' }
+        ],
         paging: true,
         searching: true,
         ordering: true,
-        lengthMenu: [5, 10, 25, 50],
-        pageLength: 10
+        lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]],
+        pageLength: 10,
+        order: [],
+        language: { processing: "Loading data…" }
     });
 	
 });

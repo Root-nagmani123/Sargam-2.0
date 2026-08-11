@@ -100,100 +100,7 @@
                             @endforeach
                         </tr>
                     </thead>
-                    <tbody>
-                        @php
-                            $rowCounter = 1;
-                        @endphp
-                        
-                        @foreach ($members as $member)
-                            @php
-                                // Get all unique evaluators for this member
-                                $evaluators = $scores->where('member_id', $member->id)->pluck('evaluator_id')->unique();
-                          
-                                @endphp
-                            
-                            @foreach ($evaluators as $evaluatorId)
-                                @php
-                                    // Get evaluator details
-                                    $evaluatorScore = $scores->where('member_id', $member->id)->where('evaluator_id', $evaluatorId)->first();
-                                    $evaluatorFirstName = $evaluatorScore->evaluator_first_name ?? '';
-                                    $evaluatorLastName = $evaluatorScore->evaluator_last_name ?? '';
-                                    $evaluatorFullName = trim($evaluatorFirstName . ' ' . $evaluatorLastName);
-                                    $evaluatorDisplayName = $evaluatorFullName ?: 'User ' . $evaluatorId;
-                                @endphp
-                                <tr>
-                                    <td>{{ $rowCounter++ }}</td>
-                                    <td class="text-start">
-                                        <strong>{{ $member->first_name }}</strong>
-                                        @if ($member->ot_code)
-                                            <br>
-                                            <small class="text-muted">- {{ $member->ot_code }}</small>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-primary">
-                                            {{ $groups->where('id', $selectedGroupId)->first()->group_name }}
-                                        </span>
-                                    </td>
-                                    <!-- User Full Name Column -->
-                                    <td class="text-start">
-                                        @php
-                                            $userFullName = trim(($member->user_full_name ?? '') . ' ' . ($member->user_last_name ?? ''));
-                                            $userDisplayName = $userFullName ?: $member->first_name;
-                                        @endphp
-                                        {{ $userDisplayName }}
-                                        @if ($member->user_id)
-                                            <br>
-                                            <small class="text-muted">(ID: {{ $member->user_id }})</small>
-                                        @endif
-                                    </td>
-                                    <!-- Evaluator Name Column -->
-                                    <td class="text-start">
-                                        {{ $evaluatorDisplayName }}
-                                        <br>
-                                        <small class="text-muted">(ID: {{ $evaluatorId }})</small>
-                                    </td>
-                                    @foreach ($columns as $column)
-                                        <td>
-                                            @php
-                                                // Get score for this specific member, column, and evaluator
-                                                $score = $scores
-                                                    ->where('member_id', $member->id)
-                                                    ->where('column_id', $column->id)
-                                                    ->where('evaluator_id', $evaluatorId)
-                                                    ->first();
-                                            @endphp
-                                            {{ $score->score ?? '-' }}
-                                        </td>
-                                    @endforeach
-                                    <!-- Reflection Responses -->
-                                    @foreach ($reflectionFields as $field)
-                                        <td class="bg-light text-start">
-                                            @php
-                                                // Match reflection responses using evaluator_id
-                                                $response = $reflectionResponses->get($evaluatorId . '-' . $field->id);
-                                                $responseEvaluatorFirstName = $response->evaluator_first_name ?? '';
-                                                $responseEvaluatorLastName = $response->evaluator_last_name ?? '';
-                                                $responseEvaluatorFullName = trim($responseEvaluatorFirstName . ' ' . $responseEvaluatorLastName);
-                                                $responseEvaluatorDisplayName = $responseEvaluatorFullName ?: 'User ' . $evaluatorId;
-                                            @endphp
-
-                                            @if ($response && $response->description)
-                                                <div class="reflection-response">
-                                                    <p class="mb-0 small">{{ $response->description }}</p>
-                                                    <small class="text-muted">
-                                                        By: {{ $responseEvaluatorDisplayName }}
-                                                    </small>
-                                                </div>
-                                            @else
-                                                <span class="text-muted">-</span>
-                                            @endif
-                                        </td>
-                                    @endforeach
-                                </tr>
-                            @endforeach
-                        @endforeach
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
@@ -237,18 +144,40 @@
 @push('scripts')
 <script>
 $(document).ready(function () {
+    if (!$('#peerEvaluationTable').length) {
+        return;
+    }
+
+    // Server-side: search, sort and paging are resolved on the server.
     $('#peerEvaluationTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{{ route('admin.peer.group.submissions', $selectedGroupId) }}",
+            type: 'GET'
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'member_name', name: 'member_name', className: 'text-start' },
+            { data: 'group_name', name: 'group_name' },
+            { data: 'user_full_name', name: 'user_full_name', className: 'text-start' },
+            { data: 'evaluator_name', name: 'evaluator_name', className: 'text-start' }
+            @foreach ($columns as $column)
+            , { data: 'col_{{ $column->id }}', name: 'col_{{ $column->id }}' }
+            @endforeach
+            @foreach ($reflectionFields as $field)
+            , { data: 'ref_{{ $field->id }}', name: 'ref_{{ $field->id }}', className: 'bg-light text-start' }
+            @endforeach
+        ],
         responsive: true,
         scrollX: true,
         autoWidth: false,
         pageLength: 25,
-        lengthMenu: [10, 25, 50, 100],
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
         ordering: true,
-        order: [[0, 'asc']], // Sr.No sorting
-        columnDefs: [
-            { orderable: false, targets: -1 } // disable sorting on last column if needed
-        ],
+        order: [],
         language: {
+            processing: "Loading data…",
             search: "Search:",
             lengthMenu: "Show _MENU_ records",
             info: "Showing _START_ to _END_ of _TOTAL_ entries",

@@ -28,11 +28,7 @@
                             <th>Status</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr id="noDataRow">
-                            <td colspan="11" class="text-center text-muted">Loading...</td>
-                        </tr>
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
@@ -43,15 +39,59 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    var dataTableInstance = null;
+    var dataUrl = '{{ route("admin.estate.reports.house-status.data") }}';
 
-    function destroyDataTable() {
-        if (dataTableInstance && $.fn.DataTable.isDataTable('#houseStatusTable')) {
-            dataTableInstance.destroy();
-            $('#houseStatusTable tbody').empty();
-            dataTableInstance = null;
+    // Server-side DataTable: searching, sorting and paging are done by the server.
+    var dataTableInstance = $('#houseStatusTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: dataUrl,
+            type: 'GET'
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'qtr_no', name: 'qtr_no' },
+            { data: 'building_name', name: 'building_name' },
+            { data: 'type', name: 'type' },
+            { data: 'allottee_name', name: 'allottee_name' },
+            { data: 'section_designation', name: 'section_designation' },
+            { data: 'mobile_number', name: 'mobile_number' },
+            { data: 'alloted_date', name: 'alloted_date' },
+            { data: 'occupied_date', name: 'occupied_date' },
+            { data: 'vacated_date', name: 'vacated_date' },
+            { data: 'status', name: 'status' }
+        ],
+        order: [],
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+        language: {
+            processing: "Loading data…",
+            emptyTable: "No data available.",
+            zeroRecords: "No matching records found.",
+            search: "Search:",
+            lengthMenu: "Show _MENU_ entries",
+            info: "Showing _START_ to _END_ of _TOTAL_ entries",
+            infoEmpty: "Showing 0 to 0 of 0 entries",
+            infoFiltered: "(filtered from _MAX_ total entries)",
+            paginate: {
+                first: "First",
+                last: "Last",
+                next: "Next",
+                previous: "Previous"
+            }
+        },
+        responsive: true,
+        autoWidth: false,
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        initComplete: function() {
+            // Print button next to search (same row as DataTable filter)
+            var $filter = $('#houseStatusTable_wrapper .dataTables_filter');
+            if ($filter.length && !$('#btnPrintHouseStatus').length) {
+                $filter.append('<label class="d-inline-flex align-items-center ms-2 mb-0"><button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2" id="btnPrintHouseStatus" title="Print"><i class="material-icons material-symbols-rounded">print</i></button></label>');
+            }
         }
-    }
+    });
 
     function escapeHtml(str) {
         if (str == null || str === '') return '';
@@ -60,101 +100,34 @@ $(document).ready(function() {
         return div.innerHTML;
     }
 
-    function loadHouseStatus() {
-        $('#noDataRow').remove();
-        $('#houseStatusTable tbody').html('<tr><td colspan="11" class="text-center">Loading...</td></tr>');
-
-        $.ajax({
-            url: '{{ route("admin.estate.reports.house-status.data") }}',
-            type: 'GET',
-            dataType: 'json',
-            success: function(res) {
-                destroyDataTable();
-                var tbody = $('#houseStatusTable tbody');
-                tbody.empty();
-                if (res.status && res.data && res.data.length > 0) {
-                    $.each(res.data, function(i, row) {
-                        tbody.append(
-                            '<tr>' +
-                                '<td>' + (row.sno != null ? row.sno : (i + 1)) + '</td>' +
-                                '<td>' + escapeHtml(row.qtr_no || '—') + '</td>' +
-                                '<td>' + escapeHtml(row.building_name || '—') + '</td>' +
-                                '<td>' + escapeHtml(row.type || '—') + '</td>' +
-                                '<td>' + escapeHtml(row.allottee_name || 'VACANT') + '</td>' +
-                                '<td>' + escapeHtml(row.section_designation || '') + '</td>' +
-                                '<td>' + escapeHtml(row.mobile_number || '') + '</td>' +
-                                '<td>' + escapeHtml(row.alloted_date || '') + '</td>' +
-                                '<td>' + escapeHtml(row.occupied_date || '') + '</td>' +
-                                '<td>' + escapeHtml(row.vacated_date || '') + '</td>' +
-                                '<td>' + escapeHtml(row.status || '') + '</td>' +
-                            '</tr>'
-                        );
-                    });
-                } else {
-                    tbody.append('<tr id="noDataRow"><td colspan="11" class="text-center text-muted">No data available.</td></tr>');
-                }
-                dataTableInstance = $('#houseStatusTable').DataTable({
-                    order: [[0, 'asc']],
-                    pageLength: 10,
-                    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                    language: {
-                        search: "Search:",
-                        lengthMenu: "Show _MENU_ entries",
-                        info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                        infoEmpty: "Showing 0 to 0 of 0 entries",
-                        infoFiltered: "(filtered from _MAX_ total entries)",
-                        paginate: {
-                            first: "First",
-                            last: "Last",
-                            next: "Next",
-                            previous: "Previous"
-                        }
-                    },
-                    responsive: true,
-                    autoWidth: false,
-                    dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
-                });
-                // Print button next to search (same row as DataTable filter)
-                var $filter = $('#houseStatusTable_wrapper .dataTables_filter');
-                if ($filter.length && !$('#btnPrintHouseStatus').length) {
-                    $filter.append('<label class="d-inline-flex align-items-center ms-2 mb-0"><button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2" id="btnPrintHouseStatus" title="Print"><i class="material-icons material-symbols-rounded">print</i></button></label>');
-                }
-            },
-            error: function(xhr) {
-                destroyDataTable();
-                var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to load data.';
-                $('#houseStatusTable tbody').empty().append('<tr><td colspan="11" class="text-center text-danger">' + msg + '</td></tr>');
-            }
-        });
-    }
-
-    loadHouseStatus();
-
-    // Print: same pattern as other estate module DataTable print
-    function buildPrintableTableHtml(tableElement) {
-        var clone = tableElement.cloneNode(true);
-        clone.classList.remove('dataTable');
-        clone.removeAttribute('style');
-        clone.removeAttribute('width');
-
-        clone.querySelectorAll('colgroup').forEach(function(colgroup) {
-            colgroup.remove();
+    // Print: rows come from the server (all pages, current search/sort applied).
+    function buildPrintableTableHtml(rows) {
+        var headers = [];
+        $('#houseStatusTable thead th').each(function() {
+            headers.push($(this).text().trim());
         });
 
-        clone.querySelectorAll('[style]').forEach(function(el) {
-            el.removeAttribute('style');
+        var html = '<table><thead><tr>';
+        headers.forEach(function(h) { html += '<th>' + escapeHtml(h) + '</th>'; });
+        html += '</tr></thead><tbody>';
+
+        rows.forEach(function(row, i) {
+            html += '<tr>' +
+                '<td>' + escapeHtml(String(row.DT_RowIndex != null ? row.DT_RowIndex : (i + 1))) + '</td>' +
+                '<td>' + escapeHtml(row.qtr_no) + '</td>' +
+                '<td>' + escapeHtml(row.building_name) + '</td>' +
+                '<td>' + escapeHtml(row.type) + '</td>' +
+                '<td>' + escapeHtml(row.allottee_name) + '</td>' +
+                '<td>' + escapeHtml(row.section_designation) + '</td>' +
+                '<td>' + escapeHtml(row.mobile_number) + '</td>' +
+                '<td>' + escapeHtml(row.alloted_date) + '</td>' +
+                '<td>' + escapeHtml(row.occupied_date) + '</td>' +
+                '<td>' + escapeHtml(row.vacated_date) + '</td>' +
+                '<td>' + escapeHtml(row.status) + '</td>' +
+            '</tr>';
         });
 
-        clone.querySelectorAll('[width]').forEach(function(el) {
-            el.removeAttribute('width');
-        });
-
-        clone.querySelectorAll('th, td').forEach(function(cell) {
-            cell.style.whiteSpace = 'normal';
-            cell.style.wordBreak = 'break-word';
-        });
-
-        return clone.outerHTML;
+        return html + '</tbody></table>';
     }
 
     function openPrintWindow(tableHtml) {
@@ -191,21 +164,26 @@ $(document).ready(function() {
     }
 
     $(document).on('click', '#btnPrintHouseStatus', function() {
-        var $table = $('#houseStatusTable');
-        if (!$table.length) {
-            alert('Table not found.');
-            return;
-        }
-        var tableEl = $table[0];
-        var dt = $table.DataTable();
-        var prevPageLen = dt.settings()[0]._iDisplayLength;
-        if (prevPageLen !== -1) {
-            dt.page.len(-1).draw(false);
-        }
-        openPrintWindow(buildPrintableTableHtml(tableEl));
-        if (prevPageLen !== -1) {
-            dt.page.len(prevPageLen).draw(false);
-        }
+        var $btn = $(this);
+        // Pull every row for the current search/sort (length = -1) so print is not limited to one page.
+        var params = $.extend({}, dataTableInstance.ajax.params(), { start: 0, length: -1 });
+        $btn.prop('disabled', true);
+
+        $.ajax({
+            url: dataUrl,
+            type: 'GET',
+            data: params,
+            dataType: 'json',
+            success: function(res) {
+                openPrintWindow(buildPrintableTableHtml((res && res.data) || []));
+            },
+            error: function() {
+                alert('Failed to load data for printing.');
+            },
+            complete: function() {
+                $btn.prop('disabled', false);
+            }
+        });
     });
 });
 </script>

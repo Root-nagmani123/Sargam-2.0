@@ -6,13 +6,34 @@ use App\Http\Controllers\Controller;
 use App\Models\UnitSubType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Yajra\DataTables\Facades\DataTables;
 
 class UnitSubTypeController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $items = UnitSubType::orderBy('pk', 'desc')->get();
-        return view('admin.estate.define_unit_sub_type.index', compact('items'));
+        if ($request->ajax()) {
+            return $this->datatable();
+        }
+
+        return view('admin.estate.define_unit_sub_type.index');
+    }
+
+    /**
+     * Server-side feed for the listing grid (search/sort/paginate happen in SQL).
+     */
+    protected function datatable()
+    {
+        $query = UnitSubType::query()->select(['pk', 'unit_sub_type'])->orderBy('pk', 'desc');
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->addColumn('action', function ($row) {
+                return '<a href="'.route('admin.estate.define-unit-sub-type.edit', $row->pk).'" class="text-primary" title="Edit">'
+                    .'<i class="material-icons material-symbols-rounded">edit</i></a>';
+            })
+            ->rawColumns(['action'])
+            ->make(true);
     }
 
     public function create()

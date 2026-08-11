@@ -96,9 +96,12 @@ class IssueManagementController extends Controller
         };
 
         $applyFilters = function ($builder) use ($request) {
-            // Search (ID, description, category name, sub-category)
-            if ($request->filled('search')) {
-                $term = trim($request->search);
+            // Search (ID, description, category name, sub-category).
+            // DataTables ajax sends `search` as an array (search[value]) — that search is
+            // applied by the datatable engine, so only the page's own text filter counts here.
+            $rawTerm = $request->input('search');
+            $term = is_array($rawTerm) ? '' : trim((string) $rawTerm);
+            if ($term !== '') {
                 $builder->where(function ($q) use ($term) {
                     if (is_numeric($term)) {
                         $q->orWhere('pk', $term);
@@ -191,10 +194,64 @@ class IssueManagementController extends Controller
     }
 
     /**
+     * Server-side feed for the issues grid: the page's own filters still apply, and
+     * DataTables' search/sort/paging run in SQL on top of them.
+     */
+    protected function issueManagementDatatable(Request $request)
+    {
+        $query = $this->issueManagementIndexFilteredQuery($request)
+            ->with($this->issueManagementIndexEagerLoads());
+
+        $currentUserId = Auth::user()->user_id;
+
+        return \Yajra\DataTables\Facades\DataTables::eloquent($query)
+            ->addColumn('id_label', fn ($issue) => '#'.e($issue->pk))
+            ->addColumn('date', fn ($issue) => $issue->created_date ? e($issue->created_date->format('d M Y')) : '-')
+            ->addColumn('category_name', fn ($issue) => e($issue->category->issue_category ?? '-'))
+            ->addColumn('description_short', fn ($issue) => e(\Str::limit($issue->description, 50)))
+            ->addColumn('priority_label', function ($issue) {
+                $p = $issue->priority->priority ?? 'N/A';
+                $class = $p == 'High' ? 'danger' : ($p == 'Medium' ? 'warning' : 'info');
+
+                return '<span class="badge rounded-1 bg-'.$class.' '.($class == 'warning' ? 'text-dark' : '').'">'.e($p).'</span>';
+            })
+            ->addColumn('status', function ($issue) {
+                $s = (int) $issue->issue_status;
+                $class = $s == 2 ? 'success' : ($s == 1 ? 'info' : ($s == 6 ? 'warning' : 'secondary'));
+
+                return '<span class="badge rounded-1 bg-'.$class.' '.($class == 'warning' ? 'text-dark' : '').'">'.e($issue->status_label).'</span>';
+            })
+            ->addColumn('action', function ($issue) use ($currentUserId) {
+                $html = '<div class="d-flex justify-content-end gap-1">'
+                    .'<a href="'.route('admin.issue-management.show', $issue->pk).'" class="text-primary" title="View">'
+                    .'<i class="material-icons material-symbols-rounded">visibility</i></a>';
+
+                if ($issue->issue_logger == $currentUserId || $issue->created_by == $currentUserId) {
+                    $html .= '<a href="'.route('admin.issue-management.edit', $issue->pk).'" class="btn btn-action btn-warning" title="Edit">'
+                        .'<iconify-icon icon="solar:pen-bold"></iconify-icon></a>';
+                }
+
+                return $html.'</div>';
+            })
+            ->filterColumn('id_label', fn ($q, $keyword) => $q->where('pk', 'like', "%{$keyword}%"))
+            ->filterColumn('description_short', fn ($q, $keyword) => $q->where('description', 'like', "%{$keyword}%"))
+            ->filterColumn('category_name', fn ($q, $keyword) => $q->whereHas('category', fn ($c) => $c->where('issue_category', 'like', "%{$keyword}%")))
+            ->orderColumn('id_label', 'pk $1')
+            ->orderColumn('date', 'created_date $1')
+            ->orderColumn('description_short', 'description $1')
+            ->rawColumns(['priority_label', 'status', 'action'])
+            ->make(true);
+    }
+
+    /**
      * Display a listing of all issues.
      */
     public function index(Request $request)
     {
+        if ($request->ajax()) {
+            return $this->issueManagementDatatable($request);
+        }
+
         $isAdmin = hasRole('Admin') || hasRole('SuperAdmin');
         $userId = Auth::user()->user_id;
         $scopedIds = null;

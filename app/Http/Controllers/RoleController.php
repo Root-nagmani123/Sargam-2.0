@@ -72,8 +72,79 @@ class RoleController extends Controller
         $categories = SidebarCategory::with([
             'groups.menus'
         ])->get();
-        // dd($categories);
+
+        // Grid is server-side: rows (and the filter bar's filters) are resolved here.
+        if ($request->ajax()) {
+            return $this->rolePermissionsDatatable($request, $categories, $rolePermissions);
+        }
+
         return view('roles-permissions.assign-permission', compact('role', 'rolePermissions', 'categories'));
+    }
+
+    /**
+     * Server-side rows for the role permission grid: one row per menu (or sub-menu),
+     * with the page's Category / Status filters applied before paging.
+     */
+    protected function rolePermissionsDatatable(Request $request, $categories, array $rolePermissions)
+    {
+        $rows = collect();
+
+        foreach ($categories as $category) {
+            foreach ($category->groups as $group) {
+                foreach ($group->menus as $menu) {
+                    $children = $menu->children;
+
+                    if ($children->count() > 0) {
+                        foreach ($children as $child) {
+                            $rows->push([
+                                'id' => $child->id,
+                                'category' => $category->name,
+                                'group' => $group->name,
+                                'menu' => $menu->name,
+                                'submenu' => $child->name,
+                                'permission' => $child->permission_name,
+                                'enabled' => in_array($child->permission_name, $rolePermissions),
+                            ]);
+                        }
+
+                        continue;
+                    }
+
+                    $rows->push([
+                        'id' => $menu->id,
+                        'category' => $category->name,
+                        'group' => $group->name,
+                        'menu' => $menu->name,
+                        'submenu' => '-',
+                        'permission' => $menu->permission_name,
+                        'enabled' => in_array($menu->permission_name, $rolePermissions),
+                    ]);
+                }
+            }
+        }
+
+        $categoryFilter = (string) $request->query('category_filter', '');
+        if ($categoryFilter !== '') {
+            $rows = $rows->where('category', $categoryFilter)->values();
+        }
+
+        $statusFilter = (string) $request->query('status_filter', '');
+        if ($statusFilter === 'enabled' || $statusFilter === 'disabled') {
+            $wanted = $statusFilter === 'enabled';
+            $rows = $rows->filter(fn ($row) => $row['enabled'] === $wanted)->values();
+        }
+
+        return \Yajra\DataTables\Facades\DataTables::of($rows)
+            ->editColumn('submenu', fn ($row) => e($row['submenu']))
+            ->addColumn('action', function ($row) {
+                return '<div class="form-check form-switch">'
+                    .'<input class="form-check-input permission-toggle" type="checkbox" name="permissions[]"'
+                    .' data-id="'.e($row['id']).'" value="'.e($row['permission']).'"'
+                    .($row['enabled'] ? ' checked' : '').'>'
+                    .'<label class="form-check-label"></label></div>';
+            })
+            ->rawColumns(['action'])
+            ->make(true);
     }
 
     /**
@@ -171,15 +242,68 @@ class RoleController extends Controller
         ]);
     }
 
-    public function showDashboard($id)
+    public function showDashboard(Request $request, $id)
     {
         $role = Role::findOrFail($id);
-        $allCards = DashboardCard::orderBy('id', 'desc')->get();
         $assignedCardIds = $role->belongsToMany(DashboardCard::class, 'role_dashboard_cards', 'role_id', 'dashboard_card_id')
             ->pluck('dashboard_cards.id')
             ->toArray();
+
+        // Grid is server-side: rows and the Status filter are resolved here.
+        if ($request->ajax()) {
+            return $this->dashboardCardsDatatable($request, $assignedCardIds);
+        }
+
+        $allCards = DashboardCard::orderBy('id', 'desc')->get();
         $materialIcons = $this->materialIconNames();
+
         return view('roles-permissions.assign-dashboard', compact('role', 'allCards', 'assignedCardIds', 'materialIcons'));
+    }
+
+    /**
+     * Server-side rows for the dashboard cards grid (Enabled/Disabled filter applied in SQL).
+     *
+     * @param  array<int, int>  $assignedCardIds
+     */
+    protected function dashboardCardsDatatable(Request $request, array $assignedCardIds)
+    {
+        $query = DashboardCard::orderBy('id', 'desc');
+
+        $statusFilter = (string) $request->query('status_filter', '');
+        if ($statusFilter === 'enabled') {
+            $query->whereIn('id', $assignedCardIds ?: [0]);
+        } elseif ($statusFilter === 'disabled') {
+            $query->whereNotIn('id', $assignedCardIds ?: [0]);
+        }
+
+        return \Yajra\DataTables\Facades\DataTables::eloquent($query)
+            ->addIndexColumn()
+            ->addColumn('name', fn ($card) => '<span class="fw-medium">'.e($card->label).'</span>')
+            ->addColumn('icon_cell', fn ($card) => '<span class="dc-icon-sm stat-icon-wrapper '.e($card->color_class).' d-inline-flex align-items-center justify-content-center">'
+                .'<i class="material-symbols-rounded">'.e($card->icon).'</i></span>')
+            ->addColumn('order', fn ($card) => '<span class="badge bg-primary">'.e($card->sort_order).'</span>')
+            ->addColumn('created', fn ($card) => $card->created_at ? e($card->created_at->format('d-m-Y')) : '-')
+            ->addColumn('enable', function ($card) use ($assignedCardIds) {
+                return '<div class="form-check form-switch d-inline-block">'
+                    .'<input class="form-check-input card-toggle" type="checkbox" data-id="'.e($card->id).'"'
+                    .(in_array($card->id, $assignedCardIds) ? ' checked' : '').'>'
+                    .'<label class="form-check-label"></label></div>';
+            })
+            ->addColumn('action', function ($card) use ($assignedCardIds) {
+                return '<div class="d-inline-flex align-items-center gap-1" role="group">'
+                    .'<button class="btn btn-sm border-0 bg-transparent text-primary edit-card-btn d-inline-flex align-items-center justify-content-center"'
+                    .' data-id="'.e($card->id).'" data-label="'.e($card->label).'" data-icon="'.e($card->icon).'"'
+                    .' data-color="'.e($card->color_class).'" data-sort="'.e($card->sort_order).'" title="Edit">'
+                    .'<i class="material-symbols-rounded" style="font-size:18px;">edit</i></button>'
+                    .'<button class="btn btn-sm border-0 bg-transparent text-danger delete-card-btn d-inline-flex align-items-center justify-content-center'
+                    .(in_array($card->id, $assignedCardIds) ? ' d-none' : '').'" data-id="'.e($card->id).'" title="Delete">'
+                    .'<i class="material-symbols-rounded" style="font-size:18px;">delete</i></button></div>';
+            })
+            ->setRowAttr(['data-id' => fn ($card) => $card->id])
+            ->filterColumn('name', fn ($q, $keyword) => $q->where('label', 'like', "%{$keyword}%"))
+            ->orderColumn('name', 'label $1')
+            ->rawColumns(['name', 'icon_cell', 'order', 'enable', 'action'])
+            ->make(true);
     }
 
     private function materialIconNames(): array

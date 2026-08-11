@@ -29,21 +29,7 @@
                             <th class="border-0 pe-3 fw-semibold text-secondary text-end">Action</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($items as $index => $row)
-                        <tr>
-                            <td class="ps-3">{{ $index + 1 }}</td>
-                            <td class="fw-medium">{{ $row->unit_sub_type }}</td>
-                            <td class="pe-3 text-end">
-                                <a href="{{ route('admin.estate.define-unit-sub-type.edit', $row->pk) }}" class="text-primary" title="Edit">
-                                    <i class="material-icons material-symbols-rounded">edit</i>
-                                </a>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr><td colspan="3" class="text-center text-muted py-4">No unit sub type found. <a href="{{ route('admin.estate.define-unit-sub-type.create') }}">Add one</a>.</td></tr>
-                        @endforelse
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
@@ -55,14 +41,23 @@
 <script>
 $(document).ready(function() {
     $('#unitSubTypeTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{{ route('admin.estate.define-unit-sub-type.index') }}"
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, width: '80px', className: 'ps-3' },
+            { data: 'unit_sub_type', name: 'unit_sub_type', className: 'fw-medium' },
+            { data: 'action', name: 'action', orderable: false, searchable: false, className: 'pe-3 text-end' }
+        ],
         order: [],
         pageLength: 10,
-        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-        columnDefs: [
-            { targets: 0, orderable: false, searchable: false, width: '80px', render: function(data, type, row, meta) { return type === 'display' ? (meta.settings._iDisplayStart || 0) + meta.row + 1 : data; } },
-            { targets: 2, orderable: false, searchable: false }
-        ],
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
         language: {
+            processing: "Loading data…",
+            emptyTable: "No unit sub type found.",
+            zeroRecords: "No matching unit sub type found.",
             search: "Search:",
             lengthMenu: "Show _MENU_ entries",
             info: "Showing _START_ to _END_ of _TOTAL_ entries",

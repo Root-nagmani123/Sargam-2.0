@@ -29,19 +29,7 @@
                             <th class="border-0 pe-3 fw-semibold text-secondary text-end">Action</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white">
-                        @forelse($items as $index => $row)
-                        <tr>
-                            <td class="ps-3">{{ $index + 1 }}</td>
-                            <td class="fw-medium">{{ $row->block_name }}</td>
-                            <td class="pe-3 text-end">
-                                <a href="{{ route('admin.estate.define-block-building.edit', $row->pk) }}" class="text-primary" title="Edit"><i class="material-icons material-symbols-rounded">edit</i></a>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr><td colspan="3" class="text-center text-muted py-4">No block/building found. <a href="{{ route('admin.estate.define-block-building.create') }}">Add one</a>.</td></tr>
-                        @endforelse
-                    </tbody>
+                    <tbody class="bg-white"></tbody>
                 </table>
             </div>
         </div>
@@ -53,14 +41,23 @@
 <script>
 $(document).ready(function() {
     $('#blockBuildingTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{{ route('admin.estate.define-block-building.index') }}"
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, width: '80px', className: 'ps-3' },
+            { data: 'block_name', name: 'block_name', className: 'fw-medium' },
+            { data: 'action', name: 'action', orderable: false, searchable: false, className: 'pe-3 text-end' }
+        ],
         order: [[1, 'asc']],
         pageLength: 10,
-        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-        columnDefs: [
-            { targets: 0, orderable: false, searchable: false, width: '80px', render: function(data, type, row, meta) { return type === 'display' ? (meta.settings._iDisplayStart || 0) + meta.row + 1 : data; } },
-            { targets: 2, orderable: false, searchable: false }
-        ],
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
         language: {
+            processing: "Loading data…",
+            emptyTable: "No block/building found.",
+            zeroRecords: "No matching block/building found.",
             search: "Search:",
             lengthMenu: "Show _MENU_ entries",
             info: "Showing _START_ to _END_ of _TOTAL_ entries",

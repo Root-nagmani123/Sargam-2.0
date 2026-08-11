@@ -11,12 +11,6 @@
             <h4>Session Details</h4>
             <hr class="my-2">
             
-            @if($sessions->isEmpty())
-                <div class="alert alert-info">
-                    <i class="material-icons material-symbols-rounded me-2">info</i>
-                    No sessions found.
-                </div>
-            @else
                 <div class="datatables">
                     <div class="table-responsive">
                         <table class="table table-striped table-hover" id="sessionsTable">
@@ -34,38 +28,10 @@
                                     <th scope="col">Status</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                @foreach($sessions as $index => $session)
-                                <tr>
-                                    <td>{{ $index + 1 }}</td>
-                                    <td>{{ $session['course_name'] }}</td>
-                                    <td>{{ $session['subject_name'] }}</td>
-                                    <td>{{ $session['module_name'] }}</td>
-                                    <td>{{ $session['topic'] }}</td>
-                                    <td>{{ $session['group_names'] }}</td>
-                                    <td>{{ $session['venue_name'] }}</td>
-                                    <td>{{ $session['session_time'] }}</td>
-                                    <td>{{ $session['session_date'] }}</td>
-                                    <td>
-                                        @php
-                                            $today = \Carbon\Carbon::today();
-                                            $sessionDate = \Carbon\Carbon::parse($session['start_date']);
-                                        @endphp
-                                        @if($sessionDate->isPast())
-                                            <span class="badge bg-secondary">Completed</span>
-                                        @elseif($sessionDate->isToday())
-                                            <span class="badge bg-primary">Today</span>
-                                        @else
-                                            <span class="badge bg-success">Upcoming</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                                @endforeach
-                            </tbody>
+                            <tbody></tbody>
                         </table>
                     </div>
                 </div>
-            @endif
         </div>
     </div>
 </div>
@@ -74,10 +40,33 @@
 <script>
     $(document).ready(function() {
         if ($('#sessionsTable').length) {
+            // Server-side: search, sort and paging are resolved in SQL.
             $('#sessionsTable').DataTable({
+                "processing": true,
+                "serverSide": true,
+                "ajax": {
+                    url: "{{ route('admin.dashboard.sessions') }}",
+                    type: 'GET'
+                },
+                "columns": [
+                    { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                    { data: 'course_name', name: 'course_name', orderable: false, searchable: false },
+                    { data: 'subject_name', name: 'subject_name', orderable: false, searchable: false },
+                    { data: 'module_name', name: 'module_name', orderable: false, searchable: false },
+                    { data: 'topic', name: 'subject_topic' },
+                    { data: 'group_names', name: 'group_names', orderable: false, searchable: false },
+                    { data: 'venue_name', name: 'venue_name', orderable: false, searchable: false },
+                    { data: 'session_time', name: 'session_time', orderable: false, searchable: false },
+                    { data: 'session_date', name: 'START_DATE', searchable: false },
+                    { data: 'status', name: 'status', orderable: false, searchable: false }
+                ],
                 "pageLength": 25,
+                "lengthMenu": [[10, 25, 50, 100], [10, 25, 50, 100]],
                 "order": [[8, "desc"]], // Sort by date descending
                 "language": {
+                    "processing": "Loading data…",
+                    "emptyTable": "No sessions found.",
+                    "zeroRecords": "No sessions found.",
                     "paginate": {
                         "previous": '<i class="material-icons material-symbols-rounded" style="font-size: 24px;">chevron_left</i>',
                         "next": '<i class="material-icons material-symbols-rounded" style="font-size: 24px;">chevron_right</i>'

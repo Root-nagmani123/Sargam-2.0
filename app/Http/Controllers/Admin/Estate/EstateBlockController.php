@@ -5,13 +5,34 @@ namespace App\Http\Controllers\Admin\Estate;
 use App\Http\Controllers\Controller;
 use App\Models\EstateBlock;
 use Illuminate\Http\Request;
+use Yajra\DataTables\Facades\DataTables;
 
 class EstateBlockController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $items = EstateBlock::orderBy('block_name')->get();
-        return view('admin.estate.define_block_building.index', compact('items'));
+        if ($request->ajax()) {
+            return $this->datatable();
+        }
+
+        return view('admin.estate.define_block_building.index');
+    }
+
+    /**
+     * Server-side feed for the listing grid (search/sort/paginate happen in SQL).
+     */
+    protected function datatable()
+    {
+        $query = EstateBlock::query()->select(['pk', 'block_name']);
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->addColumn('action', function ($row) {
+                return '<a href="'.route('admin.estate.define-block-building.edit', $row->pk).'" class="text-primary" title="Edit">'
+                    .'<i class="material-icons material-symbols-rounded">edit</i></a>';
+            })
+            ->rawColumns(['action'])
+            ->make(true);
     }
 
     public function create()

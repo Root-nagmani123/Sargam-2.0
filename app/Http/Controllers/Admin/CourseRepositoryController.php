@@ -37,24 +37,9 @@ class CourseRepositoryController extends Controller
             if ($parentPk) {
                 // Show children of specific parent
                 $parentRepository = CourseRepositoryMaster::findOrFail($parentPk);
-                $repositories = $parentRepository->children()
+                $repositoriesQuery = $parentRepository->children()
                     ->with(['children', 'documents'])
-                    ->orderBy('created_date', 'desc')
-                    ->get();
-                   
-            
-                                $documents_count_array = [];
-
-                    foreach ($repositories as $child) {
-
-                        $documents_count = CourseRepositoryDetail::where(
-                            'course_repository_master_pk',
-                            $child->pk
-                        )->count();
-
-                        $documents_count_array[$child->pk] = $documents_count;
-                    }
-
+                    ->orderBy('created_date', 'desc');
 
                 // Build ancestor chain for breadcrumb
                 $current = $parentRepository;
@@ -65,30 +50,20 @@ class CourseRepositoryController extends Controller
                 }
             } else {
                 // Show only root repositories (no parent or parent_type = 0)
-                $repositories = CourseRepositoryMaster::where('del_folder_status', 1)
+                $repositoriesQuery = CourseRepositoryMaster::where('del_folder_status', 1)
                     ->where(function($query) {
                         $query->whereNull('parent_type')
                               ->orWhere('parent_type', 0);
                     })
                     ->with(['children', 'documents'])
-                    ->orderBy('created_date', 'desc')
-                    ->get();
-                    $documents_count_array = [];
-
-                    foreach ($repositories as $child) {
-
-                        $documents_count = CourseRepositoryDetail::where(
-                            'course_repository_master_pk',
-                            $child->pk
-                        )->count();
-
-                        $documents_count_array[$child->pk] = $documents_count;
-                    }
-                    
+                    ->orderBy('created_date', 'desc');
             }
-            
+
+            if ($request->ajax()) {
+                return $this->categoriesDatatable($repositoriesQuery);
+            }
+
             return view('admin.course-repository.index', [
-                'repositories' => $repositories,
                 'parentRepository' => $parentRepository,
                 'parentPk' => $parentPk,
                 'ancestors' => $ancestors,
@@ -101,10 +76,57 @@ class CourseRepositoryController extends Controller
     }
 
     /**
+     * Server-side feed for the category grid (search/sort/paging happen in SQL).
+     * Sub-category and attachment counts are resolved for the visible page only.
+     */
+    protected function categoriesDatatable($query)
+    {
+        return \Yajra\DataTables\Facades\DataTables::eloquent($query)
+            ->addIndexColumn()
+            ->addColumn('category', function ($repo) {
+                $showUrl = route('course-repository.show', $repo->pk);
+                $thumb = filled($repo->category_image) && \Storage::disk('public')->exists($repo->category_image)
+                    ? '<img src="'.e(asset('storage/'.$repo->category_image)).'" class="rounded-circle object-fit-cover flex-shrink-0" width="40" height="40" alt="">'
+                    : '<div class="rounded-circle bg-light d-flex align-items-center justify-content-center flex-shrink-0" style="width:40px;height:40px;"><i class="bi bi-image text-muted"></i></div>';
+
+                return '<div class="d-flex align-items-center gap-3">'.$thumb
+                    .'<a href="'.$showUrl.'" class="cr-link-category">'.e($repo->course_repository_name).'</a></div>';
+            })
+            ->addColumn('sub_category', function ($repo) {
+                $subCount = $repo->children->count();
+
+                return '<a href="'.route('course-repository.show', $repo->pk).'" class="cr-link-subcategory '
+                    .($subCount == 0 ? 'cr-link-muted' : '').'">'.$subCount.' Sub-Category</a>';
+            })
+            ->addColumn('attachment', function ($repo) {
+                $docCount = $repo->getDocumentCount();
+
+                return '<a href="'.route('course-repository.show', $repo->pk).'" class="cr-link-documents '
+                    .($docCount == 0 ? 'cr-link-muted' : '').'">See '.str_pad($docCount, 2, '0', STR_PAD_LEFT).' Attachment</a>';
+            })
+            ->addColumn('action', function ($repo) {
+                return '<div class="d-inline-flex align-items-center gap-2">'
+                    .'<button type="button" class="programme-action-btn edit-repo"'
+                    .' data-pk="'.e($repo->pk).'"'
+                    .' data-name="'.e($repo->course_repository_name).'"'
+                    .' data-details="'.e($repo->course_repository_details).'"'
+                    .' data-image="'.e($repo->category_image).'" title="Edit" aria-label="Edit category">'
+                    .'<i class="bi bi-pencil" aria-hidden="true"></i></button>'
+                    .'<button type="button" class="programme-action-btn programme-action-btn--danger delete-repo"'
+                    .' data-pk="'.e($repo->pk).'" title="Delete" aria-label="Delete category">'
+                    .'<i class="bi bi-trash" aria-hidden="true"></i></button></div>';
+            })
+            ->filterColumn('category', fn ($q, $keyword) => $q->where('course_repository_name', 'like', "%{$keyword}%"))
+            ->orderColumn('category', 'course_repository_name $1')
+            ->rawColumns(['category', 'sub_category', 'attachment', 'action'])
+            ->make(true);
+    }
+
+    /**
      * Show repository details
      * GET /course-repository/{pk}
      */
-    public function show($pk)
+    public function show(Request $request, $pk)
     {
         try {
             $repository = CourseRepositoryMaster::with([
@@ -132,39 +154,15 @@ class CourseRepositoryController extends Controller
                          }
           
             
-            // Get all documents linked through details with course_repository_details_pk
-            // Also include documents directly linked to master via course_repository_master_pk
-            $documents = CourseRepositoryDocument::where('del_type', 1)
-                ->where(function($query) use ($pk) {
-                    $query->where('course_repository_master_pk', $pk)
-                        ->orWhereIn('course_repository_details_pk',
-                            CourseRepositoryDetail::where('course_repository_master_pk', $pk)->pluck('pk')
-                        );
-                })
-                ->with(['detail.course', 'detail.subject', 'detail.topic', 'detail.author', 'detail.sector', 'detail.ministry'])
-                ->orderBy('pk', 'desc')
-                ->get();
+            $documentsQuery = $this->repositoryDocumentsQuery($pk);
 
-            // Legacy imported rows store subject/topic/author foreign keys from the
-            // source system rather than local master pks, so the relations above
-            // resolve to null. The keyword column was populated at import time as
-            // "batch,subject,topic,date,author" — fall back to it, and finally to
-            // the raw id, when the relation doesn't resolve.
-            $documents->each(function (CourseRepositoryDocument $doc) {
-                $detail = $doc->detail;
-                if (!$detail) {
-                    return;
-                }
-                $keywordParts = array_map('trim', explode(',', (string) $detail->keyword));
-                // course_master_pk itself is sometimes a meaningless numeric id from the
-                // source system rather than a name — prefer the keyword's batch segment
-                // (index 0) when present, same as the other fields below, before falling
-                // back to that raw id.
-                $doc->fallback_course = $detail->course?->course_name ?: ($keywordParts[0] ?? null) ?: $detail->course_master_pk;
-                $doc->fallback_subject = $detail->subject?->subject_name ?: ($keywordParts[1] ?? null) ?: $detail->subject_pk;
-                $doc->fallback_topic = $detail->topic?->subject_topic ?: ($keywordParts[2] ?? null) ?: $detail->topic_pk;
-                $doc->fallback_author = $detail->author?->full_name ?: ($keywordParts[4] ?? null) ?: $detail->author_name;
-            });
+            if ($request->ajax()) {
+                return $request->query('grid') === 'documents'
+                    ? $this->repositoryDocumentsDatatable($documentsQuery)
+                    : $this->childRepositoriesDatatable(
+                        CourseRepositoryMaster::where('parent_type', $pk)->with(['children', 'documents'])
+                    );
+            }
 
             // Build ancestor chain for breadcrumb
             $ancestors = [];
@@ -176,7 +174,7 @@ class CourseRepositoryController extends Controller
            
             return view('admin.course-repository.show', [
                 'repository' => $repository,
-                'documents' => $documents,
+                'documentsCount' => (clone $documentsQuery)->count(),
                 'ancestors' => $ancestors,
                 'documents_count_array' => $documents_count_array,
                 // Data for dynamic dropdowns
@@ -201,6 +199,161 @@ class CourseRepositoryController extends Controller
             Log::error('Error in course repository show: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Repository not found');
         }
+    }
+
+    /**
+     * Documents of a repository: linked through its details plus any linked directly to the master.
+     */
+    protected function repositoryDocumentsQuery($pk)
+    {
+        return CourseRepositoryDocument::where('del_type', 1)
+            ->where(function ($query) use ($pk) {
+                $query->where('course_repository_master_pk', $pk)
+                    ->orWhereIn('course_repository_details_pk',
+                        CourseRepositoryDetail::where('course_repository_master_pk', $pk)->pluck('pk')
+                    );
+            })
+            ->with(['detail.course', 'detail.subject', 'detail.topic', 'detail.author', 'detail.sector', 'detail.ministry'])
+            ->orderBy('pk', 'desc');
+    }
+
+    /**
+     * Legacy imported rows store subject/topic/author foreign keys from the source system
+     * rather than local master pks, so the relations resolve to null. The keyword column was
+     * populated at import time as "batch,subject,topic,date,author" — fall back to it, and
+     * finally to the raw id, when the relation doesn't resolve.
+     */
+    protected function applyDocumentFallbacks(CourseRepositoryDocument $doc): CourseRepositoryDocument
+    {
+        $detail = $doc->detail;
+        if (! $detail) {
+            return $doc;
+        }
+
+        $keywordParts = array_map('trim', explode(',', (string) $detail->keyword));
+        // course_master_pk itself is sometimes a meaningless numeric id from the
+        // source system rather than a name — prefer the keyword's batch segment
+        // (index 0) when present, same as the other fields below, before falling
+        // back to that raw id.
+        $doc->fallback_course = $detail->course?->course_name ?: ($keywordParts[0] ?? null) ?: $detail->course_master_pk;
+        $doc->fallback_subject = $detail->subject?->subject_name ?: ($keywordParts[1] ?? null) ?: $detail->subject_pk;
+        $doc->fallback_topic = $detail->topic?->subject_topic ?: ($keywordParts[2] ?? null) ?: $detail->topic_pk;
+        $doc->fallback_author = $detail->author?->full_name ?: ($keywordParts[4] ?? null) ?: $detail->author_name;
+
+        return $doc;
+    }
+
+    /**
+     * Server-side feed for the Sub-Categories grid on the repository detail page.
+     */
+    protected function childRepositoriesDatatable($query)
+    {
+        return \Yajra\DataTables\Facades\DataTables::eloquent($query)
+            ->addIndexColumn()
+            ->addColumn('category', function ($child) {
+                $thumb = filled($child->category_image) && \Storage::disk('public')->exists($child->category_image)
+                    ? '<img src="'.e(asset('storage/'.$child->category_image)).'" alt="" class="rounded-circle object-fit-cover flex-shrink-0" width="40" height="40">'
+                    : '<div class="rounded-circle bg-light d-flex align-items-center justify-content-center flex-shrink-0" style="width:40px;height:40px;"><i class="bi bi-image text-muted"></i></div>';
+
+                return '<div class="d-flex align-items-center gap-3">'.$thumb
+                    .'<a href="'.route('course-repository.show', $child->pk).'" class="cr-link-category">'
+                    .e($child->course_repository_name).'</a></div>';
+            })
+            ->addColumn('details', fn ($child) => '<span class="text-muted small">'.e(\Str::limit($child->course_repository_details ?? 'N/A', 60)).'</span>')
+            ->addColumn('sub_categories', function ($child) {
+                $count = $child->children->count();
+
+                return '<a href="'.route('course-repository.show', $child->pk).'" class="cr-link-subcategory '
+                    .($count == 0 ? 'cr-link-muted' : '').'">'.$count.' Sub-Categories</a>';
+            })
+            ->addColumn('documents', function ($child) {
+                $count = $child->getDocumentCount();
+
+                return '<a href="'.route('course-repository.show', $child->pk).'" class="cr-link-documents '
+                    .($count == 0 ? 'cr-link-muted' : '').'">View '.str_pad($count, 2, '0', STR_PAD_LEFT).' Attachments</a>';
+            })
+            ->addColumn('action', function ($child) {
+                return '<div class="d-inline-flex align-items-center gap-2">'
+                    .'<button type="button" class="programme-action-btn edit-repo"'
+                    .' data-pk="'.e($child->pk).'"'
+                    .' data-name="'.e($child->course_repository_name).'"'
+                    .' data-details="'.e($child->course_repository_details).'"'
+                    .' data-image="'.e($child->category_image).'"'
+                    .' data-attachment="'.e($child->category_attachment).'" title="Edit" aria-label="Edit sub-category">'
+                    .'<i class="bi bi-pencil" aria-hidden="true"></i></button>'
+                    .'<button type="button" class="programme-action-btn programme-action-btn--danger delete-repo"'
+                    .' data-pk="'.e($child->pk).'" title="Delete" aria-label="Delete sub-category">'
+                    .'<i class="bi bi-trash" aria-hidden="true"></i></button></div>';
+            })
+            ->filterColumn('category', fn ($q, $keyword) => $q->where('course_repository_name', 'like', "%{$keyword}%"))
+            ->filterColumn('details', fn ($q, $keyword) => $q->where('course_repository_details', 'like', "%{$keyword}%"))
+            ->orderColumn('category', 'course_repository_name $1')
+            ->rawColumns(['category', 'details', 'sub_categories', 'documents', 'action'])
+            ->make(true);
+    }
+
+    /**
+     * Server-side feed for the Documents grid on the repository detail page.
+     */
+    protected function repositoryDocumentsDatatable($query)
+    {
+        return \Yajra\DataTables\Facades\DataTables::eloquent($query)
+            ->addIndexColumn()
+            ->addColumn('document_name', fn ($doc) => '<i class="bi bi-file-earmark-pdf text-danger me-1" aria-hidden="true"></i>'
+                .'<span class="fw-semibold">'.e(\Str::limit($doc->upload_document ?? 'N/A', 30)).'</span>')
+            ->addColumn('file_title_short', fn ($doc) => e(\Str::limit($doc->file_title ?? 'N/A', 25)))
+            ->addColumn('course_name', fn ($doc) => e($this->applyDocumentFallbacks($doc)->fallback_course ?: 'N/A'))
+            ->addColumn('subject', function ($doc) {
+                $value = $this->applyDocumentFallbacks($doc)->fallback_subject;
+
+                return '<small class="text-muted">'.($value ? e(\Str::limit($value, 20)) : '<span class="text-muted">N/A</span>').'</small>';
+            })
+            ->addColumn('topic', function ($doc) {
+                $value = $this->applyDocumentFallbacks($doc)->fallback_topic;
+
+                return '<small class="text-muted">'.($value ? e(\Str::limit($value, 20)) : '<span class="text-muted">N/A</span>').'</small>';
+            })
+            ->addColumn('session_date', function ($doc) {
+                $date = $doc->detail && $doc->detail->session_date
+                    ? \Carbon\Carbon::parse($doc->detail->session_date)->format('d M Y')
+                    : null;
+
+                return '<small class="text-muted">'.($date ? e($date) : '<span class="text-muted">N/A</span>').'</small>';
+            })
+            ->addColumn('sector', function ($doc) {
+                $value = $doc->detail
+                    ? ($doc->detail->sector?->sector_name ?: $doc->detail->sector_master_pk)
+                    : null;
+
+                return '<small class="text-muted">'.($value ? e(\Str::limit($value, 15)) : '<span class="text-muted">N/A</span>').'</small>';
+            })
+            ->addColumn('ministry', function ($doc) {
+                $value = $doc->detail
+                    ? ($doc->detail->ministry?->ministry_name ?: $doc->detail->ministry_master_pk)
+                    : null;
+
+                return '<small class="text-muted">'.($value ? e(\Str::limit($value, 15)) : '<span class="text-muted">N/A</span>').'</small>';
+            })
+            ->addColumn('author', function ($doc) {
+                $value = $this->applyDocumentFallbacks($doc)->fallback_author;
+
+                return '<small class="text-muted">'.($value ? e(\Str::limit($value, 15)) : '<span class="text-muted">N/A</span>').'</small>';
+            })
+            ->addColumn('action', function ($doc) {
+                return '<div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Document actions">'
+                    .'<button type="button" class="programme-action-btn edit-doc" data-pk="'.e($doc->pk).'" data-bs-toggle="tooltip" title="Edit" aria-label="Edit">'
+                    .'<i class="bi bi-pencil" aria-hidden="true"></i></button>'
+                    .'<a href="'.route('course-repository.document.download', $doc->pk).'?file='.urlencode((string) $doc->upload_document).'" class="programme-action-btn" data-bs-toggle="tooltip" title="Download" aria-label="Download">'
+                    .'<i class="bi bi-download" aria-hidden="true"></i></a>'
+                    .'<button type="button" class="programme-action-btn programme-action-btn--danger delete-doc" data-pk="'.e($doc->pk).'" data-bs-toggle="tooltip" title="Delete" aria-label="Delete">'
+                    .'<i class="bi bi-trash" aria-hidden="true"></i></button></div>';
+            })
+            ->filterColumn('document_name', fn ($q, $keyword) => $q->where('upload_document', 'like', "%{$keyword}%"))
+            ->filterColumn('file_title_short', fn ($q, $keyword) => $q->where('file_title', 'like', "%{$keyword}%"))
+            ->orderColumn('document_name', 'upload_document $1')
+            ->orderColumn('file_title_short', 'file_title $1')
+            ->rawColumns(['document_name', 'subject', 'topic', 'session_date', 'sector', 'ministry', 'author', 'action'])
+            ->make(true);
     }
 
     /**
@@ -1673,35 +1826,11 @@ class CourseRepositoryController extends Controller
                 });
             }
 
-            $documents = $documentsQuery
-                ->orderBy('pk', 'desc')
-                ->get();
+            $documentsQuery->orderBy('pk', 'desc');
 
-            // Resolve each document's actual storage path (handles legacy path-prefix
-            // mismatches between DB and disk) so view/download links work, matching
-            // the resolution already used by the admin panel's downloadDocument().
-            $documents->each(function (CourseRepositoryDocument $doc) {
-                $relativePath = $this->resolveDocumentRelativePath($doc);
-                $doc->resolved_file_url = $relativePath
-                    ? Storage::disk('public')->url($relativePath)
-                    : null;
-
-                // Legacy imported rows store subject/topic/author foreign keys from the
-                // source system rather than local master pks, so the relations below
-                // resolve to null. The keyword column was populated at import time as
-                // "batch,subject,topic,date,author" — fall back to it in that case.
-                $detail = $doc->detail;
-                if ($detail) {
-                    $keywordParts = array_map('trim', explode(',', (string) $detail->keyword));
-                    // course_master_pk itself is sometimes a meaningless numeric id from
-                    // the source system rather than a name — prefer the keyword's batch
-                    // segment (index 0) when present, same as the fields below.
-                    $doc->fallback_course = $detail->course?->course_name ?: ($keywordParts[0] ?? null);
-                    $doc->fallback_subject = $detail->subject?->subject_name ?: ($keywordParts[1] ?? null);
-                    $doc->fallback_topic = $detail->topic?->subject_topic ?: ($keywordParts[2] ?? null);
-                    $doc->fallback_author = $detail->author?->full_name ?: ($keywordParts[4] ?? null);
-                }
-            });
+            if ($request->ajax()) {
+                return $this->userDocumentsDatatable($documentsQuery);
+            }
 
             // Build ancestor chain for breadcrumb
             $ancestors = [];
@@ -1715,7 +1844,7 @@ class CourseRepositoryController extends Controller
                 $this->getUserFilterViewData($request),
                 [
                     'repository' => $repository,
-                    'documents' => $documents,
+                    'documentsCount' => (clone $documentsQuery)->count(),
                     'ancestors' => $ancestors,
                     'documents_count_array' => $documents_count_array,
                     'documentCounts' => $this->bulkOwnDocumentCounts($repository->children),
@@ -1725,6 +1854,67 @@ class CourseRepositoryController extends Controller
             Log::error('Error in course repository user show: ' . $e->getMessage());
             return redirect()->route('admin.course-repository.user.index')->with('error', 'Repository not found');
         }
+    }
+
+    /**
+     * Server-side feed for the user-facing Documents grid.
+     * File URLs and the legacy keyword fallbacks are resolved for the visible page only.
+     */
+    protected function userDocumentsDatatable($query)
+    {
+        $prepare = function (CourseRepositoryDocument $doc) {
+            // Resolve the document's actual storage path (handles legacy path-prefix
+            // mismatches between DB and disk) so view/download links work, matching
+            // the resolution already used by the admin panel's downloadDocument().
+            if (! isset($doc->resolved_file_url)) {
+                $relativePath = $this->resolveDocumentRelativePath($doc);
+                $doc->resolved_file_url = $relativePath
+                    ? Storage::disk('public')->url($relativePath)
+                    : null;
+
+                // Legacy imported rows store subject/topic/author foreign keys from the
+                // source system rather than local master pks, so the relations resolve to
+                // null. The keyword column was populated at import time as
+                // "batch,subject,topic,date,author" — fall back to it in that case.
+                $detail = $doc->detail;
+                if ($detail) {
+                    $keywordParts = array_map('trim', explode(',', (string) $detail->keyword));
+                    // course_master_pk itself is sometimes a meaningless numeric id from
+                    // the source system rather than a name — prefer the keyword's batch
+                    // segment (index 0) when present, same as the fields below.
+                    $doc->fallback_course = $detail->course?->course_name ?: ($keywordParts[0] ?? null);
+                    $doc->fallback_subject = $detail->subject?->subject_name ?: ($keywordParts[1] ?? null);
+                    $doc->fallback_topic = $detail->topic?->subject_topic ?: ($keywordParts[2] ?? null);
+                    $doc->fallback_author = $detail->author?->full_name ?: ($keywordParts[4] ?? null);
+                }
+            }
+
+            return $doc;
+        };
+
+        return \Yajra\DataTables\Facades\DataTables::eloquent($query)
+            ->addIndexColumn()
+            ->addColumn('document_name', fn ($doc) => '<span class="material-icons material-symbols-rounded text-danger">picture_as_pdf</span>'
+                .e(\Str::limit($doc->upload_document ?? 'N/A', 30)))
+            ->addColumn('file_title_short', fn ($doc) => e(\Str::limit($doc->file_title ?? 'N/A', 25)))
+            ->addColumn('course', fn ($doc) => '<small>'.e($prepare($doc)->fallback_course ?: 'N/A').'</small>')
+            ->addColumn('subject', fn ($doc) => '<small>'.e($prepare($doc)->fallback_subject ? \Str::limit($doc->fallback_subject, 20) : 'N/A').'</small>')
+            ->addColumn('topic', fn ($doc) => '<small>'.e($prepare($doc)->fallback_topic ? \Str::limit($doc->fallback_topic, 15) : 'N/A').'</small>')
+            ->addColumn('session_date', fn ($doc) => '<small>'.e($doc->detail && $doc->detail->session_date
+                ? $doc->detail->session_date->format('d-m-Y')
+                : 'N/A').'</small>')
+            ->addColumn('author', fn ($doc) => '<small>'.e($prepare($doc)->fallback_author ? \Str::limit($doc->fallback_author, 15) : 'N/A').'</small>')
+            ->addColumn('action', fn ($doc) => view('admin.course-repository.user.partials.document-actions', [
+                'detailPk' => $doc->detail?->pk ?? $doc->course_repository_details_pk,
+                'detail' => $doc->detail,
+                'fileDoc' => $prepare($doc),
+            ])->render())
+            ->filterColumn('document_name', fn ($q, $keyword) => $q->where('upload_document', 'like', "%{$keyword}%"))
+            ->filterColumn('file_title_short', fn ($q, $keyword) => $q->where('file_title', 'like', "%{$keyword}%"))
+            ->orderColumn('document_name', 'upload_document $1')
+            ->orderColumn('file_title_short', 'file_title $1')
+            ->rawColumns(['document_name', 'course', 'subject', 'topic', 'session_date', 'author', 'action'])
+            ->make(true);
     }
 
     /**
@@ -1793,6 +1983,10 @@ class CourseRepositoryController extends Controller
 
     private function getFilters(Request $request)
     {
+        // DataTables ajax sends `search` as an array (search[value]); its own search is
+        // applied by the datatable engine, so only a plain string counts as a page filter.
+        $search = $request->query('search');
+
         return [
             'date' => $request->query('date'),
             'course' => $request->query('course'),
@@ -1801,7 +1995,7 @@ class CourseRepositoryController extends Controller
             'faculty' => $request->query('faculty'),
             'sector' => $request->query('sector'),
             'ministry' => $request->query('ministry'),
-            'search' => $request->query('search'),
+            'search' => is_array($search) ? null : $search,
         ];
     }
 

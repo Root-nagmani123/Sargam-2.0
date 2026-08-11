@@ -81,61 +81,8 @@
                                 <th>Action</th>
                             </tr>
                         </thead>
-                        <tbody>
-                        @foreach($categories as $category)
-                            @foreach($category->groups as $group)
-                                @foreach($group->menus as $menu)
-                                    @if($menu->children->count() > 0)
-                                        @foreach($menu->children as $child)
-                                            <tr data-category="{{ $category->name }}"
-                                                data-group="{{ $group->name }}"
-                                                data-menu="{{ $menu->name }}"
-                                                data-submenu="{{ $child->name }}"
-                                                data-permission="{{ $child->permission_name }}">
-                                                <td>{{ $category->name }}</td>
-                                                <td>{{ $group->name }}</td>
-                                                <td>{{ $menu->name }}</td>
-                                                <td class="ps-4">{{ $child->name }}</td>
-                                                <td>{{ $child->permission_name }}</td>
-                                                <td>
-                                                    <div class="form-check form-switch">
-                                                        <input class="form-check-input permission-toggle" type="checkbox"
-                                                            name="permissions[]"
-                                                            data-id="{{ $child->id }}"
-                                                            value="{{ $child->permission_name }}"
-                                                            {{ in_array($child->permission_name, $rolePermissions) ? 'checked' : '' }}>
-                                                        <label class="form-check-label"></label>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    @else
-                                        <tr data-category="{{ $category->name }}"
-                                            data-group="{{ $group->name }}"
-                                            data-menu="{{ $menu->name }}"
-                                            data-submenu="-"
-                                            data-permission="{{ $menu->permission_name }}">
-                                            <td>{{ $category->name }}</td>
-                                            <td>{{ $group->name }}</td>
-                                            <td>{{ $menu->name }}</td>
-                                            <td>-</td>
-                                            <td>{{ $menu->permission_name }}</td>
-                                            <td>
-                                                <div class="form-check form-switch">
-                                                    <input class="form-check-input permission-toggle" type="checkbox"
-                                                        name="permissions[]"
-                                                        data-id="{{ $menu->id }}"
-                                                        value="{{ $menu->permission_name }}"
-                                                        {{ in_array($menu->permission_name, $rolePermissions) ? 'checked' : '' }}>
-                                                    <label class="form-check-label"></label>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @endif
-                                @endforeach
-                            @endforeach
-                        @endforeach
-                        </tbody>
+                        {{-- Rows come from the server-side DataTable (see script below). --}}
+                        <tbody></tbody>
                     </table>
                 </div>
             </div>
@@ -247,24 +194,34 @@
     // checkbox-based filter, so it runs through a custom ext.search predicate.
     var permissionTable = null;
 
-    // Custom "Enabled/Disabled" filter based on the toggle switch in each row.
-    $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
-        if (settings.nTable.id !== 'permissionTable') return true;
-        var status = $('#statusFilter').val();
-        if (!status) return true;
-        var row = settings.aoData[dataIndex].nTr;
-        var isChecked = $(row).find('.permission-toggle').is(':checked');
-        return (status === 'enabled' && isChecked) || (status === 'disabled' && !isChecked);
-    });
-
     $(document).ready(function () {
+        // Server-side: search, sort, paging and the Category / Status filters all run
+        // on the server (the filters are sent with every request).
         permissionTable = $('#permissionTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: "{{ route('roles.show', $role->id) }}",
+                type: 'GET',
+                data: function (d) {
+                    d.category_filter = $('#categoryFilter').val() || '';
+                    d.status_filter = $('#statusFilter').val() || '';
+                    return d;
+                }
+            },
+            columns: [
+                { data: 'category', name: 'category' },
+                { data: 'group', name: 'group' },
+                { data: 'menu', name: 'menu' },
+                { data: 'submenu', name: 'submenu', className: 'ps-4' },
+                { data: 'permission', name: 'permission' },
+                { data: 'action', name: 'action', orderable: false, searchable: false }
+            ],
             responsive: true,
             autoWidth: false,
             pageLength: 10,
-            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
             order: [],
-            columnDefs: [{ orderable: false, targets: 5 }], // Action (toggle) column
             dom: "<'row'<'col-12'tr>>" +
                  "<'row mt-3 align-items-center dt-bottom-bar'<'col-md-6 dt-bottom-paginate'p><'col-md-6 dt-bottom-info d-flex align-items-center justify-content-md-end gap-2'il>>",
             language: {
@@ -300,11 +257,8 @@
         });
 
         function applyPermissionFilters() {
-            var category = $('#categoryFilter').val();
-            // Category = exact match on column 0; global search covers the rest.
-            permissionTable
-                .column(0)
-                .search(category ? '^' + $.fn.dataTable.util.escapeRegex(category) + '$' : '', true, false);
+            // Category + Status ride along in the ajax payload; the text box is the
+            // grid's global search.
             permissionTable.search($('#permissionSearch').val()).draw();
         }
 

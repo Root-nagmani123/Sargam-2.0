@@ -32,22 +32,7 @@
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($items as $index => $row)
-                        <tr>
-                            <td>{{ $index + 1 }}</td>
-                            <td>{{ $row->campus_name }}</td>
-                            <td>{{ $row->description ?? '--' }}</td>
-                            <td>
-                                <a href="{{ route('admin.estate.define-campus.edit', $row->pk) }}" class="text-primary" title="Edit"><i class="material-icons material-symbols-rounded">edit</i></a>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="4" class="text-center text-muted py-4">No campus found.</td>
-                        </tr>
-                        @endforelse
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
@@ -59,24 +44,24 @@
 <script>
 $(document).ready(function() {
     $('#campusTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{{ route('admin.estate.define-campus.index') }}"
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'campus_name', name: 'campus_name' },
+            { data: 'description', name: 'description' },
+            { data: 'action', name: 'action', orderable: false, searchable: false }
+        ],
         order: [[1, 'asc']],
         pageLength: 10,
-        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-        columnDefs: [
-            {
-                targets: 0,
-                orderable: false,
-                searchable: false,
-                render: function(data, type, row, meta) {
-                    if (type === 'display') {
-                        var start = meta.settings._iDisplayStart || 0;
-                        return start + meta.row + 1;
-                    }
-                    return data;
-                }
-            }
-        ],
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
         language: {
+            processing: "Loading data…",
+            emptyTable: "No campus found.",
+            zeroRecords: "No matching campus found.",
             search: "Search:",
             lengthMenu: "Show _MENU_ entries",
             info: "Showing _START_ to _END_ of _TOTAL_ entries",

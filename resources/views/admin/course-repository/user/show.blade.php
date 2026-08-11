@@ -20,7 +20,7 @@ $crumbItems[] = [
 $crumbItems[] = $repository->course_repository_name;
 
 $childCount = $repository->children->count();
-$documentCount = $documents->count();
+$documentCount = $documentsCount ?? 0;
 @endphp
 
 <div class="cru-page">
@@ -81,7 +81,7 @@ $documentCount = $documents->count();
             @endif
 
             <!-- Documents Section -->
-            @if($documents->count() > 0)
+            @if(($documentsCount ?? 0) > 0)
             @php
                 // One definition of the documents table's columns, shared by the
                 // Column-Visibility control (table-column-toggle) and the toggle script.
@@ -102,7 +102,7 @@ $documentCount = $documents->count();
             @endphp
             <div class="card shadow-sm">
                 <div class="card-header bg-light d-flex flex-wrap align-items-center justify-content-between gap-2">
-                    <h5 class="mb-0 fw-bold">Documents ({{ $documents->count() }})</h5>
+                    <h5 class="mb-0 fw-bold">Documents ({{ $documentsCount ?? 0 }})</h5>
                     {{-- Column show/hide control (module's own, CSS-class based). Kept
                          separate from the DataTable's paging/search so the two don't fight. --}}
                     @include('admin.course-repository.user.partials.table-column-toggle', [
@@ -131,73 +131,10 @@ $documentCount = $documents->count();
                                     <th data-col="action" class="cru-col-action text-center fw-bold">Action</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                @foreach ($documents as $index => $doc)
-                                <tr>
-                                    <td class="cru-col-sno text-center">{{ $loop->iteration }}</td>
-                                    <td class="cru-col-document_name">
-                                        <span
-                                            class="material-icons material-symbols-rounded text-danger">picture_as_pdf</span>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}
-                                    </td>
-                                    <td class="cru-col-file_title">{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
-                                    <td class="cru-col-course">
-                                        <small>
-                                            @if($doc->fallback_course)
-                                            {{ $doc->fallback_course }}
-                                            @else
-                                            N/A
-                                            @endif
-                                        </small>
-                                    </td>
-                                    <td class="cru-col-subject">
-                                        <small>
-                                            @if($doc->fallback_subject)
-                                            {{ Str::limit($doc->fallback_subject, 20) }}
-                                            @else
-                                            N/A
-                                            @endif
-                                        </small>
-                                    </td>
-                                    <td class="cru-col-topic">
-                                        <small>
-                                            @if($doc->fallback_topic)
-                                            {{ Str::limit($doc->fallback_topic, 15) }}
-                                            @else
-                                            N/A
-                                            @endif
-                                        </small>
-                                    </td>
-                                    <td class="cru-col-session_date">
-                                        <small>
-                                            @if($doc->detail && $doc->detail->session_date)
-                                            {{ $doc->detail->session_date->format('d-m-Y') }}
-                                            @else
-                                            N/A
-                                            @endif
-                                        </small>
-                                    </td>
-                                    <td class="cru-col-author">
-                                        <small>
-                                            @if($doc->fallback_author)
-                                            {{ Str::limit($doc->fallback_author, 15) }}
-                                            @else
-                                            N/A
-                                            @endif
-                                        </small>
-                                    </td>
-                                    {{-- Shared action partial (same as documents-table / week-detail).
-                                         Gates on the document's pk/detail, not physical file presence,
-                                         so the buttons always show. --}}
-                                    <td class="cru-col-action text-center">
-                                        @include('admin.course-repository.user.partials.document-actions', [
-                                            'detailPk' => $doc->detail?->pk ?? $doc->course_repository_details_pk,
-                                            'detail' => $doc->detail,
-                                            'fileDoc' => $doc,
-                                        ])
-                                    </td>
-                                </tr>
-                                @endforeach
-                            </tbody>
+                            {{-- Rows come from the server-side DataTable (see script below).
+                                 The action cell renders the shared document-actions partial
+                                 server-side, same as before. --}}
+                            <tbody></tbody>
                         </table>
                     </div>
                 </div>
@@ -210,12 +147,29 @@ $documentCount = $documents->count();
                     if (!(window.jQuery && $.fn && $.fn.dataTable)) return;
                     var el = document.getElementById(@json($cruDocsTableId));
                     if (!el || $.fn.dataTable.isDataTable(el)) return;
-                    if (el.querySelectorAll('tbody tr').length === 0) return; // nothing to page
 
-                    var dt = $(el).DataTable({
+                    // Server-side: search, sort and paging are resolved in SQL.
+                    $(el).DataTable({
+                        processing: true,
+                        serverSide: true,
+                        ajax: {
+                            url: "{{ route('admin.course-repository.user.show', $repository->pk) }}",
+                            type: 'GET'
+                        },
+                        columns: [
+                            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'cru-col-sno text-center' },
+                            { data: 'document_name', name: 'document_name', className: 'cru-col-document_name' },
+                            { data: 'file_title_short', name: 'file_title_short', className: 'cru-col-file_title' },
+                            { data: 'course', name: 'course', orderable: false, searchable: false, className: 'cru-col-course' },
+                            { data: 'subject', name: 'subject', orderable: false, searchable: false, className: 'cru-col-subject' },
+                            { data: 'topic', name: 'topic', orderable: false, searchable: false, className: 'cru-col-topic' },
+                            { data: 'session_date', name: 'session_date', orderable: false, searchable: false, className: 'cru-col-session_date' },
+                            { data: 'author', name: 'author', orderable: false, searchable: false, className: 'cru-col-author' },
+                            { data: 'action', name: 'action', orderable: false, searchable: false, className: 'cru-col-action text-center' }
+                        ],
                         paging: true,
                         pageLength: 10,
-                        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+                        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
                         searching: true,
                         ordering: true,
                         info: true,
@@ -224,26 +178,9 @@ $documentCount = $documents->count();
                         responsive: false,
                         autoWidth: false,
                         order: [], // keep the server order (pk desc)
-                        columnDefs: [
-                            // S.No is a display counter and Action is just icons — neither sorts.
-                            { orderable: false, targets: [0, -1] }
-                        ],
-                        pagingType: 'full_numbers'
+                        pagingType: 'full_numbers',
+                        language: { processing: 'Loading data…' }
                     });
-
-                    // Renumber S.No in the CURRENT display order after every draw, so it stays
-                    // sequential (1..N, continuous across pages) through sort/search/paging —
-                    // otherwise each row keeps the number it was printed with server-side.
-                    function renumber() {
-                        var start = dt.page.info().start;
-                        dt.rows({ page: 'current', order: 'applied', search: 'applied' })
-                          .every(function (rowIdx, tableLoop, rowLoop) {
-                              var cell = this.node().querySelector('.cru-col-sno');
-                              if (cell) cell.textContent = start + rowLoop + 1;
-                          });
-                    }
-                    dt.on('draw', renumber);
-                    renumber();
                 }
 
                 if (document.readyState === 'loading') {

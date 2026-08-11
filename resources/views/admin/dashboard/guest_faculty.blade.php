@@ -4,7 +4,7 @@
 
 @section('content')
 @include('admin.dashboard.partials.faculty_table', [
-    'faculties'    => $guest_faculty,
+    'ajaxUrl'      => route('admin.dashboard.guest_faculty'),
     'tableId'      => 'guess_faculty',
     'cssFile'      => 'css/guest_faculty.css',
     'cardClass'    => 'guest-faculty-card',

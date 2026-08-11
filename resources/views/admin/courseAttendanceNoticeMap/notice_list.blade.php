@@ -111,34 +111,8 @@
                                     <th class="text-center">Action</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                @forelse($students as $i => $row)
-                                    @php
-                                        $studentId = $row->Student_master_pk;
-                                        $st = $statusMeta[$row->status] ?? null;
-                                    @endphp
-                                    <tr>
-                                        <td class="text-center">
-                                            <input type="checkbox" class="form-check-input notice-row-check" name="selected_student_list[]" value="{{ $studentId }}" aria-label="Select OT">
-                                            <input type="hidden" class="notice-row-att" name="attendance_pk_{{ $studentId }}" value="{{ $row->pk }}">
-                                        </td>
-                                        <td>{{ $i + 1 }}</td>
-                                        <td class="fw-medium">{{ $row->display_name ?? 'N/A' }}@if($st) <span class="nl-status {{ $st['class'] }}">({{ $st['label'] }})</span>@endif</td>
-                                        <td>{{ $row->generated_OT_code ?? 'N/A' }}</td>
-                                        <td>{{ $sessionRange ?? '—' }}</td>
-                                        <td class="text-center">
-                                            <a href="#" class="nl-row-notice js-row-notice" data-student="{{ $studentId }}" data-attendance="{{ $row->pk }}" title="Send Notice">
-                                                <i class="material-icons material-icons-rounded">send</i>
-                                                <span>Notice</span>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="6" class="text-center text-muted py-5">No students found for this session.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
+                            {{-- Rows come from the server-side DataTable (see script below). --}}
+                            <tbody></tbody>
                         </table>
                     </div>
                     <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="noticeListTable"></div>
@@ -154,62 +128,98 @@
 <script>
 $(function () {
     var $table = $('#noticeListTable');
-    var hasRows = $table.find('tbody tr').length && !$table.find('tbody tr td[colspan]').length;
+    var dataUrl = "{{ route('send.notice.list.page', ['group_pk' => $group_pk, 'course_pk' => $course_pk, 'timetable_pk' => $timetable_pk]) }}";
 
-    // Client-side DataTable — the global enhancer (datatable-global-ui.js) relocates
+    // Selected OTs survive paging: rows leave the DOM when the server sends the next page.
+    var selectedRows = {};
+
+    // Server-side DataTable — the global enhancer (datatable-global-ui.js) relocates
     // the search + pagination + "Showing N of M items" into the provided slots.
-    var dt = null;
-    if (hasRows) {
-        dt = $table.DataTable({
-            ordering: true,
-            order: [[1, 'asc']],
-            columnDefs: [
-                { targets: [0, 5], orderable: false, searchable: false }
-            ]
-        });
-    }
+    var dt = $table.DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: { url: dataUrl, type: 'GET' },
+        columns: [
+            { data: 'select', name: 'select', orderable: false, searchable: false, className: 'text-center' },
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'ot_name', name: 'display_name', className: 'fw-medium' },
+            { data: 'ot_code', name: 'generated_OT_code' },
+            { data: 'attendance', name: 'attendance', orderable: false, searchable: false },
+            { data: 'action', name: 'action', orderable: false, searchable: false, className: 'text-center' }
+        ],
+        ordering: true,
+        order: [],
+        language: {
+            processing: 'Loading data…',
+            emptyTable: 'No students found for this session.'
+        },
+        drawCallback: function () {
+            // Re-apply the selection to the rows that just arrived.
+            $('#noticeListTable .notice-row-check').each(function () {
+                this.checked = Object.prototype.hasOwnProperty.call(selectedRows, String(this.value));
+            });
+            syncSelectAllCheckbox();
+            syncSendAll();
+        }
+    });
 
     function syncSendAll() {
-        var any = $('#noticeListTable .notice-row-check:checked').length > 0;
+        var any = Object.keys(selectedRows).length > 0;
         $('#noticeSendAllBtn').prop('disabled', !any);
         // Reveal the template + "Send Notice to All" controls only while a selection exists.
         $('#noticeBulkBar').toggleClass('d-none', !any).toggleClass('d-flex', any);
     }
 
-    // Select-all toggles every row checkbox (across all pages).
+    function syncSelectAllCheckbox() {
+        var $all = $('#noticeListTable .notice-row-check');
+        $('#noticeSelectAll').prop('checked', $all.length > 0 && $all.filter(':checked').length === $all.length);
+    }
+
+    // Select-all covers every row of the current result set, not just the visible page.
     $('#noticeSelectAll').on('change', function () {
         var checked = this.checked;
-        if (dt) {
-            $(dt.rows().nodes()).find('.notice-row-check').prop('checked', checked);
-        } else {
-            $('#noticeListTable .notice-row-check').prop('checked', checked);
+        if (!checked) {
+            selectedRows = {};
+            $('#noticeListTable .notice-row-check').prop('checked', false);
+            syncSendAll();
+            return;
         }
-        syncSendAll();
+
+        var params = $.extend({}, dt.ajax.params(), { start: 0, length: -1 });
+        $.getJSON(dataUrl, params, function (res) {
+            (res.data || []).forEach(function (row) {
+                var $cell = $('<div>').html(row.select);
+                var student = $cell.find('.notice-row-check').val();
+                var attPk = $cell.find('.notice-row-att').val();
+                if (student) {
+                    selectedRows[String(student)] = attPk || '';
+                }
+            });
+            $('#noticeListTable .notice-row-check').prop('checked', true);
+            syncSendAll();
+        });
     });
 
     // Keep select-all + Send button in sync when a row is toggled.
     $('#noticeListTable').on('change', '.notice-row-check', function () {
-        var $all = dt ? $(dt.rows().nodes()).find('.notice-row-check') : $('#noticeListTable .notice-row-check');
-        $('#noticeSelectAll').prop('checked', $all.length > 0 && $all.filter(':checked').length === $all.length);
+        var student = String(this.value);
+        if (this.checked) {
+            selectedRows[student] = $(this).closest('td').find('.notice-row-att').val() || '';
+        } else {
+            delete selectedRows[student];
+        }
+        syncSelectAllCheckbox();
         syncSendAll();
     });
 
     // Bulk "Send Notice to All (selected)": build a clean POST so rows paged out of
-    // the DOM by DataTables are still included.
+    // the DOM by the server-side grid are still included.
     $('#noticeListForm').on('submit', function (e) {
         e.preventDefault();
         var $src = $(this);
 
-        var $rows = dt ? $(dt.rows().nodes()) : $('#noticeListTable tbody tr');
-        var selected = [];
-        $rows.each(function () {
-            var $cb = $(this).find('.notice-row-check');
-            if ($cb.prop('checked')) {
-                selected.push({
-                    student: $cb.val(),
-                    attPk: $(this).find('.notice-row-att').val()
-                });
-            }
+        var selected = Object.keys(selectedRows).map(function (student) {
+            return { student: student, attPk: selectedRows[student] };
         });
         if (!selected.length) { return; }
 

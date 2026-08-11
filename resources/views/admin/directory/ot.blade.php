@@ -56,7 +56,25 @@
             </form>
 
             <div class="table-responsive ot-directory-scroll">
-                <table class="table align-middle datatable" id="otDirectoryTable" data-export="false">
+                @php
+                    // Column map for the server-side grid (see admin/layouts/footer auto-init).
+                    $otDirectoryDtColumns = json_encode([
+                        ['data' => 'DT_RowIndex', 'name' => 'DT_RowIndex', 'orderable' => false, 'searchable' => false],
+                        ['data' => 'display_name', 'name' => 'sm.display_name'],
+                        ['data' => 'generated_OT_code', 'name' => 'sm.generated_OT_code'],
+                        ['data' => 'room_no', 'name' => 'room_no', 'orderable' => false, 'searchable' => false],
+                        ['data' => 'room_extension_no', 'name' => 'room_extension_no', 'orderable' => false, 'searchable' => false],
+                        ['data' => 'email', 'name' => 'sm.email'],
+                        ['data' => 'course_name', 'name' => 'cm.course_name'],
+                        ['data' => 'cadre_name', 'name' => 'cad.cadre_name'],
+                        ['data' => 'photo', 'name' => 'photo', 'orderable' => false, 'searchable' => false],
+                    ], JSON_HEX_APOS | JSON_HEX_QUOT);
+                @endphp
+                <table class="table align-middle datatable" id="otDirectoryTable" data-export="false"
+                    data-server-side="true"
+                    data-ajax-url="{{ request()->fullUrlWithQuery(['course_id' => $selectedCourseId]) }}"
+                    data-order='[]'
+                    data-columns='{!! $otDirectoryDtColumns !!}'>
                     <thead>
                         <tr>
                             <th>S.No.</th>
@@ -70,27 +88,7 @@
                             <th>Photo</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @foreach($students as $index => $student)
-                            <tr>
-                                <td>{{ ($students->firstItem() ?? 0) + $index }}</td>
-                                <td>{{ $student->display_name ?: '-' }}</td>
-                                <td>{{ $student->generated_OT_code ?: '-' }}</td>
-                                <td>-</td>
-                                <td>-</td>
-                                <td>{{ $student->email ?: '-' }}</td>
-                                <td>{{ $student->course_name ?: '-' }}</td>
-                                <td>{{ $student->cadre_name ?: '-' }}</td>
-                                <td>
-                                    @if(!empty($student->photo_path))
-                                        <img src="{{ asset('storage/' . $student->photo_path) }}" alt="photo" class="directory-photo" loading="lazy" decoding="async">
-                                    @else
-                                        <img src="{{ asset('images/dummypic.jpeg') }}" alt="photo" class="directory-photo" loading="lazy" decoding="async">
-                                    @endif
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>

@@ -45,7 +45,10 @@ class EmployeeIDCardRequestController extends Controller
         }
         $dateFrom = $request->get('date_from');
         $dateTo = $request->get('date_to');
-        $search = trim($request->get('search', ''));
+        // DataTables ajax sends `search` as an array (search[value]) — that one is applied
+        // by the grid below, so only the page's own text filter is read here.
+        $rawSearch = $request->get('search', '');
+        $search = is_array($rawSearch) ? '' : trim((string) $rawSearch);
 
         $isAdmin = hasRole('Admin') || hasRole('SuperAdmin');
         $userId = Auth::user()->user_id ?? Auth::id();
@@ -88,6 +91,19 @@ class EmployeeIDCardRequestController extends Controller
             ->filter(fn ($r) => ($r->request_for ?? '') === 'Extension' && ($r->status ?? '') === 'Approved')
             ->values();
 
+        // The three grids on this page are server-side: each one asks for its own slice
+        // of the (already cached) merged collection.
+        if ($request->ajax() && $request->has('draw')) {
+            $grid = (string) $request->get('grid', 'active');
+            $source = match ($grid) {
+                'duplication' => $duplicationCollection,
+                'archive' => $archivedCollection,
+                default => $allRequests,
+            };
+
+            return $this->employeeIdcardDatatable($request, $source, $grid);
+        }
+
         return view('admin.employee_idcard.index', [
             'allRequests' => $allRequests,
             'activeRequests' => $activeCollection,
@@ -100,6 +116,227 @@ class EmployeeIDCardRequestController extends Controller
             'dateTo' => $dateTo ?? '',
             'search' => $search ?? '',
         ]);
+    }
+
+    /**
+     * Server-side rows for one of the ID card grids (active / duplication / archive).
+     * Search, sort and paging are applied here over the merged collection, so the browser
+     * only ever receives one page of rows.
+     *
+     * @param  \Illuminate\Support\Collection<int, mixed>  $source
+     */
+    protected function employeeIdcardDatatable(Request $request, \Illuminate\Support\Collection $source, string $grid)
+    {
+        $draw = (int) $request->input('draw', 0);
+        $start = max((int) $request->input('start', 0), 0);
+        $length = (int) $request->input('length', 10);
+        if ($length < 1 || $length > 100) {
+            $length = 10;
+        }
+
+        $recordsTotal = $source->count();
+
+        $search = trim((string) $request->input('search.value', ''));
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $source = $source->filter(function ($row) use ($needle) {
+                $haystack = mb_strtolower(implode(' ', array_filter([
+                    $row->name ?? '',
+                    $row->designation ?? '',
+                    $row->card_type ?? '',
+                    $row->request_for ?? '',
+                    $row->duplication_reason ?? '',
+                    $row->status ?? '',
+                    $row->id_card_valid_upto ?? '',
+                    $row->created_at ? $row->created_at->format('d/m/Y') : '',
+                ], fn ($v) => $v !== null && $v !== '')));
+
+                return str_contains($haystack, $needle);
+            })->values();
+        }
+
+        $recordsFiltered = $source->count();
+
+        // Column index → row property used for sorting (S.No / photo / actions do not sort).
+        $sortable = $grid === 'archive'
+            ? [2 => 'created_at', 3 => 'name', 4 => 'designation', 5 => 'status']
+            : ($grid === 'duplication'
+                ? [2 => 'created_at', 3 => 'name', 4 => 'designation', 5 => 'duplication_reason', 7 => 'id_card_valid_upto', 8 => 'status']
+                : [2 => 'created_at', 3 => 'name', 4 => 'designation', 5 => 'card_type', 6 => 'request_for', 7 => 'id_card_valid_upto', 8 => 'status']);
+
+        $orderColumn = (int) $request->input('order.0.column', 0);
+        $orderDir = strtolower((string) $request->input('order.0.dir', 'asc'));
+        if (isset($sortable[$orderColumn])) {
+            $key = $sortable[$orderColumn];
+            $source = $orderDir === 'desc'
+                ? $source->sortByDesc(fn ($row) => $row->{$key} ?? '')->values()
+                : $source->sortBy(fn ($row) => $row->{$key} ?? '')->values();
+        }
+
+        $page = $length === -1 ? $source : $source->slice($start, $length);
+
+        $data = [];
+        $serial = $start + 1;
+        foreach ($page as $row) {
+            $data[] = $this->employeeIdcardDatatableRow($row, $serial++, $grid);
+        }
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+        ]);
+    }
+
+    /**
+     * One grid row as positional cell HTML (mirrors the markup the Blade table used).
+     *
+     * @return array<int, string>
+     */
+    private function employeeIdcardDatatableRow($row, int $serial, string $grid): array
+    {
+        $photoExists = ($row->photo ?? null) && \Storage::disk('public')->exists($row->photo);
+        $photoUrl = $photoExists ? asset('storage/'.$row->photo) : asset('images/dummypic.jpeg');
+        $requestDate = $row->created_at ? $row->created_at->format('d/m/Y') : '--';
+
+        $statusClass = match ($row->status ?? '') {
+            'Pending' => 'warning',
+            'Approved' => 'success',
+            'Rejected' => 'danger',
+            'Issued' => 'primary',
+            default => 'secondary',
+        };
+        $statusTooltip = match ($row->status ?? '') {
+            'Pending' => $row->pending_status_tooltip ?? 'Pending',
+            'Approved' => 'Please collect your ID card from security section',
+            default => null,
+        };
+        $tooltipAttrs = $statusTooltip
+            ? ' data-bs-toggle="tooltip" data-bs-placement="top" title="'.e($statusTooltip).'"'
+            : '';
+
+        $showUrl = route('admin.employee_idcard.show', $row->id);
+        $canEdit = $row->user_may_edit_request ?? false;
+
+        if ($grid === 'archive') {
+            $statusIcon = match ($row->status ?? '') {
+                'Pending' => 'schedule',
+                'Approved' => 'check_circle',
+                'Rejected' => 'cancel',
+                'Issued' => 'card_giftcard',
+                default => 'help',
+            };
+
+            $actions = '<div class="btn-group btn-group-sm" role="group">'
+                .'<a href="'.$showUrl.'" class="btn btn-outline-primary '.(($row->status ?? '') === 'Approved' ? 'rounded-2' : 'rounded-start-2').' d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details">'
+                .'<i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i></a>';
+
+            if (($row->status ?? '') !== 'Approved') {
+                $actions .= '<form action="'.route('admin.employee_idcard.restore', $row->id).'" method="POST" class="d-inline" onsubmit="return confirm(\'Restore this request?\');">'
+                    .csrf_field()
+                    .'<button type="submit" class="btn btn-outline-success rounded-0 px-2 py-1" title="Restore">'
+                    .'<i class="material-icons material-symbols-rounded" style="font-size:18px;">restore</i></button></form>'
+                    .'<form action="'.route('admin.employee_idcard.forceDelete', $row->id).'" method="POST" class="d-inline" onsubmit="return confirm(\'Permanently delete this request? This action cannot be undone.\');">'
+                    .csrf_field().method_field('DELETE')
+                    .'<button type="submit" class="btn btn-outline-danger rounded-end-2 px-2 py-1" title="Delete Permanently">'
+                    .'<i class="material-icons material-symbols-rounded" style="font-size:18px;">delete_forever</i></button></form>';
+            }
+            $actions .= '</div>';
+
+            return [
+                '<span class="fw-medium">'.$serial.'</span>',
+                '<a href="'.e($photoUrl).'" target="_blank" class="d-inline-block rounded-2 overflow-hidden shadow-sm">'
+                    .'<img src="'.e($photoUrl).'" alt="ID Card" class="rounded-2 object-fit-cover" style="width:40px;height:50px;"></a>',
+                e($requestDate),
+                '<span class="fw-medium text-body-emphasis">'.e($row->name).'</span>',
+                '<span class="text-body-secondary">'.e($row->designation ?? '--').'</span>',
+                '<span class="badge rounded-1 bg-'.$statusClass.'"'.$tooltipAttrs.'>'
+                    .'<i class="material-icons material-symbols-rounded" style="font-size:12px;">'.$statusIcon.'</i> '
+                    .e($row->status).'</span>',
+                $actions,
+            ];
+        }
+
+        if ($grid === 'duplication') {
+            $dupBadge = match ($row->duplication_reason ?? '') {
+                'Lost' => 'danger',
+                'Damage' => 'warning',
+                'Expired Card' => 'info',
+                default => 'secondary',
+            };
+
+            $actions = '<div class="btn-group btn-group-sm" role="group">'
+                .'<a href="'.$showUrl.'" class="btn btn-outline-primary '.($canEdit ? 'rounded-start-2' : 'rounded-2').' view-details-btn d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details"'
+                .' data-name="'.e($row->name).'" data-designation="'.e($row->designation ?? '--').'"'
+                .' data-request-for="'.e($row->request_for ?? '--').'" data-duplication="'.e($row->duplication_reason ?? '--').'"'
+                .' data-extension="'.e(($row->request_for ?? '') == 'Extension' ? ($row->id_card_valid_upto ?? '--') : '--').'"'
+                .' data-valid-upto="'.e($row->id_card_valid_upto ?? '--').'" data-status="'.e($row->status ?? '--').'"'
+                .' data-created="'.e($requestDate).'" data-show-url="'.$showUrl.'">'
+                .'<i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i></a>';
+
+            if ($canEdit) {
+                $actions .= '<a href="'.route('admin.employee_idcard.edit', $row->id).'" class="btn btn-outline-secondary rounded-0 d-inline-flex align-items-center gap-1 px-2 py-1" title="Edit">'
+                    .'<i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i></a>'
+                    .'<form action="'.route('admin.employee_idcard.destroy', $row->id).'" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to archive this request?\');">'
+                    .csrf_field().method_field('DELETE')
+                    .'<button type="submit" class="btn btn-outline-danger rounded-end-2 px-2 py-1" title="Archive">'
+                    .'<i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i></button></form>';
+            }
+            $actions .= '</div>';
+
+            return [
+                '<span class="fw-medium">'.$serial.'</span>',
+                '<a href="'.e($photoUrl).'" target="_blank" class="d-inline-block rounded-2 overflow-hidden shadow-sm">'
+                    .'<img src="'.e($photoUrl).'" alt="ID Card" class="rounded-2 object-fit-cover" style="width:40px;height:50px;"></a>',
+                e($requestDate),
+                '<span class="fw-medium text-body-emphasis">'.e($row->name).'</span>',
+                '<span class="text-body-secondary">'.e($row->designation ?? '--').'</span>',
+                '<span class="badge bg-'.$dupBadge.' text-dark">'.e($row->duplication_reason ?? '--').'</span>',
+                '<span class="text-body-tertiary">--</span>',
+                e($row->id_card_valid_upto ?? '--'),
+                '<span class="badge rounded-1 bg-'.$statusClass.'"'.$tooltipAttrs.'>'.e($row->status ?? '--').'</span>',
+                $actions,
+            ];
+        }
+
+        // Active / all requests grid
+        $photoCell = $photoExists
+            ? '<a href="'.e($photoUrl).'" target="_blank" class="d-inline-block rounded-2 overflow-hidden shadow-sm">'
+                .'<img src="'.e($photoUrl).'" alt="ID Card" class="rounded-2 object-fit-cover" style="width:40px;height:50px;"></a>'
+            : '<img src="'.e($photoUrl).'" alt="ID Card" class="rounded-2 object-fit-cover" style="width:40px;height:50px;">';
+
+        $actions = '<div class="btn-group btn-group-sm" role="group">'
+            .'<a href="'.$showUrl.'" class="text-primary '.($canEdit ? 'rounded-start-2' : 'rounded-2').' view-details-btn d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details"'
+            .' data-request-id="'.e($row->id).'" data-name="'.e($row->name).'" data-designation="'.e($row->designation ?? '--').'"'
+            .' data-request-for="'.e($row->request_for ?? '--').'" data-duplication="'.e($row->duplication_reason ?? '--').'"'
+            .' data-extension="'.e($row->id_card_valid_upto ?? '--').'" data-valid-from="'.e($row->id_card_valid_from ?? '').'"'
+            .' data-id-number="'.e($row->id_card_number ?? '').'" data-valid-upto="'.e($row->id_card_valid_upto ?? '--').'"'
+            .' data-status="'.e($row->status ?? '--').'" data-created="'.e($requestDate).'" data-show-url="'.$showUrl.'">'
+            .'<i class="material-icons material-symbols-rounded">visibility</i></a>';
+
+        if ($canEdit) {
+            $actions .= '<a href="'.route('admin.employee_idcard.edit', $row->id).'" class="text-primary rounded-0 d-inline-flex align-items-center gap-1 px-2 py-1" title="Edit" data-bs-toggle="tooltip" data-bs-placement="top">'
+                .'<i class="material-icons material-symbols-rounded">edit</i></a>'
+                .'<form action="'.route('admin.employee_idcard.destroy', $row->id).'" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to archive this request?\');">'
+                .csrf_field().method_field('DELETE')
+                .'<button type="submit" class="text-primary border-0 bg-transparent rounded-end-2 px-2 py-1" title="Archive">'
+                .'<i class="material-icons material-symbols-rounded">delete</i></button></form>';
+        }
+        $actions .= '</div>';
+
+        return [
+            '<span class="fw-medium">'.$serial.'</span>',
+            $photoCell,
+            e($requestDate),
+            e($row->name),
+            e($row->designation ?? '--'),
+            e($row->card_type ?? '--'),
+            e($row->request_for ?? '--'),
+            e($row->id_card_valid_upto ?? '--'),
+            '<span class="badge rounded-1 bg-'.$statusClass.'"'.$tooltipAttrs.'>'.e($row->status ?? '--').'</span>',
+            $actions,
+        ];
     }
 
     /**
@@ -288,8 +525,11 @@ class EmployeeIDCardRequestController extends Controller
             }
         }
 
-        // Name search (case-insensitive)
-        $search = trim($request->get('search', ''));
+        // Name search (case-insensitive).
+        // DataTables ajax sends `search` as an array (search[value]) — that one is applied by
+        // the grid itself, so only the page's own text filter is honoured here.
+        $searchInput = $request->get('search', '');
+        $search = is_array($searchInput) ? '' : trim((string) $searchInput);
         if ($search !== '') {
             $searchLower = mb_strtolower($search);
             $merged = $merged->filter(function ($r) use ($searchLower) {
@@ -1909,7 +2149,9 @@ class EmployeeIDCardRequestController extends Controller
             }
         }
 
-        $search = trim($request->get('search', ''));
+        // DataTables ajax sends `search` as an array (search[value]) — ignore it here.
+        $searchInput = $request->get('search', '');
+        $search = is_array($searchInput) ? '' : trim((string) $searchInput);
         if ($search !== '') {
             $searchLower = mb_strtolower($search);
             $merged = $merged->filter(function ($r) use ($searchLower) {

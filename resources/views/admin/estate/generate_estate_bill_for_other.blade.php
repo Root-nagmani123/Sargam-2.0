@@ -82,11 +82,7 @@
                             <th>GRAND TOTAL</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr id="noDataRow">
-                            <td colspan="15" class="text-center text-muted py-4">Select Bill Month and click Show to load data.</td>
-                        </tr>
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
@@ -168,6 +164,13 @@ $(document).ready(function() {
         return div.innerHTML;
     }
 
+    // Selected bill pks survive paging (server-side rows are re-rendered on every draw).
+    var selectedPks = {};
+
+    function nl2br(value) {
+        return escapeHtml(value).replace(/\n/g, '<br>');
+    }
+
     function buildColumnToggle() {
         if (!dataTableInstance) return;
         var table = dataTableInstance;
@@ -190,85 +193,80 @@ $(document).ready(function() {
         table.column(colIdx).visible($(this).prop('checked'));
     });
 
+    // Server-side DataTable: search, sort and paging are handled by the server.
+    dataTableInstance = $('#billForOtherTable').DataTable({
+        processing: true,
+        serverSide: true,
+        deferLoading: 0, // first load happens when the user presses Show
+        ajax: {
+            url: dataUrl,
+            type: 'GET',
+            data: function(d) {
+                d.bill_month = $('#bill_month').val() || '';
+                return d;
+            }
+        },
+        columns: [
+            {
+                data: 'pk',
+                name: 'pk',
+                orderable: false,
+                searchable: false,
+                className: 'text-center',
+                render: function(data, type, row) {
+                    var pk = data != null ? String(data) : '';
+                    return '<input type="checkbox" class="form-check-input bill-row-check"' +
+                        (selectedPks[pk] ? ' checked' : '') +
+                        ' value="' + escapeHtml(pk) + '"' +
+                        ' data-pk="' + escapeHtml(pk) + '"' +
+                        ' data-bill-no="' + escapeHtml(row.bill_no || '') + '"' +
+                        ' data-bill-month="' + escapeHtml(row.bill_month || '') + '"' +
+                        ' data-bill-year="' + escapeHtml(row.bill_year || '') + '">';
+                }
+            },
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'name', name: 'name', defaultContent: '—' },
+            { data: 'section', name: 'section', defaultContent: '—' },
+            { data: 'house_no', name: 'house_no', defaultContent: '—' },
+            { data: 'from_date', name: 'from_date', defaultContent: '—' },
+            { data: 'to_date', name: 'to_date', defaultContent: '—' },
+            { data: 'meter_no', name: 'meter_no', render: function(d) { return nl2br(d) || '—'; } },
+            { data: 'prev_reading', name: 'prev_reading', render: function(d) { return nl2br(d) || '—'; } },
+            { data: 'curr_reading', name: 'curr_reading', render: function(d) { return nl2br(d) || '—'; } },
+            { data: 'unit_consumed', name: 'unit_consumed', defaultContent: '—' },
+            { data: 'total_charge', name: 'total_charge', render: function(d) { return formatMoney(d); } },
+            { data: 'licence_fee', name: 'licence_fee', render: function(d) { return formatMoney(d); } },
+            { data: 'water_charges', name: 'water_charges', render: function(d) { return formatMoney(d); } },
+            { data: 'grand_total', name: 'grand_total', className: 'fw-semibold', render: function(d) { return formatMoney(d); } }
+        ],
+        order: [],
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+        responsive: false,
+        autoWidth: false,
+        scrollX: true,
+        language: {
+            processing: 'Loading data…',
+            emptyTable: 'Select Bill Month and click Show to load data.',
+            zeroRecords: 'No data available for the selected month.'
+        },
+        initComplete: function() {
+            buildColumnToggle();
+        },
+        drawCallback: function() {
+            syncCheckAll();
+        }
+    });
+
     function loadBillForOther() {
         var billMonth = $('#bill_month').val();
         if (!billMonth) return;
 
-        $('#noDataRow').remove();
-        $('#billForOtherTable tbody').html('<tr><td colspan="15" class="text-center">Loading...</td></tr>');
         // Reset all selection checkboxes when (re)loading data.
+        selectedPks = {};
         $('#billForOtherCheckAll').prop('checked', false);
         $('#check_all_bills').prop('checked', false);
-
-        $.ajax({
-            url: dataUrl,
-            type: 'GET',
-            data: { bill_month: billMonth },
-            dataType: 'json',
-            success: function(res) {
-                if (dataTableInstance && $.fn.DataTable.isDataTable('#billForOtherTable')) {
-                    dataTableInstance.destroy();
-                    dataTableInstance = null;
-                }
-                var tbody = $('#billForOtherTable tbody');
-                tbody.empty();
-
-                var data = (res && res.data) ? res.data : [];
-                if (data.length === 0) {
-                    tbody.append('<tr id="noDataRow"><td colspan="15" class="text-center text-muted py-4">No data available for the selected month.</td></tr>');
-                } else {
-                    data.forEach(function(row) {
-                        var pk = row.pk != null ? row.pk : '';
-                        tbody.append(
-                            '<tr>' +
-                            '<td class="text-center"><input type="checkbox" class="form-check-input bill-row-check" value="' + escapeHtml(pk) + '" data-pk="' + escapeHtml(pk) + '" data-bill-no="' + escapeHtml(row.bill_no || '') + '" data-bill-month="' + escapeHtml(row.bill_month || '') + '" data-bill-year="' + escapeHtml(row.bill_year || '') + '"></td>' +
-                            '<td>' + escapeHtml(row.sno || '') + '</td>' +
-                            '<td>' + escapeHtml(row.name || '—') + '</td>' +
-                            '<td>' + escapeHtml(row.section || '—') + '</td>' +
-                            '<td>' + escapeHtml(row.house_no || '—') + '</td>' +
-                            '<td>' + escapeHtml(row.from_date || '—') + '</td>' +
-                            '<td>' + escapeHtml(row.to_date || '—') + '</td>' +
-                            '<td>' + (String(row.meter_no || '').replace(/\n/g, '<br>') || '—') + '</td>' +
-                            '<td>' + (String(row.prev_reading || '').replace(/\n/g, '<br>') || '—') + '</td>' +
-                            '<td>' + (String(row.curr_reading || '').replace(/\n/g, '<br>') || '—') + '</td>' +
-                            '<td>' + escapeHtml(row.unit_consumed ?? '—') + '</td>' +
-                            '<td>' + formatMoney(row.total_charge) + '</td>' +
-                            '<td>' + formatMoney(row.licence_fee) + '</td>' +
-                            '<td>' + formatMoney(row.water_charges) + '</td>' +
-                            '<td class="fw-semibold">' + formatMoney(row.grand_total) + '</td>' +
-                            '</tr>'
-                        );
-                    });
-                }
-
-                // Do not initialise DataTables when there is only the colspan row, it causes incorrect column count warnings.
-                if (data.length > 0) {
-                    // Custom dom/language nahi de rahe — global DataTables UI (datatable-global-ui.js)
-                    // apne aap "Showing [10 ▼] of _TOTAL_ items" wala single toolbar/footer laga dega.
-                    // (Custom dom dene par woh UI dobara inject hota tha → double pagination + galat count.)
-                    dataTableInstance = $('#billForOtherTable').DataTable({
-                        order: [[1, 'asc']],
-                        pageLength: 10,
-                        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                        responsive: false,
-                        autoWidth: false,
-                        scrollX: true
-                    });
-                    buildColumnToggle();
-                }
-            },
-            error: function() {
-                if (dataTableInstance && $.fn.DataTable.isDataTable('#billForOtherTable')) {
-                    dataTableInstance.destroy();
-                    dataTableInstance = null;
-                }
-                $('#billForOtherTable tbody').empty().append(
-                    '<tr id="noDataRow"><td colspan="15" class="text-center text-danger py-4">Failed to load data. Please try again.</td></tr>'
-                );
-                $('#billForOtherCheckAll').prop('checked', false);
-                $('#check_all_bills').prop('checked', false);
-            }
-        });
+        dataTableInstance.ajax.reload();
     }
 
     function buildPrintableTableHtml() {
@@ -346,12 +344,9 @@ $(document).ready(function() {
     }
 
     function getSelectedBillPks() {
-        var pks = [];
-        $('#billForOtherTable .bill-row-check:checked').each(function() {
-            var pk = $(this).data('pk');
-            if (pk && parseInt(pk, 10) > 0) pks.push(parseInt(pk, 10));
-        });
-        return pks;
+        return Object.keys(selectedPks)
+            .map(function(pk) { return parseInt(pk, 10); })
+            .filter(function(pk) { return pk > 0; });
     }
 
     function showStatusMessage(msg, type) {
@@ -380,44 +375,54 @@ $(document).ready(function() {
         $('#billForOtherCheckAll').prop('checked', allChecked);
         $('#check_all_bills').prop('checked', allChecked);
     }
+    // Check All applies to the rows currently on screen (paging is server-side).
+    function toggleAllVisible(checked) {
+        $('#billForOtherTable .bill-row-check').each(function() {
+            this.checked = checked;
+            var pk = String($(this).data('pk') || '');
+            if (!pk) return;
+            if (checked) {
+                selectedPks[pk] = true;
+            } else {
+                delete selectedPks[pk];
+            }
+        });
+    }
     $('#billForOtherCheckAll').on('change', function() {
         var checked = this.checked;
-        $('#billForOtherTable .bill-row-check').each(function() { this.checked = checked; });
+        toggleAllVisible(checked);
         $('#check_all_bills').prop('checked', checked);
     });
     $('#check_all_bills').on('change', function() {
         var checked = this.checked;
-        $('#billForOtherTable .bill-row-check').each(function() { this.checked = checked; });
+        toggleAllVisible(checked);
         $('#billForOtherCheckAll').prop('checked', checked);
     });
     $(document).on('change', '#billForOtherTable .bill-row-check', function() {
+        var pk = String($(this).data('pk') || '');
+        if (pk) {
+            if (this.checked) {
+                selectedPks[pk] = true;
+            } else {
+                delete selectedPks[pk];
+            }
+        }
         syncCheckAll();
     });
 
     $('#btnPrint').on('click', function() {
         var printAllUrl = "{{ route('admin.estate.reports.bill-report-print-all') }}";
-        var selectedRows = $('#billForOtherTable .bill-row-check:checked');
         var selectedMonthValue = ($('#bill_month').val() || '').toString().trim();
+        var pksToPrint = getSelectedBillPks();
 
-        if (!selectedRows.length) {
+        if (!pksToPrint.length) {
             alert('Please select at least one bill to print.');
-            return;
-        }
-
-        var selectedPks = [];
-        selectedRows.each(function() {
-            var pk = ($(this).data('pk') || '').toString().trim();
-            if (pk) selectedPks.push(pk);
-        });
-
-        if (!selectedPks.length) {
-            alert('No printable bill found for selected row(s).');
             return;
         }
 
         var combinedUrl = printAllUrl +
             '?bill_month=' + encodeURIComponent(selectedMonthValue) +
-            '&selected_pks=' + encodeURIComponent(selectedPks.join(',')) +
+            '&selected_pks=' + encodeURIComponent(pksToPrint.join(',')) +
             '&is_other=1';
         window.open(combinedUrl, '_blank', 'noopener');
     });

@@ -19,7 +19,23 @@
                 </div>
 
                 <div class="table-responsive">
-                    <table class="table datatable" id="usefulLinksTable" data-export="false">
+                    @php
+                        // Column map for the server-side grid (see admin/layouts/footer auto-init).
+                        $usefulLinkDtColumns = json_encode([
+                            ['data' => 'DT_RowIndex', 'name' => 'DT_RowIndex', 'orderable' => false, 'searchable' => false],
+                            ['data' => 'label', 'name' => 'label'],
+                            ['data' => 'url', 'name' => 'url'],
+                            ['data' => 'file', 'name' => 'file_path', 'orderable' => false, 'searchable' => false],
+                            ['data' => 'order', 'name' => 'position', 'searchable' => false],
+                            ['data' => 'open', 'name' => 'target_blank', 'searchable' => false],
+                            ['data' => 'action', 'name' => 'action', 'orderable' => false, 'searchable' => false],
+                        ], JSON_HEX_APOS | JSON_HEX_QUOT);
+                    @endphp
+                    <table class="table datatable" id="usefulLinksTable" data-export="false"
+                        data-server-side="true"
+                        data-ajax-url="{{ route('admin.setup.useful_links.index') }}"
+                        data-order='[]'
+                        data-columns='{!! $usefulLinkDtColumns !!}'>
                         <thead>
                             <tr>
                                 <th style="width:70px;">S.No.</th>
@@ -31,56 +47,7 @@
                                 <th style="width:140px;">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @foreach($usefulLinks as $index => $link)
-                                <tr data-usefullink-id="{{ $link->id }}">
-                                    <td>{{ $index + 1 }}</td>
-                                    <td>{{ $link->label }}</td>
-                                    <td style="max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
-                                        title="{{ $link->url }}">
-                                        {{ $link->url ?: '-' }}
-                                    </td>
-                                    <td>
-                                        @if ($link->file_path)
-                                            <a href="{{ asset('storage/' . $link->file_path) }}" target="_blank">
-                                                View File
-                                            </a>
-                                        @else
-                                            -
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <span class="usefullink-drag-handle text-muted" draggable="true" title="Drag to reorder"
-                                            style="cursor: grab;">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">drag_handle</i>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {{ $link->target_blank ? 'New Tab' : 'Same Tab' }}
-                                    </td>
-                                    <td>
-                                        <div class="d-flex gap-2">
-                                            <a href="{{ route('admin.setup.useful_links.edit', encrypt($link->id)) }}"
-                                                class="text-primary openEditUsefulLink" title="Edit">
-                                                <i class="material-icons material-symbols-rounded"
-                                                    style="font-size:22px;">edit</i>
-                                            </a>
-
-                                            <form action="{{ route('admin.setup.useful_links.delete', encrypt($link->id)) }}"
-                                                method="POST"
-                                                onsubmit="return confirm('Delete this useful link?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-link p-0 text-primary" title="Delete">
-                                                    <i class="material-icons material-symbols-rounded"
-                                                        style="font-size:22px;">delete</i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
             </div>
@@ -214,9 +181,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         usefulLinksSaveOrder.addEventListener('click', async () => {
             if (!tbody) return;
-            const order = Array.from(tbody.querySelectorAll('tr[data-usefullink-id]'))
+            const rows = Array.from(tbody.querySelectorAll('tr[data-usefullink-id]'));
+            const order = rows
                 .map(tr => parseInt(tr.dataset.usefullinkId, 10))
                 .filter(Boolean);
+
+            // Rows are paginated server-side, so they are shuffled within the position
+            // slots the visible rows already occupy.
+            const positions = rows
+                .map(tr => parseInt(tr.dataset.position, 10))
+                .filter(Number.isFinite)
+                .sort((a, b) => a - b);
+
+            const payload = positions.length === order.length ? { order, positions } : { order };
 
             if (order.length < 2) return;
 
@@ -232,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         'X-Requested-With': 'XMLHttpRequest',
                         'X-CSRF-TOKEN': csrfToken
                     },
-                    body: JSON.stringify({ order })
+                    body: JSON.stringify(payload)
                 });
 
                 if (!res.ok) {
@@ -268,11 +245,12 @@ document.addEventListener('DOMContentLoaded', () => {
         loadForm(e.currentTarget.getAttribute('href'), 'Create Useful Link');
     });
 
-    document.querySelectorAll('.openEditUsefulLink').forEach(link => {
-        link.addEventListener('click', e => {
-            e.preventDefault();
-            loadForm(e.currentTarget.getAttribute('href'), 'Edit Useful Link');
-        });
+    // Delegated: rows are rendered by the server-side DataTable on every draw.
+    document.addEventListener('click', e => {
+        const link = e.target.closest('.openEditUsefulLink');
+        if (!link) return;
+        e.preventDefault();
+        loadForm(link.getAttribute('href'), 'Edit Useful Link');
     });
 
     document.addEventListener('submit', async (e) => {

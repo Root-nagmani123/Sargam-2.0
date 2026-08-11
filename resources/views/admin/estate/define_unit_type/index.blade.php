@@ -31,26 +31,7 @@
                             <th class="border-0 pe-3 fw-semibold text-secondary text-end">Action</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white">
-                        @forelse($items as $index => $row)
-                        <tr>
-                            <td class="ps-3">{{ $items->firstItem() + $index }}</td>
-                            <td class="fw-medium">{{ $row->unit_type }}</td>
-                            <td class="pe-3 text-end">
-                                <a href="{{ route('admin.estate.define-unit-type.edit', $row->pk) }}" class="text-primary" title="Edit">
-                                    <i class="material-icons material-symbols-rounded">edit</i>
-                                </a>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="3" class="text-center text-muted py-5">
-                                <i class="bi bi-inbox display-6 d-block mb-2 opacity-50"></i>
-                                <span>No unit type found.</span>
-                            </td>
-                        </tr>
-                        @endforelse
-                    </tbody>
+                    <tbody class="bg-white"></tbody>
                 </table>
             </div>
         </div>
@@ -62,28 +43,23 @@
 <script>
 $(document).ready(function() {
     var table = $('#unitTypeTable').DataTable({
-        order: [],
-        pageLength: 10,
-        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-        columnDefs: [
-            {
-                targets: 0,
-                orderable: false,
-                searchable: false,
-                width: '80px',
-                render: function(data, type, row, meta) {
-                    return type === 'display'
-                        ? (meta.settings._iDisplayStart || 0) + meta.row + 1
-                        : data;
-                }
-            },
-            {
-                targets: 2,
-                orderable: false,
-                searchable: false
-            }
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{{ route('admin.estate.define-unit-type.index') }}"
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, width: '80px', className: 'ps-3' },
+            { data: 'unit_type', name: 'unit_type', className: 'fw-medium' },
+            { data: 'action', name: 'action', orderable: false, searchable: false, className: 'pe-3 text-end' }
         ],
+        order: [[1, 'asc']],
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
         language: {
+            processing: "Loading data…",
+            emptyTable: "No unit type found.",
+            zeroRecords: "No matching unit type found.",
             search: "Search:",
             lengthMenu: "Show _MENU_ entries",
             info: "Showing _START_ to _END_ of _TOTAL_ entries",

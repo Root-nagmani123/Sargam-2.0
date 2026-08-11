@@ -41,75 +41,7 @@
                             <th scope="col" class="text-nowrap">ACTION</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @php $requestList = $requests ?? collect(); @endphp
-                        @forelse($requestList as $index => $row)
-                        <tr>
-                            <td></td>
-                            <td>{{ $row->request_id ?? '—' }}</td>
-                            <td data-order="{{ $row->request_date_sort ?? '' }}">{{ $row->request_date ?? '—' }}</td>
-                            <td>{{ ($row->name ?? '—') }} ({{ $row->emp_id ?? '—' }})</td>
-                            <td>{{ $row->doj_academy ?? '—' }}</td>
-                            <td>{{ $row->status ?? '—' }}</td>
-                            <td>{{ $row->alloted_house ?? '—' }}</td>
-                            <td>{{ $row->eligibility_type ?? '—' }}</td>
-                            <td>{{ $row->possession_from ?? '—' }}</td>
-                            <td>{{ $row->possession_to ?? '—' }}</td>
-                            <td class="text-nowrap">
-                                @php
-                                    $isAuthority = isEstateAuthority();
-                                    $changeStatus = (int) ($row->change_status ?? 0); // 0=pending, 1=approved, 2=disapproved
-                                @endphp
-
-                                @if($isAuthority)
-                                    @if($changeStatus === 0)
-                                        <button type="button"
-                                                class="btn btn-sm btn-success btn-approve-change-request me-1"
-                                                data-id="{{ $row->pk }}">
-                                            Approve
-                                        </button>
-                                        <button type="button"
-                                                class="btn btn-sm btn-danger btn-disapprove-change-request"
-                                                data-id="{{ $row->pk }}"
-                                                data-request-id="{{ $row->request_id }}">
-                                            Disapprove
-                                        </button>
-                                    @elseif($changeStatus === 1)
-                                        <span class="badge bg-success">Approved</span>
-                                    @elseif($changeStatus === 2)
-                                        <span class="badge bg-danger">Disapproved</span>
-                                    @endif
-                                @else
-                                    @if($changeStatus === 0)
-                                        <button type="button"
-                                                class="btn btn-sm btn-outline-primary btn-change-request"
-                                                data-request-id="{{ $row->pk }}">
-                                            Change
-                                        </button>
-                                    @elseif($changeStatus === 1)
-                                        <span class="text-success small d-block mt-1">(Your request has been approved)</span>
-                                    @elseif($changeStatus === 2)
-                                        <span class="text-danger small d-block mt-1">(Your request has been disapproved)</span>
-                                    @endif
-                                @endif
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td class="text-center text-body-secondary py-4">No request records found.</td>
-                        </tr>
-                        @endforelse
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
@@ -613,6 +545,24 @@ document.addEventListener('DOMContentLoaded', function() {
         var table = jQuery('#requestForHouseTable');
         if (table.length && !jQuery.fn.DataTable.isDataTable(table)) {
             var dt = table.DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '{{ route("admin.estate.request-for-house") }}'
+                },
+                columns: [
+                    { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                    { data: 'request_id', name: 'ec.estate_change_req_ID' },
+                    { data: 'request_date', name: 'ec.change_req_date', searchable: false },
+                    { data: 'name', name: 'eh.emp_name' },
+                    { data: 'doj_academy', name: 'eh.doj_academic', searchable: false },
+                    { data: 'status', name: 'ec.change_ap_dis_status', searchable: false },
+                    { data: 'alloted_house', name: 'eh.current_alot', searchable: false, orderable: false },
+                    { data: 'eligibility_type', name: 'eh.eligibility_type_pk', searchable: false },
+                    { data: 'possession_from', name: 'epd.possession_date', searchable: false },
+                    { data: 'possession_to', name: 'epd.current_meter_reading_date', searchable: false, orderable: false },
+                    { data: 'action', name: 'action', orderable: false, searchable: false, className: 'text-nowrap' }
+                ],
                 responsive: false,
                 autoWidth: false,
                 scrollX: false,
@@ -622,21 +572,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 pageLength: 10,
                 // Default sort by Request Date (index 2)
                 order: [[2, 'desc']],
-                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-                columnDefs: [
-                    // S.NO. column: dynamic serial number 1,2,3... respecting paging
-                    {
-                        targets: 0,
-                        orderable: false,
-                        searchable: false,
-                        render: function (data, type, row, meta) {
-                            return meta.row + meta.settings._iDisplayStart + 1;
-                        }
-                    },
-                    // Change column (last)
-                    { targets: 10, orderable: false, searchable: false }
-                ],
+                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
                 language: {
+                    processing: 'Loading data…',
+                    emptyTable: 'No request records found.',
+                    zeroRecords: 'No matching request records found.',
                     search: 'Search within table:',
                     lengthMenu: 'Show _MENU_ entries',
                     info: 'Showing _START_ to _END_ of _TOTAL_ entries',
@@ -652,14 +592,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 dom: '<"row align-items-center mb-3"<"col-12 col-md-4"l><"col-12 col-md-8"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>'
             });
 
-            // Ensure S.NO. column always shows 1,2,3... based on current
-            // sorting, searching and paging (no matter how user interacts).
-            dt.on('order.dt search.dt draw.dt', function () {
-                dt.column(0, {search: 'applied', order: 'applied'}).nodes().each(function (cell, i) {
-                    cell.innerHTML = i + 1;
-                });
-            });
-            dt.draw();
+            // S.NO. comes from the server (DT_RowIndex), so it already continues across pages.
         }
     }
 });

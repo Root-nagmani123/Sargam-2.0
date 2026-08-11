@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\Setup;
 use App\Http\Controllers\Controller;
 use App\Models\QuickLink;
 use Illuminate\Http\Request;
+use Yajra\DataTables\Facades\DataTables;
 
 class QuickLinksSetupController extends Controller
 {
@@ -13,15 +14,47 @@ class QuickLinksSetupController extends Controller
         abort_unless(hasRole('Admin') || hasRole('Super Admin'), 403);
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        // Quick links are typically small in number, so we load all records.
-        // This allows drag-and-drop ordering across the full list.
-        $quickLinks = QuickLink::query()
-            ->orderBy('position')
-            ->get();
+        if ($request->ajax()) {
+            return $this->datatable();
+        }
 
-        return view('admin.setup.quick_links.index', compact('quickLinks'));
+        return view('admin.setup.quick_links.index');
+    }
+
+    /**
+     * Server-side feed for the listing grid (search/sort/paginate happen in SQL).
+     * Rows carry id + position so drag-and-drop ordering keeps working per page.
+     */
+    protected function datatable()
+    {
+        $query = QuickLink::query()
+            ->select(['id', 'label', 'url', 'position', 'target_blank'])
+            ->orderBy('position');
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->editColumn('url', fn ($row) => '<span class="d-inline-block text-truncate" style="max-width:360px;" title="'.e($row->url).'">'.e($row->url).'</span>')
+            ->addColumn('order', fn () => '<span class="quicklink-drag-handle text-muted" draggable="true" title="Drag to reorder" style="cursor: grab;">'
+                .'<i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">drag_handle</i></span>')
+            ->addColumn('open', fn ($row) => $row->target_blank ? 'New Tab' : 'Same Tab')
+            ->addColumn('action', function ($row) {
+                return '<div class="d-flex gap-2">'
+                    .'<a href="'.route('admin.setup.quick_links.edit', encrypt($row->id)).'" class="text-primary openEditQuickLink" title="Edit">'
+                    .'<i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i></a>'
+                    .'<form action="'.route('admin.setup.quick_links.delete', encrypt($row->id)).'" method="POST" onsubmit="return confirm(\'Delete this quick link?\');">'
+                    .csrf_field().method_field('DELETE')
+                    .'<button type="submit" class="btn btn-link p-0 text-primary" title="Delete">'
+                    .'<i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i></button>'
+                    .'</form></div>';
+            })
+            ->setRowAttr([
+                'data-quicklink-id' => fn ($row) => $row->id,
+                'data-position' => fn ($row) => $row->position,
+            ])
+            ->rawColumns(['url', 'order', 'action'])
+            ->make(true);
     }
 
     public function create(Request $request)
@@ -171,6 +204,9 @@ class QuickLinksSetupController extends Controller
         $validated = $request->validate([
             'order' => ['required', 'array', 'min:1'],
             'order.*' => ['required', 'integer', 'min:1', 'distinct'],
+            // Sent by the paginated grid: the position slots the reordered rows occupy.
+            'positions' => ['sometimes', 'array'],
+            'positions.*' => ['required', 'integer', 'min:1'],
         ]);
 
         $ids = $validated['order'];
@@ -181,11 +217,17 @@ class QuickLinksSetupController extends Controller
             abort(422, 'Invalid quick link order payload.');
         }
 
+        // With server-side paging only the visible rows are reordered, so they are shuffled
+        // within the position slots they already occupy. Without `positions` (full-list
+        // reorder) the legacy 1..n renumbering applies.
+        $positions = $validated['positions'] ?? null;
+        $usePositions = is_array($positions) && count($positions) === count($ids);
+
         foreach (array_values($ids) as $i => $id) {
             QuickLink::query()
                 ->where('id', $id)
                 ->update([
-                    'position' => $i + 1,
+                    'position' => $usePositions ? (int) $positions[$i] : $i + 1,
                     'active_inactive' => 1,
                 ]);
         }

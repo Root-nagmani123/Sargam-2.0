@@ -34,69 +34,20 @@
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($visitorPasses as $pass)
-                            <tr>
-                                <td>{{ $pass->pass_number }}</td>
-                                <td>
-                                    @if($pass->visitorNames->count() > 0)
-                                        @foreach($pass->visitorNames->take(2) as $vn)
-                                            {{ $vn->visitor_name }}@if(!$loop->last),@endif
-                                        @endforeach
-                                        @if($pass->visitorNames->count() > 2)
-                                            <small class="text-muted">(+{{ $pass->visitorNames->count() - 2 }} more)</small>
-                                        @endif
-                                    @else
-                                        --
-                                    @endif
-                                </td>
-                                <td>{{ $pass->company ?? '--' }}</td>
-                                <td>{{ Str::limit($pass->purpose, 30) }}</td>
-                                <td>{{ $pass->employee ? $pass->employee->first_name . ' ' . $pass->employee->last_name : '--' }}</td>
-                                <td>{{ $pass->in_time ? $pass->in_time->format('d-m-Y H:i') : '--' }}</td>
-                                <td>
-                                    @if($pass->out_time)
-                                        {{ $pass->out_time->format('d-m-Y H:i') }}
-                                    @else
-                                        <span class="badge bg-success">Active</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <div class="d-flex gap-2">
-                                        <a href="{{ route('admin.security.visitor_pass.show', encrypt($pass->pk)) }}" class="text-info" title="View">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:22px;">visibility</i>
-                                        </a>
-                                        @if(!$pass->out_time)
-                                            <form action="{{ route('admin.security.visitor_pass.checkout', encrypt($pass->pk)) }}" method="POST" onsubmit="return confirm('Mark visitor as checked out?')">
-                                                @csrf
-                                                <button type="submit" class="btn btn-link p-0 text-warning" title="Check Out">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:22px;">logout</i>
-                                                </button>
-                                            </form>
-                                            <a href="{{ route('admin.security.visitor_pass.edit', encrypt($pass->pk)) }}" class="text-success" title="Edit">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i>
-                                            </a>
-                                        @endif
-                                        <form action="{{ route('admin.security.visitor_pass.delete', encrypt($pass->pk)) }}" method="POST" onsubmit="return confirm('Delete this visitor pass?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-link p-0 text-danger" title="Delete">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="text-center text-muted">No visitor passes found.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
+                    {{-- Rows are served page-by-page by the server-side grid below. --}}
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
     </div>
 </div>
-@include('components.mess-master-datatables', ['tableId' => 'visitorPassTable', 'searchPlaceholder' => 'Search visitor passes...', 'orderColumn' => 0, 'actionColumnIndex' => 7, 'infoLabel' => 'visitor passes'])
+@include('components.mess-master-datatables', [
+    'tableId' => 'visitorPassTable',
+    'searchPlaceholder' => 'Search visitor passes...',
+    'orderColumn' => 0,
+    'actionColumnIndex' => 7,
+    'infoLabel' => 'visitor passes',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.security.visitor_pass.index'),
+])
 @endsection

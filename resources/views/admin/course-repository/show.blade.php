@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
          page with no message — indistinguishable from "the button reloaded the page". --}}
     <x-session_message />
 
-    @if($repository->children->count() == 0 && $documents->count() == 0)
+    @if($repository->children->count() == 0 && ($documentsCount ?? 0) == 0)
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
             <div class="text-center py-5 px-3 cr-admin-empty">
@@ -170,91 +170,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                            <tbody>
-                                @foreach ($repository->children as $index => $child)
-
-                                <tr>
-
-                                    <td>{{ $loop->iteration }}</td>
-
-                                    <td>
-                                        <div class="d-flex align-items-center gap-3">
-
-                                            @if(filled($child->category_image) &&
-                                            \Storage::disk('public')->exists($child->category_image))
-
-                                            <img src="{{ asset('storage/' . $child->category_image) }}" alt=""
-                                                class="rounded-circle object-fit-cover flex-shrink-0" width="40"
-                                                height="40">
-
-                                            @else
-
-                                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center flex-shrink-0"
-                                                style="width:40px;height:40px;">
-                                                <i class="bi bi-image text-muted"></i>
-                                            </div>
-
-                                            @endif
-
-                                            <a href="{{ route('course-repository.show', $child->pk) }}"
-                                                class="cr-link-category">
-                                                {{ $child->course_repository_name }}
-                                            </a>
-
-                                        </div>
-                                    </td>
-
-                                    <td>
-                                        <span class="text-muted small">
-                                            {{ Str::limit($child->course_repository_details ?? 'N/A', 60) }}
-                                        </span>
-                                    </td>
-
-                                    <td>
-                                        <a href="{{ route('course-repository.show', $child->pk) }}"
-                                            class="cr-link-subcategory {{ $child->children->count() == 0 ? 'cr-link-muted' : '' }}">
-                                            {{ $child->children->count() }} Sub-Categories
-                                        </a>
-                                    </td>
-
-                                    <td>
-                                        @php $childDocCount = $child->getDocumentCount(); @endphp
-                                        <a href="{{ route('course-repository.show', $child->pk) }}"
-                                            class="cr-link-documents {{ $childDocCount == 0 ? 'cr-link-muted' : '' }}">
-                                            View {{ str_pad($childDocCount, 2, '0', STR_PAD_LEFT) }}
-                                            Attachments
-                                        </a>
-                                    </td>
-
-                                    <td>
-
-                                        <div class="d-inline-flex align-items-center gap-2">
-
-                                            <button type="button" class="programme-action-btn edit-repo"
-                                                data-pk="{{ $child->pk }}"
-                                                data-name="{{ $child->course_repository_name }}"
-                                                data-details="{{ $child->course_repository_details }}"
-                                                data-image="{{ $child->category_image }}"
-                                                data-attachment="{{ $child->category_attachment }}" title="Edit"
-                                                aria-label="Edit sub-category">
-                                                <i class="bi bi-pencil" aria-hidden="true"></i>
-                                            </button>
-
-                                            <button type="button"
-                                                class="programme-action-btn programme-action-btn--danger delete-repo"
-                                                data-pk="{{ $child->pk }}" title="Delete"
-                                                aria-label="Delete sub-category">
-                                                <i class="bi bi-trash" aria-hidden="true"></i>
-                                            </button>
-
-                                        </div>
-
-                                    </td>
-
-                                </tr>
-
-                                @endforeach
-                            </tbody>
+                            {{-- Rows come from the server-side DataTable (see script below). --}}
+                            <tbody></tbody>
                         </table>
                     </div>
                     <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
@@ -266,7 +183,7 @@ document.addEventListener('DOMContentLoaded', function() {
         @endif
 
         <!-- Documents Section -->
-        @if($documents->count() > 0)
+        @if(($documentsCount ?? 0) > 0)
         <div class="card overflow-hidden rounded-3">
             <div class="card-body p-3 p-md-4">
 
@@ -301,111 +218,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <th scope="col">Action</th>
                                 </tr>
                             </thead>
-                        <tbody>
-                            @foreach ($documents as $index => $doc)
-                            <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
-                                <td class="cru-col-dsno">{{ $loop->iteration }}</td>
-                                <td class="cru-col-docname">
-                                    <i class="bi bi-file-earmark-pdf text-danger me-1" aria-hidden="true"></i>
-                                    <span
-                                        class="fw-semibold">{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</span>
-                                </td>
-                                <td class="cru-col-filetitle">{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
-                                <td class="cru-col-coursename">
-                                    @if($doc->fallback_course)
-                                    {{ $doc->fallback_course }}
-                                    @else
-                                    N/A
-                                    @endif
-                                </td>
-                                <td class="text-center cru-col-subject">
-                                    <small class="text-muted">
-                                        @if($doc->fallback_subject)
-                                        {{ Str::limit($doc->fallback_subject, 20) }}
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                    </small>
-                                </td>
-                                <td class="text-center cru-col-topic">
-                                    <small class="text-muted">
-                                        @if($doc->fallback_topic)
-                                        {{ Str::limit($doc->fallback_topic, 20) }}
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                    </small>
-                                </td>
-                                <td class="text-center cru-col-sessiondate">
-                                    <small class="text-muted">
-                                        @if($doc->detail && $doc->detail->session_date)
-                                        {{ \Carbon\Carbon::parse($doc->detail->session_date)->format('d M Y') }}
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                    </small>
-                                </td>
-                                <td class="text-center cru-col-sector">
-                                    <small class="text-muted">
-                                        @if($doc->detail)
-                                        @if($doc->detail->sector)
-                                        {{ Str::limit($doc->detail->sector->sector_name, 15) }}
-                                        @elseif($doc->detail->sector_master_pk)
-                                        {{ Str::limit($doc->detail->sector_master_pk, 15) }}
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                    </small>
-                                </td>
-                                <td class="text-center cru-col-ministry">
-                                    <small class="text-muted">
-                                        @if($doc->detail)
-                                        @if($doc->detail->ministry)
-                                        {{ Str::limit($doc->detail->ministry->ministry_name, 15) }}
-                                        @elseif($doc->detail->ministry_master_pk)
-                                        {{ Str::limit($doc->detail->ministry_master_pk, 15) }}
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                    </small>
-                                </td>
-                                <td class="text-center cru-col-author">
-                                    <small class="text-muted">
-                                        @if($doc->fallback_author)
-                                        {{ Str::limit($doc->fallback_author, 15) }}
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                    </small>
-                                </td>
-                                <td class="cru-col-daction">
-                                    <div class="d-inline-flex align-items-center gap-2" role="group"
-                                        aria-label="Document actions">
-                                        <button type="button" class="programme-action-btn edit-doc"
-                                            data-pk="{{ $doc->pk }}" data-bs-toggle="tooltip" title="Edit"
-                                            aria-label="Edit"><i class="bi bi-pencil" aria-hidden="true"></i></button>
-                                        <a href="{{ route('course-repository.document.download', $doc->pk) }}?file={{ urlencode($doc->upload_document) }}"
-                                            class="programme-action-btn" data-bs-toggle="tooltip" title="Download"
-                                            aria-label="Download">
-                                            <i class="bi bi-download" aria-hidden="true"></i>
-                                        </a>
-                                        <button type="button"
-                                            class="programme-action-btn programme-action-btn--danger delete-doc"
-                                            data-pk="{{ $doc->pk }}" data-bs-toggle="tooltip" title="Delete"
-                                            aria-label="Delete">
-                                            <i class="bi bi-trash" aria-hidden="true"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
+                        {{-- Rows come from the server-side DataTable (see script below). --}}
+                        <tbody></tbody>
                     </table>
                     </div>
                     <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
@@ -1128,7 +942,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <input class="form-check-input me-1" type="checkbox" value="documents" checked>
                         <span class="material-symbols-outlined me-1"
                             style="font-size: 16px;">description</span>Documents
-                        <span class="badge bg-primary rounded-1 ms-auto">{{ $documents->count() ?? 0 }}</span>
+                        <span class="badge bg-primary rounded-1 ms-auto">{{ $documentsCount ?? 0 }}</span>
                     </label>
                     <label class="list-group-item">
                         <input class="form-check-input me-1" type="checkbox" value="categories" checked>
@@ -4026,12 +3840,35 @@ $(function() {
     var TABLES = [{
             id: 'child_repositories',
             grid: '#childColumnToggleGrid',
-            storageKey: 'courseRepositoryShow:hiddenColumns:child:v1'
+            storageKey: 'courseRepositoryShow:hiddenColumns:child:v1',
+            ajaxUrl: "{{ route('course-repository.show', $repository->pk) }}?grid=children",
+            columns: [
+                { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                { data: 'category', name: 'category' },
+                { data: 'details', name: 'details' },
+                { data: 'sub_categories', name: 'sub_categories', orderable: false, searchable: false },
+                { data: 'documents', name: 'documents', orderable: false, searchable: false },
+                { data: 'action', name: 'action', orderable: false, searchable: false }
+            ]
         },
         {
             id: 'documents',
             grid: '#documentsColumnToggleGrid',
-            storageKey: 'courseRepositoryShow:hiddenColumns:documents:v1'
+            storageKey: 'courseRepositoryShow:hiddenColumns:documents:v1',
+            ajaxUrl: "{{ route('course-repository.show', $repository->pk) }}?grid=documents",
+            columns: [
+                { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'cru-col-dsno' },
+                { data: 'document_name', name: 'document_name', className: 'cru-col-docname' },
+                { data: 'file_title_short', name: 'file_title_short', className: 'cru-col-filetitle' },
+                { data: 'course_name', name: 'course_name', orderable: false, searchable: false, className: 'cru-col-coursename' },
+                { data: 'subject', name: 'subject', orderable: false, searchable: false, className: 'text-center cru-col-subject' },
+                { data: 'topic', name: 'topic', orderable: false, searchable: false, className: 'text-center cru-col-topic' },
+                { data: 'session_date', name: 'session_date', orderable: false, searchable: false, className: 'text-center cru-col-sessiondate' },
+                { data: 'sector', name: 'sector', orderable: false, searchable: false, className: 'text-center cru-col-sector' },
+                { data: 'ministry', name: 'ministry', orderable: false, searchable: false, className: 'text-center cru-col-ministry' },
+                { data: 'author', name: 'author', orderable: false, searchable: false, className: 'text-center cru-col-author' },
+                { data: 'action', name: 'action', orderable: false, searchable: false, className: 'cru-col-daction' }
+            ]
         }
     ];
 
@@ -4062,34 +3899,23 @@ $(function() {
             // columns, which caused table links to need a double-click (the first
             // click was absorbed). The `.table-responsive` wrapper already handles
             // horizontal overflow.
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: cfg.ajaxUrl,
+                type: 'GET'
+            },
+            columns: cfg.columns,
             autoWidth: false,
             pageLength: 10,
             lengthMenu: [
-                [10, 25, 50, 100, -1],
-                [10, 25, 50, 100, 'All']
+                [10, 25, 50, 100],
+                [10, 25, 50, 100]
             ],
             order: [],
-            columnDefs: [{
-                    targets: 0,
-                    orderable: false,
-                    searchable: false
-                },
-                {
-                    targets: -1,
-                    orderable: false,
-                    searchable: false
-                }
-            ]
-        });
-
-        // Server order is preserved, so S. No. must follow the visible page.
-        dt.on('draw.dt', function() {
-            var start = dt.page.info().start;
-            dt.column(0, {
-                page: 'current'
-            }).nodes().each(function(cell, i) {
-                cell.innerHTML = start + i + 1;
-            });
+            language: {
+                processing: 'Loading data…'
+            }
         });
 
         var hidden = getHidden(cfg.storageKey);

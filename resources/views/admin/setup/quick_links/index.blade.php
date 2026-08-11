@@ -17,7 +17,22 @@
             <div class="card-body">
 
                 <div class="table-responsive">
-                    <table class="table datatable" id="quickLinksTable" data-export="false">
+                    @php
+                        // Column map for the server-side grid (see admin/layouts/footer auto-init).
+                        $quickLinkDtColumns = json_encode([
+                            ['data' => 'DT_RowIndex', 'name' => 'DT_RowIndex', 'orderable' => false, 'searchable' => false],
+                            ['data' => 'label', 'name' => 'label'],
+                            ['data' => 'url', 'name' => 'url'],
+                            ['data' => 'order', 'name' => 'position', 'searchable' => false],
+                            ['data' => 'open', 'name' => 'target_blank', 'searchable' => false],
+                            ['data' => 'action', 'name' => 'action', 'orderable' => false, 'searchable' => false],
+                        ], JSON_HEX_APOS | JSON_HEX_QUOT);
+                    @endphp
+                    <table class="table datatable" id="quickLinksTable" data-export="false"
+                        data-server-side="true"
+                        data-ajax-url="{{ route('admin.setup.quick_links.index') }}"
+                        data-order='[]'
+                        data-columns='{!! $quickLinkDtColumns !!}'>
                         <thead>
                             <tr>
                                 <th style="width:70px;">S.No.</th>
@@ -28,52 +43,7 @@
                                 <th style="width:140px;">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @forelse($quickLinks as $index => $link)
-                                <tr data-quicklink-id="{{ $link->id }}">
-                                    <td>{{ $index + 1 }}</td>
-                                    <td>{{ $link->label }}</td>
-                                    <td style="max-width:360px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
-                                        title="{{ $link->url }}">
-                                        {{ $link->url }}
-                                    </td>
-                                    <td>
-                                        <span class="quicklink-drag-handle text-muted" draggable="true" title="Drag to reorder"
-                                            style="cursor: grab;">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">drag_handle</i>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {{ $link->target_blank ? 'New Tab' : 'Same Tab' }}
-                                    </td>
-                                    <td>
-                                        <div class="d-flex gap-2">
-                                            <a href="{{ route('admin.setup.quick_links.edit', encrypt($link->id)) }}"
-                                                class="text-primary openEditQuickLink" title="Edit">
-                                                <i class="material-icons material-symbols-rounded"
-                                                    style="font-size:22px;">edit</i>
-                                            </a>
-                                            
-
-                                            <form action="{{ route('admin.setup.quick_links.delete', encrypt($link->id)) }}"
-                                                method="POST"
-                                                onsubmit="return confirm('Delete this quick link?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-link p-0 text-primary" title="Delete">
-                                                    <i class="material-icons material-symbols-rounded"
-                                                        style="font-size:22px;">delete</i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted">No Quick Links found.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
             </div>
@@ -205,9 +175,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         quickLinksSaveOrder.addEventListener('click', async () => {
             if (!tbody) return;
-            const order = Array.from(tbody.querySelectorAll('tr[data-quicklink-id]'))
+            const rows = Array.from(tbody.querySelectorAll('tr[data-quicklink-id]'));
+            const order = rows
                 .map(tr => parseInt(tr.dataset.quicklinkId, 10))
                 .filter(Boolean);
+
+            // Rows are paginated server-side, so they are shuffled within the position
+            // slots the visible rows already occupy.
+            const positions = rows
+                .map(tr => parseInt(tr.dataset.position, 10))
+                .filter(Number.isFinite)
+                .sort((a, b) => a - b);
+
+            const payload = positions.length === order.length ? { order, positions } : { order };
 
             if (order.length < 2) return;
 
@@ -223,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         'X-Requested-With': 'XMLHttpRequest',
                         'X-CSRF-TOKEN': csrfToken
                     },
-                    body: JSON.stringify({ order })
+                    body: JSON.stringify(payload)
                 });
 
                 if (!res.ok) {
@@ -259,11 +239,12 @@ document.addEventListener('DOMContentLoaded', () => {
         loadForm(e.currentTarget.getAttribute('href'), 'Create Quick Link');
     });
 
-    document.querySelectorAll('.openEditQuickLink').forEach(link => {
-        link.addEventListener('click', e => {
-            e.preventDefault();
-            loadForm(e.currentTarget.getAttribute('href'), 'Edit Quick Link');
-        });
+    // Delegated: rows are rendered by the server-side DataTable on every draw.
+    document.addEventListener('click', e => {
+        const link = e.target.closest('.openEditQuickLink');
+        if (!link) return;
+        e.preventDefault();
+        loadForm(link.getAttribute('href'), 'Edit Quick Link');
     });
 });
 </script>
