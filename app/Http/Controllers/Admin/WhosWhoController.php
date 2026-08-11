@@ -536,7 +536,7 @@ class WhosWhoController extends Controller
                 'courseName' => $course->course_name ?? 'N/A',
                 'courseCode' => $course->couse_short_name ?? $course->course_name ?? 'N/A',
                 'batch' => $batch,
-                'image' => $student->photo_path ? asset('storage/' . $student->photo_path) : 'https://via.placeholder.com/180x180?text=' . urlencode(substr($student->display_name ?? 'Student', 0, 1)),
+                'image' => build_student_photo_url($student->photo_path),
                 'image_src' => $forExport ? $this->resolveStudentPhotoDataUri($student->photo_path) : null,
                 'dob' => $student->dob ? Carbon::parse($student->dob)->format('d-M-y') : 'N/A',
                 'domicile' => strtoupper($stateName),
