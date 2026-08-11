@@ -208,7 +208,7 @@
                                         <a href="{{ route('faculty.edit', ['id' => encrypt($duty['faculty_master_pk'])]) }}"
                                             class="btn btn-outline-primary btn-sm rounded-1 d-inline-flex align-items-center"
                                             title="Edit Faculty Details" aria-label="Edit Faculty Details">
-                                            <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                            <i class="bi bi-pencil" aria-hidden="true"></i>
                                         </a>
                                         @endif
                                     </div>
