@@ -24,11 +24,8 @@
 
     {{-- Secondary actions (Download / Print) — above the card, per §1 --}}
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 ic-secondary-actions">
-        {{-- Searching/sorting is client-side now, so the server has no filter to
-             mirror: these export the full list. --}}
-        {{-- ?cols= is stamped on by icUpdateExportCols() so both exports carry the
-             same columns the grid is showing. Searching/sorting is client-side, so
-             the row set is always the full list. --}}
+        {{-- ?q= and ?cols= are stamped on by icUpdateExportCols(), so a download
+             carries the same search term and columns the grid is showing. --}}
         {{-- More than one download format → dropdown, per §1 of the doc. --}}
         <div class="dropdown">
             <button type="button" id="icDownloadToggle"
@@ -84,9 +81,10 @@
 
             <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    {{-- No data-sargam-dt-ui opt-out: DataTables paginates this grid now,
-                         so the global enhancer supplies the search slot and footer.
-                         Sorting is DataTables' too — hence plain <th> text. --}}
+                    {{-- Server-side: search, sort and paging are all SQL, so only the
+                         page on screen ever reaches the browser and the grid does not
+                         grow with the table. The global enhancer supplies the search
+                         slot and footer. --}}
                     <table id="issueCategoriesTable"
                            class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                         <thead>
@@ -99,72 +97,7 @@
                                 <th scope="col">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @foreach($categories as $category)
-                                @php $isActive = (int) $category->status === 1; @endphp
-                                <tr>
-                                    {{-- Renumbered on every draw (see the JS) so the serial follows
-                                         the sorted/filtered order rather than the original rows. --}}
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td>{{ $category->issue_category }}</td>
-                                    <td>{{ $category->description ?: '—' }}</td>
-                                    <td>{{ $category->sub_categories_count }}</td>
-                                    <td data-order="{{ (int) $category->status }}">
-                                        <span class="status-pill badge {{ $isActive ? 'bg-success-subtle' : 'bg-danger-subtle' }}">
-                                            {{ $isActive ? 'Active' : 'Inactive' }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {{-- Every action is the same stack: a fixed-height icon strip over a
-                                             caption, in an equal-width column — so the icons keep an even rhythm
-                                             no matter how wide the captions are. --}}
-                                        <div class="ic-act-group" role="group" aria-label="Row actions">
-                                            <button type="button" class="ic-act ic-act--edit ic-edit-btn" aria-label="Edit category"
-                                                    data-id="{{ $category->pk }}"
-                                                    data-name="{{ $category->issue_category }}"
-                                                    data-description="{{ $category->description }}"
-                                                    data-status="{{ (int) $category->status }}">
-                                                <span class="ic-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
-                                                <span class="ic-act__label">Edit</span>
-                                            </button>
-
-                                            {{-- NB: no .form-check/.form-switch wrapper. Those pull the input left by
-                                                 -2.375rem (custom.css:106) for the switch-beside-label layout, which
-                                                 would knock it off-centre here. The .status-toggle skin is keyed on
-                                                 the input itself, so it still applies. --}}
-                                            <label class="ic-act ic-act--toggle">
-                                                <span class="ic-act__icon">
-                                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                           data-table="issue_category_master" data-column="status"
-                                                           data-id="{{ $category->pk }}" {{ $isActive ? 'checked' : '' }}>
-                                                </span>
-                                                <span class="ic-act__label">{{ $isActive ? 'Activate' : 'Deactivate' }}</span>
-                                            </label>
-
-                                            @if($isActive)
-                                                {{-- destroy() refuses to delete an active category — mirror that guard here. --}}
-                                                <span class="ic-act ic-act--del is-disabled" aria-disabled="true"
-                                                      title="Deactivate this category before deleting it">
-                                                    <span class="ic-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
-                                                    <span class="ic-act__label">Delete</span>
-                                                </span>
-                                            @else
-                                                <form action="{{ route('admin.issue-categories.destroy', $category->pk) }}"
-                                                      method="POST" class="ic-delete-form">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="ic-act ic-act--del" aria-label="Delete category"
-                                                            data-name="{{ $category->issue_category }}">
-                                                        <span class="ic-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
-                                                        <span class="ic-act__label">Delete</span>
-                                                    </button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
 
@@ -299,18 +232,36 @@
 $(function () {
     'use strict';
 
-    /* ── DataTable ───────────────────────────────────────────────────────────
+    /* ── DataTable (server-side) ─────────────────────────────────────────────
        Search, sort, paging and the "Showing N of M items" footer are all
-       DataTables' now; datatable-global-ui.js supplies the page defaults and
-       moves the filter/pager into the toolbar and footer slots. No `dom` or
-       colVis options here — the global script owns that. ── */
+       DataTables', and every one of them is answered by the server: a draw
+       fetches only the page being shown. `sargamServerOrder` keeps ordering on
+       the server too, so clicking a header re-sorts the WHOLE set rather than
+       shuffling the visible page. No `dom` or colVis options here — the global
+       script owns that. ── */
     var $table = $('#issueCategoriesTable');
 
     var dt = $table.DataTable({
+        serverSide: true,
+        processing: true,
+        sargamServerOrder: true,
+        searching: true,
+        // 400ms after the last keystroke — search as you type, one query per pause.
+        searchDelay: 400,
         order: [[1, 'asc']],                       // Category A→Z, matching the old default
-        columnDefs: [
-            { targets: 0, orderable: false, searchable: false, className: 'text-center' },
-            { targets: -1, orderable: false, searchable: false }   // Action
+        ajax: {
+            url: '{{ route('admin.issue-categories.data') }}'
+        },
+        /* `name` is the sort key the controller whitelists (SORTABLE_COLUMNS);
+           an empty one means "not sortable in SQL" and the server falls back to
+           its default order. */
+        columns: [
+            { data: 'sno', name: '', orderable: false, searchable: false, className: 'text-center' },
+            { data: 'category', name: 'category' },
+            { data: 'description', name: 'description' },
+            { data: 'sub_categories', name: 'sub_categories' },
+            { data: 'status', name: 'status' },
+            { data: 'action', name: '', orderable: false, searchable: false }
         ],
         language: {
             emptyTable: '<div class="ic-empty">' +
@@ -325,16 +276,6 @@ $(function () {
                 '</div>'
         }
     });
-
-    // S. No. follows what is on screen, not the original row order.
-    function renumberSerial() {
-        var start = dt.page.info().start;
-        dt.column(0, { search: 'applied', order: 'applied', page: 'current' })
-          .nodes()
-          .each(function (cell, i) { cell.innerHTML = start + i + 1; });
-    }
-    dt.on('draw.dt', renumberSerial);
-    renumberSerial();
 
     /* ── Column visibility (DataTables column API) ────────────────────────
        Hidden columns are stored by LABEL, not index: an index would point at a
@@ -359,9 +300,9 @@ $(function () {
             if (key && this.visible()) { keys.push(key); }
         });
 
-        // This grid searches client-side, so the term lives only in DataTables.
-        // Without carrying it the export returns every row and its header cannot
-        // name the filter that was applied.
+        // The term lives in DataTables, which sends it to the grid feed as
+        // search[value]; the export reads ?q=. Without carrying it the download
+        // returns every row and its header cannot name the filter applied.
         var term = dt.search() || '';
 
         ['icDownloadLink', 'icExcelLink', 'icPdfLink', 'icPrintLink'].forEach(function (id) {
@@ -428,7 +369,6 @@ $(function () {
                 persistHiddenCols(cols);
                 dt.column(index).visible(this.checked, false);
                 dt.columns.adjust();
-                renumberSerial();
                 icUpdateExportCols();
             });
 
@@ -449,11 +389,12 @@ $(function () {
 
     /* ── Status toggle: repaint the row (badge + caption + delete guard) ──
        custom.js does the AJAX; the badge and the switch live in different
-       columns, so reload rather than hand-mirroring them. ── */
+       columns, so redraw from the server rather than hand-mirroring them.
+       Reloading the current page (not page 1) keeps the user where they were. ── */
     $(document).ajaxSuccess(function (event, xhr, settings) {
         var url = (settings && settings.url) ? settings.url : '';
         if (url.indexOf('toggle-status') === -1 && url.indexOf('toggleStatus') === -1) { return; }
-        setTimeout(function () { window.location.reload(); }, 600);
+        setTimeout(function () { dt.ajax.reload(null, false); }, 600);
     });
 
     /* ── Delete: confirm before submitting ───────────────────────────────── */

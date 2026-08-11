@@ -13,22 +13,9 @@
 
 @section('setup_content')
 @php
-    // Search, sort and paging are DataTables' now; ?cols= is appended to the
-    // export links by emUpdateExportCols().
+    // Search, sort and paging are the server's now; ?q= and ?cols= are appended
+    // to the export links by emUpdateExportCols() so a download matches the grid.
     $exportQuery = [];
-
-    // "Trevor Swanson - 1 Day", days tinted by level.
-    $levelCell = function ($level, int $n) {
-        if (! $level) {
-            return '<span class="text-muted">—</span>';
-        }
-        $days = (int) $level->days_notify;
-
-        return '<span class="ic-level ic-level--' . $n . '">'
-            . e($level->employee->name ?? 'N/A')
-            . ' - <span class="ic-level__days">' . $days . ' ' . ($days === 1 ? 'Day' : 'Days') . '</span>'
-            . '</span>';
-    };
 @endphp
 <div class="container-fluid ic-page">
     <x-breadcrum title="Escalation Matrix" :showBack="false">
@@ -92,7 +79,8 @@
 
             <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    {{-- No data-sargam-dt-ui opt-out: DataTables paginates this grid now. --}}
+                    {{-- Server-side: search, sort and the page slice all run on the
+                         server, so only the page on screen reaches the browser. --}}
                     <table id="escalationMatrixTable"
                            class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                         <thead>
@@ -105,40 +93,7 @@
                                 <th scope="col">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @foreach($matrix as $row)
-                                <tr>
-                                    {{-- Renumbered on every draw (see the JS). --}}
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td>{{ $row['category']->issue_category }}</td>
-                                    <td>{!! $levelCell($row['level1'], 1) !!}</td>
-                                    <td>{!! $levelCell($row['level2'], 2) !!}</td>
-                                    <td>{!! $levelCell($row['level3'], 3) !!}</td>
-                                    <td>
-                                        <div class="ic-act-group" role="group" aria-label="Row actions">
-                                            {{-- There is no detail route for a mapping, so View opens a
-                                                 read-only modal built from the row's own data. --}}
-                                            <button type="button" class="ic-act ic-act--view em-view-btn"
-                                                    aria-label="View escalation mapping for {{ $row['category']->issue_category }}"
-                                                    data-category="{{ $row['category']->issue_category }}"
-                                                    data-category-id="{{ $row['category']->pk }}"
-                                                    data-l1-name="{{ $row['level1']->employee->name ?? '' }}"
-                                                    data-l1-days="{{ $row['level1']->days_notify ?? '' }}"
-                                                    data-l1-emp="{{ $row['level1']->employee_master_pk ?? '' }}"
-                                                    data-l2-name="{{ $row['level2']->employee->name ?? '' }}"
-                                                    data-l2-days="{{ $row['level2']->days_notify ?? '' }}"
-                                                    data-l2-emp="{{ $row['level2']->employee_master_pk ?? '' }}"
-                                                    data-l3-name="{{ $row['level3']->employee->name ?? '' }}"
-                                                    data-l3-days="{{ $row['level3']->days_notify ?? '' }}"
-                                                    data-l3-emp="{{ $row['level3']->employee_master_pk ?? '' }}">
-                                                <span class="ic-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span>
-                                                <span class="ic-act__label">View</span>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
 
@@ -393,17 +348,33 @@ function editMatrix(categoryId, categoryName, emp1, days1, emp2, days2, emp3, da
 $(function () {
     'use strict';
 
-    /* ── DataTable ───────────────────────────────────────────────────────────
-       Search, sort, paging and the footer are DataTables' now;
-       datatable-global-ui.js supplies the defaults and moves the filter/pager
-       into the toolbar and footer slots. ── */
+    /* ── DataTable (server-side) ─────────────────────────────────────────────
+       Search, sort, paging and the footer are DataTables', and every one is
+       answered by the server: a draw fetches only the page being shown.
+       `sargamServerOrder` keeps ordering on the server too, so a header click
+       re-sorts the WHOLE matrix rather than the visible page. ── */
     var $table = $('#escalationMatrixTable');
 
     var dt = $table.DataTable({
+        serverSide: true,
+        processing: true,
+        sargamServerOrder: true,
+        searching: true,
+        // 400ms after the last keystroke — search as you type, one query per pause.
+        searchDelay: 400,
         order: [[1, 'asc']],
-        columnDefs: [
-            { targets: 0, orderable: false, searchable: false, className: 'text-center' },
-            { targets: -1, orderable: false, searchable: false }
+        ajax: {
+            url: '{{ route('admin.issue-escalation-matrix.data') }}'
+        },
+        /* `name` is the sort key the controller whitelists (SORTABLE_COLUMNS);
+           an empty one means "not sortable". */
+        columns: [
+            { data: 'sno', name: '', orderable: false, searchable: false, className: 'text-center' },
+            { data: 'category', name: 'category' },
+            { data: 'level1', name: 'level1' },
+            { data: 'level2', name: 'level2' },
+            { data: 'level3', name: 'level3' },
+            { data: 'action', name: '', orderable: false, searchable: false }
         ],
         language: {
             emptyTable: '<div class="ic-empty">' +
@@ -418,16 +389,6 @@ $(function () {
                 '</div>'
         }
     });
-
-    // S. No. follows what is on screen, not the original row order.
-    function renumberSerial() {
-        var start = dt.page.info().start;
-        dt.column(0, { search: 'applied', order: 'applied', page: 'current' })
-          .nodes()
-          .each(function (cell, i) { cell.innerHTML = start + i + 1; });
-    }
-    dt.on('draw.dt', renumberSerial);
-    renumberSerial();
 
     /* ── Column visibility (DataTables column API) ────────────────────────
        Stored by LABEL, not index — an index points at a different column the
@@ -449,9 +410,9 @@ $(function () {
             if (key && this.visible()) { keys.push(key); }
         });
 
-        // This grid searches client-side, so the term lives only in DataTables.
-        // Without carrying it the export returns every row and its header cannot
-        // name the filter that was applied.
+        // The term lives in DataTables, which sends it to the grid feed as
+        // search[value]; the export reads ?q=. Without carrying it the download
+        // returns every row and its header cannot name the filter applied.
         var term = dt.search() || '';
 
         ['emDownloadLink', 'emExcelLink', 'emPdfLink', 'emPrintLink'].forEach(function (id) {
@@ -517,7 +478,6 @@ $(function () {
                 persistHiddenCols(cols);
                 dt.column(index).visible(this.checked, false);
                 dt.columns.adjust();
-                renumberSerial();
                 emUpdateExportCols();
             });
 

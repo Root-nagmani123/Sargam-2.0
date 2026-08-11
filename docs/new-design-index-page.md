@@ -288,7 +288,7 @@ The layout splits status **display** from the **control**:
 <td>
     <div class="ic-act-group" role="group" aria-label="Row actions">
         <button type="button" class="ic-act ic-act--edit ic-edit-btn" data-id="…" data-name="…" data-status="…">
-            <span class="ic-act__icon"><i class="bi bi-pencil-square" aria-hidden="true"></i></span>
+            <span class="ic-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
             <span class="ic-act__label">Edit</span>
         </button>
 

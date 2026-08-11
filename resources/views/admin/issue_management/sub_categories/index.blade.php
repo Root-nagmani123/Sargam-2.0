@@ -11,8 +11,10 @@
 
 @section('setup_content')
 @php
-    // Only the category scope goes to the server now — search, sort and paging
-    // are DataTables'. ?cols= is appended by iscUpdateExportCols().
+    // Search, sort, paging AND the category scope are all the server's now.
+    // ?category_id= is stamped here so a deep link exports the right scope
+    // before any JS runs; iscUpdateExportCols() keeps it in step afterwards,
+    // together with ?q= and ?cols=.
     $exportQuery = ['category_id' => $categoryId];
 @endphp
 <div class="container-fluid ic-page">
@@ -60,9 +62,9 @@
 
             {{-- Toolbar: category filter left, columns + search right (§2) --}}
             <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 ic-toolbar">
-                <form method="GET" action="{{ route('admin.issue-sub-categories.index') }}"
-                      class="d-flex flex-wrap align-items-center gap-3" id="iscFilterForm">
-
+                {{-- No <form>: the category filter rides along on the grid's ajax
+                     call, so changing it costs one small XHR instead of a reload. --}}
+                <div class="d-flex flex-wrap align-items-center gap-3" id="iscFilters">
                     <span class="programme-dt-filters-label">Filters</span>
                     <div class="programme-dt-filter-select">
                         <select name="category_id" class="form-select" id="iscCategoryFilter" aria-label="Filter by category">
@@ -75,10 +77,9 @@
                         </select>
                     </div>
 
-                    @if($categoryId !== null)
-                        <a href="{{ route('admin.issue-sub-categories.index') }}" class="btn programme-dt-btn-reset">Reset Filters</a>
-                    @endif
-                </form>
+                    <button type="button" id="iscResetFilters"
+                            class="btn programme-dt-btn-reset {{ $categoryId !== null ? '' : 'd-none' }}">Reset Filters</button>
+                </div>
 
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
                     <button type="button" class="btn programme-dt-btn-columns" id="iscBtnColumns"
@@ -97,7 +98,8 @@
 
             <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    {{-- No data-sargam-dt-ui opt-out: DataTables paginates this grid now. --}}
+                    {{-- Server-side: search, sort and paging are all SQL, so only the
+                         page on screen ever reaches the browser. --}}
                     <table id="issueSubCategoriesTable"
                            class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                         <thead>
@@ -109,64 +111,7 @@
                                 <th scope="col">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @foreach($subCategories as $subCategory)
-                                @php $isActive = (int) $subCategory->status === 1; @endphp
-                                <tr>
-                                    {{-- Renumbered on every draw (see the JS). --}}
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td>{{ $subCategory->category->issue_category ?? '—' }}</td>
-                                    <td>{{ $subCategory->issue_sub_category }}</td>
-                                    <td data-order="{{ (int) $subCategory->status }}">
-                                        <span class="status-pill badge rounded-1 {{ $isActive ? 'bg-success-subtle' : 'bg-danger-subtle' }}">
-                                            {{ $isActive ? 'Active' : 'Inactive' }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="ic-act-group" role="group" aria-label="Row actions">
-                                            <button type="button" class="ic-act ic-act--edit isc-edit-btn" aria-label="Edit sub-category"
-                                                    data-id="{{ $subCategory->pk }}"
-                                                    data-category="{{ $subCategory->issue_category_master_pk }}"
-                                                    data-name="{{ $subCategory->issue_sub_category }}"
-                                                    data-status="{{ (int) $subCategory->status }}">
-                                                <span class="ic-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
-                                                <span class="ic-act__label">Edit</span>
-                                            </button>
-
-                                            {{-- No .form-check/.form-switch wrapper — see the shared stylesheet. --}}
-                                            <label class="ic-act ic-act--toggle">
-                                                <span class="ic-act__icon">
-                                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                           data-table="issue_sub_category_master" data-column="status"
-                                                           data-id="{{ $subCategory->pk }}" {{ $isActive ? 'checked' : '' }}>
-                                                </span>
-                                                <span class="ic-act__label">{{ $isActive ? 'Activate' : 'Deactivate' }}</span>
-                                            </label>
-
-                                            @if($isActive)
-                                                {{-- destroy() refuses to delete an active sub-category — mirror that guard. --}}
-                                                <span class="ic-act ic-act--del is-disabled" aria-disabled="true"
-                                                      title="Deactivate this sub-category before deleting it">
-                                                    <span class="ic-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
-                                                    <span class="ic-act__label">Delete</span>
-                                                </span>
-                                            @else
-                                                <form action="{{ route('admin.issue-sub-categories.destroy', $subCategory->pk) }}"
-                                                      method="POST" class="ic-delete-form">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="ic-act ic-act--del" aria-label="Delete sub-category"
-                                                            data-name="{{ $subCategory->issue_sub_category }}">
-                                                        <span class="ic-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
-                                                        <span class="ic-act__label">Delete</span>
-                                                    </button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
 
@@ -289,22 +234,39 @@
 $(function () {
     'use strict';
 
-    /* ── Toolbar: category filter submits on change ──────────────────────── */
-    $('#iscCategoryFilter').on('change', function () {
-        $('#iscFilterForm').trigger('submit');
-    });
-
-    /* ── DataTable ───────────────────────────────────────────────────────────
-       Search, sort, paging and the footer are DataTables' now;
-       datatable-global-ui.js supplies the defaults and moves the filter/pager
-       into the toolbar and footer slots. ── */
+    /* ── DataTable (server-side) ─────────────────────────────────────────────
+       Search, sort, paging and the footer are DataTables', and every one is
+       answered by the server: a draw fetches only the page being shown. The
+       Category filter rides along on the same call. `sargamServerOrder` keeps
+       ordering on the server too, so a header click re-sorts the WHOLE set. ── */
     var $table = $('#issueSubCategoriesTable');
 
+    function categoryFilter() {
+        return $('#iscCategoryFilter').val() || '';
+    }
+
     var dt = $table.DataTable({
+        serverSide: true,
+        processing: true,
+        sargamServerOrder: true,
+        searching: true,
+        // 400ms after the last keystroke — search as you type, one query per pause.
+        searchDelay: 400,
         order: [[1, 'asc']],
-        columnDefs: [
-            { targets: 0, orderable: false, searchable: false, className: 'text-center' },
-            { targets: -1, orderable: false, searchable: false }
+        ajax: {
+            url: '{{ route('admin.issue-sub-categories.data') }}',
+            data: function (d) {
+                d.category_id = categoryFilter();
+            }
+        },
+        /* `name` is the sort key the controller whitelists (SORTABLE_COLUMNS);
+           an empty one means "not sortable in SQL". */
+        columns: [
+            { data: 'sno', name: '', orderable: false, searchable: false, className: 'text-center' },
+            { data: 'category', name: 'category' },
+            { data: 'sub_category', name: 'sub_category' },
+            { data: 'status', name: 'status' },
+            { data: 'action', name: '', orderable: false, searchable: false }
         ],
         language: {
             emptyTable: '<div class="ic-empty">' +
@@ -320,15 +282,19 @@ $(function () {
         }
     });
 
-    // S. No. follows what is on screen, not the original row order.
-    function renumberSerial() {
-        var start = dt.page.info().start;
-        dt.column(0, { search: 'applied', order: 'applied', page: 'current' })
-          .nodes()
-          .each(function (cell, i) { cell.innerHTML = start + i + 1; });
-    }
-    dt.on('draw.dt', renumberSerial);
-    renumberSerial();
+    /* ── Toolbar: category filter redraws, never reloads ─────────────────── */
+    $('#iscCategoryFilter').on('change', function () {
+        dt.page(0).draw();          // back to page 1: the old page may not exist now
+        $('#iscResetFilters').toggleClass('d-none', categoryFilter() === '');
+        iscUpdateExportCols();
+    });
+
+    $('#iscResetFilters').on('click', function () {
+        $('#iscCategoryFilter').val('');
+        dt.search('').page(0).draw();
+        $('#iscResetFilters').addClass('d-none');
+        iscUpdateExportCols();
+    });
 
     /* ── Column visibility (DataTables column API) ────────────────────────
        Stored by LABEL, not index — an index points at a different column the
@@ -342,8 +308,7 @@ $(function () {
     var ISC_EXPORT_COL_COUNT = ISC_EXPORT_COLUMN_KEYS.filter(Boolean).length;
 
     /* Keep every export link carrying exactly the columns still on screen, plus
-       the search term currently applied to it. (?category_id= is already on the
-       href — it survives a page load, so Blade stamps it.) */
+       the search term and category scope currently applied to it. */
     function iscUpdateExportCols() {
         var keys = [];
         dt.columns().every(function () {
@@ -351,10 +316,11 @@ $(function () {
             if (key && this.visible()) { keys.push(key); }
         });
 
-        // This grid searches client-side, so the term lives only in DataTables.
-        // Without carrying it the export returns every row and its header cannot
-        // name the filter that was applied.
+        // The term lives in DataTables, which sends it to the grid feed as
+        // search[value]; the export reads ?q=. Without carrying it the download
+        // returns every row and its header cannot name the filter applied.
         var term = dt.search() || '';
+        var category = categoryFilter();
 
         ['iscDownloadLink', 'iscExcelLink', 'iscPdfLink', 'iscPrintLink'].forEach(function (id) {
             var link = document.getElementById(id);
@@ -363,6 +329,10 @@ $(function () {
             var params = new URLSearchParams(link.href.split('?')[1] || '');
             params.delete('q');
             if (term !== '') { params.set('q', term); }
+            // Blade stamped the initial scope; changing the dropdown no longer
+            // reloads the page, so keep it in step here.
+            params.delete('category_id');
+            if (category !== '') { params.set('category_id', category); }
             params.delete('cols');
             // Omit ?cols= while nothing is hidden — the server reads that as "all".
             if (keys.length !== ISC_EXPORT_COL_COUNT) { params.set('cols', keys.join(',')); }
@@ -419,7 +389,6 @@ $(function () {
                 persistHiddenCols(cols);
                 dt.column(index).visible(this.checked, false);
                 dt.columns.adjust();
-                renumberSerial();
                 iscUpdateExportCols();
             });
 
@@ -439,11 +408,12 @@ $(function () {
 
     /* ── Status toggle: repaint the row (badge + caption + delete guard) ──
        custom.js does the AJAX; the badge and the switch live in different
-       columns, so reload rather than hand-mirroring them. ── */
+       columns, so redraw from the server rather than hand-mirroring them.
+       Reloading the current page (not page 1) keeps the user where they were. ── */
     $(document).ajaxSuccess(function (event, xhr, settings) {
         var url = (settings && settings.url) ? settings.url : '';
         if (url.indexOf('toggle-status') === -1 && url.indexOf('toggleStatus') === -1) { return; }
-        setTimeout(function () { window.location.reload(); }, 600);
+        setTimeout(function () { dt.ajax.reload(null, false); }, 600);
     });
 
     /* ── Delete: confirm before submitting ───────────────────────────────── */

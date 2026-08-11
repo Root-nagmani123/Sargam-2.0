@@ -11,8 +11,8 @@
 
 @section('setup_content')
 @php
-    // Search, sort and paging are DataTables' now; ?cols= is appended to these
-    // links by ipUpdateExportCols().
+    // Search, sort and paging are the server's now; ?q= and ?cols= are appended
+    // to these links by ipUpdateExportCols() so a download matches the grid.
     $exportQuery = [];
 @endphp
 <div class="container-fluid ic-page">
@@ -77,7 +77,8 @@
 
             <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    {{-- No data-sargam-dt-ui opt-out: DataTables paginates this grid now. --}}
+                    {{-- Server-side: search, sort and paging are all SQL, so only the
+                         page on screen ever reaches the browser. --}}
                     <table id="issuePrioritiesTable"
                            class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                         <thead>
@@ -89,73 +90,7 @@
                                 <th scope="col">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @foreach($priorities as $priority)
-                                @php
-                                    $isActive = (int) $priority->status === 1;
-                                    // destroy() refuses a priority that any issue log references.
-                                    $inUse = (int) ($priority->issue_logs_count ?? 0) > 0;
-                                @endphp
-                                <tr>
-                                    {{-- Renumbered on every draw (see the JS). --}}
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td>{{ $priority->priority }}</td>
-                                    <td class="ic-col-wrap">{{ $priority->description ?: '—' }}</td>
-                                    <td data-order="{{ (int) $priority->status }}">
-                                        <span class="status-pill badge rounded-1 {{ $isActive ? 'bg-success-subtle' : 'bg-danger-subtle' }}">
-                                            {{ $isActive ? 'Active' : 'Inactive' }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {{-- Edit · status switch · Delete — the canonical stack (§3b).
-                                             Status is still editable from the Edit modal too. --}}
-                                        <div class="ic-act-group" role="group" aria-label="Row actions">
-                                            <button type="button" class="ic-act ic-act--edit ip-edit-btn" aria-label="Edit priority"
-                                                    data-id="{{ $priority->pk }}"
-                                                    data-name="{{ $priority->priority }}"
-                                                    data-description="{{ $priority->description }}"
-                                                    data-status="{{ (int) $priority->status }}">
-                                                <span class="ic-act__icon"><i class="bi bi-pencil-square" aria-hidden="true"></i></span>
-                                                <span class="ic-act__label">Edit</span>
-                                            </button>
-
-                                            {{-- No .form-check/.form-switch wrapper: custom.css:107 pulls the
-                                                 input -2.375rem left inside one, which breaks the
-                                                 switch-above-caption layout. custom.js binds .status-toggle
-                                                 globally, so there is no toggle JS to write here.
-                                                 The caption names the ACTION, not the state (§3b). --}}
-                                            <label class="ic-act ic-act--toggle">
-                                                <span class="ic-act__icon">
-                                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                           data-table="issue_priority_master" data-column="status"
-                                                           data-id="{{ $priority->pk }}" {{ $isActive ? 'checked' : '' }}>
-                                                </span>
-                                                <span class="ic-act__label">{{ $isActive ? 'Activate' : 'Deactivate' }}</span>
-                                            </label>
-
-                                            @if($inUse)
-                                                <span class="ic-act ic-act--del is-disabled" aria-disabled="true"
-                                                      title="In use by {{ $priority->issue_logs_count }} issue(s) — cannot be deleted">
-                                                    <span class="ic-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
-                                                    <span class="ic-act__label">Delete</span>
-                                                </span>
-                                            @else
-                                                <form action="{{ route('admin.issue-priorities.destroy', $priority->pk) }}"
-                                                      method="POST" class="ic-delete-form">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="ic-act ic-act--del" aria-label="Delete priority"
-                                                            data-name="{{ $priority->priority }}">
-                                                        <span class="ic-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
-                                                        <span class="ic-act__label">Delete</span>
-                                                    </button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
 
@@ -269,17 +204,32 @@
 $(function () {
     'use strict';
 
-    /* ── DataTable ───────────────────────────────────────────────────────────
-       Search, sort, paging and the footer are DataTables' now;
-       datatable-global-ui.js supplies the defaults and moves the filter/pager
-       into the toolbar and footer slots. ── */
+    /* ── DataTable (server-side) ─────────────────────────────────────────────
+       Search, sort, paging and the footer are DataTables', and every one is
+       answered by the server: a draw fetches only the page being shown.
+       `sargamServerOrder` keeps ordering on the server too, so a header click
+       re-sorts the WHOLE set rather than the visible page. ── */
     var $table = $('#issuePrioritiesTable');
 
     var dt = $table.DataTable({
+        serverSide: true,
+        processing: true,
+        sargamServerOrder: true,
+        searching: true,
+        // 400ms after the last keystroke — search as you type, one query per pause.
+        searchDelay: 400,
         order: [[1, 'asc']],
-        columnDefs: [
-            { targets: 0, orderable: false, searchable: false, className: 'text-center' },
-            { targets: -1, orderable: false, searchable: false }
+        ajax: {
+            url: '{{ route('admin.issue-priorities.data') }}'
+        },
+        /* `name` is the sort key the controller whitelists (SORTABLE_COLUMNS);
+           an empty one means "not sortable in SQL". */
+        columns: [
+            { data: 'sno', name: '', orderable: false, searchable: false, className: 'text-center' },
+            { data: 'priority', name: 'priority' },
+            { data: 'description', name: 'description', className: 'ic-col-wrap' },
+            { data: 'status', name: 'status' },
+            { data: 'action', name: '', orderable: false, searchable: false }
         ],
         language: {
             emptyTable: '<div class="ic-empty">' +
@@ -294,16 +244,6 @@ $(function () {
                 '</div>'
         }
     });
-
-    // S. No. follows what is on screen, not the original row order.
-    function renumberSerial() {
-        var start = dt.page.info().start;
-        dt.column(0, { search: 'applied', order: 'applied', page: 'current' })
-          .nodes()
-          .each(function (cell, i) { cell.innerHTML = start + i + 1; });
-    }
-    dt.on('draw.dt', renumberSerial);
-    renumberSerial();
 
     /* ── Column visibility (DataTables column API) ────────────────────────
        Stored by LABEL, not index — an index points at a different column the
@@ -325,9 +265,9 @@ $(function () {
             if (key && this.visible()) { keys.push(key); }
         });
 
-        // This grid searches client-side, so the term lives only in DataTables.
-        // Without carrying it the export returns every row and its header cannot
-        // name the filter that was applied.
+        // The term lives in DataTables, which sends it to the grid feed as
+        // search[value]; the export reads ?q=. Without carrying it the download
+        // returns every row and its header cannot name the filter applied.
         var term = dt.search() || '';
 
         ['ipDownloadLink', 'ipExcelLink', 'ipPdfLink', 'ipPrintLink'].forEach(function (id) {
@@ -393,7 +333,6 @@ $(function () {
                 persistHiddenCols(cols);
                 dt.column(index).visible(this.checked, false);
                 dt.columns.adjust();
-                renumberSerial();
                 ipUpdateExportCols();
             });
 
@@ -410,6 +349,15 @@ $(function () {
     // Stamp the restored column state onto the export links on first paint too.
     ipUpdateExportCols();
 
+    /* ── Status toggle: repaint the row (badge + caption) ─────────────────
+       custom.js does the AJAX. status-toggle-delete.js can't help here — it
+       swaps the control out of a re-fetched page, whose <tbody> is empty for a
+       server-side grid — so redraw the current page from the feed instead. ── */
+    $(document).ajaxSuccess(function (event, xhr, settings) {
+        var url = (settings && settings.url) ? settings.url : '';
+        if (url.indexOf('toggle-status') === -1 && url.indexOf('toggleStatus') === -1) { return; }
+        setTimeout(function () { dt.ajax.reload(null, false); }, 600);
+    });
 
     /* ── Delete: confirm before submitting ───────────────────────────────── */
     $(document).on('submit', '.ic-delete-form', function (e) {

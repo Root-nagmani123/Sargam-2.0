@@ -1487,11 +1487,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
 
     // Category Management
     Route::get('issue-categories', [IssueCategoryController::class, 'index'])->name('issue-categories.index');
+    // Server-side rows for the grid above; the export routes stay as they are —
+    // the grid links to them and reads the same ?q / ?sort / ?cols.
+    Route::get('issue-categories/data', [IssueCategoryController::class, 'data'])->name('issue-categories.data');
     Route::get('issue-categories/export/{format?}', [IssueCategoryController::class, 'export'])->name('issue-categories.export');
     Route::post('issue-categories', [IssueCategoryController::class, 'store'])->name('issue-categories.store');
     Route::put('issue-categories/{id}', [IssueCategoryController::class, 'update'])->name('issue-categories.update');
     Route::delete('issue-categories/{id}', [IssueCategoryController::class, 'destroy'])->name('issue-categories.destroy');    // Sub-Category Management
     Route::get('issue-sub-categories', [IssueSubCategoryController::class, 'index'])->name('issue-sub-categories.index');
+    Route::get('issue-sub-categories/data', [IssueSubCategoryController::class, 'data'])->name('issue-sub-categories.data');
     Route::get('issue-sub-categories/export/{format?}', [IssueSubCategoryController::class, 'export'])->name('issue-sub-categories.export');
     Route::post('issue-sub-categories', [IssueSubCategoryController::class, 'store'])->name('issue-sub-categories.store');
     Route::put('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'update'])->name('issue-sub-categories.update');
@@ -1499,6 +1503,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
 
     // Priority Management
     Route::get('issue-priorities', [IssuePriorityController::class, 'index'])->name('issue-priorities.index');
+    Route::get('issue-priorities/data', [IssuePriorityController::class, 'data'])->name('issue-priorities.data');
     Route::get('issue-priorities/export/{format?}', [IssuePriorityController::class, 'export'])->name('issue-priorities.export');
     Route::post('issue-priorities', [IssuePriorityController::class, 'store'])->name('issue-priorities.store');
     Route::put('issue-priorities/{id}', [IssuePriorityController::class, 'update'])->name('issue-priorities.update');
@@ -1506,6 +1511,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
 
     // Escalation Matrix (3-level hierarchy)
     Route::get('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'index'])->name('issue-escalation-matrix.index');
+    Route::get('issue-escalation-matrix/data', [IssueEscalationMatrixController::class, 'data'])->name('issue-escalation-matrix.data');
     Route::get('issue-escalation-matrix/export/{format?}', [IssueEscalationMatrixController::class, 'export'])->name('issue-escalation-matrix.export');
     Route::post('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'store'])->name('issue-escalation-matrix.store');
     Route::put('issue-escalation-matrix/{categoryId}', [IssueEscalationMatrixController::class, 'update'])->name('issue-escalation-matrix.update');

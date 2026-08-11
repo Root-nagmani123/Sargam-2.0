@@ -8,6 +8,10 @@ use App\DataTables\GroupMappingDataTable;
 use App\DataTables\Master\EmployeeTypeMasterDataTable;
 use App\DataTables\MemberDataTable;
 use App\DataTables\RoleDataTable;
+use App\Http\Controllers\Admin\IssueManagement\IssueCategoryController;
+use App\Http\Controllers\Admin\IssueManagement\IssueEscalationMatrixController;
+use App\Http\Controllers\Admin\IssueManagement\IssuePriorityController;
+use App\Http\Controllers\Admin\IssueManagement\IssueSubCategoryController;
 use App\Http\Controllers\Admin\Master\FacultyExpertiseMasterController;
 use App\Http\Controllers\Admin\Master\FacultyTypeMasterController;
 use App\DataTables\UserCredentialsDataTable;
@@ -4514,6 +4518,21 @@ public function toggleStatus(Request $request)
         }
         if ($table === 'faculty_type_master') {
             FacultyTypeMasterController::bumpListCacheEpoch();
+        }
+        /* CENTCOM grids are server-side: their cached page snapshots are keyed by
+           search + sort, and both can depend on status (sorting by the Status
+           column, or a search term that matches the status pill). Without these
+           bumps a toggled row keeps its old position until the TTL expires. */
+        if ($table === 'issue_category_master') {
+            IssueCategoryController::bumpIndexListCacheEpoch();
+            // The matrix lists ACTIVE categories only, so it changes shape too.
+            IssueEscalationMatrixController::bumpEscalationMatrixListCacheEpoch();
+        }
+        if ($table === 'issue_sub_category_master') {
+            IssueSubCategoryController::bumpIndexListCacheEpoch();
+        }
+        if ($table === 'issue_priority_master') {
+            IssuePriorityController::bumpIndexListCacheEpoch();
         }
 
         $newState = ((int) $status === 1) ? 'Active' : 'Inactive';

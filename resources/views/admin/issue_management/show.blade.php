@@ -106,7 +106,7 @@
             @if($canEdit)
                 <a href="{{ route('admin.issue-management.edit', $issue->pk) }}"
                    class="btn programme-dt-btn-columns border-0 text-primary">
-                    <i class="bi bi-pencil-square" aria-hidden="true"></i><span>Edit Issue</span>
+                    <i class="bi bi-pencil" aria-hidden="true"></i><span>Edit Issue</span>
                 </a>
             @endif
         </div>

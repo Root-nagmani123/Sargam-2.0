@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\IssueManagement;
 
 use App\Exports\IssueEscalationMatrixExport;
+use App\Http\Controllers\Concerns\NormalisesDataTablesRequest;
 use App\Http\Controllers\Controller;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
@@ -14,13 +15,13 @@ use App\Models\{
 use App\Support\DataTableRedisCache;
 use App\Support\ExportCsvHeader;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\{DB, Auth};
 
 class IssueEscalationMatrixController extends Controller
 {
+    use NormalisesDataTablesRequest;
+
     private const LISTING_CACHE_EPOCH_KEY = 'admin_issue_escalation_matrix_index_list_epoch';
 
     public static function bumpEscalationMatrixListCacheEpoch(): void
@@ -154,10 +155,17 @@ class IssueEscalationMatrixController extends Controller
     /**
      * Display escalation matrix - categories with 3-level hierarchy (employees + days).
      */
-    /** Page-size choices offered by the "Showing N of M items" footer select. */
-    private const PER_PAGE_OPTIONS = [10, 20, 50, 100, 200];
+    /**
+     * Page sizes the grid feed accepts — this list MUST mirror the lengthMenu
+     * datatable-global-ui.js installs, or picking one it offers falls back to
+     * INDEX_PER_PAGE and the footer says 25 while 10 rows are shown.
+     */
+    private const DATA_PER_PAGE_OPTIONS = [10, 25, 50, 100, 200];
 
     private const INDEX_PER_PAGE = 10;
+
+    /** Sortable grid headers — anything else falls back to Complaint Category. */
+    private const SORTABLE_COLUMNS = ['category', 'level1', 'level2', 'level3'];
 
     /**
      * A level cell as the grid and the reports render it: "Trevor Swanson - 1 Day".
@@ -221,7 +229,12 @@ class IssueEscalationMatrixController extends Controller
         return $matrix;
     }
 
-    public function index(Request $request)
+    /**
+     * The whole matrix (cached), hydrated back into models.
+     *
+     * @return array{matrix: array<int, array<string, mixed>>, categories: Collection<int, IssueCategoryMaster>}
+     */
+    private function cachedMatrix(): array
     {
         $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
         $cacheKey = 'admin_issue_escalation_matrix:v1:' . md5(json_encode(['epoch' => $epoch]));
@@ -245,17 +258,85 @@ class IssueEscalationMatrixController extends Controller
             $cached = $this->matrixToCacheArray($built['matrix'], $built['categories']);
         }
 
-        $hydrated = $this->matrixFromCacheArray($cached);
+        return $this->matrixFromCacheArray($cached);
+    }
+
+    /**
+     * Display the escalation matrix.
+     *
+     * Rows come from data() over ajax; this action renders the shell plus the
+     * category / employee lists the Add and Edit modals need.
+     */
+    public function index(Request $request)
+    {
+        $hydrated = $this->cachedMatrix();
         $categories = $hydrated['categories'];
         $employees = $this->getEmployeesForDropdown();
 
-        // Client-side DataTable: search, sort and paging happen in the browser,
-        // so the whole (small) matrix is handed over in one go.
-        $matrix = $this->filterAndSortMatrix($hydrated['matrix'], '', 'category', 'asc');
+        return view('admin.issue_management.escalation_matrix.index', compact('categories', 'employees'));
+    }
 
-        $perPageOptions = self::PER_PAGE_OPTIONS;
+    /**
+     * DataTables server-side feed for the Escalation Matrix grid.
+     *
+     * Unlike the other Centcom grids this one has no single query behind it —
+     * a row is a category joined to its three levels, assembled in memory — so
+     * search, sort and the page slice run over the built (cached) matrix. Only
+     * the page on screen is serialised and sent.
+     */
+    public function data(Request $request)
+    {
+        $paging = $this->normaliseDataTablesRequest($request, self::INDEX_PER_PAGE, self::DATA_PER_PAGE_OPTIONS);
 
-        return view('admin.issue_management.escalation_matrix.index', compact('matrix', 'categories', 'employees'));
+        $search = trim((string) $request->query('q', ''));
+        $sortKey = (string) $request->query('sort', 'category');
+        if (! in_array($sortKey, self::SORTABLE_COLUMNS, true)) {
+            $sortKey = 'category';
+        }
+        $sortDir = strtolower((string) $request->query('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+
+        $hydrated = $this->cachedMatrix();
+        $total = count($hydrated['matrix']);
+        $filtered = $this->filterAndSortMatrix($hydrated['matrix'], $search, $sortKey, $sortDir);
+
+        $page = array_slice($filtered, $paging['start'], $paging['perPage']);
+
+        $rows = [];
+        foreach ($page as $i => $row) {
+            $rows[] = [
+                'sno' => $paging['start'] + $i + 1,
+                'category' => e((string) ($row['category']->issue_category ?? '')),
+                'level1' => $this->levelCellHtml($row['level1'], 1),
+                'level2' => $this->levelCellHtml($row['level2'], 2),
+                'level3' => $this->levelCellHtml($row['level3'], 3),
+                'action' => view('admin.issue_management.escalation_matrix._row_actions', compact('row'))->render(),
+            ];
+        }
+
+        return response()->json([
+            'draw' => (int) $request->input('draw', 0),
+            'recordsTotal' => $total,
+            'recordsFiltered' => count($filtered),
+            'data' => $rows,
+        ]);
+    }
+
+    /**
+     * A level cell as the grid paints it: "Trevor Swanson - 1 Day", days tinted
+     * by level. The reports use levelCellText() for the same content in plain text.
+     */
+    private function levelCellHtml($level, int $n): string
+    {
+        if (! $level) {
+            return '<span class="text-muted">—</span>';
+        }
+
+        $days = (int) $level->days_notify;
+
+        return '<span class="ic-level ic-level--' . $n . '">'
+            . e($level->employee->name ?? 'N/A')
+            . ' - <span class="ic-level__days">' . $days . ' ' . ($days === 1 ? 'Day' : 'Days') . '</span>'
+            . '</span>';
     }
 
     /**

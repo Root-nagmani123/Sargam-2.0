@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\IssueManagement;
 
 use App\Exports\IssueSubCategoryExport;
+use App\Http\Controllers\Concerns\NormalisesDataTablesRequest;
 use App\Http\Controllers\Controller;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
@@ -16,18 +17,22 @@ use App\Support\DataTableSearchHelper;
 use App\Support\ExportCsvHeader;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
 
 class IssueSubCategoryController extends Controller
 {
+    use NormalisesDataTablesRequest;
+
     private const LISTING_CACHE_EPOCH_KEY = 'admin_issue_sub_categories_index_list_epoch';
 
     private const INDEX_PER_PAGE = 10;
 
-    /** Page-size choices offered by the "Showing N of M items" footer select. */
-    private const PER_PAGE_OPTIONS = [10, 20, 50, 100, 200];
+    /**
+     * Page sizes the grid feed accepts — this list MUST mirror the lengthMenu
+     * datatable-global-ui.js installs, or picking one it offers falls back to
+     * INDEX_PER_PAGE and the footer says 25 while 10 rows are shown.
+     */
+    private const DATA_PER_PAGE_OPTIONS = [10, 25, 50, 100, 200];
 
     /** Sortable grid headers → the column ordered by. */
     private const SORTABLE_COLUMNS = [
@@ -39,16 +44,6 @@ class IssueSubCategoryController extends Controller
     public static function bumpIndexListCacheEpoch(): void
     {
         DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'IssueSubCategoryController@index');
-    }
-
-    /**
-     * Normalise the ?per_page= value against the whitelist (falls back to the default).
-     */
-    private function resolvePerPage(Request $request): int
-    {
-        $perPage = (int) $request->query('per_page', self::INDEX_PER_PAGE);
-
-        return in_array($perPage, self::PER_PAGE_OPTIONS, true) ? $perPage : self::INDEX_PER_PAGE;
     }
 
     private function resolveSearch(Request $request): string
@@ -168,57 +163,97 @@ class IssueSubCategoryController extends Controller
 
     /**
      * Display a listing of issue sub-categories.
+     *
+     * Rows come from data() over ajax, so this action only renders the shell and
+     * the Category dropdown. ?category_id= still seeds that dropdown, so a deep
+     * link into one category keeps working.
      */
     public function index(Request $request)
     {
-        // Client-side DataTable: search, sort and paging happen in the browser, so
-        // the whole (small) set is served at once. The Category filter stays
-        // server-side — it selects a genuinely different scope, and the export
-        // links mirror it.
         $categoryId = $this->resolveCategoryFilter($request);
-
-        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_sub_categories_index:v2:' . md5(json_encode([
-            'epoch' => $epoch,
-            'category_id' => $categoryId,
-        ]));
-
-        $ids = DataTableRedisCache::remember(
-            $cacheKey,
-            [
-                'enabled' => 'ISSUE_SUB_CATEGORY_INDEX_CACHE_ENABLED',
-                'seconds' => 'ISSUE_SUB_CATEGORY_INDEX_CACHE_SECONDS',
-            ],
-            'IssueSubCategoryController@index',
-            fn () => $this->indexAllPks($categoryId)
-        );
-
-        if (! is_array($ids)) {
-            $ids = $this->indexAllPks($categoryId);
-        }
-
-        $subCategories = $this->hydrateSubCategoriesByOrderedPks($ids);
 
         $categories = IssueCategoryMaster::active()->orderBy('issue_category')->get();
 
         return view('admin.issue_management.sub_categories.index', compact(
-            'subCategories',
             'categories',
             'categoryId'
         ));
     }
 
     /**
-     * Every sub-category pk in display order, for the given category scope.
+     * DataTables server-side feed for the Manage Sub-Categories grid.
+     *
+     * Searching, sorting and paging are all SQL: only the page on screen ever
+     * crosses the wire. The Category filter rides along on the same call, so
+     * narrowing the scope is one small XHR rather than a full page reload.
      */
-    private function indexAllPks(?int $categoryId): array
+    public function data(Request $request)
     {
-        // Table-qualified: the category join makes a bare `pk` ambiguous.
-        return $this->indexFilteredQuery('', 'category', 'asc', $categoryId)
-            ->pluck('issue_sub_category_master.pk')
-            ->map(fn ($pk) => (int) $pk)
+        $paging = $this->normaliseDataTablesRequest($request, self::INDEX_PER_PAGE, self::DATA_PER_PAGE_OPTIONS);
+        $search = $this->resolveSearch($request);
+        $sort = $this->resolveSort($request);
+        $categoryId = $this->resolveCategoryFilter($request);
+
+        $snapshot = $this->indexCachedSnapshot($paging['page'], $paging['perPage'], $search, $sort, $categoryId);
+
+        // Only the pk order is cached; the rows themselves are hydrated fresh so
+        // a status toggle shows up on the very next draw.
+        $rows = $this->hydrateSubCategoriesByOrderedPks($snapshot['ids'])
             ->values()
-            ->all();
+            ->map(fn (IssueSubCategoryMaster $subCategory, int $i) => [
+                'sno' => $paging['start'] + $i + 1,
+                'category' => e((string) ($subCategory->category->issue_category ?? '—')),
+                'sub_category' => e((string) $subCategory->issue_sub_category),
+                'status' => view('admin.issue_management.sub_categories._row_status', compact('subCategory'))->render(),
+                'action' => view('admin.issue_management.sub_categories._row_actions', compact('subCategory'))->render(),
+            ]);
+
+        return response()->json([
+            'draw' => (int) $request->input('draw', 0),
+            'recordsTotal' => $snapshot['total'],
+            'recordsFiltered' => $snapshot['total'],
+            'data' => $rows,
+        ]);
+    }
+
+    /**
+     * Cached {total, ids} snapshot for one page of the grid query.
+     *
+     * @param  array{key: string, dir: string}  $sort
+     * @return array{total: int, ids: array<int, int>}
+     */
+    private function indexCachedSnapshot(int $page, int $perPage, string $search, array $sort, ?int $categoryId): array
+    {
+        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
+        // Every input that changes the slice is in the key — a page cached under
+        // one search term or category must never be served for another.
+        $cacheKey = 'admin_issue_sub_categories_index:v3:' . md5(json_encode([
+            'epoch' => $epoch,
+            'search' => $search,
+            'sort' => $sort,
+            'category_id' => $categoryId,
+            'page' => $page,
+            'per_page' => $perPage,
+        ]));
+
+        $snapshot = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'ISSUE_SUB_CATEGORY_INDEX_CACHE_ENABLED',
+                'seconds' => 'ISSUE_SUB_CATEGORY_INDEX_CACHE_SECONDS',
+            ],
+            'IssueSubCategoryController@data',
+            fn () => $this->indexPageSnapshot($page, $perPage, $search, $sort['key'], $sort['dir'], $categoryId)
+        );
+
+        if (! is_array($snapshot) || ! isset($snapshot['total']) || ! isset($snapshot['ids']) || ! is_array($snapshot['ids'])) {
+            $snapshot = $this->indexPageSnapshot($page, $perPage, $search, $sort['key'], $sort['dir'], $categoryId);
+        }
+
+        return [
+            'total' => (int) $snapshot['total'],
+            'ids' => array_map('intval', $snapshot['ids']),
+        ];
     }
 
     /**
