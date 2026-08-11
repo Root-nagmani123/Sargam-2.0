@@ -229,10 +229,14 @@
             return;
         }
 
+        // Behaviour matches Yajra's own definitions. The icons are Bootstrap Icons,
+        // not the FontAwesome ones Yajra uses — bootstrap-icons is what this app
+        // loads globally (admin/layouts/pre_header.blade.php), and an `fa` class
+        // here would render an empty box.
         if (!buttons.reset) {
             buttons.reset = {
                 className: 'buttons-reset',
-                text: 'Reset',
+                text: '<i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset',
                 action: function (e, dt) {
                     dt.search('').columns().search('').draw();
                 }
@@ -242,7 +246,7 @@
         if (!buttons.reload) {
             buttons.reload = {
                 className: 'buttons-reload',
-                text: 'Reload',
+                text: '<i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Reload',
                 action: function (e, dt) {
                     dt.draw(false);
                 }
@@ -288,6 +292,10 @@
             var $filter = $wrapper.find('.dataTables_filter').first();
             if ($filter.length) {
                 styleSearchFilter($filter, searchLabel);
+                // Stamp it as ours so the destroy handler can remove this node
+                // without touching a .dataTables_filter the PAGE supplied itself
+                // (group_mapping ships its own, driven by #gmCustomSearch).
+                $filter.attr('data-sargam-dt-filter', tableId);
                 $searchSlot.append($filter);
             }
         }
@@ -704,34 +712,65 @@
      * The per-page enhancer copies that this file replaced polled on a timer
      * instead, which is why they survived it.
      *
-     * So we sweep independently of the event as well. This is cheap and
-     * idempotent: enhance() returns immediately for any table whose footer it has
-     * already built (the footerKey flag), and its guards stop it touching a footer
-     * owned by someone else.
+     * So we also enhance from `draw.dt`, delegated on document. Every table draws
+     * at least once after initialising, whenever it is created — including tables
+     * built long after page load (opened in a modal, or rebuilt by a filter change),
+     * which a fixed timer would miss. Separate event, separate dispatch, so a
+     * throw in another extension's init handler cannot suppress it.
+     *
+     * Cheap and idempotent: enhance() returns immediately once it has built a
+     * footer (the footerKey flag), and its guards stop it touching a footer owned
+     * by someone else.
      */
-    function sweepUnenhancedTables() {
-        if (!$.fn.dataTable || !$.fn.dataTable.tables) {
-            return;
-        }
-
-        $($.fn.dataTable.tables()).each(function () {
-            var $table = $(this);
-            if (!shouldEnhance($table)) {
+    function enhanceIfNeeded(settings) {
+        try {
+            var api = new $.fn.dataTable.Api(settings);
+            if (!shouldEnhance($(api.table().node()))) {
                 return;
             }
-            try {
-                var api = $table.DataTable();
-                enhance(api);
-                bindTableEvents(api);
-            } catch (err) { /* a table mid-teardown — skip it */ }
-        });
+            enhance(api);
+            bindTableEvents(api);
+        } catch (err) { /* table mid-teardown — skip it */ }
     }
 
-    $(function () {
-        // After Yajra's own $(function(){…}) init has run, and once more later for
-        // tables whose controls appear on a delayed/second draw.
-        window.setTimeout(sweepUnenhancedTables, 200);
-        window.setTimeout(sweepUnenhancedTables, 800);
+    $(document).on('draw.dt' + NS, function (e, settings) {
+        enhanceIfNeeded(settings);
+    });
+
+    /**
+     * Release the slots when a table is destroyed.
+     *
+     * .destroy() tears down the wrapper but leaves the nodes we relocated stranded
+     * in the page's slots, while footerKey stays set — so the re-initialised table
+     * early-returns in enhance() and the user is left with dead chrome. Pages hit
+     * by this (attendance) had to clear the slots by hand before recreating.
+     *
+     * We only clear what we own: the footer is checked against the sargamDtTableId
+     * stamp, and the filter against the data-sargam-dt-filter stamp, so a
+     * hand-written footer or a page-supplied search box is never touched.
+     */
+    $(document).on('destroy.dt' + NS, function (e, settings) {
+        try {
+            var $table = $(new $.fn.dataTable.Api(settings).table().node());
+            var tableId = $table.attr('id');
+            if (!tableId) {
+                return;
+            }
+
+            var $footer = resolveSlot($table, tableId, 'footer', false);
+            if ($footer.length && $footer.data('sargamDtTableId') === tableId) {
+                $footer.empty()
+                    .removeData('sargamDtTableId')
+                    .removeData('sargamDtFooterReady_' + tableId);
+            }
+
+            var $searchSlot = resolveSlot($table, tableId, 'search', false);
+            if ($searchSlot.length) {
+                $searchSlot.find('[data-sargam-dt-filter="' + tableId + '"]').remove();
+            }
+
+            $table.removeData('sargamDtUiEventsBound');
+        } catch (err) { /* noop */ }
     });
 
     window.SargamDataTableUI = {

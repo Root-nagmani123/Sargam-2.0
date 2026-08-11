@@ -36,7 +36,7 @@
         <!-- start Zero Configuration -->
         <div class="card" style="border-left:4px solid #004a93;">
             <div class="card-body">
-                <div class="table-responsive">
+                <div>
                     <div class="row">
                         <div class="col-6">
                             <h4 class="fw-semibold text-primary mb-0" style="color:#004a93 !important;">
@@ -72,7 +72,20 @@
                     </div>
 
                     <hr>
-                    {!! $dataTable->table(['class' => 'table', 'data-sargam-dt-ui' => 'false']) !!}
+
+                    <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4">
+                        <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                            <div id="facultyDtSearch" class="programme-dt-search" data-dt-search-for="faculty-table"></div>
+                        </div>
+                    </div>
+
+                    <div class="programme-dt-panel">
+                        <div class="table-responsive">
+                            {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
+                        </div>
+                        <div id="facultyDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                            data-dt-footer-for="faculty-table"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -82,16 +95,10 @@
 @push('scripts')
     {!! $dataTable->scripts() !!}
 
-{{-- This page deliberately keeps DataTables' own chrome: #faculty-table opts out
-     of the global enhancer (data-sargam-dt-ui="false" here, sargamDtUi => false in
-     FacultyDataTable.php) and ships a custom `dom` that renders length/filter/info/
-     paginate in visible Bootstrap rows. It therefore has no .programme-dt-search /
-     .programme-dt-footer slots. A relocation script used to live here targeting
-     #facultyDtSearch / #facultyDtFooter — elements that never existed in this
-     markup — so it returned early on every call and did nothing; it was removed.
-     Migrating this page to the programme-dt design is a separate change: it needs
-     the slot divs, both opt-outs dropped, the custom `dom` removed and the
-     language strings ("Showing _MENU_" / "of _TOTAL_ items") added. --}}
+{{-- Search box, pagination and the "Showing N of M items" count are relocated into
+     #facultyDtSearch / #facultyDtFooter by the global enhancer
+     (public/js/datatable-global-ui.js) via the data-dt-search-for /
+     data-dt-footer-for hooks above. Do NOT add a page-local copy of that logic. --}}
 
 <script>
 // Delete Faculty with SweetAlert Confirmation
