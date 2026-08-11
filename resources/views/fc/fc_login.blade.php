@@ -43,8 +43,7 @@
                             @endif
 
                             <form class="row g-3 g-md-4" method="POST" action="{{ route('fc.login.verify') }}" autocomplete="off" id="fcLoginForm">
-                                {{-- ⚠️ TEMPORARY load-test only — revert with: git checkout resources/views/fc/fc_login.blade.php --}}
-                                {{-- @csrf --}}
+                                @csrf
 
 
                                 <div class="col-12 text-center">

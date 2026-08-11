@@ -590,10 +590,13 @@ class FcAdminSmsBulkService
         }
 
         // No tracker row at all, but credentials are staged: still B1 (see class
-        // doc-comment), so name the first trackable step instead of leaving it blank.
+        // doc-comment). Nothing is done yet, so every applicable trackable step is
+        // pending — the SMS names the first one, the email lists them all.
         if ($bucket === self::TEMPLATE_B1 && $stepName === null) {
-            $stepName = trim((string) ($steps->first()?->step_name ?? '')) ?: 'Basic Information';
-            $rowPendingSteps = $stepName;
+            $progress = $this->stepProgressFromTracker($form, $steps, null, $roster);
+            $stepName = $progress['pending_step']
+                ?: (trim((string) ($steps->first()?->step_name ?? '')) ?: 'Basic Information');
+            $rowPendingSteps = $progress['pending_steps'] ?: $stepName;
         }
 
         return [
@@ -767,14 +770,16 @@ class FcAdminSmsBulkService
 
                 // Credentials staged (user_id + password set) counts as "started" even
                 // with 0 trackable steps done — see class doc-comment. Since there is no
-                // tracker row yet in that case, $stepName was never set above: fall back
-                // to the first trackable step so the SMS/list still names a pending step
-                // instead of showing blank.
+                // tracker row yet in that case, $stepName was never set above: every
+                // applicable trackable step is still pending, so name the first one for
+                // the SMS and keep the whole list for the email.
                 $hasStagedCredentials = $this->hasStagedCredentials($roster);
                 $bucket = $hasStagedCredentials ? self::TEMPLATE_B1 : self::TEMPLATE_B2;
                 if ($hasStagedCredentials && $stepName === null) {
-                    $stepName = trim((string) ($steps->first()?->step_name ?? '')) ?: 'Basic Information';
-                    $rowPendingSteps = $stepName;
+                    $progress = $this->stepProgressFromTracker($form, $steps, null, $roster);
+                    $stepName = $progress['pending_step']
+                        ?: (trim((string) ($steps->first()?->step_name ?? '')) ?: 'Basic Information');
+                    $rowPendingSteps = $progress['pending_steps'] ?: $stepName;
                 }
 
                 $mobile = trim((string) ($roster->contact_no ?? ''));
@@ -1080,8 +1085,12 @@ class FcAdminSmsBulkService
 
             if ($this->hasStagedCredentials($roster)) {
                 $base['bucket'] = self::TEMPLATE_B1;
-                $base['step_name'] = trim((string) ($steps->first()?->step_name ?? '')) ?: 'Basic Information';
-                $base['pending_steps'] = $base['step_name'];
+                if (trim((string) $base['step_name']) === '') {
+                    $base['step_name'] = trim((string) ($steps->first()?->step_name ?? '')) ?: 'Basic Information';
+                }
+                if (trim((string) $base['pending_steps']) === '') {
+                    $base['pending_steps'] = $base['step_name'];
+                }
 
                 return $base;
             }

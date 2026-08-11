@@ -7,6 +7,7 @@ use App\Models\CourseMaster;
 use App\Models\FC\FcForm;
 use App\Models\FC\FcFormStep;
 use App\Models\FC\FcFormFieldGroup;
+use App\Services\FC\FcDescriptiveDataFieldResolver;
 use App\Services\FC\FcStepApplicabilityService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -210,6 +211,8 @@ class FormManagementController extends Controller
 
     public function update(Request $request, FcForm $form)
     {
+        $this->lockFormSettingFields($request, $form);
+
         $validated = $request->validate([
             'form_name'           => 'required|string|max:150',
             'description'         => 'nullable|string',
@@ -280,11 +283,15 @@ class FormManagementController extends Controller
             $this->ensureTrackerColumn($form->trackerStorageTable(), $validated['tracker_column']);
         }
 
+        $this->forgetFormDerivedCaches((int) $form->id);
+
         return back()->with('success', 'Step added.');
     }
 
     public function updateStep(Request $request, FcFormStep $step)
     {
+        $this->lockStepFields($request, $step);
+
         $validated = $request->validate([
             'step_name'         => 'required|string|max:100',
             'step_slug'         => [
@@ -320,26 +327,131 @@ class FormManagementController extends Controller
 
         $step->update($validated);
 
-        // Auto-create tracker column if one was just set or changed
-        if (filled($validated['tracker_column'] ?? null)) {
+        // Auto-create tracker column if one was just set or changed. Skipped while the
+        // tracker fields are locked: the value cannot have moved, so the only thing this
+        // could do is run DDL for a column that already exists.
+        if (config('fc.form_step_tracker_enabled') && filled($validated['tracker_column'] ?? null)) {
             $this->ensureTrackerColumn($step->form->trackerStorageTable(), $validated['tracker_column']);
         }
+
+        $this->forgetFormDerivedCaches((int) $step->form_id);
 
         return back()->with('success', 'Step updated.');
     }
 
+    /**
+     * Drop the caches derived from this form's step/field structure.
+     *
+     * The Descriptive Data report resolves its columns — and its filter dropdowns — from
+     * fc_form_steps joined to fc_form_fields, filtered on `s.is_active = 1`, and caches the
+     * result per form. The form BUILDER already invalidates that through its own
+     * bumpFormStructure() hook; the step mutators on THIS controller did not, so deactivating
+     * or deleting a step here left the report rendering that step's columns, populated with
+     * data, until the 60-minute TTL expired.
+     *
+     * Best-effort by contract: FcDescriptiveDataFieldResolver::forgetForm() swallows cache
+     * failures, so a cache outage can never break saving a form step.
+     */
+    private function forgetFormDerivedCaches(int $formId): void
+    {
+        if ($formId > 0) {
+            FcDescriptiveDataFieldResolver::forgetForm($formId);
+        }
+    }
+
+    /**
+     * Per-field locks for the Form Settings card (see config/fc.php).
+     *
+     * Each locked field has the value already stored substituted back into the request
+     * BEFORE validation, rather than being rejected. Two reasons:
+     *
+     *  - `disabled` inputs are not submitted at all, so a locked "Active" checkbox would
+     *    otherwise arrive absent and $request->boolean('is_active') would read false —
+     *    silently DEACTIVATING the form, the exact outcome the lock exists to prevent.
+     *  - The always-safe fields on the same form (name, description, icon) must stay
+     *    editable during a live intake, so the save has to succeed, not 403.
+     *
+     * A stale tab or a hand-crafted POST is handled by the same substitution.
+     */
+    private function lockFormSettingFields(Request $request, FcForm $form): void
+    {
+        if (! config('fc.form_activate_enabled')) {
+            $request->merge(['is_active' => (int) $form->is_active]);
+        }
+
+        if (! config('fc.form_tracking_table_enabled')) {
+            $request->merge(['consolidation_table' => $form->consolidation_table]);
+        }
+
+        if (! config('fc.form_completion_rule_enabled')
+            && fc_schema_has_column('fc_forms', 'registration_requires_all_steps')) {
+            $request->merge([
+                'registration_requires_all_steps' => (int) $form->registration_requires_all_steps,
+            ]);
+        }
+    }
+
+    /**
+     * Per-field locks for the Edit Step modal. Same substitute-don't-reject contract as
+     * lockFormSettingFields() — and here it is load-bearing for a second reason: step_slug
+     * and target_table are `required`, so a disabled input would fail validation outright
+     * and block the step-name edit sitting next to it.
+     */
+    private function lockStepFields(Request $request, FcFormStep $step): void
+    {
+        if (! config('fc.form_step_structure_enabled')) {
+            $request->merge([
+                'step_slug'    => $step->step_slug,
+                'target_table' => $step->target_table,
+            ]);
+        }
+
+        if (! config('fc.form_step_tracker_enabled')) {
+            $request->merge([
+                'completion_column' => $step->completion_column,
+                'tracker_column'    => $step->tracker_column,
+            ]);
+        }
+
+        if (! config('fc.form_step_applicability_enabled')) {
+            $request->merge(['applicability_rule' => $step->applicability_rule]);
+        }
+
+        if (! config('fc.form_step_activate_enabled')) {
+            $request->merge(['is_active' => (int) $step->is_active]);
+        }
+    }
+
     public function deleteStep(FcFormStep $step)
     {
+        // Read the owning form BEFORE the row is gone — afterwards $step->form_id is still
+        // populated in memory, but relying on that is a trap for the next edit.
+        $formId = (int) $step->form_id;
+
         $step->delete();
+        $this->forgetFormDerivedCaches($formId);
+
         return back()->with('success', 'Step and all its fields deleted.');
     }
 
     public function reorderSteps(Request $request)
     {
         $request->validate(['order' => 'required|array', 'order.*' => 'integer']);
+
+        // One query for the owning form ids, before the reorder — not one per step (G5).
+        $formIds = FcFormStep::whereIn('id', $request->order)
+            ->distinct()
+            ->pluck('form_id')
+            ->all();
+
         foreach ($request->order as $position => $id) {
             FcFormStep::where('id', $id)->update(['step_number' => $position + 1]);
         }
+
+        foreach ($formIds as $formId) {
+            $this->forgetFormDerivedCaches((int) $formId);
+        }
+
         return response()->json(['ok' => true]);
     }
 

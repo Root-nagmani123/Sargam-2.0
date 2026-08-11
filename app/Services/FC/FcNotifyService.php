@@ -545,7 +545,9 @@ class FcNotifyService
 
             $emailReplacements = $replacements;
             $emailReplacements['Institute_Signature'] = "Lal Bahadur Shastri National Academy of Administration (LBSNAA)\nMussoorie – 248179, Uttarakhand";
-            $emailReplacements['Login_Link_Label'] = 'Login Link:';
+            $emailReplacements['Login_Link_Label'] = $templateKey === 'registration_pending'
+                ? 'Registration Portal Link:'
+                : 'Login Link:';
 
             $subject = $this->applyReplacements((string) $template['subject'], $replacements);
             $body = $this->applyReplacements((string) $template['body'], $emailReplacements, markForBold: true);
