@@ -206,6 +206,50 @@
         }
     }
 
+    /**
+     * Define the `reset` / `reload` button types.
+     *
+     * 18 of our Yajra DataTable classes declare Button::make('reset') and
+     * Button::make('reload'). Those two types are NOT part of DataTables Buttons —
+     * they ship in Yajra's own buttons.server-side.js, which this app never loads.
+     * The Buttons extension then throws "Cannot extend unknown button type: reset"
+     * from its own init.dt handler, and because jQuery aborts the remaining
+     * handlers for an event once one throws, every listener registered after it —
+     * including this file's enhancer — silently never runs. Symptom: search,
+     * pagination and the "Showing N of M items" count all stay in the hidden dom
+     * row and the page looks like it has no chrome at all.
+     *
+     * Defining the two missing types keeps Buttons happy. We do it from preInit
+     * (below), which is dispatched before Buttons builds its instances, and only
+     * when Buttons is actually present.
+     */
+    function ensureYajraButtonTypes() {
+        var buttons = $.fn.dataTable && $.fn.dataTable.ext && $.fn.dataTable.ext.buttons;
+        if (!buttons) {
+            return;
+        }
+
+        if (!buttons.reset) {
+            buttons.reset = {
+                className: 'buttons-reset',
+                text: 'Reset',
+                action: function (e, dt) {
+                    dt.search('').columns().search('').draw();
+                }
+            };
+        }
+
+        if (!buttons.reload) {
+            buttons.reload = {
+                className: 'buttons-reload',
+                text: 'Reload',
+                action: function (e, dt) {
+                    dt.draw(false);
+                }
+            };
+        }
+    }
+
     function styleSearchFilter($filter, searchLabel) {
         $filter.find('input')
             .addClass('form-control shadow-none')
@@ -348,6 +392,13 @@
         }
 
         if ($wrapper.find('.dataTables_paginate').length && !$footer.find('.dataTables_paginate').length) {
+            // Only reclaim a footer WE built. If it has content that we didn't put
+            // there — a page's hand-written Laravel paginator, say — we never owned
+            // it and must not empty it. Same reasoning as the guards in enhance();
+            // `sargamDtTableId` is stamped there precisely to mark our own work.
+            if ($footer.children().length && $footer.data('sargamDtTableId') !== tableId) {
+                return;
+            }
             $footer.empty().data('sargamDtFooterReady_' + tableId, false);
             enhance(api);
         }
@@ -597,6 +648,12 @@
     })();
 
     $(document).on('preInit.dt' + NS, function (e, settings) {
+        // Runs before the Buttons extension builds its instances — see the comment
+        // on ensureYajraButtonTypes(). Must happen for EVERY table, including ones
+        // that opt out of the UI enhancement, because the throw it prevents would
+        // take down unrelated handlers too.
+        try { ensureYajraButtonTypes(); } catch (err) { /* noop */ }
+
         var api = new $.fn.dataTable.Api(settings);
         var $table = $(api.table().node());
 
@@ -636,6 +693,46 @@
         }, 300);
     });
 
+
+    /**
+     * Safety net: enhance any initialised table the init.dt path missed.
+     *
+     * enhance() normally runs from the delegated init.dt handler above. That is a
+     * single point of failure: if ANY handler registered earlier for the same
+     * event throws, jQuery abandons the rest of the dispatch and we are never
+     * called — which is exactly what the unknown-button-type error used to do.
+     * The per-page enhancer copies that this file replaced polled on a timer
+     * instead, which is why they survived it.
+     *
+     * So we sweep independently of the event as well. This is cheap and
+     * idempotent: enhance() returns immediately for any table whose footer it has
+     * already built (the footerKey flag), and its guards stop it touching a footer
+     * owned by someone else.
+     */
+    function sweepUnenhancedTables() {
+        if (!$.fn.dataTable || !$.fn.dataTable.tables) {
+            return;
+        }
+
+        $($.fn.dataTable.tables()).each(function () {
+            var $table = $(this);
+            if (!shouldEnhance($table)) {
+                return;
+            }
+            try {
+                var api = $table.DataTable();
+                enhance(api);
+                bindTableEvents(api);
+            } catch (err) { /* a table mid-teardown — skip it */ }
+        });
+    }
+
+    $(function () {
+        // After Yajra's own $(function(){…}) init has run, and once more later for
+        // tables whose controls appear on a delayed/second draw.
+        window.setTimeout(sweepUnenhancedTables, 200);
+        window.setTimeout(sweepUnenhancedTables, 800);
+    });
 
     window.SargamDataTableUI = {
         enhance: enhance,
