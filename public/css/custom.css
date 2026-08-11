@@ -241,6 +241,13 @@ body.custom-loaded {
 #smColumnToggleGrid .colvis-item,
 #smModuleColumnToggleGrid .colvis-item,
 #attendanceColumnToggleGrid .colvis-item,
+#estateBillReportColumnGrid .colvis-item,
+#issueCatColumnToggleGrid .colvis-item,
+#issueSubCatColumnToggleGrid .colvis-item,
+#issuePriorityColumnToggleGrid .colvis-item,
+#centcomColumnToggleGrid .colvis-item,
+#issueMgmtColumnToggleGrid .colvis-item,
+#escalationColumnToggleGrid .colvis-item {
 #facultyColumnToggleGrid .colvis-item,
 #estateBillReportColumnGrid .colvis-item {
     cursor: pointer;
@@ -253,6 +260,13 @@ body.custom-loaded {
 #smColumnToggleGrid .colvis-item:hover,
 #smModuleColumnToggleGrid .colvis-item:hover,
 #attendanceColumnToggleGrid .colvis-item:hover,
+#estateBillReportColumnGrid .colvis-item:hover,
+#issueCatColumnToggleGrid .colvis-item:hover,
+#issueSubCatColumnToggleGrid .colvis-item:hover,
+#issuePriorityColumnToggleGrid .colvis-item:hover,
+#centcomColumnToggleGrid .colvis-item:hover,
+#issueMgmtColumnToggleGrid .colvis-item:hover,
+#escalationColumnToggleGrid .colvis-item:hover {
 #facultyColumnToggleGrid .colvis-item:hover,
 #estateBillReportColumnGrid .colvis-item:hover {
     border-color: #004a93 !important;
@@ -265,6 +279,13 @@ body.custom-loaded {
 #smColumnToggleGrid .colvis-item .form-check-input,
 #smModuleColumnToggleGrid .colvis-item .form-check-input,
 #attendanceColumnToggleGrid .colvis-item .form-check-input,
+#estateBillReportColumnGrid .colvis-item .form-check-input,
+#issueCatColumnToggleGrid .colvis-item .form-check-input,
+#issueSubCatColumnToggleGrid .colvis-item .form-check-input,
+#issuePriorityColumnToggleGrid .colvis-item .form-check-input,
+#centcomColumnToggleGrid .colvis-item .form-check-input,
+#issueMgmtColumnToggleGrid .colvis-item .form-check-input,
+#escalationColumnToggleGrid .colvis-item .form-check-input {
 #facultyColumnToggleGrid .colvis-item .form-check-input,
 #estateBillReportColumnGrid .colvis-item .form-check-input {
     cursor: pointer;
