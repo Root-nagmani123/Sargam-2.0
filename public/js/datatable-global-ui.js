@@ -206,6 +206,54 @@
         }
     }
 
+    /**
+     * Define the `reset` / `reload` button types.
+     *
+     * 18 of our Yajra DataTable classes declare Button::make('reset') and
+     * Button::make('reload'). Those two types are NOT part of DataTables Buttons —
+     * they ship in Yajra's own buttons.server-side.js, which this app never loads.
+     * The Buttons extension then throws "Cannot extend unknown button type: reset"
+     * from its own init.dt handler, and because jQuery aborts the remaining
+     * handlers for an event once one throws, every listener registered after it —
+     * including this file's enhancer — silently never runs. Symptom: search,
+     * pagination and the "Showing N of M items" count all stay in the hidden dom
+     * row and the page looks like it has no chrome at all.
+     *
+     * Defining the two missing types keeps Buttons happy. We do it from preInit
+     * (below), which is dispatched before Buttons builds its instances, and only
+     * when Buttons is actually present.
+     */
+    function ensureYajraButtonTypes() {
+        var buttons = $.fn.dataTable && $.fn.dataTable.ext && $.fn.dataTable.ext.buttons;
+        if (!buttons) {
+            return;
+        }
+
+        // Behaviour matches Yajra's own definitions. The icons are Bootstrap Icons,
+        // not the FontAwesome ones Yajra uses — bootstrap-icons is what this app
+        // loads globally (admin/layouts/pre_header.blade.php), and an `fa` class
+        // here would render an empty box.
+        if (!buttons.reset) {
+            buttons.reset = {
+                className: 'buttons-reset',
+                text: '<i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset',
+                action: function (e, dt) {
+                    dt.search('').columns().search('').draw();
+                }
+            };
+        }
+
+        if (!buttons.reload) {
+            buttons.reload = {
+                className: 'buttons-reload',
+                text: '<i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Reload',
+                action: function (e, dt) {
+                    dt.draw(false);
+                }
+            };
+        }
+    }
+
     function styleSearchFilter($filter, searchLabel) {
         $filter.find('input')
             .addClass('form-control shadow-none')
@@ -244,6 +292,10 @@
             var $filter = $wrapper.find('.dataTables_filter').first();
             if ($filter.length) {
                 styleSearchFilter($filter, searchLabel);
+                // Stamp it as ours so the destroy handler can remove this node
+                // without touching a .dataTables_filter the PAGE supplied itself
+                // (group_mapping ships its own, driven by #gmCustomSearch).
+                $filter.attr('data-sargam-dt-filter', tableId);
                 $searchSlot.append($filter);
             }
         }
@@ -261,6 +313,26 @@
         var $paginate = $wrapper.find('.dataTables_paginate').first();
         var $length = $wrapper.find('.dataTables_length').first();
         var $info = $wrapper.find('.dataTables_info').first();
+
+        // Two bail-outs, both BEFORE the $footer.empty() below. That empty() is
+        // destructive and irreversible: the nodes leave the document, and
+        // DataTables only ever updates its EXISTING feature nodes on redraw, so
+        // anything wiped here never comes back on its own.
+        //
+        // (1) Nothing in the wrapper to relocate — DataTables hasn't rendered its
+        //     controls yet. Return WITHOUT setting footerKey so the later pass
+        //     retries, instead of locking in a permanently empty footer.
+        if (!$paginate.length && !$length.length && !$info.length) {
+            return;
+        }
+
+        // (2) The footer already has content and we don't hold the pager, so
+        //     something else (a page-local enhancer that ran first) populated it
+        //     and owns those nodes. Rebuilding from what's left in the wrapper
+        //     could only lose controls — leave it alone.
+        if ($footer.children().length && !$paginate.length) {
+            return;
+        }
 
         var $pagCol = $('<div class="programme-dt-pagination"></div>');
         var $countCol = $('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>');
@@ -328,6 +400,13 @@
         }
 
         if ($wrapper.find('.dataTables_paginate').length && !$footer.find('.dataTables_paginate').length) {
+            // Only reclaim a footer WE built. If it has content that we didn't put
+            // there — a page's hand-written Laravel paginator, say — we never owned
+            // it and must not empty it. Same reasoning as the guards in enhance();
+            // `sargamDtTableId` is stamped there precisely to mark our own work.
+            if ($footer.children().length && $footer.data('sargamDtTableId') !== tableId) {
+                return;
+            }
             $footer.empty().data('sargamDtFooterReady_' + tableId, false);
             enhance(api);
         }
@@ -577,6 +656,12 @@
     })();
 
     $(document).on('preInit.dt' + NS, function (e, settings) {
+        // Runs before the Buttons extension builds its instances — see the comment
+        // on ensureYajraButtonTypes(). Must happen for EVERY table, including ones
+        // that opt out of the UI enhancement, because the throw it prevents would
+        // take down unrelated handlers too.
+        try { ensureYajraButtonTypes(); } catch (err) { /* noop */ }
+
         var api = new $.fn.dataTable.Api(settings);
         var $table = $(api.table().node());
 
@@ -616,6 +701,77 @@
         }, 300);
     });
 
+
+    /**
+     * Safety net: enhance any initialised table the init.dt path missed.
+     *
+     * enhance() normally runs from the delegated init.dt handler above. That is a
+     * single point of failure: if ANY handler registered earlier for the same
+     * event throws, jQuery abandons the rest of the dispatch and we are never
+     * called — which is exactly what the unknown-button-type error used to do.
+     * The per-page enhancer copies that this file replaced polled on a timer
+     * instead, which is why they survived it.
+     *
+     * So we also enhance from `draw.dt`, delegated on document. Every table draws
+     * at least once after initialising, whenever it is created — including tables
+     * built long after page load (opened in a modal, or rebuilt by a filter change),
+     * which a fixed timer would miss. Separate event, separate dispatch, so a
+     * throw in another extension's init handler cannot suppress it.
+     *
+     * Cheap and idempotent: enhance() returns immediately once it has built a
+     * footer (the footerKey flag), and its guards stop it touching a footer owned
+     * by someone else.
+     */
+    function enhanceIfNeeded(settings) {
+        try {
+            var api = new $.fn.dataTable.Api(settings);
+            if (!shouldEnhance($(api.table().node()))) {
+                return;
+            }
+            enhance(api);
+            bindTableEvents(api);
+        } catch (err) { /* table mid-teardown — skip it */ }
+    }
+
+    $(document).on('draw.dt' + NS, function (e, settings) {
+        enhanceIfNeeded(settings);
+    });
+
+    /**
+     * Release the slots when a table is destroyed.
+     *
+     * .destroy() tears down the wrapper but leaves the nodes we relocated stranded
+     * in the page's slots, while footerKey stays set — so the re-initialised table
+     * early-returns in enhance() and the user is left with dead chrome. Pages hit
+     * by this (attendance) had to clear the slots by hand before recreating.
+     *
+     * We only clear what we own: the footer is checked against the sargamDtTableId
+     * stamp, and the filter against the data-sargam-dt-filter stamp, so a
+     * hand-written footer or a page-supplied search box is never touched.
+     */
+    $(document).on('destroy.dt' + NS, function (e, settings) {
+        try {
+            var $table = $(new $.fn.dataTable.Api(settings).table().node());
+            var tableId = $table.attr('id');
+            if (!tableId) {
+                return;
+            }
+
+            var $footer = resolveSlot($table, tableId, 'footer', false);
+            if ($footer.length && $footer.data('sargamDtTableId') === tableId) {
+                $footer.empty()
+                    .removeData('sargamDtTableId')
+                    .removeData('sargamDtFooterReady_' + tableId);
+            }
+
+            var $searchSlot = resolveSlot($table, tableId, 'search', false);
+            if ($searchSlot.length) {
+                $searchSlot.find('[data-sargam-dt-filter="' + tableId + '"]').remove();
+            }
+
+            $table.removeData('sargamDtUiEventsBound');
+        } catch (err) { /* noop */ }
+    });
 
     window.SargamDataTableUI = {
         enhance: enhance,
