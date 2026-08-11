@@ -437,7 +437,7 @@ class IssueManagementController extends Controller
             // detail page; ?action=update-status opens it straight away.
             $actions = $link(
                 route('admin.issue-management.show', ['id' => $issue->pk, 'action' => 'update-status']),
-                'edit', 'bi-pencil-square', 'Update Status'
+                'edit', 'bi-pencil', 'Update Status'
             ) . $view;
             $group = 'ic-act-group ic-act-group--wide';
         } else {
@@ -445,7 +445,7 @@ class IssueManagementController extends Controller
             // Edit stays available to the raiser/logger while the issue is open —
             // the old grid offered it and dropping it would lose the feature.
             if (($issue->issue_logger == $userId || $issue->created_by == $userId) && $status !== 2) {
-                $actions .= $link(route('admin.issue-management.edit', $issue->pk), 'edit', 'bi-pencil-square', 'Edit');
+                $actions .= $link(route('admin.issue-management.edit', $issue->pk), 'edit', 'bi-pencil', 'Edit');
             }
             $group = 'ic-act-group';
         }
@@ -503,10 +503,66 @@ class IssueManagementController extends Controller
 
         return response()->json([
             'draw' => (int) $request->input('draw', 0),
-            'recordsTotal' => $snapshot['total'],
+            'recordsTotal' => $this->recordsTotalBeforeSearch($request, $snapshot['total'], $variant),
             'recordsFiltered' => $snapshot['total'],
             'data' => $data,
         ]);
+    }
+
+    /**
+     * DataTables' recordsTotal: the count BEFORE the search box, with the
+     * toolbar filters (status / category / priority / dates) and the user scope
+     * still applied — those define the grid's dataset, the search box filters it.
+     *
+     * Costs one extra count only while a term is typed; with no term the answer
+     * is the filtered total by definition, so the common draw stays untouched.
+     */
+    private function recordsTotalBeforeSearch(Request $request, int $filteredTotal, string $variant): int
+    {
+        if (trim((string) $request->get('search', '')) === '') {
+            return $filteredTotal;
+        }
+
+        // The answer does not depend on the term, so it is identical for every
+        // keystroke in a typing run — cache it against the scope + toolbar
+        // filters rather than counting 65k rows again on each draw.
+        $userId = Auth::user()->user_id;
+        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
+        $cacheKey = 'admin_issue_management_records_total:v1:' . md5(json_encode([
+            'epoch' => $epoch,
+            'variant' => $variant,
+            'user_id' => $userId,
+            'is_admin' => hasRole('Admin') || hasRole('SuperAdmin'),
+            'raised_by' => $request->get('raised_by'),
+            'status' => $request->get('status'),
+            'category' => $request->get('category'),
+            'priority' => $request->get('priority'),
+            'date_from' => $request->get('date_from'),
+            'date_to' => $request->get('date_to'),
+        ]));
+
+        $count = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'ISSUE_MANAGEMENT_INDEX_CACHE_ENABLED',
+                'seconds' => 'ISSUE_MANAGEMENT_INDEX_CACHE_SECONDS',
+            ],
+            'IssueManagementController@recordsTotalBeforeSearch',
+            function () use ($request, $variant) {
+                // clone: Symfony's Request::__clone() deep-copies the parameter
+                // bags, so blanking the term here cannot leak into the caller.
+                $unsearched = clone $request;
+                $unsearched->merge(['search' => '']);
+
+                $base = $variant === 'centcom'
+                    ? $this->issueManagementCentcomFilteredQuery($unsearched)
+                    : $this->issueManagementIndexFilteredQuery($unsearched);
+
+                return (int) $base->toBase()->getCountForPagination();
+            }
+        );
+
+        return is_int($count) ? $count : $filteredTotal;
     }
 
     /**
@@ -1577,7 +1633,10 @@ class IssueManagementController extends Controller
                 return response()->view('admin.issue_management.close_modal_redirect', ['url' => $showUrl]);
             }
             return redirect()->to($showUrl)->with('success', 'Issue updated successfully.');
-        } catch (\Exception $e) {
+        // \Throwable, not \Exception: a PHP Error (TypeError and friends) would
+        // otherwise skip this handler and leave the transaction open, holding
+        // locks for the rest of the request.
+        } catch (\Throwable $e) {
             DB::rollback();
             return back()->withInput()
                 ->with('error', 'Failed to update issue: ' . $e->getMessage());
@@ -2008,7 +2067,8 @@ class IssueManagementController extends Controller
             return redirect()->route('admin.issue-management.show', $issue->pk)
                 ->with('success', 'Issue status updated successfully.');
 
-        } catch (\Exception $e) {
+        // \Throwable, not \Exception — see update() above.
+        } catch (\Throwable $e) {
             DB::rollback();
             return back()->with('error', 'Failed to update status: ' . $e->getMessage());
         }

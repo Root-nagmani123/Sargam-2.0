@@ -555,7 +555,9 @@ class IssueEscalationMatrixController extends Controller
 
             return redirect()->route('admin.issue-escalation-matrix.index')
                 ->with('success', 'Escalation matrix saved successfully.');
-        } catch (\Exception $e) {
+        // \Throwable, not \Exception: a PHP Error would otherwise skip this
+        // handler and leave the transaction open holding locks.
+        } catch (\Throwable $e) {
             DB::rollBack();
 
             return back()->withInput()->with('error', 'Failed to save: ' . $e->getMessage());

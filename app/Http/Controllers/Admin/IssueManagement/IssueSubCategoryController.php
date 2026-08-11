@@ -210,7 +210,13 @@ class IssueSubCategoryController extends Controller
 
         return response()->json([
             'draw' => (int) $request->input('draw', 0),
-            'recordsTotal' => $snapshot['total'],
+            // recordsTotal is the count BEFORE the search term. The Category
+            // dropdown is a scope, not DataTables' filter, so it stays applied
+            // here; only the search term is removed.
+            'recordsTotal' => $search === ''
+                ? $snapshot['total']
+                : (int) $this->indexFilteredQuery('', 'category', 'asc', $categoryId)
+                    ->toBase()->getCountForPagination(),
             'recordsFiltered' => $snapshot['total'],
             'data' => $rows,
         ]);

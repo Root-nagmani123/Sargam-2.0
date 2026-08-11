@@ -171,7 +171,11 @@ class IssuePriorityController extends Controller
 
         return response()->json([
             'draw' => (int) $request->input('draw', 0),
-            'recordsTotal' => $snapshot['total'],
+            // recordsTotal is the count BEFORE the search term; the extra count
+            // only runs when a term is present (without one the two are equal).
+            'recordsTotal' => $search === ''
+                ? $snapshot['total']
+                : (int) $this->indexFilteredQuery()->toBase()->getCountForPagination(),
             'recordsFiltered' => $snapshot['total'],
             'data' => $rows,
         ]);

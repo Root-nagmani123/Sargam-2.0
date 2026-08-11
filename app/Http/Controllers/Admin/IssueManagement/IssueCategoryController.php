@@ -182,7 +182,12 @@ class IssueCategoryController extends Controller
 
         return response()->json([
             'draw' => (int) $request->input('draw', 0),
-            'recordsTotal' => $snapshot['total'],
+            // DataTables' contract: recordsTotal is the count BEFORE the search
+            // term, recordsFiltered the count after it. With no term the two are
+            // the same by definition, so the extra count only runs when searching.
+            'recordsTotal' => $search === ''
+                ? $snapshot['total']
+                : (int) $this->indexFilteredQuery()->toBase()->getCountForPagination(),
             'recordsFiltered' => $snapshot['total'],
             'data' => $rows,
         ]);
