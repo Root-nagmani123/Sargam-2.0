@@ -470,8 +470,12 @@ class UserController extends Controller
      */
     protected function buildNoticeFeed(?Request $request): array
     {
+        // No year filter: this feed shows live notices only (the base query drops
+        // anything past its expiry_date), so a Year control could never offer more
+        // than the current year or two and would read as a broken archive. If an
+        // archive is wanted later, the expiry predicate has to relax first — the
+        // control on its own would not deliver one.
         $filters = [
-            'year'     => trim((string) ($request?->query('notice_year') ?? '')),
             'type'     => trim((string) ($request?->query('notice_type') ?? '')),
             'dept'     => trim((string) ($request?->query('notice_dept') ?? '')),
             'audience' => trim((string) ($request?->query('notice_audience') ?? '')),
@@ -485,19 +489,21 @@ class UserController extends Controller
                 'path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(),
             ]);
 
-            return [$empty, ['years' => collect(), 'types' => collect(), 'depts' => collect(), 'audiences' => collect()], $filters];
+            return [$empty, ['types' => collect(), 'depts' => collect(), 'audiences' => collect()], $filters];
         }
 
         // Dropdown options come from the UNFILTERED role-scoped set, so choosing a
-        // Type never empties the Year list (and a filtered-away option can still be
-        // un-chosen).
+        // Type never empties the Department list (and a filtered-away option can
+        // still be un-chosen).
         //
-        // One DISTINCT per column, not one DISTINCT over all four together: putting
-        // display_date in a combined DISTINCT makes the row count track the notice
-        // count (dates barely repeat), so it degenerates into reading the whole live
-        // set. Per column the result is bounded by that column's real cardinality —
-        // a handful of types/audiences/departments. The year range is two aggregates
-        // rather than a date list for the same reason.
+        // One DISTINCT per column, never one DISTINCT across several together: a
+        // combined DISTINCT that includes a near-unique column (display_date) has a
+        // row count that tracks the notice count, so it degenerates into reading the
+        // whole live set. Per column the result is bounded by that column's real
+        // cardinality — a handful of types, audiences and departments.
+        //
+        // select(), not selectRaw(): selectRaw APPENDS to the base query's column
+        // list, which would mix the 13 plain columns with the projection here.
         $distinctOf = fn (string $column) => (clone $base)
             ->reorder()
             ->select($column)
@@ -508,39 +514,11 @@ class UserController extends Controller
             ->sort()
             ->values();
 
-        // YEAR() is fine *here* — it is in the SELECT list of the options query, not
-        // in a WHERE. G8 is about functions on indexed columns in a predicate, and
-        // the actual year filter below still uses a plain datetime range. This gives
-        // exactly the years that have notices (no empty years offered) in one row
-        // per year, instead of one row per notice.
-        //
-        // select(), not selectRaw(): selectRaw APPENDS to the base query's column
-        // list, which would mix the 13 plain columns with the aggregate and fail
-        // under only_full_group_by.
-        $years = (clone $base)
-            ->reorder()
-            ->select(DB::raw('YEAR(notices_notification.display_date) as yr'))
-            ->distinct()
-            ->pluck('yr')
-            ->filter()
-            ->map(fn ($y) => (int) $y)
-            ->unique()
-            ->sortDesc()
-            ->values();
-
         $filterOptions = [
-            'years'     => $years,
             'types'     => $distinctOf('notices_notification.notice_type'),
             'depts'     => $distinctOf('notice_author_dept.department_name'),
             'audiences' => $distinctOf('notices_notification.target_audience'),
         ];
-
-        // Year as a datetime range, never YEAR(display_date) — a function on the
-        // column would make the index unusable (G8).
-        if ($filters['year'] !== '' && ctype_digit($filters['year'])) {
-            $base->where('notices_notification.display_date', '>=', $filters['year'] . '-01-01 00:00:00')
-                ->where('notices_notification.display_date', '<=', $filters['year'] . '-12-31 23:59:59');
-        }
 
         if ($filters['type'] !== '') {
             $base->where('notices_notification.notice_type', $filters['type']);

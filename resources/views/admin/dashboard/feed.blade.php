@@ -100,14 +100,9 @@
 
                     <span class="notices-feed-toolbar__label">Filters</span>
 
-                    <select class="form-select form-select-sm notices-feed-filter" name="notice_year"
-                        id="notice-filter-year" aria-label="Filter by year">
-                        <option value="">Year</option>
-                        @foreach($noticeFilterOptions['years'] as $yr)
-                        <option value="{{ $yr }}" {{ (string) $noticeFilters['year'] === (string) $yr ? 'selected' : '' }}>{{ $yr }}</option>
-                        @endforeach
-                    </select>
-
+                    {{-- No Year control: the feed lists live notices only (expired ones are
+                         dropped by the base query), so a Year dropdown could never offer more
+                         than the current year or two and would read as a broken archive. --}}
                     <select class="form-select form-select-sm notices-feed-filter" name="notice_type"
                         id="notice-filter-type" aria-label="Filter by type">
                         <option value="">Type</option>
@@ -148,10 +143,8 @@
                 <div id="dashboard-feed-page-list-notices">
                     @forelse($notices as $feedNotice)
                     @php
+                        // Still used below to pick the badge class/label.
                         $noticeTypeLower     = strtolower((string) ($feedNotice->notice_type ?? ''));
-                        $noticeDeptLower     = strtolower((string) ($feedNotice->author_department ?? ''));
-                        $noticeAudienceLower = strtolower((string) ($feedNotice->target_audience ?? ''));
-                        $noticeYear          = !empty($feedNotice->display_date) ? \Carbon\Carbon::parse($feedNotice->display_date)->year : '';
                         $feedNoticeDate      = !empty($feedNotice->display_date) ? \Carbon\Carbon::parse($feedNotice->display_date)->format('d/m/Y h:i A') : '—';
                         $feedNoticeSearch    = strtolower(($feedNotice->notice_title ?? '') . ' ' . ($feedNotice->notice_type ?? '') . ' ' . ($feedNotice->author_name ?? '') . ' ' . ($feedNotice->author_department ?? ''));
 
@@ -169,12 +162,11 @@
                             $noticeBadgeLabel = $feedNotice->notice_type ?? 'Notice';
                         }
                     @endphp
+                    {{-- data-notice-year/-type/-dept/-audience used to drive client-side
+                         filtering; that now happens in SQL, and nothing read them. Only
+                         data-feed-search (search box) and data-notice-pk (accordion) are live. --}}
                     <div class="notices-feed-item"
                         data-feed-search="{{ $feedNoticeSearch }}"
-                        data-notice-year="{{ $noticeYear }}"
-                        data-notice-type="{{ $noticeTypeLower }}"
-                        data-notice-dept="{{ $noticeDeptLower }}"
-                        data-notice-audience="{{ $noticeAudienceLower }}"
                         data-notice-pk="{{ $feedNotice->pk }}">
                         <div class="notices-feed-item__header" role="button" tabindex="0"
                             id="notice-head-{{ $feedNotice->pk }}"
@@ -218,7 +210,7 @@
                     </div>
                     @empty
                     <p class="dashboard-feed-empty mb-0">
-                        @if($noticeFilters['q'] !== '' || $noticeFilters['year'] !== '' || $noticeFilters['type'] !== '' || $noticeFilters['dept'] !== '' || $noticeFilters['audience'] !== '')
+                        @if($noticeFilters['q'] !== '' || $noticeFilters['type'] !== '' || $noticeFilters['dept'] !== '' || $noticeFilters['audience'] !== '')
                         No notices match these filters.
                         @else
                         No notices available.
