@@ -8,7 +8,7 @@
         buttonText="Add Course Group Type"
         buttonId="showAlert"
         buttonIcon="add"
-        buttonClass="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm" />
+        buttonClass="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm" :showBack="false" />
 
     <div class="card cgt-dt-card border-0 shadow-sm rounded-1 overflow-hidden">
         <div class="card-body p-3 p-md-4">
