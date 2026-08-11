@@ -490,25 +490,49 @@ class UserController extends Controller
 
         // Dropdown options come from the UNFILTERED role-scoped set, so choosing a
         // Type never empties the Year list (and a filtered-away option can still be
-        // un-chosen). Four small columns, distinct — not the full notice rows.
-        $optionRows = (clone $base)
+        // un-chosen).
+        //
+        // One DISTINCT per column, not one DISTINCT over all four together: putting
+        // display_date in a combined DISTINCT makes the row count track the notice
+        // count (dates barely repeat), so it degenerates into reading the whole live
+        // set. Per column the result is bounded by that column's real cardinality —
+        // a handful of types/audiences/departments. The year range is two aggregates
+        // rather than a date list for the same reason.
+        $distinctOf = fn (string $column) => (clone $base)
             ->reorder()
-            ->select([
-                'notices_notification.notice_type',
-                'notices_notification.target_audience',
-                'notice_author_dept.department_name as author_department',
-                'notices_notification.display_date',
-            ])
+            ->select($column)
             ->distinct()
-            ->get();
+            ->pluck($column)
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
+        // YEAR() is fine *here* — it is in the SELECT list of the options query, not
+        // in a WHERE. G8 is about functions on indexed columns in a predicate, and
+        // the actual year filter below still uses a plain datetime range. This gives
+        // exactly the years that have notices (no empty years offered) in one row
+        // per year, instead of one row per notice.
+        //
+        // select(), not selectRaw(): selectRaw APPENDS to the base query's column
+        // list, which would mix the 13 plain columns with the aggregate and fail
+        // under only_full_group_by.
+        $years = (clone $base)
+            ->reorder()
+            ->select(DB::raw('YEAR(notices_notification.display_date) as yr'))
+            ->distinct()
+            ->pluck('yr')
+            ->filter()
+            ->map(fn ($y) => (int) $y)
+            ->unique()
+            ->sortDesc()
+            ->values();
 
         $filterOptions = [
-            'years' => $optionRows
-                ->map(fn ($r) => !empty($r->display_date) ? (int) date('Y', strtotime($r->display_date)) : null)
-                ->filter()->unique()->sortDesc()->values(),
-            'types'     => $optionRows->pluck('notice_type')->filter()->unique()->sort()->values(),
-            'depts'     => $optionRows->pluck('author_department')->filter()->unique()->sort()->values(),
-            'audiences' => $optionRows->pluck('target_audience')->filter()->unique()->sort()->values(),
+            'years'     => $years,
+            'types'     => $distinctOf('notices_notification.notice_type'),
+            'depts'     => $distinctOf('notice_author_dept.department_name'),
+            'audiences' => $distinctOf('notices_notification.target_audience'),
         ];
 
         // Year as a datetime range, never YEAR(display_date) — a function on the
@@ -531,7 +555,9 @@ class UserController extends Controller
         }
 
         if ($filters['q'] !== '') {
-            $like = '%' . $filters['q'] . '%';
+            // Escape LIKE metacharacters: a typed "%" should match a literal percent
+            // sign, not every notice.
+            $like = '%' . addcslashes($filters['q'], '%_\\') . '%';
             $base->where(function ($w) use ($like) {
                 $w->where('notices_notification.notice_title', 'like', $like)
                     ->orWhere('notices_notification.notice_type', 'like', $like)
@@ -553,7 +579,6 @@ class UserController extends Controller
      */
     protected function buildDashboardFeedData(?Request $request = null): array
     {
-        $noticeRequest = $request;
         $user = Auth::user();
         $isAdminSummary = hasRole('Admin');
         $daysOld = $isAdminSummary ? 10 : null;
@@ -615,7 +640,7 @@ class UserController extends Controller
 
         // Notices are filtered and paginated in SQL (see buildNoticeFeed) rather
         // than fetched whole and filtered in the browser.
-        [$notices, $noticeFilterOptions, $noticeFilters] = $this->buildNoticeFeed($noticeRequest);
+        [$notices, $noticeFilterOptions, $noticeFilters] = $this->buildNoticeFeed($request);
 
         $feedExpandedNotifications = collect();
         $feedExpandedWishes = collect();
@@ -654,19 +679,6 @@ class UserController extends Controller
             'feedExpandedWishes',
             'notificationBadgeCount'
         );
-    }
-
-    public function resolveDashboardNoticeTabKey(?string $type): string
-    {
-        $t = strtolower((string) ($type ?? ''));
-        if (str_contains($t, 'office order')) {
-            return 'office-orders';
-        }
-        if (str_contains($t, 'course notice')) {
-            return 'work-allocation';
-        }
-
-        return 'notice-circular';
     }
 
     /**

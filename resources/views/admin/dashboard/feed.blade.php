@@ -179,7 +179,9 @@
                         <div class="notices-feed-item__header" role="button" tabindex="0"
                             id="notice-head-{{ $feedNotice->pk }}"
                             aria-expanded="false" aria-controls="notice-panel-{{ $feedNotice->pk }}"
-                            aria-label="View notice: {{ e($feedNotice->notice_title ?? 'Notice') }}">
+                            {{-- no e() here: {{ }} already escapes, and Laravel's e() re-encodes
+                                 entities by default, so e() inside {{ }} double-escapes. --}}
+                            aria-label="View notice: {{ $feedNotice->notice_title ?? 'Notice' }}">
                             <div class="d-flex justify-content-between align-items-center gap-3">
                                 <div class="notices-feed-item__body min-w-0">
                                     <span class="notices-feed-item__title d-block mb-1">{{ $feedNotice->notice_title }}</span>
