@@ -1,4 +1,4 @@
-{{-- All Requests / Centcom queue → PDF (DomPDF).
+{{-- Manage Sub-Categories → PDF (DomPDF).
 
      Deliberately NOT sharing export_print_styles: DomPDF has no print-color-adjust,
      no @media print and only partial CSS support, and it needs base64 image data
@@ -22,11 +22,11 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>{{ $title }} — LBSNAA</title>
+    <title>Manage Sub-Categories — LBSNAA</title>
     <style>
-        @page { size: A4 landscape; margin: 12mm 10mm; }
+        @page { size: A4 portrait; margin: 12mm 10mm; }
         * { font-family: 'DejaVu Sans', sans-serif; }
-        body { margin: 0; padding: 0; color: #1f2937; font-size: 8px; }
+        body { margin: 0; padding: 0; color: #1f2937; font-size: 9px; }
 
         table.pdf-hdr { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
         table.pdf-hdr td { vertical-align: middle; padding: 0; }
@@ -42,13 +42,11 @@
         .meta  { text-align: center; font-size: 8px; color: #6b7280; margin-bottom: 6px; }
         .total { text-align: center; font-size: 9px; font-weight: bold; color: #003366;
                  background: #eef2f8; padding: 3px 0; margin-bottom: 6px; }
-        .note  { font-size: 7.5px; color: #92400e; background: #fef3c7; border: 0.8px solid #fcd34d;
-                 padding: 3px 6px; margin-bottom: 6px; }
 
         table.data-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         table.data-table th, table.data-table td {
             border: 0.8px solid #cccccc;
-            padding: 3px 4px;
+            padding: 4px 5px;
             text-align: left;
             vertical-align: top;
             word-wrap: break-word;
@@ -57,20 +55,16 @@
             background: #003366;
             color: #ffffff;
             font-weight: bold;
-            font-size: 8px;
+            font-size: 8.5px;
             border-color: #002244;
         }
         table.data-table tbody tr:nth-child(even) { background: #f4f7fb; }
 
         /* DomPDF ignores <colgroup> widths — they have to sit on the cells. */
-        .col-id          { width: 5%;  text-align: center; }
-        .col-date        { width: 11%; }
-        .col-category    { width: 12%; }
-        .col-desc        { width: 26%; }
-        .col-complainant { width: 14%; }
-        .col-nodal       { width: 14%; }
-        .col-priority    { width: 8%;  }
-        .col-status      { width: 10%; }
+        .col-sno      { width: 8%;  text-align: center; }
+        .col-category { width: 34%; }
+        .col-sub      { width: 42%; }
+        .col-status   { width: 16%; text-align: center; }
 
         .empty { text-align: center; padding: 16px; color: #6b7280; }
         .foot  { margin-top: 8px; text-align: center; font-size: 7px; color: #6b7280; }
@@ -94,38 +88,33 @@
 
     <div class="rule"></div>
 
-    <div class="report-title">{{ mb_strtoupper($title) }}</div>
+    <div class="report-title">MANAGE SUB-CATEGORIES</div>
     <div class="meta">
+        {{-- $filterLine names every applied filter (Search, Category). DomPDF
+             renders <strong> but nothing else in it, so strip the rest. --}}
         @if(filled($filterLine)){!! strip_tags($filterLine, '<strong>') !!} &nbsp;|&nbsp; @endif Generated: {{ $exportDate }}
     </div>
-    <div class="total">Total Records: {{ number_format($total) }}</div>
-
-    @if ($truncated)
-        <div class="note">
-            Only the first {{ number_format($limit) }} of {{ number_format($total) }} matching rows
-            are included. Narrow the filters to export the rest.
-        </div>
-    @endif
+    <div class="total">Total Records: {{ number_format($rows->count()) }}</div>
 
     {{-- Same resolved $columns as the CSV, Excel and print view. Keyed by column,
          never by position, so a hidden column drops cleanly from all four. --}}
     <table class="data-table">
         <thead>
             <tr>
-                @foreach ($columns as $key => $col)
+                @foreach ($columns as $col)
                     <th class="{{ $col['class'] }}">{{ $col['heading'] }}</th>
                 @endforeach
             </tr>
         </thead>
         <tbody>
-            @forelse ($rows as $row)
+            @forelse ($rows as $index => $row)
                 <tr>
-                    @foreach ($columns as $key => $col)
-                        <td class="{{ $col['class'] }}">{{ $row[$key] !== '' ? $row[$key] : '-' }}</td>
+                    @foreach ($columns as $col)
+                        <td class="{{ $col['class'] }}">{{ $col['value']($row, $index) }}</td>
                     @endforeach
                 </tr>
             @empty
-                <tr><td colspan="{{ count($columns) }}" class="empty">No rows to export</td></tr>
+                <tr><td colspan="{{ count($columns) }}" class="empty">No sub-categories to export</td></tr>
             @endforelse
         </tbody>
     </table>
