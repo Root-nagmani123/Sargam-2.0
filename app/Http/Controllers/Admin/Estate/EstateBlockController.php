@@ -10,7 +10,8 @@ class EstateBlockController extends Controller
 {
     public function index()
     {
-        $items = EstateBlock::orderBy('block_name')->get();
+        // Naya record hamesha sabse upar — isliye pk desc, naam se nahi.
+        $items = EstateBlock::orderBy('pk', 'desc')->get();
         return view('admin.estate.define_block_building.index', compact('items'));
     }
 

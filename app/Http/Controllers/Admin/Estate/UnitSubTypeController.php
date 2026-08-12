@@ -11,6 +11,7 @@ class UnitSubTypeController extends Controller
 {
     public function index()
     {
+        // Naya record hamesha sabse upar — isliye pk desc, naam se nahi.
         $items = UnitSubType::orderBy('pk', 'desc')->get();
         return view('admin.estate.define_unit_sub_type.index', compact('items'));
     }

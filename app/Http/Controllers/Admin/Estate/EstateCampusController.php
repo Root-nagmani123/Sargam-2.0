@@ -10,7 +10,8 @@ class EstateCampusController extends Controller
 {
     public function index()
     {
-        $items = EstateCampus::orderBy('campus_name')->get();
+        // Naya record hamesha sabse upar — isliye pk desc, naam se nahi.
+        $items = EstateCampus::orderBy('pk', 'desc')->get();
         return view('admin.estate.define_campus.index', compact('items'));
     }
 

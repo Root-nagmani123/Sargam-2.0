@@ -10,7 +10,8 @@ class UnitTypeController extends Controller
 {
     public function index()
     {
-        $items = UnitType::orderBy('unit_type')->paginate(request('per_page', 10));
+        // Naya record hamesha sabse upar — isliye pk desc, naam se nahi.
+        $items = UnitType::orderBy('pk', 'desc')->paginate(request('per_page', 10));
         return view('admin.estate.define_unit_type.index', compact('items'));
     }
 

@@ -62,7 +62,9 @@
 <script>
 $(document).ready(function() {
     $('#blockBuildingTable').DataTable({
-        order: [[1, 'asc']],
+        // Khaali rakho: controller pehle hi pk desc bhejta hai (naya record sabse upar).
+        // Yahan koi order dene par DataTables use client-side dobara sort kar dega.
+        order: [],
         pageLength: 10,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
         columnDefs: [
