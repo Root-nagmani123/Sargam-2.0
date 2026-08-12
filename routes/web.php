@@ -1602,6 +1602,8 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
 Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->group(function () {
     // Estate Request for Others
     Route::get('request-for-others', [EstateController::class, 'requestForOthers'])->name('request-for-others');
+    Route::get('request-for-others/export', [EstateController::class, 'exportRequestForOthers'])->name('request-for-others.export');
+    Route::get('request-for-others/print', [EstateController::class, 'printRequestForOthers'])->name('request-for-others.print');
 
     // Request For Estate (estate_home_request_details + possession)
     Route::get('request-for-estate', [EstateController::class, 'requestForEstate'])->name('request-for-estate');

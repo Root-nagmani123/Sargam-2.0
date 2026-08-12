@@ -677,3 +677,111 @@
 .ds-modal .umr-form .select2-container--default .select2-selection--single .select2-selection__arrow {
     height: 100%;
 }
+
+/* ══ Estate Request for Others (.eor-page) ══════════════════════════════════
+   Same chrome as Request For Estate; only the toolbar's date filter and the
+   two-action column need geometry of their own. */
+
+/* The DOJ filter is a native <input type="date">, not a <select>, so it needs
+   the same 40px / 8px pill geometry spelled out for .form-control. */
+.eor-page .programme-dt-filter-select .form-control[type="date"] {
+    min-height: var(--ds-control-h, 2.5rem);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9375rem;
+    color: #344054;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    box-shadow: none;
+    background-color: var(--ds-surface, #fff);
+}
+
+.eor-page .programme-dt-filter-select .form-control[type="date"]:focus {
+    border-color: var(--ds-primary, #004384);
+    box-shadow: 0 0 0 3px rgba(0, 67, 132, 0.12);
+}
+
+/* Two filters + Remove Filter + Columns + a 300px search do not fit one row at
+   the shared 180px filter width once the admin sidebar is open — the reset
+   button drops to a second line. Trim the filters and the search instead, so
+   the toolbar keeps the design's single row. */
+@media (min-width: 992px) {
+    .eor-page .programme-dt-filter-select {
+        width: 150px;
+    }
+
+    .eor-page .programme-dt-search {
+        width: 220px;
+    }
+}
+
+/* ── Add / Edit Other Estate Request modal (.eor-modal) ────────────────────
+   A four-field, single-column form — narrower than the shared .ds-modal default
+   so it reads as one column instead of a half-empty dialog. */
+.eor-modal .modal-dialog {
+    max-width: 460px;
+}
+
+/* The design sets the asterisk tight against the label text. */
+.eor-modal .form-label .ds-req {
+    margin-left: 1px;
+}
+
+/* A native <input type="date"> ignores `placeholder` and always paints
+   "dd-mm-yyyy". While .is-empty is set (see the page's syncDojPlaceholder), the
+   value text is hidden and this overlay stands in for the placeholder — the
+   browser's own calendar button stays visible and clickable. */
+.eor-date-field {
+    position: relative;
+}
+
+.eor-date-field .eor-date-placeholder {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 0.75rem;
+    transform: translateY(-50%);
+    font-size: 0.875rem;
+    color: #98a2b3;
+    pointer-events: none;
+}
+
+.eor-date-field input[type="date"].is-empty:not(:focus) {
+    color: transparent;
+}
+
+.eor-date-field input[type="date"].is-empty:not(:focus) + .eor-date-placeholder {
+    display: block;
+}
+
+/* Only Edit + Delete here, so the action column is narrower than the
+   Request For Estate one it inherits from. */
+.eor-page .programme-dt-table th.rfe-col-action,
+.eor-page .programme-dt-table td.rfe-col-action {
+    min-width: 120px;
+}
+
+/* Request ID is a short slug — keep it from eating the row's width. Keyed on the
+   column's own class, not nth-child: hiding a column from the Columns modal
+   renumbers the cells. */
+.eor-page .programme-dt-table th.eor-col-req,
+.eor-page .programme-dt-table td.eor-col-req {
+    width: 170px;
+    white-space: nowrap;
+}
+
+/* "DOJ in Academy" is the longest heading on the page; without a floor the sort
+   caret overlaps the last word. */
+.eor-page .programme-dt-table th.eor-col-doj,
+.eor-page .programme-dt-table td.eor-col-doj {
+    min-width: 150px;
+    white-space: nowrap;
+}
+
+/* Section is free text and runs long ("COACH AND MEDICAL CENTRE") — let it wrap
+   instead of pushing the Action column off the panel. */
+.eor-page .programme-dt-table th.eor-col-section,
+.eor-page .programme-dt-table td.eor-col-section {
+    min-width: 160px;
+    white-space: normal;
+    line-height: 1.45;
+}

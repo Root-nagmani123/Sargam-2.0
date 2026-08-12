@@ -12,6 +12,7 @@ use App\DataTables\EstateReturnHouseDataTable;
 use App\DataTables\EstateRequestPutInHacDataTable;
 use App\DataTables\EstateHacApprovedDataTable;
 use App\Exports\EstateHacApprovedExport;
+use App\Exports\EstateOtherRequestExport;
 use App\Exports\EstatePossessionDetailsExport;
 use App\Exports\EstateRequestForEstateExport;
 use App\Exports\EstateUpdateMeterNoExport;
@@ -347,7 +348,70 @@ class EstateController extends Controller
      */
     public function requestForOthers(EstateOtherRequestDataTable $dataTable)
     {
-        return $dataTable->render('admin.estate.estate_request_for_others');
+        return $dataTable->render('admin.estate.estate_request_for_others', [
+            'sectionOptions' => EstateOtherRequestDataTable::sectionOptions(),
+        ]);
+    }
+
+    /**
+     * Rows + heading line for the Estate Request for Others downloads.
+     *
+     * Runs the DataTable's own listing query and filters, so the export always
+     * carries exactly the rows the on-screen list was showing.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function requestForOthersExportPayload(Request $request): array
+    {
+        $search = trim((string) $request->input('search', ''));
+        $section = trim((string) $request->input('section_filter', ''));
+        $doj = trim((string) $request->input('doj_filter', ''));
+
+        $rows = EstateOtherRequestDataTable::listingQuery()
+            ->tap(fn ($query) => EstateOtherRequestDataTable::applyFilters($query, $search, $section, $doj))
+            ->get();
+
+        $filters = ['Section: ' . ($section !== '' ? $section : 'All')];
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $doj) === 1) {
+            $filters[] = 'DOJ in Academy: ' . \Carbon\Carbon::parse($doj)->format('d-m-Y');
+        }
+        if ($search !== '') {
+            $filters[] = 'Search: "' . $search . '"';
+        }
+
+        return [
+            'rows' => $rows,
+            'cols' => EstateOtherRequestExport::resolveCols($request->input('cols')),
+            'filterLine' => implode('  |  ', $filters),
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /**
+     * Estate Request for Others — branded .xlsx of the currently filtered list.
+     */
+    public function exportRequestForOthers(Request $request)
+    {
+        $payload = $this->requestForOthersExportPayload($request);
+
+        return Excel::download(
+            new EstateOtherRequestExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'estate-request-for-others-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /**
+     * Estate Request for Others — print-ready view of the currently filtered list.
+     * Same header and columns as the Excel download.
+     */
+    public function printRequestForOthers(Request $request)
+    {
+        return view('admin.estate.estate_request_for_others_print', $this->requestForOthersExportPayload($request));
     }
 
     /**
