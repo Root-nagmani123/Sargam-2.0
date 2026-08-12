@@ -47,7 +47,19 @@ class UnitTypeController extends Controller
 
     public function destroy(Request $request, string $id)
     {
-        UnitType::findOrFail($id)->delete();
+        $item = UnitType::findOrFail($id);
+
+        try {
+            $item->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Unit type abhi bhi sub types / houses se referenced hai (FK constraint).
+            $message = 'This Unit Type is used by other estate records and cannot be deleted.';
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'message' => $message], 409);
+            }
+            return redirect()->route('admin.estate.define-unit-type.index')->with('error', $message);
+        }
+
         if ($request->ajax()) {
             return response()->json(['success' => true, 'message' => 'Unit type deleted successfully.']);
         }

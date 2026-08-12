@@ -35,7 +35,16 @@
                             <td class="ps-3">{{ $index + 1 }}</td>
                             <td class="fw-medium">{{ $row->block_name }}</td>
                             <td class="pe-3 text-end">
-                                <a href="{{ route('admin.estate.define-block-building.edit', $row->pk) }}" class="text-primary" title="Edit"><i class="material-icons material-symbols-rounded">edit</i></a>
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <a href="{{ route('admin.estate.define-block-building.edit', $row->pk) }}" class="text-primary" title="Edit"><i class="material-icons material-symbols-rounded">edit</i></a>
+                                    <form action="{{ route('admin.estate.define-block-building.destroy', $row->pk) }}" method="POST" onsubmit="return confirm('Delete this Building/Block?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-link p-0 text-danger" title="Delete">
+                                            <i class="material-icons material-symbols-rounded">delete</i>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         @empty
@@ -73,11 +82,17 @@ $(document).ready(function() {
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
     });
     // Move "Add New" button next to the search box (same as estate define-campus / define-unit-type)
-    var $wrapper = $('#blockBuildingTable').closest('.dataTables_wrapper');
-    var $filter = $wrapper.find('.dataTables_filter');
-    var $addBtn = $('.block-building-add-btn').detach().addClass('ms-2');
+    // NOTE: public/js/datatable-global-ui.js moves .dataTables_filter OUT of .dataTables_wrapper
+    // into its own toolbar (stamping it data-sargam-dt-filter="<tableId>"), so search the stamp
+    // first and the wrapper second. Never detach() before a target is found — that is how this
+    // button used to disappear completely.
+    var $addBtn = $('.block-building-add-btn');
+    var $filter = $('[data-sargam-dt-filter="blockBuildingTable"]').first();
+    if (!$filter.length) {
+        $filter = $('#blockBuildingTable').closest('.dataTables_wrapper').find('.dataTables_filter').first();
+    }
     if ($filter.length && $addBtn.length) {
-        $filter.append($addBtn);
+        $filter.append($addBtn.addClass('ms-2'));
         $filter.addClass('d-flex align-items-center justify-content-end gap-2');
     }
 });

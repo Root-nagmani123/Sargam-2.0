@@ -49,7 +49,20 @@ class EstateCampusController extends Controller
 
     public function destroy(Request $request, string $id)
     {
-        EstateCampus::findOrFail($id)->delete();
+        $item = EstateCampus::findOrFail($id);
+
+        try {
+            $item->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Campus abhi bhi blocks / houses / possessions se referenced hai (FK constraint).
+            // 500 dikhane ke bajaye saaf message do.
+            $message = 'This Estate/Campus is used by other estate records and cannot be deleted.';
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'message' => $message], 409);
+            }
+            return redirect()->route('admin.estate.define-campus.index')->with('error', $message);
+        }
+
         if ($request->ajax()) {
             return response()->json(['success' => true, 'message' => 'Campus deleted successfully.']);
         }

@@ -39,7 +39,16 @@
                             <td>{{ $row->campus_name }}</td>
                             <td>{{ $row->description ?? '--' }}</td>
                             <td>
-                                <a href="{{ route('admin.estate.define-campus.edit', $row->pk) }}" class="text-primary" title="Edit"><i class="material-icons material-symbols-rounded">edit</i></a>
+                                <div class="d-flex gap-2">
+                                    <a href="{{ route('admin.estate.define-campus.edit', $row->pk) }}" class="text-primary" title="Edit"><i class="material-icons material-symbols-rounded">edit</i></a>
+                                    <form action="{{ route('admin.estate.define-campus.destroy', $row->pk) }}" method="POST" onsubmit="return confirm('Delete this Estate/Campus?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-link p-0 text-danger" title="Delete">
+                                            <i class="material-icons material-symbols-rounded">delete</i>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         @empty
@@ -94,12 +103,18 @@ $(document).ready(function() {
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
     });
 
-    // Move "Add New" button next to the search box and align right
-    var $wrapper = $('#campusTable').closest('.dataTables_wrapper');
-    var $filter = $wrapper.find('.dataTables_filter');
-    var $addBtn = $('.campus-add-btn').detach().addClass('ms-2');
+    // Move "Add New" button next to the search box and align right.
+    // NOTE: public/js/datatable-global-ui.js moves .dataTables_filter OUT of .dataTables_wrapper
+    // into its own toolbar (stamping it data-sargam-dt-filter="<tableId>"), so search the stamp
+    // first and the wrapper second. Never detach() before a target is found — that is how this
+    // button used to disappear completely.
+    var $addBtn = $('.campus-add-btn');
+    var $filter = $('[data-sargam-dt-filter="campusTable"]').first();
+    if (!$filter.length) {
+        $filter = $('#campusTable').closest('.dataTables_wrapper').find('.dataTables_filter').first();
+    }
     if ($filter.length && $addBtn.length) {
-        $filter.append($addBtn);
+        $filter.append($addBtn.addClass('ms-2'));
         $filter.addClass('d-flex align-items-center justify-content-end gap-2');
     }
 });

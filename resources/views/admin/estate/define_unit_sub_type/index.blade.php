@@ -35,9 +35,18 @@
                             <td class="ps-3">{{ $index + 1 }}</td>
                             <td class="fw-medium">{{ $row->unit_sub_type }}</td>
                             <td class="pe-3 text-end">
-                                <a href="{{ route('admin.estate.define-unit-sub-type.edit', $row->pk) }}" class="text-primary" title="Edit">
-                                    <i class="material-icons material-symbols-rounded">edit</i>
-                                </a>
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <a href="{{ route('admin.estate.define-unit-sub-type.edit', $row->pk) }}" class="text-primary" title="Edit">
+                                        <i class="material-icons material-symbols-rounded">edit</i>
+                                    </a>
+                                    <form action="{{ route('admin.estate.define-unit-sub-type.destroy', $row->pk) }}" method="POST" onsubmit="return confirm('Delete this Unit Sub Type?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-link p-0 text-danger" title="Delete">
+                                            <i class="material-icons material-symbols-rounded">delete</i>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         @empty
@@ -76,11 +85,17 @@ $(document).ready(function() {
     });
 
     // Move "Add New" button next to the search box and align right
-    var $wrapper = $('#unitSubTypeTable').closest('.dataTables_wrapper');
-    var $filter = $wrapper.find('.dataTables_filter');
-    var $addBtn = $('.unit-sub-type-add-btn').detach().addClass('ms-2');
+    // NOTE: public/js/datatable-global-ui.js moves .dataTables_filter OUT of .dataTables_wrapper
+    // into its own toolbar (stamping it data-sargam-dt-filter="<tableId>"), so search the stamp
+    // first and the wrapper second. Never detach() before a target is found — that is how this
+    // button used to disappear completely.
+    var $addBtn = $('.unit-sub-type-add-btn');
+    var $filter = $('[data-sargam-dt-filter="unitSubTypeTable"]').first();
+    if (!$filter.length) {
+        $filter = $('#unitSubTypeTable').closest('.dataTables_wrapper').find('.dataTables_filter').first();
+    }
     if ($filter.length && $addBtn.length) {
-        $filter.append($addBtn);
+        $filter.append($addBtn.addClass('ms-2'));
         $filter.addClass('d-flex align-items-center justify-content-end gap-2');
     }
 });

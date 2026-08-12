@@ -47,7 +47,19 @@ class EstateBlockController extends Controller
 
     public function destroy(Request $request, string $id)
     {
-        EstateBlock::findOrFail($id)->delete();
+        $item = EstateBlock::findOrFail($id);
+
+        try {
+            $item->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Block/building abhi bhi houses / possessions se referenced hai (FK constraint).
+            $message = 'This Building/Block is used by other estate records and cannot be deleted.';
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'message' => $message], 409);
+            }
+            return redirect()->route('admin.estate.define-block-building.index')->with('error', $message);
+        }
+
         if ($request->ajax()) {
             return response()->json(['success' => true, 'message' => 'Estate block/building deleted successfully.']);
         }
