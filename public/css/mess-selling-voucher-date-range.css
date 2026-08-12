@@ -89,82 +89,491 @@
     .svdr-master-page .programme-dt-footer .paginate_button.previous .page-link::before { content: "\2039"; font-size: 1.1rem; }
     .svdr-master-page .programme-dt-footer .paginate_button.next .page-link::before { content: "\203A"; font-size: 1.1rem; }
 
-    /* ── Clean modern Add / Edit / View / Return modals (reskin legacy chrome) ── */
-    #addReportModal .modal-content, #editReportModal .modal-content, #viewReportModal .modal-content, #returnItemModal .modal-content {
-        border-radius: 16px !important; border: 0 !important; box-shadow: 0 24px 48px rgba(16, 24, 40, .18) !important;
-    }
-    #addReportModal .modal-header, #editReportModal .modal-header, #viewReportModal .modal-header, #returnItemModal .modal-header {
-        background: #fff !important; background-image: none !important; border-top: 0 !important;
-        border-bottom: 1px solid var(--ds-line, #eef2f6) !important; padding: 1.15rem 1.5rem !important;
-    }
-    #addReportModal .modal-title, #editReportModal .modal-title, #viewReportModal .modal-title, #returnItemModal .modal-title {
-        color: var(--ds-ink, #1f2937) !important; font-size: 1.4rem !important; font-weight: 700 !important;
-    }
-    #addReportModal .modal-body, #editReportModal .modal-body, #viewReportModal .modal-body, #returnItemModal .modal-body {
-        background: #fff !important; background-image: none !important;
-    }
-    #addReportModal .modal-body .card, #editReportModal .modal-body .card, #viewReportModal .modal-body .card, #returnItemModal .modal-body .card {
-        border: 1px solid var(--ds-line, #eef2f6) !important; border-radius: 12px !important; box-shadow: none !important;
-    }
-    #addReportModal .modal-body .card-header, #editReportModal .modal-body .card-header, #viewReportModal .modal-body .card-header, #returnItemModal .modal-body .card-header,
-    #addReportModal .modal-body .card-footer, #editReportModal .modal-body .card-footer, #viewReportModal .modal-body .card-footer, #returnItemModal .modal-body .card-footer {
-        background: #fff !important; background-image: none !important; border-color: var(--ds-line, #eef2f6) !important;
-    }
-    #addReportModal .modal-body .card-header [class*="bg-"], #editReportModal .modal-body .card-header [class*="bg-"],
-    #viewReportModal .modal-body .card-header [class*="bg-"], #returnItemModal .modal-body .card-header [class*="bg-"] {
-        background: rgba(0, 74, 147, .1) !important; color: var(--ds-primary, #004a93) !important;
-    }
-    #addReportModal .modal-footer, #editReportModal .modal-footer, #viewReportModal .modal-footer, #returnItemModal .modal-footer {
-        background: #fff !important; background-image: none !important;
-        border-top: 1px solid var(--ds-line, #eef2f6) !important; padding: 1rem 1.5rem 1.25rem !important;
-    }
-    #addReportModal .modal-footer .btn[type="submit"], #editReportModal .modal-footer .btn[type="submit"], #returnItemModal .modal-footer .btn[type="submit"] {
-        background: var(--ds-primary, #004a93) !important; border: 1px solid var(--ds-primary, #004a93) !important;
-        color: #fff !important; border-radius: 8px !important; font-weight: 600 !important;
-    }
-    #addReportModal .modal-footer .btn[data-bs-dismiss="modal"], #editReportModal .modal-footer .btn[data-bs-dismiss="modal"], #returnItemModal .modal-footer .btn[data-bs-dismiss="modal"] {
-        color: var(--ds-secondary, #d92d20) !important; border: 1px solid var(--ds-secondary, #d92d20) !important;
-        background: #fff !important; border-radius: 8px !important; font-weight: 600 !important;
+    /* ══ Add / Edit / View / Transfer To — compact spec design ══
+       Matches the Purchase Order and Selling Voucher modals. Do not re-introduce a
+       generic "reskin" layer on top of this: the two fight over !important. */
+    #addReportModal .modal-content,
+    #editReportModal .modal-content,
+    #viewReportModal .modal-content,
+    #returnItemModal .modal-content {
+        border: 0;
+        border-radius: 8px;
+        box-shadow: 0 16px 40px rgba(16, 24, 40, .16);
     }
 
-    /* ── Modal field & section polish (Add / Edit / Return / View) ── */
-    #addReportModal .voucher-section-card, #editReportModal .voucher-section-card, #returnItemModal .voucher-section-card {
-        border: 1px solid var(--ds-line, #eef2f6) !important; border-radius: 12px !important; box-shadow: none !important; overflow: hidden;
+    #addReportModal .modal-header,
+    #editReportModal .modal-header,
+    #viewReportModal .modal-header,
+    #returnItemModal .modal-header {
+        align-items: center;
+        padding: .875rem 1.25rem;
+        background: #fff;
+        border-bottom: 1px solid #e9ecef;
     }
-    #addReportModal .voucher-section-card .card-header, #editReportModal .voucher-section-card .card-header, #returnItemModal .voucher-section-card .card-header {
-        background: #fff !important; border-bottom: 1px solid var(--ds-line, #eef2f6) !important;
+
+    #addReportModal .modal-title,
+    #editReportModal .modal-title,
+    #viewReportModal .modal-title,
+    #returnItemModal .modal-title {
+        font-size: 1rem;
+        font-weight: 600;
+        line-height: 1.3;
+        color: #212529;
     }
-    #addReportModal .voucher-section-card .card-header h6, #editReportModal .voucher-section-card .card-header h6, #returnItemModal .voucher-section-card .card-header h6 {
-        color: var(--ds-primary, #004a93) !important; font-weight: 700 !important;
+
+    #addReportModal .btn-close,
+    #editReportModal .btn-close,
+    #viewReportModal .btn-close,
+    #returnItemModal .btn-close {
+        padding: .5rem;
+        font-size: .8rem;
+        opacity: .55;
     }
-    /* Labels */
-    #addReportModal .voucher-label, #editReportModal .voucher-label, #returnItemModal .voucher-label, #viewReportModal .voucher-label {
-        font-weight: 600 !important; font-size: .875rem !important; color: var(--ds-ink, #1f2937) !important; margin-bottom: .375rem;
+
+    #addReportModal .modal-body,
+    #editReportModal .modal-body,
+    #viewReportModal .modal-body,
+    #returnItemModal .modal-body {
+        padding: 1.125rem 1.25rem 1.25rem;
+        background: #fff;
     }
-    /* Inputs / selects → token radius + focus ring */
-    #addReportModal .modal-body .form-control, #addReportModal .modal-body .form-select,
-    #editReportModal .modal-body .form-control, #editReportModal .modal-body .form-select,
-    #returnItemModal .modal-body .form-control, #returnItemModal .modal-body .form-select {
-        border-radius: 8px; border-color: var(--ds-line, #d0d5dd);
+
+    /* ── Labels ── */
+    #addReportModal .dr-label,
+    #editReportModal .dr-label,
+    #viewReportModal .dr-label,
+    #returnItemModal .dr-label {
+        display: block;
+        margin-bottom: .25rem;
+        font-size: .75rem;
+        font-weight: 400;
+        line-height: 1.2;
+        color: #212529;
     }
-    #addReportModal .modal-body .form-control:focus, #addReportModal .modal-body .form-select:focus,
-    #editReportModal .modal-body .form-control:focus, #editReportModal .modal-body .form-select:focus,
-    #returnItemModal .modal-body .form-control:focus, #returnItemModal .modal-body .form-select:focus {
-        border-color: var(--ds-primary, #004a93); box-shadow: 0 0 0 3px rgba(0, 74, 147, .12);
+
+    #addReportModal .dr-req,
+    #editReportModal .dr-req,
+    #viewReportModal .dr-req,
+    #returnItemModal .dr-req {
+        color: #dc3545;
     }
-    /* Client-type radios → brand blue */
-    #addReportModal .form-check-input:checked, #editReportModal .form-check-input:checked {
-        background-color: var(--ds-primary, #004a93); border-color: var(--ds-primary, #004a93);
+
+    /* ── Client-type radio row ── */
+    #addReportModal .dr-radio-row,
+    #editReportModal .dr-radio-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.25rem;
+        align-items: center;
+        min-height: 32px;
     }
-    /* Line-item table header → clean brand-blue band (replaces the legacy branded red) */
-    #addReportModal .voucher-brand-head th, #editReportModal .voucher-brand-head th, #returnItemModal .voucher-brand-head th,
-    #viewReportModal #viewReportItemsCard .table thead th {
-        background: var(--ds-primary, #004a93) !important; color: #fff !important;
-        border-color: var(--ds-primary, #004a93) !important; font-weight: 600; font-size: .8rem; text-transform: none;
+
+    #addReportModal .dr-radio-row .form-check,
+    #editReportModal .dr-radio-row .form-check {
+        display: flex;
+        align-items: center;
+        gap: .375rem;
+        margin: 0;
+        padding: 0;
+        min-height: 0;
     }
-    /* Add-line / add-item buttons inside modals → outline-blue pill */
-    #addReportModal #addModalAddItemRow, #editReportModal .btn-outline-primary {
-        border-radius: 8px;
+
+    #addReportModal .dr-radio-row .form-check-input,
+    #editReportModal .dr-radio-row .form-check-input {
+        width: 14px;
+        height: 14px;
+        margin: 0;
+        float: none;
+        border-color: #adb5bd;
+    }
+
+    #addReportModal .dr-radio-row .form-check-input:checked,
+    #editReportModal .dr-radio-row .form-check-input:checked {
+        background-color: var(--ds-primary, #004384);
+        border-color: var(--ds-primary, #004384);
+    }
+
+    #addReportModal .dr-radio-row .form-check-label,
+    #editReportModal .dr-radio-row .form-check-label {
+        font-size: .78125rem;
+        line-height: 1.2;
+        color: #212529;
+        cursor: pointer;
+    }
+
+    /* ── Controls ── */
+    #addReportModal .modal-body .form-control,
+    #addReportModal .modal-body .form-select,
+    #editReportModal .modal-body .form-control,
+    #editReportModal .modal-body .form-select,
+    #returnItemModal .modal-body .form-control,
+    #returnItemModal .modal-body .form-select {
+        height: 32px;
+        min-height: 32px;
+        padding: .25rem .5rem;
+        font-size: .78125rem;
+        line-height: 1.4;
+        color: #212529;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        box-shadow: none;
+    }
+
+    #addReportModal .modal-body .form-select,
+    #editReportModal .modal-body .form-select,
+    #returnItemModal .modal-body .form-select {
+        padding-right: 1.75rem;
+        background-size: 12px 9px;
+        background-position: right .5rem center;
+    }
+
+    #addReportModal .modal-body .form-control::placeholder,
+    #editReportModal .modal-body .form-control::placeholder,
+    #returnItemModal .modal-body .form-control::placeholder {
+        color: #adb5bd;
+        opacity: 1;
+    }
+
+    #addReportModal .modal-body .form-control:focus,
+    #addReportModal .modal-body .form-select:focus,
+    #editReportModal .modal-body .form-control:focus,
+    #editReportModal .modal-body .form-select:focus,
+    #returnItemModal .modal-body .form-control:focus,
+    #returnItemModal .modal-body .form-select:focus {
+        border-color: var(--ds-primary, #004384);
+        box-shadow: 0 0 0 .15rem rgba(0, 67, 132, .12);
+    }
+
+    #addReportModal input[type="date"]::-webkit-calendar-picker-indicator,
+    #editReportModal input[type="date"]::-webkit-calendar-picker-indicator,
+    #returnItemModal input[type="date"]::-webkit-calendar-picker-indicator {
+        opacity: .5;
+        cursor: pointer;
+    }
+
+    /* Read-only value boxes (View + Transfer To) */
+    #viewReportModal .dr-value,
+    #returnItemModal .dr-value {
+        display: flex;
+        align-items: center;
+        min-height: 32px;
+        padding: .25rem .5rem;
+        font-size: .78125rem;
+        line-height: 1.4;
+        color: #212529;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 4px;
+    }
+
+    /* Choices.js controls → same box as a native select */
+    #addReportModal .choices,
+    #editReportModal .choices {
+        margin-bottom: 0;
+    }
+
+    #addReportModal .choices__inner,
+    #editReportModal .choices__inner {
+        display: flex;
+        align-items: center;
+        height: 32px;
+        min-height: 32px !important;
+        padding: 0 1.75rem 0 .5rem !important;
+        font-size: .78125rem !important;
+        background: #fff !important;
+        border: 1px solid #ced4da !important;
+        border-radius: 4px !important;
+        box-shadow: none !important;
+    }
+
+    #addReportModal #addModalItemsBody .choices__inner,
+    #editReportModal #editModalItemsBody .choices__inner {
+        height: 28px;
+        min-height: 28px !important;
+        padding: 0 1.5rem 0 .375rem !important;
+        font-size: .71875rem !important;
+    }
+
+    #addReportModal .choices.is-focused .choices__inner,
+    #editReportModal .choices.is-focused .choices__inner {
+        border-color: var(--ds-primary, #004384) !important;
+        box-shadow: 0 0 0 .15rem rgba(0, 67, 132, .12) !important;
+    }
+
+    #addReportModal .choices__list--single,
+    #editReportModal .choices__list--single {
+        padding: 0 !important;
+    }
+
+    #addReportModal .choices__list--single .choices__item,
+    #editReportModal .choices__list--single .choices__item {
+        font-size: .78125rem;
+        line-height: 1.4;
+        color: #212529;
+    }
+
+    #addReportModal #addModalItemsBody .choices__list--single .choices__item,
+    #editReportModal #editModalItemsBody .choices__list--single .choices__item {
+        font-size: .71875rem;
+    }
+
+    #addReportModal .choices__placeholder,
+    #editReportModal .choices__placeholder {
+        color: #adb5bd;
+        opacity: 1;
+    }
+
+    #addReportModal .choices[data-type*="select-one"]::after,
+    #editReportModal .choices[data-type*="select-one"]::after {
+        right: .625rem;
+        border-width: 4px;
+        border-top-color: #6c757d;
+    }
+
+    /* ── Item table ── */
+    #addReportModal .dr-items-box,
+    #editReportModal .dr-items-box,
+    #viewReportModal .dr-items-box,
+    #returnItemModal .dr-items-box {
+        margin-top: 1.125rem;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    #addReportModal .dr-items-table,
+    #editReportModal .dr-items-table,
+    #viewReportModal .dr-items-table,
+    #returnItemModal .dr-items-table {
+        margin: 0;
+        font-size: .75rem;
+    }
+
+    #addReportModal .dr-items-table > thead > tr > th,
+    #editReportModal .dr-items-table > thead > tr > th,
+    #viewReportModal .dr-items-table > thead > tr > th,
+    #returnItemModal .dr-items-table > thead > tr > th {
+        padding: .5rem;
+        font-size: .71875rem;
+        font-weight: 600;
+        color: #212529 !important;
+        white-space: nowrap;
+        vertical-align: middle;
+        background: #f8f9fa !important;
+        border-bottom: 1px solid #dee2e6;
+        border-color: #dee2e6 !important;
+        text-transform: none;
+    }
+
+    #addReportModal .dr-items-table > tbody > tr > td,
+    #editReportModal .dr-items-table > tbody > tr > td,
+    #viewReportModal .dr-items-table > tbody > tr > td,
+    #returnItemModal .dr-items-table > tbody > tr > td {
+        padding: .3125rem .375rem;
+        font-size: .75rem;
+        color: #212529;
+        vertical-align: middle;
+        background: #fff;
+        border-bottom: 1px solid #f1f3f5;
+    }
+
+    #addReportModal .dr-items-table > tbody > tr:last-child > td,
+    #editReportModal .dr-items-table > tbody > tr:last-child > td,
+    #viewReportModal .dr-items-table > tbody > tr:last-child > td,
+    #returnItemModal .dr-items-table > tbody > tr:last-child > td {
+        border-bottom: 0;
+    }
+
+    #addReportModal .dr-items-table th:first-child,
+    #addReportModal .dr-items-table td:first-child,
+    #editReportModal .dr-items-table th:first-child,
+    #editReportModal .dr-items-table td:first-child,
+    #viewReportModal .dr-items-table th:first-child,
+    #viewReportModal .dr-items-table td:first-child,
+    #returnItemModal .dr-items-table th:first-child,
+    #returnItemModal .dr-items-table td:first-child {
+        padding-left: .625rem;
+    }
+
+    #addReportModal .dr-items-table th:last-child,
+    #addReportModal .dr-items-table td:last-child,
+    #editReportModal .dr-items-table th:last-child,
+    #editReportModal .dr-items-table td:last-child,
+    #viewReportModal .dr-items-table th:last-child,
+    #viewReportModal .dr-items-table td:last-child,
+    #returnItemModal .dr-items-table th:last-child,
+    #returnItemModal .dr-items-table td:last-child {
+        padding-right: .625rem;
+    }
+
+    #addReportModal .dr-items-table .form-control,
+    #addReportModal .dr-items-table .form-select,
+    #editReportModal .dr-items-table .form-control,
+    #editReportModal .dr-items-table .form-select,
+    #returnItemModal .dr-items-table .form-control {
+        height: 28px !important;
+        min-height: 28px !important;
+        padding: .1875rem .375rem;
+        font-size: .71875rem !important;
+    }
+
+    /* readonly cells stay white — nothing in these tables is a greyed-out field */
+    #addReportModal .dr-items-table input[readonly],
+    #editReportModal .dr-items-table input[readonly],
+    #addReportModal .dr-items-table input[readonly].bg-light,
+    #editReportModal .dr-items-table input[readonly].bg-light {
+        background-color: #fff !important;
+        color: #495057;
+    }
+
+    #addReportModal .dr-items-table .invalid-feedback,
+    #editReportModal .dr-items-table .invalid-feedback,
+    #returnItemModal .dr-items-table .invalid-feedback {
+        font-size: .65rem;
+    }
+
+    /* Row actions — remove on every row, add on the last row only */
+    #addReportModal .dr-act-cell,
+    #editReportModal .dr-act-cell {
+        white-space: nowrap;
+    }
+
+    #addReportModal .dr-icon-btn,
+    #editReportModal .dr-icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        font-size: 15px;
+        font-weight: 600;
+        line-height: 1;
+        color: #fff;
+        border: 0;
+        border-radius: 4px;
+    }
+
+    #addReportModal .dr-icon-btn + .dr-icon-btn,
+    #editReportModal .dr-icon-btn + .dr-icon-btn {
+        margin-left: .375rem;
+    }
+
+    #addReportModal .dr-icon-btn--remove,
+    #editReportModal .dr-icon-btn--remove {
+        background: #dc3545;
+    }
+
+    #addReportModal .dr-icon-btn--remove:hover:not(:disabled),
+    #editReportModal .dr-icon-btn--remove:hover:not(:disabled) {
+        background: #bb2d3b;
+    }
+
+    #addReportModal .dr-icon-btn--remove:disabled,
+    #editReportModal .dr-icon-btn--remove:disabled {
+        opacity: .45;
+    }
+
+    #addReportModal .dr-icon-btn--add,
+    #editReportModal .dr-icon-btn--add {
+        background: #0d6efd;
+    }
+
+    #addReportModal .dr-icon-btn--add:hover,
+    #editReportModal .dr-icon-btn--add:hover {
+        background: #0b5ed7;
+    }
+
+    #addReportModal #addModalItemsBody tr:not(:last-child) .dr-add-row,
+    #editReportModal #editModalItemsBody tr:not(:last-child) .dr-add-row {
+        visibility: hidden;
+    }
+
+    /* Total strip */
+    #addReportModal .dr-total-bar,
+    #editReportModal .dr-total-bar,
+    #viewReportModal .dr-total-bar {
+        padding: .4375rem .75rem;
+        font-size: .78125rem;
+        font-weight: 600;
+        text-align: right;
+        color: var(--ds-primary, #004384);
+        background: #e7f0fb;
+        border-top: 1px solid #dee2e6;
+    }
+
+    #addModalGrandTotal,
+    #editModalGrandTotal,
+    #viewReportGrandTotal {
+        font-weight: 700;
+        color: var(--ds-primary, #004384);
+    }
+
+    /* View-only: status pill + meta line */
+    #viewReportModal .dr-status-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: .1875rem .625rem;
+        font-size: .71875rem;
+        font-weight: 600;
+        border-radius: 999px;
+    }
+
+    #viewReportModal .dr-status-pill--approved { color: #067647; background: #ecfdf3; }
+    #viewReportModal .dr-status-pill--completed { color: var(--ds-primary, #004384); background: #e7f0fb; }
+    #viewReportModal .dr-status-pill--pending { color: #b54708; background: #fffaeb; }
+    #viewReportModal .dr-status-pill--other { color: #475467; background: #f2f4f7; }
+
+    #viewReportModal .dr-meta {
+        margin-top: .875rem;
+        font-size: .71875rem;
+        color: #6c757d;
+    }
+
+    /* ── Footers ── */
+    #addReportModal .modal-footer,
+    #editReportModal .modal-footer,
+    #viewReportModal .modal-footer,
+    #returnItemModal .modal-footer {
+        gap: .5rem;
+        padding: .75rem 1.25rem;
+        background: #fff;
+        border-top: 1px solid #e9ecef;
+    }
+
+    #addReportModal .modal-footer > *,
+    #editReportModal .modal-footer > *,
+    #viewReportModal .modal-footer > *,
+    #returnItemModal .modal-footer > * {
+        margin: 0;
+    }
+
+    #addReportModal .modal-footer .btn,
+    #editReportModal .modal-footer .btn,
+    #viewReportModal .modal-footer .btn,
+    #returnItemModal .modal-footer .btn {
+        padding: .375rem 1.125rem;
+        font-size: .8125rem;
+        font-weight: 500;
+        border-radius: 4px;
+    }
+
+    #addReportModal .modal-footer .dr-btn-primary,
+    #editReportModal .modal-footer .dr-btn-primary,
+    #viewReportModal .modal-footer .dr-btn-primary,
+    #returnItemModal .modal-footer .dr-btn-primary {
+        color: #fff;
+        background: var(--ds-primary, #004384);
+        border: 1px solid var(--ds-primary, #004384);
+    }
+
+    #addReportModal .modal-footer .dr-btn-cancel,
+    #editReportModal .modal-footer .dr-btn-cancel,
+    #viewReportModal .modal-footer .dr-btn-cancel,
+    #returnItemModal .modal-footer .dr-btn-cancel {
+        color: #dc3545;
+        background: #fff;
+        border: 1px solid #dc3545;
     }
 
 /* ===== block 2 ===== */
@@ -873,9 +1282,9 @@
 }
 
 #viewReportModal #viewReportItemsCard .table thead th {
-    color: #fff !important;
-    background: #004a93 !important;
-    border-color: #004a93;
+    color: #212529 !important;
+    background: #f8f9fa !important;
+    border-color: #dee2e6 !important;
     /* Freeze header while tbody scrolls */
     position: sticky;
     top: 0;
@@ -888,7 +1297,7 @@
 }
 
 #viewReportModal #viewReportGrandTotal {
-    color: #212529 !important;
+    color: var(--ds-primary, #004384) !important;
 }
 
 #viewReportModal .text-muted {
@@ -917,9 +1326,6 @@
 /* modal-dialog-scrollable bounds the modal to the viewport, so the Grand Total
    footer is always reachable and never clipped. The item list gets its own
    inner scroll with a sticky header (see thead rule above). */
-#viewReportModal #viewReportItemsCard .card-body {
-    padding: 0 !important;
-}
 #viewReportModal #viewReportItemsCard .table-responsive {
     max-height: 42vh;
     overflow-y: auto;

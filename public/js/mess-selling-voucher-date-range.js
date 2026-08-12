@@ -524,7 +524,7 @@ var SVDR_CFG = window.SVDR_CFG || {};
             } catch (e) {}
         }
         if (selectEl.id === 'drClientNameSelect') addModalTomSelectInstances.client = null;
-        selectEl.innerHTML = '<option value="">Select Client Name</option>';
+        selectEl.innerHTML = '<option value="">Select Client</option>';
         filtered.forEach(function(o) {
             var opt = document.createElement('option');
             opt.value = o.value;
@@ -535,7 +535,7 @@ var SVDR_CFG = window.SVDR_CFG || {};
         });
         if (typeof Choices !== 'undefined') {
             var inst = createChoicesInstance(selectEl, createBlankSearchConfig({
-                placeholder: 'Select Client Name',
+                placeholder: 'Select Client',
                 clearOnOpen: true
             }));
             if (selectEl.id === 'drClientNameSelect') addModalTomSelectInstances.client = inst;
@@ -555,7 +555,7 @@ var SVDR_CFG = window.SVDR_CFG || {};
             } catch (e) {}
             editModalTomSelectInstances.client = null;
         }
-        editSel.innerHTML = '<option value="">Select Client Name</option>';
+        editSel.innerHTML = '<option value="">Select Client</option>';
         filtered.forEach(function(o) {
             var opt = document.createElement('option');
             opt.value = o.value;
@@ -566,7 +566,7 @@ var SVDR_CFG = window.SVDR_CFG || {};
         });
         if (typeof Choices !== 'undefined') {
             editModalTomSelectInstances.client = createChoicesInstance(editSel, createBlankSearchConfig({
-                placeholder: 'Select Client Name',
+                placeholder: 'Select Client',
                 clearOnOpen: true
             }));
         }
@@ -810,7 +810,7 @@ var SVDR_CFG = window.SVDR_CFG || {};
 
     function createItemSelectConfig() {
         return createBlankSearchConfig({
-            placeholder: 'Select Item',
+            placeholder: 'Item',
             maxOptions: null,
             clearOnOpen: false,
             searchEnabled: true,
@@ -841,7 +841,7 @@ var SVDR_CFG = window.SVDR_CFG || {};
             rebuildClientNameSelect(clientSel, clientNameOptionsAdd, slug);
         } else if (clientSel && !clientSel.tomselect) {
             addModalTomSelectInstances.client = createChoicesInstance(clientSel, createBlankSearchConfig({
-                placeholder: 'Select Client Name',
+                placeholder: 'Select Client',
                 clearOnOpen: true
             }));
         }
@@ -955,7 +955,7 @@ var SVDR_CFG = window.SVDR_CFG || {};
             }
         } else if (clientSel && !clientSel.tomselect) {
             editModalTomSelectInstances.client = createChoicesInstance(clientSel, createBlankSearchConfig({
-                placeholder: 'Select Client Name',
+                placeholder: 'Select Client',
                 clearOnOpen: true
             }));
         }
@@ -1300,7 +1300,7 @@ var SVDR_CFG = window.SVDR_CFG || {};
             const unitInp = row.querySelector('.edit-dr-unit');
             const rateInp = row.querySelector('.edit-dr-rate');
             const availInp = row.querySelector('.edit-dr-avail');
-            if (unitInp) unitInp.value = (o && o.dataset.unit) ? o.dataset.unit : '—';
+            if (unitInp) unitInp.value = (o && o.dataset.unit) ? o.dataset.unit : '-';
             if (rateInp && o && o.dataset.rate) rateInp.value = o.dataset.rate;
             if (availInp && o && o.dataset.available) availInp.value = o.dataset.available;
             updateEditRowLeft(row);
@@ -1324,22 +1324,22 @@ var SVDR_CFG = window.SVDR_CFG || {};
         }).join('');
         return '<tr class="dr-item-row">' +
             '<td><select name="items[' + index +
-            '][item_subcategory_id]" class="form-select  dr-item-select" required><option value="">Select Item</option>' +
+            '][item_subcategory_id]" class="form-select  dr-item-select" required><option value="">Item</option>' +
             options + '</select></td>' +
             '<td><input type="text" name="items[' + index +
-            '][unit]" class="form-control  dr-unit" readonly placeholder="—"></td>' +
+            '][unit]" class="form-control  dr-unit" readonly placeholder="-"></td>' +
             '<td><input type="number" name="items[' + index +
-            '][available_quantity]" class="form-control  dr-avail bg-light" readonly></td>' +
+            '][available_quantity]" class="form-control  dr-avail bg-light" readonly placeholder="-"></td>' +
             '<td><input type="number" name="items[' + index +
-            '][quantity]" class="form-control  dr-qty" step="0.01" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
-            '<td><input type="text" class="form-control  dr-left bg-light" readonly placeholder="0"></td>' +
+            '][quantity]" class="form-control  dr-qty" step="0.01" placeholder="-" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
+            '<td><input type="text" class="form-control  dr-left bg-light" readonly placeholder="-"></td>' +
             '<td><input type="date" name="items[' + index +
             '][issue_date]" class="form-control  dr-issue-date" value="' + new Date().toISOString().slice(0, 10) +
             '"></td>' +
             '<td><input type="number" name="items[' + index +
-            '][rate]" class="form-control  dr-rate" step="0.01" min="0" required></td>' +
-            '<td><input type="text" class="form-control  dr-total bg-light" readonly></td>' +
-            '<td><button type="button" class="btn btn-sm btn-outline-danger dr-remove-row voucher-icon-btn" title="Remove">×</button></td>' +
+            '][rate]" class="form-control  dr-rate" step="0.01" min="0" placeholder="-" required></td>' +
+            '<td><input type="text" class="form-control  dr-total bg-light" readonly placeholder="-"></td>' +
+            '<td class="dr-act-cell"><button type="button" class="dr-icon-btn dr-icon-btn--remove dr-remove-row" title="Remove line" aria-label="Remove line">&minus;</button><button type="button" class="dr-icon-btn dr-icon-btn--add dr-add-row" title="Add line" aria-label="Add line">+</button></td>' +
             '</tr>';
     }
 
@@ -1349,7 +1349,7 @@ var SVDR_CFG = window.SVDR_CFG || {};
         const unitInp = row.querySelector('.dr-unit');
         const rateInp = row.querySelector('.dr-rate');
         const availInp = row.querySelector('.dr-avail');
-        if (unitInp) unitInp.value = (opt && opt.dataset.unit) ? opt.dataset.unit : '—';
+        if (unitInp) unitInp.value = (opt && opt.dataset.unit) ? opt.dataset.unit : '-';
         // Only auto-set rate if user has not manually overridden it
         if (rateInp && rateInp.dataset.manualRate !== '1' && opt && opt.dataset.rate) {
             rateInp.value = opt.dataset.rate;
@@ -1419,7 +1419,8 @@ var SVDR_CFG = window.SVDR_CFG || {};
             const totalInp = row.querySelector('.dr-total');
             if (totalInp && totalInp.value) sum += parseFloat(totalInp.value);
         });
-        document.getElementById('addModalGrandTotal').textContent = '₹' + sum.toFixed(2);
+        // Rendered as "Total: 0.00/-" — label and /- suffix live in the markup.
+        document.getElementById('addModalGrandTotal').textContent = sum.toFixed(2);
     }
 
     // Store selection change in ADD modal
@@ -1444,7 +1445,19 @@ var SVDR_CFG = window.SVDR_CFG || {};
         });
     }
 
-    document.getElementById('addModalAddItemRow').addEventListener('click', function() {
+    // The toolbar "Add Item" buttons are gone — the last row's blue + adds the next
+    // line. Kept callable by id for the Enter-on-Rate shortcut below.
+    window.drAddItemRow = function() { addDrItemRowImpl(); };
+    document.addEventListener('click', function(ev) {
+        var addBtn = ev.target.closest && ev.target.closest('.dr-add-row');
+        if (!addBtn) return;
+        if (addBtn.closest('#addModalItemsBody')) { addDrItemRowImpl(); return; }
+        if (addBtn.closest('#editModalItemsBody') && typeof window.drAddEditItemRow === 'function') {
+            window.drAddEditItemRow();
+        }
+    });
+
+    function addDrItemRowImpl() {
         const tbody = document.getElementById('addModalItemsBody');
         const div = document.createElement('div');
         div.innerHTML = '<table><tbody>' + getAddRowHtml(addRowIndex) + '</tbody></table>';
@@ -1486,7 +1499,7 @@ var SVDR_CFG = window.SVDR_CFG || {};
         tbody.querySelectorAll('.dr-remove-row').forEach(function(btn) {
             btn.disabled = tbody.querySelectorAll('.dr-item-row').length <= 1;
         });
-    });
+    }
 
     document.querySelectorAll('#addModalItemsBody .dr-item-row').forEach(function(row) {
         row.querySelector('.dr-item-select').addEventListener('change', function() {
@@ -1511,7 +1524,7 @@ var SVDR_CFG = window.SVDR_CFG || {};
     });
 
     document.getElementById('addModalItemsBody').addEventListener('click', function(e) {
-        if (e.target.classList.contains('dr-remove-row')) {
+        if (e.target.closest('.dr-remove-row')) {
             const row = e.target.closest('tr');
             if (row && document.getElementById('addModalItemsBody').querySelectorAll('.dr-item-row')
                 .length > 1) {
@@ -1578,9 +1591,8 @@ var SVDR_CFG = window.SVDR_CFG || {};
             e.preventDefault();
 
             // Kisi bhi input field se Enter press => new row append karo
-            const addBtn = document.getElementById('addModalAddItemRow');
-            if (addBtn) {
-                addBtn.click();
+            if (typeof window.drAddItemRow === 'function') {
+                window.drAddItemRow();
                 // Naye row ki pehli editable field pe focus
                 setTimeout(function() {
                     const tbody = document.getElementById('addModalItemsBody');
@@ -1880,7 +1892,7 @@ var SVDR_CFG = window.SVDR_CFG || {};
                 }
                 if (nameInput) {
                     nameInput.style.display = 'block';
-                    nameInput.placeholder = 'Client / section / role name';
+                    nameInput.placeholder = 'e.g. John Doe';
                     nameInput.setAttribute('required', 'required');
                 }
             }
@@ -2415,7 +2427,7 @@ var SVDR_CFG = window.SVDR_CFG || {};
                 }
                 if (nameInput) {
                     nameInput.style.display = 'block';
-                    nameInput.placeholder = 'Client / section / role name';
+                    nameInput.placeholder = 'e.g. John Doe';
                     nameInput.setAttribute('required', 'required');
                 }
             }
@@ -2788,16 +2800,21 @@ var SVDR_CFG = window.SVDR_CFG || {};
         }
         const optionsHtml = options.join('');
         const avail = item.available_quantity != null ? item.available_quantity : '';
+        const returnQty = parseFloat(item.return_quantity) || 0;
         const qty = item.quantity != null ? item.quantity : '';
         const rate = item.rate != null ? item.rate : '';
         const issueDate = item.issue_date || '';
-        const total = (qty && rate) ? (parseFloat(qty) * parseFloat(rate)).toFixed(2) : '';
+        const total = (item.amount != null)
+            ? Number(item.amount).toFixed(2)
+            : ((qty !== '' && rate !== '') ? (parseFloat(qty) * parseFloat(rate)).toFixed(2) : '');
         const left = (avail !== '' && qty !== '') ? Math.max(0, parseFloat(avail) - parseFloat(qty)).toFixed(2) :
             '';
-        const originalQtyAttr = (item.quantity != null && item.quantity !== '') ? (' data-original-qty="' + (
-            parseFloat(item.quantity) || 0) + '"') : '';
+        const originalQtyAttr = (qty !== '' && qty != null) ? (' data-original-qty="' + (
+            parseFloat(qty) || 0) + '" data-return-qty="' + returnQty + '"') : '';
         const lineIdField = item.id ? ('<input type="hidden" name="items[' + index + '][line_id]" value="' +
             item.id + '">') : '';
+        const returnQtyField = '<input type="hidden" name="items[' + index +
+            '][return_quantity]" class="edit-dr-return-qty-hidden" value="' + returnQty + '">';
         const storeId = item.store_id || (!isExistingLine ? '' : (editCurrentStoreId || ''));
         const storeName = String(item.store_name || (!isExistingLine ? '' : editCurrentStoreName) || '—')
             .replace(/</g, '&lt;').replace(/"/g, '&quot;');
@@ -2813,11 +2830,11 @@ var SVDR_CFG = window.SVDR_CFG || {};
         }
         return '<tr class="edit-dr-item-row"' + originalQtyAttr + '>' +
             storeCell +
-            '<td>' + lineIdField + '<select name="items[' + index +
-            '][item_subcategory_id]" class="form-select  edit-dr-item-select" required><option value="">Select Item</option>' +
+            '<td>' + lineIdField + returnQtyField + '<select name="items[' + index +
+            '][item_subcategory_id]" class="form-select  edit-dr-item-select" required><option value="">Item</option>' +
             optionsHtml + '</select></td>' +
             '<td><input type="text" name="items[' + index +
-            '][unit]" class="form-control  edit-dr-unit" readonly placeholder="—" value="' + (item.unit || '')
+            '][unit]" class="form-control  edit-dr-unit" readonly placeholder="-" value="' + (item.unit || '')
             .replace(/"/g, '&quot;') + '"></td>' +
             '<td><input type="text" name="items[' + index +
             '][available_quantity]" class="form-control  edit-dr-avail bg-light" value="' + avail +
@@ -2832,9 +2849,9 @@ var SVDR_CFG = window.SVDR_CFG || {};
                 ' required') + ' value="' + issueDate + '"></td>' +
             '<td><input type="text" name="items[' + index +
             '][rate]" class="form-control  edit-dr-rate" required value="' + rate + '"></td>' +
-            '<td><input type="text" class="form-control  edit-dr-total bg-light" readonly value="' + total +
+            '<td><input type="text" class="form-control  edit-dr-total bg-light" readonly placeholder="-" value="' + total +
             '"></td>' +
-            '<td><button type="button" class="btn btn-sm btn-outline-danger edit-dr-remove-row voucher-icon-btn" title="Remove">×</button></td>' +
+            '<td class="dr-act-cell"><button type="button" class="dr-icon-btn dr-icon-btn--remove edit-dr-remove-row" title="Remove line" aria-label="Remove line">&minus;</button><button type="button" class="dr-icon-btn dr-icon-btn--add dr-add-row" title="Add line" aria-label="Add line">+</button></td>' +
             '</tr>';
     }
 
@@ -2906,10 +2923,13 @@ var SVDR_CFG = window.SVDR_CFG || {};
             const totalInp = row.querySelector('.edit-dr-total');
             if (totalInp && totalInp.value) sum += parseFloat(totalInp.value);
         });
-        document.getElementById('editModalGrandTotal').textContent = '₹' + sum.toFixed(2);
+        // Rendered as "Total: 0.00/-" — label and /- suffix live in the markup.
+        document.getElementById('editModalGrandTotal').textContent = sum.toFixed(2);
     }
 
-    document.getElementById('editModalAddItemRow').addEventListener('click', function() {
+    window.drAddEditItemRow = function() { addDrEditItemRowImpl(); };
+
+    function addDrEditItemRowImpl() {
         const tbody = document.getElementById('editModalItemsBody');
         const trContent = getEditRowHtml(editRowIndex, {});
         const div = document.createElement('div');
@@ -2922,7 +2942,7 @@ var SVDR_CFG = window.SVDR_CFG || {};
         const sel = newTr.querySelector('.edit-dr-item-select');
         if (sel && typeof Choices !== 'undefined') createChoicesInstance(sel, createItemSelectConfig());
         const opt = getSelectSelectedOption(sel);
-        newTr.querySelector('.edit-dr-unit').value = (opt && opt.dataset.unit) ? opt.dataset.unit : '—';
+        newTr.querySelector('.edit-dr-unit').value = (opt && opt.dataset.unit) ? opt.dataset.unit : '-';
         const initAvailInp = newTr.querySelector('.edit-dr-avail');
         if (initAvailInp && opt && opt.dataset.available) {
             initAvailInp.value = opt.dataset.available;
@@ -2941,6 +2961,9 @@ var SVDR_CFG = window.SVDR_CFG || {};
             updateEditGrandTotal();
         });
         newTr.querySelector('.edit-dr-item-select').addEventListener('change', function() {
+            const retHidden = newTr.querySelector('.edit-dr-return-qty-hidden');
+            if (retHidden) retHidden.value = '0';
+            newTr.setAttribute('data-return-qty', '0');
             const o = getSelectSelectedOption(this);
             newTr.querySelector('.edit-dr-unit').value = (o && o.dataset.unit) ? o.dataset.unit :
                 '—';
@@ -2959,10 +2982,10 @@ var SVDR_CFG = window.SVDR_CFG || {};
             refreshEditAllAvailable();
             updateEditGrandTotal();
         });
-    });
+    }
 
     document.getElementById('editModalItemsBody').addEventListener('click', function(e) {
-        if (e.target.classList.contains('edit-dr-remove-row')) {
+        if (e.target.closest('.edit-dr-remove-row')) {
             const row = e.target.closest('tr');
             if (row) {
                 row.remove();
@@ -3022,9 +3045,8 @@ var SVDR_CFG = window.SVDR_CFG || {};
             const row = activeEl.closest('.edit-dr-item-row');
             if (row) {
                 e.preventDefault();
-                const addBtn = document.getElementById('editModalAddItemRow');
-                if (addBtn) {
-                    addBtn.click();
+                if (typeof window.drAddEditItemRow === 'function') {
+                    window.drAddEditItemRow();
                     setTimeout(function() {
                         const lastRow = editModalItemsBodyEl.querySelector('.edit-dr-item-row:last-child');
                         if (lastRow) {
@@ -3070,21 +3092,19 @@ var SVDR_CFG = window.SVDR_CFG || {};
                 const v = data.voucher;
                 document.getElementById('viewReportModalLabel').textContent =
                     'View Selling Voucher with Date Range #' + (v.id || reportId);
-                document.getElementById('viewRequestDate').textContent = v.request_date || '—';
-                document.getElementById('viewStoreName').textContent = v.store_name || '—';
-                document.getElementById('viewReferenceNumber').textContent = v.reference_number || '—';
-                document.getElementById('viewOrderBy').textContent = v.order_by || '—';
-                document.getElementById('viewClientType').textContent = v.client_type || '—';
+                document.getElementById('viewRequestDate').textContent = v.request_date || '-';
+                document.getElementById('viewStoreName').textContent = v.store_name || '-';
+                document.getElementById('viewReferenceNumber').textContent = v.reference_number || '-';
+                document.getElementById('viewOrderBy').textContent = v.order_by || '-';
+                document.getElementById('viewClientType').textContent = v.client_type || '-';
                 document.getElementById('viewClientName').textContent = (v.client_name_text || v
-                    .client_name || '—');
-                document.getElementById('viewPaymentType').textContent = v.payment_type || '—';
+                    .client_name || '-');
+                document.getElementById('viewPaymentType').textContent = v.payment_type || '-';
                 const statusEl = document.getElementById('viewStatus');
-                statusEl.innerHTML = v.status === 0 ?
-                    '<span class="badge rounded-1 text-bg-warning">Pending</span>' : (v.status === 2 ?
-                        '<span class="badge rounded-1 text-bg-success">Approved</span>' : (v.status ===
-                            4 ? '<span class="badge rounded-1 text-bg-primary">Completed</span>' :
-                            '<span class="badge rounded-1 text-bg-secondary">' + (v.status_label || v
-                                .status) + '</span>'));
+                const drStatusMap = { 0: ['pending', 'Pending'], 2: ['approved', 'Approved'], 4: ['completed', 'Completed'] };
+                const drStatus = drStatusMap[v.status] || ['other', String(v.status_label || v.status || '-')];
+                statusEl.className = 'dr-status-pill dr-status-pill--' + drStatus[0];
+                statusEl.textContent = drStatus[1];
                 if (v.remarks) {
                     document.getElementById('viewRemarksWrap').style.display = 'block';
                     document.getElementById('viewRemarks').textContent = v.remarks;
@@ -3097,9 +3117,9 @@ var SVDR_CFG = window.SVDR_CFG || {};
                 if (data.has_items && data.items && data.items.length > 0) {
                     data.items.forEach(function(item) {
                         tbody.insertAdjacentHTML('beforeend', '<tr><td>' + (item.item_name ||
-                                '—') + '</td><td>' + (item.unit || '—') + '</td><td>' + item
+                                '-') + '</td><td>' + (item.unit || '-') + '</td><td>' + item
                             .quantity + '</td><td>' + (item.return_quantity || 0) +
-                            '</td><td>₹' + item.rate + '</td><td>₹' + item.amount +
+                            '</td><td>' + item.rate + '</td><td>' + item.amount +
                             '</td><td>' + (item.issue_date || '—') + '</td></tr>');
                     });
                     document.getElementById('viewReportGrandTotal').textContent = data.grand_total ||
@@ -3141,25 +3161,25 @@ var SVDR_CFG = window.SVDR_CFG || {};
             .then(function(data) {
                 var clientEl = document.getElementById('returnClientName');
                 if (clientEl) {
-                    clientEl.textContent = data.client_name || '—';
+                    clientEl.textContent = data.client_name || '-';
                 }
-                document.getElementById('returnTransferFromStore').textContent = data.store_name || '—';
+                document.getElementById('returnTransferFromStore').textContent = data.store_name || '-';
                 const issueDate = data.issue_date || '';
                 const todayYmd = new Date().toISOString().slice(0, 10);
                 const tbody = document.getElementById('returnItemModalBody');
                 tbody.innerHTML = '';
                 function ymdToDmY(ymd) {
-                    if (!ymd) return '—';
+                    if (!ymd) return '-';
                     var p = String(ymd).split('-');
                     if (p.length !== 3) return ymd;
                     return p[2] + '/' + p[1] + '/' + p[0];
                 }
                 (data.items || []).forEach(function(item, i) {
                     const id = (item.id != null) ? item.id : '';
-                    const name = (item.item_name || '—').replace(/</g, '&lt;').replace(/"/g,
+                    const name = (item.item_name || '-').replace(/</g, '&lt;').replace(/"/g,
                         '&quot;');
                     const qty = item.quantity != null ? item.quantity : '';
-                    const unit = (item.unit || '—').replace(/</g, '&lt;');
+                    const unit = (item.unit || '-').replace(/</g, '&lt;');
                     const retQty = item.return_quantity != null ? item.return_quantity : 0;
                     const retDate = item.return_date || '';
                     const issuedQty = parseFloat(qty) || 0;
@@ -3357,6 +3377,9 @@ var SVDR_CFG = window.SVDR_CFG || {};
                 updateEditGrandTotal();
             });
             row.querySelector('.edit-dr-item-select').addEventListener('change', function() {
+                const retHidden = row.querySelector('.edit-dr-return-qty-hidden');
+                if (retHidden) retHidden.value = '0';
+                row.setAttribute('data-return-qty', '0');
                 const o = getSelectSelectedOption(this);
                 row.querySelector('.edit-dr-unit').value = (o && o.dataset.unit) ? o.dataset.unit :
                     '—';
@@ -3576,7 +3599,7 @@ var SVDR_CFG = window.SVDR_CFG || {};
                         editNameInp.style.display = 'block';
                         editNameInp.readOnly = true;
                         editNameInp.classList.add('bg-light');
-                        editNameInp.placeholder = 'Client / section / role name';
+                        editNameInp.placeholder = 'e.g. John Doe';
                         editNameInp.setAttribute('required', 'required');
                     }
                 }
@@ -4256,40 +4279,136 @@ var SVDR_CFG = window.SVDR_CFG || {};
         if (!sel) return;
         var modalEl = document.querySelector(sel);
         if (!modalEl) return;
-        var content = modalEl.querySelector('.modal-content');
-        if (!content) return;
-        var win = window.open('', '_blank', 'width=900,height=700');
-        if (!win) {
-            alert('Please allow popups to print.');
-            return;
-        }
+        var bodyEl = modalEl.querySelector('.modal-body');
+        if (!bodyEl) return;
+
         var title = (modalEl.querySelector('.modal-title') || {}).textContent ||
             'Selling Voucher (Date Range)';
         var printedOn = new Date();
-        var dateStr = printedOn.getDate().toString().padStart(2, '0') + '/' + (printedOn.getMonth() + 1)
-            .toString().padStart(2, '0') + '/' + printedOn.getFullYear() + ', ' + printedOn
-            .toLocaleTimeString('en-IN', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-            });
-        var bodyContent = content.innerHTML.replace(/<button[^>]*btn-close[^>]*>[\s\S]*?<\/button>/gi, '');
+        var dateStr = printedOn.getDate().toString().padStart(2, '0') + '/' +
+            (printedOn.getMonth() + 1).toString().padStart(2, '0') + '/' + printedOn.getFullYear() +
+            ', ' + printedOn.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+        var wrap = document.createElement('div');
+        wrap.innerHTML = bodyEl.innerHTML;
+        wrap.querySelectorAll('button, .btn-close').forEach(function(el) { el.remove(); });
+        // The screen layout drops section headings; print reads better with them.
+        var firstRow = wrap.querySelector('.row');
+        if (firstRow) {
+            var h = document.createElement('div');
+            h.className = 'dr-print-title';
+            h.textContent = 'Voucher Details';
+            firstRow.parentNode.insertBefore(h, firstRow);
+        }
+        var itemsBox = wrap.querySelector('.dr-items-box');
+        if (itemsBox) {
+            var h2 = document.createElement('div');
+            h2.className = 'dr-print-title';
+            h2.textContent = 'Item Details';
+            itemsBox.parentNode.insertBefore(h2, itemsBox);
+        }
+
+        var logoUrl = (SVDR_CFG.logoUrl || '');
         var printHeader =
-            '<div class="print-doc-header" style="text-align:center;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #2c3e50;">' +
-            '<div style="font-size:16px;font-weight:700;color:#1a1a1a;margin-bottom:4px;">OFFICER\'S MESS LBSNAA MUSSOORIE</div>' +
-            '<div style="background:#495057;color:#fff;padding:6px 12px;font-size:13px;display:inline-block;margin:4px 0;">Selling Voucher (Date Range)</div>' +
-            '<div style="font-size:11px;color:#6c757d;margin-top:6px;">Printed on ' + dateStr +
+            '<div class="print-doc-header" style="text-align:center;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #2c3e50;">' +
+            (logoUrl ? '<div style="margin-bottom:10px;"><img src="' + logoUrl + '" alt="LBSNAA Logo" style="height:60px;width:auto;"></div>' : '') +
+            '<div style="font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">OFFICER\'S MESS LBSNAA MUSSOORIE</div>' +
+            '<div style="background:#004384;color:#fff;padding:8px 16px;font-size:14px;display:inline-block;margin:4px 0;border-radius:4px;-webkit-print-color-adjust:exact;print-color-adjust:exact;">Selling Voucher (Date Range)</div>' +
+            '<div style="font-size:11px;color:#6c757d;margin-top:8px;">' +
+            (title ? title.replace(/</g, '&lt;') + ' &nbsp;|&nbsp; ' : '') + 'Printed on ' + dateStr +
             '</div></div>';
-        var printCss =
-            '<style>@page{size:A4;margin:14mm;}body{font-family:Arial,sans-serif;font-size:12px;color:#212529;padding:0 12px;margin:0;background:#fff;}.print-doc-header{-webkit-print-color-adjust:exact;print-color-adjust:exact;}.modal-header{border-bottom:1px solid #dee2e6;padding-bottom:8px;margin-bottom:12px;}.modal-body{color:#212529;}.card{margin-bottom:14px;page-break-inside:avoid;}.card-header{font-weight:600;font-size:12px;margin-bottom:8px;}.card-body table th,.card-body table td{border:1px solid #adb5bd;padding:6px 8px;}table{width:100%;border-collapse:collapse;font-size:11px;}thead th{background:#af2910!important;color:#fff!important;border-color:#8b2009;font-weight:600;-webkit-print-color-adjust:exact;print-color-adjust:exact;}.card-footer{font-weight:600;padding-top:8px;}.btn-close,.modal-footer{display:none!important;}@media print{body{padding:0;}}</style>';
-        win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + title.replace(/</g,
-                '&lt;') + '</title>' + printCss + '</head><body>' + printHeader +
-            '<div class="modal-content-wrap">' + bodyContent + '</div></body></html>');
-        win.document.close();
-        win.focus();
-        setTimeout(function() {
-            win.print();
-            win.close();
-        }, 350);
+
+        var ink = ' -webkit-print-color-adjust: exact; print-color-adjust: exact;';
+        // Mirrors the on-screen View classes (.dr-label/.dr-value/.dr-items-table/.dr-total-bar).
+        var printCss = '<style>' +
+            '@page { size: A4; margin: 14mm; }' +
+            'body { font-family: Arial, sans-serif; font-size: 12px; color: #212529; margin: 0; padding: 0; background: #fff; }' +
+            '.print-doc-header {' + ink + ' }' +
+            '.print-doc-header img {' + ink + ' }' +
+            '.modal-header, .modal-footer, .btn-close { display: none !important; }' +
+            '.dr-print-title { margin: 16px 0 8px; font-size: 13px; font-weight: 700; color: #004384;' +
+            ' border-bottom: 1px solid #dee2e6; padding-bottom: 4px; }' +
+            '.dr-print-title:first-child { margin-top: 0; }' +
+            '.row { display: flex; flex-wrap: wrap; margin: 0 -6px; }' +
+            '.row > [class*="col-"] { box-sizing: border-box; padding: 0 6px 10px; width: 33.33%; }' +
+            '.row > .col-12 { width: 100%; }' +
+            '.dr-label { display: block; margin-bottom: 2px; font-size: 10px; font-weight: 600;' +
+            ' color: #6c757d; text-transform: uppercase; letter-spacing: .02em; }' +
+            '.dr-value { margin: 0; padding: 4px 8px; font-size: 12px; color: #212529; background: #f8f9fa;' +
+            ' border: 1px solid #e9ecef; border-radius: 3px; min-height: 20px;' + ink + ' }' +
+            '.dr-status-pill { display: inline-block; padding: 3px 10px; font-size: 10px; font-weight: 700;' +
+            ' border-radius: 999px;' + ink + ' }' +
+            '.dr-status-pill--approved { color: #067647 !important; background: #d7f5e5 !important; }' +
+            '.dr-status-pill--completed { color: #004384 !important; background: #dbe9f8 !important; }' +
+            '.dr-status-pill--pending { color: #b54708 !important; background: #fdf0d5 !important; }' +
+            '.dr-status-pill--other { color: #475467 !important; background: #eceff3 !important; }' +
+            '.dr-items-box { border: 1px solid #adb5bd; border-radius: 3px; overflow: hidden; }' +
+            'table { width: 100%; border-collapse: collapse; font-size: 11px; page-break-inside: auto; }' +
+            'th, td { border: 1px solid #adb5bd; padding: 5px 8px; text-align: left; }' +
+            'thead th { background: #004384 !important; color: #fff !important; border-color: #003468;' +
+            ' font-weight: 600;' + ink + ' }' +
+            'thead { display: table-header-group; }' +
+            'tbody tr { page-break-inside: avoid; }' +
+            'tbody tr:nth-child(even) td { background-color: #f4f6f8 !important;' + ink + ' }' +
+            'th:nth-child(n+3), td:nth-child(n+3) { text-align: right; }' +
+            '.dr-total-bar { padding: 7px 10px; font-size: 12px; font-weight: 700; text-align: right;' +
+            ' color: #004384 !important; background: #dbe9f8 !important; border-top: 1px solid #adb5bd;' +
+            ' page-break-inside: avoid;' + ink + ' }' +
+            '.dr-meta { margin-top: 12px; font-size: 10px; color: #6c757d; }' +
+            '@media print { .print-doc-header { margin-bottom: 16px; } }' +
+            '</style>';
+
+        var docHtml = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' +
+            title.replace(/</g, '&lt;') + '</title>' + printCss + '</head><body>' + printHeader +
+            '<div class="modal-content-wrap">' + wrap.innerHTML + '</div></body></html>';
+
+        // Printed from a hidden same-page iframe rather than window.open(): a popup
+        // blocker silently kills the popup route, so the button just does nothing.
+        var frame = document.createElement('iframe');
+        frame.setAttribute('aria-hidden', 'true');
+        frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+        document.body.appendChild(frame);
+
+        var fired = false;
+        var cleaned = false;
+
+        function cleanup() {
+            if (cleaned) return;
+            cleaned = true;
+            setTimeout(function() {
+                if (frame && frame.parentNode) frame.parentNode.removeChild(frame);
+            }, 500);
+        }
+
+        function doPrint() {
+            if (fired) return;
+            fired = true;
+            var fw = frame.contentWindow;
+            if (!fw) { cleanup(); return; }
+            try { fw.addEventListener('afterprint', cleanup); } catch (err) {}
+            try {
+                fw.focus();
+                fw.print();
+            } catch (err) {
+                console.error('Print failed', err);
+            }
+            // afterprint is not fired by every browser - always reclaim the iframe.
+            setTimeout(cleanup, 60000);
+        }
+
+        var fdoc = frame.contentWindow.document;
+        fdoc.open();
+        fdoc.write(docHtml);
+        fdoc.close();
+
+        // Print once the logo has decoded, otherwise the header prints blank.
+        var logo = fdoc.querySelector('.print-doc-header img');
+        if (!logo || logo.complete) {
+            setTimeout(doPrint, 60);
+        } else {
+            logo.addEventListener('load', doPrint);
+            logo.addEventListener('error', doPrint);
+            setTimeout(doPrint, 2000);
+        }
     });
 })();
