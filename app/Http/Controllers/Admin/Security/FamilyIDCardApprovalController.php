@@ -559,12 +559,99 @@ class FamilyIDCardApprovalController extends Controller
             ->with('success', 'Family ID Card group rejected (' . $groupRows->count() . ' members)');
     }
 
-    public function all()
+    public function all(Request $request)
     {
-        $applications = SecurityFamilyIdApply::with('approvals')
-            ->orderBy('created_date', 'desc')
-            ->paginate(15);
+        // Grid is server-side: search, sort and paging are resolved in SQL.
+        if ($request->ajax() && $request->has('draw')) {
+            return $this->allApplicationsDatatable($request);
+        }
 
-        return view('admin.security.family_idcard_approval.all', compact('applications'));
+        return view('admin.security.family_idcard_approval.all');
+    }
+
+    /**
+     * Server-side rows for the "All Family ID Card Applications" grid.
+     * Each row is positional cell HTML, matching the grid's column order.
+     */
+    protected function allApplicationsDatatable(Request $request)
+    {
+        $base = SecurityFamilyIdApply::with('approvals');
+
+        $draw = (int) $request->input('draw', 0);
+        $start = max((int) $request->input('start', 0), 0);
+        $length = (int) $request->input('length', 10);
+        if ($length < 1 || $length > 100) {
+            $length = 10;
+        }
+
+        $recordsTotal = (clone $base)->count();
+
+        $search = trim((string) $request->input('search.value', ''));
+        if ($search !== '') {
+            $like = '%'.$search.'%';
+            $base->where(function ($q) use ($like) {
+                $q->where('fml_id_apply', 'like', $like)
+                    ->orWhere('family_name', 'like', $like)
+                    ->orWhere('emp_id_apply', 'like', $like)
+                    ->orWhere('family_relation', 'like', $like);
+            });
+        }
+
+        $recordsFiltered = (clone $base)->count();
+
+        $sortable = [
+            0 => 'fml_id_apply',
+            1 => 'family_name',
+            2 => 'emp_id_apply',
+            3 => 'family_relation',
+            4 => 'id_status',
+            5 => 'created_date',
+        ];
+        $orderColumn = (int) $request->input('order.0.column', 5);
+        $orderDir = strtolower((string) $request->input('order.0.dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+
+        $paged = clone $base;
+        $paged->orderBy($sortable[$orderColumn] ?? 'created_date', $orderDir);
+
+        if ($length !== -1) {
+            $paged->skip($start)->take($length);
+        }
+
+        // "?return=approval2|approval3" is carried into the row's View link, same as before.
+        $returnTab = in_array($request->query('return'), ['approval2', 'approval3'], true)
+            ? '?return='.$request->query('return')
+            : '';
+
+        $data = $paged->get()->map(function (SecurityFamilyIdApply $app) use ($returnTab) {
+            $idStatus = (int) ($app->id_status ?? 1);
+            $badge = match ($idStatus) {
+                2 => 'bg-success',
+                3 => 'bg-danger',
+                default => 'bg-warning text-dark',
+            };
+            $statusText = match ($idStatus) {
+                2 => 'Approved',
+                3 => 'Rejected',
+                default => 'Pending',
+            };
+
+            return [
+                '<code>'.e($app->fml_id_apply).'</code>',
+                '<strong>'.e($app->family_name ?? '--').'</strong>',
+                e($app->emp_id_apply ?? '--'),
+                e($app->family_relation ?? '--'),
+                '<span class="badge '.$badge.'">'.$statusText.'</span>',
+                $app->created_date ? e($app->created_date->format('d-m-Y H:i')) : '--',
+                '<a href="'.route('admin.security.family_idcard_approval.show', encrypt($app->fml_id_apply)).$returnTab.'" class="btn btn-sm btn-info" title="View">'
+                    .'<i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i></a>',
+            ];
+        })->all();
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+        ]);
     }
 }

@@ -2204,7 +2204,10 @@ class EmployeeIDCardApprovalController extends Controller
 
     public function all(Request $request)
     {
-        $search = trim($request->get('search', ''));
+        // DataTables ajax sends `search` as an array (search[value]); its own search is
+        // applied by the grid below, so only the page's filter bar is read here.
+        $rawSearch = $request->get('search', '');
+        $search = is_array($rawSearch) ? '' : trim((string) $rawSearch);
         $statusFilter = $request->get('status', '');
 
         // 1) Permanent requests (SecurityParmIdApply)
@@ -2274,18 +2277,104 @@ class EmployeeIDCardApprovalController extends Controller
             return $d->created_at ? (\Carbon\Carbon::parse($d->created_at)->timestamp ?? 0) : 0;
         })->values();
 
-        $perPage = 10;
-        $page = (int) $request->get('page', 1);
+        // Grid is server-side: only the visible page of the merged list is sent to the browser.
+        if ($request->ajax() && $request->has('draw')) {
+            return $this->allRequestsDatatable($request, $merged);
+        }
 
-        $requests = new \Illuminate\Pagination\LengthAwarePaginator(
-            $merged->forPage($page, $perPage),
-            $merged->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
+        return view('admin.security.employee_idcard_approval.all');
+    }
 
-        return view('admin.security.employee_idcard_approval.all', compact('requests'));
+    /**
+     * Server-side rows for the "All ID Card Requests" grid. The page's Status / Search
+     * filters are already applied to $merged; search, sort and paging happen here.
+     *
+     * @param  \Illuminate\Support\Collection<int, mixed>  $merged
+     */
+    protected function allRequestsDatatable(Request $request, \Illuminate\Support\Collection $merged)
+    {
+        $draw = (int) $request->input('draw', 0);
+        $start = max((int) $request->input('start', 0), 0);
+        $length = (int) $request->input('length', 10);
+        if ($length < 1 || $length > 100) {
+            $length = 10;
+        }
+
+        $recordsTotal = $merged->count();
+
+        $keyword = trim((string) $request->input('search.value', ''));
+        if ($keyword !== '') {
+            $needle = mb_strtolower($keyword);
+            $merged = $merged->filter(function ($req) use ($needle) {
+                $haystack = mb_strtolower(implode(' ', array_filter([
+                    $req->name ?? '',
+                    $req->card_type ?? '',
+                    $req->request_for ?? '',
+                    $req->status ?? '',
+                    $req->created_at ? $req->created_at->format('d/m/Y') : '',
+                ], fn ($v) => $v !== null && $v !== '')));
+
+                return str_contains($haystack, $needle);
+            })->values();
+        }
+
+        $recordsFiltered = $merged->count();
+
+        // Column index → property (S.No and Actions do not sort).
+        $sortable = [1 => 'created_at', 2 => 'card_type', 3 => 'request_for', 4 => 'name', 5 => 'status'];
+        $orderColumn = (int) $request->input('order.0.column', 1);
+        $orderDir = strtolower((string) $request->input('order.0.dir', 'desc'));
+        if (isset($sortable[$orderColumn])) {
+            $key = $sortable[$orderColumn];
+            $merged = $orderDir === 'desc'
+                ? $merged->sortByDesc(fn ($req) => $req->{$key} ?? '')->values()
+                : $merged->sortBy(fn ($req) => $req->{$key} ?? '')->values();
+        }
+
+        $page = $length === -1 ? $merged : $merged->slice($start, $length);
+
+        $serial = $start + 1;
+        $data = [];
+        foreach ($page as $req) {
+            $statusClass = match ($req->status ?? '') {
+                'Pending' => 'warning',
+                'Approved' => 'success',
+                'Rejected' => 'danger',
+                'Issued' => 'primary',
+                default => 'secondary',
+            };
+            $statusTitle = ($req->status ?? '') === 'Approved'
+                ? ' title="Please collect your ID card from security section"'
+                : '';
+
+            $approverCell = function ($approver) {
+                return $approver
+                    ? '<span class="badge bg-success">Approved</span><br><small class="text-muted">'.e($approver->name).'</small>'
+                    : '<span class="text-muted">--</span>';
+            };
+
+            $data[] = [
+                $serial++,
+                $req->created_at ? e($req->created_at->format('d/m/Y')) : '--',
+                e($req->card_type ?? '--'),
+                e($req->request_for ?? '--'),
+                e($req->name),
+                '<span class="badge bg-'.$statusClass.'"'.$statusTitle.'>'.e($req->status).'</span>',
+                $approverCell($req->approver1 ?? null),
+                $approverCell($req->approver2 ?? null),
+                '<a href="'.route('admin.security.employee_idcard_approval.show', encrypt($req->id)).'" class="btn btn-sm btn-info" title="View">'
+                    .'<i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i></a> '
+                    .'<a href="'.route('admin.employee_idcard.show', $req->id).'" class="btn btn-sm btn-outline-secondary" title="Full Details">'
+                    .'<i class="material-icons material-symbols-rounded" style="font-size:18px;">open_in_new</i></a>',
+            ];
+        }
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+        ]);
     }
 
     public function export(Request $request)

@@ -40,119 +40,21 @@
                             <th style="width:140px;">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($applications as $index => $app)
-                            <tr>
-                                <td>{{ $applications->firstItem() + $index }}</td>
-                                <td>
-                                    <code class="bg-light text-dark p-1">{{ $app->veh_req_id }}</code>
-                                </td>
-                                <td>
-                                    @if($app->employee)
-                                        <strong>{{ $app->employee->emp_name }}</strong><br>
-                                        <small class="text-muted">{{ $app->employee->emp_code ?? 'N/A' }}</small>
-                                    @else
-                                        <span class="text-muted">--</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($app->vehicleType)
-                                        {{ $app->vehicleType->vehicle_type }}
-                                    @else
-                                        <span class="text-muted">--</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <strong>{{ $app->veh_reg_no }}</strong>
-                                </td>
-                                <td>
-                                    @php
-                                        $statusClass = '';
-                                        $statusText = '';
-                                        switch($app->vech_card_status) {
-                                            case 1:
-                                                $statusClass = 'warning';
-                                                $statusText = 'Pending';
-                                                break;
-                                            case 2:
-                                                $statusClass = 'success';
-                                                $statusText = 'Approved';
-                                                break;
-                                            case 3:
-                                                $statusClass = 'danger';
-                                                $statusText = 'Rejected';
-                                                break;
-                                            default:
-                                                $statusClass = 'secondary';
-                                                $statusText = 'Unknown';
-                                        }
-                                    @endphp
-                                    <span class="badge bg-{{ $statusClass }}">{{ $statusText }}</span>
-                                </td>
-                                <td>
-                                    @php
-                                        $forwardClass = '';
-                                        $forwardText = '';
-                                        switch($app->veh_card_forward_status) {
-                                            case 0:
-                                                $forwardClass = 'secondary';
-                                                $forwardText = 'Not Sent';
-                                                break;
-                                            case 1:
-                                                $forwardClass = 'info';
-                                                $forwardText = 'Forwarded';
-                                                break;
-                                            case 2:
-                                                $forwardClass = 'success';
-                                                $forwardText = 'Card Ready';
-                                                break;
-                                            default:
-                                                $forwardClass = 'secondary';
-                                                $forwardText = '--';
-                                        }
-                                    @endphp
-                                    <span class="badge bg-{{ $forwardClass }}">{{ $forwardText }}</span>
-                                </td>
-                                <td>
-                                    <small>{{ $app->created_date ? $app->created_date->format('d-M-Y') : '--' }}</small>
-                                </td>
-                                <td>
-                                    <div class="d-flex gap-2">
-                                        <a href="{{ route('admin.security.vehicle_pass.show', encrypt($app->vehicle_tw_pk)) }}" class="text-primary" title="View Details">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:22px;">visibility</i>
-                                        </a>
-                                        @if($app->vech_card_status == 1)
-                                            <a href="{{ route('admin.security.vehicle_pass.edit', encrypt($app->vehicle_tw_pk)) }}" class="text-success" title="Edit">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i>
-                                            </a>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="9" class="text-center text-muted py-4">No applications found.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
+                    {{-- Rows are served page-by-page by the server-side grid below. --}}
+                    <tbody></tbody>
                 </table>
-            </div>
-            <div class="mt-3">
-                {{ $applications->links() }}
             </div>
         </div>
     </div>
 </div>
+@include('components.mess-master-datatables', [
+    'tableId' => 'allApplicationsTable',
+    'searchPlaceholder' => 'Search vehicle pass applications...',
+    'orderColumn' => 7,
+    'orderDir' => 'desc',
+    'actionColumnIndex' => 8,
+    'infoLabel' => 'applications',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.security.vehicle_pass_approval.all'),
+])
 @endsection
-
-@push('scripts')
-<script>
-$(document).ready(function() {
-    // You can add DataTables initialization here if needed
-    // $('#allApplicationsTable').DataTable({
-    //     "pageLength": 15,
-    //     "order": [[7, 'desc']]
-    // });
-});
-</script>
-@endpush

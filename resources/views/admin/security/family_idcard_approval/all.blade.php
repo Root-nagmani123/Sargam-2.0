@@ -17,7 +17,7 @@
             </div>
 
             <div class="table-responsive">
-                <table class="table table-striped mb-0">
+                <table class="table table-striped mb-0" id="allFamilyIdcardTable">
                     <thead>
                         <tr>
                             <th>Request ID</th>
@@ -29,49 +29,21 @@
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($applications as $app)
-                            <tr>
-                                <td><code>{{ $app->fml_id_apply }}</code></td>
-                                <td><strong>{{ $app->family_name ?? '--' }}</strong></td>
-                                <td>{{ $app->emp_id_apply ?? '--' }}</td>
-                                <td>{{ $app->family_relation ?? '--' }}</td>
-                                <td>
-                                    @php
-                                        $idStatus = (int) ($app->id_status ?? 1);
-                                        $badge = match($idStatus) {
-                                            2 => 'bg-success',
-                                            3 => 'bg-danger',
-                                            default => 'bg-warning text-dark',
-                                        };
-                                        $statusText = match($idStatus) {
-                                            2 => 'Approved',
-                                            3 => 'Rejected',
-                                            default => 'Pending',
-                                        };
-                                    @endphp
-                                    <span class="badge {{ $badge }}">{{ $statusText }}</span>
-                                </td>
-                                <td>{{ $app->created_date ? $app->created_date->format('d-m-Y H:i') : '--' }}</td>
-                                <td>
-                                    <a href="{{ route('admin.security.family_idcard_approval.show', encrypt($app->fml_id_apply)) }}{{ $familyShowReturnQs }}"
-                                       class="btn btn-sm btn-info" title="View">
-                                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
-                                    </a>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="text-center text-muted py-4">No Family ID Card applications found.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
+                    {{-- Rows are served page-by-page by the server-side grid below. --}}
+                    <tbody></tbody>
                 </table>
-            </div>
-            <div class="mt-3">
-                {{ $applications->links() }}
             </div>
         </div>
     </div>
 </div>
+@include('components.mess-master-datatables', [
+    'tableId' => 'allFamilyIdcardTable',
+    'searchPlaceholder' => 'Search family ID card applications...',
+    'orderColumn' => 5,
+    'orderDir' => 'desc',
+    'actionColumnIndex' => 6,
+    'infoLabel' => 'applications',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.security.family_idcard_approval.all', array_filter(['return' => $familyApprovalReturn])),
+])
 @endsection

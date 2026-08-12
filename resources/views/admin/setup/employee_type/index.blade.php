@@ -21,41 +21,9 @@
                             <th style="width:110px;">Status</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($employeeTypes as $index => $et)
-                            <tr data-pk="{{ $et->pk }}">
-                                <td>{{ $employeeTypes->firstItem() + $index }}</td>
-                                <td>{{ $et->category_type_name }}</td>
-                                <td>
-                                    <div class="d-flex gap-2">
-                                        <a href="{{ route('admin.setup.employee_type.edit', encrypt($et->pk)) }}" class="text-success openEditEmployeeType" title="Edit">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i>
-                                        </a>
-                                        <form action="{{ route('admin.setup.employee_type.delete', encrypt($et->pk)) }}" method="POST" onsubmit="return confirm('Delete this Employee Type?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-link p-0 text-danger" title="Delete"><i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i></button>
-                                        </form>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="form-check form-switch d-inline-block">
-                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                               data-table="employee_type_master" data-column="active_inactive" data-id="{{ $et->pk }}" {{ $et->active_inactive == 1 ? 'checked' : '' }}>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="4" class="text-center text-muted">No Employee Types found.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
+                    {{-- Rows come from the server-side DataTable (see script below). --}}
+                        <tbody></tbody>
                 </table>
-            </div>
-            <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
-                <div class="small text-muted mb-2">Showing {{ $employeeTypes->firstItem() }} to {{ $employeeTypes->lastItem() }} of {{ $employeeTypes->total() }} items</div>
-                <div>{{ $employeeTypes->links('pagination::bootstrap-5') }}</div>
             </div>
         </div>
     </div>
@@ -87,6 +55,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalBody = modalEl.querySelector('.modal-body');
     const modalTitle = modalEl.querySelector('.modal-title');
 
+    // Server-side grid: search, sort and paging are resolved in SQL.
+    const table = $('#employeeTypeTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: { url: "{{ route('admin.setup.employee_type.index') }}", type: 'GET' },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'name', name: 'name' },
+            { data: 'action', name: 'action', orderable: false, searchable: false },
+            { data: 'status', name: 'status', orderable: false, searchable: false }
+        ],
+        order: [],
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+        language: {
+            processing: 'Loading data…',
+            emptyTable: 'No Employee Type found.'
+        }
+    });
+
     function loadForm(url, title){
         modalTitle.textContent = title || 'Employee Type';
         modalBody.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
@@ -102,14 +90,14 @@ document.addEventListener('DOMContentLoaded', () => {
         loadForm(e.currentTarget.getAttribute('href'), 'Create Employee Type');
     });
 
-    document.querySelectorAll('.openEditEmployeeType').forEach(link => {
-        link.addEventListener('click', e => {
-            e.preventDefault();
-            loadForm(e.currentTarget.getAttribute('href'), 'Edit Employee Type');
-        });
+    // Delegated: rows are re-rendered by the grid on every draw.
+    document.addEventListener('click', e => {
+        const link = e.target.closest('.openEditEmployeeType');
+        if (!link) return;
+        e.preventDefault();
+        loadForm(link.getAttribute('href'), 'Edit Employee Type');
     });
 
-    // Delegate submit inside modal
     modalEl.addEventListener('submit', function(e){
         const form = e.target;
         if(form.tagName !== 'FORM') return;
@@ -124,52 +112,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if(!res.ok){ throw new Error('Save failed'); }
                 const data = await res.json();
-                if(data && data.success){ updateTable(data); bootstrap.Modal.getInstance(modalEl)?.hide(); }
+                if(data && data.success){
+                    // Rows live on the server now, so pull the fresh page.
+                    table.ajax.reload(null, false);
+                    bootstrap.Modal.getInstance(modalEl)?.hide();
+                }
             })
             .catch(()=>{ modalBody.insertAdjacentHTML('afterbegin','<div class="alert alert-danger">Error saving.</div>'); })
             .finally(()=>{ if(submitBtn) submitBtn.disabled = false; });
     });
-
-    function buildEditUrl(encrypted){ return `${window.location.origin}/admin/setup/employee-type/edit/${encodeURIComponent(encrypted)}`; }
-
-    function updateTable(payload){
-        if(!payload || !payload.data) return;
-        const { action, data } = payload;
-        const tbody = document.querySelector('#employeeTypeTable tbody');
-        if(!tbody) return;
-        if(action === 'create'){
-            const newRow = document.createElement('tr');
-            newRow.setAttribute('data-pk', data.pk);
-            newRow.innerHTML = `
-                <td>${tbody.querySelectorAll('tr').length ? (parseInt(tbody.querySelector('tr td').textContent) - 1) : 1}</td>
-                <td>${escapeHtml(data.category_type_name)}</td>
-                <td>
-                    <div class=\"d-flex gap-2\">
-                        <a href=\"${buildEditUrl(data.encrypted_pk)}\" class=\"text-success openEditEmployeeType\" title=\"Edit\"><i class=\"material-icons material-symbols-rounded\" style=\"font-size:22px;\">edit</i></a>
-                        <form action=\"${window.location.origin}/admin/setup/employee-type/delete/${encodeURIComponent(data.encrypted_pk)}\" method=\"POST\" onsubmit=\"return confirm('Delete this Employee Type?')\">
-                            <input type=\"hidden\" name=\"_token\" value=\"{{ csrf_token() }}\">
-                            <input type=\"hidden\" name=\"_method\" value=\"DELETE\">
-                            <button type=\"submit\" class=\"btn btn-link p-0 text-danger\" title=\"Delete\"><i class=\"material-icons material-symbols-rounded\" style=\"font-size:22px;\">delete</i></button>
-                        </form>
-                    </div>
-                </td>
-                <td><div class=\"form-check form-switch d-inline-block\"><input class=\"form-check-input status-toggle\" type=\"checkbox\" role=\"switch\" data-table=\"employee_type_master\" data-column=\"active_inactive\" data-id=\"${data.pk}\" checked></div></td>`;
-            tbody.prepend(newRow);
-            reindexSerials(tbody);
-            newRow.querySelector('.openEditEmployeeType').addEventListener('click', interceptEdit);
-        } else if(action === 'update') {
-            const row = tbody.querySelector(`tr[data-pk='${data.pk}']`);
-            if(row){ row.querySelectorAll('td')[1].textContent = data.category_type_name; }
-        }
-    }
-
-    function reindexSerials(tbody){
-        Array.from(tbody.querySelectorAll('tr')).forEach((r,i)=>{ const cell = r.querySelector('td'); if(cell) cell.textContent = i+1; });
-    }
-
-    function interceptEdit(e){ e.preventDefault(); loadForm(this.getAttribute('href'),'Edit Employee Type'); }
-
-    function escapeHtml(str){ return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 });
 </script>
 @endpush

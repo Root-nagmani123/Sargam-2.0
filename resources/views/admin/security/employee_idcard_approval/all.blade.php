@@ -41,7 +41,7 @@
             @endif
 
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover mb-0" id="allIdcardApprovalTable">
                     <thead>
                         <tr>
                             <th>S.No.</th>
@@ -55,64 +55,21 @@
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($requests as $index => $req)
-                            <tr>
-                                <td>{{ $requests->firstItem() + $index }}</td>
-                                <td>{{ $req->created_at ? $req->created_at->format('d/m/Y') : '--' }}</td>
-                                <td>{{ $req->card_type ?? '--' }}</td>
-                                <td>{{ $req->request_for ?? '--' }}</td>
-                                <td>{{ $req->name }}</td>
-                                <td>
-                                    @php
-                                        $statusClass = match($req->status) {
-                                            'Pending' => 'warning',
-                                            'Approved' => 'success',
-                                            'Rejected' => 'danger',
-                                            'Issued' => 'primary',
-                                            default => 'secondary'
-                                        };
-                                    @endphp
-                                    <span class="badge bg-{{ $statusClass }}"
-                                          @if(($req->status ?? '') === 'Approved') title="Please collect your ID card from security section" @endif>{{ $req->status }}</span>
-                                </td>
-                                <td>
-                                    @if($req->approver1)
-                                        <span class="badge bg-success">Approved</span>
-                                        <br><small class="text-muted">{{ $req->approver1->name }}</small>
-                                    @else
-                                        <span class="text-muted">--</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($req->approver2)
-                                        <span class="badge bg-success">Approved</span>
-                                        <br><small class="text-muted">{{ $req->approver2->name }}</small>
-                                    @else
-                                        <span class="text-muted">--</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <a href="{{ route('admin.security.employee_idcard_approval.show', encrypt($req->id)) }}" class="btn btn-sm btn-info" title="View">
-                                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
-                                    </a>
-                                    <a href="{{ route('admin.employee_idcard.show', $req->id) }}" class="btn btn-sm btn-outline-secondary" title="Full Details">
-                                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">open_in_new</i>
-                                    </a>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="9" class="text-center text-muted py-4">No requests found.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
+                    {{-- Rows are served page-by-page by the server-side grid below. --}}
+                    <tbody></tbody>
                 </table>
-            </div>
-            <div class="mt-3">
-                {{ $requests->links() }}
             </div>
         </div>
     </div>
 </div>
+@include('components.mess-master-datatables', [
+    'tableId' => 'allIdcardApprovalTable',
+    'searchPlaceholder' => 'Search ID card requests...',
+    'orderColumn' => 1,
+    'orderDir' => 'desc',
+    'actionColumnIndex' => 8,
+    'infoLabel' => 'requests',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.security.employee_idcard_approval.all'),
+])
 @endsection

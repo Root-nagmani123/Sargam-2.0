@@ -553,7 +553,7 @@ class VehiclePassApprovalController extends Controller
             ->with('success', 'Vehicle Pass rejected');
     }
 
-    public function allApplications()
+    public function allApplications(Request $request)
     {
         // Regular vehicle pass applications - all
         $regularQuery = VehiclePassTWApply::with(['vehicleType', 'employee', 'createdBy'])
@@ -629,16 +629,117 @@ class VehiclePassApprovalController extends Controller
             return $d->created_date ? (\Carbon\Carbon::parse($d->created_date)->timestamp ?? 0) : 0;
         })->values();
 
-        $perPage = 15;
-        $page = (int) request()->get('page', 1);
-        $applications = new LengthAwarePaginator(
-            $merged->forPage($page, $perPage),
-            $merged->count(),
-            $perPage,
-            $page,
-            ['path' => request()->url(), 'query' => request()->query()]
-        );
+        // Grid is server-side: only the visible page of the merged list is sent to the browser.
+        if ($request->ajax() && $request->has('draw')) {
+            return $this->allApplicationsDatatable($request, $merged);
+        }
 
-        return view('admin.security.vehicle_pass_approval.all', compact('applications'));
+        return view('admin.security.vehicle_pass_approval.all');
+    }
+
+    /**
+     * Server-side rows for the "All Vehicle Pass Applications" grid: search, sort and
+     * paging run over the merged regular + duplicate list built by {@see allApplications()}.
+     *
+     * @param  \Illuminate\Support\Collection<int, mixed>  $merged
+     */
+    protected function allApplicationsDatatable(Request $request, \Illuminate\Support\Collection $merged)
+    {
+        $draw = (int) $request->input('draw', 0);
+        $start = max((int) $request->input('start', 0), 0);
+        $length = (int) $request->input('length', 15);
+        if ($length < 1 || $length > 100) {
+            $length = 15;
+        }
+
+        $recordsTotal = $merged->count();
+
+        $keyword = trim((string) $request->input('search.value', ''));
+        if ($keyword !== '') {
+            $needle = mb_strtolower($keyword);
+            $merged = $merged->filter(function ($app) use ($needle) {
+                $haystack = mb_strtolower(implode(' ', array_filter([
+                    (string) $app->veh_req_id,
+                    (string) $app->veh_reg_no,
+                    $app->employee->emp_name ?? '',
+                    (string) ($app->employee->emp_code ?? ''),
+                    $app->vehicle_type ?? '',
+                    $app->status ?? '',
+                ], fn ($v) => $v !== null && $v !== '')));
+
+                return str_contains($haystack, $needle);
+            })->values();
+        }
+
+        $recordsFiltered = $merged->count();
+
+        // Column index → sort key (S.No and Actions do not sort).
+        $sortable = [
+            1 => fn ($a) => $a->veh_req_id,
+            2 => fn ($a) => $a->employee->emp_name ?? '',
+            3 => fn ($a) => $a->vehicle_type ?? '',
+            4 => fn ($a) => $a->veh_reg_no,
+            5 => fn ($a) => $a->vech_card_status,
+            6 => fn ($a) => $a->veh_card_forward_status,
+            7 => fn ($a) => $a->created_date ? \Carbon\Carbon::parse($a->created_date)->timestamp : 0,
+        ];
+        $orderColumn = (int) $request->input('order.0.column', 7);
+        $orderDir = strtolower((string) $request->input('order.0.dir', 'desc'));
+        if (isset($sortable[$orderColumn])) {
+            $merged = $orderDir === 'desc'
+                ? $merged->sortByDesc($sortable[$orderColumn])->values()
+                : $merged->sortBy($sortable[$orderColumn])->values();
+        }
+
+        $page = $length === -1 ? $merged : $merged->slice($start, $length);
+
+        $serial = $start + 1;
+        $data = [];
+        foreach ($page as $app) {
+            [$statusClass, $statusText] = match ((int) $app->vech_card_status) {
+                1 => ['warning', 'Pending'],
+                2 => ['success', 'Approved'],
+                3 => ['danger', 'Rejected'],
+                default => ['secondary', 'Unknown'],
+            };
+            [$forwardClass, $forwardText] = match ((int) $app->veh_card_forward_status) {
+                0 => ['secondary', 'Not Sent'],
+                1 => ['info', 'Forwarded'],
+                2 => ['success', 'Card Ready'],
+                default => ['secondary', '--'],
+            };
+
+            $employeeCell = $app->employee
+                ? '<strong>'.e($app->employee->emp_name).'</strong><br><small class="text-muted">'.e($app->employee->emp_code ?? 'N/A').'</small>'
+                : '<span class="text-muted">--</span>';
+
+            $actions = '<div class="d-flex gap-2">'
+                .'<a href="'.route('admin.security.vehicle_pass.show', encrypt($app->vehicle_tw_pk)).'" class="text-primary" title="View Details">'
+                .'<i class="material-icons material-symbols-rounded" style="font-size:22px;">visibility</i></a>';
+            if ((int) $app->vech_card_status === 1) {
+                $actions .= '<a href="'.route('admin.security.vehicle_pass.edit', encrypt($app->vehicle_tw_pk)).'" class="text-success" title="Edit">'
+                    .'<i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i></a>';
+            }
+            $actions .= '</div>';
+
+            $data[] = [
+                $serial++,
+                '<code class="bg-light text-dark p-1">'.e($app->veh_req_id).'</code>',
+                $employeeCell,
+                $app->vehicleType ? e($app->vehicleType->vehicle_type) : '<span class="text-muted">--</span>',
+                '<strong>'.e($app->veh_reg_no).'</strong>',
+                '<span class="badge bg-'.$statusClass.'">'.$statusText.'</span>',
+                '<span class="badge bg-'.$forwardClass.'">'.$forwardText.'</span>',
+                '<small>'.($app->created_date ? e(\Carbon\Carbon::parse($app->created_date)->format('d-M-Y')) : '--').'</small>',
+                $actions,
+            ];
+        }
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+        ]);
     }
 }

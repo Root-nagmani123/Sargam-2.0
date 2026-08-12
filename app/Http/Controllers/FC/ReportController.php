@@ -1656,8 +1656,10 @@ class ReportController extends Controller
                     $q->whereNull('b.account_no');
                 }
             })
-            ->when($request->filled('search'), function ($q) use ($request, $s1Col) {
-                $s = '%' . $request->search . '%';
+            // DataTables ajax sends `search` as an array (search[value]); the grid applies
+            // that one itself, so only the page's own search box is honoured here.
+            ->when(! is_array($request->input('search')) && $request->filled('search'), function ($q) use ($request, $s1Col) {
+                $s = '%' . $request->input('search') . '%';
                 $q->where(function ($qq) use ($s, $s1Col) {
                     $qq->where('s1.full_name', 'like', $s)
                        ->orWhere('s1.first_name', 'like', $s)
@@ -1675,11 +1677,35 @@ class ReportController extends Controller
             ])
             ->orderBy('s1.full_name');
 
-        $students   = $query->paginate(50)->withQueryString();
+        // Grid is server-side: only the visible page is sent to the browser.
+        if ($request->ajax()) {
+            return \Yajra\DataTables\Facades\DataTables::of($query)
+                ->addIndexColumn()
+                ->addColumn('user_id_cell', fn ($row) => '<code style="font-size:10px">'.e($row->user_id).'</code>')
+                ->editColumn('full_name', fn ($row) => e($row->full_name))
+                ->addColumn('service', fn ($row) => '<span class="badge bg-primary-subtle text-primary" style="font-size:10px;">'.e($row->service_code ?? '—').'</span>')
+                ->editColumn('bank_name', fn ($row) => e($row->bank_name ?? '—'))
+                ->addColumn('ifsc', fn ($row) => '<code style="font-size:10px">'.e($row->ifsc_code ?? '—').'</code>')
+                ->addColumn('account', fn ($row) => '<code style="font-size:10px">'.e($row->account_no ?? '—').'</code>')
+                ->editColumn('account_holder_name', fn ($row) => e($row->account_holder_name ?? '—'))
+                // user_id / full_name are SELECT aliases, so search must target the real columns.
+                ->filterColumn('user_id_cell', fn ($q, $keyword) => $q->where("s1.{$s1Col}", 'like', "%{$keyword}%"))
+                ->filterColumn('full_name', function ($q, $keyword) {
+                    $q->where(function ($qq) use ($keyword) {
+                        $qq->where('s1.full_name', 'like', "%{$keyword}%")
+                            ->orWhere('s1.first_name', 'like', "%{$keyword}%")
+                            ->orWhere('s1.last_name', 'like', "%{$keyword}%");
+                    });
+                })
+                ->rawColumns(['user_id_cell', 'service', 'ifsc', 'account'])
+                ->make(true);
+        }
+
+        $totalStudents = (clone $query)->count();
         $scopedForm = $request->filled('form_id') ? FcForm::find($request->form_id) : null;
         $forms      = FcForm::orderByDesc('id')->get();
 
-        return view('fc.report.bank-details', compact('students', 'forms', 'scopedForm'));
+        return view('fc.report.bank-details', compact('totalStudents', 'forms', 'scopedForm'));
     }
 
     // ── Export to CSV ─────────────────────────────────────────────────

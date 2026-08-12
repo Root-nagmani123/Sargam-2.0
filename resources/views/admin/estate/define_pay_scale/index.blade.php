@@ -21,7 +21,7 @@
             </div>
 
             <div class="table-responsive">
-                <table class="table align-middle mb-0">
+                <table class="table align-middle mb-0" id="payScaleTable">
                     <thead>
                         <tr>
                             <th>S.NO.</th>
@@ -31,31 +31,43 @@
                             <th>Action</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($items as $index => $row)
-                        <tr>
-                            <td>{{ $items->firstItem() + $index }}</td>
-                            <td>{{ $row->salaryGrade ? $row->salaryGrade->display_label_text : '-' }}</td>
-                            <td>{{ $row->unitType ? $row->unitType->name : '-' }}</td>
-                            <td>{{ $row->unitSubType ? $row->unitSubType->name : '-' }}</td>
-                            <td>
-                                <a href="{{ route('admin.estate.define-pay-scale.edit', $row->pk) }}" class="text-primary" title="Edit"><i class="material-icons material-symbols-rounded">edit</i></a>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr><td colspan="5" class="text-center text-muted py-4">No eligibility mapping found. <a href="{{ route('admin.estate.define-pay-scale.create') }}">Add one</a> to define pay scale mapping.</td></tr>
-                        @endforelse
-                    </tbody>
+                    {{-- Rows come from the server-side DataTable (see script below). --}}
+                    <tbody></tbody>
                 </table>
             </div>
-
-            @if($items->hasPages())
-            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 mt-3">
-                <div class="text-muted small">Showing {{ $items->firstItem() }} to {{ $items->lastItem() }} of {{ $items->total() }} entries</div>
-                {{ $items->links() }}
-            </div>
-            @endif
         </div>
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+$(document).ready(function () {
+    // Server-side: search, sort and paging are resolved in SQL.
+    $('#payScaleTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{{ route('admin.estate.define-pay-scale.index') }}",
+            type: 'GET'
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'salary_grade', name: 'salary_grade', orderable: false, searchable: false },
+            { data: 'unit_type', name: 'unit_type', orderable: false, searchable: false },
+            { data: 'unit_sub_type', name: 'unit_sub_type', orderable: false, searchable: false },
+            { data: 'action', name: 'action', orderable: false, searchable: false }
+        ],
+        order: [],
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+        responsive: true,
+        autoWidth: false,
+        language: {
+            processing: 'Loading data…',
+            emptyTable: 'No eligibility mapping found.'
+        }
+    });
+});
+</script>
+@endpush

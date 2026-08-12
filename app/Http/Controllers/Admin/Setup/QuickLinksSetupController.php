@@ -30,8 +30,13 @@ class QuickLinksSetupController extends Controller
     protected function datatable()
     {
         $query = QuickLink::query()
-            ->select(['id', 'label', 'url', 'position', 'target_blank'])
-            ->orderBy('position');
+            ->select(['id', 'label', 'url', 'position', 'target_blank']);
+
+        // Default order only when the grid has not asked for one — DataTables appends its
+        // sort after ours, so a base ORDER BY would win and the clicked header do nothing.
+        if (! \App\Support\DataTableSearchHelper::clientOrdered()) {
+            $query->orderBy('position');
+        }
 
         return DataTables::of($query)
             ->addIndexColumn()

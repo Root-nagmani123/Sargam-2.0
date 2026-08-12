@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 use Illuminate\Http\Request;
+use App\Support\DataTableSearchHelper;
 use App\Services\RoleService;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
@@ -267,7 +268,10 @@ class RoleController extends Controller
      */
     protected function dashboardCardsDatatable(Request $request, array $assignedCardIds)
     {
-        $query = DashboardCard::orderBy('id', 'desc');
+        $query = DashboardCard::query();
+        if (! DataTableSearchHelper::clientOrdered()) {
+            $query->orderBy('id', 'desc');
+        }
 
         $statusFilter = (string) $request->query('status_filter', '');
         if ($statusFilter === 'enabled') {

@@ -37,32 +37,51 @@
 
     <div class="card border-0 shadow-sm" style="border-radius:8px;">
         <div class="card-header bg-white border-bottom py-2 px-3 small fw-semibold">
-            {{ $students->total() }} students
+            {{ $totalStudents }} students
         </div>
         <div class="table-responsive">
-            <table class="table table-hover table-sm mb-0" style="font-size:12px;">
+            <table class="table table-hover table-sm mb-0" style="font-size:12px;" id="bankDetailsTable">
                 <thead class="table-dark">
                     <tr><th class="px-3">#</th><th>User ID</th><th>Full Name</th><th>Service</th><th>Bank Name</th><th>IFSC</th><th>Account No</th><th>Holder Name</th></tr>
                 </thead>
-                <tbody>
-                @forelse($students as $idx => $s)
-                    <tr>
-                        <td class="px-3">{{ $students->firstItem() + $idx }}</td>
-                        <td><code style="font-size:10px">{{ $s->user_id }}</code></td>
-                        <td>{{ $s->full_name }}</td>
-                        <td><span class="badge bg-primary-subtle text-primary" style="font-size:10px;">{{ $s->service_code ?? '—' }}</span></td>
-                        <td>{{ $s->bank_name ?? '—' }}</td>
-                        <td><code style="font-size:10px">{{ $s->ifsc_code ?? '—' }}</code></td>
-                        <td><code style="font-size:10px">{{ $s->account_no ?? '—' }}</code></td>
-                        <td>{{ $s->account_holder_name ?? '—' }}</td>
-                    </tr>
-                @empty
-                    <tr><td colspan="8" class="text-center text-muted py-3">No records found.</td></tr>
-                @endforelse
-                </tbody>
+                {{-- Rows come from the server-side DataTable (see script below). --}}
+                <tbody></tbody>
             </table>
         </div>
-        <div class="card-footer bg-white py-2 px-3">{{ $students->links() }}</div>
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+$(document).ready(function () {
+    // Server-side: search, sort and paging are resolved in SQL. The page's own filter
+    // form submits as a normal GET, so its values ride along in the URL.
+    $('#bankDetailsTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{{ request()->fullUrl() }}",
+            type: 'GET'
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'px-3' },
+            { data: 'user_id_cell', name: 'user_id', orderable: false },
+            { data: 'full_name', name: 'full_name', orderable: false },
+            { data: 'service', name: 'service_code', orderable: false, searchable: false },
+            { data: 'bank_name', name: 'b.bank_name', orderable: false },
+            { data: 'ifsc', name: 'b.ifsc_code', orderable: false },
+            { data: 'account', name: 'b.account_no', orderable: false },
+            { data: 'account_holder_name', name: 'b.account_holder_name', orderable: false }
+        ],
+        order: [],
+        pageLength: 50,
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+        language: {
+            processing: 'Loading data…',
+            emptyTable: 'No records found.'
+        }
+    });
+});
+</script>
+@endpush

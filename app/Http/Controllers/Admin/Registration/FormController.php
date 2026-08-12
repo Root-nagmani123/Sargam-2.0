@@ -62,18 +62,38 @@ class FormController extends Controller
     // New method for inactive forms
     public function inactive(Request $request)
     {
-        $query = DB::table('local_form')
-            ->where('visible', 0) // Only inactive
-            ->orderBy('sortorder');
+        $query = DB::table('local_form')->where('visible', 0); // Only inactive
 
-        if ($request->has('search') && $request->search != '') {
-            $query->where('name', 'like', '%' . $request->search . '%');
+        // Default order only when the grid has not asked for one — DataTables appends its
+        // sort after ours, so a base ORDER BY would win and the clicked header do nothing.
+        if (! \App\Support\DataTableSearchHelper::clientOrdered($request)) {
+            $query->orderBy('sortorder');
         }
 
-        // Get inactive forms
-        $forms = $query->get();
+        // DataTables ajax sends `search` as an array (search[value]); the grid applies
+        // that one itself, so only a plain search param filters here.
+        $search = $request->input('search');
+        if (! is_array($search) && (string) $search !== '') {
+            $query->where('name', 'like', '%' . $search . '%');
+        }
 
-        return view('admin.registration.inactive', compact('forms'));
+        // Grid is server-side: only the visible page is sent to the browser.
+        if ($request->ajax()) {
+            return \Yajra\DataTables\Facades\DataTables::of($query)
+                ->addIndexColumn()
+                ->editColumn('name', fn ($row) => e($row->name))
+                ->editColumn('description', fn ($row) => e($row->description))
+                ->addColumn('edit', fn ($row) => '<a href="'.route('forms.edit', $row->id).'" class="btn btn-sm btn-warning">Edit</a>')
+                ->addColumn('activate', function ($row) {
+                    return '<div class="form-check form-switch">'
+                        .'<input class="form-check-input toggle-visible-switch" type="checkbox" data-id="'.e($row->id).'"'
+                        .($row->visible ? ' checked' : '').'></div>';
+                })
+                ->rawColumns(['edit', 'activate'])
+                ->make(true);
+        }
+
+        return view('admin.registration.inactive');
     }
 
 

@@ -21,41 +21,9 @@
                             <th style="width:110px;">Status</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($employeeGroups as $index => $eg)
-                            <tr data-pk="{{ $eg->pk }}">
-                                <td>{{ $employeeGroups->firstItem() + $index }}</td>
-                                <td>{{ $eg->emp_group_name }}</td>
-                                <td>
-                                    <div class="d-flex gap-2">
-                                        <a href="{{ route('admin.setup.employee_group.edit', encrypt($eg->pk)) }}" class="text-success openEditEmployeeGroup" title="Edit">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i>
-                                        </a>
-                                        <form action="{{ route('admin.setup.employee_group.delete', encrypt($eg->pk)) }}" method="POST" onsubmit="return confirm('Delete this Employee Group?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-link p-0 text-danger" title="Delete"><i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i></button>
-                                        </form>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="form-check form-switch d-inline-block">
-                                             <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                 data-table="employee_group_master" data-column="active_inactive" data-id="{{ $eg->pk }}" {{ $eg->active_inactive == 1 ? 'checked' : '' }}>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="4" class="text-center text-muted">No Employee Groups found.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
+                    {{-- Rows come from the server-side DataTable (see script below). --}}
+                        <tbody></tbody>
                 </table>
-            </div>
-            <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
-                <div class="small text-muted mb-2">Showing {{ $employeeGroups->firstItem() }} to {{ $employeeGroups->lastItem() }} of {{ $employeeGroups->total() }} items</div>
-                <div>{{ $employeeGroups->links('pagination::bootstrap-5') }}</div>
             </div>
         </div>
     </div>
@@ -86,6 +54,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalBody = modalEl.querySelector('.modal-body');
     const modalTitle = modalEl.querySelector('.modal-title');
 
+    // Server-side grid: search, sort and paging are resolved in SQL.
+    const table = $('#employeeGroupTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: { url: "{{ route('admin.setup.employee_group.index') }}", type: 'GET' },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'name', name: 'name' },
+            { data: 'action', name: 'action', orderable: false, searchable: false },
+            { data: 'status', name: 'status', orderable: false, searchable: false }
+        ],
+        order: [],
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+        language: {
+            processing: 'Loading data…',
+            emptyTable: 'No Employee Group found.'
+        }
+    });
+
     function loadForm(url, title){
         modalTitle.textContent = title || 'Employee Group';
         modalBody.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
@@ -101,11 +89,12 @@ document.addEventListener('DOMContentLoaded', () => {
         loadForm(e.currentTarget.getAttribute('href'), 'Create Employee Group');
     });
 
-    document.querySelectorAll('.openEditEmployeeGroup').forEach(link => {
-        link.addEventListener('click', e => {
-            e.preventDefault();
-            loadForm(e.currentTarget.getAttribute('href'), 'Edit Employee Group');
-        });
+    // Delegated: rows are re-rendered by the grid on every draw.
+    document.addEventListener('click', e => {
+        const link = e.target.closest('.openEditEmployeeGroup');
+        if (!link) return;
+        e.preventDefault();
+        loadForm(link.getAttribute('href'), 'Edit Employee Group');
     });
 
     modalEl.addEventListener('submit', function(e){
@@ -122,48 +111,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if(!res.ok){ throw new Error('Save failed'); }
                 const data = await res.json();
-                if(data && data.success){ updateTable(data); bootstrap.Modal.getInstance(modalEl)?.hide(); }
+                if(data && data.success){
+                    // Rows live on the server now, so pull the fresh page.
+                    table.ajax.reload(null, false);
+                    bootstrap.Modal.getInstance(modalEl)?.hide();
+                }
             })
             .catch(()=>{ modalBody.insertAdjacentHTML('afterbegin','<div class="alert alert-danger">Error saving.</div>'); })
             .finally(()=>{ if(submitBtn) submitBtn.disabled = false; });
     });
-
-    function buildEditUrl(encrypted){ return `${window.location.origin}/admin/setup/employee-group/edit/${encodeURIComponent(encrypted)}`; }
-
-    function updateTable(payload){
-        if(!payload || !payload.data) return;
-        const { action, data } = payload;
-        const tbody = document.querySelector('#employeeGroupTable tbody');
-        if(!tbody) return;
-        if(action === 'create'){
-            const newRow = document.createElement('tr');
-            newRow.setAttribute('data-pk', data.pk);
-            newRow.innerHTML = `
-                <td>1</td>
-                <td>${escapeHtml(data.emp_group_name)}</td>
-                <td>
-                    <div class=\"d-flex gap-2\">
-                        <a href=\"${buildEditUrl(data.encrypted_pk)}\" class=\"text-success openEditEmployeeGroup\" title=\"Edit\"><i class=\"material-icons material-symbols-rounded\" style=\"font-size:22px;\">edit</i></a>
-                        <form action=\"${window.location.origin}/admin/setup/employee-group/delete/${encodeURIComponent(data.encrypted_pk)}\" method=\"POST\" onsubmit=\"return confirm('Delete this Employee Group?')\">
-                            <input type=\"hidden\" name=\"_token\" value=\"{{ csrf_token() }}\">
-                            <input type=\"hidden\" name=\"_method\" value=\"DELETE\">
-                            <button type=\"submit\" class=\"btn btn-link p-0 text-danger\" title=\"Delete\"><i class=\"material-icons material-symbols-rounded\" style=\"font-size:22px;\">delete</i></button>
-                        </form>
-                    </div>
-                </td>
-                <td><div class=\"form-check form-switch d-inline-block\"><input class=\"form-check-input status-toggle\" type=\"checkbox\" role=\"switch\" data-table=\"employee_group_master\" data-column=\"active_inactive\" data-id=\"${data.pk}\" checked></div></td>`;
-            tbody.prepend(newRow);
-            reindexSerials(tbody);
-            newRow.querySelector('.openEditEmployeeGroup')?.addEventListener('click', interceptEdit);
-        } else if(action === 'update') {
-            const row = tbody.querySelector(`tr[data-pk='${data.pk}']`);
-            if(row){ row.querySelectorAll('td')[1].textContent = data.emp_group_name; }
-        }
-    }
-
-    function reindexSerials(tbody){ Array.from(tbody.querySelectorAll('tr')).forEach((r,i)=>{ const cell=r.querySelector('td'); if(cell) cell.textContent=i+1; }); }
-    function interceptEdit(e){ e.preventDefault(); loadForm(this.getAttribute('href'),'Edit Employee Group'); }
-    function escapeHtml(str){ return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]); }
 });
 </script>
 @endpush

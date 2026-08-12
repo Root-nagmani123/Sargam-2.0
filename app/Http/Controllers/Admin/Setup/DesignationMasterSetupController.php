@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin\Setup;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Support\DataTableSearchHelper;
+use Yajra\DataTables\Facades\DataTables;
 use App\Models\DesignationMaster;
 use Illuminate\Validation\Rule;
 
@@ -11,8 +13,47 @@ class DesignationMasterSetupController extends Controller
 {
     public function index(Request $request)
     {
-        $designations = DesignationMaster::orderBy('pk','desc')->paginate(10);
-        return view('admin.setup.designation_master.index', compact('designations'));
+        if ($request->ajax()) {
+            return $this->datatable();
+        }
+
+        return view('admin.setup.designation_master.index');
+    }
+
+    /**
+     * Server-side feed for the listing grid (search/sort/paginate happen in SQL).
+     */
+    protected function datatable()
+    {
+        $query = DesignationMaster::query();
+        if (! DataTableSearchHelper::clientOrdered()) {
+            $query->orderBy('pk', 'desc');
+        }
+
+        return DataTables::eloquent($query)
+            ->addIndexColumn()
+            ->addColumn('name', fn ($row) => e($row->designation_name))
+            ->addColumn('action', function ($row) {
+                return '<div class="d-flex gap-2">'
+                    .'<a href="'.route('admin.setup.designation_master.edit', encrypt($row->pk)).'" class="text-success openEditDesignation" title="Edit">'
+                    .'<i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i></a>'
+                    .'<form action="'.route('admin.setup.designation_master.delete', encrypt($row->pk)).'" method="POST" onsubmit="return confirm(\'Delete this Designation?\')">'
+                    .csrf_field().method_field('DELETE')
+                    .'<button type="submit" class="btn btn-link p-0 text-danger" title="Delete">'
+                    .'<i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i></button>'
+                    .'</form></div>';
+            })
+            ->addColumn('status', function ($row) {
+                return '<div class="form-check form-switch d-inline-block">'
+                    .'<input class="form-check-input status-toggle" type="checkbox" role="switch"'
+                    .' data-table="designation_master" data-column="active_inactive" data-id="'.e($row->pk).'"'
+                    .($row->active_inactive == 1 ? ' checked' : '').'></div>';
+            })
+            ->setRowAttr(['data-pk' => fn ($row) => $row->pk])
+            ->filterColumn('name', fn ($q, $keyword) => $q->where('designation_name', 'like', "%{$keyword}%"))
+            ->orderColumn('name', 'designation_name $1')
+            ->rawColumns(['action', 'status'])
+            ->make(true);
     }
 
     public function create(Request $request)

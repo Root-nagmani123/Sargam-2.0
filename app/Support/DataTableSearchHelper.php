@@ -86,4 +86,20 @@ class DataTableSearchHelper
     {
         return strtolower((string) $request->input('order.0.dir', $default)) === 'desc' ? 'desc' : 'asc';
     }
+
+    /**
+     * True when the grid asked for an explicit sort (a header was clicked).
+     *
+     * A listing's own default ordering must be skipped in that case: DataTables' sort is
+     * appended AFTER the base ORDER BY, so a unique base key (e.g. `pk desc`) would decide
+     * the order entirely and the clicked header would appear to do nothing.
+     */
+    public static function clientOrdered(?Request $request = null): bool
+    {
+        $request ??= request();
+
+        $order = $request->input('order');
+
+        return is_array($order) && $order !== [] && isset($order[0]['column']);
+    }
 }

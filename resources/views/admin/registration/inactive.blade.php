@@ -23,31 +23,8 @@
                                     <th>Activate</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                @php $serial = 1; @endphp
-                                @forelse ($forms as $index => $form)
-                                    <tr>
-                                        <td>{{ $serial++ }}</td>
-                                        <td>{{ $form->id }}</td>
-                                        <td>{{ $form->name }}</td>
-                                        <td>{{ $form->description }}</td>
-                                        <td>
-                                            <a href="{{ route('forms.edit', $form->id) }}"
-                                                class="btn btn-sm btn-warning">Edit</a>
-                                        </td>
-                                        <td>
-                                            <div class="form-check form-switch">
-                                                <input class="form-check-input toggle-visible-switch" type="checkbox"
-                                                    data-id="{{ $form->id }}" {{ $form->visible ? 'checked' : '' }}>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="6" class="text-center">No inactive forms found.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
+                            {{-- Rows come from the server-side DataTable (see script below). --}}
+                            <tbody></tbody>
                         </table>
                         <div class="mt-3">
                             {{-- {{ $forms->links() }} --}}
@@ -60,6 +37,33 @@
 
     @push('scripts')
         <script>
+            $(document).ready(function () {
+                // Server-side: search, sort and paging are resolved in SQL.
+                $('#zero_config').DataTable({
+                    processing: true,
+                    serverSide: true,
+                    ajax: {
+                        url: "{{ route('forms.inactive') }}",
+                        type: 'GET'
+                    },
+                    columns: [
+                        { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                        { data: 'id', name: 'id' },
+                        { data: 'name', name: 'name' },
+                        { data: 'description', name: 'description' },
+                        { data: 'edit', name: 'edit', orderable: false, searchable: false },
+                        { data: 'activate', name: 'activate', orderable: false, searchable: false }
+                    ],
+                    order: [],
+                    pageLength: 10,
+                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                    language: {
+                        processing: 'Loading data…',
+                        emptyTable: 'No inactive forms found.'
+                    }
+                });
+            });
+
             $(document).on('change', '.toggle-visible-switch', function() {
                 const id = $(this).data('id');
 

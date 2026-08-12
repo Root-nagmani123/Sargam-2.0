@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\Estate;
 use App\Http\Controllers\Controller;
 use App\Models\UnitSubType;
 use Illuminate\Http\Request;
+use App\Support\DataTableSearchHelper;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -24,7 +25,10 @@ class UnitSubTypeController extends Controller
      */
     protected function datatable()
     {
-        $query = UnitSubType::query()->select(['pk', 'unit_sub_type'])->orderBy('pk', 'desc');
+        $query = UnitSubType::query()->select(['pk', 'unit_sub_type']);
+        if (! DataTableSearchHelper::clientOrdered()) {
+            $query->orderBy('pk', 'desc');
+        }
 
         return DataTables::of($query)
             ->addIndexColumn()

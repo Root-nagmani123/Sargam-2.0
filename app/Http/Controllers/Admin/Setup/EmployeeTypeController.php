@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin\Setup;
 use App\DataTables\Master\EmployeeTypeMasterDataTable;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Support\DataTableSearchHelper;
+use Yajra\DataTables\Facades\DataTables;
 use App\Models\EmployeeTypeMaster;
 use Illuminate\Validation\Rule;
 
@@ -12,8 +14,47 @@ class EmployeeTypeController extends Controller
 {
     public function index(Request $request)
     {
-        $employeeTypes = EmployeeTypeMaster::orderBy('pk','desc')->paginate(10);
-        return view('admin.setup.employee_type.index', compact('employeeTypes'));
+        if ($request->ajax()) {
+            return $this->datatable();
+        }
+
+        return view('admin.setup.employee_type.index');
+    }
+
+    /**
+     * Server-side feed for the listing grid (search/sort/paginate happen in SQL).
+     */
+    protected function datatable()
+    {
+        $query = EmployeeTypeMaster::query();
+        if (! DataTableSearchHelper::clientOrdered()) {
+            $query->orderBy('pk', 'desc');
+        }
+
+        return DataTables::eloquent($query)
+            ->addIndexColumn()
+            ->addColumn('name', fn ($row) => e($row->category_type_name))
+            ->addColumn('action', function ($row) {
+                return '<div class="d-flex gap-2">'
+                    .'<a href="'.route('admin.setup.employee_type.edit', encrypt($row->pk)).'" class="text-success openEditEmployeeType" title="Edit">'
+                    .'<i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i></a>'
+                    .'<form action="'.route('admin.setup.employee_type.delete', encrypt($row->pk)).'" method="POST" onsubmit="return confirm(\'Delete this Employee Type?\')">'
+                    .csrf_field().method_field('DELETE')
+                    .'<button type="submit" class="btn btn-link p-0 text-danger" title="Delete">'
+                    .'<i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i></button>'
+                    .'</form></div>';
+            })
+            ->addColumn('status', function ($row) {
+                return '<div class="form-check form-switch d-inline-block">'
+                    .'<input class="form-check-input status-toggle" type="checkbox" role="switch"'
+                    .' data-table="employee_type_master" data-column="active_inactive" data-id="'.e($row->pk).'"'
+                    .($row->active_inactive == 1 ? ' checked' : '').'></div>';
+            })
+            ->setRowAttr(['data-pk' => fn ($row) => $row->pk])
+            ->filterColumn('name', fn ($q, $keyword) => $q->where('category_type_name', 'like', "%{$keyword}%"))
+            ->orderColumn('name', 'category_type_name $1')
+            ->rawColumns(['action', 'status'])
+            ->make(true);
     }
 
     public function create(Request $request)
