@@ -250,6 +250,7 @@ body.custom-loaded {
 #escalationColumnToggleGrid .colvis-item,
 #rfeColumnToggleGrid .colvis-item,
 #eorColumnToggleGrid .colvis-item,
+#epoColumnToggleGrid .colvis-item,
 #facultyColumnToggleGrid .colvis-item {
     cursor: pointer;
     transition: border-color 0.15s ease, background-color 0.15s ease;
@@ -270,6 +271,7 @@ body.custom-loaded {
 #escalationColumnToggleGrid .colvis-item:hover,
 #rfeColumnToggleGrid .colvis-item:hover,
 #eorColumnToggleGrid .colvis-item:hover,
+#epoColumnToggleGrid .colvis-item:hover,
 #facultyColumnToggleGrid .colvis-item:hover {
     border-color: #004a93 !important;
     background-color: rgba(0, 74, 147, 0.04);
@@ -290,6 +292,7 @@ body.custom-loaded {
 #escalationColumnToggleGrid .colvis-item .form-check-input,
 #rfeColumnToggleGrid .colvis-item .form-check-input,
 #eorColumnToggleGrid .colvis-item .form-check-input,
+#epoColumnToggleGrid .colvis-item .form-check-input,
 #facultyColumnToggleGrid .colvis-item .form-check-input {
     cursor: pointer;
     flex-shrink: 0;
