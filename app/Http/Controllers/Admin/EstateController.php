@@ -6772,12 +6772,10 @@ class EstateController extends Controller
             'edit_reading_pk' => 'nullable|integer|exists:estate_month_reading_details,pk',
         ]);
 
+        // $editReadingPk yahan already validated hai (upar wala guard): sirf tabhi non-null jab submit me
+        // theek wahi ek row ho. Andar dobara request se mat nikalo — warna guard bypass ho jayega.
         $validator->after(function ($v) use ($request, $editReadingPk) {
             $readings = (array) $request->input('readings', []);
-            // Set only when this page was opened via Edit from List Meter Reading: that row is a correction of an
-            // already-saved reading, so the min-baseline rule is skipped for it (other rows still validate).
-            $editReadingPkRaw = $request->input('edit_reading_pk');
-            $editReadingPk = (is_numeric($editReadingPkRaw) && (int) $editReadingPkRaw > 0) ? (int) $editReadingPkRaw : null;
             $selectedPks = [];
             foreach ($readings as $item) {
                 if (is_array($item) && isset($item['selected']) && (string) $item['selected'] === '1' && ! empty($item['pk'])) {
@@ -9750,7 +9748,8 @@ class EstateController extends Controller
                 }
             }
 
-            // Self view me Other/contract allotment ka bill bhi dikhana hai (estate_other_req.email link).
+            // Self view me Other/contract allotment ka bill bhi dikhana hai
+            // (link = estate_other_req.employee_master_emp_id + emp_name; {@see estateSelfOtherLinks()}).
             $selfOtherLinks = $applySelfFilter ? $this->estateSelfOtherLinks() : [];
 
             $ustKey = ($unitSubTypePk !== null && $unitSubTypePk !== '') ? (string) $unitSubTypePk : '';
@@ -11758,7 +11757,7 @@ class EstateController extends Controller
             ->whereRaw('TRIM(CAST(emro.bill_year AS CHAR)) = ?', [$billYearStr])
             ->where('epo.return_home_status', 0);
         if ($filterByUser) {
-            // Other/contract bills ka link estate_other_req.email hai (wahi jo My Estate Bill use karta hai).
+            // Other/contract bills ka link employee_master_emp_id + emp_name hai (wahi jo My Estate Bill use karta hai).
             $this->applyEstateOtherRequestSelfFilter($otherQ, $currentUserLinks);
         }
         $otherQ = $otherQ->select([
@@ -11996,7 +11995,7 @@ class EstateController extends Controller
             $currentUserId = $user->user_id ?? $user->pk ?? null;
             $employeeIds = getEmployeeIdsForUser($currentUserId);
             $employeeIds = array_filter(array_map('intval', $employeeIds));
-            // Other/contract bills email se link hote hain — My Estate Bill wala hi resolver.
+            // Other/contract bills employee_master_emp_id + emp_name se link hote hain — My Estate Bill wala hi resolver.
             $currentUserLinks = $this->estateSelfOtherLinks();
         }
 
@@ -12006,7 +12005,6 @@ class EstateController extends Controller
         $normalizedBillMonth = $billYearStr . '-' . $billMonthNumPadded;
         $employeeIdsSorted = array_values($employeeIds);
         sort($employeeIdsSorted, SORT_NUMERIC);
-        $currentUserLinksNorm = $currentUserLinks;
 
         $cacheKey = $this->estateBillReportGridCacheKey(
             $isDataTables,
@@ -12014,7 +12012,7 @@ class EstateController extends Controller
             $filterByUser,
             $employeeIdsSorted,
             $currentUserId,
-            $currentUserLinksNorm,
+            $currentUserLinks,
             max(0, (int) $request->get('start', 0)),
             $request->get('length', 10),
             $searchValue,
