@@ -36,11 +36,15 @@ class ItemCategoryMasterExport implements FromCollection, WithColumnWidths, With
     /** Data-row count, captured while streaming the collection (for the meta line). */
     protected int $rowCount = 0;
 
-    public function __construct(?string $search = null, ?string $categoryType = null, ?array $visibleColumns = null)
+    /** Status pill the grid had applied ('active' / 'inactive'), or null for all. */
+    protected ?string $status;
+
+    public function __construct(?string $search = null, ?string $categoryType = null, ?array $visibleColumns = null, ?string $status = null)
     {
         $this->search = ($search !== null && trim($search) !== '') ? trim($search) : null;
         $this->categoryType = ($categoryType !== null && trim($categoryType) !== '') ? trim($categoryType) : null;
         $this->visibleColumns = ($visibleColumns === null || $visibleColumns === []) ? null : array_values($visibleColumns);
+        $this->status = ($status !== null && trim($status) !== '') ? strtolower(trim($status)) : null;
     }
 
     /**
@@ -297,6 +301,11 @@ class ItemCategoryMasterExport implements FromCollection, WithColumnWidths, With
             }
         }
 
+        // The report follows the grid: same status pill as the listing.
+        if ($this->status !== null && Schema::hasColumn('mess_item_categories', 'status')) {
+            $query->where('status', $this->status);
+        }
+
         if ($this->search !== null) {
             $term = $this->search;
             $query->where(function ($q) use ($term) {
@@ -345,6 +354,9 @@ class ItemCategoryMasterExport implements FromCollection, WithColumnWidths, With
         if ($this->categoryType !== null) {
             $types = ItemCategory::categoryTypes();
             $parts[] = 'Type: ' . ($types[$this->categoryType] ?? ucfirst(str_replace('_', ' ', $this->categoryType)));
+        }
+        if ($this->status !== null) {
+            $parts[] = 'Status: ' . ucfirst($this->status);
         }
         if ($this->search !== null) {
             $parts[] = 'Search: ' . $this->search;

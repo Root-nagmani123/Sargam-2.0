@@ -592,6 +592,11 @@
                 var $c = $(this);
                 var title = $c.text().replace(/\s+/g, ' ').trim().toLowerCase();
                 if (title === '' || title === 'action' || title === 'actions') { return; }
+                // A page can mark a header unsortable the same way it would for an
+                // Action column (see looksLikeActionColumn): the client-side page
+                // sorter is what paints the caret on server-side tables, so a
+                // columnDefs `orderable:false` alone cannot suppress it.
+                if ($c.is('.no-sort, .dt-nosort, [data-sargam-no-sort]')) { return; }
                 $c.attr('data-sargam-sort', idx).css('cursor', 'pointer');
                 // reflect the active sort direction (survives header re-clone)
                 if (sortState.col === idx) {

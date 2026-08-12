@@ -279,7 +279,6 @@
                     @endforeach
                     </tbody>
                 </table>
-            @endforeach
             @if(! empty($section['reportData']))
                 <table class="purchase-sale-data">
                     <tbody>

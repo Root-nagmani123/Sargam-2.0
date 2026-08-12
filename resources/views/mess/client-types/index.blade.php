@@ -174,54 +174,61 @@
 
     {{-- Success feedback is rendered as the global green toast — see mess.partials.delete-confirm --}}
 
-    {{-- Download / Print bar (branded server-side exports — see admin.mess.client-types.export) --}}
-    <div class="d-flex justify-content-end gap-2 mb-3">
-        <button type="button" class="btn client-master-export-btn border-0" id="clientDownloadBtn">
-            <i class="material-symbols-rounded">download</i>
-            <span>Download</span>
-        </button>
-        <button type="button" class="btn client-master-export-btn border-0" id="clientPrintBtn">
-            <i class="material-symbols-rounded">print</i>
-            <span>Print</span>
-        </button>
+    {{-- Download / Print, right-aligned above the card. The design shows no status
+         pills here (Sargam 2.0.pdf p17) — the ?status= filter is still served, it
+         simply has no on-screen control. --}}
+    <div class="d-flex flex-wrap align-items-center justify-content-end gap-3 mb-3">
+        <div class="d-flex flex-wrap gap-2 ms-auto">
+            <button type="button" class="btn client-master-export-btn" id="clientDownloadBtn">
+                <i class="material-symbols-rounded">download</i>
+                <span>Download</span>
+            </button>
+            <button type="button" class="btn client-master-export-btn" id="clientPrintBtn">
+                <i class="material-symbols-rounded">print</i>
+                <span>Print</span>
+            </button>
+        </div>
     </div>
 
     <div class="card client-master-card border-0">
         <div class="card-body">
-            {{-- Toolbar: Columns modal trigger + search (the global enhancer relocates the search box here) --}}
-            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3">
-                <button type="button" class="btn programme-dt-btn-columns" id="btnClientColumns"
-                        data-bs-toggle="modal" data-bs-target="#clientColumnVisibilityModal" title="Show / hide columns">
-                    <span>Columns</span>
-                    <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
-                </button>
-                <div class="programme-dt-search" data-dt-search-for="clientTypesTable"></div>
+            {{-- Toolbar: Columns + search, right-aligned. Client Master has no filter
+                 selects in the design (Sargam 2.0.pdf p17). --}}
+            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="btnClientColumns"
+                            data-bs-toggle="modal" data-bs-target="#clientColumnVisibilityModal" title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    @include('mess.partials.search-toggle', ['tableId' => 'clientTypesTable'])
+                </div>
             </div>
 
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    <table id="clientTypesTable" class="table table-hover programme-dt-table align-middle mb-0 w-100">
+                        <thead>
+                            <tr>
+                                <th scope="col">Client Types</th>
+                                <th scope="col">Client Name</th>
+                                <th scope="col" class="no-sort">Status</th>
+                                <th scope="col">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
                 </div>
-            @endif
-<hr class="my-2">
-            <div class="table-responsive">
-                <table id="clientTypesTable" class="table  align-middle w-100">
-                    <thead>
-                        <tr>
-                            <th>Client Types</th>
-                            <th>Client Name</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
             </div>
-        </div>
+
+            {{-- Footer: pagination (left) + "Showing [N] of M items" (right), populated by the global enhancer --}}
+            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3" data-dt-footer-for="clientTypesTable"></div>
         </div>
     </div>
 </div>
+
+{{-- Column Visibility Modal (programme/attendance style) --}}
+@include('mess.partials.column-visibility', ['tableId' => 'clientTypesTable', 'key' => 'client'])
 
 {{-- Create Client Type Modal --}}
 <div class="modal fade client-modal" id="createClientTypeModal" tabindex="-1" aria-labelledby="createClientTypeModalLabel" aria-hidden="true">
@@ -324,6 +331,9 @@
     </div>
 </div>
 
+{{-- Branded delete-confirmation dialog + global success toast --}}
+@include('mess.partials.delete-confirm')
+
 @include('components.mess-master-datatables', [
     'tableId' => 'clientTypesTable',
     'searchPlaceholder' => 'Search client types...',
@@ -332,6 +342,14 @@
     'infoLabel' => 'client types',
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.client-types.index'),
+    'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
+    'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+    'serverSideColumnDefs' => [
+        ['className' => 'text-center', 'targets' => [2, 3]],
+        // Status carries no sort caret in the design — the pills above the card
+        // are how you slice by status here.
+        ['orderable' => false, 'targets' => [2]],
+    ],
 ])
 @push('scripts')
 {{-- Download / Print → branded server-side report (admin.mess.client-types.export). --}}
@@ -358,63 +376,6 @@
     if (downloadBtn) downloadBtn.addEventListener('click', function () { window.location.href = buildUrl('excel', false); });
     var printBtn = document.getElementById('clientPrintBtn');
     if (printBtn) printBtn.addEventListener('click', function () { window.open(buildUrl('pdf', true), '_blank'); });
-})();
-</script>
-{{-- Column Visibility modal ⇄ mess Column-manager bridge --}}
-<script>
-(function () {
-    var TABLE_ID = 'clientTypesTable';
-    var $ = window.jQuery;
-    var grid = document.getElementById('clientColumnToggleGrid');
-    var modalEl = document.getElementById('clientColumnVisibilityModal');
-    if (!$ || !grid || !modalEl) return;
-
-    function getMgr() {
-        return (window.MessColumnManager && typeof window.MessColumnManager.get === 'function')
-            ? window.MessColumnManager.get(TABLE_ID) : null;
-    }
-    function visibleCount(mgr) {
-        return mgr.baseColumns.filter(function (c) { return mgr.state.visibility[String(c.index)] !== false; }).length;
-    }
-    function buildGrid() {
-        var mgr = getMgr();
-        if (!mgr || !mgr.baseColumns || !mgr.baseColumns.length) return false;
-        grid.innerHTML = '';
-        (mgr.state.order || []).forEach(function (idx) {
-            var col = mgr.baseColumns.filter(function (c) { return c.index === idx; })[0];
-            if (!col) return;
-            var isVisible = mgr.state.visibility[String(col.index)] !== false;
-            var inputId = 'clientcolvis_' + col.index;
-            var cell = document.createElement('div');
-            cell.className = 'col-12 col-sm-6 col-md-4';
-            var label = document.createElement('label');
-            label.className = 'colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100';
-            label.setAttribute('for', inputId);
-            var cb = document.createElement('input');
-            cb.type = 'checkbox'; cb.className = 'form-check-input m-0'; cb.id = inputId; cb.checked = isVisible;
-            if (col.locked) cb.disabled = true;
-            cb.addEventListener('change', function () {
-                var m = getMgr(); if (!m) return;
-                if (!cb.checked && visibleCount(m) <= 1) {
-                    cb.checked = true;
-                    window.alert('At least one column must remain visible.');
-                    return;
-                }
-                m.state.visibility[String(col.index)] = cb.checked;
-                m.saveState();
-                m.apply();
-            });
-            var span = document.createElement('span'); span.textContent = col.label;
-            label.appendChild(cb); label.appendChild(span);
-            cell.appendChild(label); grid.appendChild(cell);
-        });
-        return true;
-    }
-    modalEl.addEventListener('show.bs.modal', function () {
-        if (buildGrid()) return;
-        var tries = 0;
-        var timer = setInterval(function () { if (buildGrid() || ++tries > 20) clearInterval(timer); }, 100);
-    });
 })();
 </script>
 {{-- Edit modal population + reopen-on-validation-error --}}

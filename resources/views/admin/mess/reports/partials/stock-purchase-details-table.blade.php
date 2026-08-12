@@ -14,18 +14,20 @@
         Use PDF/Excel for full export; print uses current page only.
     </p>
 @endif
+<div class="programme-dt-panel">
 <div class="table-responsive stock-purchase-table-wrapper" role="region" aria-label="Stock purchase table" tabindex="0">
-    <table class="table align-middle mb-0 stock-purchase-table" style="width:100%;">
+    <table class="table table-hover align-middle mb-0 stock-purchase-table" style="width:100%;">
         <thead class="stock-purchase-thead">
+            {{-- data-col tags drive the Columns modal on stock-purchase-details.blade.php --}}
             <tr>
                 @include('admin.mess.reports.partials.report-sno-th', ['class' => 'spr-th'])
                 <th class="spr-th">Item</th>
-                <th class="spr-th">Item Code</th>
-                <th class="spr-th text-end">Unit</th>
+                <th class="spr-th" data-col="code">Item Code</th>
+                <th class="spr-th text-end" data-col="unit">Unit</th>
                 <th class="spr-th text-end">Quantity</th>
-                <th class="spr-th text-end">Rate</th>
-                <th class="spr-th text-end">Tax %</th>
-                <th class="spr-th text-end">Tax Amount</th>
+                <th class="spr-th text-end" data-col="rate">Rate</th>
+                <th class="spr-th text-end" data-col="taxpc">Tax %</th>
+                <th class="spr-th text-end" data-col="taxamt">Tax Amount</th>
                 <th class="spr-th text-end">Total</th>
             </tr>
         </thead>
@@ -61,12 +63,12 @@
                 <tr class="spr-item-row">
                     <td class="text-center text-body-secondary small mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['start' => $row['line_no'], 'index' => 0])</td>
                     <td class="fw-medium">{{ $row['item_name'] }}</td>
-                    <td class="text-body-secondary">{{ $row['item_code'] }}</td>
-                    <td class="text-end text-body-secondary">{{ $row['unit'] }}</td>
+                    <td class="text-body-secondary" data-col="code">{{ $row['item_code'] }}</td>
+                    <td class="text-end text-body-secondary" data-col="unit">{{ $row['unit'] }}</td>
                     <td class="text-end spr-num">{{ number_format($row['qty'], 2) }}</td>
-                    <td class="text-end spr-num">₹{{ number_format($row['rate'], 1) }}</td>
-                    <td class="text-end spr-num">{{ number_format($row['tax_percent'], 2) }}%</td>
-                    <td class="text-end spr-num">₹{{ number_format($row['tax_amount'], 2) }}</td>
+                    <td class="text-end spr-num" data-col="rate">₹{{ number_format($row['rate'], 1) }}</td>
+                    <td class="text-end spr-num" data-col="taxpc">{{ number_format($row['tax_percent'], 2) }}%</td>
+                    <td class="text-end spr-num" data-col="taxamt">₹{{ number_format($row['tax_amount'], 2) }}</td>
                     <td class="text-end spr-num fw-semibold">₹{{ number_format($row['total'], 2) }}</td>
                 </tr>
             @empty
@@ -97,6 +99,7 @@
             @endif
         </tbody>
     </table>
+</div>
 </div>
 @if(isset($reportPage) && $reportPage->hasPages())
     <div class="ssr-pagination-bar px-3 py-3 border-top bg-white rounded-bottom-3">

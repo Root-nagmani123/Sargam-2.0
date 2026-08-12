@@ -5,6 +5,7 @@ namespace App\Exports;
 use App\Models\Mess\ItemCategory;
 use App\Models\Mess\ItemSubcategory;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 use Maatwebsite\Excel\Concerns\{FromCollection, WithColumnWidths, WithEvents, WithTitle};
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
@@ -34,11 +35,15 @@ class ItemSubcategoryMasterExport implements FromCollection, WithColumnWidths, W
 
     protected int $rowCount = 0;
 
-    public function __construct(?string $search = null, ?string $categoryId = null, ?array $visibleColumns = null)
+    /** Status pill the grid had applied ('active' / 'inactive'), or null for all. */
+    protected ?string $status;
+
+    public function __construct(?string $search = null, ?string $categoryId = null, ?array $visibleColumns = null, ?string $status = null)
     {
         $this->search = ($search !== null && trim($search) !== '') ? trim($search) : null;
         $this->categoryId = ($categoryId !== null && trim((string) $categoryId) !== '') ? trim((string) $categoryId) : null;
         $this->visibleColumns = ($visibleColumns === null || $visibleColumns === []) ? null : array_values($visibleColumns);
+        $this->status = ($status !== null && trim($status) !== '') ? strtolower(trim($status)) : null;
     }
 
     /**
@@ -275,6 +280,11 @@ class ItemSubcategoryMasterExport implements FromCollection, WithColumnWidths, W
             }
         }
 
+        // The report follows the grid: same status pill as the listing.
+        if ($this->status !== null && Schema::hasColumn('mess_item_subcategories', 'status')) {
+            $query->where('status', $this->status);
+        }
+
         if ($this->search !== null) {
             $term = $this->search;
             $nameCol = ItemSubcategory::displayNameColumnForQuery();
@@ -322,6 +332,11 @@ class ItemSubcategoryMasterExport implements FromCollection, WithColumnWidths, W
         ];
     }
 
+    public function filterLine(): string
+    {
+        return $this->exportFilterLine();
+    }
+
     private function exportFilterLine(): string
     {
         $parts = [];
@@ -330,6 +345,9 @@ class ItemSubcategoryMasterExport implements FromCollection, WithColumnWidths, W
             if ($cat) {
                 $parts[] = 'Category: ' . $cat->category_name;
             }
+        }
+        if ($this->status !== null) {
+            $parts[] = 'Status: ' . ucfirst($this->status);
         }
         if ($this->search !== null) {
             $parts[] = 'Search: ' . $this->search;

@@ -191,16 +191,20 @@
 
     {{-- Success feedback is rendered as the global green toast — see mess.partials.delete-confirm --}}
 
-    {{-- Download / Print bar (branded server-side exports — see admin.mess.itemcategories.export) --}}
-    <div class="d-flex justify-content-end gap-2 mb-3">
-        <button type="button" class="btn itemcat-master-export-btn border-0" id="itemcatDownloadBtn">
-            <i class="material-symbols-rounded">download</i>
-            <span>Download</span>
-        </button>
-        <button type="button" class="btn itemcat-master-export-btn border-0" id="itemcatPrintBtn">
-            <i class="material-symbols-rounded">print</i>
-            <span>Print</span>
-        </button>
+    {{-- Download / Print, right-aligned above the card. The design shows no status
+         pills here (Sargam 2.0.pdf p11) — the ?status= filter is still served, it
+         simply has no on-screen control. --}}
+    <div class="d-flex flex-wrap align-items-center justify-content-end gap-3 mb-3">
+        <div class="d-flex flex-wrap gap-2 ms-auto">
+            <button type="button" class="btn itemcat-master-export-btn" id="itemcatDownloadBtn">
+                <i class="material-symbols-rounded">download</i>
+                <span>Download</span>
+            </button>
+            <button type="button" class="btn itemcat-master-export-btn" id="itemcatPrintBtn">
+                <i class="material-symbols-rounded">print</i>
+                <span>Print</span>
+            </button>
+        </div>
     </div>
 
     <div class="card itemcat-master-card border-0">
@@ -219,7 +223,12 @@
                             @endforeach
                         </select>
                     </div>
-                    <a href="{{ route('admin.mess.itemcategories.index') }}" class="btn programme-dt-btn-reset d-inline-flex align-items-center justify-content-center">Reset</a>
+                    {{-- An <a>, not a button: it also has to clear the server-side
+                         category_type filter, which only a fresh GET can do. --}}
+                    <a href="{{ route('admin.mess.itemcategories.index') }}"
+                       class="btn programme-dt-btn-reset d-inline-flex align-items-center justify-content-center {{ request()->hasAny(['category_type', 'status']) ? '' : 'd-none' }}"
+                       data-mess-remove-filter="itemCategoriesTable"
+                       data-mess-filter-server="{{ filled($selectedCategoryType) ? '1' : '0' }}">Remove Filter</a>
                 </form>
 
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
@@ -228,28 +237,35 @@
                         <span>Columns</span>
                         <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
-                    <div class="programme-dt-search" data-dt-search-for="itemCategoriesTable"></div>
+                    @include('mess.partials.search-toggle', ['tableId' => 'itemCategoriesTable'])
                 </div>
             </div>
 
-            <div class="table-responsive">
-                <table id="itemCategoriesTable" class="table align-middle w-100">
-                    <thead>
-                        <tr>
-                            <th>Category Name</th>
-                            <th>Category Type</th>
-                            <th>Item Category Description</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    <table id="itemCategoriesTable" class="table table-hover programme-dt-table align-middle mb-0 w-100">
+                        <thead>
+                            <tr>
+                                <th scope="col">Category Name</th>
+                                <th scope="col">Category Type</th>
+                                <th scope="col">Item Category Description</th>
+                                <th scope="col" class="no-sort">Status</th>
+                                <th scope="col">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
-        </div>
+
+            {{-- Footer: pagination (left) + "Showing [N] of M items" (right), populated by the global enhancer --}}
+            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3" data-dt-footer-for="itemCategoriesTable"></div>
         </div>
     </div>
 </div>
+
+{{-- Column Visibility Modal (programme/attendance style) --}}
+@include('mess.partials.column-visibility', ['tableId' => 'itemCategoriesTable', 'key' => 'itemcat'])
 
 {{-- Create Category Item Modal --}}
 <div class="modal fade itemcat-modal" id="createItemCategoryModal" tabindex="-1" aria-labelledby="createItemCategoryModalLabel" aria-hidden="true">
@@ -354,6 +370,9 @@
     </div>
 </div>
 
+{{-- Branded delete-confirmation dialog + global success toast --}}
+@include('mess.partials.delete-confirm')
+
 @include('components.mess-master-datatables', [
     'tableId' => 'itemCategoriesTable',
     'searchPlaceholder' => 'Search category items...',
@@ -362,8 +381,17 @@
     'infoLabel' => 'category items',
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.itemcategories.index'),
+    'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
+    'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+    'serverSideColumnDefs' => [
+        ['className' => 'text-center', 'targets' => [3, 4]],
+        // Status carries no sort caret in the design — the pills above the card
+        // are how you slice by status here.
+        ['orderable' => false, 'targets' => [3]],
+    ],
 ])
 @push('scripts')
+@include('mess.partials.grid-filters-script')
 {{-- Download / Print → branded server-side report (admin.mess.itemcategories.export).
      Passes the live search term + Category-type filter + chosen columns so the
      report matches what's on screen. Print opens the PDF inline for printing. --}}
@@ -405,87 +433,6 @@
             window.open(buildUrl('pdf', true), '_blank');
         });
     }
-})();
-</script>
-{{-- Column Visibility modal ⇄ mess Column-manager bridge (the manager owns the
-     visibility state; this modal is its programme-styled UI). --}}
-<script>
-(function () {
-    var TABLE_ID = 'itemCategoriesTable';
-    var $ = window.jQuery;
-    var grid = document.getElementById('itemcatColumnToggleGrid');
-    var modalEl = document.getElementById('itemcatColumnVisibilityModal');
-    if (!$ || !grid || !modalEl) return;
-
-    function getMgr() {
-        return (window.MessColumnManager && typeof window.MessColumnManager.get === 'function')
-            ? window.MessColumnManager.get(TABLE_ID)
-            : null;
-    }
-
-    function visibleCount(mgr) {
-        return mgr.baseColumns.filter(function (c) {
-            return mgr.state.visibility[String(c.index)] !== false;
-        }).length;
-    }
-
-    function buildGrid() {
-        var mgr = getMgr();
-        if (!mgr || !mgr.baseColumns || !mgr.baseColumns.length) return false;
-
-        grid.innerHTML = '';
-        (mgr.state.order || []).forEach(function (idx) {
-            var col = mgr.baseColumns.filter(function (c) { return c.index === idx; })[0];
-            if (!col) return;
-
-            var isVisible = mgr.state.visibility[String(col.index)] !== false;
-            var inputId = 'itemcatcolvis_' + col.index;
-
-            var cell = document.createElement('div');
-            cell.className = 'col-12 col-sm-6 col-md-4';
-
-            var label = document.createElement('label');
-            label.className = 'colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100';
-            label.setAttribute('for', inputId);
-
-            var cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.className = 'form-check-input m-0';
-            cb.id = inputId;
-            cb.checked = isVisible;
-            if (col.locked) cb.disabled = true;
-
-            cb.addEventListener('change', function () {
-                var m = getMgr();
-                if (!m) return;
-                if (!cb.checked && visibleCount(m) <= 1) {
-                    cb.checked = true;
-                    window.alert('At least one column must remain visible.');
-                    return;
-                }
-                m.state.visibility[String(col.index)] = cb.checked;
-                m.saveState();
-                m.apply();
-            });
-
-            var span = document.createElement('span');
-            span.textContent = col.label;
-
-            label.appendChild(cb);
-            label.appendChild(span);
-            cell.appendChild(label);
-            grid.appendChild(cell);
-        });
-        return true;
-    }
-
-    modalEl.addEventListener('show.bs.modal', function () {
-        if (buildGrid()) return;
-        var tries = 0;
-        var timer = setInterval(function () {
-            if (buildGrid() || ++tries > 20) clearInterval(timer);
-        }, 100);
-    });
 })();
 </script>
 {{-- Edit modal population --}}

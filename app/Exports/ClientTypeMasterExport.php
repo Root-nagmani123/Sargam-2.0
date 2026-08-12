@@ -31,10 +31,32 @@ class ClientTypeMasterExport implements FromCollection, WithColumnWidths, WithEv
 
     protected int $rowCount = 0;
 
-    public function __construct(?string $search = null, ?array $visibleColumns = null)
+    /** Status pill the grid had applied ('active' / 'inactive'), or null for all. */
+    protected ?string $status;
+
+    public function __construct(?string $search = null, ?array $visibleColumns = null, ?string $status = null)
     {
         $this->search = ($search !== null && trim($search) !== '') ? trim($search) : null;
         $this->visibleColumns = ($visibleColumns === null || $visibleColumns === []) ? null : array_values($visibleColumns);
+        $this->status = ($status !== null && trim($status) !== '') ? strtolower(trim($status)) : null;
+    }
+
+
+    /**
+     * "Applied Filters:   Search: x   |   Status: Active" — shared by the workbook's
+     * meta block and the PDF header so the two never disagree.
+     */
+    public function filterLine(): string
+    {
+        $parts = [];
+        if ($this->search !== null) {
+            $parts[] = 'Search: ' . $this->search;
+        }
+        if ($this->status !== null) {
+            $parts[] = 'Status: ' . ucfirst($this->status);
+        }
+
+        return $parts === [] ? '' : 'Applied Filters:   ' . implode('   |   ', $parts);
     }
 
     /**
@@ -144,8 +166,8 @@ class ClientTypeMasterExport implements FromCollection, WithColumnWidths, WithEv
                 $metaLines[] = ['text' => 'Lal Bahadur Shastri National Academy of Administration, Mussoorie', 'style' => 'inst'];
                 $metaLines[] = ['text' => 'Client Master', 'style' => 'title'];
 
-                if ($this->search !== null) {
-                    $metaLines[] = ['text' => 'Applied Filters:   Search: ' . $this->search, 'style' => 'meta'];
+                if ($this->filterLine() !== '') {
+                    $metaLines[] = ['text' => $this->filterLine(), 'style' => 'meta'];
                 }
 
                 $metaLines[] = [
@@ -259,6 +281,11 @@ class ClientTypeMasterExport implements FromCollection, WithColumnWidths, WithEv
     private function recordsQuery()
     {
         $query = ClientType::query();
+
+        // The report follows the grid: same status pill as the listing.
+        if ($this->status !== null) {
+            $query->where('status', $this->status);
+        }
 
         if ($this->search !== null) {
             $term = $this->search;

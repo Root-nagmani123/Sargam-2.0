@@ -42,10 +42,10 @@
     <x-breadcrum title="Stock Purchase Details Report" :showBack="false"></x-breadcrum>
     {{-- Download / Print bar --}}
     <div class="d-flex justify-content-end gap-2 mb-3 no-print">
-        <a href="{{ route('admin.mess.reports.stock-purchase-details.excel', request()->query()) }}" class="btn spr-export-btn border-0" title="Download (Excel)">
+        <a href="{{ route('admin.mess.reports.stock-purchase-details.excel', request()->query()) }}" class="btn spr-export-btn" title="Download (Excel)">
             <i class="material-symbols-rounded">download</i><span>Download</span>
         </a>
-        <button type="button" class="btn spr-export-btn border-0" onclick="printStockPurchaseTable()" title="Print (or Save as PDF)">
+        <button type="button" class="btn spr-export-btn" onclick="printStockPurchaseTable()" title="Print (or Save as PDF)">
             <i class="material-symbols-rounded">print</i><span>Print</span>
         </button>
     </div>
@@ -80,8 +80,46 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <a href="{{ route('admin.mess.reports.stock-purchase-details') }}" id="sprRemoveFilter" class="programme-dt-btn-reset flex-shrink-0 d-inline-flex align-items-center justify-content-center text-decoration-none" title="Remove all filters">Reset</a>
+                            <a href="{{ route('admin.mess.reports.stock-purchase-details') }}" id="sprRemoveFilter" class="programme-dt-btn-reset flex-shrink-0 d-inline-flex align-items-center justify-content-center text-decoration-none" title="Remove all filters">Remove Filter</a>
+                            {{-- Search sits INSIDE the filter form: sprApplyFilters() serialises the
+                                 form, so the term reaches the server and narrows the whole report
+                                 (line count, grand total and pager included), not just this page. --}}
+                            <input type="search" name="search" id="sprSearch"
+                                   class="form-control spr-search-input {{ filled(request('search')) ? '' : 'd-none' }}"
+                                   placeholder="Search item, vendor, bill…" autocomplete="off" value="{{ request('search') }}">
                         </form>
+                        <div class="d-flex align-items-center gap-2 ms-auto flex-shrink-0">
+                            <button type="button" class="btn programme-dt-btn-columns" id="sprColumnsBtn"
+                                    data-bs-toggle="modal" data-bs-target="#sprColumnsModal" title="Show / hide columns">
+                                <i class="material-symbols-rounded">view_column</i><span>Columns</span>
+                            </button>
+                            @include('mess.partials.search-toggle', ['inputId' => 'sprSearch'])
+                        </div>
+                    </div>
+
+                    {{-- Column visibility modal. The table is hand-written (not a DataTable),
+                         so the toggles hide the tagged header + body cells directly and the
+                         grouped vendor / bill rows have their colspan recomputed. --}}
+                    <div class="modal fade" id="sprColumnsModal" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content rounded-4 border-0 shadow">
+                                <div class="modal-header border-0 pb-2">
+                                    <h5 class="modal-title fw-bold">Column Visibility</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body pt-0">
+                                    <hr class="mt-0">
+                                    <div class="d-flex flex-column gap-2">
+                                        <label class="spr-colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input type="checkbox" class="form-check-input m-0 spr-col-toggle" data-col="code" checked> <span>Item Code</span></label>
+                                        <label class="spr-colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input type="checkbox" class="form-check-input m-0 spr-col-toggle" data-col="unit" checked> <span>Unit</span></label>
+                                        <label class="spr-colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input type="checkbox" class="form-check-input m-0 spr-col-toggle" data-col="rate" checked> <span>Rate</span></label>
+                                        <label class="spr-colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input type="checkbox" class="form-check-input m-0 spr-col-toggle" data-col="taxpc" checked> <span>Tax %</span></label>
+                                        <label class="spr-colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input type="checkbox" class="form-check-input m-0 spr-col-toggle" data-col="taxamt" checked> <span>Tax Amount</span></label>
+                                    </div>
+                                </div>
+                                <div class="modal-footer border-0"><button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button></div>
+                            </div>
+                        </div>
                     </div>
 
                     <div id="stock-purchase-table-wrap">
@@ -149,6 +187,7 @@
                         tableWrap.innerHTML = html;
                         tableWrap.style.opacity = '';
                         hookPagination();
+                        if (typeof window.sprApplyColumnVisibility === 'function') window.sprApplyColumnVisibility();
                     })
                     .catch(function (e) {
                         tableWrap.style.opacity = '';
@@ -177,6 +216,52 @@
             window.addEventListener('popstate', function () {
                 if (tableWrap) ajaxLoad(window.location.href);
             });
+
+            var sprSearchEl = document.getElementById('sprSearch');
+            if (sprSearchEl) {
+                var sprSearchTimer = null;
+                sprSearchEl.addEventListener('input', function () {
+                    if (sprSearchTimer) clearTimeout(sprSearchTimer);
+                    sprSearchTimer = setTimeout(sprApplyFilters, 400);
+                });
+            }
+
+            // Column visibility: hide the tagged cells, then fix up the colspan on the
+            // vendor / bill / total rows so they still span the full table.
+            function sprApplyColumnVisibility() {
+                var hidden = [];
+                document.querySelectorAll('.spr-col-toggle').forEach(function (cb) {
+                    var col = cb.getAttribute('data-col');
+                    if (!cb.checked) hidden.push(col);
+                    document.querySelectorAll('.stock-purchase-report [data-col="' + col + '"]').forEach(function (el) {
+                        el.style.display = cb.checked ? '' : 'none';
+                    });
+                });
+
+                var table = document.querySelector('.stock-purchase-report table.stock-purchase-table');
+                if (!table) return;
+                var headRow = table.querySelector('thead tr');
+                if (!headRow) return;
+                var headCells = Array.prototype.slice.call(headRow.children);
+                table.querySelectorAll('tbody td[colspan]').forEach(function (td) {
+                    if (!td.getAttribute('data-colspan-base')) {
+                        td.setAttribute('data-colspan-base', td.getAttribute('colspan'));
+                    }
+                    // Every spanning cell here starts at column 0, so it loses one
+                    // column for each hidden header cell inside its span.
+                    var base = parseInt(td.getAttribute('data-colspan-base'), 10) || 1;
+                    var gone = headCells.slice(0, base).filter(function (th) {
+                        return th.style.display === 'none';
+                    }).length;
+                    td.setAttribute('colspan', Math.max(1, base - gone));
+                });
+            }
+
+            document.querySelectorAll('.spr-col-toggle').forEach(function (cb) {
+                cb.addEventListener('change', sprApplyColumnVisibility);
+            });
+            // The table is re-rendered by ajaxLoad(), so re-apply after every swap.
+            window.sprApplyColumnVisibility = sprApplyColumnVisibility;
 
             hookPagination();
 
@@ -834,6 +919,12 @@ function printStockPurchaseTable() {
 }
 .stock-purchase-report .spr-toolbar .ts-wrapper,
 .stock-purchase-report .spr-toolbar .form-select { min-width: 11rem; }
+.stock-purchase-report .spr-search-input {
+    min-height: var(--ds-control-h, 40px); height: var(--ds-control-h, 40px); width: 14rem;
+    border-radius: var(--ds-radius, 4px); border: 1px solid var(--ds-line, #e5e7eb); font-size: .85rem;
+}
+.stock-purchase-report .spr-colvis-item { cursor: pointer; transition: border-color .15s ease, background-color .15s ease; }
+.stock-purchase-report .spr-colvis-item:hover { border-color: var(--ds-primary, #004384); background-color: rgba(0, 67, 132, .04); }
 /* Report context strip — clean, token-based (print/PDF export keeps its own template) */
 .stock-purchase-report .spr-report-header {
     background: var(--ds-surface-2, #f8fafc);

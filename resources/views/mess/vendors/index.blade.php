@@ -185,43 +185,57 @@
 @endpush
 
 @section('content')
-<div class="container-fluid">
-    <x-breadcrum title="Mess Stores"></x-breadcrum>
-    <div class="datatables">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="mb-0">Vendor Master</h4>
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal"
-                        data-bs-target="#createVendorModal">
-                        Add Vendor
-                    </button>
-                </div>
+<div class="container-fluid vendor-master-page">
+    <x-breadcrum title="Vendor Master" :showBack="false">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createVendorModal">
+            <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
+            <span>Add Vendor</span>
+        </button>
+    </x-breadcrum>
+
+    {{-- Success feedback is rendered as the global green toast — see mess.partials.delete-confirm --}}
+
+    {{-- Status pills (left) + Download / Print (right) — above the card, per §1 of
+         docs/new-design-index-page.md. Vendors carry no status column, so the row
+         holds the exports alone and stays right-aligned (doc §1, "No status pills"). --}}
+    <div class="d-flex justify-content-end gap-2 mb-3">
+        <button type="button" class="btn vendor-master-export-btn" id="vendorsDownloadBtn">
+            <i class="material-symbols-rounded">download</i>
+            <span>Download</span>
+        </button>
+        <button type="button" class="btn vendor-master-export-btn" id="vendorsPrintBtn">
+            <i class="material-symbols-rounded">print</i>
+            <span>Print</span>
+        </button>
+    </div>
 
     <div class="card vendor-master-card border-0">
         <div class="card-body">
-            {{-- Toolbar: Columns modal trigger + search (the global enhancer relocates the search box here) --}}
-            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3">
-                <button type="button" class="btn programme-dt-btn-columns" id="btnVendorsColumns"
-                        data-bs-toggle="modal" data-bs-target="#vendorsColumnVisibilityModal" title="Show / hide columns">
-                    <span>Columns</span>
-                    <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
-                </button>
-                <div class="programme-dt-search" data-dt-search-for="vendorsTable"></div>
+            {{-- Toolbar: Columns + search, right-aligned. Vendor Master has no filter
+                 selects in the design (Sargam 2.0.pdf p8). --}}
+            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="btnVendorsColumns"
+                            data-bs-toggle="modal" data-bs-target="#vendorsColumnVisibilityModal" title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    @include('mess.partials.search-toggle', ['tableId' => 'vendorsTable'])
+                </div>
             </div>
 
             <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <table id="vendorsTable" class="table programme-dt-table align-middle w-100 mb-0">
+                    <table id="vendorsTable" class="table table-hover programme-dt-table align-middle w-100 mb-0">
                         <thead>
                             <tr>
-                                <th>S. No.</th>
-                                <th>Vendor Name</th>
-                                <th>Email</th>
-                                <th>Contact Person</th>
-                                <th>Phone</th>
-                                <th>Address</th>
-                                <th>Action</th>
+                                <th scope="col">S. No.</th>
+                                <th scope="col">Vendor Name</th>
+                                <th scope="col">Email</th>
+                                <th scope="col">Contact Person</th>
+                                <th scope="col">Phone</th>
+                                <th scope="col">Address</th>
+                                <th scope="col">Action</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -234,6 +248,9 @@
         </div>
     </div>
 </div>
+
+{{-- Column Visibility Modal (programme/attendance style) --}}
+@include('mess.partials.column-visibility', ['tableId' => 'vendorsTable', 'key' => 'vendors'])
 
 {{-- Create Vendor Modal --}}
 <div class="modal fade vendor-modal" id="createVendorModal" tabindex="-1" aria-labelledby="createVendorModalLabel"
@@ -513,16 +530,65 @@
         </div>
     </div>
 </div>
+{{-- Branded delete-confirmation dialog + global success toast --}}
+@include('mess.partials.delete-confirm')
+
 @include('components.mess-master-datatables', [
     'tableId' => 'vendorsTable',
     'searchPlaceholder' => 'Search vendors...',
     'orderColumn' => 0,
-    'actionColumnIndex' => 5,
+    'orderDir' => 'desc',
+    'actionColumnIndex' => 6,
     'infoLabel' => 'vendors',
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.vendors.index'),
+    'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
+    'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+    'serverSideColumnDefs' => [
+        ['className' => 'text-center', 'targets' => [6]],
+    ],
 ])
 @push('scripts')
+{{-- Download / Print → branded server-side report (admin.mess.vendors.export).
+     Passes the live search term + the Column-Visibility-chosen columns so the
+     report matches what's on screen. Print opens the PDF inline for printing. --}}
+<script>
+(function () {
+    var TABLE_ID = 'vendorsTable';
+    var BASE = @json(route('admin.mess.vendors.export'));
+    var $ = window.jQuery;
+
+    function buildUrl(format, inline) {
+        var params = ['format=' + format];
+
+        var dt = ($ && $.fn.DataTable && $.fn.DataTable.isDataTable('#' + TABLE_ID))
+            ? $('#' + TABLE_ID).DataTable() : null;
+        var search = dt ? dt.search() : '';
+        if (search) params.push('search=' + encodeURIComponent(search));
+
+        var cols = (window.MessColumnManager && typeof window.MessColumnManager.resolveExportIndexes === 'function')
+            ? window.MessColumnManager.resolveExportIndexes(TABLE_ID) : null;
+        if (cols && cols.length) params.push('columns=' + encodeURIComponent(cols.join(',')));
+
+        if (inline) params.push('inline=1');
+        return BASE + '?' + params.join('&');
+    }
+
+    var downloadBtn = document.getElementById('vendorsDownloadBtn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', function () {
+            window.location.href = buildUrl('excel', false);
+        });
+    }
+
+    var printBtn = document.getElementById('vendorsPrintBtn');
+    if (printBtn) {
+        printBtn.addEventListener('click', function () {
+            window.open(buildUrl('pdf', true), '_blank');
+        });
+    }
+})();
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Validation rules (must match VendorController)

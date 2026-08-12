@@ -160,45 +160,70 @@
 @endpush
 
 @section('content')
-<div class="container-fluid">
-    <x-breadcrum title="Sub Store Master"></x-breadcrum>
-    <div class="datatables">
-        <div class="card border-0 shadow-sm rounded-3">
-            <div class="card-header border-0 bg-body-tertiary d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div>
-                    <h4 class="mb-0 fw-semibold">Sub Store Master</h4>
-                    <p class="mb-0 text-muted small">Manage all mess sub stores in one place.</p>
+<div class="container-fluid substore-master-page">
+    <x-breadcrum title="Sub Store Master" :showBack="false">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createSubStoreModal">
+            <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
+            <span>Add Sub Store</span>
+        </button>
+    </x-breadcrum>
+
+    {{-- Success feedback is rendered as the global green toast — see mess.partials.delete-confirm --}}
+
+    {{-- Download / Print, right-aligned above the card. The design shows no status
+         pills here (Sargam 2.0.pdf p20) — the ?status= filter is still served, it
+         simply has no on-screen control. --}}
+    <div class="d-flex flex-wrap align-items-center justify-content-end gap-3 mb-3">
+        <div class="d-flex flex-wrap gap-2 ms-auto">
+            <button type="button" class="btn substore-master-export-btn" id="substoreDownloadBtn">
+                <i class="material-symbols-rounded">download</i>
+                <span>Download</span>
+            </button>
+            <button type="button" class="btn substore-master-export-btn" id="substorePrintBtn">
+                <i class="material-symbols-rounded">print</i>
+                <span>Print</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="card substore-master-card border-0">
+        <div class="card-body">
+            {{-- Toolbar: Columns + search, right-aligned. Sub Store Master has no filter
+                 selects in the design (Sargam 2.0.pdf p20). --}}
+            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="btnSubstoreColumns"
+                            data-bs-toggle="modal" data-bs-target="#substoreColumnVisibilityModal" title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    @include('mess.partials.search-toggle', ['tableId' => 'subStoresTable'])
                 </div>
-                <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createSubStoreModal">
-                    <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
-                    <span>Add Sub Store</span>
-                </button>
-                <div class="programme-dt-search" data-dt-search-for="subStoresTable"></div>
             </div>
 
-            <div class="card-body">
-                @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
-                        {{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                @endif
-
-            <div class="table-responsive">
-                <table id="subStoresTable" class="table  align-middle w-100">
-                    <thead>
-                        <tr>
-                            <th>Sub Store Name</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    <table id="subStoresTable" class="table table-hover programme-dt-table align-middle mb-0 w-100">
+                        <thead>
+                            <tr>
+                                <th scope="col">Sub Store Name</th>
+                                <th scope="col" class="no-sort">Status</th>
+                                <th scope="col">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
+
+            {{-- Footer: pagination (left) + "Showing [N] of M items" (right), populated by the global enhancer --}}
+            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3" data-dt-footer-for="subStoresTable"></div>
         </div>
     </div>
 </div>
+
+{{-- Column Visibility Modal (programme/attendance style) --}}
+@include('mess.partials.column-visibility', ['tableId' => 'subStoresTable', 'key' => 'substore'])
 
 {{-- Create Sub Store Modal --}}
 <div class="modal fade substore-modal" id="createSubStoreModal" tabindex="-1" aria-labelledby="createSubStoreModalLabel" aria-hidden="true">
@@ -273,6 +298,9 @@
     </div>
 </div>
 
+{{-- Branded delete-confirmation dialog + global success toast --}}
+@include('mess.partials.delete-confirm')
+
 @include('components.mess-master-datatables', [
     'tableId' => 'subStoresTable',
     'searchPlaceholder' => 'Search sub stores...',
@@ -281,6 +309,14 @@
     'infoLabel' => 'sub stores',
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.sub-stores.index'),
+    'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
+    'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+    'serverSideColumnDefs' => [
+        ['className' => 'text-center', 'targets' => [1, 2]],
+        // Status carries no sort caret in the design — the pills above the card
+        // are how you slice by status here.
+        ['orderable' => false, 'targets' => [1]],
+    ],
 ])
 @push('scripts')
 {{-- Download / Print → branded server-side report (admin.mess.sub-stores.export). --}}
@@ -307,63 +343,6 @@
     if (downloadBtn) downloadBtn.addEventListener('click', function () { window.location.href = buildUrl('excel', false); });
     var printBtn = document.getElementById('substorePrintBtn');
     if (printBtn) printBtn.addEventListener('click', function () { window.open(buildUrl('pdf', true), '_blank'); });
-})();
-</script>
-{{-- Column Visibility modal ⇄ mess Column-manager bridge --}}
-<script>
-(function () {
-    var TABLE_ID = 'subStoresTable';
-    var $ = window.jQuery;
-    var grid = document.getElementById('substoreColumnToggleGrid');
-    var modalEl = document.getElementById('substoreColumnVisibilityModal');
-    if (!$ || !grid || !modalEl) return;
-
-    function getMgr() {
-        return (window.MessColumnManager && typeof window.MessColumnManager.get === 'function')
-            ? window.MessColumnManager.get(TABLE_ID) : null;
-    }
-    function visibleCount(mgr) {
-        return mgr.baseColumns.filter(function (c) { return mgr.state.visibility[String(c.index)] !== false; }).length;
-    }
-    function buildGrid() {
-        var mgr = getMgr();
-        if (!mgr || !mgr.baseColumns || !mgr.baseColumns.length) return false;
-        grid.innerHTML = '';
-        (mgr.state.order || []).forEach(function (idx) {
-            var col = mgr.baseColumns.filter(function (c) { return c.index === idx; })[0];
-            if (!col) return;
-            var isVisible = mgr.state.visibility[String(col.index)] !== false;
-            var inputId = 'substorecolvis_' + col.index;
-            var cell = document.createElement('div');
-            cell.className = 'col-12 col-sm-6 col-md-4';
-            var label = document.createElement('label');
-            label.className = 'colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100';
-            label.setAttribute('for', inputId);
-            var cb = document.createElement('input');
-            cb.type = 'checkbox'; cb.className = 'form-check-input m-0'; cb.id = inputId; cb.checked = isVisible;
-            if (col.locked) cb.disabled = true;
-            cb.addEventListener('change', function () {
-                var m = getMgr(); if (!m) return;
-                if (!cb.checked && visibleCount(m) <= 1) {
-                    cb.checked = true;
-                    window.alert('At least one column must remain visible.');
-                    return;
-                }
-                m.state.visibility[String(col.index)] = cb.checked;
-                m.saveState();
-                m.apply();
-            });
-            var span = document.createElement('span'); span.textContent = col.label;
-            label.appendChild(cb); label.appendChild(span);
-            cell.appendChild(label); grid.appendChild(cell);
-        });
-        return true;
-    }
-    modalEl.addEventListener('show.bs.modal', function () {
-        if (buildGrid()) return;
-        var tries = 0;
-        var timer = setInterval(function () { if (buildGrid() || ++tries > 20) clearInterval(timer); }, 100);
-    });
 })();
 </script>
 {{-- Edit modal population --}}

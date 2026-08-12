@@ -47,21 +47,7 @@
        the underlying state engine that keeps Download/Print column-sync correct. */
     .store-master-page .mess-col-manager-dropdown { display: none !important; }
 
-    /* Column Visibility modal grid tiles (mirrors programme / attendance). */
-    #storesColumnToggleGrid .colvis-item {
-        cursor: pointer;
-        transition: border-color 0.15s ease, background-color 0.15s ease;
-    }
-
-    #storesColumnToggleGrid .colvis-item:hover {
-        border-color: var(--ds-primary, #004a93) !important;
-        background-color: rgba(0, 74, 147, 0.04);
-    }
-
-    #storesColumnToggleGrid .colvis-item .form-check-input {
-        cursor: pointer;
-        flex-shrink: 0;
-    }
+    {{-- Column Visibility tile styling now ships with mess.partials.column-visibility. --}}
 
     /* Store name secondary line (code) */
     .store-master-page .store-name-primary { font-weight: 600; color: var(--ds-ink, #1f2937); }
@@ -186,67 +172,46 @@
 
     {{-- Success feedback is rendered as the global green toast — see mess.partials.delete-confirm --}}
 
-    {{-- Status pills (left) + Download / Print (right) — above the card, per §1 of
-         docs/new-design-index-page.md. The pills are this grid's only filter:
-         Store::storeTypes() holds a single value, so a type select would be dead UI. --}}
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0"
-            role="group" aria-label="Filter stores by status">
-            @foreach(['' => 'All', 'active' => 'Active', 'inactive' => 'Inactive'] as $value => $label)
-                @php $isOn = (string) request('status', '') === (string) $value; @endphp
-                <li class="nav-item" role="presentation">
-                    <button type="button"
-                            class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $isOn ? 'active' : '' }}"
-                            data-store-status="{{ $value }}"
-                            aria-pressed="{{ $isOn ? 'true' : 'false' }}"
-                            @if($isOn) aria-current="true" @endif>{{ $label }}</button>
-                </li>
-            @endforeach
-        </ul>
-
-        <div class="d-flex flex-wrap gap-2">
-        <button type="button" class="btn store-master-export-btn border-0" id="storesDownloadBtn">
+    {{-- Download / Print, right-aligned above the card. The design shows no status
+         pills here (Sargam 2.0.pdf p4) — the ?status= filter is still served, it
+         simply has no on-screen control. --}}
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
+        <button type="button" class="btn store-master-export-btn" id="storesDownloadBtn">
             <i class="material-symbols-rounded">download</i>
             <span>Download</span>
         </button>
-        <button type="button" class="btn store-master-export-btn border-0" id="storesPrintBtn">
+        <button type="button" class="btn store-master-export-btn" id="storesPrintBtn">
             <i class="material-symbols-rounded">print</i>
             <span>Print</span>
         </button>
-        </div>
     </div>
 
     <div class="card store-master-card border-0">
         <div class="card-body">
-            {{-- Toolbar: reset on the left, Columns + search on the right (§2).
-                 The global enhancer relocates DataTables' own search box into the slot. --}}
-            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-3 programme-dt-toolbar">
-                <div class="d-flex flex-wrap align-items-center gap-3">
-                    <button type="button" class="btn programme-dt-btn-reset {{ request('status') ? '' : 'd-none' }}"
-                            id="storesResetFilters">Reset Filters</button>
-                </div>
-
+            {{-- Toolbar: Columns + search, right-aligned. Store Master has no filter
+                 selects in the design (Sargam 2.0.pdf p4). --}}
+            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3 programme-dt-toolbar">
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
                     <button type="button" class="btn programme-dt-btn-columns" id="btnStoresColumns"
                             data-bs-toggle="modal" data-bs-target="#storesColumnVisibilityModal" title="Show / hide columns">
                         <span>Columns</span>
                         <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
-                    <div class="programme-dt-search" data-dt-search-for="storesTable"></div>
+                    @include('mess.partials.search-toggle', ['tableId' => 'storesTable'])
                 </div>
             </div>
 
             <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <table id="storesTable" class="table programme-dt-table text-nowrap align-middle mb-0 w-100">
+                    <table id="storesTable" class="table table-hover programme-dt-table align-middle mb-0 w-100">
                         <thead>
                             <tr>
                                 <th scope="col">S. No.</th>
                                 <th scope="col">Store Name</th>
                                 <th scope="col">Store Type</th>
                                 <th scope="col">Location</th>
-                                <th scope="col" class="text-center">Status</th>
-                                <th scope="col" class="text-center">Action</th>
+                                <th scope="col" class="no-sort">Status</th>
+                                <th scope="col">Action</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -261,23 +226,7 @@
 </div>
 
 {{-- Column Visibility Modal (programme/attendance style) --}}
-<div class="modal fade" id="storesColumnVisibilityModal" tabindex="-1" aria-labelledby="storesColumnVisibilityLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
-            <div class="modal-header border-0 pb-2">
-                <h5 class="modal-title fw-bold" id="storesColumnVisibilityLabel">Column Visibility</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body pt-0">
-                <hr class="mt-0">
-                <div class="row g-3" id="storesColumnToggleGrid"></div>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
+@include('mess.partials.column-visibility', ['tableId' => 'storesTable', 'key' => 'stores'])
 
 {{-- Create Store Modal --}}
 <div class="modal fade store-modal" id="createStoreModal" tabindex="-1" aria-labelledby="createStoreModalLabel" aria-hidden="true">
@@ -409,8 +358,12 @@
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.stores.index'),
     'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
+    'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
     'serverSideColumnDefs' => [
         ['className' => 'text-center', 'targets' => [4, 5]],
+        // Status carries no sort caret in the design — the pills above the card
+        // are how you slice by status here.
+        ['orderable' => false, 'targets' => [4]],
     ],
 ])
 @push('scripts')
@@ -456,139 +409,6 @@
             window.open(buildUrl('pdf', true), '_blank');
         });
     }
-})();
-</script>
-{{-- Status pills + Reset. The mess DataTable component builds its ajax URL from
-     window.location.search, so pushing the pill into the URL and reloading the
-     table is all that is needed — no page navigation, and the filter survives a
-     refresh or a shared link. --}}
-<script>
-(function () {
-    var TABLE_ID = 'storesTable';
-    var $ = window.jQuery;
-
-    function dt() {
-        return ($ && $.fn.DataTable && $.fn.DataTable.isDataTable('#' + TABLE_ID))
-            ? $('#' + TABLE_ID).DataTable() : null;
-    }
-
-    function applyStatus(status) {
-        var url = new URL(window.location.href);
-        if (status) { url.searchParams.set('status', status); }
-        else { url.searchParams.delete('status'); }
-        window.history.replaceState({}, '', url.toString());
-
-        document.querySelectorAll('[data-store-status]').forEach(function (btn) {
-            var on = btn.getAttribute('data-store-status') === status;
-            btn.classList.toggle('active', on);
-            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-            if (on) { btn.setAttribute('aria-current', 'true'); } else { btn.removeAttribute('aria-current'); }
-        });
-
-        var reset = document.getElementById('storesResetFilters');
-        if (reset) { reset.classList.toggle('d-none', !status); }
-
-        var api = dt();
-        if (api) { api.page(0).ajax.reload(null, false); }
-    }
-
-    document.querySelectorAll('[data-store-status]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            applyStatus(btn.getAttribute('data-store-status') || '');
-        });
-    });
-
-    var reset = document.getElementById('storesResetFilters');
-    if (reset) {
-        reset.addEventListener('click', function () {
-            var api = dt();
-            if (api) { api.search(''); }
-            applyStatus('');
-        });
-    }
-})();
-</script>
-{{-- Column Visibility modal ⇄ mess Column-manager bridge.
-     The mess Column-manager owns the visibility state (and drives export column
-     sync); this modal is just its programme-styled UI. --}}
-<script>
-(function () {
-    var TABLE_ID = 'storesTable';
-    var $ = window.jQuery;
-    var grid = document.getElementById('storesColumnToggleGrid');
-    var modalEl = document.getElementById('storesColumnVisibilityModal');
-    if (!$ || !grid || !modalEl) return;
-
-    function getMgr() {
-        return (window.MessColumnManager && typeof window.MessColumnManager.get === 'function')
-            ? window.MessColumnManager.get(TABLE_ID)
-            : null;
-    }
-
-    function visibleCount(mgr) {
-        return mgr.baseColumns.filter(function (c) {
-            return mgr.state.visibility[String(c.index)] !== false;
-        }).length;
-    }
-
-    function buildGrid() {
-        var mgr = getMgr();
-        if (!mgr || !mgr.baseColumns || !mgr.baseColumns.length) return false;
-
-        grid.innerHTML = '';
-        (mgr.state.order || []).forEach(function (idx) {
-            var col = mgr.baseColumns.filter(function (c) { return c.index === idx; })[0];
-            if (!col) return;
-
-            var isVisible = mgr.state.visibility[String(col.index)] !== false;
-            var inputId = 'storescolvis_' + col.index;
-
-            var cell = document.createElement('div');
-            cell.className = 'col-12 col-sm-6 col-md-4';
-
-            var label = document.createElement('label');
-            label.className = 'colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100';
-            label.setAttribute('for', inputId);
-
-            var cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.className = 'form-check-input m-0';
-            cb.id = inputId;
-            cb.checked = isVisible;
-            if (col.locked) cb.disabled = true;
-
-            cb.addEventListener('change', function () {
-                var m = getMgr();
-                if (!m) return;
-                if (!cb.checked && visibleCount(m) <= 1) {
-                    cb.checked = true;
-                    window.alert('At least one column must remain visible.');
-                    return;
-                }
-                m.state.visibility[String(col.index)] = cb.checked;
-                m.saveState();
-                m.apply();
-            });
-
-            var span = document.createElement('span');
-            span.textContent = col.label;
-
-            label.appendChild(cb);
-            label.appendChild(span);
-            cell.appendChild(label);
-            grid.appendChild(cell);
-        });
-        return true;
-    }
-
-    modalEl.addEventListener('show.bs.modal', function () {
-        if (buildGrid()) return;
-        // Column-manager still initialising — retry briefly.
-        var tries = 0;
-        var timer = setInterval(function () {
-            if (buildGrid() || ++tries > 20) clearInterval(timer);
-        }, 100);
-    });
 })();
 </script>
 <script>

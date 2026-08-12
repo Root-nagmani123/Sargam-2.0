@@ -202,16 +202,20 @@
 
     {{-- Success feedback is rendered as the global green toast — see mess.partials.delete-confirm --}}
 
-    {{-- Download / Print bar (branded server-side exports — see admin.mess.itemsubcategories.export) --}}
-    <div class="d-flex justify-content-end gap-2 mb-3">
-        <button type="button" class="btn itemsub-master-export-btn border-0" id="itemsubDownloadBtn">
-            <i class="material-symbols-rounded">download</i>
-            <span>Download</span>
-        </button>
-        <button type="button" class="btn itemsub-master-export-btn border-0" id="itemsubPrintBtn">
-            <i class="material-symbols-rounded">print</i>
-            <span>Print</span>
-        </button>
+    {{-- Download / Print, right-aligned above the card. The design shows no status
+         pills here (Sargam 2.0.pdf p14) — the ?status= filter is still served, it
+         simply has no on-screen control. --}}
+    <div class="d-flex flex-wrap align-items-center justify-content-end gap-3 mb-3">
+        <div class="d-flex flex-wrap gap-2 ms-auto">
+            <button type="button" class="btn itemsub-master-export-btn" id="itemsubDownloadBtn">
+                <i class="material-symbols-rounded">download</i>
+                <span>Download</span>
+            </button>
+            <button type="button" class="btn itemsub-master-export-btn" id="itemsubPrintBtn">
+                <i class="material-symbols-rounded">print</i>
+                <span>Print</span>
+            </button>
+        </div>
     </div>
 
     <div class="card itemsub-master-card border-0">
@@ -230,7 +234,12 @@
                             @endforeach
                         </select>
                     </div>
-                    <a href="{{ route('admin.mess.itemsubcategories.index') }}" class="btn programme-dt-btn-reset d-inline-flex align-items-center justify-content-center">Reset</a>
+                    {{-- An <a>, not a button: it also has to clear the server-side
+                         category_id filter, which only a fresh GET can do. --}}
+                    <a href="{{ route('admin.mess.itemsubcategories.index') }}"
+                       class="btn programme-dt-btn-reset d-inline-flex align-items-center justify-content-center {{ request()->hasAny(['category_id', 'status']) ? '' : 'd-none' }}"
+                       data-mess-remove-filter="itemSubcategoriesTable"
+                       data-mess-filter-server="{{ filled($selectedCategoryId) ? '1' : '0' }}">Remove Filter</a>
                 </form>
 
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
@@ -239,13 +248,13 @@
                         <span>Columns</span>
                         <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
-                    <div class="programme-dt-search" data-dt-search-for="itemSubcategoriesTable"></div>
+                    @include('mess.partials.search-toggle', ['tableId' => 'itemSubcategoriesTable'])
                 </div>
             </div>
 
             <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <table id="itemSubcategoriesTable" class="table programme-dt-table align-middle w-100 mb-0">
+                    <table id="itemSubcategoriesTable" class="table table-hover programme-dt-table align-middle w-100 mb-0">
                         <thead>
                             <tr>
                                 <th>S. No.</th>
@@ -254,7 +263,7 @@
                                 <th>Item Code</th>
                                 <th>Unit Measurement</th>
                                 <th>Alert Qty</th>
-                                <th>Status</th>
+                                <th scope="col" class="no-sort">Status</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -434,9 +443,17 @@
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.itemsubcategories.index'),
     'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
+    'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+    'serverSideColumnDefs' => [
+        ['className' => 'text-center', 'targets' => [6, 7]],
+        // Status carries no sort caret in the design — the pills above the card
+        // are how you slice by status here.
+        ['orderable' => false, 'targets' => [6]],
+    ],
 ])
 
 @push('scripts')
+@include('mess.partials.grid-filters-script')
 {{-- Download / Print → branded server-side report (admin.mess.itemsubcategories.export).
      Passes the live search + Category filter + chosen columns so the report matches
      the screen. Print opens the PDF inline for printing. --}}

@@ -1519,7 +1519,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
 // Mess Management (auth required — layout assumes logged-in user)
 Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(function () {
     // Master Data
+    Route::get('vendors/export', [\App\Http\Controllers\Mess\VendorController::class, 'export'])->name('vendors.export');
     Route::resource('vendors', \App\Http\Controllers\Mess\VendorController::class)->except(['show']);
+    Route::get('itemcategories/export', [\App\Http\Controllers\Mess\ItemCategoryController::class, 'export'])->name('itemcategories.export');
     Route::resource('itemcategories', \App\Http\Controllers\Mess\ItemCategoryController::class)->except(['show']);
     Route::get('itemsubcategories/export', [\App\Http\Controllers\Mess\ItemSubcategoryController::class, 'export'])->name('itemsubcategories.export');
     Route::resource('itemsubcategories', \App\Http\Controllers\Mess\ItemSubcategoryController::class)->except(['show']);
@@ -1536,6 +1538,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     Route::get('sub-stores/export', [\App\Http\Controllers\Mess\SubStoreController::class, 'export'])->name('sub-stores.export');
     Route::resource('sub-stores', \App\Http\Controllers\Mess\SubStoreController::class)->except(['show']);
 
+    Route::get('client-types/export', [\App\Http\Controllers\Mess\ClientTypeController::class, 'export'])->name('client-types.export');
     Route::resource('client-types', \App\Http\Controllers\Mess\ClientTypeController::class)->except(['show']);
 
     // Purchase Order Management

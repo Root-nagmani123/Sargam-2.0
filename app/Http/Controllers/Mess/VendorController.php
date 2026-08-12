@@ -79,24 +79,27 @@ class VendorController extends Controller
         $orderCol = DataTableSearchHelper::orderColumnIndex($request, 0);
         $orderDir = DataTableSearchHelper::orderDirection($request, 'asc');
 
+        // Column 0 is the running S. No. — it has no column of its own to sort by,
+        // so it sorts on the same key the serial is numbered from (id).
         switch ($orderCol) {
-            case 0:
+            case 1:
                 $paged->orderBy('name', $orderDir);
                 break;
-            case 1:
+            case 2:
                 $paged->orderBy('email', $orderDir);
                 break;
-            case 2:
+            case 3:
                 $paged->orderBy('contact_person', $orderDir);
                 break;
-            case 3:
+            case 4:
                 $paged->orderBy('phone', $orderDir);
                 break;
-            case 4:
+            case 5:
                 $paged->orderBy('address', $orderDir);
                 break;
+            case 0:
             default:
-                $paged->orderByDesc('id');
+                $paged->orderBy('id', $orderDir);
         }
         $paged->orderByDesc('id');
 
@@ -107,7 +110,11 @@ class VendorController extends Controller
         $rows = $paged->get();
         $canDelete = function_exists('hasRole') && (hasRole('Super Admin') || hasRole('Mess-Admin'));
 
-        $data = $rows->map(fn (Vendor $vendor) => $this->buildVendorDatatableRow($vendor, $canDelete))->all();
+        // Column 0 is a running serial, not the primary key — the same "S. No."
+        // the branded export prints. It follows the page, so it always reads 1..n.
+        $data = $rows->values()
+            ->map(fn (Vendor $vendor, int $i) => $this->buildVendorDatatableRow($vendor, $canDelete, $start + $i + 1))
+            ->all();
 
         return response()->json([
             'draw' => $draw,
@@ -120,7 +127,7 @@ class VendorController extends Controller
     /**
      * @return string[]
      */
-    private function buildVendorDatatableRow(Vendor $vendor, bool $canDelete): array
+    private function buildVendorDatatableRow(Vendor $vendor, bool $canDelete, int $serial): array
     {
         $nameCell = '<div class="fw-semibold">' . e($vendor->name) . '</div>';
         $emailCell = e($vendor->email ?? '-');
@@ -139,27 +146,36 @@ class VendorController extends Controller
             . ' data-ifsc-code="' . e($vendor->ifsc_code ?? '') . '"'
             . ' data-account-number="' . e($vendor->account_number ?? '') . '"';
 
-        $viewBtn = '<button type="button" class="text-primary btn-view-vendor bg-transparent border-0"'
-            . $dataAttrs . ' title="View"><i class="material-icons material-symbol-rounded">visibility</i></button>';
+        // Icon-over-label row actions, the same vocabulary Store Master uses — the
+        // page's .vendor-action-btn CSS was written for this markup.
+        $viewBtn = '<button type="button" class="vendor-action-btn text-primary btn-view-vendor"'
+            . $dataAttrs . ' title="See" aria-label="See ' . e($vendor->name) . '">'
+            . '<i class="material-symbols-rounded" aria-hidden="true">visibility</i><span>See</span></button>';
 
-        $editBtn = '<button type="button" class="text-primary btn-edit-vendor bg-transparent border-0"'
-            . $dataAttrs . ' title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>';
+        $editBtn = '<button type="button" class="vendor-action-btn text-primary btn-edit-vendor"'
+            . $dataAttrs . ' title="Edit" aria-label="Edit ' . e($vendor->name) . '">'
+            . '<i class="material-symbols-rounded" aria-hidden="true">edit</i><span>Edit</span></button>';
 
         $deleteForm = '';
         if ($canDelete) {
             $deleteUrl = route('admin.mess.vendors.destroy', $vendor->id);
-            $deleteForm = '<form method="POST" action="' . e($deleteUrl) . '" class="d-inline"'
-                . ' onsubmit="return confirm(\'Are you sure you want to delete this vendor?\');">'
+            // mess-delete-form + no native confirm(): mess.partials.delete-confirm
+            // intercepts the submit and shows the branded dialog instead.
+            $deleteForm = '<form method="POST" action="' . e($deleteUrl) . '" class="d-inline mess-delete-form"'
+                . ' data-confirm-title="Delete Vendor?"'
+                . ' data-confirm-message="' . e('“' . $vendor->name . '” will be removed. This action cannot be undone.') . '">'
                 . '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">'
                 . '<input type="hidden" name="_method" value="DELETE">'
-                . '<button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">'
-                . '<i class="material-icons material-symbol-rounded">delete</i></button>'
+                . '<button type="submit" class="vendor-action-btn text-danger"'
+                . ' aria-label="Delete ' . e($vendor->name) . '">'
+                . '<i class="material-symbols-rounded" aria-hidden="true">delete</i><span>Delete</span></button>'
                 . '</form>';
         }
 
-        $actions = '<div class="d-flex gap-2 flex-wrap">' . $viewBtn . $editBtn . $deleteForm . '</div>';
+        $actions = '<div class="d-flex align-items-center vendor-actions">' . $viewBtn . $editBtn . $deleteForm . '</div>';
 
         return [
+            (string) $serial,
             $nameCell,
             $emailCell,
             $contactPersonCell,

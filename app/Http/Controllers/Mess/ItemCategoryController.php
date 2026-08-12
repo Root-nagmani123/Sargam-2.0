@@ -17,6 +17,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class ItemCategoryController extends Controller
 {
+    use Concerns\FiltersByStatus;
+
     private const LIST_CACHE_EPOCH_KEY = 'mess_item_category_master_list_epoch';
     private const DT_LIST_EPOCH_KEY = 'mess_item_category_master_dt_list_epoch';
 
@@ -56,6 +58,9 @@ class ItemCategoryController extends Controller
     {
         return [
             'category_type' => $request->get('category_type'),
+            // Without this the Active and Inactive pills would share a cache entry
+            // and serve each other's rows.
+            'status' => $this->resolveStatusFilter($request),
             'can_delete' => $this->canDeleteItemCategory(),
         ];
     }
@@ -71,6 +76,9 @@ class ItemCategoryController extends Controller
                 $query->where('category_type', $categoryTypeFilter);
             }
         }
+
+        // Driven by the status pills above the grid (mess/itemcategories/index.blade.php).
+        $this->applyStatusFilter($query, $request, 'mess_item_categories');
 
         return $query;
     }
@@ -159,30 +167,36 @@ class ItemCategoryController extends Controller
         $typeLabel = $categoryTypes[$itemcategory->category_type ?? 'raw_material'] ?? ucfirst(str_replace('_', ' ', $itemcategory->category_type ?? ''));
         $typeCell = e($typeLabel);
         $descriptionCell = e($itemcategory->description ?? '-');
-        $statusCell = '<span class="badge bg-' . e($itemcategory->status_badge_class) . '">'
-            . e($itemcategory->status_label) . '</span>';
+        $isActive = ($itemcategory->status ?? 'active') === ItemCategory::STATUS_ACTIVE;
+        $statusCell = '<span class="badge programme-status-badge programme-status-badge--'
+            . ($isActive ? 'active' : 'inactive') . '">' . e(ucfirst((string) $itemcategory->status_label)) . '</span>';
 
-        $editBtn = '<button type="button" class="text-primary btn-edit-itemcategory bg-transparent border-0"'
+        $editBtn = '<button type="button" class="itemcat-action-btn text-primary btn-edit-itemcategory"'
             . ' data-id="' . (int) $itemcategory->id . '"'
             . ' data-category-name="' . e($itemcategory->category_name) . '"'
             . ' data-category-type="' . e($itemcategory->category_type ?? 'raw_material') . '"'
             . ' data-description="' . e($itemcategory->description ?? '') . '"'
             . ' data-status="' . e($itemcategory->status ?? 'active') . '"'
-            . ' title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>';
+            . ' aria-label="Edit ' . e($itemcategory->category_name) . '">'
+            . '<i class="material-symbols-rounded" aria-hidden="true">edit</i><span>Edit</span></button>';
 
         $deleteForm = '';
         if ($canDelete) {
             $deleteUrl = route('admin.mess.itemcategories.destroy', $itemcategory->id);
-            $deleteForm = '<form method="POST" action="' . e($deleteUrl) . '" class="d-inline"'
-                . ' onsubmit="return confirm(\'Are you sure you want to delete this category item?\');">'
+            // mess-delete-form + no native confirm(): mess.partials.delete-confirm
+            // intercepts the submit and shows the branded dialog instead.
+            $deleteForm = '<form method="POST" action="' . e($deleteUrl) . '" class="d-inline mess-delete-form"'
+                . ' data-confirm-title="Delete Category Item?"'
+                . ' data-confirm-message="' . e('“' . $itemcategory->category_name . '” will be removed. This action cannot be undone.') . '">'
                 . '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">'
                 . '<input type="hidden" name="_method" value="DELETE">'
-                . '<button type="submit" class="text-primary btn-delete-itemcategory bg-transparent border-0 p-0" title="Delete">'
-                . '<i class="material-icons material-symbol-rounded">delete</i></button>'
+                . '<button type="submit" class="itemcat-action-btn text-danger btn-delete-itemcategory"'
+                . ' aria-label="Delete ' . e($itemcategory->category_name) . '">'
+                . '<i class="material-symbols-rounded" aria-hidden="true">delete</i><span>Delete</span></button>'
                 . '</form>';
         }
 
-        $actions = '<div class="d-flex gap-2 flex-wrap">' . $editBtn . $deleteForm . '</div>';
+        $actions = '<div class="d-flex align-items-center itemcat-actions">' . $editBtn . $deleteForm . '</div>';
 
         return [
             $nameCell,
@@ -214,7 +228,8 @@ class ItemCategoryController extends Controller
         $categoryType = $request->get('category_type');
         $visibleColumns = $this->parseVisibleColumns($request->get('columns'));
 
-        $export = new ItemCategoryMasterExport($search, $categoryType, $visibleColumns);
+        // The report follows the grid: same search, same type filter, same status pill.
+        $export = new ItemCategoryMasterExport($search, $categoryType, $visibleColumns, $this->resolveStatusFilter($request));
         $fileName = 'category-item-master-' . now()->format('Y-m-d_H-i-s');
 
         if ($format === 'pdf') {

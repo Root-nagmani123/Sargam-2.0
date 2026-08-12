@@ -6,6 +6,9 @@
         </span>
     </p>
 
+    {{-- .programme-dt-panel is the design's table surface (docs/new-design-index-page.md §3):
+         the #f2f4f7 header fill, 16px cell padding and hover row the rest of the module has. --}}
+    <div class="programme-dt-panel">
     <div
         class="table-responsive table-fit-single-view stock-summary-table-scroll ssr-table-scroller"
         role="region"
@@ -118,6 +121,7 @@
             </tbody>
         </table>
     </div>
+    </div>
     @if(isset($reportPage))
         <div class="ssr-pagination-bar px-3 px-lg-4 py-3 border-top d-flex flex-wrap align-items-center justify-content-between gap-3">
             @if($reportPage->hasPages())
@@ -128,7 +132,7 @@
             <div class="d-flex align-items-center gap-2 small text-body-secondary order-1 order-md-2 ms-md-auto">
                 <span>Showing</span>
                 <select id="ssrPerPage" class="form-select form-select-sm ssr-perpage-select" aria-label="Rows per page">
-                    @foreach([4, 10, 25, 50, 100] as $pp)
+                    @foreach([4, 10, 25, 50, 100, 200] as $pp)
                         <option value="{{ $pp }}" {{ (int) $reportPage->perPage() === $pp ? 'selected' : '' }}>{{ $pp }}</option>
                     @endforeach
                 </select>

@@ -85,10 +85,10 @@
     @php $psqExportQ = request()->query(); $psqExportQuery = $psqExportQ ? '?' . http_build_query($psqExportQ) : ''; @endphp
     {{-- Download / Print bar --}}
     <div class="d-flex justify-content-end gap-2 mb-3 no-print">
-        <a href="{{ route('admin.mess.reports.purchase-sale-quantity.excel') }}{{ $psqExportQuery }}" class="btn psq-export-btn border-0" title="Download (Excel)">
+        <a href="{{ route('admin.mess.reports.purchase-sale-quantity.excel') }}{{ $psqExportQuery }}" class="btn psq-export-btn" title="Download (Excel)">
             <i class="material-symbols-rounded">download</i><span>Download</span>
         </a>
-        <button type="button" class="btn psq-export-btn border-0" onclick="printPurchaseSaleQuantity()" title="Print (or Save as PDF)">
+        <button type="button" class="btn psq-export-btn" onclick="printPurchaseSaleQuantity()" title="Print (or Save as PDF)">
             <i class="material-symbols-rounded">print</i><span>Print</span>
         </button>
     </div>
@@ -161,7 +161,36 @@
                     <a href="{{ route('admin.mess.reports.purchase-sale-quantity') }}" id="psqRemoveFilter" class="programme-dt-btn-reset flex-shrink-0 d-inline-flex align-items-center justify-content-center text-decoration-none" title="Remove all filters">Remove Filter</a>
                 </form>
                 <div class="d-flex align-items-center gap-2 ms-auto flex-shrink-0">
-                    <input type="search" id="psqSearch" class="form-control psq-search-input" placeholder="Search item…" autocomplete="off">
+                    <button type="button" class="btn programme-dt-btn-columns" id="psqColumnsBtn"
+                            data-bs-toggle="modal" data-bs-target="#psqColumnsModal" title="Show / hide columns">
+                        <i class="material-symbols-rounded">view_column</i><span>Columns</span>
+                    </button>
+                    <input type="search" id="psqSearch"
+                           class="form-control psq-search-input {{ filled(request('search')) ? '' : 'd-none' }}"
+                           placeholder="Search item…" autocomplete="off">
+                    @include('mess.partials.search-toggle', ['inputId' => 'psqSearch'])
+                </div>
+            </div>
+
+            {{-- Column visibility modal. These tables are hand-written (not DataTables),
+                 so the toggles hide the tagged header + body cells directly. --}}
+            <div class="modal fade" id="psqColumnsModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content rounded-4 border-0 shadow">
+                        <div class="modal-header border-0 pb-2">
+                            <h5 class="modal-title fw-bold">Column Visibility</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body pt-0">
+                            <hr class="mt-0">
+                            <div class="d-flex flex-column gap-2">
+                                <label class="psq-colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input type="checkbox" class="form-check-input m-0 psq-col-toggle" data-col="unit" checked> <span>Unit</span></label>
+                                <label class="psq-colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input type="checkbox" class="form-check-input m-0 psq-col-toggle" data-col="avgpur" checked> <span>Avg Purchase Price</span></label>
+                                <label class="psq-colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input type="checkbox" class="form-check-input m-0 psq-col-toggle" data-col="avgsale" checked> <span>Avg Sale Price</span></label>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0"><button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -177,17 +206,19 @@
                         </div>
                     @endif
                     @if($section['viewType'] === 'item_wise')
+                        <div class="programme-dt-panel">
                         <div class="table-responsive">
-                            <table class="table programme-dt-table align-middle mb-0 psq-table">
+                            <table class="table table-hover programme-dt-table align-middle mb-0 psq-table">
                                 <thead>
+                                    {{-- data-col tags drive the Columns modal above --}}
                                     <tr>
                                         @include('admin.mess.reports.partials.report-sno-th', ['class' => 'border-0 py-3 text-center'])
                                         @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'item_name', 'label' => 'Item Name', 'defaultDir' => 'asc', 'defaultSort' => 'item_name', 'class' => 'border-0 py-3'])
-                                        <th class="border-0 py-3" style="width:80px;">Unit</th>
+                                        <th class="border-0 py-3" style="width:80px;" data-col="unit">Unit</th>
                                         <th class="text-end border-0 py-3">Total Purchase Qty</th>
-                                        <th class="text-end border-0 py-3">Avg Purchase Price</th>
+                                        <th class="text-end border-0 py-3" data-col="avgpur">Avg Purchase Price</th>
                                         <th class="text-end border-0 py-3">Total Sale Qty</th>
-                                        <th class="text-end border-0 py-3">Avg Sale Price</th>
+                                        <th class="text-end border-0 py-3" data-col="avgsale">Avg Sale Price</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -196,11 +227,11 @@
                                         <tr class="psq-data-row">
                                             <td class="text-center text-body-secondary small fw-medium mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $psqItemPaginator ?? ($section['paginator'] ?? null), 'index' => $index])</td>
                                             <td class="fw-medium">{{ $row['item_name'] }}</td>
-                                            <td><span class="badge bg-body-secondary text-body-emphasis rounded-1 px-2">{{ $row['unit'] }}</span></td>
+                                            <td data-col="unit"><span class="badge bg-body-secondary text-body-emphasis rounded-1 px-2">{{ $row['unit'] }}</span></td>
                                             <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
-                                            <td class="text-end">{{ $row['avg_purchase_price'] !== null ? '₹' . number_format($row['avg_purchase_price'], 2) : '—' }}</td>
+                                            <td class="text-end" data-col="avgpur">{{ $row['avg_purchase_price'] !== null ? '₹' . number_format($row['avg_purchase_price'], 2) : '—' }}</td>
                                             <td class="text-end">{{ number_format($row['sale_qty'], 2) }}</td>
-                                            <td class="text-end">{{ $row['avg_sale_price'] !== null ? '₹' . number_format($row['avg_sale_price'], 2) : '—' }}</td>
+                                            <td class="text-end" data-col="avgsale">{{ $row['avg_sale_price'] !== null ? '₹' . number_format($row['avg_sale_price'], 2) : '—' }}</td>
                                         </tr>
                                     @empty
                                         <tr>
@@ -221,15 +252,16 @@
                                         <tr class="table-secondary fw-semibold">
                                             <td class="text-center">—</td>
                                             <td>Grand Total</td>
-                                            <td>—</td>
+                                            <td data-col="unit">—</td>
                                             <td class="text-end">{{ number_format($psGrandPurchase, 2) }}</td>
-                                            <td class="text-end">—</td>
+                                            <td class="text-end" data-col="avgpur">—</td>
                                             <td class="text-end">{{ number_format($psGrandSale, 2) }}</td>
-                                            <td class="text-end">—</td>
+                                            <td class="text-end" data-col="avgsale">—</td>
                                         </tr>
                                     @endif
                                 </tbody>
                             </table>
+                        </div>
                         </div>
                     @else
                         @php
@@ -247,17 +279,18 @@
                                         {{ $group['category_name'] }}
                                     </h6>
                                 </div>
+                                <div class="programme-dt-panel">
                                 <div class="table-responsive">
-                                    <table class="table table-hover align-middle mb-0 psq-table">
+                                    <table class="table table-hover programme-dt-table align-middle mb-0 psq-table">
                                         <thead>
                                             <tr>
                                                 @include('admin.mess.reports.partials.report-sno-th', ['class' => 'border-0 py-3 text-center'])
                                                 <th class="border-0 py-3">Item Name</th>
-                                                <th class="border-0 py-3" style="width:80px;">Unit</th>
+                                                <th class="border-0 py-3" style="width:80px;" data-col="unit">Unit</th>
                                                 <th class="text-end border-0 py-3">Total Purchase Qty</th>
-                                                <th class="text-end border-0 py-3">Avg Purchase Price</th>
+                                                <th class="text-end border-0 py-3" data-col="avgpur">Avg Purchase Price</th>
                                                 <th class="text-end border-0 py-3">Total Sale Qty</th>
-                                                <th class="text-end border-0 py-3">Avg Sale Price</th>
+                                                <th class="text-end border-0 py-3" data-col="avgsale">Avg Sale Price</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -266,19 +299,20 @@
                                                 <tr class="psq-data-row">
                                                     <td class="text-center text-body-secondary small fw-medium mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['start' => $psqGroupedSerial, 'index' => 0])</td>
                                                     <td class="fw-medium">{{ $row['item_name'] }}</td>
-                                                    <td><span class="badge bg-body-secondary text-body-emphasis rounded-1 px-2">{{ $row['unit'] }}</span></td>
+                                                    <td data-col="unit"><span class="badge bg-body-secondary text-body-emphasis rounded-1 px-2">{{ $row['unit'] }}</span></td>
                                                     <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
-                                                    <td class="text-end">
+                                                    <td class="text-end" data-col="avgpur">
                                                         {{ isset($row['avg_purchase_price']) && $row['avg_purchase_price'] !== null ? '₹' . number_format($row['avg_purchase_price'], 2) : '—' }}
                                                     </td>
                                                     <td class="text-end">{{ number_format($row['sale_qty'], 2) }}</td>
-                                                    <td class="text-end">
+                                                    <td class="text-end" data-col="avgsale">
                                                         {{ isset($row['avg_sale_price']) && $row['avg_sale_price'] !== null ? '₹' . number_format($row['avg_sale_price'], 2) : '—' }}
                                                     </td>
                                                 </tr>
                                             @endforeach
                                         </tbody>
                                     </table>
+                                </div>
                                 </div>
                             </div>
                         @empty
@@ -298,11 +332,12 @@
                                     <tbody>
                                         <tr class="table-secondary fw-semibold">
                                             <td class="text-center" style="width: 60px;">—</td>
-                                            <td colspan="2">Grand Total</td>
+                                            <td>Grand Total</td>
+                                            <td data-col="unit">—</td>
                                             <td class="text-end">{{ number_format($psGrandPurchaseGrouped, 2) }}</td>
-                                            <td class="text-end">—</td>
+                                            <td class="text-end" data-col="avgpur">—</td>
                                             <td class="text-end">{{ number_format($psGrandSaleGrouped, 2) }}</td>
-                                            <td class="text-end">—</td>
+                                            <td class="text-end" data-col="avgsale">—</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -319,7 +354,7 @@
                             <div class="d-flex align-items-center gap-2 small text-body-secondary ms-auto">
                                 <span>Showing</span>
                                 <select id="psqPerPage" class="form-select form-select-sm" style="width:auto;">
-                                    @foreach([10, 25, 50, 100] as $n)
+                                    @foreach([10, 25, 50, 100, 200] as $n)
                                         <option value="{{ $n }}" @selected((int) $perPage === (int) $n)>{{ $n }}</option>
                                     @endforeach
                                 </select>
@@ -520,6 +555,8 @@
         min-height: var(--ds-control-h, 40px); height: var(--ds-control-h, 40px); width: 13rem;
         border-radius: var(--ds-radius, 4px); border: 1px solid var(--ds-line, #e5e7eb); font-size: 0.85rem;
     }
+    .purchase-sale-quantity-report .psq-colvis-item { cursor: pointer; transition: border-color .15s ease, background-color .15s ease; }
+    .purchase-sale-quantity-report .psq-colvis-item:hover { border-color: var(--ds-primary, #004384); background-color: rgba(0, 67, 132, .04); }
     /* On-screen: hide the blue print-style report header (mock goes straight to the table; the print window builds its own) */
     .purchase-sale-quantity-report .psq-report-header { display: none !important; }
     .purchase-sale-quantity-report .psq-pagination-links p { display: none !important; }
@@ -906,6 +943,16 @@ tablesHtml +
                 psqTimer = setTimeout(function () { form.submit(); }, 500);
             });
         }
+        // Column visibility — hide the tagged header + body cells across both
+        // table shapes (item-wise and category-grouped).
+        document.querySelectorAll('.psq-col-toggle').forEach(function (cb) {
+            cb.addEventListener('change', function () {
+                var col = cb.getAttribute('data-col');
+                document.querySelectorAll('.purchase-sale-quantity-report [data-col="' + col + '"]').forEach(function (el) {
+                    el.style.display = cb.checked ? '' : 'none';
+                });
+            });
+        });
         var psqSearch = document.getElementById('psqSearch');
         if (psqSearch) {
             psqSearch.addEventListener('input', function () {

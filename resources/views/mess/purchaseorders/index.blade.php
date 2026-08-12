@@ -227,11 +227,11 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
 
     {{-- Download / Print bar (branded server-side exports — see admin.mess.purchaseorders.export) --}}
     <div class="d-flex justify-content-end gap-2 mb-3">
-        <button type="button" class="btn po-master-export-btn border-0" id="poDownloadBtn">
+        <button type="button" class="btn po-master-export-btn" id="poDownloadBtn">
             <i class="material-symbols-rounded">download</i>
             <span>Download</span>
         </button>
-        <button type="button" class="btn po-master-export-btn border-0" id="poPrintBtn">
+        <button type="button" class="btn po-master-export-btn" id="poPrintBtn">
             <i class="material-symbols-rounded">print</i>
             <span>Print</span>
         </button>
@@ -274,7 +274,7 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
                         <span>Columns</span>
                         <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
-                    <div class="programme-dt-search" data-dt-search-for="purchaseOrdersTable"></div>
+                    @include('mess.partials.search-toggle', ['tableId' => 'purchaseOrdersTable'])
                 </div>
             </div>
 

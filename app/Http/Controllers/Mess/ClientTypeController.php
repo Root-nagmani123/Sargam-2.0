@@ -17,6 +17,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class ClientTypeController extends Controller
 {
+    use Concerns\FiltersByStatus;
+
     private const LIST_CACHE_EPOCH_KEY = 'mess_client_type_master_list_epoch';
     private const DT_LIST_EPOCH_KEY = 'mess_client_type_master_dt_list_epoch';
 
@@ -38,7 +40,11 @@ class ClientTypeController extends Controller
                     'seconds' => 'MESS_CLIENT_TYPE_MASTER_DATATABLE_CACHE_SECONDS',
                 ],
                 'ClientTypeController@index',
-                fn () => $this->buildClientTypeDatatableResponse($request)
+                fn () => $this->buildClientTypeDatatableResponse($request),
+                // The cache fingerprint covers DataTables' own params only, so the
+                // status pill has to be added by hand — without it Active and
+                // Inactive would share a cache entry and serve each other's rows.
+                ['status' => $this->resolveStatusFilter($request)]
             );
         }
 
@@ -47,7 +53,8 @@ class ClientTypeController extends Controller
 
     private function buildClientTypeDatatableResponse(Request $request): JsonResponse
     {
-        $query = ClientType::query();
+        // Driven by the status pills above the grid (mess/client-types/index.blade.php).
+        $query = $this->applyStatusFilter(ClientType::query(), $request, 'mess_client_types');
 
         $draw = (int) $request->input('draw', 0);
         $start = max((int) $request->input('start', 0), 0);
@@ -120,29 +127,38 @@ class ClientTypeController extends Controller
         $typeLabel = $clientTypeOptions[$clientType->client_type] ?? $clientType->client_type;
         $typeCell = '<div class="fw-semibold">' . e($typeLabel) . '</div>';
         $nameCell = '<div class="fw-semibold">' . e($clientType->client_name) . '</div>';
-        $statusCell = '<span class="badge bg-' . e($clientType->status_badge_class) . '">'
-            . e($clientType->status_label) . '</span>';
+        // .programme-status-badge is the design-system status pill the rest of the
+        // module renders (docs/new-design-index-page.md §3b); `badge` stays for the
+        // shape Bootstrap gives it.
+        $isActive = ($clientType->status ?? 'active') === ClientType::STATUS_ACTIVE;
+        $statusCell = '<span class="badge programme-status-badge programme-status-badge--'
+            . ($isActive ? 'active' : 'inactive') . '">' . e(ucfirst((string) $clientType->status_label)) . '</span>';
 
-        $editBtn = '<button type="button" class="text-primary btn-edit-clienttype bg-transparent border-0"'
+        $editBtn = '<button type="button" class="client-action-btn text-primary btn-edit-clienttype"'
             . ' data-id="' . (int) $clientType->id . '"'
             . ' data-client-type="' . e($clientType->client_type) . '"'
             . ' data-client-name="' . e($clientType->client_name) . '"'
             . ' data-status="' . e($clientType->status ?? 'active') . '"'
-            . ' title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>';
+            . ' aria-label="Edit ' . e($clientType->client_name) . '">'
+            . '<i class="material-symbols-rounded" aria-hidden="true">edit</i><span>Edit</span></button>';
 
         $deleteForm = '';
         if ($canDelete) {
             $deleteUrl = route('admin.mess.client-types.destroy', $clientType->id);
-            $deleteForm = '<form method="POST" action="' . e($deleteUrl) . '" class="d-inline"'
-                . ' onsubmit="return confirm(\'Are you sure you want to delete this client type?\');">'
+            // mess-delete-form + no native confirm(): mess.partials.delete-confirm
+            // intercepts the submit and shows the branded dialog instead.
+            $deleteForm = '<form method="POST" action="' . e($deleteUrl) . '" class="d-inline mess-delete-form"'
+                . ' data-confirm-title="Delete Client Type?"'
+                . ' data-confirm-message="' . e('“' . $clientType->client_name . '” will be removed. This action cannot be undone.') . '">'
                 . '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">'
                 . '<input type="hidden" name="_method" value="DELETE">'
-                . '<button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">'
-                . '<i class="material-icons material-symbol-rounded">delete</i></button>'
+                . '<button type="submit" class="client-action-btn text-danger"'
+                . ' aria-label="Delete ' . e($clientType->client_name) . '">'
+                . '<i class="material-symbols-rounded" aria-hidden="true">delete</i><span>Delete</span></button>'
                 . '</form>';
         }
 
-        $actions = '<div class="d-flex gap-2 flex-wrap">' . $editBtn . $deleteForm . '</div>';
+        $actions = '<div class="d-flex align-items-center client-actions">' . $editBtn . $deleteForm . '</div>';
 
         return [
             $typeCell,
@@ -256,7 +272,8 @@ class ClientTypeController extends Controller
         $search = $request->get('search');
         $visibleColumns = $this->parseVisibleColumns($request->get('columns'));
 
-        $export = new ClientTypeMasterExport($search, $visibleColumns);
+        // The report follows the grid: same search, same status pill.
+        $export = new ClientTypeMasterExport($search, $visibleColumns, $this->resolveStatusFilter($request));
         $fileName = 'client-master-' . now()->format('Y-m-d_H-i-s');
 
         if ($format === 'pdf') {
@@ -266,7 +283,7 @@ class ClientTypeController extends Controller
             $pdf = Pdf::loadView('mess.client-types.export_pdf', array_merge([
                 'headings' => $export->activeHeadings(),
                 'rows' => $export->pdfRows(),
-                'filterLine' => ($search !== null && trim((string) $search) !== '') ? ('Applied Filters:   Search: ' . trim($search)) : '',
+                'filterLine' => $export->filterLine(),
                 'printedOn' => now()->format('d-m-Y H:i'),
                 'reportTitle' => 'Client Master',
             ], $this->buildExportHeaderData()))

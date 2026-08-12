@@ -17,10 +17,10 @@
     @php $sbExportQ = request()->query(); $sbExportQuery = $sbExportQ ? '?' . http_build_query($sbExportQ) : ''; @endphp
     {{-- Download / Print bar --}}
     <div class="d-flex justify-content-end gap-2 mb-3 no-print">
-        <a href="{{ route('admin.mess.reports.stock-balance-till-date.excel') }}{{ $sbExportQuery }}" class="btn sb-export-btn border-0" title="Download (Excel)">
+        <a href="{{ route('admin.mess.reports.stock-balance-till-date.excel') }}{{ $sbExportQuery }}" class="btn sb-export-btn" title="Download (Excel)">
             <i class="material-symbols-rounded">download</i><span>Download</span>
         </a>
-        <button type="button" class="btn sb-export-btn border-0" onclick="printStockBalance()" title="Print (or Save as PDF)">
+        <button type="button" class="btn sb-export-btn" onclick="printStockBalance()" title="Print (or Save as PDF)">
             <i class="material-symbols-rounded">print</i><span>Print</span>
         </button>
     </div>
@@ -49,7 +49,7 @@
                     <button type="button" class="btn programme-dt-btn-columns" id="sbColumnsBtn" data-bs-toggle="modal" data-bs-target="#sbColumnsModal" title="Show / hide columns">
                         <i class="material-symbols-rounded">view_column</i><span>Columns</span>
                     </button>
-                    <input type="search" id="sbSearch" class="form-control sb-search-input" placeholder="Search item…" autocomplete="off">
+                    @include('mess.partials.search-toggle', ['tableId' => 'stockBalanceTable'])
                 </div>
             </div>
             {{-- Column visibility modal --}}
@@ -88,8 +88,9 @@
                 <span class="fw-semibold text-dark">Stock Balance Details</span>
                 <span class="text-muted small" id="stockBalanceReportCount"></span>
             </div>
-            <div class="table-responsive flex-grow-1 min-h-0">
-                <table id="stockBalanceTable" class="table table-hover align-middle mb-0 w-100">
+            <div class="programme-dt-panel flex-grow-1 d-flex flex-column min-h-0">
+                <div class="table-responsive flex-grow-1 min-h-0">
+                <table id="stockBalanceTable" class="table table-hover programme-dt-table align-middle mb-0 w-100">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -109,7 +110,11 @@
                         </tr>
                     </tfoot>
                 </table>
+                </div>
             </div>
+
+            {{-- Footer: pagination (left) + "Showing [N] of M items" (right), populated by the global enhancer --}}
+            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3 px-3 pb-3" data-dt-footer-for="stockBalanceTable"></div>
         </div>
     </div>
 </div>
@@ -126,6 +131,8 @@
     'colReorder' => false,
     'searchHighlight' => false,
     'pageLength' => 50,
+    'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+    'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.reports.stock-balance-till-date', request()->query()),
     'ajaxJsonCallback' => 'stockBalanceReportOnDraw',
@@ -238,6 +245,11 @@
         display: inline-flex; align-items: center; gap: 0.4rem;
     }
     .stock-balance-report .sb-export-btn:hover { background: var(--ds-surface-2, #f8fafc); border-color: var(--ds-primary, #004a93); }
+
+    /* Collapse the leftover (now-emptied) DataTables control wrappers once the
+       global enhancer has relocated search / pagination into the slots. */
+    .stock-balance-report .dt-top:empty,
+    .stock-balance-report .dt-foot:empty { display: none; margin: 0; }
     .stock-balance-report .sb-export-btn .material-symbols-rounded { font-size: 1.15rem; }
     .stock-balance-report .sb-filter-toolbar,
     .stock-balance-report .sb-filter-form { flex-wrap: wrap; gap: 0.5rem; }
@@ -299,16 +311,9 @@
                 sbTimer = setTimeout(function () { form.submit(); }, 500);
             });
         }
-        var sbSearch = document.getElementById('sbSearch');
-        if (sbSearch) {
-            sbSearch.addEventListener('input', function () {
-                var q = sbSearch.value.trim().toLowerCase();
-                document.querySelectorAll('.stock-balance-report .stock-balance-table-body-scroll tbody tr').forEach(function (tr) {
-                    if (tr.querySelector('td[colspan]')) return; // keep the total row
-                    tr.style.display = (!q || tr.textContent.toLowerCase().indexOf(q) !== -1) ? '' : 'none';
-                });
-            });
-        }
+        // Search is DataTables' own box, relocated into .programme-dt-search by
+        // public/js/datatable-global-ui.js — it is server-side here, so it filters
+        // the whole result set rather than just the rows on screen.
         // Column visibility — directly show/hide the tagged header + body cells.
         document.querySelectorAll('.sb-col-toggle').forEach(function (cb) {
             cb.addEventListener('change', function () {

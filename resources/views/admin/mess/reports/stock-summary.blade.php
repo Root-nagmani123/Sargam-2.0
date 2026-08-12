@@ -12,10 +12,10 @@
 
     {{-- Download / Print bar --}}
     <div class="d-flex justify-content-end gap-2 mb-3 no-print">
-        <a href="{{ route('admin.mess.reports.stock-summary.excel', request()->query()) }}" class="btn ssr-export-btn border-0" title="Download (Excel)">
+        <a href="{{ route('admin.mess.reports.stock-summary.excel', request()->query()) }}" class="btn ssr-export-btn" title="Download (Excel)">
             <i class="material-symbols-rounded">download</i><span>Download</span>
         </a>
-        <button type="button" class="btn ssr-export-btn border-0" onclick="printStockSummary()" title="Print (or Save as PDF)">
+        <button type="button" class="btn ssr-export-btn" onclick="printStockSummary()" title="Print (or Save as PDF)">
             <i class="material-symbols-rounded">print</i><span>Print</span>
         </button>
     </div>
@@ -61,7 +61,8 @@
                     <button type="button" class="btn programme-dt-btn-columns" id="ssrColumnsBtn" data-bs-toggle="modal" data-bs-target="#ssrColumnsModal" title="Show / hide columns">
                         <i class="material-symbols-rounded">view_column</i><span>Columns</span>
                     </button>
-                    <input type="search" id="ssrSearch" class="form-control ssr-search-input" placeholder="Search item…" autocomplete="off" value="{{ request('search') }}">
+                    <input type="search" id="ssrSearch" class="form-control ssr-search-input {{ filled(request('search')) ? '' : 'd-none' }}" placeholder="Search item…" autocomplete="off" value="{{ request('search') }}">
+                    @include('mess.partials.search-toggle', ['inputId' => 'ssrSearch'])
                 </div>
             </div>
 

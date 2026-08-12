@@ -260,7 +260,10 @@
                 <div class="min-w-0 flex-grow-1">
                     <nav aria-label="breadcrumb" class="mb-1">
                         <ol class="breadcrumb mb-0 small text-body-secondary align-items-center flex-wrap modern-breadcrumb-trail"
-                            style="--bs-breadcrumb-divider: '/';">
+                            {{-- Chevron, not a slash — the design specifies
+                                 "Home > Mess Management > Master Data > <Screen>".
+                                 This component is shared, so the change is global. --}}
+                            style="--bs-breadcrumb-divider: '>';">
                             @foreach ($breadcrumbItems as $index => $item)
                                 @php $isLast = $index === count($breadcrumbItems) - 1; @endphp
                                 <li class="breadcrumb-item{{ $isLast ? ' active' : '' }}"

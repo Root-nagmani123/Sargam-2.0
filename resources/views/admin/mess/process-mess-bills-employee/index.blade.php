@@ -66,10 +66,10 @@
     @endphp
     <div class="d-flex justify-content-end gap-2 mb-3 no-print">
         <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query($exportQuery) }}"
-           class="btn pmbe-export-btn border-0 text-primary" title="Download (Excel)" data-mess-excel-export="processMessBillsTable">
+           class="btn pmbe-export-btn text-primary" title="Download (Excel)" data-mess-excel-export="processMessBillsTable">
             <i class="material-symbols-rounded">download</i><span>Download</span>
         </a>
-        <button type="button" class="btn pmbe-export-btn border-0 text-primary" title="Print" onclick="printProcessMessBillsMainTable()">
+        <button type="button" class="btn pmbe-export-btn text-primary" title="Print" onclick="printProcessMessBillsMainTable()">
             <i class="material-symbols-rounded">print</i><span>Print</span>
         </button>
     </div>

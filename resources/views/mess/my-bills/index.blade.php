@@ -112,9 +112,9 @@
                             <i class="material-symbols-rounded align-middle">filter_list</i>
                             Apply
                         </button>
-                        <a href="{{ route('admin.mess.my-bills.index') }}" class="btn btn-outline-secondary shadow-sm" title="Clear filters">
-                            <i class="material-symbols-rounded" style="font-size: 1.1rem;">filter_list_off</i>
-                        </a>
+                        <a href="{{ route('admin.mess.my-bills.index') }}"
+                           class="btn programme-dt-btn-reset d-inline-flex align-items-center justify-content-center text-decoration-none"
+                           title="Remove all filters">Remove Filter</a>
                     </div>
                 </div>
             </form>
@@ -123,8 +123,22 @@
 
     <div class="card border-0 shadow">
         <div class="card-body p-3 p-lg-4">
+            {{-- Toolbar: Columns + search on the right (§2). The global enhancer
+                 relocates DataTables' own search box into the slot. --}}
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-3 programme-dt-toolbar no-print">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="btnMyBillsColumns"
+                            data-bs-toggle="modal" data-bs-target="#myBillsColumnVisibilityModal" title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    @include('mess.partials.search-toggle', ['tableId' => 'myMessBillsTable'])
+                </div>
+            </div>
+
+            <div class="programme-dt-panel">
             <div class="table-responsive">
-                <table class="table table-sm table-striped table-hover text-nowrap align-middle mb-0" id="myMessBillsTable">
+                <table class="table table-hover programme-dt-table align-middle mb-0" id="myMessBillsTable">
                     <thead class="table-light">
                         <tr>
                             <th class="py-2">S.No.</th>
@@ -184,9 +198,16 @@
                     </tbody>
                 </table>
             </div>
+            </div>
+
+            {{-- Footer: pagination (left) + "Showing [N] of M items" (right), populated by the global enhancer --}}
+            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3 no-print" data-dt-footer-for="myMessBillsTable"></div>
         </div>
     </div>
 </div>
+
+{{-- Column Visibility Modal (programme/attendance style) --}}
+@include('mess.partials.column-visibility', ['tableId' => 'myMessBillsTable', 'key' => 'myBills'])
 
 <div class="modal fade" id="myBillDetailsModal" tabindex="-1" aria-labelledby="myBillDetailsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
@@ -216,6 +237,8 @@
     'orderColumn' => [[0, 'asc']],
     'actionColumnIndex' => 7,
     'infoLabel' => 'generated mess bills',
+    'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
+    'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
 ])
 @endsection
 
@@ -223,6 +246,13 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
 @media screen { .mess-my-bills-page .report-header { display: none; } }
+/* Collapse the leftover (now-emptied) DataTables control wrappers once the global
+   enhancer has relocated search / pagination into the slots. */
+.mess-my-bills-page .dt-top:empty,
+.mess-my-bills-page .dt-foot:empty { display: none; margin: 0; }
+/* Column visibility is presented as a programme-style modal, so the mess
+   Column-manager's own injected dropdown stays hidden. */
+.mess-my-bills-page .mess-col-manager-dropdown { display: none !important; }
 @media print {
     .mess-my-bills-page .no-print { display: none !important; }
 }

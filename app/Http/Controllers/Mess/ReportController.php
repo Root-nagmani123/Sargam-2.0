@@ -140,11 +140,12 @@ class ReportController extends Controller
         sort($filters['vendorIds']);
         sort($filters['storeIds']);
 
-        $cacheKey = 'stock-purchase-details:v2:meta:' . md5(json_encode([
+        $cacheKey = 'stock-purchase-details:v3:meta:' . md5(json_encode([
             $filters['fromDate'],
             $filters['toDate'],
             $filters['vendorIds'],
             $filters['storeIds'],
+            $filters['search'],
         ]));
         $loadMeta = fn () => $this->loadStockPurchaseDetailMeta($filters);
 
@@ -576,6 +577,10 @@ class ReportController extends Controller
             'toDate' => $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d'),
             'vendorIds' => $this->normalizedIdList($request, 'vendor_id'),
             'storeIds' => $this->normalizedIdList($request, 'store_id'),
+            // Toolbar search box. Applied in SQL (see stockPurchaseDetailLinesBaseQuery)
+            // so it narrows the whole report, not just the page on screen — and so the
+            // line count, the grand total and the pager all agree with it.
+            'search' => trim((string) $request->input('search', '')),
         ];
     }
 
@@ -621,6 +626,20 @@ class ReportController extends Controller
         }
         if ($filters['vendorIds'] !== []) {
             $query->whereIn('po.vendor_id', $filters['vendorIds']);
+        }
+
+        $search = trim((string) ($filters['search'] ?? ''));
+        if ($search !== '') {
+            $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search) . '%';
+            $nameSql = $this->stockPurchaseDetailItemNameSql();
+            $codeSql = $this->stockPurchaseDetailItemCodeSql();
+            $query->where(function ($q) use ($like, $nameSql, $codeSql) {
+                $q->whereRaw("{$nameSql} LIKE ?", [$like])
+                    ->orWhereRaw("{$codeSql} LIKE ?", [$like])
+                    ->orWhere('v.name', 'like', $like)
+                    ->orWhere('po.po_number', 'like', $like)
+                    ->orWhere('po.bill_no', 'like', $like);
+            });
         }
 
         return $query;
@@ -836,6 +855,38 @@ class ReportController extends Controller
         $baseQuery->orderBy('po_date', 'asc')->orderBy('id', 'asc');
 
         $purchaseOrders = $baseQuery->get();
+
+        // Keep Download / Print in step with the on-screen toolbar search. The grid
+        // narrows in SQL (stockPurchaseDetailLinesBaseQuery); this collection is
+        // eager-loaded, so the same predicate is applied in PHP over what was
+        // loaded. A bill whose vendor / PO no. / bill no. matches keeps all its
+        // lines; otherwise only the matching item lines survive.
+        $search = trim((string) ($filters['search'] ?? ''));
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $contains = static fn ($haystack) => $haystack !== null
+                && $haystack !== ''
+                && str_contains(mb_strtolower((string) $haystack), $needle);
+
+            $purchaseOrders = $purchaseOrders->filter(static function ($po) use ($needle, $contains) {
+                if ($contains(optional($po->vendor)->name) || $contains($po->po_number) || $contains($po->bill_no)) {
+                    return true;
+                }
+
+                $kept = $po->items->filter(static function ($item) use ($contains) {
+                    $sub = $item->itemSubcategory;
+
+                    return $contains($sub->item_name ?? null)
+                        || $contains($sub->name ?? null)
+                        || $contains($sub->subcategory_name ?? null)
+                        || $contains($sub->item_code ?? null);
+                })->values();
+
+                $po->setRelation('items', $kept);
+
+                return $kept->isNotEmpty();
+            })->values();
+        }
 
         $grandTotal = $purchaseOrders->sum(static function ($po) {
             return $po->items->sum(static fn ($item) => (float) ($item->quantity ?? 0) * (float) ($item->unit_price ?? 0));

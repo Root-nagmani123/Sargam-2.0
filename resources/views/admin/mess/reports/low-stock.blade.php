@@ -17,11 +17,11 @@
     @php $lsExportQ = request()->query(); $lsExportQuery = $lsExportQ ? '?' . http_build_query($lsExportQ) : ''; @endphp
     {{-- Download / Print bar --}}
     <div class="d-flex justify-content-end gap-2 mb-3 no-print">
-        <a href="{{ route('admin.mess.reports.low-stock.pdf') }}{{ $lsExportQuery }}" class="btn ls-export-btn border-0"
+        <a href="{{ route('admin.mess.reports.low-stock.pdf') }}{{ $lsExportQuery }}" class="btn ls-export-btn"
             title="Download (PDF)">
             <i class="material-symbols-rounded">download</i><span>Download</span>
         </a>
-        <button type="button" class="btn ls-export-btn border-0" onclick="printLowStockReport()"
+        <button type="button" class="btn ls-export-btn" onclick="printLowStockReport()"
             title="Print (or Save as PDF)">
             <i class="material-symbols-rounded">print</i><span>Print</span>
         </button>
@@ -59,8 +59,7 @@
                             data-bs-toggle="modal" data-bs-target="#lsColumnsModal" title="Show / hide columns">
                             <i class="material-symbols-rounded">view_column</i><span>Columns</span>
                         </button>
-                        <input type="search" id="lsSearch" class="form-control ls-search-input"
-                            placeholder="Search item…" autocomplete="off">
+                        @include('mess.partials.search-toggle', ['tableId' => 'lowStockReportTable'])
                     </div>
                 </div>
                 {{-- Column visibility modal --}}
@@ -114,8 +113,9 @@
                     </span>
                 </div>
 
-                <div class="table-responsive">
-                    <table class="table programme-dt-table align-middle mb-0" id="lowStockReportTable">
+                <div class="programme-dt-panel">
+                    <div class="table-responsive">
+                    <table class="table table-hover programme-dt-table align-middle mb-0" id="lowStockReportTable">
                         <thead class="text-nowrap">
                             <tr>
                                 <th class="text-center text-uppercase small fw-bold text-body-secondary py-3">S. No.</th>
@@ -128,7 +128,11 @@
                         </thead>
                         <tbody></tbody>
                     </table>
+                    </div>
                 </div>
+
+                {{-- Footer: pagination (left) + "Showing [N] of M items" (right), populated by the global enhancer --}}
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 px-4 py-3" data-dt-footer-for="lowStockReportTable"></div>
             </div>
         </div>
     </div>
@@ -145,6 +149,8 @@
     'colReorder' => false,
     'searchHighlight' => false,
     'pageLength' => 25,
+    'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+    'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.reports.low-stock', request()->query()),
     'ajaxJsonCallback' => 'lowStockReportOnDraw',
@@ -657,17 +663,9 @@
                 }, 500);
             });
         }
-        var lsSearch = document.getElementById('lsSearch');
-        if (lsSearch) {
-            lsSearch.addEventListener('input', function() {
-                var q = lsSearch.value.trim().toLowerCase();
-                document.querySelectorAll('#lowStockReportTable tbody tr').forEach(function(tr) {
-                    if (tr.querySelector('td[colspan]')) return;
-                    tr.style.display = (!q || tr.textContent.toLowerCase().indexOf(q) !== -1) ?
-                        '' : 'none';
-                });
-            });
-        }
+        // Search is DataTables' own box, relocated into .programme-dt-search by
+        // public/js/datatable-global-ui.js — it is server-side here, so it filters
+        // the whole result set rather than just the rows on screen.
         document.querySelectorAll('.ls-col-toggle').forEach(function(cb) {
             cb.addEventListener('change', function() {
                 var col = cb.getAttribute('data-col');

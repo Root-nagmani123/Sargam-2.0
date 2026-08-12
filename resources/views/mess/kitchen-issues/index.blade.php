@@ -184,11 +184,11 @@
 
     {{-- Download / Print bar (branded server-side exports — see admin.mess.material-management.selling-vouchers-export) --}}
     <div class="d-flex justify-content-end gap-2 mb-3">
-        <button type="button" class="btn sv-master-export-btn border-0" id="svDownloadBtn">
+        <button type="button" class="btn sv-master-export-btn" id="svDownloadBtn">
             <i class="material-symbols-rounded">download</i>
             <span>Download</span>
         </button>
-        <button type="button" class="btn sv-master-export-btn border-0" id="svPrintBtn">
+        <button type="button" class="btn sv-master-export-btn" id="svPrintBtn">
             <i class="material-symbols-rounded">print</i>
             <span>Print</span>
         </button>
@@ -313,7 +313,7 @@
                         <span>Columns</span>
                         <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
-                    <div class="programme-dt-search" data-dt-search-for="sellingVouchersTable"></div>
+                    @include('mess.partials.search-toggle', ['tableId' => 'sellingVouchersTable'])
                 </div>
             </div>
 

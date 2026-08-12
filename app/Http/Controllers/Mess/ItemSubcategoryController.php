@@ -17,6 +17,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class ItemSubcategoryController extends Controller
 {
+    use Concerns\FiltersByStatus;
+
     private const DT_LIST_EPOCH_KEY = 'mess_item_subcategory_dt_list_epoch';
 
     public static function bumpListCacheEpoch(): void
@@ -54,6 +56,9 @@ class ItemSubcategoryController extends Controller
     {
         return [
             'category_id' => $request->get('category_id'),
+            // Without this the Active and Inactive pills would share a cache entry
+            // and serve each other's rows.
+            'status' => $this->resolveStatusFilter($request),
             'can_delete' => function_exists('hasRole') && (hasRole('Admin') || hasRole('Mess-Admin')),
         ];
     }
@@ -69,6 +74,9 @@ class ItemSubcategoryController extends Controller
                 $query->where('category_id', (int) $categoryIdFilter);
             }
         }
+
+        // Driven by the status pills above the grid (mess/itemsubcategories/index.blade.php).
+        $this->applyStatusFilter($query, $request, 'mess_item_subcategories');
 
         return $query;
     }
@@ -252,17 +260,22 @@ class ItemSubcategoryController extends Controller
         $categoryId = $request->get('category_id');
         $visibleColumns = $this->parseVisibleColumns($request->get('columns'));
 
-        $export = new ItemSubcategoryMasterExport($search, $categoryId, $visibleColumns);
+        // The report follows the grid: same search, same category filter, same status pill.
+        $export = new ItemSubcategoryMasterExport($search, $categoryId, $visibleColumns, $this->resolveStatusFilter($request));
         $fileName = 'sub-category-item-master-' . now()->format('Y-m-d_H-i-s');
 
         if ($format === 'pdf') {
-            @ini_set('memory_limit', '256M');
+            // 512M, not the 256M the smaller masters use: this table is four
+            // figures of rows (1,105 on the dev data) and DomPDF exhausted 256M
+            // building the page, so Print returned a blank 500. The heavier mess
+            // reports (ReportController) already run at 512M.
+            @ini_set('memory_limit', '512M');
             @set_time_limit(120);
 
             $pdf = Pdf::loadView('mess.itemsubcategories.export_pdf', array_merge([
                 'headings' => $export->activeHeadings(),
                 'rows' => $export->pdfRows(),
-                'filterLine' => $this->buildExportFilterLine($request),
+                'filterLine' => $export->filterLine(),
                 'printedOn' => now()->format('d-m-Y H:i'),
                 'reportTitle' => 'Sub-Category Item Master',
             ], $this->buildExportHeaderData()))
@@ -304,24 +317,6 @@ class ItemSubcategoryController extends Controller
     }
 
     /** "Applied Filters: …" line for the PDF header, or '' when unfiltered. */
-    private function buildExportFilterLine(Request $request): string
-    {
-        $parts = [];
-        $categoryId = $request->get('category_id');
-        if ($categoryId !== null && trim((string) $categoryId) !== '') {
-            $cat = ItemCategory::find((int) $categoryId);
-            if ($cat) {
-                $parts[] = 'Category: ' . $cat->category_name;
-            }
-        }
-        $search = $request->get('search');
-        if ($search !== null && trim((string) $search) !== '') {
-            $parts[] = 'Search: ' . trim($search);
-        }
-
-        return $parts === [] ? '' : 'Applied Filters:   ' . implode('   |   ', $parts);
-    }
-
     /**
      * Branded LBSNAA header assets for the PDF export — emblem / Hindi title /
      * 75-years logo used by the official report layout.

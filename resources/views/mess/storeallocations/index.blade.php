@@ -184,11 +184,11 @@
 
     {{-- Download / Print bar (branded server-side exports — see admin.mess.storeallocations.export) --}}
     <div class="d-flex justify-content-end gap-2 mb-3">
-        <button type="button" class="btn store-alloc-export-btn border-0" id="storeAllocDownloadBtn">
+        <button type="button" class="btn store-alloc-export-btn" id="storeAllocDownloadBtn">
             <i class="material-symbols-rounded">download</i>
             <span>Download</span>
         </button>
-        <button type="button" class="btn store-alloc-export-btn border-0" id="storeAllocPrintBtn">
+        <button type="button" class="btn store-alloc-export-btn" id="storeAllocPrintBtn">
             <i class="material-symbols-rounded">print</i>
             <span>Print</span>
         </button>
@@ -196,19 +196,22 @@
 
     <div class="card store-alloc-card border-0">
         <div class="card-body">
-            {{-- Toolbar: Columns modal trigger + search (the global enhancer relocates the search box here) --}}
-            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3">
-                <button type="button" class="btn programme-dt-btn-columns" id="btnStoreAllocColumns"
-                        data-bs-toggle="modal" data-bs-target="#storeAllocColumnVisibilityModal" title="Show / hide columns">
-                    <span>Columns</span>
-                    <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
-                </button>
-                <div class="programme-dt-search" data-dt-search-for="storeAllocationTable"></div>
+            {{-- Toolbar: Columns + search, right-aligned. Mess Store Allocation has no filter
+                 selects in the design (Sargam 2.0.pdf p82). --}}
+            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="btnStoreAllocColumns"
+                            data-bs-toggle="modal" data-bs-target="#storeAllocColumnVisibilityModal" title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    @include('mess.partials.search-toggle', ['tableId' => 'storeAllocationTable'])
+                </div>
             </div>
 
             <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <table class="table programme-dt-table align-middle w-100 mb-0" id="storeAllocationTable">
+                    <table class="table table-hover programme-dt-table align-middle w-100 mb-0" id="storeAllocationTable">
                         <thead>
                             <tr>
                                 <th>S. No.</th>
@@ -244,12 +247,14 @@
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.storeallocations.index'),
     'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
+    'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
     'serverSideColumnDefs' => [
         ['className' => 'text-end align-middle', 'targets' => [6]],
         ['className' => 'text-center align-middle store-alloc-actions-cell', 'targets' => [7]],
     ],
 ])
 @include('mess.partials.modal-dropdown-stability')
+
 
 {{-- Create Store Allocation Modal --}}
 <style>

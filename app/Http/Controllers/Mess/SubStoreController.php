@@ -15,6 +15,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class SubStoreController extends Controller
 {
+    use Concerns\FiltersByStatus;
+
     private const LIST_CACHE_EPOCH_KEY = 'mess_sub_store_master_list_epoch';
     private const DT_LIST_EPOCH_KEY = 'mess_sub_store_master_dt_list_epoch';
 
@@ -36,7 +38,11 @@ class SubStoreController extends Controller
                     'seconds' => 'MESS_SUB_STORE_MASTER_DATATABLE_CACHE_SECONDS',
                 ],
                 'SubStoreController@index',
-                fn () => $this->buildSubStoreDatatableResponse($request)
+                fn () => $this->buildSubStoreDatatableResponse($request),
+                // The cache fingerprint covers DataTables' own params only, so the
+                // status pill has to be added by hand — without it Active and
+                // Inactive would share a cache entry and serve each other's rows.
+                ['status' => $this->resolveStatusFilter($request)]
             );
         }
 
@@ -45,7 +51,8 @@ class SubStoreController extends Controller
 
     private function buildSubStoreDatatableResponse(Request $request): JsonResponse
     {
-        $query = SubStore::query();
+        // Driven by the status pills above the grid (mess/sub-stores/index.blade.php).
+        $query = $this->applyStatusFilter(SubStore::query(), $request, 'mess_sub_stores');
 
         $draw = (int) $request->input('draw', 0);
         $start = max((int) $request->input('start', 0), 0);
@@ -111,28 +118,34 @@ class SubStoreController extends Controller
     private function buildSubStoreDatatableRow(SubStore $subStore, bool $canDelete): array
     {
         $nameCell = '<div class="fw-semibold">' . e($subStore->sub_store_name) . '</div>';
-        $statusCell = '<span class="badge bg-' . e($subStore->status_badge_class) . '">'
-            . e($subStore->status_label) . '</span>';
+        $isActive = ($subStore->status ?? 'active') === SubStore::STATUS_ACTIVE;
+        $statusCell = '<span class="badge programme-status-badge programme-status-badge--'
+            . ($isActive ? 'active' : 'inactive') . '">' . e(ucfirst((string) $subStore->status_label)) . '</span>';
 
-        $editBtn = '<button type="button" class="text-primary btn-edit-substore bg-transparent border-0"'
+        $editBtn = '<button type="button" class="substore-action-btn text-primary btn-edit-substore"'
             . ' data-id="' . (int) $subStore->id . '"'
             . ' data-sub-store-name="' . e($subStore->sub_store_name) . '"'
             . ' data-status="' . e($subStore->status ?? 'active') . '"'
-            . ' title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>';
+            . ' aria-label="Edit ' . e($subStore->sub_store_name) . '">'
+            . '<i class="material-symbols-rounded" aria-hidden="true">edit</i><span>Edit</span></button>';
 
         $deleteForm = '';
         if ($canDelete) {
             $deleteUrl = route('admin.mess.sub-stores.destroy', $subStore->id);
-            $deleteForm = '<form method="POST" action="' . e($deleteUrl) . '" class="d-inline"'
-                . ' onsubmit="return confirm(\'Are you sure you want to delete this sub store?\');">'
+            // mess-delete-form + no native confirm(): mess.partials.delete-confirm
+            // intercepts the submit and shows the branded dialog instead.
+            $deleteForm = '<form method="POST" action="' . e($deleteUrl) . '" class="d-inline mess-delete-form"'
+                . ' data-confirm-title="Delete Sub Store?"'
+                . ' data-confirm-message="' . e('“' . $subStore->sub_store_name . '” will be removed. This action cannot be undone.') . '">'
                 . '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">'
                 . '<input type="hidden" name="_method" value="DELETE">'
-                . '<button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">'
-                . '<i class="material-icons material-symbol-rounded">delete</i></button>'
+                . '<button type="submit" class="substore-action-btn text-danger"'
+                . ' aria-label="Delete ' . e($subStore->sub_store_name) . '">'
+                . '<i class="material-symbols-rounded" aria-hidden="true">delete</i><span>Delete</span></button>'
                 . '</form>';
         }
 
-        $actions = '<div class="d-flex gap-2 flex-wrap">' . $editBtn . $deleteForm . '</div>';
+        $actions = '<div class="d-flex align-items-center substore-actions">' . $editBtn . $deleteForm . '</div>';
 
         return [
             $nameCell,
@@ -160,7 +173,8 @@ class SubStoreController extends Controller
         $search = $request->get('search');
         $visibleColumns = $this->parseVisibleColumns($request->get('columns'));
 
-        $export = new SubStoreMasterExport($search, $visibleColumns);
+        // The report follows the grid: same search, same status pill.
+        $export = new SubStoreMasterExport($search, $visibleColumns, $this->resolveStatusFilter($request));
         $fileName = 'sub-store-master-' . now()->format('Y-m-d_H-i-s');
 
         if ($format === 'pdf') {
@@ -170,7 +184,7 @@ class SubStoreController extends Controller
             $pdf = Pdf::loadView('mess.sub-stores.export_pdf', array_merge([
                 'headings' => $export->activeHeadings(),
                 'rows' => $export->pdfRows(),
-                'filterLine' => ($search !== null && trim((string) $search) !== '') ? ('Applied Filters:   Search: ' . trim($search)) : '',
+                'filterLine' => $export->filterLine(),
                 'printedOn' => now()->format('d-m-Y H:i'),
                 'reportTitle' => 'Sub Store Master',
             ], $this->buildExportHeaderData()))
